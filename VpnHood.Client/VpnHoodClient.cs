@@ -372,7 +372,7 @@ public class VpnHoodClient : IAsyncDisposable {
                     }
 
                     else if (_packetCapture.CanSendPacketToOutbound) {
-                        if (!IsInIpRange(ipPacket.DestinationAddress))
+                        if (!IsInIpRange(ipPacket.DestinationAddress)) 
                             passthruPackets.Add(ipPacket);
 
                         // Drop IPv6 if not support

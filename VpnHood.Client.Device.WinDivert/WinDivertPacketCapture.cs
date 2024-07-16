@@ -12,28 +12,56 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client.Device.WinDivert;
 
-public class WinDivertPacketCapture : IPacketCapture
-{
+public class WinDivertPacketCapture : IPacketCapture {
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern IntPtr LoadLibrary(string lpFileName);
-
+    private static extern IntPtr LoadLibrary(string lpFileName);
     private readonly SharpPcap.WinDivert.WinDivertDevice _device;
     private bool _disposed;
     private IpNetwork[]? _includeNetworks;
     private WinDivertHeader? _lastCaptureHeader;
-    
+
     public const short ProtectedTtl = 111;
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Stopped;
     public bool Started => _device.Started;
     public virtual bool CanSendPacketToOutbound => true;
-
     public virtual bool IsDnsServersSupported => false;
 
-    public virtual IPAddress[]? DnsServers
-    {
+    public virtual IPAddress[]? DnsServers {
         get => throw new NotSupportedException();
         set => throw new NotSupportedException();
+    }
+
+    public bool CanExcludeApps => false;
+    public bool CanIncludeApps => false;
+
+    public string[]? ExcludeApps {
+        get => throw new NotSupportedException();
+        set => throw new NotSupportedException();
+    }
+
+    public string[]? IncludeApps {
+        get => throw new NotSupportedException();
+        set => throw new NotSupportedException();
+    }
+
+    public bool IsMtuSupported => false;
+
+    public int Mtu {
+        get => throw new NotSupportedException();
+        set => throw new NotSupportedException();
+    }
+
+    public bool IsAddIpV6AddressSupported => false;
+
+    public bool AddIpV6Address {
+        get => throw new NotSupportedException();
+        set => throw new NotSupportedException();
+    }
+
+    public bool? IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+    {
+        return null;
     }
 
     public WinDivertPacketCapture()
@@ -44,7 +72,6 @@ public class WinDivertPacketCapture : IPacketCapture
 
         // manage WinDivert file
         SetWinDivertDllFolder();
-
     }
 
     public virtual bool CanProtectSocket => true;
@@ -57,8 +84,7 @@ public class WinDivertPacketCapture : IPacketCapture
     public void SendPacketToInbound(IList<IPPacket> ipPackets)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++)
-        {
+        for (var i = 0; i < ipPackets.Count; i++) {
             var ipPacket = ipPackets[i];
             SendPacket(ipPacket, false);
         }
@@ -73,22 +99,18 @@ public class WinDivertPacketCapture : IPacketCapture
     {
         SendPacket(ipPacket, true);
     }
-
     public void SendPacketToOutbound(IList<IPPacket> ipPackets)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++)
-        {
+        for (var i = 0; i < ipPackets.Count; i++) {
             var ipPacket = ipPackets[i];
             SendPacket(ipPacket, true);
         }
     }
 
-    public IpNetwork[]? IncludeNetworks
-    {
+    public IpNetwork[]? IncludeNetworks {
         get => _includeNetworks;
-        set
-        {
+        set {
             if (Started)
                 throw new InvalidOperationException(
                     $"Can't set {nameof(IncludeNetworks)} when {nameof(WinDivertPacketCapture)} is started!");
@@ -111,8 +133,7 @@ public class WinDivertPacketCapture : IPacketCapture
 
         // create include and exclude phrases
         var phraseX = "true";
-        if (IncludeNetworks != null)
-        {
+        if (IncludeNetworks != null) {
             var ipRanges = IncludeNetworks.ToIpRanges();
             var phrases = ipRanges.Select(x => x.FirstIpAddress.Equals(x.LastIpAddress)
                 ? $"{Ip(x)}.DstAddr=={x.FirstIpAddress}"
@@ -125,14 +146,12 @@ public class WinDivertPacketCapture : IPacketCapture
         var filter = $"(ip or ipv6) and outbound and !loopback and ip.TTL!={ProtectedTtl} and (udp.DstPort==53 or ({phraseX}))";
         // filter = $"(ip or ipv6) and outbound and !loopback and (protocol!=6 or tcp.DstPort!=3389) and (protocol!=6 or tcp.SrcPort!=3389) and (udp.DstPort==53 or ({phraseX}))";
         filter = filter.Replace("ipv6.DstAddr>=::", "ipv6"); // WinDivert bug
-        try
-        {
+        try {
             _device.Filter = filter;
             _device.Open(new DeviceConfiguration());
             _device.StartCapture();
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             if (ex.Message.IndexOf("access is denied", StringComparison.OrdinalIgnoreCase) >= 0)
                 throw new Exception(
                     "Access denied! Could not open WinDivert driver! Make sure the app is running with admin privilege.", ex);
@@ -149,18 +168,6 @@ public class WinDivertPacketCapture : IPacketCapture
         Stopped?.Invoke(this, EventArgs.Empty);
     }
 
-    public void Dispose()
-    {
-        if (_disposed)
-            return;
-
-        if (_device.Started)
-            StopCapture();
-
-        _device.Dispose();
-        _disposed = true;
-    }
-
     private void Device_OnPacketArrival(object sender, PacketCapture e)
     {
         var rawPacket = e.GetPacket();
@@ -173,13 +180,11 @@ public class WinDivertPacketCapture : IPacketCapture
 
     protected virtual void ProcessPacketReceivedFromInbound(IPPacket ipPacket)
     {
-        try
-        {
+        try {
             var eventArgs = new PacketReceivedEventArgs([ipPacket], this);
             PacketReceivedFromInbound?.Invoke(this, eventArgs);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.Log(LogLevel.Error, ex,
                 "Error in processing packet Packet: {Packet}", VhLogger.FormatIpPacket(ipPacket.ToString()!));
         }
@@ -204,8 +209,7 @@ public class WinDivertPacketCapture : IPacketCapture
 
         // extract WinDivert
         var checkFiles = requiredFiles.Select(x => Path.Combine(destinationFolder, x));
-        if (checkFiles.Any(x => !File.Exists(x)))
-        {
+        if (checkFiles.Any(x => !File.Exists(x))) {
             using var memStream = new MemoryStream(Resource.WinDivertLibZip);
             using var zipArchive = new ZipArchive(memStream);
             zipArchive.ExtractToDirectory(destinationFolder, true);
@@ -214,38 +218,15 @@ public class WinDivertPacketCapture : IPacketCapture
         LoadLibrary(Path.Combine(destinationFolder, "WinDivert.dll"));
     }
 
-    public bool CanExcludeApps => false;
-    public bool CanIncludeApps => false;
-
-    public string[]? ExcludeApps
+    public void Dispose()
     {
-        get => throw new NotSupportedException();
-        set => throw new NotSupportedException();
-    }
+        if (_disposed)
+            return;
 
-    public string[]? IncludeApps
-    {
-        get => throw new NotSupportedException();
-        set => throw new NotSupportedException();
-    }
+        if (_device.Started)
+            StopCapture();
 
-    public bool IsMtuSupported => false;
-
-    public int Mtu
-    {
-        get => throw new NotSupportedException();
-        set => throw new NotSupportedException();
-    }
-
-    public bool IsAddIpV6AddressSupported => false;
-    public bool AddIpV6Address
-    {
-        get => throw new NotSupportedException();
-        set => throw new NotSupportedException();
-    }
-
-    public bool? IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
-    {
-        return null;
+        _device.Dispose();
+        _disposed = true;
     }
 }

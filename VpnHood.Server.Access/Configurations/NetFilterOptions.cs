@@ -25,6 +25,7 @@ public class NetFilterOptions
         if (obj.ExcludeIpRanges != null) ExcludeIpRanges = obj.ExcludeIpRanges;
         if (obj.BlockIpV6 != null) BlockIpV6 = obj.BlockIpV6;
     }
+
     public void ApplyDefaults()
     {
         IncludeLocalNetwork = IncludeLocalNetworkValue;
@@ -66,5 +67,4 @@ public class NetFilterOptions
 
         return includeIpRanges.Invert();
     }
-
 }

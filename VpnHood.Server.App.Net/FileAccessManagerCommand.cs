@@ -19,8 +19,7 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
         cmdApp.Description = "Print a token";
 
         var tokenIdArg = cmdApp.Argument("tokenId", "tokenId to print");
-        cmdApp.OnExecuteAsync(async _ =>
-        {
+        cmdApp.OnExecuteAsync(async _ => {
             await PrintToken(tokenIdArg.Value!).VhConfigureAwait();
             return 0;
         });
@@ -30,12 +29,14 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
     {
         var accessItem = await fileAccessManager.AccessItem_Read(tokenId).VhConfigureAwait();
         if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
-        var hostName = accessItem.Token.ServerToken.HostName + (accessItem.Token.ServerToken.IsValidHostName ? "" : " (Fake)");
+        var hostName = accessItem.Token.ServerToken.HostName +
+                       (accessItem.Token.ServerToken.IsValidHostName ? "" : " (Fake)");
         var endPoints = accessItem.Token.ServerToken.HostEndPoints?.Select(x => x.ToString()) ?? Array.Empty<string>();
 
         Console.WriteLine();
         Console.WriteLine("Access Details:");
-        Console.WriteLine(JsonSerializer.Serialize(accessItem.AccessUsage, new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine(JsonSerializer.Serialize(accessItem.AccessUsage,
+            new JsonSerializerOptions { WriteIndented = true }));
         Console.WriteLine();
         Console.WriteLine($"{nameof(Token.SupportId)}: {accessItem.Token.SupportId}");
         Console.WriteLine($"{nameof(ServerToken.HostEndPoints)}: {string.Join(",", endPoints)}");
@@ -59,17 +60,20 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
         cmdApp.Description = "Generate a token";
         var nameOption = cmdApp.Option("-name", "TokenName. Default: <NoName>", CommandOptionType.SingleValue);
         var maxClientOption = cmdApp.Option("-maxClient", "MaximumClient. Default: 2", CommandOptionType.SingleValue);
-        var maxTrafficOptions = cmdApp.Option("-maxTraffic", "MaximumTraffic in MB. Default: unlimited", CommandOptionType.SingleValue);
-        var expirationTimeOption = cmdApp.Option("-expire", "ExpirationTime. Default: Never Expire. Format: 2030/01/25", CommandOptionType.SingleValue);
+        var maxTrafficOptions = cmdApp.Option("-maxTraffic", "MaximumTraffic in MB. Default: unlimited",
+            CommandOptionType.SingleValue);
+        var expirationTimeOption = cmdApp.Option("-expire", "ExpirationTime. Default: Never Expire. Format: 2030/01/25",
+            CommandOptionType.SingleValue);
 
-        cmdApp.OnExecuteAsync(async _ =>
-        {
+        cmdApp.OnExecuteAsync(async _ => {
             var accessItem = accessManager.AccessItem_Create(
                 tokenName: nameOption.HasValue() ? nameOption.Value() : null,
                 maxClientCount: maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()!) : 2,
-                maxTrafficByteCount: maxTrafficOptions.HasValue() ? int.Parse(maxTrafficOptions.Value()!) * 1_000_000 : 0,
+                maxTrafficByteCount: maxTrafficOptions.HasValue()
+                    ? int.Parse(maxTrafficOptions.Value()!) * 1_000_000
+                    : 0,
                 expirationTime: expirationTimeOption.HasValue() ? DateTime.Parse(expirationTimeOption.Value()!) : null
-                );
+            );
 
             Console.WriteLine("The following token has been generated: ");
             await PrintToken(accessItem.Token.TokenId).VhConfigureAwait();

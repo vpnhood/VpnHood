@@ -22,7 +22,8 @@ internal class UdpProxyEx : ITimeoutItem
     public bool Disposed { get; private set; }
     public IPEndPoint LocalEndPoint { get; }
 
-    public UdpProxyEx(IPacketReceiver packetReceiver, UdpClient udpClient, AddressFamily addressFamily, TimeSpan udpTimeout)
+    public UdpProxyEx(IPacketReceiver packetReceiver, UdpClient udpClient, AddressFamily addressFamily,
+        TimeSpan udpTimeout)
     {
         _packetReceiver = packetReceiver;
         _udpClient = udpClient;
@@ -32,8 +33,7 @@ internal class UdpProxyEx : ITimeoutItem
         LocalEndPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
 
         // prevent raise exception when there is no listener
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
             udpClient.Client.IOControl(-1744830452, [0], [0]);
         }
 
@@ -50,8 +50,7 @@ internal class UdpProxyEx : ITimeoutItem
     {
         LastUsedTime = FastDateTime.Now;
 
-        try
-        {
+        try {
             await _sendSemaphore.WaitAsync().VhConfigureAwait();
 
             if (VhLogger.IsDiagnoseMode)
@@ -60,15 +59,15 @@ internal class UdpProxyEx : ITimeoutItem
 
             // IpV4 fragmentation
             if (noFragment != null && ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
-                _udpClient.DontFragment = noFragment.Value; // Never call this for IPv6, it will throw exception for any value
+                _udpClient.DontFragment =
+                    noFragment.Value; // Never call this for IPv6, it will throw exception for any value
 
             var sentBytes = await _udpClient.SendAsync(datagram, datagram.Length, ipEndPoint).VhConfigureAwait();
             if (sentBytes != datagram.Length)
                 VhLogger.Instance.LogWarning(
                     $"Couldn't send all udp bytes. Requested: {datagram.Length}, Sent: {sentBytes}");
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(GeneralEventId.Udp,
                 "Couldn't send a udp packet. RemoteEp: {RemoteEp}, Exception: {Message}",
                 VhLogger.Format(ipEndPoint), ex.Message);
@@ -76,30 +75,26 @@ internal class UdpProxyEx : ITimeoutItem
             if (IsInvalidState(ex))
                 Dispose();
         }
-        finally
-        {
+        finally {
             _sendSemaphore.Release();
         }
     }
 
     public async Task Listen()
     {
-        while (!Disposed)
-        {
+        while (!Disposed) {
             var udpResult = await _udpClient.ReceiveAsync().VhConfigureAwait();
             LastUsedTime = FastDateTime.Now;
 
             // find the audience
-            if (!DestinationEndPointMap.TryGetValue(udpResult.RemoteEndPoint, out var sourceEndPoint))
-            {
+            if (!DestinationEndPointMap.TryGetValue(udpResult.RemoteEndPoint, out var sourceEndPoint)) {
                 VhLogger.Instance.LogInformation(GeneralEventId.Udp, "Could not find result UDP in the NAT!");
                 return;
             }
 
             // create packet for audience
             var ipPacket = PacketUtil.CreateIpPacket(udpResult.RemoteEndPoint.Address, sourceEndPoint.Value.Address);
-            var udpPacket = new UdpPacket((ushort)udpResult.RemoteEndPoint.Port, (ushort)sourceEndPoint.Value.Port)
-            {
+            var udpPacket = new UdpPacket((ushort)udpResult.RemoteEndPoint.Port, (ushort)sourceEndPoint.Value.Port) {
                 PayloadData = udpResult.Buffer
             };
 

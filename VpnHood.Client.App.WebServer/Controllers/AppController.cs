@@ -13,12 +13,13 @@ namespace VpnHood.Client.App.WebServer.Controllers;
 internal class AppController : WebApiController, IAppController
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
+
     private async Task<T> GetRequestDataAsync<T>()
     {
         var json = await HttpContext.GetRequestBodyAsByteArrayAsync().VhConfigureAwait();
         var res = JsonSerializer.Deserialize<T>(json,
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        
+
         return res ?? throw new Exception($"The request expected to have a {typeof(T).Name} but it is null!");
     }
 
@@ -36,8 +37,7 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Get, "/config")]
     public Task<AppConfig> GetConfig()
     {
-        var ret = new AppConfig
-        {
+        var ret = new AppConfig {
             Features = App.Features,
             Settings = App.Settings,
             ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),
@@ -48,7 +48,6 @@ internal class AppController : WebApiController, IAppController
         };
 
         return Task.FromResult(ret);
-
     }
 
     [Route(HttpVerbs.Get, "/state")]
@@ -65,7 +64,7 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/diagnose")]
-    public Task Diagnose([QueryField] Guid? clientProfileId = null,[QueryField] string? serverLocation = null)
+    public Task Diagnose([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null)
     {
         return App.Connect(clientProfileId, serverLocation: serverLocation, diagnose: true,
             userAgent: HttpContext.Request.UserAgent, throwException: false);
@@ -133,11 +132,12 @@ internal class AppController : WebApiController, IAppController
     {
         var ipGroupManager = await App.GetIpGroupManager().VhConfigureAwait();
         var ipGroupIds = await ipGroupManager.GetIpGroupIds().VhConfigureAwait();
-        return ipGroupIds.Select(x=>new IpGroupInfo{IpGroupId = x}).ToArray();
+        return ipGroupIds.Select(x => new IpGroupInfo { IpGroupId = x }).ToArray();
     }
 
     [Route(HttpVerbs.Patch, "/client-profiles/{clientProfileId}")]
-    public async Task<ClientProfileInfo> UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    public async Task<ClientProfileInfo> UpdateClientProfile(Guid clientProfileId,
+        ClientProfileUpdateParams updateParams)
     {
         updateParams = await GetRequestDataAsync<ClientProfileUpdateParams>().VhConfigureAwait();
         var clientProfile = App.ClientProfileService.Update(clientProfileId, updateParams);
@@ -170,5 +170,4 @@ internal class AppController : WebApiController, IAppController
     {
         return App.Services.UiService.RequestNotification(ActiveUiContext.RequiredContext, CancellationToken.None);
     }
-
 }

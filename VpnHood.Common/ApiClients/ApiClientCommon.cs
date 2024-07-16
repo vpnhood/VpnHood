@@ -9,12 +9,14 @@ public abstract class ApiClientCommon
     public AuthenticationHeaderValue? DefaultAuthorization { get; set; }
     public Dictionary<string, string> DefaultHeaders { get; set; } = new();
 
-    protected virtual Task PrepareRequestAsync(HttpClient client, HttpRequestMessage request, StringBuilder urlBuilder, CancellationToken ct)
+    protected virtual Task PrepareRequestAsync(HttpClient client, HttpRequestMessage request, StringBuilder urlBuilder,
+        CancellationToken ct)
     {
         return PrepareRequestAsync(client, request, urlBuilder.ToString(), ct);
     }
 
-    protected virtual Task PrepareRequestAsync(HttpClient client, HttpRequestMessage request, string url, CancellationToken ct)
+    protected virtual Task PrepareRequestAsync(HttpClient client, HttpRequestMessage request, string url,
+        CancellationToken ct)
     {
         // build url
         request.RequestUri = new Uri(url, UriKind.RelativeOrAbsolute);

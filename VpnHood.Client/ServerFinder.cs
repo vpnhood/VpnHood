@@ -43,25 +43,28 @@ public class ServerFinder(
 
         // exclude ip v6 if not supported
         if (!IncludeIpV6)
-            hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6() || x.Address.Equals(IPAddress.IPv6Loopback)).ToArray();
+            hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6() || x.Address.Equals(IPAddress.IPv6Loopback))
+                .ToArray();
 
         // for compatibility don't query server for single endpoint
         // todo: does not need on 535 or upper due to ServerStatusRequest
         if (hostEndPoints.Count(x => x.Address.IsV4()) == 1)
-            return hostEndPoints.First(x=>x.Address.IsV4());
+            return hostEndPoints.First(x => x.Address.IsV4());
 
         // randomize endpoint 
         VhUtil.Shuffle(hostEndPoints);
 
         // find the best server
-        _hostEndPointStatuses = await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
+        _hostEndPointStatuses =
+            await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
         var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
         _ = TrackEndPointsAvailability([], _hostEndPointStatuses).VhConfigureAwait();
         if (res != null)
             return res;
 
-        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionAttempt(connected: false, serverLocation: ServerLocation, isIpV6Supported: IncludeIpV6));
+        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionAttempt(connected: false, serverLocation: ServerLocation,
+            isIpV6Supported: IncludeIpV6));
         throw new UnreachableServer(serverLocation: ServerLocation);
     }
 
@@ -76,7 +79,8 @@ public class ServerFinder(
 
         // exclude ip v6 if not supported (IPv6Loopback is for tests)
         if (!IncludeIpV6)
-            hostEndPoints = hostEndPoints.Where(x =>!x.Address.IsV6() || x.Address.Equals(IPAddress.IPv6Loopback)).ToArray();
+            hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6() || x.Address.Equals(IPAddress.IPv6Loopback))
+                .ToArray();
 
         // merge old values
         foreach (var hostStatus in hostStatuses)
@@ -91,7 +95,8 @@ public class ServerFinder(
         if (res != null)
             return res;
 
-        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionAttempt(connected: false, serverLocation: ServerLocation, isIpV6Supported: IncludeIpV6));
+        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionAttempt(connected: false, serverLocation: ServerLocation,
+            isIpV6Supported: IncludeIpV6));
         throw new UnreachableServer(serverLocation: ServerLocation);
     }
 
@@ -110,57 +115,53 @@ public class ServerFinder(
             .ToArray();
 
         // report endpoints
-        var endPointReport = string.Join(", ", changesStatus.Select(x => $"{VhLogger.Format(x.TcpEndPoint)} => {x.Available}"));
+        var endPointReport = string.Join(", ",
+            changesStatus.Select(x => $"{VhLogger.Format(x.TcpEndPoint)} => {x.Available}"));
         VhLogger.Instance.LogInformation(GeneralEventId.Session, "HostEndPoints: {EndPoints}", endPointReport);
 
         return tracker?.Track(trackEvents) ?? Task.CompletedTask;
     }
 
-    private async Task<HostStatus[]> VerifyServersStatus(IPEndPoint[] hostEndPoints, bool byOrder, CancellationToken cancellationToken)
+    private async Task<HostStatus[]> VerifyServersStatus(IPEndPoint[] hostEndPoints, bool byOrder,
+        CancellationToken cancellationToken)
     {
         var hostStatuses = hostEndPoints
             .Select(x => new HostStatus { TcpEndPoint = x })
             .ToArray();
 
-        try
-        {
+        try {
             // check all servers
             using var cancellationTokenSource = new CancellationTokenSource();
-            using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
-            await VhUtil.ParallelForEachAsync(hostStatuses, async hostStatus =>
-            {
+            using var linkedCancellationTokenSource =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
+            await VhUtil.ParallelForEachAsync(hostStatuses, async hostStatus => {
                 var connector = CreateConnector(hostStatus.TcpEndPoint);
 
                 // ReSharper disable once AccessToDisposedClosure
-                hostStatus.Available = await VerifyServerStatus(connector, linkedCancellationTokenSource.Token).VhConfigureAwait();
+                hostStatus.Available = await VerifyServerStatus(connector, linkedCancellationTokenSource.Token)
+                    .VhConfigureAwait();
 
                 // ReSharper disable once AccessToDisposedClosure
                 if (hostStatus.Available == true && !byOrder)
                     linkedCancellationTokenSource.Cancel(); // no need to continue, we find a server
 
                 // search by order
-                if (byOrder)
-                {
+                if (byOrder) {
                     // ReSharper disable once LoopCanBeConvertedToQuery (It can not! [false, false, null, true] is not accepted )
-                    foreach (var item in hostStatuses)
-                    {
+                    foreach (var item in hostStatuses) {
                         if (item.Available == null)
                             break; // wait to get the result in order
 
-                        if (item.Available.Value)
-                        {
+                        if (item.Available.Value) {
                             // ReSharper disable once AccessToDisposedClosure
                             linkedCancellationTokenSource.Cancel();
                             break;
                         }
                     }
                 }
-
             }, maxDegreeOfParallelism, linkedCancellationTokenSource.Token).VhConfigureAwait();
-
         }
-        catch (OperationCanceledException)
-        {
+        catch (OperationCanceledException) {
             // it means a server has been found
         }
 
@@ -169,11 +170,9 @@ public class ServerFinder(
 
     private static async Task<bool> VerifyServerStatus(ConnectorService connector, CancellationToken cancellationToken)
     {
-        try
-        {
+        try {
             var requestResult = await connector.SendRequest<ServerStatusResponse>(
-                    new ServerStatusRequest
-                    {
+                    new ServerStatusRequest {
                         RequestId = Guid.NewGuid().ToString(),
                         Message = "Hi, How are you?"
                     },
@@ -186,12 +185,10 @@ public class ServerFinder(
 
             return true;
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             throw; // query cancelled due to discovery cancellationToken
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not get server status. EndPoint: {EndPoint}",
                 VhLogger.Format(connector.EndPointInfo.TcpEndPoint));
 
@@ -201,14 +198,14 @@ public class ServerFinder(
 
     private ConnectorService CreateConnector(IPEndPoint tcpEndPoint)
     {
-        var endPointInfo = new ConnectorEndPointInfo
-        {
+        var endPointInfo = new ConnectorEndPointInfo {
             CertificateHash = serverToken.CertificateHash,
             HostName = serverToken.HostName,
             TcpEndPoint = tcpEndPoint
         };
         var connector = new ConnectorService(endPointInfo, socketFactory, serverQueryTimeout, false);
-        connector.Init(serverProtocolVersion: 0, tcpRequestTimeout: serverQueryTimeout, serverSecret: serverToken.Secret, tcpReuseTimeout: TimeSpan.Zero);
+        connector.Init(serverProtocolVersion: 0, tcpRequestTimeout: serverQueryTimeout,
+            serverSecret: serverToken.Secret, tcpReuseTimeout: TimeSpan.Zero);
         return connector;
     }
 }

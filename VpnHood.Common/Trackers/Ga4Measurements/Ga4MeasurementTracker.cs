@@ -1,4 +1,5 @@
 ﻿// ReSharper disable once CheckNamespace
+
 namespace Ga4.Trackers.Ga4Measurements;
 
 public class Ga4MeasurementTracker : TrackerBase, IGa4MeasurementTracker
@@ -14,16 +15,15 @@ public class Ga4MeasurementTracker : TrackerBase, IGa4MeasurementTracker
 
     public Task Track(IEnumerable<Ga4MeasurementEvent> ga4Events)
     {
-        if (!IsEnabled) 
+        if (!IsEnabled)
             return Task.CompletedTask;
 
         var gaEventArray = ga4Events.Select(x => (Ga4MeasurementEvent)x.Clone()).ToArray();
-        if (!gaEventArray.Any()) 
+        if (!gaEventArray.Any())
             throw new ArgumentException("Events can not be empty! ", nameof(ga4Events));
 
         // updating events by default values
-        foreach (var ga4Event in gaEventArray)
-        {
+        foreach (var ga4Event in gaEventArray) {
             if (IsAdminDebugView && !ga4Event.Parameters.TryGetValue("debug_mode", out _))
                 ga4Event.Parameters.Add("debug_mode", 1);
 
@@ -32,16 +32,21 @@ public class Ga4MeasurementTracker : TrackerBase, IGa4MeasurementTracker
         }
 
 
-        var ga4Payload = new Ga4MeasurementPayload
-        {
+        var ga4Payload = new Ga4MeasurementPayload {
             ClientId = ClientId,
             UserId = UserId,
             Events = gaEventArray,
-            UserProperties = UserProperties.Any() ? UserProperties.ToDictionary(p => p.Key, p => new Ga4MeasurementPayload.UserProperty { Value = p.Value }) : null
+            UserProperties = UserProperties.Any()
+                ? UserProperties.ToDictionary(p => p.Key,
+                    p => new Ga4MeasurementPayload.UserProperty { Value = p.Value })
+                : null
         };
 
-        var baseUri = IsDebugEndPoint ? new Uri("https://www.google-analytics.com/debug/mp/collect") : new Uri("https://www.google-analytics.com/mp/collect");
-        var requestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, $"?api_secret={ApiSecret}&measurement_id={MeasurementId}"));
+        var baseUri = IsDebugEndPoint
+            ? new Uri("https://www.google-analytics.com/debug/mp/collect")
+            : new Uri("https://www.google-analytics.com/mp/collect");
+        var requestMessage = new HttpRequestMessage(HttpMethod.Post,
+            new Uri(baseUri, $"?api_secret={ApiSecret}&measurement_id={MeasurementId}"));
         PrepareHttpHeaders(requestMessage.Headers);
         return SendHttpRequest(requestMessage, "Measurement", ga4Payload);
     }
@@ -49,8 +54,7 @@ public class Ga4MeasurementTracker : TrackerBase, IGa4MeasurementTracker
     public override Task Track(IEnumerable<TrackEvent> trackEvents)
     {
         var ga4MeasurementEvents = trackEvents.Select(x =>
-            new Ga4MeasurementEvent
-            {
+            new Ga4MeasurementEvent {
                 EventName = x.EventName,
                 Parameters = x.Parameters
             });

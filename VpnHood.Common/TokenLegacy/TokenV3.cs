@@ -6,42 +6,30 @@ using VpnHood.Common.Converters;
 
 namespace VpnHood.Common.TokenLegacy;
 
-
 [Obsolete("deprecated in version 3.3.451 or upper")]
 public class TokenV3
 {
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
+    [JsonPropertyName("name")] public string? Name { get; set; }
 
-    [JsonPropertyName("v")]
-    public int Version { get; set; } = 3;
+    [JsonPropertyName("v")] public int Version { get; set; } = 3;
 
-    [JsonPropertyName("sid")]
-    public int SupportId { get; set; }
+    [JsonPropertyName("sid")] public int SupportId { get; set; }
 
-    [JsonPropertyName("tid")]
-    public required string TokenId { get; set; }
+    [JsonPropertyName("tid")] public required string TokenId { get; set; }
 
-    [JsonPropertyName("sec")]
-    public required byte[] Secret { get; set; }
+    [JsonPropertyName("sec")] public required byte[] Secret { get; set; }
 
-    [JsonPropertyName("isv")]
-    public bool IsValidHostName { get; set; }
+    [JsonPropertyName("isv")] public bool IsValidHostName { get; set; }
 
-    [JsonPropertyName("hname")]
-    public required string HostName { get; set; }
+    [JsonPropertyName("hname")] public required string HostName { get; set; }
 
-    [JsonPropertyName("hport")]
-    public int HostPort { get; set; }
+    [JsonPropertyName("hport")] public int HostPort { get; set; }
 
-    [JsonPropertyName("ch")]
-    public byte[]? CertificateHash { get; set; }
+    [JsonPropertyName("ch")] public byte[]? CertificateHash { get; set; }
 
-    [JsonPropertyName("pb")]
-    public bool IsPublic { get; set; }
+    [JsonPropertyName("pb")] public bool IsPublic { get; set; }
 
-    [JsonPropertyName("url")]
-    public string? Url { get; set; }
+    [JsonPropertyName("url")] public string? Url { get; set; }
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     [JsonPropertyName("ep")]
@@ -49,15 +37,13 @@ public class TokenV3
 
     public Token ToToken()
     {
-        var token = new Token
-        {
+        var token = new Token {
             Name = Name,
             IssuedAt = DateTime.MinValue,
             SupportId = SupportId.ToString(),
             TokenId = TokenId,
             Secret = Secret,
-            ServerToken = new ServerToken
-            {
+            ServerToken = new ServerToken {
                 CreatedTime = DateTime.MinValue,
                 IsValidHostName = IsValidHostName,
                 HostName = HostName,
@@ -81,8 +67,7 @@ public class TokenV3
     public static TokenV3 FromToken(Token token)
     {
         // convert token to token v3
-        var tokenV3 = new TokenV3
-        {
+        var tokenV3 = new TokenV3 {
             Name = token.Name,
             SupportId = token.SupportId != null ? int.Parse(token.SupportId) : 0,
             TokenId = token.TokenId,

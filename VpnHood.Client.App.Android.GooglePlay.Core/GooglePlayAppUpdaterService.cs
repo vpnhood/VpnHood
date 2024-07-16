@@ -14,11 +14,11 @@ public class GooglePlayAppUpdaterService : IAppUpdaterService
 {
     public async Task<bool> Update(IUiContext uiContext)
     {
-        try
-        {
+        try {
             var appUiContext = (AndroidUiContext)uiContext;
             using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
-            using var appUpdateInfo = await appUpdateManager.AppUpdateInfo.AsTask<AppUpdateInfo>().VhConfigureAwait() ?? throw new Exception("Could not retrieve AppUpdateInfo");
+            using var appUpdateInfo = await appUpdateManager.AppUpdateInfo.AsTask<AppUpdateInfo>().VhConfigureAwait() ??
+                                      throw new Exception("Could not retrieve AppUpdateInfo");
 
             // play set UpdateAvailability.UpdateNotAvailable even when there is no connection to google
             // So we return false if there is UpdateNotAvailable to let the alternative way works
@@ -28,13 +28,13 @@ public class GooglePlayAppUpdaterService : IAppUpdaterService
                 return false;
 
             // Show Google Play update dialog
-            using var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity, AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
+            using var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
+                AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
             await updateFlowPlayTask.AsTask().VhConfigureAwait();
 
             return true;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             // return false to allow the alternative way
             // google play does not throw exception if user cancel exception
             VhLogger.Instance.LogWarning(ex, "Could not update the app using Google Play.");

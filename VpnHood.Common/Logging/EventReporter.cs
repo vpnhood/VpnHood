@@ -43,8 +43,7 @@ public class EventReporter : IDisposable, IJob
 
     private void ReportInternal()
     {
-        lock (_lockObject)
-        {
+        lock (_lockObject) {
             //nothing to log
             if (TotalEventCount - LastReportEventCount == 0)
                 return;
@@ -58,8 +57,7 @@ public class EventReporter : IDisposable, IJob
 
     protected virtual void Report()
     {
-        var args = new[]
-        {
+        var args = new[] {
             Tuple.Create("EventDuration", (object?)JobSection.Elapsed.ToString(@"hh\:mm\:ss")),
             Tuple.Create("EventCount", (object?)(TotalEventCount - LastReportEventCount)),
             Tuple.Create("EventTotal", (object?)TotalEventCount)

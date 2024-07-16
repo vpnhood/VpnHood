@@ -4,6 +4,5 @@ namespace VpnHood.Common;
 
 internal class TokenVersion
 {
-    [JsonPropertyName("v")]
-    public int Version { get; set; }
+    [JsonPropertyName("v")] public int Version { get; set; }
 }

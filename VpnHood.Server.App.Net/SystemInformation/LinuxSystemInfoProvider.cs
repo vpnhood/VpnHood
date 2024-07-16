@@ -9,8 +9,7 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
 {
     private long? GetMemInfoValue(string key)
     {
-        try
-        {
+        try {
             var meminfo = File.ReadAllText("/proc/meminfo");
             var memTotalLine = meminfo.Split('\n').FirstOrDefault(line => line.StartsWith($"{key}:"));
             if (memTotalLine == null)
@@ -21,10 +20,8 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
                 return null;
 
             return long.Parse(tokenize[1]) * 1000;
-
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, $"Could not read {key} form /proc/meminfo.");
             return null;
         }
@@ -33,10 +30,10 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
     private long _lastCpuTotalTime;
     private long _lastCpuIdleTime;
     private int _lastUsage;
+
     private int? GetCpuUsage()
     {
-        try
-        {
+        try {
             // Read the first line of the /proc/stat file
             var statLine = File.ReadAllLines("/proc/stat")[0];
 
@@ -66,13 +63,11 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
             var usage = 100.0 * (lapTotalTime - lapIdleTime) / lapTotalTime;
 
             _lastCpuIdleTime = idleTime;
-            _lastCpuTotalTime = totalTime; 
+            _lastCpuTotalTime = totalTime;
             _lastUsage = (int)usage;
             return (int)usage;
-
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not read CPU usage form /proc/stat.");
             return null;
         }
@@ -80,8 +75,7 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
 
     public SystemInfo GetSystemInfo()
     {
-        return new SystemInfo
-        {
+        return new SystemInfo {
             OsInfo = GetOperatingSystemInfo(),
             TotalMemory = GetMemInfoValue("MemTotal"),
             AvailableMemory = GetMemInfoValue("MemAvailable"),
@@ -93,8 +87,7 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
     public string GetOperatingSystemInfo()
     {
         string? prettyName = null;
-        if (File.Exists("/etc/os-release"))
-        {
+        if (File.Exists("/etc/os-release")) {
             var items = File
                 .ReadAllLines("/etc/os-release")
                 .Select(line => line.Split('='))

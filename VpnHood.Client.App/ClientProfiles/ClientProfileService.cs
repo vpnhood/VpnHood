@@ -39,7 +39,8 @@ public class ClientProfileService
 
     public Token GetToken(string tokenId)
     {
-        var clientProfile = FindByTokenId(tokenId) ?? throw new NotExistsException($"TokenId does not exist. TokenId: {tokenId}");
+        var clientProfile = FindByTokenId(tokenId) ??
+                            throw new NotExistsException($"TokenId does not exist. TokenId: {tokenId}");
         return clientProfile.Token;
     }
 
@@ -74,11 +75,11 @@ public class ClientProfileService
     public ClientProfile Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
         var clientProfile = _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
-            ?? throw new NotExistsException("ClientProfile does not exists. ClientProfileId: {clientProfileId}");
+                            ?? throw new NotExistsException(
+                                "ClientProfile does not exists. ClientProfileId: {clientProfileId}");
 
         // update name
-        if (updateParams.ClientProfileName != null)
-        {
+        if (updateParams.ClientProfileName != null) {
             var name = updateParams.ClientProfileName.Value?.Trim();
             if (name == clientProfile.Token.Name?.Trim()) name = null; // set default if the name is same as token name
             if (name?.Length == 0) name = null;
@@ -113,16 +114,14 @@ public class ClientProfileService
 
         // update tokens
         foreach (var clientProfile in _clientProfiles.Where(clientProfile =>
-                     clientProfile.Token.TokenId == token.TokenId))
-        {
+                     clientProfile.Token.TokenId == token.TokenId)) {
             if (overwriteNewer || token.IssuedAt >= clientProfile.Token.IssuedAt)
                 clientProfile.Token = token;
         }
 
         // add if it is a new token
         if (_clientProfiles.All(x => x.Token.TokenId != token.TokenId))
-            _clientProfiles.Add(new ClientProfile
-            {
+            _clientProfiles.Add(new ClientProfile {
                 ClientProfileId = Guid.NewGuid(),
                 ClientProfileName = token.Name,
                 Token = token,
@@ -141,10 +140,12 @@ public class ClientProfileService
     {
         // insert & update new built-in access tokens
         var accessTokens = accessKeys.Select(Token.FromAccessKey);
-        var clientProfiles = accessTokens.Select(token => ImportAccessToken(token, overwriteNewer: false, allowOverwriteBuiltIn: true, isBuiltIn: true));
+        var clientProfiles = accessTokens.Select(token =>
+            ImportAccessToken(token, overwriteNewer: false, allowOverwriteBuiltIn: true, isBuiltIn: true));
 
         // remove old built-in client profiles that does not exist in the new list
-        if (_clientProfiles.RemoveAll(x => x.IsBuiltIn && clientProfiles.All(y => y.ClientProfileId != x.ClientProfileId)) > 0)
+        if (_clientProfiles.RemoveAll(x =>
+                x.IsBuiltIn && clientProfiles.All(y => y.ClientProfileId != x.ClientProfileId)) > 0)
             Save();
 
         return clientProfiles.ToArray();
@@ -152,8 +153,7 @@ public class ClientProfileService
 
     public Token UpdateTokenByAccessKey(Token token, string accessKey)
     {
-        try
-        {
+        try {
             var newToken = Token.FromAccessKey(accessKey);
             if (VhUtil.JsonEquals(token, newToken))
                 return token;
@@ -166,12 +166,10 @@ public class ClientProfileService
             VhLogger.Instance.LogInformation("ServerToken has been updated.");
             return newToken;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not update token from the given access-key.");
             return token;
         }
-
     }
 
     public async Task<bool> UpdateServerTokenByUrl(Token token)
@@ -180,16 +178,16 @@ public class ClientProfileService
             return false;
 
         // update token
-        VhLogger.Instance.LogInformation("Trying to get a new ServerToken from url. Url: {Url}", VhLogger.FormatHostName(token.ServerToken.Url));
-        try
-        {
+        VhLogger.Instance.LogInformation("Trying to get a new ServerToken from url. Url: {Url}",
+            VhLogger.FormatHostName(token.ServerToken.Url));
+        try {
             using var client = new HttpClient();
-            var encryptedServerToken = await VhUtil.RunTask(client.GetStringAsync(token.ServerToken.Url), TimeSpan.FromSeconds(20)).VhConfigureAwait();
+            var encryptedServerToken = await VhUtil
+                .RunTask(client.GetStringAsync(token.ServerToken.Url), TimeSpan.FromSeconds(20)).VhConfigureAwait();
             var newServerToken = ServerToken.Decrypt(token.ServerToken.Secret, encryptedServerToken);
 
             // return older only if token body is same and created time is newer
-            if (!token.ServerToken.IsTokenUpdated(newServerToken))
-            {
+            if (!token.ServerToken.IsTokenUpdated(newServerToken)) {
                 VhLogger.Instance.LogInformation("The remote ServerToken is not new and has not been updated.");
                 return false;
             }
@@ -201,8 +199,7 @@ public class ClientProfileService
             VhLogger.Instance.LogInformation("ServerToken has been updated from url.");
             return true;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not update ServerToken from url.");
             return false;
         }
@@ -216,20 +213,17 @@ public class ClientProfileService
 
     private IEnumerable<ClientProfile> Load()
     {
-        try
-        {
+        try {
             var json = File.ReadAllText(ClientProfilesFilePath);
             return VhUtil.JsonDeserialize<ClientProfile[]>(json);
         }
-        catch
-        {
+        catch {
             return [];
         }
     }
 
     internal void UpdateFromAccount(string[] accessKeys)
     {
-
         var accessTokens = accessKeys.Select(Token.FromAccessKey);
 
         // Remove client profiles that does not exist in the account

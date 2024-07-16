@@ -13,9 +13,12 @@ internal static class HttpResponseBuilder
         httpResponse.Headers.Date = DateTimeOffset.Now;
         httpResponse.Content.Headers.ContentLength = context.Length;
 
-        var response = $"HTTP/{httpResponse.Version.Major}.{httpResponse.Version.Minor} {(int)httpResponse.StatusCode} {httpResponse.ReasonPhrase}\r\n";
-        response = httpResponse.Headers.Aggregate(response, (current, header) => current + $"{header.Key}: {string.Join(", ", header.Value)}\r\n");
-        response = httpResponse.Content.Headers.Aggregate(response, (current, header) => current + $"{header.Key}: {string.Join(", ", header.Value)}\r\n");
+        var response =
+            $"HTTP/{httpResponse.Version.Major}.{httpResponse.Version.Minor} {(int)httpResponse.StatusCode} {httpResponse.ReasonPhrase}\r\n";
+        response = httpResponse.Headers.Aggregate(response,
+            (current, header) => current + $"{header.Key}: {string.Join(", ", header.Value)}\r\n");
+        response = httpResponse.Content.Headers.Aggregate(response,
+            (current, header) => current + $"{header.Key}: {string.Join(", ", header.Value)}\r\n");
         response += "\r\n" + context;
         return Encoding.UTF8.GetBytes(response);
     }

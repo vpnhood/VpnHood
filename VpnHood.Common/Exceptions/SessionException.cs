@@ -12,8 +12,7 @@ public class SessionException : Exception
 
     public SessionException(SessionErrorCode errorCode, string? message = null) : base(message)
     {
-        SessionResponse = new SessionResponse
-        {
+        SessionResponse = new SessionResponse {
             ErrorCode = errorCode,
             ErrorMessage = message
         };

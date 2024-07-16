@@ -13,21 +13,18 @@ public class NatItemEx : NatItem
 
         DestinationAddress = ipPacket.DestinationAddress;
 
-        switch (ipPacket.Protocol)
-        {
-            case ProtocolType.Tcp:
-                {
-                    var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
-                    DestinationPort = tcpPacket.DestinationPort;
-                    break;
-                }
+        switch (ipPacket.Protocol) {
+            case ProtocolType.Tcp: {
+                var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                DestinationPort = tcpPacket.DestinationPort;
+                break;
+            }
 
-            case ProtocolType.Udp:
-                {
-                    var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-                    DestinationPort = udpPacket.DestinationPort;
-                    break;
-                }
+            case ProtocolType.Udp: {
+                var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+                DestinationPort = udpPacket.DestinationPort;
+                break;
+            }
 
             default:
                 throw new NotSupportedException($"{ipPacket.Protocol} is not yet supported by this NAT!");

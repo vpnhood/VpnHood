@@ -14,10 +14,9 @@ public class UdpEchoServer
     {
         serverEp ??= new IPEndPoint(IPAddress.Loopback, 59090);
         _udpClient = new UdpClient(serverEp);
-       
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             _udpClient.Client.IOControl(-1744830452, [0], [0]);
-
     }
 
     public IPEndPoint? LocalEndPoint => (IPEndPoint?)_udpClient.Client.LocalEndPoint;
@@ -26,13 +25,11 @@ public class UdpEchoServer
     {
         Console.WriteLine($"Starting server on {_udpClient.Client.LocalEndPoint}. Waiting for packet...");
 
-        while (true)
-        {
+        while (true) {
             // receiving
             var udpResult = await _udpClient.ReceiveAsync();
             var buffer = udpResult.Buffer;
-            if (buffer.Length < 8)
-            {
+            if (buffer.Length < 8) {
                 _receivedSpeedometer.AddFailed();
                 continue;
             }
@@ -41,8 +38,7 @@ public class UdpEchoServer
 
             // saving
             var echoCount = BitConverter.ToInt32(buffer, 4);
-            for (var i = 0; i < echoCount; i++)
-            {
+            for (var i = 0; i < echoCount; i++) {
                 await _udpClient.SendAsync(buffer, buffer.Length, udpResult.RemoteEndPoint);
                 _sendSpeedometer.AddSucceeded(buffer);
             }
@@ -52,13 +48,11 @@ public class UdpEchoServer
 
     public void Start()
     {
-        while (true)
-        {
+        while (true) {
             // receiving
             IPEndPoint? remoteEp = null;
             var buffer = _udpClient.Receive(ref remoteEp);
-            if (buffer.Length < 8)
-            {
+            if (buffer.Length < 8) {
                 _receivedSpeedometer.AddFailed();
                 continue;
             }
@@ -66,8 +60,7 @@ public class UdpEchoServer
             // saving
             _receivedSpeedometer.AddSucceeded(buffer);
             var echoCount = BitConverter.ToInt32(buffer, 4);
-            for (var i = 0; i < echoCount; i++)
-            {
+            for (var i = 0; i < echoCount; i++) {
                 _udpClient.Send(buffer);
                 _sendSpeedometer.AddSucceeded(buffer);
             }

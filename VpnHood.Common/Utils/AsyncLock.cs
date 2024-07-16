@@ -32,8 +32,7 @@ public sealed class AsyncLock
             if (Succeeded)
                 semaphoreSlimEx.Release();
 
-            lock (SemaphoreSlims)
-            {
+            lock (SemaphoreSlims) {
                 semaphoreSlimEx.ReferenceCount--;
                 if (semaphoreSlimEx.ReferenceCount == 0 && name != null)
                     SemaphoreSlims.TryRemove(name, out _);
@@ -58,22 +57,20 @@ public sealed class AsyncLock
         return LockAsync(name, Timeout.InfiniteTimeSpan);
     }
 
-    public static async Task<ILockAsyncResult> LockAsync(string name, TimeSpan timeout, CancellationToken cancellationToken = default)
+    public static async Task<ILockAsyncResult> LockAsync(string name, TimeSpan timeout,
+        CancellationToken cancellationToken = default)
     {
         SemaphoreSlimEx semaphoreSlim;
-        lock (SemaphoreSlims)
-        {
+        lock (SemaphoreSlims) {
             semaphoreSlim = SemaphoreSlims.GetOrAdd(name, _ => new SemaphoreSlimEx(1, 1));
             semaphoreSlim.ReferenceCount++;
         }
 
-        try
-        {
+        try {
             var succeeded = await semaphoreSlim.WaitAsync(timeout, cancellationToken).VhConfigureAwait();
             return new SemaphoreLock(semaphoreSlim, succeeded, name);
         }
-        catch
-        {
+        catch {
             semaphoreSlim.ReferenceCount--;
             throw;
         }

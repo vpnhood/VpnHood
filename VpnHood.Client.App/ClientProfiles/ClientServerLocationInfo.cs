@@ -16,25 +16,21 @@ public class ClientServerLocationInfo : ServerLocationInfo
         var countryCount = new Dictionary<string, int>();
 
         // Count occurrences of each country and region
-        foreach (var locationInfo in locationInfos)
-        {
+        foreach (var locationInfo in locationInfos) {
             if (!countryCount.TryAdd(locationInfo.CountryCode, 1))
                 countryCount[locationInfo.CountryCode]++;
         }
 
         // Add wildcard serverLocations for countries multiple occurrences
         var seenCountries = new HashSet<string>();
-        foreach (var locationInfo in locationInfos)
-        {
+        foreach (var locationInfo in locationInfos) {
             var countryCode = locationInfo.CountryCode;
 
             // Add wildcard selector for country if it has multiple occurrences
             var isMultipleCountry = countryCount[countryCode] > 1;
-            if (!seenCountries.Contains(countryCode))
-            {
+            if (!seenCountries.Contains(countryCode)) {
                 if (isMultipleCountry)
-                    results.Add(new ClientServerLocationInfo
-                    {
+                    results.Add(new ClientServerLocationInfo {
                         CountryCode = locationInfo.CountryCode,
                         RegionName = "*",
                         IsNestedCountry = false,
@@ -43,8 +39,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
                 seenCountries.Add(countryCode);
             }
 
-            results.Add(new ClientServerLocationInfo
-            {
+            results.Add(new ClientServerLocationInfo {
                 CountryCode = locationInfo.CountryCode,
                 RegionName = locationInfo.RegionName,
                 IsNestedCountry = isMultipleCountry,
@@ -54,8 +49,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
 
         // Add auto if there is no item or if there are multiple countries
         if (countryCount.Count > 1)
-            results.Insert(0, new ClientServerLocationInfo
-            {
+            results.Insert(0, new ClientServerLocationInfo {
                 CountryCode = Auto.CountryCode,
                 RegionName = Auto.RegionName,
                 IsNestedCountry = false,

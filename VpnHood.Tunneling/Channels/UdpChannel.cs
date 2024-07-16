@@ -19,7 +19,10 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
     private readonly BufferCryptor _sessionCryptorWriter = new(sessionKey);
     private readonly BufferCryptor _sessionCryptorReader = new(sessionKey);
     private bool _disposed;
-    private readonly long _cryptorPosBase = isServer ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
+
+    private readonly long
+        _cryptorPosBase = isServer ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
+
     private readonly List<IPPacket> _receivedIpPackets = [];
 
     public event EventHandler<ChannelPacketReceivedEventArgs>? PacketReceived;
@@ -30,6 +33,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
     public bool Connected { get; private set; }
     public DateTime LastActivityTime { get; private set; }
     public Traffic Traffic { get; } = new();
+
     public void Start()
     {
         if (_disposed)
@@ -44,8 +48,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
 
     public async Task SendPacket(IList<IPPacket> ipPackets)
     {
-        try
-        {
+        try {
             // this is shared buffer and client, so we need to sync
             // Using multiple UdpClient will not increase performance
             await _semaphore.WaitAsync().VhConfigureAwait();
@@ -54,8 +57,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
 
             // copy packets
             // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < ipPackets.Count; i++)
-            {
+            for (var i = 0; i < ipPackets.Count; i++) {
                 var ipPacket = ipPackets[i];
                 Buffer.BlockCopy(ipPacket.Bytes, 0, _buffer, bufferIndex, ipPacket.TotalLength);
                 bufferIndex += ipPacket.TotalPacketLength;
@@ -63,24 +65,26 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
 
             // encrypt packets
             var sessionCryptoPosition = _cryptorPosBase + Traffic.Sent;
-            _sessionCryptorWriter.Cipher(_buffer, UdpChannelTransmitter.HeaderLength, bufferIndex - UdpChannelTransmitter.HeaderLength, sessionCryptoPosition);
+            _sessionCryptorWriter.Cipher(_buffer, UdpChannelTransmitter.HeaderLength,
+                bufferIndex - UdpChannelTransmitter.HeaderLength, sessionCryptoPosition);
 
             // send buffer
-            if (_lastRemoteEp == null) throw new InvalidOperationException("RemoveEndPoint has not been initialized yet in UdpChannel.");
-            if (_udpChannelTransmitter == null) throw new InvalidOperationException("UdpChannelTransmitter has not been initialized yet in UdpChannel.");
-            var ret = await _udpChannelTransmitter.SendAsync(_lastRemoteEp, sessionId, 
+            if (_lastRemoteEp == null)
+                throw new InvalidOperationException("RemoveEndPoint has not been initialized yet in UdpChannel.");
+            if (_udpChannelTransmitter == null)
+                throw new InvalidOperationException(
+                    "UdpChannelTransmitter has not been initialized yet in UdpChannel.");
+            var ret = await _udpChannelTransmitter.SendAsync(_lastRemoteEp, sessionId,
                 sessionCryptoPosition, _buffer, bufferIndex, protocolVersion).VhConfigureAwait();
 
             Traffic.Sent += ret;
             LastActivityTime = FastDateTime.Now;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             if (IsInvalidState(ex))
                 await DisposeAsync().VhConfigureAwait();
         }
-        finally
-        {
+        finally {
             _semaphore.Release();
         }
     }
@@ -96,10 +100,8 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
         _sessionCryptorReader.Cipher(buffer, bufferIndex, buffer.Length - bufferIndex, cryptorPosition);
 
         // read all packets
-        try
-        {
-            while (bufferIndex < buffer.Length)
-            {
+        try {
+            while (bufferIndex < buffer.Length) {
                 var ipPacket = PacketUtil.ReadNextPacket(buffer, ref bufferIndex);
                 Traffic.Received += ipPacket.TotalLength;
                 _receivedIpPackets.Add(ipPacket);
@@ -108,17 +110,17 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
             PacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(_receivedIpPackets.ToArray(), this));
             LastActivityTime = FastDateTime.Now;
             _receivedIpPackets.Clear();
-
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(GeneralEventId.Udp, ex, "Error in processing packets.");
         }
     }
 
     private bool IsInvalidState(Exception ex)
     {
-        return _disposed || ex is ObjectDisposedException or SocketException { SocketErrorCode: SocketError.InvalidArgument };
+        return _disposed || ex is ObjectDisposedException or SocketException {
+            SocketErrorCode: SocketError.InvalidArgument
+        };
     }
 
     public ValueTask DisposeAsync(bool graceful)

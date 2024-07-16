@@ -24,8 +24,7 @@ public static class StreamUtil
     public static bool ReadWaitForFill(Stream stream, byte[] buffer, int startIndex, int count)
     {
         var totalRead = 0;
-        while (totalRead != count)
-        {
+        while (totalRead != count) {
             var read = stream.Read(buffer, startIndex + totalRead, count - totalRead);
             totalRead += read;
             if (read == 0)
@@ -39,8 +38,7 @@ public static class StreamUtil
         CancellationToken cancellationToken)
     {
         var totalRead = 0;
-        while (totalRead != count)
-        {
+        while (totalRead != count) {
             var read = await stream.ReadAsync(buffer, startIndex + totalRead, count - totalRead,
                 cancellationToken).VhConfigureAwait();
             totalRead += read;
@@ -75,7 +73,8 @@ public static class StreamUtil
         return ret;
     }
 
-    public static async Task<T> ReadJsonAsync<T>(Stream stream, CancellationToken cancellationToken, int maxLength = 0xFFFF)
+    public static async Task<T> ReadJsonAsync<T>(Stream stream, CancellationToken cancellationToken,
+        int maxLength = 0xFFFF)
     {
         var message = await ReadMessage(stream, cancellationToken, maxLength).VhConfigureAwait();
         var ret = JsonSerializer.Deserialize<T>(message) ?? throw new Exception("Could not read Message!");

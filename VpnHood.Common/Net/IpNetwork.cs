@@ -41,8 +41,8 @@ public class IpNetwork
     public BigInteger Total => _lastIpAddressValue - _firstIpAddressValue + 1;
 
     public static IpNetwork AllV4 { get; } = Parse("0.0.0.0/0");
-    public static IpNetwork[] LocalNetworksV4 { get; } =
-    [
+
+    public static IpNetwork[] LocalNetworksV4 { get; } = [
         Parse("10.0.0.0/8"),
         Parse("172.16.0.0/12"),
         Parse("192.168.0.0/16"),
@@ -74,22 +74,20 @@ public class IpNetwork
         // mask == 1 << len
         BigInteger mask = 1;
         var len = 0;
-        while (first + mask <= last)
-        {
-            if ((first & mask) != 0)
-            {
+        while (first + mask <= last) {
+            if ((first & mask) != 0) {
                 yield return new IpNetwork(IPAddressUtil.FromBigInteger(first, addressFamily), bits - len);
                 first += mask;
             }
+
             mask <<= 1;
             len++;
         }
-        while (first < last)
-        {
+
+        while (first < last) {
             mask >>= 1;
             len--;
-            if ((last & mask) != 0)
-            {
+            if ((last & mask) != 0) {
                 yield return new IpNetwork(IPAddressUtil.FromBigInteger(first, addressFamily), bits - len);
                 first += mask;
             }
@@ -113,13 +111,11 @@ public class IpNetwork
 
     public static IpNetwork Parse(string value)
     {
-        try
-        {
+        try {
             var parts = value.Split('/');
             return new IpNetwork(IPAddress.Parse(parts[0]), int.Parse(parts[1]));
         }
-        catch
-        {
+        catch {
             throw new FormatException($"Could not parse IPNetwork from: {value}.");
         }
     }

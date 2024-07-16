@@ -17,7 +17,6 @@ namespace VpnHood.Client.App.Droid.Connect;
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |
                            ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale |
                            ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
-
 [IntentFilter([Intent.ActionMain], Categories = [Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher])]
 [IntentFilter([TileService.ActionQsTilePreferences])]
 
@@ -26,8 +25,7 @@ public class MainActivity : AndroidAppMainActivity
 {
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
-        return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions
-        {
+        return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions {
             DefaultSpaPort = AppSettings.Instance.DefaultSpaPort,
             ListenToAllIps = AppSettings.Instance.ListenToAllIps // if true it will cause crash in network change
         });

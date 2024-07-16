@@ -20,8 +20,7 @@ public class StreamLogger(Stream stream, bool includeScopes = true, bool leaveOp
 
     public override void Dispose()
     {
-        lock (_lock)
-        {
+        lock (_lock) {
             if (_streamWriter == null)
                 return;
 

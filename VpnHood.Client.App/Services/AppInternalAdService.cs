@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Globalization;
+﻿using System.Globalization;
+using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.Device;
@@ -38,13 +38,11 @@ internal class AppInternalAdService(IAppAdService[] adServices, AppAdOptions adO
             .Where(x => countryCode is null || x.IsCountrySupported(countryCode));
 
         var noFillAdNetworks = new List<string>();
-        foreach (var adService in filteredAdServices)
-        {
+        foreach (var adService in filteredAdServices) {
             cancellationToken.ThrowIfCancellationRequested();
 
             // find first successful ad network
-            try
-            {
+            try {
                 if (noFillAdNetworks.Contains(adService.NetworkName))
                     continue;
 
@@ -56,18 +54,15 @@ internal class AppInternalAdService(IAppAdService[] adServices, AppAdOptions adO
                 LoadedAdService = adService;
                 return;
             }
-            catch (NoFillAdException)
-            {
+            catch (NoFillAdException) {
                 noFillAdNetworks.Add(adService.NetworkName);
             }
-            catch (Exception ex) when (ex is UiContextNotAvailableException || ActiveUiContext.Context != uiContext)
-            {
+            catch (Exception ex) when (ex is UiContextNotAvailableException || ActiveUiContext.Context != uiContext) {
                 throw new ShowAdNoUiException();
             }
 
             // do not catch if parent cancel the operation
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 VhLogger.Instance.LogWarning(ex, "Could not load any ad. Network: {Network}.", adService.NetworkName);
             }
         }
@@ -81,23 +76,20 @@ internal class AppInternalAdService(IAppAdService[] adServices, AppAdOptions adO
             throw new LoadAdException("Could not load any ad.");
 
         // show the ad
-        try
-        {
+        try {
             await LoadedAdService.ShowAd(uiContext, customData, cancellationToken).VhConfigureAwait();
             await Task.Delay(adOptions.ShowAdPostDelay, cancellationToken); //wait for finishing trackers
             if (ActiveUiContext.Context != uiContext) // some ad provider may not raise exception on minimize
                 throw new ShowAdNoUiException();
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             if (ActiveUiContext.Context != uiContext)
                 throw new ShowAdNoUiException();
 
             // let's treat unknown error same as LoadException in this version
             throw new LoadAdException("Could not show any ad.", ex);
         }
-        finally
-        {
+        finally {
             LoadedAdService = null;
         }
     }
@@ -105,7 +97,11 @@ internal class AppInternalAdService(IAppAdService[] adServices, AppAdOptions adO
     public static string GetCountryName(string? countryCode)
     {
         if (string.IsNullOrEmpty(countryCode)) return "n/a";
-        try { return new RegionInfo(countryCode).Name; }
-        catch { return countryCode; }
+        try {
+            return new RegionInfo(countryCode).Name;
+        }
+        catch {
+            return countryCode;
+        }
     }
 }

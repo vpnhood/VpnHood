@@ -9,17 +9,23 @@ public class ContextMenu : IDisposable
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetCursorPos(out PointFx lpPoint);
+
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
+
     [DllImport("user32.dll")]
     private static extern IntPtr CreatePopupMenu();
+
     [DllImport("user32.dll")]
     private static extern bool DestroyMenu(IntPtr hMenu);
+
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     private static extern bool AppendMenu(IntPtr hMenu, MenuFlags uFlags, uint idNewItem, string lpNewItem);
+
     [DllImport("user32.dll")]
     private static extern bool TrackPopupMenuEx(IntPtr hMenu, uint fuFlags, int x, int y, IntPtr hWnd, IntPtr tpm);
+
     [DllImport("user32.dll")]
     private static extern int EnableMenuItem(IntPtr hMenu, uint uIdEnableItem, uint uEnable);
 
@@ -28,6 +34,7 @@ public class ContextMenu : IDisposable
         public short Fraction;
         public short Value;
     }
+
     public struct PointFx
     {
         public Fixed X;
@@ -81,6 +88,7 @@ public class ContextMenu : IDisposable
     }
 
     private readonly List<EventHandler> _eventHandlers = [];
+
     public int AddMenuItem(string text, EventHandler onClick)
     {
         _eventHandlers.Add(onClick);
@@ -107,8 +115,7 @@ public class ContextMenu : IDisposable
     protected virtual void Dispose(bool disposing)
     {
         if (_disposedValue) return;
-        if (disposing)
-        {
+        if (disposing) {
             // dispose managed state (managed objects).
             _window.Dispose();
         }

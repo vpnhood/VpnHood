@@ -8,6 +8,7 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
+
 public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 {
     private RewardedAd? _loadedAd;
@@ -25,7 +26,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
     public bool IsCountrySupported(string countryCode)
     {
         // Make sure it is upper case
-        countryCode = countryCode.Trim().ToUpper(); 
+        countryCode = countryCode.Trim().ToUpper();
 
         // these countries are not supported at all
         return countryCode != "CN" && countryCode != "IR";
@@ -68,8 +69,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
         if (_loadedAd == null)
             throw new ShowAdException($"The {AdType} has not been loaded.");
 
-        try
-        {
+        try {
             // create ad custom data
             var verificationOptions = new ServerSideVerificationOptions.Builder()
                 .SetCustomData(customData ?? "")
@@ -78,8 +78,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
             var fullScreenContentCallback = new MyFullScreenContentCallback();
             var userEarnedRewardListener = new MyOnUserEarnedRewardListener();
 
-            activity.RunOnUiThread(() =>
-            {
+            activity.RunOnUiThread(() => {
                 _loadedAd.SetServerSideVerificationOptions(verificationOptions);
                 _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
                 _loadedAd.Show(activity, userEarnedRewardListener);
@@ -96,8 +95,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
             if (fullScreenContentCallback.DismissedTask.IsFaulted)
                 throw fullScreenContentCallback.DismissedTask.Exception;
         }
-        finally
-        {
+        finally {
             _loadedAd = null;
             AdLoadedTime = null;
         }
@@ -138,6 +136,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
             _dismissedCompletionSource.TrySetException(new ShowAdException(adError.Message));
         }
     }
+
     private class MyOnUserEarnedRewardListener : Java.Lang.Object, IOnUserEarnedRewardListener
     {
         private readonly TaskCompletionSource<IRewardItem> _earnedRewardCompletionSource = new();

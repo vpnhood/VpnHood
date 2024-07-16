@@ -47,8 +47,7 @@ public class AppLogService : IDisposable
             removeLastFile: removeLastFile);
 
         logger = new SyncLogger(logger);
-        logger = new FilterLogger(logger, eventId =>
-        {
+        logger = new FilterLogger(logger, eventId => {
             if (logSettings.LogEventNames.Contains(eventId.Name, StringComparer.OrdinalIgnoreCase))
                 return true;
 
@@ -67,14 +66,12 @@ public class AppLogService : IDisposable
         if (removeLastFile && File.Exists(LogFilePath))
             File.Delete(LogFilePath);
 
-        using var loggerFactory = LoggerFactory.Create(builder =>
-        {
+        using var loggerFactory = LoggerFactory.Create(builder => {
             // console
             if (logToConsole) // AddSimpleConsole does not support event id
                 builder.AddProvider(new VhConsoleLogger(includeScopes: true, singleLine: _singleLineConsole));
 
-            if (logToFile)
-            {
+            if (logToFile) {
                 var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
                 _streamLogger = new StreamLogger(fileStream);
                 builder.AddProvider(_streamLogger);

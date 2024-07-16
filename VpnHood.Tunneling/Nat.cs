@@ -19,10 +19,8 @@ public class Nat(bool isDestinationSensitive) : IDisposable
     public TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(2);
     public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
-    public int ItemCount
-    {
-        get
-        {
+    public int ItemCount {
+        get {
             lock (_lockObject)
                 return _map.Count;
         }
@@ -69,8 +67,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
     private void Remove(NatItem natItem)
     {
         NatItem natItem2;
-        lock (_lockObject)
-        {
+        lock (_lockObject) {
             _mapR.Remove(natItem, out natItem2);
             _map.Remove((natItem.IpVersion, natItem.Protocol, natItem.NatId), out _);
         }
@@ -78,21 +75,19 @@ public class Nat(bool isDestinationSensitive) : IDisposable
         VhLogger.Instance.LogTrace(GeneralEventId.Nat, $"NatItem has been removed. {natItem2}");
         NatItemRemoved?.Invoke(this, new NatEventArgs(natItem2));
     }
+
     private ushort GetFreeNatId(IPVersion ipVersion, ProtocolType protocol)
     {
         var key = (ipVersion, protocol);
 
         // find last value
-        lock (_lockObject)
-        {
+        lock (_lockObject) {
             if (!_lastNatIds.TryGetValue(key, out var lastNatId)) lastNatId = 8000;
             if (lastNatId > 0xFFFE) lastNatId = 0;
 
-            for (var i = (ushort)(lastNatId + 1); i != lastNatId; i++)
-            {
+            for (var i = (ushort)(lastNatId + 1); i != lastNatId; i++) {
                 if (i == 0) i++;
-                if (!_map.ContainsKey((ipVersion, protocol, i)))
-                {
+                if (!_map.ContainsKey((ipVersion, protocol, i))) {
                     _lastNatIds[key] = i;
                     return i;
                 }
@@ -108,8 +103,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
         if (_disposed) throw new ObjectDisposedException(nameof(Nat));
 
         var natItem = CreateNatItemFromPacket(ipPacket);
-        lock (_lockObject)
-        {
+        lock (_lockObject) {
             if (!_mapR.TryGetValue(natItem, out var natItem2))
                 return null;
 
@@ -120,8 +114,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
 
     public NatItem GetOrAdd(IPPacket ipPacket)
     {
-        lock (_lockObject)
-        {
+        lock (_lockObject) {
             return Get(ipPacket) ?? Add(ipPacket);
         }
     }
@@ -143,20 +136,16 @@ public class Nat(bool isDestinationSensitive) : IDisposable
         // try to find previous mapping
         var natItem = CreateNatItemFromPacket(ipPacket);
         natItem.NatId = natId;
-        try
-        {
-            lock (_lockObject)
-            {
+        try {
+            lock (_lockObject) {
                 if (_disposed) throw new ObjectDisposedException(nameof(Nat));
                 _map.Add((natItem.IpVersion, natItem.Protocol, natItem.NatId), natItem);
                 _mapR.Add(natItem, natItem); //sounds crazy! because GetHashCode and Equals don't include all members
             }
         }
-        catch (ArgumentException) when (overwrite)
-        {
+        catch (ArgumentException) when (overwrite) {
             Remove(natItem);
-            lock (_lockObject)
-            {
+            lock (_lockObject) {
                 if (_disposed) throw new ObjectDisposedException(nameof(Nat));
                 _map.Add((natItem.IpVersion, natItem.Protocol, natItem.NatId), natItem);
                 _mapR.Add(natItem, natItem); //sounds crazy! because GetHashCode and Equals don't include all members
@@ -169,17 +158,16 @@ public class Nat(bool isDestinationSensitive) : IDisposable
 
     public void RemoveOldest(ProtocolType protocol)
     {
-        lock (_lockObject)
-        {
+        lock (_lockObject) {
             var oldest = _map.Values.FirstOrDefault();
             if (oldest == null)
                 return;
 
-            foreach (var item in _map.Values.Where(x => x.Protocol == protocol))
-            {
+            foreach (var item in _map.Values.Where(x => x.Protocol == protocol)) {
                 if (item.AccessTime < oldest.AccessTime)
                     oldest = item;
             }
+
             Remove(oldest);
         }
     }
@@ -189,8 +177,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
     {
         if (_disposed) throw new ObjectDisposedException(nameof(Nat));
 
-        lock (_lockObject)
-        {
+        lock (_lockObject) {
             var natKey = (ipVersion, protocol, id);
             if (!_map.TryGetValue(natKey, out var natItem))
                 return null;
@@ -202,8 +189,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
 
     public void Dispose()
     {
-        lock (_lockObject)
-        {
+        lock (_lockObject) {
             if (_disposed) return;
             _disposed = true;
         }

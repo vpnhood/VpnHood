@@ -12,12 +12,10 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container.
-        builder.Services.AddSwaggerDocument(configure =>
-        {
+        builder.Services.AddSwaggerDocument(configure => {
             configure.Title = "VpnHood.Client.Api";
             configure.RequireParametersWithoutDefault = true;
-            configure.SchemaSettings.TypeMappers = new List<ITypeMapper>
-            {
+            configure.SchemaSettings.TypeMappers = new List<ITypeMapper> {
                 new PrimitiveTypeMapper(typeof(IPAddress), s => { s.Type = JsonObjectType.String; }),
                 new PrimitiveTypeMapper(typeof(IPEndPoint), s => { s.Type = JsonObjectType.String; }),
                 new PrimitiveTypeMapper(typeof(Version), s => { s.Type = JsonObjectType.String; }),

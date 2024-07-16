@@ -8,7 +8,8 @@ using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Server;
 
-public class Http01ChallengeService(IPAddress[] ipAddresses, string token, string keyAuthorization, TimeSpan timeout) : IDisposable
+public class Http01ChallengeService(IPAddress[] ipAddresses, string token, string keyAuthorization, TimeSpan timeout)
+    : IDisposable
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new(timeout);
     private readonly List<TcpListener> _tcpListeners = [];
@@ -20,11 +21,9 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
         if (IsStarted) throw new InvalidOperationException("The HTTP-01 Challenge Service has already been started.");
         if (_disposed) throw new ObjectDisposedException(nameof(Http01ChallengeService));
 
-        try
-        {
+        try {
             IsStarted = true;
-            foreach (var ipAddress in ipAddresses)
-            {
+            foreach (var ipAddress in ipAddresses) {
                 var ipEndPoint = new IPEndPoint(ipAddress, 80);
                 VhLogger.Instance.LogInformation("HTTP-01 Challenge Listener starting on {EndPoint}", ipEndPoint);
 
@@ -34,8 +33,7 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
                 _ = AcceptTcpClient(listener, _cancellationTokenSource.Token);
             }
         }
-        catch
-        {
+        catch {
             Stop();
             throw;
         }
@@ -43,25 +41,23 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
 
     private async Task AcceptTcpClient(TcpListener tcpListener, CancellationToken cancellationToken)
     {
-        while (IsStarted && !cancellationToken.IsCancellationRequested)
-        {
+        while (IsStarted && !cancellationToken.IsCancellationRequested) {
             using var client = await tcpListener.AcceptTcpClientAsync().VhConfigureAwait();
-            try
-            {
+            try {
                 await HandleRequest(client, token, keyAuthorization, cancellationToken).VhConfigureAwait();
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 VhLogger.Instance.LogError(GeneralEventId.DnsChallenge, ex, "Could not process the HTTP-01 challenge.");
             }
         }
     }
 
-    private static async Task HandleRequest(TcpClient client, string token, string keyAuthorization, CancellationToken cancellationToken)
+    private static async Task HandleRequest(TcpClient client, string token, string keyAuthorization,
+        CancellationToken cancellationToken)
     {
         await using var stream = client.GetStream();
         var headers = await HttpUtil.ParseHeadersAsync(stream, cancellationToken).VhConfigureAwait()
-            ?? throw new Exception("Connection has been closed before receiving any request.");
+                      ?? throw new Exception("Connection has been closed before receiving any request.");
 
         if (!headers.Any()) return;
         var request = headers[HttpUtil.HttpRequestKey];
@@ -69,7 +65,8 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
         var expectedUrl = $"/.well-known/acme-challenge/{token}";
         var isMatched = requestParts.Length > 1 && requestParts[0] == "GET" && requestParts[1] == expectedUrl;
 
-        VhLogger.Instance.LogInformation(GeneralEventId.DnsChallenge, "HTTP Challenge. Request: {request}, IsMatched: {isMatched}", request, isMatched);
+        VhLogger.Instance.LogInformation(GeneralEventId.DnsChallenge,
+            "HTTP Challenge. Request: {request}, IsMatched: {isMatched}", request, isMatched);
 
         var response = (isMatched)
             ? HttpResponseBuilder.Http01(keyAuthorization)
@@ -85,15 +82,13 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
         if (!IsStarted || _disposed)
             return;
 
-        foreach (var listener in _tcpListeners)
-        {
-            try
-            {
+        foreach (var listener in _tcpListeners) {
+            try {
                 listener.Stop();
             }
-            catch (Exception ex)
-            {
-                VhLogger.Instance.LogError(ex, "Could not stop HTTP-01 Challenge Listener. {EndPoint}", listener.LocalEndpoint);
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "Could not stop HTTP-01 Challenge Listener. {EndPoint}",
+                    listener.LocalEndpoint);
             }
         }
 

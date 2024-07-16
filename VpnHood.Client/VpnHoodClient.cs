@@ -27,8 +27,7 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client;
 
-public class VpnHoodClient : IDisposable, IAsyncDisposable
-{
+public class VpnHoodClient : IAsyncDisposable {
     private bool _disposed;
     private readonly bool _autoDisposePacketCapture;
     private readonly CancellationTokenSource _cancellationTokenSource;
@@ -118,7 +117,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _useUdpChannel = options.UseUdpChannel;
         _adProvider = options.AdProvider;
         _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken,
-            serverLocation:  options.ServerLocation,
+            serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
             tracker: options.AllowEndPointTracker ? options.Tracker : null);
 
@@ -158,34 +157,33 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 #endif
     }
 
-    public IPAddress[] DnsServers
-    {
+    public IPAddress[] DnsServers {
         get => _dnsServers;
-        private set
-        {
+        private set {
             _dnsServersIpV4 = value.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
             _dnsServersIpV6 = value.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
             _dnsServers = value;
         }
     }
 
-    public ClientState State
-    {
+    public ClientState State {
         get => _state;
-        private set
-        {
+        private set {
             if (_state == value) return;
             _state = value; //must set before raising the event; 
             VhLogger.Instance.LogInformation("Client state is changed. NewState: {NewState}", State);
-            StateChanged?.Invoke(this, EventArgs.Empty);
+            try {
+                StateChanged?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogWarning(ex, "Could not fire client's StateChanged.");
+            }
         }
     }
 
-    public bool UseUdpChannel
-    {
+    public bool UseUdpChannel {
         get => _useUdpChannel;
-        set
-        {
+        set {
             if (_useUdpChannel == value) return;
             _useUdpChannel = value;
             _ = ManageDatagramChannels(_cancellationTokenSource.Token);
@@ -249,11 +247,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         SessionStatus = new SessionStatus();
 
         // Connect
-        try
-        {
+        try {
             // Init hostEndPoint
-            var endPointInfo = new ConnectorEndPointInfo
-            {
+            var endPointInfo = new ConnectorEndPointInfo {
                 HostName = Token.ServerToken.HostName,
                 TcpEndPoint = await _serverFinder.FindBestServerAsync(cancellationToken).VhConfigureAwait(),
                 CertificateHash = Token.ServerToken.CertificateHash
@@ -281,8 +277,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             State = ClientState.Connected;
             _initConnectedTime = DateTime.UtcNow;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             // ReSharper disable once DisposeOnUsingVariable
             // clear before start new async task
             scope?.Dispose();
@@ -329,8 +324,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // manually manage DNS reply if DNS does not supported by _packetCapture
         if (!_packetCapture.IsDnsServersSupported)
             // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < e.IpPackets.Length; i++)
-            {
+            for (var i = 0; i < e.IpPackets.Length; i++) {
                 var ipPacket = e.IpPackets[i];
                 UpdateDnsRequest(ipPacket, false);
             }
@@ -345,8 +339,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (_disposed || _initConnectedTime is null)
             return;
 
-        try
-        {
+        try {
             lock (_sendingPackets) // this method should not be called in multi-thread, if so we need to allocate the list per call
             {
                 _sendingPackets.Clear(); // prevent reallocation in this intensive event
@@ -357,8 +350,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 var droppedPackets = _sendingPackets.DroppedPackets;
 
                 // ReSharper disable once ForCanBeConvertedToForeach
-                for (var i = 0; i < e.IpPackets.Count; i++)
-                {
+                for (var i = 0; i < e.IpPackets.Count; i++) {
                     var ipPacket = e.IpPackets[i];
                     if (_disposed) return;
                     var isIpV6 = ipPacket.DestinationAddress.AddressFamily == AddressFamily.InterNetworkV6;
@@ -366,15 +358,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     var isDnsPacket = udpPacket?.DestinationPort == 53;
 
                     // DNS packet must go through tunnel even if it is not in range
-                    if (isDnsPacket)
-                    {
+                    if (isDnsPacket) {
                         // Drop IPv6 if not support
-                        if (isIpV6 && !IsIpV6SupportedByServer)
-                        {
+                        if (isIpV6 && !IsIpV6SupportedByServer) {
                             droppedPackets.Add(ipPacket);
                         }
-                        else
-                        {
+                        else {
                             if (!_packetCapture.IsDnsServersSupported)
                                 UpdateDnsRequest(ipPacket, true);
 
@@ -382,8 +371,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                         }
                     }
 
-                    else if (_packetCapture.CanSendPacketToOutbound)
-                    {
+                    else if (_packetCapture.CanSendPacketToOutbound) {
                         if (!IsInIpRange(ipPacket.DestinationAddress))
                             passthruPackets.Add(ipPacket);
 
@@ -407,8 +395,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                         else
                             droppedPackets.Add(ipPacket);
                     }
-                    else
-                    {
+                    else {
                         // Drop IPv6 if not support
                         if (isIpV6 && !IsIpV6SupportedByServer)
                             droppedPackets.Add(ipPacket);
@@ -425,8 +412,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                             tunnelPackets.Add(ipPacket);
 
                         // Udp
-                        else if (ipPacket.Protocol == ProtocolType.Udp && !DropUdpPackets)
-                        {
+                        else if (ipPacket.Protocol == ProtocolType.Udp && !DropUdpPackets) {
                             if (IsInIpRange(ipPacket.DestinationAddress)) //todo add InInProcess
                                 tunnelPackets.Add(ipPacket);
                             else
@@ -439,8 +425,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 }
 
                 // Stop tunnel traffics if the client is paused and unpause after AutoPauseTimeout
-                if (_autoWaitTime != null)
-                {
+                if (_autoWaitTime != null) {
                     if (FastDateTime.Now - _autoWaitTime.Value < AutoWaitTimeout)
                         tunnelPackets.Clear();
                     else
@@ -459,8 +444,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (_autoWaitTime == null && State == ClientState.Waiting)
                 State = ClientState.Connecting;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not process the captured packets.");
         }
     }
@@ -468,26 +452,22 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private static bool IsIcmpControlMessage(IPPacket ipPacket)
     {
         // IPv4
-        if (ipPacket is { Version: IPVersion.IPv4, Protocol: ProtocolType.Icmp })
-        {
+        if (ipPacket is { Version: IPVersion.IPv4, Protocol: ProtocolType.Icmp }) {
             var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
             return icmpPacket.TypeCode != IcmpV4TypeCode.EchoRequest; // drop all other Icmp but echo
         }
 
         // IPv6
-        if (ipPacket is { Version: IPVersion.IPv6, Protocol: ProtocolType.IcmpV6 })
-        {
+        if (ipPacket is { Version: IPVersion.IPv6, Protocol: ProtocolType.IcmpV6 }) {
             var icmpPacket = ipPacket.Extract<IcmpV6Packet>();
             if (icmpPacket.Type == IcmpV6Type.EchoRequest)
                 return false;
 
-            if (icmpPacket.Type == IcmpV6Type.NeighborSolicitation)
-            {
+            if (icmpPacket.Type == IcmpV6Type.NeighborSolicitation) {
                 //_packetCapture.SendPacketToInbound(PacketUtil.CreateIcmpV6NeighborAdvertisement(ipPacket));
             }
 
-            else if (icmpPacket.Type == IcmpV6Type.RouterSolicitation)
-            {
+            else if (icmpPacket.Type == IcmpV6Type.RouterSolicitation) {
                 //_packetCapture.SendPacketToInbound(PacketUtil.CreateIcmpV6RouterAdvertisement(ipPacket));
             }
 
@@ -517,8 +497,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // cache the result
         // we don't need to keep that much ips in the cache
-        if (_includeIps.Count > 0xFFFF)
-        {
+        if (_includeIps.Count > 0xFFFF) {
             VhLogger.Instance.LogInformation("Clearing IP filter cache!");
             _includeIps.Clear();
         }
@@ -535,16 +514,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // find dns server
         var dnsServers = ipPacket.Version == IPVersion.IPv4 ? _dnsServersIpV4 : _dnsServersIpV6;
-        if (dnsServers.Length == 0)
-        {
+        if (dnsServers.Length == 0) {
             VhLogger.Instance.LogWarning("There is no DNS server for this Address Family. AddressFamily : {AddressFamily}",
                 ipPacket.DestinationAddress.AddressFamily);
             return false;
         }
 
         // manage DNS outgoing packet if requested DNS is not VPN DNS
-        if (outgoing && Array.FindIndex(dnsServers, x => x.Equals(ipPacket.DestinationAddress)) == -1)
-        {
+        if (outgoing && Array.FindIndex(dnsServers, x => x.Equals(ipPacket.DestinationAddress)) == -1) {
             var udpPacket = PacketUtil.ExtractUdp(ipPacket);
             if (udpPacket.DestinationPort == 53) //53 is DNS port
             {
@@ -559,12 +536,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
 
         // manage DNS incoming packet from VPN DNS
-        else if (!outgoing && Array.FindIndex(dnsServers, x => x.Equals(ipPacket.SourceAddress)) != -1)
-        {
+        else if (!outgoing && Array.FindIndex(dnsServers, x => x.Equals(ipPacket.SourceAddress)) != -1) {
             var udpPacket = PacketUtil.ExtractUdp(ipPacket);
             var natItem = (NatItemEx?)Nat.Resolve(ipPacket.Version, ProtocolType.Udp, udpPacket.DestinationPort);
-            if (natItem != null)
-            {
+            if (natItem != null) {
                 VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Dns,
                     $"DNS reply to {VhLogger.Format(natItem.SourceAddress)}:{natItem.SourcePort}");
                 ipPacket.SourceAddress = natItem.DestinationAddress;
@@ -589,21 +564,18 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (!ShouldManageDatagramChannels)
             return;
 
-        try
-        {
+        try {
             // make sure only one UdpChannel exists for DatagramChannels if UseUdpChannel is on
             if (UseUdpChannel)
                 await AddUdpChannel().VhConfigureAwait();
             else
                 await AddTcpDatagramChannel(cancellationToken).VhConfigureAwait();
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             if (_disposed) return;
             VhLogger.LogError(GeneralEventId.DatagramChannel, ex, "Could not Manage DatagramChannels.");
         }
-        finally
-        {
+        finally {
             _datagramChannelsSemaphore.Release();
         }
     }
@@ -613,22 +585,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (HostTcpEndPoint == null) throw new InvalidOperationException($"{nameof(HostTcpEndPoint)} is not initialized!");
         if (VhUtil.IsNullOrEmpty(ServerSecret)) throw new Exception("ServerSecret has not been set.");
         if (VhUtil.IsNullOrEmpty(_sessionKey)) throw new Exception("Server UdpKey has not been set.");
-        if (HostUdpEndPoint == null)
-        {
+        if (HostUdpEndPoint == null) {
             UseUdpChannel = false;
             throw new Exception("Server does not serve any UDP endpoint.");
         }
 
         var udpClient = SocketFactory.CreateUdpClient(HostTcpEndPoint.AddressFamily);
         var udpChannel = new UdpChannel(SessionId, _sessionKey, false, ConnectorService.ServerProtocolVersion);
-        try
-        {
+        try {
             var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, ServerSecret);
             udpChannel.SetRemote(udpChannelTransmitter, HostUdpEndPoint);
             Tunnel.AddChannel(udpChannel);
         }
-        catch
-        {
+        catch {
             udpClient.Dispose();
             await udpChannel.DisposeAsync().VhConfigureAwait();
             UseUdpChannel = false;
@@ -638,19 +607,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private async Task ConnectInternal(CancellationToken cancellationToken, bool allowRedirect = true)
     {
-        try
-        {
+        try {
             // send hello request
-            var clientInfo = new ClientInfo
-            {
+            var clientInfo = new ClientInfo {
                 ClientId = ClientId,
                 ClientVersion = Version.ToString(3),
                 ProtocolVersion = ProtocolVersion,
                 UserAgent = UserAgent
             };
 
-            var request = new HelloRequest
-            {
+            var request = new HelloRequest {
                 RequestId = Guid.NewGuid() + ":client",
                 EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, Token.Secret),
                 ClientInfo = clientInfo,
@@ -681,13 +647,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}");
 
             // usage tracker
-            if (_allowAnonymousTracker)
-            {
+            if (_allowAnonymousTracker) {
                 // Anonymous server usage tracker
-                if (!string.IsNullOrEmpty(sessionResponse.GaMeasurementId))
-                {
-                    var ga4Tracking = new Ga4TagTracker()
-                    {
+                if (!string.IsNullOrEmpty(sessionResponse.GaMeasurementId)) {
+                    var ga4Tracking = new Ga4TagTracker() {
                         SessionCount = 1,
                         MeasurementId = sessionResponse.GaMeasurementId,
                         ClientId = ClientId.ToString(),
@@ -700,8 +663,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 }
 
                 // Anonymous app usage tracker
-                if (_usageTracker != null)
-                {
+                if (_usageTracker != null) {
                     _ = _usageTracker.Track(ClientTrackerBuilder.BuildConnectionAttempt(connected: true, _serverFinder.ServerLocation, isIpV6Supported: IsIpV6SupportedByClient));
                     _clientUsageTracker = new ClientUsageTracker(Stat, _usageTracker);
                 }
@@ -730,11 +692,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 IncludeIpRanges = IncludeIpRanges.Intersect(sessionResponse.IncludeIpRanges);
 
             // Get IncludeIpRange for clientIp
-            if (_ipRangeProvider != null)
-            {
+            if (_ipRangeProvider != null) {
                 var filterIpRanges = await _ipRangeProvider.GetIncludeIpRanges(sessionResponse.ClientPublicAddress, cancellationToken).VhConfigureAwait();
-                if (!VhUtil.IsNullOrEmpty(filterIpRanges))
-                {
+                if (!VhUtil.IsNullOrEmpty(filterIpRanges)) {
                     filterIpRanges = filterIpRanges.Union(DnsServers.Select((x => new IpRange(x))));
                     IncludeIpRanges = IncludeIpRanges.Intersect(filterIpRanges);
                 }
@@ -747,8 +707,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 VhLogger.Instance.LogWarning("Client DNS servers have been ignored because the server does not route them.");
 
             DnsServers = DnsServers.Where(IsInIpRange).ToArray();
-            if (VhUtil.IsNullOrEmpty(DnsServers))
-            {
+            if (VhUtil.IsNullOrEmpty(DnsServers)) {
                 DnsServers = VhUtil.IsNullOrEmpty(sessionResponse.DnsServers) ? IPAddressUtil.GoogleDnsServers : sessionResponse.DnsServers;
                 IncludeIpRanges = IncludeIpRanges.Union(DnsServers.Select(IpRange.FromIpAddress));
             }
@@ -777,8 +736,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             await ManageDatagramChannels(cancellationToken).VhConfigureAwait();
 
         }
-        catch (RedirectHostException ex) when (allowRedirect)
-        {
+        catch (RedirectHostException ex) when (allowRedirect) {
             // todo: init new connector
             ConnectorService.EndPointInfo.TcpEndPoint = await _serverFinder.FindBestServerAsync(ex.RedirectHostEndPoints, cancellationToken);
             await ConnectInternal(cancellationToken, false).VhConfigureAwait();
@@ -788,8 +746,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private async Task AddTcpDatagramChannel(CancellationToken cancellationToken)
     {
         // Create and send the Request Message
-        var request = new TcpDatagramChannelRequest
-        {
+        var request = new TcpDatagramChannelRequest {
             RequestId = Guid.NewGuid() + ":client",
             SessionId = SessionId,
             SessionKey = SessionKey
@@ -797,8 +754,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         var requestResult = await SendRequest<SessionResponse>(request, cancellationToken).VhConfigureAwait();
         StreamDatagramChannel? channel = null;
-        try
-        {
+        try {
             // find timespan
             var lifespan = !VhUtil.IsInfinite(_maxTcpDatagramLifespan)
                 ? TimeSpan.FromSeconds(new Random().Next((int)_minTcpDatagramLifespan.TotalSeconds, (int)_maxTcpDatagramLifespan.TotalSeconds))
@@ -808,8 +764,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             channel = new StreamDatagramChannel(requestResult.ClientStream, request.RequestId, lifespan);
             Tunnel.AddChannel(channel);
         }
-        catch
-        {
+        catch {
             if (channel != null) await channel.DisposeAsync().VhConfigureAwait();
             await requestResult.DisposeAsync().VhConfigureAwait();
             throw;
@@ -822,8 +777,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (_disposed)
             throw new ObjectDisposedException(VhLogger.FormatType(this));
 
-        try
-        {
+        try {
             // create a connection and send the request 
             var requestResult = await ConnectorService.SendRequest<T>(request, cancellationToken).VhConfigureAwait();
 
@@ -839,8 +793,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             State = ClientState.Connected;
             return requestResult;
         }
-        catch (SessionException ex)
-        {
+        catch (SessionException ex) {
             // set SessionStatus
             if (ex.SessionResponse.AccessUsage != null)
                 SessionStatus.AccessUsage = ex.SessionResponse.AccessUsage;
@@ -855,13 +808,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             throw;
         }
-        catch (UnauthorizedAccessException ex)
-        {
+        catch (UnauthorizedAccessException ex) {
             _ = DisposeAsync(ex);
             throw;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             if (_disposed)
                 throw;
 
@@ -873,8 +824,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 _ = DisposeAsync(ex);
 
             // pause after retry limit
-            else if (now - _lastConnectionErrorTime.Value > ReconnectTimeout)
-            {
+            else if (now - _lastConnectionErrorTime.Value > ReconnectTimeout) {
                 _autoWaitTime = now;
                 State = ClientState.Waiting;
                 VhLogger.Instance.LogWarning("Client is paused because of too many connection errors.");
@@ -894,8 +844,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // don't use SendRequest because it can be disposed
         await using var requestResult = await SendRequest<SessionResponse>(
-            new SessionStatusRequest()
-            {
+            new SessionStatusRequest() {
                 RequestId = Guid.NewGuid() + ":client",
                 SessionId = SessionId,
                 SessionKey = SessionKey
@@ -906,12 +855,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private async Task SendByeRequest(CancellationToken cancellationToken)
     {
-        try
-        {
+        try {
             // don't use SendRequest because it can be disposed
             await using var requestResult = await ConnectorService.SendRequest<SessionResponse>(
-                new ByeRequest
-                {
+                new ByeRequest {
                     RequestId = Guid.NewGuid() + ":client",
                     SessionId = SessionId,
                     SessionKey = SessionKey
@@ -919,8 +866,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 cancellationToken)
                 .VhConfigureAwait();
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the bye request.");
         }
     }
@@ -930,8 +876,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (SessionId == 0)
             throw new Exception("SessionId is not set.");
 
-        try
-        {
+        try {
             if (_adProvider == null)
                 throw new Exception("AppAdService has not been initialized.");
 
@@ -940,16 +885,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (!string.IsNullOrEmpty(adData) && required)
                 _ = SendAdReward(adData, cancellationToken);
         }
-        catch (LoadAdException ex)
-        {
+        catch (LoadAdException ex) {
             if (required)
                 throw new LoadAdException("Could not load or show the required ad.", ex);
 
             VhLogger.Instance.LogInformation(ex, "Could not load or show the flexible ad.");
             // ignore exception for flexible ad if load failed
         }
-        finally
-        {
+        finally {
             _isWaitingForAd = false;
         }
 
@@ -957,12 +900,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private async Task SendAdReward(string adData, CancellationToken cancellationToken)
     {
-        try
-        {
+        try {
             // request reward from server
             await using var requestResult = await SendRequest<SessionResponse>(
-                new AdRewardRequest
-                {
+                new AdRewardRequest {
                     RequestId = Guid.NewGuid() + ":client",
                     SessionId = SessionId,
                     SessionKey = SessionKey,
@@ -971,8 +912,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 cancellationToken)
                 .VhConfigureAwait();
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the AdReward request.");
             throw new AdException("This server requires a display ad, but AppAdService has not been initialized.");
         }
@@ -985,11 +925,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Disposing...");
 
         // set SessionStatus error code if not set yet
-        if (SessionStatus.ErrorCode == SessionErrorCode.Ok)
-        {
+        if (SessionStatus.ErrorCode == SessionErrorCode.Ok) {
 
-            if (ex is SessionException sessionException)
-            {
+            if (ex is SessionException sessionException) {
                 SessionStatus.ErrorCode = sessionException.SessionResponse.ErrorCode;
                 SessionStatus.Error = new ApiError(sessionException);
                 SessionStatus.SuppressedBy = sessionException.SessionResponse.SuppressedBy;
@@ -999,19 +937,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     SessionStatus.AccessUsage.Traffic = _helloTraffic; // let calculate it on client
                 }
             }
-            else
-            {
+            else {
                 SessionStatus.ErrorCode = SessionErrorCode.GeneralError;
                 SessionStatus.Error = new ApiError(ex);
             }
         }
 
         return DisposeAsync(false);
-    }
-
-    public void Dispose()
-    {
-        _ = DisposeAsync();
     }
 
     public ValueTask DisposeAsync()
@@ -1044,8 +976,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // disposing PacketCapture. Must be at end for graceful shutdown
         _packetCapture.Stopped -= PacketCapture_OnStopped;
         _packetCapture.PacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
-        if (_autoDisposePacketCapture)
-        {
+        if (_autoDisposePacketCapture) {
             VhLogger.Instance.LogTrace("Disposing the PacketCapture...");
             _packetCapture.Dispose();
         }
@@ -1076,8 +1007,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         Nat.Dispose();
 
         // Sending Bye
-        if (wasConnected && SessionId != 0 && SessionStatus.ErrorCode == SessionErrorCode.Ok)
-        {
+        if (wasConnected && SessionId != 0 && SessionStatus.ErrorCode == SessionErrorCode.Ok) {
             using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
             await SendByeRequest(cancellationTokenSource.Token).VhConfigureAwait();
         }
@@ -1090,8 +1020,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogInformation("Bye Bye!");
     }
 
-    private class SendingPackets
-    {
+    private class SendingPackets {
         public readonly List<IPPacket> PassthruPackets = [];
         public readonly List<IPPacket> ProxyPackets = [];
         public readonly List<IPPacket> TcpHostPackets = [];
@@ -1108,8 +1037,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    public class ClientStat
-    {
+    public class ClientStat {
         private readonly VpnHoodClient _client;
         public ConnectorStat ConnectorStat => _client.ConnectorService.Stat;
         public Traffic Speed => _client.Tunnel.Speed;

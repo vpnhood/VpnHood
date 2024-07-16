@@ -7,10 +7,8 @@ namespace VpnHood.Client.Exceptions;
 
 public class RedirectHostException(SessionResponse sessionResponse) : SessionException(sessionResponse)
 {
-    public IPEndPoint[] RedirectHostEndPoints
-    {
-        get
-        {
+    public IPEndPoint[] RedirectHostEndPoints {
+        get {
             if (!VhUtil.IsNullOrEmpty(SessionResponse.RedirectHostEndPoints))
                 return SessionResponse.RedirectHostEndPoints;
 

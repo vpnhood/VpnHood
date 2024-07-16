@@ -18,8 +18,7 @@ public class IpGroupBuilder
         VhLogger.Instance.LogTrace("Building the optimized Ip2Location archive...");
         await using var outputStream = File.Create(outputZipFile);
         using var newArchive = new ZipArchive(outputStream, ZipArchiveMode.Create, leaveOpen: true);
-        foreach (var ipGroup in ipGroups)
-        {
+        foreach (var ipGroup in ipGroups) {
             var ipRanges = new IpRangeOrderedList(ipGroup.Value);
             var entry = newArchive.CreateEntry($"{ipGroup.Key}.ips");
             await using var entryStream = entry.Open();
@@ -32,8 +31,7 @@ public class IpGroupBuilder
         // extract IpGroups
         var ipGroupIpRanges = new Dictionary<string, List<IpRange>>();
         using var streamReader = new StreamReader(ipLocationsStream);
-        while (!streamReader.EndOfStream)
-        {
+        while (!streamReader.EndOfStream) {
             var line = await streamReader.ReadLineAsync().VhConfigureAwait();
             var items = line.Replace("\"", "").Split(',');
             if (items.Length != 4)
@@ -42,13 +40,14 @@ public class IpGroupBuilder
             var ipGroupId = items[2].ToLower();
             if (ipGroupId == "-") continue;
             if (ipGroupId == "um") ipGroupId = "us";
-            if (!ipGroupIpRanges.TryGetValue(ipGroupId, out var ipRanges))
-            {
+            if (!ipGroupIpRanges.TryGetValue(ipGroupId, out var ipRanges)) {
                 ipRanges = [];
                 ipGroupIpRanges.Add(ipGroupId, ipRanges);
             }
 
-            var addressFamily = items[0].Length > 10 || items[1].Length > 10 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
+            var addressFamily = items[0].Length > 10 || items[1].Length > 10
+                ? AddressFamily.InterNetworkV6
+                : AddressFamily.InterNetwork;
             var ipRange = new IpRange(
                 IPAddressUtil.FromBigInteger(BigInteger.Parse(items[0]), addressFamily),
                 IPAddressUtil.FromBigInteger(BigInteger.Parse(items[1]), addressFamily));

@@ -24,6 +24,7 @@ public class NullPacketCapture : IPacketCapture
     public virtual bool AddIpV6Address { get; set; } = true;
     public virtual bool CanProtectSocket { get; set; } = true;
     public virtual bool CanSendPacketToOutbound { get; set; } = false;
+
     public virtual void StartCapture()
     {
         Started = true;
@@ -39,7 +40,6 @@ public class NullPacketCapture : IPacketCapture
     public virtual void ProtectSocket(Socket socket)
     {
         // nothing
-
     }
 
     public virtual void SendPacketToInbound(IPPacket ipPacket)
@@ -71,5 +71,4 @@ public class NullPacketCapture : IPacketCapture
     {
         StopCapture();
     }
-
 }

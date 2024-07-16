@@ -11,6 +11,7 @@ public static class AndroidUtil
         ArgumentNullException.ThrowIfNull(context.PackageName);
         ArgumentNullException.ThrowIfNull(context.PackageManager);
 
-        return context.PackageManager.GetApplicationLabel(context.PackageManager.GetApplicationInfo(context.PackageName, PackageInfoFlags.MetaData));
+        return context.PackageManager.GetApplicationLabel(
+            context.PackageManager.GetApplicationInfo(context.PackageName, PackageInfoFlags.MetaData));
     }
 }

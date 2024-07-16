@@ -2,7 +2,7 @@
 
 namespace VpnHood.Tunneling.Messaging;
 
-public class UdpPacketRequest() 
+public class UdpPacketRequest()
     : RequestBase(Messaging.RequestCode.TcpDatagramChannel)
 {
     public required byte[][] PacketBuffers { get; init; }

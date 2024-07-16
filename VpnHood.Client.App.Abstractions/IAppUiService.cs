@@ -6,10 +6,10 @@ public interface IAppUiService
 {
     bool IsQuickLaunchSupported { get; }
     Task<bool> RequestQuickLaunch(IUiContext uiContext, CancellationToken cancellationToken);
-    
+
     bool IsNotificationSupported { get; }
     Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken);
-    
+
     bool IsOpenAlwaysOnPageSupported { get; }
     void OpenAlwaysOnPage(IUiContext uiContext);
 }

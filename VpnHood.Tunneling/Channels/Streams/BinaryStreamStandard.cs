@@ -22,7 +22,9 @@ public class BinaryStreamStandard : ChunkStream
     public override int PreserveWriteBufferLength => ChunkHeaderLength;
 
     public BinaryStreamStandard(Stream sourceStream, string streamId, bool useBuffer)
-        : base(useBuffer ? new ReadCacheStream(sourceStream, false, TunnelDefaults.StreamProxyBufferSize) : sourceStream, streamId)
+        : base(
+            useBuffer ? new ReadCacheStream(sourceStream, false, TunnelDefaults.StreamProxyBufferSize) : sourceStream,
+            streamId)
     {
     }
 
@@ -45,15 +47,13 @@ public class BinaryStreamStandard : ChunkStream
 
     private async Task<int> ReadInternalAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        try
-        {
+        try {
             // check is stream has finished
             if (_finished)
                 return 0;
 
             // If there are no more in the chunks read the next chunk
-            if (_remainingChunkBytes == 0)
-            {
+            if (_remainingChunkBytes == 0) {
                 _remainingChunkBytes = await ReadChunkHeaderAsync(cancellationToken).VhConfigureAwait();
                 _finished = _remainingChunkBytes == 0;
 
@@ -63,7 +63,8 @@ public class BinaryStreamStandard : ChunkStream
             }
 
             var bytesToRead = Math.Min(_remainingChunkBytes, count);
-            var bytesRead = await SourceStream.ReadAsync(buffer, offset, bytesToRead, cancellationToken).VhConfigureAwait();
+            var bytesRead = await SourceStream.ReadAsync(buffer, offset, bytesToRead, cancellationToken)
+                .VhConfigureAwait();
             if (bytesRead == 0 && count != 0) // count zero is used for checking the connection
                 throw new Exception("BinaryStream has been closed unexpectedly.");
 
@@ -72,8 +73,7 @@ public class BinaryStreamStandard : ChunkStream
             if (_remainingChunkBytes == 0) ReadChunkCount++;
             return bytesRead;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             CloseByError(ex);
             throw;
         }
@@ -91,8 +91,9 @@ public class BinaryStreamStandard : ChunkStream
     private async Task<int> ReadChunkHeaderAsync(CancellationToken cancellationToken)
     {
         // read chunk header by cryptor
-        if (!await StreamUtil.ReadWaitForFillAsync(SourceStream, _readChunkHeaderBuffer, 0, _readChunkHeaderBuffer.Length, cancellationToken).VhConfigureAwait())
-        {
+        if (!await StreamUtil
+                .ReadWaitForFillAsync(SourceStream, _readChunkHeaderBuffer, 0, _readChunkHeaderBuffer.Length,
+                    cancellationToken).VhConfigureAwait()) {
             if (!_finished && ReadChunkCount > 0)
                 VhLogger.Instance.LogWarning(GeneralEventId.TcpLife, "BinaryStream has been closed unexpectedly.");
             _isConnectionClosed = true;
@@ -102,7 +103,6 @@ public class BinaryStreamStandard : ChunkStream
         // get chunk size
         var chunkSize = BitConverter.ToInt32(_readChunkHeaderBuffer);
         return chunkSize;
-
     }
 
     public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -117,16 +117,14 @@ public class BinaryStreamStandard : ChunkStream
         using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_writeCts.Token, cancellationToken);
 
         // should not write a zero chunk if caller data is zero
-        try
-        {
+        try {
             _writeTask = count == 0
                 ? SourceStream.WriteAsync(buffer, offset, count, tokenSource.Token)
                 : WriteInternalAsync(buffer, offset, count, tokenSource.Token);
 
             await _writeTask.VhConfigureAwait();
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             CloseByError(ex);
             throw;
         }
@@ -134,16 +132,15 @@ public class BinaryStreamStandard : ChunkStream
 
     private async Task WriteInternalAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        try
-        {
-            if (PreserveWriteBuffer)
-            {
+        try {
+            if (PreserveWriteBuffer) {
                 // create the chunk header
                 BitConverter.GetBytes(count).CopyTo(buffer, offset - ChunkHeaderLength);
-                await SourceStream.WriteAsync(buffer, offset - ChunkHeaderLength, ChunkHeaderLength + count, cancellationToken).VhConfigureAwait();
+                await SourceStream
+                    .WriteAsync(buffer, offset - ChunkHeaderLength, ChunkHeaderLength + count, cancellationToken)
+                    .VhConfigureAwait();
             }
-            else
-            {
+            else {
                 var size = ChunkHeaderLength + count;
                 if (size > _writeBuffer.Length)
                     Array.Resize(ref _writeBuffer, size);
@@ -162,8 +159,7 @@ public class BinaryStreamStandard : ChunkStream
             await SourceStream.FlushAsync(cancellationToken).VhConfigureAwait();
             WroteChunkCount++;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             CloseByError(ex);
             throw;
         }
@@ -171,6 +167,7 @@ public class BinaryStreamStandard : ChunkStream
 
     private bool _leaveOpen;
     public override bool CanReuse => !_hasError && !_isConnectionClosed;
+
     public override async Task<ChunkStream> CreateReuse()
     {
         if (_disposed)
@@ -180,7 +177,8 @@ public class BinaryStreamStandard : ChunkStream
             throw new InvalidOperationException($"Could not reuse a BinaryStream that has error. StreamId: {StreamId}");
 
         if (_isConnectionClosed)
-            throw new InvalidOperationException($"Could not reuse a BinaryStream that its underling stream has been closed . StreamId: {StreamId}");
+            throw new InvalidOperationException(
+                $"Could not reuse a BinaryStream that its underling stream has been closed . StreamId: {StreamId}");
 
         // Dispose the stream but keep the original stream open
         _leaveOpen = true;
@@ -192,7 +190,8 @@ public class BinaryStreamStandard : ChunkStream
 
         // dispose and throw the ungraceful BinaryStream
         await base.DisposeAsync().VhConfigureAwait();
-        throw new InvalidOperationException($"Could not reuse a BinaryStream that has not been closed gracefully. StreamId: {StreamId}");
+        throw new InvalidOperationException(
+            $"Could not reuse a BinaryStream that has not been closed gracefully. StreamId: {StreamId}");
     }
 
     private async Task CloseStream(CancellationToken cancellationToken)
@@ -202,30 +201,27 @@ public class BinaryStreamStandard : ChunkStream
         _writeCts.CancelAfter(TunnelDefaults.TcpGracefulTimeout);
 
         // wait for finishing current write
-        try
-        {
+        try {
             await _writeTask.VhConfigureAwait();
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.TcpLife, ex,
                 "Final stream write has not been completed gracefully. StreamId: {StreamId}",
                 StreamId);
             return;
         }
+
         _writeCts.Dispose();
 
         // finish writing current BinaryStream gracefully
-        try
-        {
+        try {
             if (PreserveWriteBuffer)
-                await WriteInternalAsync(new byte[ChunkHeaderLength], ChunkHeaderLength, 0, cancellationToken).VhConfigureAwait();
+                await WriteInternalAsync(new byte[ChunkHeaderLength], ChunkHeaderLength, 0, cancellationToken)
+                    .VhConfigureAwait();
             else
                 await WriteInternalAsync([], 0, 0, cancellationToken).VhConfigureAwait();
-
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.TcpLife, ex,
                 "Could not write the chunk terminator. StreamId: {StreamId}",
                 StreamId);
@@ -233,12 +229,10 @@ public class BinaryStreamStandard : ChunkStream
         }
 
         // make sure current caller read has been finished gracefully or wait for cancellation time
-        try
-        {
+        try {
             await _readTask.VhConfigureAwait();
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.TcpLife, ex,
                 "Final stream read has not been completed gracefully. StreamId: {StreamId}",
                 StreamId);
@@ -247,17 +241,14 @@ public class BinaryStreamStandard : ChunkStream
 
         _readCts.Dispose();
 
-        try
-        {
+        try {
             if (_hasError)
                 throw new InvalidOperationException("Could not close a BinaryStream due internal error.");
 
-            if (!_finished)
-            {
+            if (!_finished) {
                 var buffer = new byte[500];
                 var trashedLength = 0;
-                while (true)
-                {
+                while (true) {
                     var read = await ReadInternalAsync(buffer, 0, buffer.Length, cancellationToken).VhConfigureAwait();
                     if (read == 0)
                         break;
@@ -271,8 +262,7 @@ public class BinaryStreamStandard : ChunkStream
                         StreamId, trashedLength);
             }
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.TcpLife, ex,
                 "BinaryStream has not been closed gracefully. StreamId: {StreamId}",
                 StreamId);
@@ -281,6 +271,7 @@ public class BinaryStreamStandard : ChunkStream
 
     private bool _disposed;
     private readonly AsyncLock _disposeLock = new();
+
     public override async ValueTask DisposeAsync()
     {
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
@@ -288,8 +279,7 @@ public class BinaryStreamStandard : ChunkStream
         _disposed = true;
 
         // close stream
-        if (!_hasError && !_isConnectionClosed)
-        {
+        if (!_hasError && !_isConnectionClosed) {
             // create a new cancellation token for CloseStream
             using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
             await CloseStream(cancellationTokenSource.Token).VhConfigureAwait();

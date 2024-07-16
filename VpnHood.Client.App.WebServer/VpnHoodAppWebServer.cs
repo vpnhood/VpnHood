@@ -51,12 +51,10 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     private void Start()
     {
         _server = CreateWebServer();
-        try
-        {
+        try {
             Logger.UnregisterLogger<ConsoleLogger>();
         }
-        catch
-        {
+        catch {
             // ignored
         }
 
@@ -81,14 +79,11 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
         var spaFolderPath = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp", "SPA");
         var path = Path.Combine(spaFolderPath, _spaHash);
-        if (!Directory.Exists(path))
-        {
-            try
-            {
+        if (!Directory.Exists(path)) {
+            try {
                 Directory.Delete(spaFolderPath, true);
             }
-            catch
-            {
+            catch {
                 // ignored
             }
 
@@ -114,7 +109,8 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         var server = new EmbedIO.WebServer(o => o
                 .WithUrlPrefixes(urlPrefixes.Distinct())
                 .WithMode(HttpListenerMode.EmbedIO))
-            .WithCors("https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081, http://localhost:30080") // must be first
+            .WithCors(
+                "https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081, http://localhost:30080") // must be first
             .WithWebApi("/api/app", ResponseSerializerCallback, c => c
                 .WithController<AppController>()
                 .HandleUnhandledException(ExceptionHandler.DataResponseForException))
@@ -132,8 +128,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     private static async Task ResponseSerializerCallback(IHttpContext context, object? data)
     {
-        if (data is null)
-        {
+        if (data is null) {
             context.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return;
         }
@@ -141,8 +136,8 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         context.Response.StatusCode = (int)HttpStatusCode.OK;
         context.Response.ContentType = MimeType.Json;
         await using var text = context.OpenResponseText(new UTF8Encoding(false));
-        await text.WriteAsync(JsonSerializer.Serialize(data, 
-            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }))
+        await text.WriteAsync(JsonSerializer.Serialize(data,
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }))
             .VhConfigureAwait();
     }
 
@@ -167,8 +162,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
                 x.NetworkInterfaceType is not NetworkInterfaceType.Loopback);
 
         var ipAddresses = new List<IPAddress>();
-        foreach (var networkInterface in networkInterfaces)
-        {
+        foreach (var networkInterface in networkInterfaces) {
             var ipProperties = networkInterface.GetIPProperties();
             var uniCastAddresses = ipProperties.UnicastAddresses;
             var ips = uniCastAddresses

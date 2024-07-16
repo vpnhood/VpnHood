@@ -18,7 +18,7 @@ public class ClientSocketFactory(
         // config for client
         socketFactory.SetKeepAlive(tcpClient.Client, true);
         VhUtil.ConfigTcpClient(tcpClient, null, null);
-        
+
         // auto protect
         if (packetCapture.CanProtectSocket)
             packetCapture.ProtectSocket(tcpClient.Client);
@@ -39,7 +39,8 @@ public class ClientSocketFactory(
         socketFactory.SetKeepAlive(socket, enable);
     }
 
-    public bool? IsInProcessPacket(PacketDotNet.ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+    public bool? IsInProcessPacket(PacketDotNet.ProtocolType protocol, IPEndPoint localEndPoint,
+        IPEndPoint remoteEndPoint)
     {
         return packetCapture.IsInProcessPacket(protocol, localEndPoint, remoteEndPoint);
     }

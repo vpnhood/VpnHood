@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 // ReSharper disable once CheckNamespace
 namespace Ga4.Trackers;
@@ -26,11 +26,9 @@ public abstract class TrackerBase : ITracker
 
     public Task TrackError(string action, Exception ex)
     {
-        var trackEvent = new TrackEvent
-        {
+        var trackEvent = new TrackEvent {
             EventName = "exception",
-            Parameters = new Dictionary<string, object>
-            {
+            Parameters = new Dictionary<string, object> {
                 { "page_location", "ex/" + action },
                 { "page_title", ex.Message }
             }
@@ -52,15 +50,14 @@ public abstract class TrackerBase : ITracker
         if (!IsEnabled)
             return;
 
-        try
-        {
+        try {
             // log
             Logger?.LogInformation(LoggerEventId,
                 "Sending Ga4Track: {name}, Url: {Url},  Headers: {Headers}",
-                name, requestMessage.RequestUri, JsonSerializer.Serialize(requestMessage.Headers, new JsonSerializerOptions { WriteIndented = true }));
+                name, requestMessage.RequestUri,
+                JsonSerializer.Serialize(requestMessage.Headers, new JsonSerializerOptions { WriteIndented = true }));
 
-            if (jsonData != null)
-            {
+            if (jsonData != null) {
                 requestMessage.Content = new StringContent(JsonSerializer.Serialize(jsonData));
                 requestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
@@ -75,8 +72,7 @@ public abstract class TrackerBase : ITracker
             var result = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
             Logger?.LogInformation(LoggerEventId, "Ga4Track Result: {Result}", result);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             Logger?.LogError(LoggerEventId, ex, "Ga4Track could not send its track");
             if (ThrowExceptionOnError)
                 throw;
@@ -85,10 +81,8 @@ public abstract class TrackerBase : ITracker
 
     public void UseSimpleLogger(bool singleLine = false)
     {
-        using var loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder.AddSimpleConsole(configure =>
-            {
+        using var loggerFactory = LoggerFactory.Create(builder => {
+            builder.AddSimpleConsole(configure => {
                 // ReSharper disable once StringLiteralTypo
                 configure.TimestampFormat = "[HH:mm:ss.ffff] ";
                 configure.IncludeScopes = false;

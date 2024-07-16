@@ -14,7 +14,7 @@ public class AccountController : ControllerBase, IAccountController
     {
         throw new SwaggerOnlyException();
     }
-    
+
     [HttpPost("refresh")]
     public Task Refresh()
     {

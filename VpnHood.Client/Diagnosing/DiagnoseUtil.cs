@@ -31,8 +31,7 @@ public class DiagnoseUtil
     private static async Task<Exception?> WhenAnySuccess(Task<Exception?>[] tasks)
     {
         Exception? exception = null;
-        while (tasks.Length > 0)
-        {
+        while (tasks.Length > 0) {
             var task = await Task.WhenAny(tasks).VhConfigureAwait();
             exception = task.Result;
             if (task.Result == null)
@@ -45,10 +44,9 @@ public class DiagnoseUtil
 
     public static async Task<Exception?> CheckHttps(Uri uri, int timeout)
     {
-        try
-        {
+        try {
             VhLogger.Instance.LogInformation(
-                "HttpTest: {HttpTestStatus}, Url: {url}, Timeout: {timeout}...", 
+                "HttpTest: {HttpTestStatus}, Url: {url}, Timeout: {timeout}...",
                 "Started", uri, timeout);
 
             using var httpClient = new HttpClient();
@@ -58,13 +56,12 @@ public class DiagnoseUtil
                 throw new Exception("The http response data length is not expected!");
 
             VhLogger.Instance.LogInformation(
-                "HttpTest: {HttpTestStatus}, Url: {url}.", 
+                "HttpTest: {HttpTestStatus}, Url: {url}.",
                 "Succeeded", uri);
 
             return null;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(
                 "HttpTest: {HttpTestStatus}!, Url: {url}. Message: {ex.Message}",
                 "Failed", uri, ex.Message);
@@ -76,8 +73,7 @@ public class DiagnoseUtil
     {
         using var udpClient = new UdpClient();
         const string dnsName = "www.google.com";
-        try
-        {
+        try {
             VhLogger.Instance.LogInformation(
                 "UdpTest: {UdpTestStatus}, DnsName: {DnsName}, NsServer: {NsServer}, Timeout: {Timeout}...",
                 "Started", dnsName, nsIpEndPoint, timeout);
@@ -92,8 +88,7 @@ public class DiagnoseUtil
 
             return null;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex,
                 "UdpTest: {UdpTestStatus}!, DnsName: {DnsName}, NsServer: {NsServer}, Message: {Message}.",
                 "Failed", dnsName, nsIpEndPoint, ex.Message);
@@ -106,8 +101,7 @@ public class DiagnoseUtil
     {
         var logIpAddress = anonymize ? VhLogger.Format(ipAddress) : ipAddress.ToString();
 
-        try
-        {
+        try {
             using var ping = new Ping();
             VhLogger.Instance.LogInformation(
                 "PingTest: {PingTestStatus}, RemoteAddress: {RemoteAddress}, Timeout: {Timeout}...",
@@ -122,8 +116,7 @@ public class DiagnoseUtil
                 "Succeeded", logIpAddress);
             return null;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex,
                 "PingTest: {PingTestStatus}!, RemoteAddress: {RemoteAddress}. Message: {Message}",
                 "Failed", logIpAddress, ex.Message);
@@ -144,7 +137,7 @@ public class DiagnoseUtil
 
         //Write message header.
         ms.Write([
-            (byte) rnd.Next(0, 0xFF), (byte) rnd.Next(0, 0xFF),
+            (byte)rnd.Next(0, 0xFF), (byte)rnd.Next(0, 0xFF),
             0x01,
             0x00,
             0x00, 0x01,
@@ -154,8 +147,7 @@ public class DiagnoseUtil
         ], 0, 12);
 
         //Write the host to query.
-        foreach (var block in host.Split('.'))
-        {
+        foreach (var block in host.Split('.')) {
             var data = Encoding.UTF8.GetBytes(block);
             ms.WriteByte((byte)data.Length);
             ms.Write(data, 0, data.Length);
@@ -176,7 +168,8 @@ public class DiagnoseUtil
         udpClient.Client.SendTimeout = timeout;
         udpClient.Client.ReceiveTimeout = timeout;
         await udpClient.SendAsync(buffer, buffer.Length, dnsEndPoint).VhConfigureAwait();
-        var receiveTask = await VhUtil.RunTask(udpClient.ReceiveAsync(), TimeSpan.FromMilliseconds(timeout)).VhConfigureAwait();
+        var receiveTask = await VhUtil.RunTask(udpClient.ReceiveAsync(), TimeSpan.FromMilliseconds(timeout))
+            .VhConfigureAwait();
         buffer = receiveTask.Buffer;
 
         //The response message has the same header and question structure, so we move index to the answer part directly.
@@ -185,8 +178,7 @@ public class DiagnoseUtil
         //Parse response records.
         void SkipName()
         {
-            while (index < buffer.Length)
-            {
+            while (index < buffer.Length) {
                 int length = buffer[index++];
                 if (length == 0)
                     return;
@@ -196,8 +188,7 @@ public class DiagnoseUtil
         }
 
         var addresses = new List<IPAddress>();
-        while (index < buffer.Length)
-        {
+        while (index < buffer.Length) {
             SkipName(); //Seems the name of record is useless in this case, so we just need to get the next index after name.
             var type = buffer[index += 2];
             index += 7; //Skip class and ttl
@@ -207,7 +198,7 @@ public class DiagnoseUtil
             if (type == 0x01) //A record
                 if (length == 4) //Parse record data to ip v4, this is what we need.
                     addresses.Add(new IPAddress(new[]
-                        {buffer[index], buffer[index + 1], buffer[index + 2], buffer[index + 3]}));
+                        { buffer[index], buffer[index + 1], buffer[index + 2], buffer[index + 3] }));
             index += length;
         }
 

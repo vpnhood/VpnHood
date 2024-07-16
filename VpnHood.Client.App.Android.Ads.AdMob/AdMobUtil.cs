@@ -11,6 +11,7 @@ public class AdMobUtil
     private static readonly AsyncLock InitLock = new();
     public static bool IsInitialized { get; private set; }
     public static TimeSpan DefaultAdTimeSpan { get; } = TimeSpan.FromMinutes(45);
+
     public static async Task Initialize(Context context, CancellationToken cancellationToken)
     {
         using var lockAsync = await InitLock.LockAsync(cancellationToken);
@@ -27,6 +28,7 @@ public class AdMobUtil
     {
         private readonly TaskCompletionSource _loadedCompletionSource = new();
         public Task Task => _loadedCompletionSource.Task;
+
         public void OnInitializationComplete(IInitializationStatus initializationStatus)
         {
             // no adapter
@@ -35,8 +37,7 @@ public class AdMobUtil
 
             // at-least one ok
             if (initializationStatus.AdapterStatusMap.Values.Any(value =>
-                    value.InitializationState == AdapterStatusState.Ready))
-            {
+                    value.InitializationState == AdapterStatusState.Ready)) {
                 _loadedCompletionSource.TrySetResult();
                 return;
             }

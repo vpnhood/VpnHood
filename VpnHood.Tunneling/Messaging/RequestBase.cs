@@ -2,7 +2,7 @@
 
 namespace VpnHood.Tunneling.Messaging;
 
-public abstract class RequestBase(RequestCode requestCode) 
+public abstract class RequestBase(RequestCode requestCode)
     : ClientRequest((byte)requestCode)
 {
     public required ulong SessionId { get; set; }

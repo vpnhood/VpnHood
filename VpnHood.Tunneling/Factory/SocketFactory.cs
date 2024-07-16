@@ -23,8 +23,7 @@ public class SocketFactory : ISocketFactory
         if (_hasKeepAliveError)
             return;
 
-        try
-        {
+        try {
             socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, enable);
 
             // .NET Standard 2.1 compatibility
@@ -33,8 +32,7 @@ public class SocketFactory : ISocketFactory
             // if (tcpKeepAliveInterval != null) socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, (int)tcpKeepAliveInterval.Value.TotalSeconds);
             // if (tcpKeepAliveRetryCount != null) socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, (int)tcpKeepAliveRetryCount);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             _hasKeepAliveError = true;
             VhLogger.Instance.LogWarning(ex, "KeepAlive is not supported! Consider upgrading your OS.");
         }

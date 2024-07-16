@@ -18,11 +18,11 @@ public sealed class AndroidAppNotification : IDisposable
     {
         _vpnHoodApp = vpnHoodApp;
         vpnHoodApp.ConnectionStateChanged += (_, _) => Update();
-        _notificationBuilder = _notificationBuilder = CreateNotificationBuilder(Application.Context, _vpnHoodApp.Resource);
+        _notificationBuilder =
+            _notificationBuilder = CreateNotificationBuilder(Application.Context, _vpnHoodApp.Resource);
     }
 
-    public AndroidDeviceNotification DeviceNotification => new()
-    {
+    public AndroidDeviceNotification DeviceNotification => new() {
         NotificationId = NotificationId,
         Notification = _notificationBuilder.Build()
     };
@@ -32,7 +32,7 @@ public sealed class AndroidAppNotification : IDisposable
         var intent = new Intent(context, typeof(NotificationBroadcastReceiver));
         intent.SetAction(name);
         var pendingIntent = PendingIntent.GetBroadcast(context, 0, intent, PendingIntentFlags.Immutable)
-            ?? throw new Exception("Could not acquire Broadcast intent.");
+                            ?? throw new Exception("Could not acquire Broadcast intent.");
 
         return pendingIntent;
     }
@@ -51,9 +51,9 @@ public sealed class AndroidAppNotification : IDisposable
         var openIntent = context.PackageManager.GetLaunchIntentForPackage(context.PackageName);
 
         //create channel
-        if (OperatingSystem.IsAndroidVersionAtLeast(26))
-        {
-            var channel = new NotificationChannel(NotificationChannelGeneralId, NotificationChannelGeneralName, NotificationImportance.Low);
+        if (OperatingSystem.IsAndroidVersionAtLeast(26)) {
+            var channel = new NotificationChannel(NotificationChannelGeneralId, NotificationChannelGeneralName,
+                NotificationImportance.Low);
             channel.EnableVibration(false);
             channel.EnableLights(false);
             channel.SetShowBadge(false);
@@ -61,8 +61,7 @@ public sealed class AndroidAppNotification : IDisposable
             notificationManager.CreateNotificationChannel(channel);
             notificationBuilder = new Notification.Builder(context, NotificationChannelGeneralId);
         }
-        else
-        {
+        else {
             notificationBuilder = new Notification.Builder(context);
         }
 
@@ -72,8 +71,10 @@ public sealed class AndroidAppNotification : IDisposable
 
         var pendingOpenIntent = PendingIntent.GetActivity(context, 0, openIntent, PendingIntentFlags.Immutable);
         notificationBuilder.SetContentIntent(pendingOpenIntent);
-        notificationBuilder.AddAction(new Notification.Action.Builder(null, appResource.Strings.Disconnect, CreatePendingIntent(context, "disconnect")).Build());
-        notificationBuilder.AddAction(new Notification.Action.Builder(null, appResource.Strings.Manage, pendingOpenIntent).Build());
+        notificationBuilder.AddAction(new Notification.Action.Builder(null, appResource.Strings.Disconnect,
+            CreatePendingIntent(context, "disconnect")).Build());
+        notificationBuilder.AddAction(
+            new Notification.Action.Builder(null, appResource.Strings.Manage, pendingOpenIntent).Build());
 
         notificationBuilder.SetOngoing(true); // ignored by StartForeground
         notificationBuilder.SetAutoCancel(false); // ignored by StartForeground
@@ -93,8 +94,7 @@ public sealed class AndroidAppNotification : IDisposable
 
     private void Update(bool force = false)
     {
-        lock (_stateLock)
-        {
+        lock (_stateLock) {
             // update only when the state changed
             var connectionState = _vpnHoodApp.ConnectionState;
             if (_lastNotifyState == connectionState && !force)
@@ -116,7 +116,8 @@ public sealed class AndroidAppNotification : IDisposable
 
 
             // show or hide
-            var notificationManager = (NotificationManager?)Application.Context.GetSystemService(Context.NotificationService);
+            var notificationManager =
+                (NotificationManager?)Application.Context.GetSystemService(Context.NotificationService);
             if (notificationManager == null)
                 return;
 

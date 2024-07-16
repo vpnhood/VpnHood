@@ -9,7 +9,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
-public class GooglePlayBillingService: IAppBillingService
+public class GooglePlayBillingService : IAppBillingService
 {
     private readonly BillingClient _billingClient;
     private readonly IAppAuthenticationService _authenticationService;
@@ -28,8 +28,7 @@ public class GooglePlayBillingService: IAppBillingService
 
     private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
     {
-        switch (billingResult.ResponseCode)
-        {
+        switch (billingResult.ResponseCode) {
             case BillingResponseCode.Ok:
                 if (purchases.Any())
                     _taskCompletionSource?.TrySetResult(purchases.First().OrderId);
@@ -39,7 +38,7 @@ public class GooglePlayBillingService: IAppBillingService
 
             case BillingResponseCode.UserCancelled:
                 _taskCompletionSource?.TrySetCanceled();
-                break;  
+                break;
 
             default:
                 _taskCompletionSource?.TrySetException(CreateBillingResultException(billingResult));
@@ -52,14 +51,13 @@ public class GooglePlayBillingService: IAppBillingService
         await EnsureConnected().VhConfigureAwait();
 
         // Check if the purchase subscription is supported on the user's device
-        try
-        {
-            var isDeviceSupportSubscription = _billingClient.IsFeatureSupported(BillingClient.FeatureType.Subscriptions);
+        try {
+            var isDeviceSupportSubscription =
+                _billingClient.IsFeatureSupported(BillingClient.FeatureType.Subscriptions);
             if (isDeviceSupportSubscription.ResponseCode == BillingResponseCode.FeatureNotSupported)
                 throw new Exception("Subscription feature is not supported on this device.");
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not check supported feature with google play.");
             throw;
         }
@@ -75,11 +73,13 @@ public class GooglePlayBillingService: IAppBillingService
             .Build();
 
         // Get products list from GooglePlay.
-        try
-        {
+        try {
             var response = await _billingClient.QueryProductDetailsAsync(productDetailsParams).VhConfigureAwait();
-            if (response.Result.ResponseCode != BillingResponseCode.Ok) throw new Exception($"Could not get products from google play. BillingResponseCode: {response.Result.ResponseCode}");
-            if (!response.ProductDetails.Any()) throw new Exception($"Product list is empty. ProductList: {response.ProductDetails}");
+            if (response.Result.ResponseCode != BillingResponseCode.Ok)
+                throw new Exception(
+                    $"Could not get products from google play. BillingResponseCode: {response.Result.ResponseCode}");
+            if (!response.ProductDetails.Any())
+                throw new Exception($"Product list is empty. ProductList: {response.ProductDetails}");
 
             var productDetails = response.ProductDetails.First();
             _productDetails = productDetails;
@@ -89,8 +89,7 @@ public class GooglePlayBillingService: IAppBillingService
 
             var subscriptionPlans = plans
                 .Where(plan => plan.PricingPhases.PricingPhaseList.Any())
-                .Select(plan => new SubscriptionPlan
-                {
+                .Select(plan => new SubscriptionPlan {
                     SubscriptionPlanId = plan.BasePlanId,
                     PlanPrice = plan.PricingPhases.PricingPhaseList.First().FormattedPrice
                 })
@@ -98,8 +97,7 @@ public class GooglePlayBillingService: IAppBillingService
 
             return subscriptionPlans;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not get products from google play.");
             throw;
         }
@@ -113,12 +111,12 @@ public class GooglePlayBillingService: IAppBillingService
         if (_authenticationService.UserId == null)
             throw new AuthenticationException();
 
-        var offerToken = _subscriptionOfferDetails == null 
-            ? throw new NullReferenceException("Could not found subscription offer details.") 
+        var offerToken = _subscriptionOfferDetails == null
+            ? throw new NullReferenceException("Could not found subscription offer details.")
             : _subscriptionOfferDetails
-            .Where(x => x.BasePlanId == planId)
-            .Select(x => x.OfferToken)
-            .Single();
+                .Where(x => x.BasePlanId == planId)
+                .Select(x => x.OfferToken)
+                .Single();
 
         var productDetailsParam = BillingFlowParams.ProductDetailsParams.NewBuilder()
             .SetProductDetails(_productDetails ?? throw new NullReferenceException("Could not found product details."))
@@ -130,8 +128,7 @@ public class GooglePlayBillingService: IAppBillingService
             .SetProductDetailsParamsList([productDetailsParam])
             .Build();
 
-        try
-        {
+        try {
             PurchaseState = BillingPurchaseState.Started;
             var billingResult = _billingClient.LaunchBillingFlow(appUiContext.Activity, billingFlowParams);
 
@@ -142,18 +139,15 @@ public class GooglePlayBillingService: IAppBillingService
             var orderId = await _taskCompletionSource.Task.VhConfigureAwait();
             return orderId;
         }
-        catch (TaskCanceledException ex)
-        {
+        catch (TaskCanceledException ex) {
             VhLogger.Instance.LogError(ex, "The google play purchase task was canceled by the user");
             throw new OperationCanceledException();
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not get order id from google play LaunchBillingFlow.");
             throw;
         }
-        finally
-        {
+        finally {
             PurchaseState = BillingPurchaseState.None;
         }
     }
@@ -162,17 +156,15 @@ public class GooglePlayBillingService: IAppBillingService
     private async Task EnsureConnected()
     {
         if (_billingClient.IsReady)
-         return;
+            return;
 
-        try
-        {
+        try {
             var billingResult = await _billingClient.StartConnectionAsync().VhConfigureAwait();
 
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw new Exception(billingResult.DebugMessage);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not start connection to google play.");
             throw;
         }
@@ -188,8 +180,7 @@ public class GooglePlayBillingService: IAppBillingService
         if (billingResult.ResponseCode == BillingResponseCode.Ok)
             throw new InvalidOperationException("Response code should be not OK.");
 
-        return new Exception(billingResult.DebugMessage)
-        {
+        return new Exception(billingResult.DebugMessage) {
             Data = { { "ResponseCode", billingResult.ResponseCode } }
         };
     }

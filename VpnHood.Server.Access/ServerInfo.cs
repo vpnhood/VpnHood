@@ -17,6 +17,7 @@ public class ServerInfo
 
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public required IPAddress[] PublicIpAddresses { get; set; }
+
     public required ServerStatus Status { get; set; }
     public string? OsInfo { get; set; }
     public string? OsVersion { get; set; }

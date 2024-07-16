@@ -18,7 +18,6 @@ using Socket = System.Net.Sockets.Socket;
 
 namespace VpnHood.Client.Device.Droid;
 
-
 [Service(
     Permission = Manifest.Permission.BindVpnService,
     Exported = true,
@@ -47,11 +46,9 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     public string[]? IncludeApps { get; set; }
     public bool IsMtuSupported => true;
 
-    public int Mtu
-    {
+    public int Mtu {
         get => _mtu;
-        set
-        {
+        set {
             if (Started)
                 throw new InvalidOperationException("Could not set MTU while PacketCapture is started.");
             _mtu = value;
@@ -63,11 +60,9 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
 
     public bool IsDnsServersSupported => true;
 
-    public IPAddress[]? DnsServers
-    {
+    public IPAddress[]? DnsServers {
         get => _dnsServers;
-        set
-        {
+        set {
             if (Started)
                 throw new InvalidOperationException(
                     $"Could not set {nameof(DnsServers)} while {nameof(IPacketCapture)} is started.");
@@ -122,8 +117,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     public void SendPacketToInbound(IList<IPPacket> ipPackets)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++)
-        {
+        for (var i = 0; i < ipPackets.Count; i++) {
             var ipPacket = ipPackets[i];
             _outStream?.Write(ipPacket.Bytes);
         }
@@ -154,19 +148,17 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     }
 
     [return: GeneratedEnum]
-    public override StartCommandResult OnStartCommand(Intent? intent, 
+    public override StartCommandResult OnStartCommand(Intent? intent,
         [GeneratedEnum] StartCommandFlags flags, int startId)
     {
         // close Vpn if it is already started
         CloseVpn();
 
         // post vpn service start command
-        try
-        {
+        try {
             AndroidDevice.Instance.OnServiceStartCommand(this, intent);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             StartServiceTaskCompletionSource?.TrySetException(ex);
             StopVpnService();
             return StartCommandResult.NotSticky;
@@ -200,8 +192,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     private void AddAppFilter(Builder builder)
     {
         // Applications Filter
-        if (IncludeApps != null)
-        {
+        if (IncludeApps != null) {
             // make sure to add current app if an allowed app exists
             var packageName = ApplicationContext?.PackageName ??
                               throw new Exception("Could not get the app PackageName!");
@@ -209,27 +200,22 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
 
             // add user apps
             foreach (var app in IncludeApps.Where(x => x != packageName))
-                try
-                {
+                try {
                     builder.AddAllowedApplication(app);
                 }
-                catch (Exception ex)
-                {
+                catch (Exception ex) {
                     VhLogger.Instance.LogError(ex, "Could not add an allowed app. App: {app}", app);
                 }
         }
 
-        if (ExcludeApps != null)
-        {
+        if (ExcludeApps != null) {
             var packageName = ApplicationContext?.PackageName ??
                               throw new Exception("Could not get the app PackageName!");
             foreach (var app in ExcludeApps.Where(x => x != packageName))
-                try
-                {
+                try {
                     builder.AddDisallowedApplication(app);
                 }
-                catch (Exception ex)
-                {
+                catch (Exception ex) {
                     VhLogger.Instance.LogError(ex, "Could not add a disallowed app. App: {app}", app);
                 }
         }
@@ -240,23 +226,19 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         if (_inStream == null)
             throw new ArgumentNullException(nameof(_inStream));
 
-        try
-        {
+        try {
             var buf = new byte[short.MaxValue];
             int read;
-            while (!_isClosing && (read = _inStream.Read(buf)) > 0)
-            {
+            while (!_isClosing && (read = _inStream.Read(buf)) > 0) {
                 var packetBuffer = buf[..read]; // copy buffer for packet
                 var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer)?.Extract<IPPacket>();
                 if (ipPacket != null)
                     ProcessPacket(ipPacket);
             }
         }
-        catch (ObjectDisposedException)
-        {
+        catch (ObjectDisposedException) {
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             if (!VhUtil.IsSocketClosedException(ex))
                 VhLogger.Instance.LogError(ex, "Error occurred in Android ReadingPacketTask.");
         }
@@ -267,8 +249,10 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
 
     public bool? IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
     {
-        var localAddress = new InetSocketAddress(InetAddress.GetByAddress(localEndPoint.Address.GetAddressBytes()), localEndPoint.Port);
-        var remoteAddress = new InetSocketAddress(InetAddress.GetByAddress(remoteEndPoint.Address.GetAddressBytes()), remoteEndPoint.Port);
+        var localAddress = new InetSocketAddress(InetAddress.GetByAddress(localEndPoint.Address.GetAddressBytes()),
+            localEndPoint.Port);
+        var remoteAddress = new InetSocketAddress(InetAddress.GetByAddress(remoteEndPoint.Address.GetAddressBytes()),
+            remoteEndPoint.Port);
 
         // Android 9 and below
         if (!OperatingSystem.IsAndroidVersionAtLeast(29))
@@ -281,13 +265,11 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
 
     protected virtual void ProcessPacket(IPPacket ipPacket)
     {
-        try
-        {
+        try {
             PacketReceivedFromInbound?.Invoke(this,
                 new PacketReceivedEventArgs([ipPacket], this));
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error in processing packet. Packet: {Packet}",
                 VhLogger.FormatIpPacket(ipPacket.ToString()!));
         }
@@ -301,6 +283,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     }
 
     private bool _isClosing;
+
     private void CloseVpn()
     {
         if (_mInterface == null || _isClosing) return;
@@ -309,40 +292,30 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         VhLogger.Instance.LogTrace("Closing VpnService...");
 
         // close streams
-        try
-        {
+        try {
             _inStream?.Dispose();
             _outStream?.Dispose();
-
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error while closing the VpnService streams.");
         }
 
         // close VpnService
-        try
-        {
+        try {
             _mInterface?.Close(); //required to close the vpn. dispose is not enough
             _mInterface?.Dispose();
-
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error while closing the VpnService.");
         }
-        finally
-        {
+        finally {
             _mInterface = null;
         }
 
-        try
-        {
+        try {
             Stopped?.Invoke(this, EventArgs.Empty);
         }
-        catch (Exception ex)
-        {
-
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error while invoking Stopped event.");
         }
 
@@ -358,25 +331,21 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         if (!_isServiceStarted) return;
         _isServiceStarted = false;
 
-        try
-        {
+        try {
             // it must be after _mInterface.Close
             if (OperatingSystem.IsAndroidVersionAtLeast(24))
                 StopForeground(StopForegroundFlags.Remove);
             else
                 StopForeground(true);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error in StopForeground of VpnService.");
         }
 
-        try
-        {
+        try {
             StopSelf();
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error in StopSelf of VpnService.");
         }
     }

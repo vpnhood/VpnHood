@@ -8,15 +8,13 @@ public static class CertificateUtil
     private static string GenerateName(int length, bool pascalCase = false)
     {
         var random = new Random();
-        string[] consonants =
-        [
+        string[] consonants = [
             "b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "q", "r", "s", "sh", "zh", "t", "v", "w",
             "x"
         ];
         string[] vowels = ["a", "e", "i", "o", "u", "ae", "y"];
         var name = "";
-        for (var i = 0; i < length; i += 2)
-        {
+        for (var i = 0; i < length; i += 2) {
             name += consonants[random.Next(consonants.Length)];
             name += vowels[random.Next(vowels.Length)];
         }
@@ -29,7 +27,7 @@ public static class CertificateUtil
 
     public static string CreateRandomDns()
     {
-        var extensions = new[] {".com", ".net", ".org"};
+        var extensions = new[] { ".com", ".net", ".org" };
 
         var random = new Random();
         var ret = GenerateName(random.Next(2, 3)) + "." + GenerateName(random.Next(7, 10));

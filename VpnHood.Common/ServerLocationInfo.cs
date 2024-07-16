@@ -7,6 +7,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
 {
     [JsonIgnore] // required to prevent NSwag generate incorrect code
     public static ServerLocationInfo Auto { get; } = new() { CountryCode = "*", RegionName = "*" };
+
     public required string CountryCode { get; init; }
     public required string RegionName { get; init; }
     public string ServerLocation => $"{CountryCode}/{RegionName}";
@@ -15,7 +16,9 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
     public int CompareTo(ServerLocationInfo other)
     {
         var countryComparison = string.Compare(CountryName, other.CountryName, StringComparison.OrdinalIgnoreCase);
-        return countryComparison != 0 ? countryComparison : string.Compare(RegionName, other.RegionName, StringComparison.OrdinalIgnoreCase);
+        return countryComparison != 0
+            ? countryComparison
+            : string.Compare(RegionName, other.RegionName, StringComparison.OrdinalIgnoreCase);
     }
 
     public override bool Equals(object? obj)
@@ -37,8 +40,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
     public static ServerLocationInfo Parse(string value)
     {
         var parts = value.Split('/');
-        var ret = new ServerLocationInfo
-        {
+        var ret = new ServerLocationInfo {
             CountryCode = ParseLocationPart(parts, 0),
             RegionName = ParseLocationPart(parts, 1)
         };
@@ -47,12 +49,10 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
 
     public static ServerLocationInfo? TryParse(string value)
     {
-        try
-        {
+        try {
             return Parse(value);
         }
-        catch 
-        {
+        catch {
             return null;
         }
     }
@@ -76,21 +76,19 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
 
     private static string GetCountryName(string countryCode)
     {
-        try
-        {
+        try {
             if (countryCode == "*") return "(auto)";
             var regionInfo = new RegionInfo(countryCode);
             return regionInfo.EnglishName;
         }
-        catch (Exception)
-        {
+        catch (Exception) {
             return countryCode;
         }
     }
 
     public static bool IsAuto(string? serverLocation)
     {
-        return 
+        return
             string.IsNullOrEmpty(serverLocation) ||
             TryParse(serverLocation)?.Equals(Auto) == true;
     }

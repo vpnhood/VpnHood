@@ -7,8 +7,7 @@ public class NotificationBroadcastReceiver : BroadcastReceiver
 {
     public override void OnReceive(Context? context, Intent? intent)
     {
-        switch (intent?.Action)
-        {
+        switch (intent?.Action) {
             case "disconnect":
                 if (VpnHoodApp.IsInit)
                     _ = VpnHoodApp.Instance.Disconnect(true);

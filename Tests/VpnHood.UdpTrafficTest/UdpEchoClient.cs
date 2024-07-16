@@ -27,36 +27,33 @@ public class UdpEchoClient
 
     public async Task StartAsync(IPEndPoint serverEp, int echoCount, int bufferSize, int timeout = 3000)
     {
-        Console.WriteLine($"Sending udp packets to {serverEp}... EchoCount: {echoCount}, BufferSize: {bufferSize}, Timeout: {timeout}");
+        Console.WriteLine(
+            $"Sending udp packets to {serverEp}... EchoCount: {echoCount}, BufferSize: {bufferSize}, Timeout: {timeout}");
 
         bufferSize += 8;
         var buffer = new byte[bufferSize];
         new Random().NextBytes(buffer);
 
-        for (var i = 0; ; i++)
-        {
+        for (var i = 0;; i++) {
             //send buffer
             Array.Copy(BitConverter.GetBytes(i), 0, buffer, 0, 4);
             Array.Copy(BitConverter.GetBytes(echoCount), 0, buffer, 4, 4);
             var res = await _udpClient.SendAsync(buffer, serverEp, CancellationToken.None);
-            if (res!= buffer.Length)
-            {
+            if (res != buffer.Length) {
                 _sendSpeedometer.AddFailed();
                 Console.WriteLine("Could not send all data.");
             }
+
             _sendSpeedometer.AddSucceeded(buffer);
 
             // wait for buffer
-            for (var j = 0; j < echoCount; j++)
-            {
-                try
-                {
+            for (var j = 0; j < echoCount; j++) {
+                try {
                     using var cancellationTokenSource = new CancellationTokenSource(timeout);
                     var udpResult = await _udpClient.ReceiveAsync(cancellationTokenSource.Token);
                     var resBuffer = udpResult.Buffer;
                     var packetNumber = BitConverter.ToInt32(buffer, 0);
-                    if (packetNumber != i || resBuffer.Length != buffer.Length || CompareBuffer(buffer, resBuffer, 8))
-                    {
+                    if (packetNumber != i || resBuffer.Length != buffer.Length || CompareBuffer(buffer, resBuffer, 8)) {
                         j--;
                         Console.WriteLine("Invalid data received");
                         continue;
@@ -64,8 +61,7 @@ public class UdpEchoClient
 
                     _receivedSpeedometer.AddSucceeded(buffer);
                 }
-                catch (OperationCanceledException)
-                {
+                catch (OperationCanceledException) {
                     Console.WriteLine("A packet loss!");
                     _receivedSpeedometer.AddFailed();
                     break;
@@ -73,5 +69,4 @@ public class UdpEchoClient
             }
         }
     }
-
 }

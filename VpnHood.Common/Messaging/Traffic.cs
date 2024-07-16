@@ -4,13 +4,14 @@ namespace VpnHood.Common.Messaging;
 
 public class Traffic : IEquatable<Traffic>, ICloneable
 {
-    public long ReceivedTraffic { set => Received = value; } 
+    public long ReceivedTraffic {
+        set => Received = value;
+    }
 
     public long Sent { get; set; }
     public long Received { get; set; }
 
-    [JsonIgnore]
-    public long Total => Sent + Received;
+    [JsonIgnore] public long Total => Sent + Received;
 
     public Traffic()
     {
@@ -30,8 +31,7 @@ public class Traffic : IEquatable<Traffic>, ICloneable
 
     public static Traffic operator +(Traffic traffic1, Traffic traffic2)
     {
-        return new Traffic
-        {
+        return new Traffic {
             Sent = traffic1.Sent + traffic2.Sent,
             Received = traffic1.Received + traffic2.Received
         };
@@ -39,8 +39,7 @@ public class Traffic : IEquatable<Traffic>, ICloneable
 
     public static Traffic operator -(Traffic traffic1, Traffic traffic2)
     {
-        return new Traffic
-        {
+        return new Traffic {
             Sent = traffic1.Sent - traffic2.Sent,
             Received = traffic1.Received - traffic2.Received
         };
@@ -66,8 +65,7 @@ public class Traffic : IEquatable<Traffic>, ICloneable
 
     public Traffic Clone()
     {
-        return new Traffic
-        {
+        return new Traffic {
             Sent = Sent,
             Received = Received
         };

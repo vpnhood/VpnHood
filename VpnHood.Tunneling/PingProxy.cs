@@ -22,8 +22,7 @@ public class PingProxy : ITimeoutItem
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
-        try
-        {
+        try {
             await _finishSemaphore.WaitAsync().VhConfigureAwait();
             IsBusy = true;
 
@@ -32,8 +31,7 @@ public class PingProxy : ITimeoutItem
                 ? await SendIpV4(ipPacket.Extract<IPv4Packet>()).VhConfigureAwait()
                 : await SendIpV6(ipPacket.Extract<IPv6Packet>()).VhConfigureAwait();
         }
-        finally
-        {
+        finally {
             IsBusy = false;
             _finishSemaphore.Release();
         }
@@ -43,15 +41,18 @@ public class PingProxy : ITimeoutItem
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
         if (ipPacket.Protocol != ProtocolType.Icmp)
-            throw new InvalidOperationException($"Packet is not {ProtocolType.Icmp}! Packet: {PacketUtil.Format(ipPacket)}");
+            throw new InvalidOperationException(
+                $"Packet is not {ProtocolType.Icmp}! Packet: {PacketUtil.Format(ipPacket)}");
 
         var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
         if (icmpPacket.TypeCode != IcmpV4TypeCode.EchoRequest)
-            throw new InvalidOperationException($"The icmp is not {IcmpV4TypeCode.EchoRequest}! Packet: {PacketUtil.Format(ipPacket)}");
+            throw new InvalidOperationException(
+                $"The icmp is not {IcmpV4TypeCode.EchoRequest}! Packet: {PacketUtil.Format(ipPacket)}");
 
         var noFragment = (ipPacket.FragmentFlags & 0x2) != 0;
         var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, noFragment);
-        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)IcmpTimeout.TotalMilliseconds, icmpPacket.Data, pingOptions).VhConfigureAwait();
+        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)IcmpTimeout.TotalMilliseconds,
+            icmpPacket.Data, pingOptions).VhConfigureAwait();
 
         if (pingReply.Status != IPStatus.Success)
             throw new Exception($"Ping Reply has been failed! Status: {pingReply.Status}");
@@ -76,11 +77,14 @@ public class PingProxy : ITimeoutItem
         // We should not use Task due its stack usage, this method is called by many session each many times!
         var icmpPacket = PacketUtil.ExtractIcmpV6(ipPacket);
         if (icmpPacket.Type != IcmpV6Type.EchoRequest)
-            throw new InvalidOperationException($"The icmp is not {IcmpV6Type.EchoRequest}! Packet: {PacketUtil.Format(ipPacket)}");
+            throw new InvalidOperationException(
+                $"The icmp is not {IcmpV6Type.EchoRequest}! Packet: {PacketUtil.Format(ipPacket)}");
 
         var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, true);
         var pingData = icmpPacket.Bytes[8..];
-        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)IcmpTimeout.TotalMilliseconds, pingData, pingOptions).VhConfigureAwait();
+        var pingReply = await _ping
+            .SendPingAsync(ipPacket.DestinationAddress, (int)IcmpTimeout.TotalMilliseconds, pingData, pingOptions)
+            .VhConfigureAwait();
 
         // IcmpV6 packet generation is not fully implemented by packetNet
         // So create all packet in buffer

@@ -17,15 +17,13 @@ public static class VhTrackerExtensions
     }
 
 
-    private static async Task VhTrackErrorAsync(this ITracker tracker, Exception exception, string message, string action, bool isWarning)
+    private static async Task VhTrackErrorAsync(this ITracker tracker, Exception exception, string message,
+        string action, bool isWarning)
     {
-        try
-        {
-            var trackEvent = new TrackEvent
-            {
+        try {
+            var trackEvent = new TrackEvent {
                 EventName = "vh_exception",
-                Parameters = new Dictionary<string, object>
-                {
+                Parameters = new Dictionary<string, object> {
                     { "method", action },
                     { "message", message + ", " + exception.Message },
                     { "error_type", exception.GetType().Name },
@@ -35,8 +33,7 @@ public static class VhTrackerExtensions
 
             await tracker.Track([trackEvent]);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not error to anonymous tracker.");
         }
     }

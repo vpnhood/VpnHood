@@ -13,7 +13,7 @@ public class StreamCryptor : AsyncStreamDecorator
     private long _readCount;
     private long _writeCount;
 
-    private StreamCryptor(Stream stream, byte[] key, long maxCipherCount, 
+    private StreamCryptor(Stream stream, byte[] key, long maxCipherCount,
         bool leaveOpen, bool encryptInGivenBuffer)
         : base(stream, leaveOpen)
     {
@@ -29,7 +29,8 @@ public class StreamCryptor : AsyncStreamDecorator
     public override bool CanSeek => false;
 
 
-    public static StreamCryptor Create(Stream stream, byte[] key, byte[]? salt = null, long maxCipherPos = long.MaxValue,
+    public static StreamCryptor Create(Stream stream, byte[] key, byte[]? salt = null,
+        long maxCipherPos = long.MaxValue,
         bool leaveOpen = false, bool encryptInGivenBuffer = true)
     {
         if (stream is null) throw new ArgumentNullException(nameof(stream));
@@ -38,8 +39,7 @@ public class StreamCryptor : AsyncStreamDecorator
         var encKey = key;
 
         // apply salt if salt exists
-        if (salt != null)
-        {
+        if (salt != null) {
             if (key.Length != salt.Length)
                 throw new Exception($"{nameof(key)} length and {nameof(salt)} length is not same.");
             encKey = (byte[])key.Clone();
@@ -54,8 +54,7 @@ public class StreamCryptor : AsyncStreamDecorator
     public void Decrypt(byte[] buffer, int offset, int count)
     {
         var cipherCount = Math.Min(count, _maxCipherCount - _readCount);
-        if (cipherCount > 0)
-        {
+        if (cipherCount > 0) {
             lock (_bufferCryptor)
                 _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _readCount);
             _readCount += count;
@@ -65,8 +64,7 @@ public class StreamCryptor : AsyncStreamDecorator
     public void Encrypt(byte[] buffer, int offset, int count)
     {
         var cipherCount = Math.Min(count, _maxCipherCount - _writeCount);
-        if (cipherCount > 0)
-        {
+        if (cipherCount > 0) {
             lock (_bufferCryptor)
                 _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _writeCount);
             _writeCount += cipherCount;
@@ -83,8 +81,7 @@ public class StreamCryptor : AsyncStreamDecorator
 
     public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        if (_encryptInGivenBuffer)
-        {
+        if (_encryptInGivenBuffer) {
             Encrypt(buffer, offset, count);
             return _stream.WriteAsync(buffer, offset, count, cancellationToken);
         }

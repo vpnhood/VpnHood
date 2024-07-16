@@ -7,11 +7,9 @@ public class ActiveUiContext : IUiContext
     private static IUiContext? _context;
     public static event EventHandler? OnChanged;
 
-    public static IUiContext? Context
-    {
+    public static IUiContext? Context {
         get => _context;
-        set
-        {
+        set {
             if (_context == value)
                 return;
 
@@ -21,6 +19,4 @@ public class ActiveUiContext : IUiContext
     }
 
     public static IUiContext RequiredContext => Context ?? throw new UiContextNotAvailableException();
-
-
 }

@@ -17,11 +17,9 @@ public class ServerFinderTest
         var servers = new List<VpnHoodServer>();
         var accessManagers = new List<TestAccessManager>();
 
-        try
-        {
+        try {
             // create servers
-            for (var i = 0; i < 5; i++)
-            {
+            for (var i = 0; i < 5; i++) {
                 var accessManager = TestHelper.CreateAccessManager(storagePath: storageFolder);
                 var server = await TestHelper.CreateServer(accessManager);
                 servers.Add(server);
@@ -46,8 +44,7 @@ public class ServerFinderTest
                 servers[4].ServerHost.TcpEndPoints.First().Equals(client.HostTcpEndPoint)
             );
         }
-        finally
-        {
+        finally {
             await Task.WhenAll(servers.Select(x => x.DisposeAsync().AsTask()));
             foreach (var accessManager in accessManagers)
                 accessManager.Dispose();
@@ -61,20 +58,18 @@ public class ServerFinderTest
         var servers = new List<VpnHoodServer>();
         var accessManagers = new List<TestAccessManager>();
 
-        try
-        {
+        try {
             // create servers
-            for (var i = 0; i < 10; i++)
-            {
+            for (var i = 0; i < 10; i++) {
                 var accessManager = TestHelper.CreateAccessManager(storagePath: storageFolder);
                 var server = await TestHelper.CreateServer(accessManager);
                 servers.Add(server);
                 accessManagers.Add(accessManager);
             }
+
             var serverEndPoints = servers.Select(x => x.ServerHost.TcpEndPoints.First()).ToArray();
 
-            accessManagers[2].RedirectHostEndPoints =
-            [
+            accessManagers[2].RedirectHostEndPoints = [
                 serverEndPoints[4],
                 serverEndPoints[5],
                 serverEndPoints[6],
@@ -94,7 +89,8 @@ public class ServerFinderTest
 
             // connect
             var clientOptions = TestHelper.CreateClientOptions();
-            var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture(), clientOptions: clientOptions);
+            var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture(),
+                clientOptions: clientOptions);
             await TestHelper.WaitForClientState(client, ClientState.Connected);
 
             Assert.AreEqual(servers[5].ServerHost.TcpEndPoints.First(), client.HostTcpEndPoint);
@@ -102,19 +98,30 @@ public class ServerFinderTest
             // tracker should report unreachable servers
             var testTracker = (TestTracker?)clientOptions.Tracker;
             Assert.IsNotNull(testTracker);
-            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[0])?.Parameters["available"] is null or false);
-            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[1])?.Parameters["available"] is null or false);
-            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[2])?.Parameters["available"] is true);
+            Assert.IsTrue(
+                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[0])?.Parameters["available"] is null
+                    or false);
+            Assert.IsTrue(
+                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[1])?.Parameters["available"] is null
+                    or false);
+            Assert.IsTrue(
+                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[2])?.Parameters["available"] is true);
             Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[3]) is null);
-            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[4])?.Parameters["available"] is false);
-            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[5])?.Parameters["available"] is true);
-            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[6])?.Parameters["available"] is null or false);
-            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[7])?.Parameters["available"] is null or true);
+            Assert.IsTrue(
+                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[4])
+                    ?.Parameters["available"] is false);
+            Assert.IsTrue(
+                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[5])?.Parameters["available"] is true);
+            Assert.IsTrue(
+                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[6])?.Parameters["available"] is null
+                    or false);
+            Assert.IsTrue(
+                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[7])?.Parameters["available"] is null
+                    or true);
             Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[8]) is null);
             Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[9]) is null);
         }
-        finally
-        {
+        finally {
             await Task.WhenAll(servers.Select(x => x.DisposeAsync().AsTask()));
             foreach (var accessManager in accessManagers)
                 accessManager.Dispose();

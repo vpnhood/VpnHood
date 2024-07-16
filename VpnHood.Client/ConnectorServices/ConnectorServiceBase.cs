@@ -47,7 +47,8 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         JobRunner.Default.Add(this);
     }
 
-    public void Init(int serverProtocolVersion, TimeSpan tcpRequestTimeout, byte[]? serverSecret, TimeSpan tcpReuseTimeout)
+    public void Init(int serverProtocolVersion, TimeSpan tcpRequestTimeout, byte[]? serverSecret,
+        TimeSpan tcpReuseTimeout)
     {
         ServerProtocolVersion = serverProtocolVersion;
         RequestTimeout = tcpRequestTimeout;
@@ -55,12 +56,14 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         _apiKey = serverSecret != null ? HttpUtil.GetApiKey(serverSecret, TunnelDefaults.HttpPassCheck) : string.Empty;
     }
 
-    private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, string streamId, CancellationToken cancellationToken)
+    private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, string streamId,
+        CancellationToken cancellationToken)
     {
         const bool useBuffer = true;
         const int version = 3;
         var binaryStreamType = string.IsNullOrEmpty(_apiKey) || !_allowTcpReuse
-            ? BinaryStreamType.None : BinaryStreamType.Standard;
+            ? BinaryStreamType.None
+            : BinaryStreamType.Standard;
 
         // write HTTP request
         var header =
@@ -76,12 +79,14 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken).VhConfigureAwait();
         return binaryStreamType == BinaryStreamType.None
             ? new TcpClientStream(tcpClient, sslStream, streamId)
-            : new TcpClientStream(tcpClient, new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer), streamId, ReuseStreamClient);
+            : new TcpClientStream(tcpClient, new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer),
+                streamId, ReuseStreamClient);
     }
 
     protected async Task<IClientStream> GetTlsConnectionToServer(string streamId, CancellationToken cancellationToken)
     {
-        if (EndPointInfo == null) throw new InvalidOperationException($"{nameof(EndPointInfo)} has not been initialized.");
+        if (EndPointInfo == null)
+            throw new InvalidOperationException($"{nameof(EndPointInfo)} has not been initialized.");
         var tcpEndPoint = EndPointInfo.TcpEndPoint;
         var hostName = EndPointInfo.HostName;
 
@@ -89,20 +94,23 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         var tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint.AddressFamily);
 
         // Client.SessionTimeout does not affect in ConnectAsync
-        VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
-        await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpConnectTimeout, cancellationToken).VhConfigureAwait();
+        VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}",
+            VhLogger.Format(tcpEndPoint));
+        await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpConnectTimeout,
+            cancellationToken).VhConfigureAwait();
 
         // Establish a TLS connection
         var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
-        VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}", VhLogger.FormatHostName(hostName));
-        await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
-        {
-            TargetHost = hostName,
-            EnabledSslProtocols = SslProtocols.None // auto
-        }, cancellationToken)
-        .VhConfigureAwait();
+        VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}",
+            VhLogger.FormatHostName(hostName));
+        await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
+                TargetHost = hostName,
+                EnabledSslProtocols = SslProtocols.None // auto
+            }, cancellationToken)
+            .VhConfigureAwait();
 
-        var clientStream = await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken).VhConfigureAwait();
+        var clientStream =
+            await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken).VhConfigureAwait();
         lock (Stat) Stat.CreatedConnectionCount++;
         return clientStream;
     }
@@ -110,8 +118,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
     protected IClientStream? GetFreeClientStream()
     {
         var now = FastDateTime.Now;
-        while (_freeClientStreams.TryDequeue(out var queueItem))
-        {
+        while (_freeClientStreams.TryDequeue(out var queueItem)) {
             // make sure the clientStream timeout has not been reached
             if (queueItem.EnqueueTime + TcpReuseTimeout > now && queueItem.ClientStream.CheckIsAlive())
                 return queueItem.ClientStream;
@@ -131,8 +138,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
     public Task RunJob()
     {
         var now = FastDateTime.Now;
-        while (_freeClientStreams.TryPeek(out var queueItem) && queueItem.EnqueueTime + TcpReuseTimeout <= now)
-        {
+        while (_freeClientStreams.TryPeek(out var queueItem) && queueItem.EnqueueTime + TcpReuseTimeout <= now) {
             _freeClientStreams.TryDequeue(out queueItem);
             DisposingTasks.Add(queueItem.ClientStream.DisposeAsync(false));
         }
@@ -147,7 +153,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
             return true;
 
         var ret = sslPolicyErrors == SslPolicyErrors.None ||
-               EndPointInfo.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
+                  EndPointInfo.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
 
         return ret;
     }

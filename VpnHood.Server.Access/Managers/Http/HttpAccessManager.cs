@@ -27,7 +27,8 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
     public HttpAccessManager(HttpClient httpClient, HttpAccessManagerOptions options)
         : base(httpClient)
     {
-        DefaultBaseAddress = new UriBuilder(options.BaseUrl.Scheme, options.BaseUrl.Host, options.BaseUrl.Port, "api/agent/").Uri;
+        DefaultBaseAddress =
+            new UriBuilder(options.BaseUrl.Scheme, options.BaseUrl.Host, options.BaseUrl.Port, "api/agent/").Uri;
 
         if (AuthenticationHeaderValue.TryParse(options.Authorization, out var authenticationHeaderValue))
             DefaultAuthorization = authenticationHeaderValue;
@@ -43,14 +44,13 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         return base.ProcessResponseAsync(client, response, ct);
     }
 
-    protected override async Task<HttpResult<T>> HttpSendAsync<T>(string urlPart, Dictionary<string, object?>? parameters, HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override async Task<HttpResult<T>> HttpSendAsync<T>(string urlPart,
+        Dictionary<string, object?>? parameters, HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        try
-        {
+        try {
             return await base.HttpSendAsync<T>(urlPart, parameters, request, cancellationToken).VhConfigureAwait();
         }
-        catch (Exception ex) when (VhUtil.IsConnectionRefusedException(ex))
-        {
+        catch (Exception ex) when (VhUtil.IsConnectionRefusedException(ex)) {
             IsMaintenanceMode = true;
             throw new MaintenanceException();
         }
@@ -70,11 +70,10 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
 
     public Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
-        var parameters = new Dictionary<string, object?>
-        {
-            { "sessionId",  sessionId},
-            { "hostEndPoint", hostEndPoint},
-            { "clientIp",  clientIp}
+        var parameters = new Dictionary<string, object?> {
+            { "sessionId", sessionId },
+            { "hostEndPoint", hostEndPoint },
+            { "clientIp", clientIp }
         };
 
         return HttpGetAsync<SessionResponseEx>($"sessions/{sessionId}", parameters);
@@ -82,11 +81,10 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
 
     public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
     {
-        var parameters = new Dictionary<string, object?>
-        {
-            { "sessionId",  sessionId},
-            { "adData",  adData},
-            { "closeSession",  false}
+        var parameters = new Dictionary<string, object?> {
+            { "sessionId", sessionId },
+            { "adData", adData },
+            { "closeSession", false }
         };
 
         return HttpPostAsync<SessionResponse>($"sessions/{sessionId}/usage", parameters, traffic);
@@ -94,10 +92,9 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
 
     public Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic)
     {
-        var parameters = new Dictionary<string, object?>
-        {
-            { "sessionId",  sessionId},
-            { "closeSession",  true}
+        var parameters = new Dictionary<string, object?> {
+            { "sessionId", sessionId },
+            { "closeSession", true }
         };
 
         return HttpPostAsync<SessionResponse>($"sessions/{sessionId}/usage", parameters, traffic);

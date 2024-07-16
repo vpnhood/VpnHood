@@ -2,7 +2,6 @@
 using System.Net;
 using System.Net.Sockets;
 
-
 namespace VpnHood.Common.Net;
 
 public class IpRangeOrderedList :
@@ -10,8 +9,12 @@ public class IpRangeOrderedList :
     IReadOnlyList<IpRange>
 {
     private readonly List<IpRange> _orderedList;
-    public IOrderedEnumerable<IpRange> CreateOrderedEnumerable<TKey>(Func<IpRange, TKey> keySelector, IComparer<TKey> comparer, bool descending) =>
-        descending ? _orderedList.OrderByDescending(keySelector, comparer) : _orderedList.OrderBy(keySelector, comparer);
+
+    public IOrderedEnumerable<IpRange> CreateOrderedEnumerable<TKey>(Func<IpRange, TKey> keySelector,
+        IComparer<TKey> comparer, bool descending) =>
+        descending
+            ? _orderedList.OrderByDescending(keySelector, comparer)
+            : _orderedList.OrderBy(keySelector, comparer);
 
     public IEnumerator<IpRange> GetEnumerator() => _orderedList.GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -40,8 +43,7 @@ public class IpRangeOrderedList :
         // serialize to binary
         using var writer = new BinaryWriter(stream);
         writer.Write(_orderedList.Count);
-        foreach (var range in _orderedList)
-        {
+        foreach (var range in _orderedList) {
             var firstIpBytes = range.FirstIpAddress.GetAddressBytes();
             var lastIpBytes = range.LastIpAddress.GetAddressBytes();
 
@@ -57,8 +59,7 @@ public class IpRangeOrderedList :
         using var reader = new BinaryReader(stream);
         var length = reader.ReadInt32();
         var ipRanges = new IpRange[length];
-        for (var i = 0; i < length; i++)
-        {
+        for (var i = 0; i < length; i++) {
             var firstIpLength = reader.ReadByte();
             var firstIpBytes = reader.ReadBytes(firstIpLength);
             var lastIpLength = reader.ReadByte();
@@ -149,17 +150,14 @@ public class IpRangeOrderedList :
     private static List<IpRange> Unify(IOrderedEnumerable<IpRange> sortedIpRanges)
     {
         List<IpRange> res = [];
-        foreach (var ipRange in sortedIpRanges)
-        {
+        foreach (var ipRange in sortedIpRanges) {
             if (res.Count > 0 &&
                 ipRange.AddressFamily == res[^1].AddressFamily &&
-                IPAddressUtil.Compare(IPAddressUtil.Decrement(ipRange.FirstIpAddress), res[^1].LastIpAddress) <= 0)
-            {
+                IPAddressUtil.Compare(IPAddressUtil.Decrement(ipRange.FirstIpAddress), res[^1].LastIpAddress) <= 0) {
                 if (IPAddressUtil.Compare(ipRange.LastIpAddress, res[^1].LastIpAddress) > 0)
                     res[^1] = new IpRange(res[^1].FirstIpAddress, ipRange.LastIpAddress);
             }
-            else
-            {
+            else {
                 res.Add(ipRange);
             }
         }
@@ -199,24 +197,23 @@ public class IpRangeOrderedList :
     {
         var ipRanges = new List<IpRange>();
         foreach (var ipRange1 in orderedIpRanges1)
-            foreach (var ipRange2 in orderedIpRanges2)
-            {
-                if (ipRange1.IsInRange(ipRange2.FirstIpAddress))
-                    ipRanges.Add(new IpRange(ipRange2.FirstIpAddress,
-                        IPAddressUtil.Min(ipRange1.LastIpAddress, ipRange2.LastIpAddress)));
+        foreach (var ipRange2 in orderedIpRanges2) {
+            if (ipRange1.IsInRange(ipRange2.FirstIpAddress))
+                ipRanges.Add(new IpRange(ipRange2.FirstIpAddress,
+                    IPAddressUtil.Min(ipRange1.LastIpAddress, ipRange2.LastIpAddress)));
 
-                else if (ipRange1.IsInRange(ipRange2.LastIpAddress))
-                    ipRanges.Add(new IpRange(IPAddressUtil.Max(ipRange1.FirstIpAddress, ipRange2.FirstIpAddress),
-                        ipRange2.LastIpAddress));
+            else if (ipRange1.IsInRange(ipRange2.LastIpAddress))
+                ipRanges.Add(new IpRange(IPAddressUtil.Max(ipRange1.FirstIpAddress, ipRange2.FirstIpAddress),
+                    ipRange2.LastIpAddress));
 
-                else if (ipRange2.IsInRange(ipRange1.FirstIpAddress))
-                    ipRanges.Add(new IpRange(ipRange1.FirstIpAddress,
-                        IPAddressUtil.Min(ipRange1.LastIpAddress, ipRange2.LastIpAddress)));
+            else if (ipRange2.IsInRange(ipRange1.FirstIpAddress))
+                ipRanges.Add(new IpRange(ipRange1.FirstIpAddress,
+                    IPAddressUtil.Min(ipRange1.LastIpAddress, ipRange2.LastIpAddress)));
 
-                else if (ipRange2.IsInRange(ipRange1.LastIpAddress))
-                    ipRanges.Add(new IpRange(IPAddressUtil.Max(ipRange1.FirstIpAddress, ipRange2.FirstIpAddress),
-                        ipRange1.LastIpAddress));
-            }
+            else if (ipRange2.IsInRange(ipRange1.LastIpAddress))
+                ipRanges.Add(new IpRange(IPAddressUtil.Max(ipRange1.FirstIpAddress, ipRange2.FirstIpAddress),
+                    ipRange1.LastIpAddress));
+        }
 
         return ipRanges;
     }
@@ -228,8 +225,7 @@ public class IpRangeOrderedList :
         var newIpRanges = new List<IpRange>();
 
         // IP4
-        if (includeIPv4)
-        {
+        if (includeIPv4) {
             var ipRanges2 = ipRanges.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
             if (ipRanges2.Any())
                 newIpRanges.AddRange(InvertInternal(ipRanges2));
@@ -238,8 +234,7 @@ public class IpRangeOrderedList :
         }
 
         // IP6
-        if (includeIPv6)
-        {
+        if (includeIPv6) {
             var ipRanges2 = ipRanges.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
             if (ipRanges2.Any())
                 newIpRanges.AddRange(InvertInternal(ipRanges2));
@@ -254,17 +249,21 @@ public class IpRangeOrderedList :
     {
         // extract
         List<IpRange> res = [];
-        for (var i = 0; i < orderedIpRanges.Length; i++)
-        {
+        for (var i = 0; i < orderedIpRanges.Length; i++) {
             var ipRange = orderedIpRanges[i];
-            var minIpValue = ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddressUtil.MinIPv6Value : IPAddressUtil.MinIPv4Value;
-            var maxIpValue = ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddressUtil.MaxIPv6Value : IPAddressUtil.MaxIPv4Value;
+            var minIpValue = ipRange.AddressFamily == AddressFamily.InterNetworkV6
+                ? IPAddressUtil.MinIPv6Value
+                : IPAddressUtil.MinIPv4Value;
+            var maxIpValue = ipRange.AddressFamily == AddressFamily.InterNetworkV6
+                ? IPAddressUtil.MaxIPv6Value
+                : IPAddressUtil.MaxIPv4Value;
 
             if (i == 0 && !IPAddressUtil.IsMinValue(ipRange.FirstIpAddress))
                 res.Add(new IpRange(minIpValue, IPAddressUtil.Decrement(ipRange.FirstIpAddress)));
 
             if (i > 0)
-                res.Add(new IpRange(IPAddressUtil.Increment(orderedIpRanges[i - 1].LastIpAddress), IPAddressUtil.Decrement(ipRange.FirstIpAddress)));
+                res.Add(new IpRange(IPAddressUtil.Increment(orderedIpRanges[i - 1].LastIpAddress),
+                    IPAddressUtil.Decrement(ipRange.FirstIpAddress)));
 
             if (i == orderedIpRanges.Length - 1 && !IPAddressUtil.IsMaxValue(ipRange.LastIpAddress))
                 res.Add(new IpRange(IPAddressUtil.Increment(ipRange.LastIpAddress), maxIpValue));
@@ -277,7 +276,8 @@ public class IpRangeOrderedList :
     {
         public int Compare(IpRange x, IpRange y)
         {
-            if (IPAddressUtil.Compare(x.FirstIpAddress, y.FirstIpAddress) <= 0 && IPAddressUtil.Compare(x.LastIpAddress, y.LastIpAddress) >= 0) return 0;
+            if (IPAddressUtil.Compare(x.FirstIpAddress, y.FirstIpAddress) <= 0 &&
+                IPAddressUtil.Compare(x.LastIpAddress, y.LastIpAddress) >= 0) return 0;
             if (IPAddressUtil.Compare(x.FirstIpAddress, y.FirstIpAddress) < 0) return -1;
             return +1;
         }

@@ -13,23 +13,17 @@ public class IpApiCoLocationProvider(string userAgent) : IIpLocationProvider
         [JsonConverter(typeof(IPAddressConverter))]
         public required IPAddress Ip { get; set; }
 
-        [JsonPropertyName("country_name")]
-        public required string CountryName { get; set; }
-       
-        [JsonPropertyName("country_code")]
-        public required string CountryCode { get; set; }
+        [JsonPropertyName("country_name")] public required string CountryName { get; set; }
 
-        [JsonPropertyName("region")]
-        public string? RegionName { get; set; }
-       
-        [JsonPropertyName("region_code")]
-        public string? RegionCode { get; set; }
-        
-        [JsonPropertyName("city")]
-        public string? CityName { get; set; }
-        
-        [JsonPropertyName("continent_code")]
-        public string? ContinentCode { get; set; }
+        [JsonPropertyName("country_code")] public required string CountryCode { get; set; }
+
+        [JsonPropertyName("region")] public string? RegionName { get; set; }
+
+        [JsonPropertyName("region_code")] public string? RegionCode { get; set; }
+
+        [JsonPropertyName("city")] public string? CityName { get; set; }
+
+        [JsonPropertyName("continent_code")] public string? ContinentCode { get; set; }
     }
 
     public Task<IpLocation> GetLocation(HttpClient httpClient, IPAddress ipAddress, CancellationToken cancellationToken)
@@ -44,7 +38,8 @@ public class IpApiCoLocationProvider(string userAgent) : IIpLocationProvider
         return GetLocation(httpClient, uri, userAgent, cancellationToken);
     }
 
-    private static async Task<IpLocation> GetLocation(HttpClient httpClient, Uri url, string userAgent, CancellationToken cancellationToken)
+    private static async Task<IpLocation> GetLocation(HttpClient httpClient, Uri url, string userAgent,
+        CancellationToken cancellationToken)
     {
         // get json from the service provider
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
@@ -54,8 +49,7 @@ public class IpApiCoLocationProvider(string userAgent) : IIpLocationProvider
         var json = await responseMessage.Content.ReadAsStringAsync().VhConfigureAwait();
 
         var apiLocation = VhUtil.JsonDeserialize<ApiLocation>(json);
-        var ipLocation = new IpLocation
-        {
+        var ipLocation = new IpLocation {
             IpAddress = apiLocation.Ip,
             CountryName = apiLocation.CountryName,
             CountryCode = apiLocation.CountryCode,

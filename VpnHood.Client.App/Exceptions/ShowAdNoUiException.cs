@@ -1,9 +1,11 @@
 ﻿using VpnHood.Common.Exceptions;
+
 namespace VpnHood.Client.App.Exceptions;
 
 public class ShowAdNoUiException : ShowAdException
 {
     private const string Msg = "Could not show any ad because the app window was not open.";
+
     public ShowAdNoUiException() : base(Msg)
     {
         // ReSharper disable once VirtualMemberCallInConstructor

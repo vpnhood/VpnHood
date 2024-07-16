@@ -29,7 +29,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     public bool IsStream => true;
 
     public StreamDatagramChannel(IClientStream clientStream, string channelId)
-    : this(clientStream, channelId, Timeout.InfiniteTimeSpan)
+        : this(clientStream, channelId, Timeout.InfiniteTimeSpan)
     {
     }
 
@@ -37,8 +37,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     {
         ChannelId = channelId;
         _clientStream = clientStream ?? throw new ArgumentNullException(nameof(clientStream));
-        if (!VhUtil.IsInfinite(lifespan))
-        {
+        if (!VhUtil.IsInfinite(lifespan)) {
             _lifeTime = FastDateTime.Now + lifespan;
             JobRunner.Default.Add(this);
         }
@@ -58,13 +57,11 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
             throw new Exception("StreamDatagramChannel has been already started.");
 
         Connected = true;
-        try
-        {
+        try {
             await ReadTask(_cancellationTokenSource.Token).VhConfigureAwait();
             await SendClose().VhConfigureAwait();
         }
-        finally
-        {
+        finally {
             Connected = false;
             _ = DisposeAsync();
         }
@@ -80,8 +77,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         if (_disposed)
             throw new ObjectDisposedException(VhLogger.FormatType(this));
 
-        try
-        {
+        try {
             await _sendSemaphore.WaitAsync(_cancellationTokenSource.Token).VhConfigureAwait();
 
             // check channel connectivity
@@ -95,26 +91,26 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
             var dataLen = 0;
             // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < ipPackets.Count; i++)
-            {
+            for (var i = 0; i < ipPackets.Count; i++) {
                 var ipPacket = ipPackets[i];
 
                 // check MTU
                 dataLen += ipPackets[i].TotalPacketLength;
-                if (dataLen > Mtu) throw new InvalidOperationException(
-                    $"Total packets length is too big for this StreamDatagramChannel. ChannelId {ChannelId}, MaxSize: {Mtu}, Packets Size: {dataLen}");
+                if (dataLen > Mtu)
+                    throw new InvalidOperationException(
+                        $"Total packets length is too big for this StreamDatagramChannel. ChannelId {ChannelId}, MaxSize: {Mtu}, Packets Size: {dataLen}");
 
                 // copy to buffer
                 Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalLength);
                 bufferIndex += ipPacket.TotalLength;
             }
 
-            await _clientStream.Stream.WriteAsync(buffer, 0, bufferIndex, _cancellationTokenSource.Token).VhConfigureAwait();
+            await _clientStream.Stream.WriteAsync(buffer, 0, bufferIndex, _cancellationTokenSource.Token)
+                .VhConfigureAwait();
             LastActivityTime = FastDateTime.Now;
             Traffic.Sent += bufferIndex;
         }
-        finally
-        {
+        finally {
             if (disconnect) Connected = false;
             _sendSemaphore.Release();
         }
@@ -124,11 +120,9 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     {
         var stream = _clientStream.Stream;
 
-        try
-        {
+        try {
             await using var streamPacketReader = new StreamPacketReader(stream);
-            while (!cancellationToken.IsCancellationRequested && !_isCloseReceived)
-            {
+            while (!cancellationToken.IsCancellationRequested && !_isCloseReceived) {
                 var ipPackets = await streamPacketReader.ReadAsync(cancellationToken).VhConfigureAwait();
                 if (ipPackets == null || _disposed)
                     break;
@@ -139,11 +133,9 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                 // check datagram message
                 List<IPPacket>? processedPackets = null;
                 // ReSharper disable once ForCanBeConvertedToForeach
-                for (var i = 0; i < ipPackets.Length; i++)
-                {
+                for (var i = 0; i < ipPackets.Length; i++) {
                     var ipPacket = ipPackets[i];
-                    if (ProcessMessage(ipPacket))
-                    {
+                    if (ProcessMessage(ipPacket)) {
                         processedPackets ??= [];
                         processedPackets.Add(ipPacket);
                     }
@@ -158,8 +150,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                     PacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(ipPackets, this));
             }
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.Packet, ex, "Could not read packet from StreamDatagram.");
             throw;
         }
@@ -184,8 +175,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
     private Task SendClose(bool throwException = false)
     {
-        try
-        {
+        try {
             // already send
             if (_isCloseSent)
                 return Task.CompletedTask;
@@ -200,8 +190,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
             return SendPacket([ipPacket], true);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.DatagramChannel, ex,
                 "Could not set the close message to the remote. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);
@@ -215,8 +204,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
     public Task RunJob()
     {
-        if (Connected && FastDateTime.Now > _lifeTime)
-        {
+        if (Connected && FastDateTime.Now > _lifeTime) {
             VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
                 "StreamDatagramChannel lifetime ended. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);
@@ -234,6 +222,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
     private bool _disposed;
     private readonly AsyncLock _disposeLock = new();
+
     public async ValueTask DisposeAsync(bool graceful)
     {
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();

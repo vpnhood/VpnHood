@@ -57,8 +57,7 @@ public class JobSection
 
     public JobLock Enter(bool force = false)
     {
-        lock (_lockObject)
-        {
+        lock (_lockObject) {
             if (!ShouldEnter(force))
                 return new JobLock(this, false);
 
@@ -67,10 +66,8 @@ public class JobSection
         }
     }
 
-    internal bool ShouldRunnerEnter
-    {
-        get
-        {
+    internal bool ShouldRunnerEnter {
+        get {
             lock (_lockObject)
                 return ShouldRunnerEnterInternal();
         }
@@ -78,8 +75,7 @@ public class JobSection
 
     internal bool EnterRunner()
     {
-        lock (_lockObject)
-        {
+        lock (_lockObject) {
             if (!ShouldRunnerEnterInternal())
                 return false;
 
@@ -90,8 +86,7 @@ public class JobSection
 
     public void Leave()
     {
-        lock (_lockObject)
-        {
+        lock (_lockObject) {
             LastDoneTime = FastDateTime.Now;
             _runnerEntered = false;
             _normalEntered = false;

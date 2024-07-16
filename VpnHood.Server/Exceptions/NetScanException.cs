@@ -11,6 +11,7 @@ internal class NetScanException(IPEndPoint remoteEndPoint, Session session, stri
 {
     protected override LogLevel LogLevel => LogLevel.Warning;
     protected override EventId EventId => GeneralEventId.NetProtect;
+
     public override void Log()
     {
         //let EventReporter manage it

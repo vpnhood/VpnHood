@@ -8,10 +8,11 @@ public class SystemTray : IDisposable
 {
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern bool Shell_NotifyIcon(uint message, ref NotifyIconData data);
-    
+
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
-    public static extern IntPtr LoadImage(IntPtr hInst, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
+    public static extern IntPtr LoadImage(IntPtr hInst, string lpszName, uint uType, int cxDesired, int cyDesired,
+        uint fuLoad);
 
     public event EventHandler? DoubleClicked;
     public event EventHandler? Clicked;
@@ -32,15 +33,21 @@ public class SystemTray : IDisposable
         public uint uFlags;
         public uint uCallbackMessage;
         public IntPtr hIcon;
+
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 0x80)]
         public string szTip;
+
         public uint dwState;
         public uint dwStateMask;
+
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 0x100)]
         public string szInfo;
+
         public uint uTimeoutOrVersion;
+
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 0x40)]
         public string szInfoTitle;
+
         public uint dwInfoFlags;
         public Guid guidItem;
         public IntPtr hBalloonIcon;
@@ -72,11 +79,8 @@ public class SystemTray : IDisposable
 
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
-
-        if (msg == Message && (int)wParam == SystemTrayId)
-        {
-            switch ((int)lParam)
-            {
+        if (msg == Message && (int)wParam == SystemTrayId) {
+            switch ((int)lParam) {
                 case (int)ContextMenuEvent.LeftButtonUp:
                     Clicked?.Invoke(this, EventArgs.Empty);
                     break;
@@ -97,12 +101,12 @@ public class SystemTray : IDisposable
 
     private NotifyIconData _notificationData;
     private string _tip;
+
     public SystemTray(string tip, nint hIcon)
     {
         _tip = tip;
         _wnd = new Window(WndProc);
-        _notificationData = new NotifyIconData
-        {
+        _notificationData = new NotifyIconData {
             cbSize = Marshal.SizeOf(typeof(NotifyIconData)),
             hWnd = _wnd.Handle,
             uID = SystemTrayId,
@@ -122,19 +126,17 @@ public class SystemTray : IDisposable
         Shell_NotifyIcon((uint)NotifyIconMessage.NimModify, ref _notificationData);
     }
 
-    public string Tip
-    {
+    public string Tip {
         get => _tip;
-        set
-        {
+        set {
             _tip = value;
             _notificationData.szTip = value;
             Shell_NotifyIcon((uint)NotifyIconMessage.NimModify, ref _notificationData);
-
         }
     }
 
     private bool _disposedValue;
+
     protected virtual void Dispose(bool disposing)
     {
         if (_disposedValue) return;

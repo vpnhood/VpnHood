@@ -36,7 +36,7 @@ public class ServerSessionException : SessionException, ISelfLog
         Session session,
         SessionResponse sessionResponse,
         string requestId
-        )
+    )
         : base(sessionResponse)
     {
         RemoteEndPoint = remoteEndPoint;
@@ -49,7 +49,7 @@ public class ServerSessionException : SessionException, ISelfLog
         IPEndPoint remoteEndPoint,
         SessionResponse sessionResponse,
         HelloRequest sessionRequest)
-    : base(sessionResponse)
+        : base(sessionResponse)
     {
         RemoteEndPoint = remoteEndPoint;
         TokenId = sessionRequest.TokenId;
@@ -69,6 +69,7 @@ public class ServerSessionException : SessionException, ISelfLog
     }
 
     protected virtual LogLevel LogLevel => LogLevel.Information;
+
     protected virtual EventId EventId => SessionResponse.ErrorCode is SessionErrorCode.GeneralError
         ? GeneralEventId.Tcp
         : GeneralEventId.Session;

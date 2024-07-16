@@ -2,7 +2,7 @@
 
 namespace VpnHood.Tunneling.Messaging;
 
-public class HelloRequest() 
+public class HelloRequest()
     : ClientRequest((byte)Messaging.RequestCode.Hello)
 {
     public required string TokenId { get; init; }

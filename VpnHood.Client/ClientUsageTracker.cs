@@ -40,7 +40,8 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
         var requestCount = _clientStat.ConnectorStat.RequestCount;
         var connectionCount = _clientStat.ConnectorStat.CreatedConnectionCount;
 
-        var trackEvent = ClientTrackerBuilder.BuildUsage(usage, requestCount - _lastRequestCount, connectionCount - _lastConnectionCount);
+        var trackEvent = ClientTrackerBuilder.BuildUsage(usage, requestCount - _lastRequestCount,
+            connectionCount - _lastConnectionCount);
 
         await _tracker.Track([trackEvent]).VhConfigureAwait();
         _lastTraffic = traffic;
@@ -50,14 +51,12 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        try
-        {
+        try {
             // Make sure no exception in dispose
             if (_clientStat.SessionTraffic - _lastTraffic != new Traffic())
                 await Report().VhConfigureAwait();
         }
-        catch
-        {
+        catch {
             // ignore
         }
 

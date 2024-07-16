@@ -19,16 +19,15 @@ public class StreamPacketReader(Stream stream) : IAsyncDisposable
     {
         _ipPackets.Clear();
 
-        while (true)
-        {
+        while (true) {
             // read packet header
             const int minPacketSize = 20;
-            if (_packetBufferCount < minPacketSize)
-            {
+            if (_packetBufferCount < minPacketSize) {
                 var toRead = minPacketSize - _packetBufferCount;
-                var read = await _stream.ReadAsync(_packetBuffer, _packetBufferCount, toRead, cancellationToken).VhConfigureAwait();
+                var read = await _stream.ReadAsync(_packetBuffer, _packetBufferCount, toRead, cancellationToken)
+                    .VhConfigureAwait();
                 _packetBufferCount += read;
-                
+
                 // is eof?
                 if (read == 0 && _packetBufferCount == 0)
                     return null;
@@ -39,7 +38,7 @@ public class StreamPacketReader(Stream stream) : IAsyncDisposable
 
                 // is uncompleted header?
                 if (toRead != read)
-                    break; 
+                    break;
 
                 // is just header?
                 if (!_stream.DataAvailableInCache)
@@ -48,30 +47,29 @@ public class StreamPacketReader(Stream stream) : IAsyncDisposable
 
             // find packet length
             var packetLength = PacketUtil.ReadPacketLength(_packetBuffer, 0);
-            if (_packetBufferCount < packetLength)
-            {
+            if (_packetBufferCount < packetLength) {
                 //not sure if we get any packet more than 1600
-                if (packetLength > _packetBuffer.Length)
-                {
+                if (packetLength > _packetBuffer.Length) {
                     Array.Resize(ref _packetBuffer, packetLength);
                     VhLogger.Instance.LogWarning("Resizing a PacketLength to {packetLength}", packetLength);
                 }
 
                 var toRead = packetLength - _packetBufferCount;
-                var read = await _stream.ReadAsync(_packetBuffer, _packetBufferCount, toRead, cancellationToken).VhConfigureAwait();
+                var read = await _stream.ReadAsync(_packetBuffer, _packetBufferCount, toRead, cancellationToken)
+                    .VhConfigureAwait();
                 _packetBufferCount += read;
                 if (read == 0)
                     throw new Exception("Stream has been unexpectedly closed before reading the rest of packet.");
 
                 // is packet read?
                 if (toRead != read)
-                    break; 
+                    break;
             }
 
             // WARNING: we shouldn't use shared memory for packet
-            var packetBuffer = _packetBuffer[.. + packetLength]; //
+            var packetBuffer = _packetBuffer[.. +packetLength]; //
             var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer).Extract<IPPacket>();
-           
+
             _ipPackets.Add(ipPacket);
             _packetBufferCount = 0;
 

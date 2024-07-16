@@ -41,14 +41,14 @@ public class FileAccessManager : IAccessManager
 
         var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
         DefaultCert = System.IO.File.Exists(defaultCertFile)
-            ? new X509Certificate2(defaultCertFile, options.SslCertificatesPassword ?? string.Empty, X509KeyStorageFlags.Exportable)
+            ? new X509Certificate2(defaultCertFile, options.SslCertificatesPassword ?? string.Empty,
+                X509KeyStorageFlags.Exportable)
             : CreateSelfSignedCertificate(defaultCertFile, options.SslCertificatesPassword ?? string.Empty);
 
-        ServerConfig.Certificates =
-        [
-            new CertificateData
-            {
-                CommonName = DefaultCert.GetNameInfo(X509NameType.DnsName, false) ?? throw new Exception("Could not get the HostName from the certificate."),
+        ServerConfig.Certificates = [
+            new CertificateData {
+                CommonName = DefaultCert.GetNameInfo(X509NameType.DnsName, false) ??
+                             throw new Exception("Could not get the HostName from the certificate."),
                 RawData = DefaultCert.Export(X509ContentType.Pfx)
             }
         ];
@@ -65,22 +65,26 @@ public class FileAccessManager : IAccessManager
         _serverToken = GetAndUpdateServerToken();
     }
 
-    private ServerToken GetAndUpdateServerToken() => GetAndUpdateServerToken(ServerConfig, DefaultCert, Path.Combine(StoragePath, "server-token", "enc-server-token"));
-    private ServerToken GetAndUpdateServerToken(FileAccessManagerOptions serverConfig, X509Certificate2 certificate, string encServerTokenFilePath)
+    private ServerToken GetAndUpdateServerToken() => GetAndUpdateServerToken(ServerConfig, DefaultCert,
+        Path.Combine(StoragePath, "server-token", "enc-server-token"));
+
+    private ServerToken GetAndUpdateServerToken(FileAccessManagerOptions serverConfig, X509Certificate2 certificate,
+        string encServerTokenFilePath)
     {
         // PublicEndPoints
         var publicEndPoints = serverConfig.PublicEndPoints ?? serverConfig.TcpEndPointsValue;
-        if (!publicEndPoints.Any() || publicEndPoints.Any(x => x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
+        if (!publicEndPoints.Any() ||
+            publicEndPoints.Any(x => x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
             throw new Exception("PublicEndPoints has not been configured properly.");
 
 
         var serverLocation = LoadServerLocation().Result;
-        var serverToken = new ServerToken
-        {
+        var serverToken = new ServerToken {
             CertificateHash = serverConfig.IsValidHostName ? null : certificate.GetCertHash(),
             HostPort = serverConfig.HostPort ?? publicEndPoints.FirstOrDefault()?.Port ?? 443,
             HostEndPoints = publicEndPoints,
-            HostName = certificate.GetNameInfo(X509NameType.DnsName, false) ?? throw new Exception("Certificate must have a subject!"),
+            HostName = certificate.GetNameInfo(X509NameType.DnsName, false) ??
+                       throw new Exception("Certificate must have a subject!"),
             IsValidHostName = serverConfig.IsValidHostName,
             Secret = serverConfig.ServerSecretValue,
             Url = serverConfig.ServerTokenUrl,
@@ -90,14 +94,13 @@ public class FileAccessManager : IAccessManager
 
         // write encrypted server token
         if (System.IO.File.Exists(encServerTokenFilePath))
-            try
-            {
-                var oldServerToken = ServerToken.Decrypt(serverConfig.ServerSecret ?? new byte[16], System.IO.File.ReadAllText(encServerTokenFilePath));
+            try {
+                var oldServerToken = ServerToken.Decrypt(serverConfig.ServerSecret ?? new byte[16],
+                    System.IO.File.ReadAllText(encServerTokenFilePath));
                 if (!oldServerToken.IsTokenUpdated(serverToken))
                     return oldServerToken;
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 VhLogger.Instance.LogWarning(ex, "Error in reading enc-server-token.");
             }
 
@@ -110,8 +113,7 @@ public class FileAccessManager : IAccessManager
     {
         var serverSecretFile = Path.Combine(CertsFolderPath, "secret");
         var secretBase64 = TryToReadFile(serverSecretFile);
-        if (string.IsNullOrEmpty(secretBase64))
-        {
+        if (string.IsNullOrEmpty(secretBase64)) {
             secretBase64 = Convert.ToBase64String(VhUtil.GenerateKey(128));
             System.IO.File.WriteAllText(serverSecretFile, secretBase64);
         }
@@ -121,36 +123,35 @@ public class FileAccessManager : IAccessManager
 
     private async Task<string?> LoadServerLocation()
     {
-        try
-        {
+        try {
             var serverCountryFile = Path.Combine(StoragePath, "server_location");
             var serverLocation = TryToReadFile(serverCountryFile);
-            if (string.IsNullOrEmpty(serverLocation) && ServerConfig.UseExternalLocationService)
-            {
+            if (string.IsNullOrEmpty(serverLocation) && ServerConfig.UseExternalLocationService) {
                 using var cancellationTokenSource = new CancellationTokenSource(5000);
                 var ipLocationProvider = new IpLocationProviderFactory().CreateDefault("VpnHood-Server");
-                var ipLocation = await ipLocationProvider.GetLocation(new HttpClient(), cancellationTokenSource.Token).VhConfigureAwait();
-                serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName, ipLocation.CityName);
-                await System.IO.File.WriteAllTextAsync(serverCountryFile, serverLocation, CancellationToken.None).VhConfigureAwait();
+                var ipLocation = await ipLocationProvider.GetLocation(new HttpClient(), cancellationTokenSource.Token)
+                    .VhConfigureAwait();
+                serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName,
+                    ipLocation.CityName);
+                await System.IO.File.WriteAllTextAsync(serverCountryFile, serverLocation, CancellationToken.None)
+                    .VhConfigureAwait();
             }
 
             VhLogger.Instance.LogInformation("ServerLocation: {ServerLocation}", serverLocation ?? "Unknown");
             return serverLocation;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not read server location.");
             return null;
         }
     }
+
     private static string? TryToReadFile(string filePath)
     {
-        try
-        {
+        try {
             return System.IO.File.Exists(filePath) ? System.IO.File.ReadAllText(filePath) : null;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not read file: {FilePath}", filePath);
             return null;
         }
@@ -169,11 +170,12 @@ public class FileAccessManager : IAccessManager
 
         // update UdpEndPoints if they are not configured 
         var udpEndPoints = ServerConfig.UdpEndPointsValue.ToArray();
-        foreach (var udpEndPoint in udpEndPoints.Where(x => x.Port == 0))
-        {
+        foreach (var udpEndPoint in udpEndPoints.Where(x => x.Port == 0)) {
             udpEndPoint.Port = udpEndPoint.AddressFamily == AddressFamily.InterNetworkV6
-                ? serverInfo.FreeUdpPortV6 : serverInfo.FreeUdpPortV4;
+                ? serverInfo.FreeUdpPortV6
+                : serverInfo.FreeUdpPortV4;
         }
+
         ServerConfig.UdpEndPoints = udpEndPoints.Where(x => x.Port != 0).ToArray();
 
         return Task.FromResult((ServerConfig)ServerConfig);
@@ -183,8 +185,7 @@ public class FileAccessManager : IAccessManager
     {
         var accessItem = await AccessItem_Read(sessionRequestEx.TokenId).VhConfigureAwait();
         if (accessItem == null)
-            return new SessionResponseEx
-            {
+            return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
                 ErrorMessage = "Token does not exist."
             };
@@ -199,7 +200,8 @@ public class FileAccessManager : IAccessManager
         return ret;
     }
 
-    public virtual async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    public virtual async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint,
+        IPAddress? clientIp)
     {
         _ = hostEndPoint;
         _ = clientIp;
@@ -207,8 +209,7 @@ public class FileAccessManager : IAccessManager
         // find token
         var tokenId = SessionController.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new SessionResponseEx
-            {
+            return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
                 SessionId = sessionId,
                 ErrorMessage = "Session does not exist."
@@ -217,8 +218,7 @@ public class FileAccessManager : IAccessManager
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId).VhConfigureAwait();
         if (accessItem == null)
-            return new SessionResponseEx
-            {
+            return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
                 SessionId = sessionId,
                 ErrorMessage = "Token does not exist."
@@ -246,12 +246,10 @@ public class FileAccessManager : IAccessManager
     private async Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData,
         bool closeSession)
     {
-
         // find token
         var tokenId = SessionController.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new SessionResponse
-            {
+            return new SessionResponse {
                 ErrorCode = SessionErrorCode.AccessError,
                 ErrorMessage = "Token does not exist."
             };
@@ -259,8 +257,7 @@ public class FileAccessManager : IAccessManager
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId).VhConfigureAwait();
         if (accessItem == null)
-            return new SessionResponse
-            {
+            return new SessionResponse {
                 ErrorCode = SessionErrorCode.AccessError,
                 ErrorMessage = "Token does not exist."
             };
@@ -276,8 +273,7 @@ public class FileAccessManager : IAccessManager
             SessionController.Sessions[sessionId].ExpirationTime = null;
 
         var res = SessionController.GetSession(sessionId, accessItem, null);
-        var ret = new SessionResponse
-        {
+        var ret = new SessionResponse {
             ErrorCode = res.ErrorCode,
             AccessUsage = res.AccessUsage,
             ErrorMessage = res.ErrorMessage,
@@ -322,8 +318,7 @@ public class FileAccessManager : IAccessManager
         var files = Directory.GetFiles(StoragePath, "*" + FileExtToken);
         var accessItems = new List<AccessItem>();
 
-        foreach (var file in files)
-        {
+        foreach (var file in files) {
             var accessItem = await AccessItem_Read(Path.GetFileNameWithoutExtension(file)).VhConfigureAwait();
             if (accessItem != null)
                 accessItems.Add(accessItem);
@@ -351,14 +346,12 @@ public class FileAccessManager : IAccessManager
         aes.GenerateKey();
 
         // create AccessItem
-        var accessItem = new AccessItem
-        {
+        var accessItem = new AccessItem {
             MaxTraffic = maxTrafficByteCount,
             MaxClientCount = maxClientCount,
             ExpirationTime = expirationTime,
             AdRequirement = adRequirement,
-            Token = new Token
-            {
+            Token = new Token {
                 IssuedAt = DateTime.UtcNow,
                 TokenId = Guid.NewGuid().ToString(),
                 Secret = aes.Key,
@@ -413,8 +406,7 @@ public class FileAccessManager : IAccessManager
     private async Task ReadAccessItemUsage(AccessItem accessItem)
     {
         // read usageItem
-        accessItem.AccessUsage = new AccessUsage
-        {
+        accessItem.AccessUsage = new AccessUsage {
             ExpirationTime = accessItem.ExpirationTime,
             MaxClientCount = accessItem.MaxClientCount,
             MaxTraffic = accessItem.MaxTraffic,
@@ -422,19 +414,17 @@ public class FileAccessManager : IAccessManager
         };
 
         // update usage
-        try
-        {
+        try {
             var fileName = GetUsageFileName(accessItem.Token.TokenId);
             using var fileLock = await AsyncLock.LockAsync(fileName).VhConfigureAwait();
-            if (System.IO.File.Exists(fileName))
-            {
+            if (System.IO.File.Exists(fileName)) {
                 var json = await System.IO.File.ReadAllTextAsync(fileName).VhConfigureAwait();
                 var accessItemUsage = JsonSerializer.Deserialize<AccessItemUsage>(json) ?? new AccessItemUsage();
-                accessItem.AccessUsage.Traffic = new Traffic { Sent = accessItemUsage.SentTraffic, Received = accessItemUsage.ReceivedTraffic };
+                accessItem.AccessUsage.Traffic = new Traffic
+                    { Sent = accessItemUsage.SentTraffic, Received = accessItemUsage.ReceivedTraffic };
             }
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(
                 $"Error in reading AccessUsage of token: {accessItem.Token.TokenId}, Message: {ex.Message}");
         }
@@ -443,8 +433,7 @@ public class FileAccessManager : IAccessManager
     private async Task WriteAccessItemUsage(AccessItem accessItem)
     {
         // write token info
-        var accessItemUsage = new AccessItemUsage
-        {
+        var accessItemUsage = new AccessItemUsage {
             ReceivedTraffic = accessItem.AccessUsage.Traffic.Received,
             SentTraffic = accessItem.AccessUsage.Traffic.Sent
         };
@@ -464,8 +453,7 @@ public class FileAccessManager : IAccessManager
         public AdRequirement AdRequirement { get; set; }
         public required Token Token { get; set; }
 
-        [JsonIgnore]
-        public AccessUsage AccessUsage { get; set; } = new();
+        [JsonIgnore] public AccessUsage AccessUsage { get; set; } = new();
     }
 
     private class AccessItemUsage

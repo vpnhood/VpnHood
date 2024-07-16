@@ -6,8 +6,12 @@ namespace VpnHood.Client.App;
 
 public class AppOptions
 {
-    public static string DefaultStorageFolderPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
-    public string StorageFolderPath { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
+    public static string DefaultStorageFolderPath =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
+
+    public string StorageFolderPath { get; set; } =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
+
     public TimeSpan SessionTimeout { get; set; } = ClientOptions.Default.SessionTimeout;
     public SocketFactory? SocketFactory { get; set; }
     public TimeSpan VersionCheckInterval { get; set; } = TimeSpan.FromHours(24);
@@ -32,6 +36,6 @@ public class AppOptions
     public TimeSpan ServerQueryTimeout { get; set; } = ClientOptions.Default.ServerQueryTimeout;
     public bool SingleLineConsoleLog { get; set; } = true;
     public bool AutoDiagnose { get; set; } = true;
-    public AppAdOptions AdOptions { get; set; } = new ();
+    public AppAdOptions AdOptions { get; set; } = new();
     public bool AllowEndPointTracker { get; set; }
 }

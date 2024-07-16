@@ -22,7 +22,8 @@ public class TunnelTest : TestBase
     private class ServerUdpChannelTransmitterTest(UdpClient udpClient, byte[] serverKey, UdpChannel udpChannel)
         : UdpChannelTransmitter(udpClient, serverKey)
     {
-        protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint, long channelCryptorPosition, byte[] buffer, int bufferIndex)
+        protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint, long channelCryptorPosition,
+            byte[] buffer, int bufferIndex)
         {
             udpChannel.SetRemote(this, remoteEndPoint);
             udpChannel.OnReceiveData(channelCryptorPosition, buffer, bufferIndex);
@@ -57,8 +58,7 @@ public class TunnelTest : TestBase
         var packetReceiver = new PacketProxyReceiverTest();
         var payload = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
         var buffer = new byte[4 + payload.Length];
-        var icmpPacket = new IcmpV4Packet(new ByteArraySegment(buffer))
-        {
+        var icmpPacket = new IcmpV4Packet(new ByteArraySegment(buffer)) {
             TypeCode = IcmpV4TypeCode.EchoRequest,
             Id = 1,
             Sequence = 1,
@@ -100,8 +100,7 @@ public class TunnelTest : TestBase
         waitHandle.Reset();
 
         // test packets
-        var packets = new List<IPPacket>
-        {
+        var packets = new List<IPPacket> {
             IPPacket.RandomPacket(IPVersion.IPv4),
             IPPacket.RandomPacket(IPVersion.IPv4),
             IPPacket.RandomPacket(IPVersion.IPv4)
@@ -113,15 +112,15 @@ public class TunnelTest : TestBase
 
         // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint 
-            ?? throw new Exception("Server connection is not established");
+        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint
+                             ?? throw new Exception("Server connection is not established");
         var serverUdpChannel = new UdpChannel(1, sessionKey, true, 4);
-        using var serverUdpChannelTransmitter = new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
+        using var serverUdpChannelTransmitter =
+            new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
         serverUdpChannel.Start();
 
         var serverReceivedPackets = Array.Empty<IPPacket>();
-        serverUdpChannel.PacketReceived += delegate (object? sender, ChannelPacketReceivedEventArgs e)
-        {
+        serverUdpChannel.PacketReceived += delegate(object? sender, ChannelPacketReceivedEventArgs e) {
             serverReceivedPackets = e.IpPackets.ToArray();
             _ = serverUdpChannel.SendPacket(e.IpPackets);
         };
@@ -129,12 +128,12 @@ public class TunnelTest : TestBase
         // Create client
         var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
         var clientUdpChannel = new UdpChannel(1, sessionKey, false, 4);
-        clientUdpChannel.SetRemote(new ClientUdpChannelTransmitter(clientUdpChannel, clientUdpClient, serverKey), serverEndPoint);
+        clientUdpChannel.SetRemote(new ClientUdpChannelTransmitter(clientUdpChannel, clientUdpClient, serverKey),
+            serverEndPoint);
         clientUdpChannel.Start();
 
         var clientReceivedPackets = Array.Empty<IPPacket>();
-        clientUdpChannel.PacketReceived += delegate (object? _, ChannelPacketReceivedEventArgs e)
-        {
+        clientUdpChannel.PacketReceived += delegate(object? _, ChannelPacketReceivedEventArgs e) {
             clientReceivedPackets = e.IpPackets.ToArray();
             waitHandle.Set();
         };
@@ -153,8 +152,7 @@ public class TunnelTest : TestBase
         waitHandle.Reset();
 
         // test packets
-        var packets = new List<IPPacket>
-        {
+        var packets = new List<IPPacket> {
             IPPacket.RandomPacket(IPVersion.IPv4),
             IPPacket.RandomPacket(IPVersion.IPv4),
             IPPacket.RandomPacket(IPVersion.IPv4)
@@ -169,13 +167,13 @@ public class TunnelTest : TestBase
         var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint
                              ?? throw new Exception("Server connection is not established");
         var serverUdpChannel = new UdpChannel(1, sessionKey, true, 4);
-        using var serverUdpChannelTransmitter = new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
+        using var serverUdpChannelTransmitter =
+            new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
 
         var serverReceivedPackets = Array.Empty<IPPacket>();
         var serverTunnel = new Tunnel(new TunnelOptions());
         serverTunnel.AddChannel(serverUdpChannel);
-        serverTunnel.PacketReceived += delegate (object? sender, ChannelPacketReceivedEventArgs e)
-        {
+        serverTunnel.PacketReceived += delegate(object? sender, ChannelPacketReceivedEventArgs e) {
             serverReceivedPackets = e.IpPackets.ToArray();
             _ = serverUdpChannel.SendPacket(e.IpPackets);
         };
@@ -183,13 +181,13 @@ public class TunnelTest : TestBase
         // Create client
         var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
         var clientUdpChannel = new UdpChannel(1, sessionKey, false, 4);
-        clientUdpChannel.SetRemote(new ClientUdpChannelTransmitter(clientUdpChannel, clientUdpClient, serverKey), serverEndPoint);
+        clientUdpChannel.SetRemote(new ClientUdpChannelTransmitter(clientUdpChannel, clientUdpClient, serverKey),
+            serverEndPoint);
 
         var clientReceivedPackets = Array.Empty<IPPacket>();
         var clientTunnel = new Tunnel();
         clientTunnel.AddChannel(clientUdpChannel);
-        clientTunnel.PacketReceived += delegate (object? _, ChannelPacketReceivedEventArgs e)
-        {
+        clientTunnel.PacketReceived += delegate(object? _, ChannelPacketReceivedEventArgs e) {
             clientReceivedPackets = e.IpPackets.ToArray();
             waitHandle.Set();
         };
@@ -203,25 +201,23 @@ public class TunnelTest : TestBase
     private static async Task SimpleLoopback(TcpListener tcpListener, CancellationToken cancellationToken)
     {
         using var client = await tcpListener.AcceptTcpClientAsync(cancellationToken);
-        
+
         // Create a memory stream to store the incoming data
         ChunkStream binaryStream = new BinaryStreamStandard(client.GetStream(), Guid.NewGuid().ToString(), true);
-        while (true)
-        {
+        while (true) {
             using var memoryStream = new MemoryStream();
             // Read the request data from the client to memoryStream
             var buffer = new byte[2048];
             var bytesRead = await binaryStream.ReadAsync(buffer, 0, 4, cancellationToken);
-            if (bytesRead == 0) 
+            if (bytesRead == 0)
                 break;
-            
-            if (bytesRead != 4) 
+
+            if (bytesRead != 4)
                 throw new Exception("Unexpected data.");
 
             var length = BitConverter.ToInt32(buffer, 0);
             var totalRead = 0;
-            while (totalRead != length)
-            {
+            while (totalRead != length) {
                 bytesRead = await binaryStream.ReadAsync(buffer, 0, 120, cancellationToken);
                 if (bytesRead == 0) throw new Exception("Unexpected data");
                 totalRead += bytesRead;
@@ -254,8 +250,7 @@ public class TunnelTest : TestBase
         var stream = tcpClient.GetStream();
 
         // send data
-        var chunks = new List<string>
-        {
+        var chunks = new List<string> {
             "HelloHelloHelloHelloHelloHelloHelloHello\r\n",
             "Apple1234,\r\nApple1234,Apple1234,Apple1234,Apple1234,Apple1234,Apple1234,Apple1234,Apple1234,Apple1234",
             "Book009,Book009,Book009,Book009,Book009,Book009,Book009,Book009,Book009,Book009",

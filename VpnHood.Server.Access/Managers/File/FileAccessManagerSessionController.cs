@@ -38,11 +38,9 @@ public class FileAccessManagerSessionController : IDisposable, IJob
     {
         // read all session from files
         var sessions = new ConcurrentDictionary<ulong, Session>();
-        foreach (var filePath in Directory.GetFiles(sessionsFolderPath, $"*.{SessionFileExtension}"))
-        {
+        foreach (var filePath in Directory.GetFiles(sessionsFolderPath, $"*.{SessionFileExtension}")) {
             var session = VhUtil.JsonDeserializeFile<Session>(filePath);
-            if (session == null)
-            {
+            if (session == null) {
                 VhLogger.Instance.LogError("Could not load session file. File: {File}", filePath);
                 VhUtil.TryDeleteFile(filePath);
                 continue;
@@ -75,8 +73,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
                 (x.Value.EndTime == null && x.Value.LastUsedTime < minSessionTime) ||
                 (x.Value.EndTime != null && x.Value.LastUsedTime < minCloseWaitTime));
 
-        foreach (var item in timeoutSessions)
-        {
+        foreach (var item in timeoutSessions) {
             Sessions.TryRemove(item.Key, out _);
             VhUtil.TryDeleteFile(GetSessionFilePath(item.Key));
         }
@@ -98,20 +95,18 @@ public class FileAccessManagerSessionController : IDisposable, IJob
     {
         // validate the request
         if (!ValidateRequest(sessionRequestEx, accessItem))
-            return new SessionResponseEx
-            {
+            return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
                 ErrorMessage = "Could not validate the request."
             };
 
 
         //increment session id using atomic operation
-        lock(Sessions)
+        lock (Sessions)
             _lastSessionId++;
 
         // create a new session
-        var session = new Session
-        {
+        var session = new Session {
             SessionId = _lastSessionId,
             TokenId = accessItem.Token.TokenId,
             ClientInfo = sessionRequestEx.ClientInfo,
@@ -122,7 +117,9 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,
             ExtraData = sessionRequestEx.ExtraData,
-            ExpirationTime = accessItem.AdRequirement is AdRequirement.Required ? DateTime.UtcNow + _adRequiredTimeout : null
+            ExpirationTime = accessItem.AdRequirement is AdRequirement.Required
+                ? DateTime.UtcNow + _adRequiredTimeout
+                : null
         };
 
         //create response
@@ -139,12 +136,12 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         return ret;
     }
 
-    public SessionResponseEx GetSession(ulong sessionId, FileAccessManager.AccessItem accessItem, IPEndPoint? hostEndPoint)
+    public SessionResponseEx GetSession(ulong sessionId, FileAccessManager.AccessItem accessItem,
+        IPEndPoint? hostEndPoint)
     {
         // check existence
         if (!Sessions.TryGetValue(sessionId, out var session))
-            return new SessionResponseEx
-            {
+            return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
                 ErrorMessage = "Session does not exist."
             };
@@ -163,12 +160,10 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         var accessUsage = accessItem.AccessUsage;
 
         // validate session status
-        if (session.ErrorCode == SessionErrorCode.Ok)
-        {
+        if (session.ErrorCode == SessionErrorCode.Ok) {
             // check token expiration
             if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.UtcNow)
-                return new SessionResponseEx
-                {
+                return new SessionResponseEx {
                     ErrorCode = SessionErrorCode.AccessExpired,
                     ErrorMessage = "Access Expired.",
                     AccessUsage = accessUsage
@@ -176,8 +171,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
 
             // session expiration
             if (session.ExpirationTime != null && session.ExpirationTime < DateTime.UtcNow)
-                return new SessionResponseEx
-                {
+                return new SessionResponseEx {
                     ErrorCode = SessionErrorCode.AccessExpired,
                     AccessUsage = accessUsage,
                     ErrorMessage = "Session Expired!"
@@ -186,8 +180,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             // check traffic
             if (accessUsage.MaxTraffic != 0 &&
                 accessUsage.Traffic.Total > accessUsage.MaxTraffic)
-                return new SessionResponseEx
-                {
+                return new SessionResponseEx {
                     ErrorCode = SessionErrorCode.AccessTrafficOverflow,
                     ErrorMessage = "All traffic quota has been consumed.",
                     AccessUsage = accessUsage
@@ -200,26 +193,23 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             // suppressedTo yourself
             var selfSessions = otherSessions.Where(x =>
                 x.ClientInfo.ClientId == session.ClientInfo.ClientId && x.SessionId != session.SessionId).ToArray();
-            if (selfSessions.Any())
-            {
+            if (selfSessions.Any()) {
                 session.SuppressedTo = SessionSuppressType.YourSelf;
-                foreach (var selfSession in selfSessions)
-                {
+                foreach (var selfSession in selfSessions) {
                     selfSession.SuppressedBy = SessionSuppressType.YourSelf;
                     selfSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
                     selfSession.Kill();
                 }
             }
 
-            if (accessUsage.MaxClientCount != 0)
-            {
+            if (accessUsage.MaxClientCount != 0) {
                 // suppressedTo others by MaxClientCount
                 var otherSessions2 = otherSessions
-                    .Where(x => x.ClientInfo.ClientId != session.ClientInfo.ClientId && x.SessionId != session.SessionId)
+                    .Where(x => x.ClientInfo.ClientId != session.ClientInfo.ClientId &&
+                                x.SessionId != session.SessionId)
                     .OrderBy(x => x.CreatedTime).ToArray();
 
-                for (var i = 0; i <= otherSessions2.Length - accessUsage.MaxClientCount; i++)
-                {
+                for (var i = 0; i <= otherSessions2.Length - accessUsage.MaxClientCount; i++) {
                     var otherSession = otherSessions2[i];
                     otherSession.SuppressedBy = SessionSuppressType.Other;
                     otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
@@ -229,7 +219,8 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             }
 
             // set to session expiration time if session expiration time is shorter than accessUsage.ExpirationTime
-            if (session.ExpirationTime != null && (accessUsage.ExpirationTime == null || session.ExpirationTime < accessUsage.ExpirationTime))
+            if (session.ExpirationTime != null && (accessUsage.ExpirationTime == null ||
+                                                   session.ExpirationTime < accessUsage.ExpirationTime))
                 accessUsage.ExpirationTime = session.ExpirationTime.Value;
 
             accessUsage.ActiveClientCount = otherSessions
@@ -238,8 +229,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         }
 
         // build result
-        return new SessionResponseEx
-        {
+        return new SessionResponseEx {
             SessionId = session.SessionId,
             CreatedTime = session.CreatedTime,
             SessionKey = session.SessionKey,
@@ -283,7 +273,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
 
         [JsonConverter(typeof(IPEndPointConverter))]
         public required IPEndPoint HostEndPoint { get; set; }
-        
+
         [JsonConverter(typeof(IPAddressConverter))]
         public IPAddress? ClientIp { get; init; }
 

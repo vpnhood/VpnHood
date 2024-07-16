@@ -1,5 +1,4 @@
-﻿
-namespace VpnHood.Client.App.Droid.Common.Activities;
+﻿namespace VpnHood.Client.App.Droid.Common.Activities;
 
 public class AndroidMainActivityOptions
 {

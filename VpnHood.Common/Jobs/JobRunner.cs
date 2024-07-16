@@ -19,11 +19,9 @@ public class JobRunner
     public static JobRunner Default => DefaultLazy.Value;
     private static readonly Lazy<JobRunner> DefaultLazy = new(() => new JobRunner());
 
-    public TimeSpan Interval
-    {
+    public TimeSpan Interval {
         get => _interval;
-        set
-        {
+        set {
             _interval = value;
             if (!IsStarted) return;
             Stop();
@@ -43,14 +41,11 @@ public class JobRunner
     private void RunJobs()
     {
         IJob[] jobs;
-        lock (_jobRefs)
-        {
+        lock (_jobRefs) {
             // find jobs to run
-            foreach (var jobRef in _jobRefs)
-            {
+            foreach (var jobRef in _jobRefs) {
                 // the WatchDog object is dead
-                if (!jobRef.TryGetTarget(out var job))
-                {
+                if (!jobRef.TryGetTarget(out var job)) {
                     _deadJobs.Add(jobRef);
                     continue;
                 }
@@ -79,15 +74,14 @@ public class JobRunner
     private async Task RunJobs(IEnumerable<IJob> jobs)
     {
         // update MaxDegreeOfParallelism
-        if (_currentMaxDegreeOfParallelism != MaxDegreeOfParallelism && _semaphore.CurrentCount == _currentMaxDegreeOfParallelism)
-        {
+        if (_currentMaxDegreeOfParallelism != MaxDegreeOfParallelism &&
+            _semaphore.CurrentCount == _currentMaxDegreeOfParallelism) {
             _currentMaxDegreeOfParallelism = MaxDegreeOfParallelism;
             _semaphore = new SemaphoreSlim(MaxDegreeOfParallelism);
         }
 
         // run jobs
-        foreach (var job in jobs)
-        {
+        foreach (var job in jobs) {
             await _semaphore.WaitAsync().VhConfigureAwait();
             _ = RunJob(job);
         }
@@ -96,32 +90,26 @@ public class JobRunner
     private async Task RunJob(IJob job)
     {
         // The watch dog is busy
-        if (!job.JobSection.EnterRunner())
-        {
+        if (!job.JobSection.EnterRunner()) {
             _semaphore.Release();
             return;
         }
 
         // run the job
-        try
-        {
+        try {
             await job.RunJob().VhConfigureAwait();
         }
-        catch (ObjectDisposedException)
-        {
+        catch (ObjectDisposedException) {
             // remove from jobs
-            lock (_jobRefs)
-            {
+            lock (_jobRefs) {
                 var jobRef = _jobRefs.FirstOrDefault(x => x.TryGetTarget(out var target) && target == job);
                 _jobRefs.Remove(jobRef);
             }
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             Logger.LogError(ex, "Could not run a job. JobName: {JobName}", job.JobSection.Name ?? "NoName");
         }
-        finally
-        {
+        finally {
             job.JobSection.Leave();
             _semaphore.Release();
         }
@@ -135,8 +123,7 @@ public class JobRunner
 
     public void Remove(IJob job)
     {
-        lock (_jobRefs)
-        {
+        lock (_jobRefs) {
             var item = _jobRefs.FirstOrDefault(x => x.TryGetTarget(out var target) && target == job);
             if (item != null)
                 _jobRefs.Remove(item);

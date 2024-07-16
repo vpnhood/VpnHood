@@ -7,12 +7,10 @@ internal class Ga4MeasurementPayload
 {
     public class UserProperty
     {
-        [JsonPropertyName("value")]
-        public required object Value { get; init; }
+        [JsonPropertyName("value")] public required object Value { get; init; }
     }
 
-    [JsonPropertyName("client_id")]
-    public required string ClientId { get; set; }
+    [JsonPropertyName("client_id")] public required string ClientId { get; set; }
 
     [JsonPropertyName("user_id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -26,6 +24,5 @@ internal class Ga4MeasurementPayload
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, UserProperty>? UserProperties { get; set; }
 
-    [JsonPropertyName("events")]
-    public required IEnumerable<Ga4MeasurementEvent> Events { get; set; }
+    [JsonPropertyName("events")] public required IEnumerable<Ga4MeasurementEvent> Events { get; set; }
 }

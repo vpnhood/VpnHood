@@ -22,24 +22,22 @@ public class ActivityEvent : Activity, IActivityEvent
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-        CreateEvent?.Invoke(this, new CreateEventArgs
-        {
+        CreateEvent?.Invoke(this, new CreateEventArgs {
             SavedInstanceState = savedInstanceState
         });
     }
 
     protected override void OnNewIntent(Intent? intent)
     {
-        NewIntentEvent?.Invoke(this, new NewIntentEventArgs
-        {
+        NewIntentEvent?.Invoke(this, new NewIntentEventArgs {
             Intent = intent
         });
     }
 
-    public override void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Permission[] grantResults)
+    public override void OnRequestPermissionsResult(int requestCode, string[] permissions,
+        [GeneratedEnum] Permission[] grantResults)
     {
-        RequestPermissionsResultEvent?.Invoke(this, new RequestPermissionsResultArgs
-        {
+        RequestPermissionsResultEvent?.Invoke(this, new RequestPermissionsResultArgs {
             RequestCode = requestCode,
             Permissions = permissions,
             GrantResults = grantResults
@@ -50,8 +48,7 @@ public class ActivityEvent : Activity, IActivityEvent
 
     public override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)
     {
-        var args = new KeyDownArgs
-        {
+        var args = new KeyDownArgs {
             KeyCode = keyCode,
             KeyEvent = e
         };
@@ -62,8 +59,7 @@ public class ActivityEvent : Activity, IActivityEvent
 
     protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
     {
-        ActivityResultEvent?.Invoke(this, new ActivityResultEventArgs
-        {
+        ActivityResultEvent?.Invoke(this, new ActivityResultEventArgs {
             RequestCode = requestCode,
             ResultCode = resultCode,
             Data = data
@@ -71,6 +67,7 @@ public class ActivityEvent : Activity, IActivityEvent
 
         base.OnActivityResult(requestCode, resultCode, data);
     }
+
     protected override void OnResume()
     {
         base.OnResume();

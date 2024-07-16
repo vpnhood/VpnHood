@@ -13,66 +13,68 @@ internal class AppPersistState
 {
     private readonly object _saveLock = new();
 
-    [JsonIgnore]
-    public string FilePath { get; private set; } = null!;
+    [JsonIgnore] public string FilePath { get; private set; } = null!;
 
     // prop
     private ApiError? _lastError;
-    public ApiError? LastError
-    {
+
+    public ApiError? LastError {
         get => _lastError;
-        set { _lastError = value; Save(); }
-    }
-
-    // prop
-    private DateTime _updateIgnoreTime = DateTime.MinValue;
-    public DateTime UpdateIgnoreTime
-    {
-        get => _updateIgnoreTime;
-        set { _updateIgnoreTime = value; Save(); }
-    }
-
-    // prop
-    private string? _clientCountryCode;
-    public string? ClientCountryCode
-    {
-        get => _clientCountryCode;
-        set
-        {
-            if (_clientCountryCode == value)
-                return;
-            
-            // set country code and its name
-            _clientCountryCode = value?.ToUpper();
-            try
-            {
-                ClientCountryName = value!=null ? new RegionInfo(value).EnglishName : null;
-            }
-            catch(Exception ex)
-            {
-                VhLogger.Instance.LogError(ex, "Could not get country name for code: {Code}", value);
-                ClientCountryName = value;
-            }
+        set {
+            _lastError = value;
             Save();
         }
     }
 
     // prop
-    [JsonIgnore]
-    public string? ClientCountryName { get; private set; }
+    private DateTime _updateIgnoreTime = DateTime.MinValue;
+
+    public DateTime UpdateIgnoreTime {
+        get => _updateIgnoreTime;
+        set {
+            _updateIgnoreTime = value;
+            Save();
+        }
+    }
+
+    // prop
+    private string? _clientCountryCode;
+
+    public string? ClientCountryCode {
+        get => _clientCountryCode;
+        set {
+            if (_clientCountryCode == value)
+                return;
+
+            // set country code and its name
+            _clientCountryCode = value?.ToUpper();
+            try {
+                ClientCountryName = value != null ? new RegionInfo(value).EnglishName : null;
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "Could not get country name for code: {Code}", value);
+                ClientCountryName = value;
+            }
+
+            Save();
+        }
+    }
+
+    // prop
+    [JsonIgnore] public string? ClientCountryName { get; private set; }
 
 
     internal static AppPersistState Load(string filePath)
     {
-        var ret = VhUtil.JsonDeserializeFile<AppPersistState>(filePath, logger: VhLogger.Instance) ?? new AppPersistState();
+        var ret = VhUtil.JsonDeserializeFile<AppPersistState>(filePath, logger: VhLogger.Instance) ??
+                  new AppPersistState();
         ret.FilePath = filePath;
         return ret;
     }
 
     private void Save()
     {
-        lock (_saveLock)
-        {
+        lock (_saveLock) {
             if (string.IsNullOrEmpty(FilePath))
                 return; // loading
 

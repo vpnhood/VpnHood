@@ -11,6 +11,7 @@ using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Test.Device;
 using VpnHood.Tunneling;
+
 // ReSharper disable DisposeOnUsingVariable
 
 namespace VpnHood.Test.Tests;
@@ -44,7 +45,8 @@ public class ServerTest : TestBase
 
         // Create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
+        await using var client =
+            await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
 
         // check usage when usage should be 0
         var sessionResponseEx = await accessManager.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);
@@ -85,7 +87,7 @@ public class ServerTest : TestBase
         accessManager.ServerConfig.UdpEndPoints = [newUdpEndPoint];
         accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         await VhTestUtil.AssertEqualsWait(accessManager.ServerConfig.ConfigCode,
-            () => accessManager.LastServerStatus!.ConfigCode); 
+            () => accessManager.LastServerStatus!.ConfigCode);
 
         Assert.AreNotEqual(
             VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback, accessManager.ServerConfig.UdpEndPoints[0].Port),
@@ -136,7 +138,6 @@ public class ServerTest : TestBase
             server.SessionManager.SessionOptions.MaxDatagramChannelCount);
         Assert.AreEqual(serverConfig.SessionOptions.SyncCacheSize, server.SessionManager.SessionOptions.SyncCacheSize);
         Assert.AreEqual(serverConfig.SessionOptions.TcpBufferSize, server.SessionManager.SessionOptions.TcpBufferSize);
-
     }
 
     [TestMethod]
@@ -240,8 +241,7 @@ public class ServerTest : TestBase
         accessManager.SessionController.Sessions.Clear();
         await server.SessionManager.SyncSessions();
 
-        await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () =>
-        {
+        await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {
             await TestHelper.Test_Https(throwError: false, timeout: 1000);
             return client.State;
         });
@@ -253,14 +253,12 @@ public class ServerTest : TestBase
     public void Merge_config()
     {
         var oldServerConfig = new ServerConfig();
-        var newServerConfig = new ServerConfig
-        {
+        var newServerConfig = new ServerConfig {
             LogAnonymizer = true,
             MaxCompletionPortThreads = 10,
             MinCompletionPortThreads = 11,
             UpdateStatusInterval = TimeSpan.FromHours(11),
-            NetFilterOptions = new NetFilterOptions
-            {
+            NetFilterOptions = new NetFilterOptions {
                 BlockIpV6 = true,
                 ExcludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.2")],
                 IncludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.3")],
@@ -270,8 +268,7 @@ public class ServerTest : TestBase
             },
             TcpEndPoints = [IPEndPoint.Parse("2.2.2.2:4433")],
             UdpEndPoints = [IPEndPoint.Parse("3.3.3.3:5533")],
-            TrackingOptions = new TrackingOptions
-            {
+            TrackingOptions = new TrackingOptions {
                 TrackClientIp = true,
                 TrackDestinationIp = false,
                 TrackDestinationPort = true,
@@ -280,8 +277,7 @@ public class ServerTest : TestBase
                 TrackTcp = false,
                 TrackUdp = true
             },
-            SessionOptions = new SessionOptions
-            {
+            SessionOptions = new SessionOptions {
                 IcmpTimeout = TimeSpan.FromMinutes(50),
                 MaxDatagramChannelCount = 13,
                 MaxTcpChannelCount = 14,
@@ -315,8 +311,7 @@ public class ServerTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // set DnsChallenge
-        var dnsChallenge = new DnsChallenge
-        {
+        var dnsChallenge = new DnsChallenge {
             KeyAuthorization = "DnsChallenge_KeyAuthorization",
             Token = "DnsChallenge",
             Timeout = TimeSpan.FromSeconds(60)
@@ -330,12 +325,14 @@ public class ServerTest : TestBase
 
         // server should listen to port 80 for HTTP-01 challenge
         var httpClient = new HttpClient();
-        var url = new Uri($"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{dnsChallenge.Token}");
+        var url = new Uri(
+            $"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{dnsChallenge.Token}");
         var keyAuthorization = await httpClient.GetStringAsync(url);
         Assert.AreEqual(dnsChallenge.KeyAuthorization, keyAuthorization);
 
         // check invalid url
-        url = new Uri($"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{Guid.NewGuid()}");
+        url = new Uri(
+            $"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{Guid.NewGuid()}");
         var response = await httpClient.GetAsync(url);
         Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
 
@@ -346,6 +343,5 @@ public class ServerTest : TestBase
             () => accessManager.LastServerStatus!.ConfigCode);
 
         await Assert.ThrowsExceptionAsync<HttpRequestException>(() => httpClient.GetAsync(url));
-
     }
 }

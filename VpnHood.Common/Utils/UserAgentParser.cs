@@ -56,8 +56,8 @@ public static class UserAgentParser
 
     private static string GetOsVersion(string userAgent, string osName)
     {
-        return userAgent.Split([osName], StringSplitOptions.None)[1].Split(';', ')').Length != 0 
-            ? $"{osName}{userAgent.Split([osName], StringSplitOptions.None)[1].Split(';', ')')[0]}" 
+        return userAgent.Split([osName], StringSplitOptions.None)[1].Split(';', ')').Length != 0
+            ? $"{osName}{userAgent.Split([osName], StringSplitOptions.None)[1].Split(';', ')')[0]}"
             : osName;
     }
 }

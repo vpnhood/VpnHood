@@ -33,7 +33,7 @@ public class NatTest : TestBase
         Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Different NatId is expected for a new source!");
 
         newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
-        PacketUtil.ExtractTcp(newIpPacket).SourcePort = (ushort) (tcpPacket.SourcePort + 1);
+        PacketUtil.ExtractTcp(newIpPacket).SourcePort = (ushort)(tcpPacket.SourcePort + 1);
         Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId,
             "Different NatId is expected for a new SourcePort!");
 
@@ -42,7 +42,7 @@ public class NatTest : TestBase
         Assert.AreEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Same NatId is expected for a new destination!");
 
         newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
-        PacketUtil.ExtractTcp(newIpPacket).DestinationPort = (ushort) (tcpPacket.DestinationPort + 1);
+        PacketUtil.ExtractTcp(newIpPacket).DestinationPort = (ushort)(tcpPacket.DestinationPort + 1);
         Assert.AreEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Sme NatId is expected for a new destinationPort!");
     }
 
@@ -62,7 +62,7 @@ public class NatTest : TestBase
         nat.Add(ipPacket2);
 
         // un-map
-        var natItem = (NatItemEx?) nat.Resolve(ipPacket.Version, ProtocolType.Tcp, id);
+        var natItem = (NatItemEx?)nat.Resolve(ipPacket.Version, ProtocolType.Tcp, id);
         Assert.IsNotNull(natItem);
         Assert.AreEqual(ipPacket.SourceAddress, natItem.SourceAddress);
         Assert.AreEqual(ipPacket.DestinationAddress, natItem.DestinationAddress);
@@ -77,7 +77,7 @@ public class NatTest : TestBase
         Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Different NatId is expected for a new source!");
 
         newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
-        PacketUtil.ExtractTcp(newIpPacket).DestinationPort = (ushort) (tcpPacket.SourcePort + 1);
+        PacketUtil.ExtractTcp(newIpPacket).DestinationPort = (ushort)(tcpPacket.SourcePort + 1);
         Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId,
             "Different NatId is expected for a new SourcePort!");
 
@@ -87,7 +87,7 @@ public class NatTest : TestBase
             "Different NatId is expected for a new destination!");
 
         newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
-        PacketUtil.ExtractTcp(newIpPacket).SourcePort = (ushort) (tcpPacket.DestinationPort + 1);
+        PacketUtil.ExtractTcp(newIpPacket).SourcePort = (ushort)(tcpPacket.DestinationPort + 1);
         Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId,
             "Different NatId is expected for a new destinationPort!");
     }
@@ -102,9 +102,8 @@ public class NatTest : TestBase
         var nat = new Nat(true);
 
         // fill NAT
-        for (var i = 1; i < 0xFFFF; i++)
-        {
-            tcpPacket.SourcePort = (ushort) i;
+        for (var i = 1; i < 0xFFFF; i++) {
+            tcpPacket.SourcePort = (ushort)i;
             nat.Add(ipPacket);
         }
 
@@ -113,14 +112,12 @@ public class NatTest : TestBase
         tcpPacket.SourcePort = 2;
         nat.Add(ipPacket);
 
-        try
-        {
+        try {
             tcpPacket.SourcePort = 3;
             nat.Add(ipPacket);
             Assert.Fail("Exception expected!");
         }
-        catch (OverflowException)
-        {
+        catch (OverflowException) {
         }
     }
 }

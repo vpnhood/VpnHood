@@ -21,8 +21,7 @@ public static class SniExtractor
             .ReadAsync(initBuffer, 0, initBuffer.Length, cancellationToken)
             .VhConfigureAwait();
 
-        return new SniData
-        {
+        return new SniData {
             Sni = ExtractSni(initBuffer[..bufCount]),
             ReadData = initBuffer[..bufCount]
         };
@@ -30,12 +29,10 @@ public static class SniExtractor
 
     public static string? ExtractSni(byte[] payloadData)
     {
-        try
-        {
+        try {
             return GetSniFromStreamInternal(payloadData);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.Tcp, ex, "Could not extract sni");
             return null;
         }
@@ -77,10 +74,11 @@ public static class SniExtractor
 
         // Ensure the extensions length does not exceed the remaining payload length
         if (currentPos + extensionsLength > payloadData.Length)
-            extensionsLength = payloadData.Length - currentPos; //Extensions length exceeds payload length. Adjusting to payload boundary
+            extensionsLength =
+                payloadData.Length -
+                currentPos; //Extensions length exceeds payload length. Adjusting to payload boundary
 
-        while (currentPos < payloadData.Length && currentPos < extensionsLength + currentPos)
-        {
+        while (currentPos < payloadData.Length && currentPos < extensionsLength + currentPos) {
             if (currentPos + 4 > payloadData.Length)
                 return null; // Extension header is out of bounds.
 

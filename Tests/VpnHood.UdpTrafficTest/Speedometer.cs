@@ -17,7 +17,7 @@ public class Speedometer : IJob
     private long _lastSucceededCount;
 
     public JobSection JobSection { get; }
-    
+
     public Speedometer(string name, TimeSpan? interval = null)
     {
         _name = name;
@@ -28,8 +28,7 @@ public class Speedometer : IJob
 
     public void AddSucceeded(byte[] buffer)
     {
-        lock (_lockObject)
-        {
+        lock (_lockObject) {
             _transferSize += buffer.Length;
             _succeededCount++;
         }
@@ -43,8 +42,7 @@ public class Speedometer : IJob
 
     public void Report()
     {
-        lock (_lockObject)
-        {
+        lock (_lockObject) {
             if (_stopwatch.ElapsedMilliseconds == 0) return;
 
             var curTransferSize = _transferSize - _lastTransferSize;
@@ -64,5 +62,4 @@ public class Speedometer : IJob
         Report();
         return Task.CompletedTask;
     }
-
 }

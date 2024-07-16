@@ -77,11 +77,9 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
         if (_loadedAd == null)
             throw new ShowAdException($"The {AdType} has not been loaded.");
 
-        try
-        {
+        try {
             var fullScreenContentCallback = new MyFullScreenContentCallback();
-            activity.RunOnUiThread(() =>
-            {
+            activity.RunOnUiThread(() => {
                 _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
                 _loadedAd.Show(activity);
             });
@@ -96,13 +94,12 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
             if (fullScreenContentCallback.DismissedTask.IsFaulted)
                 throw fullScreenContentCallback.DismissedTask.Exception;
         }
-        finally
-        {
+        finally {
             _loadedAd = null;
             AdLoadedTime = null;
         }
-
     }
+
     private class MyFullScreenContentCallback : FullScreenContentCallback
     {
         private readonly TaskCompletionSource _dismissedCompletionSource = new();
@@ -118,6 +115,7 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
             _dismissedCompletionSource.TrySetException(new ShowAdException(adError.Message));
         }
     }
+
     private class MyAppOpenAdLoadCallback : AppOpenAdLoadCallback
     {
         private readonly TaskCompletionSource<AppOpenAd> _loadedCompletionSource = new();

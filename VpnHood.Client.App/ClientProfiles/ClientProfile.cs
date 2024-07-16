@@ -12,18 +12,16 @@ public class ClientProfile
     public bool IsBuiltIn { get; set; }
 
     private Token _token = default!;
-    public required Token Token
-    {
+
+    public required Token Token {
         get => _token;
-        set
-        {
+        set {
             _token = value;
             ServerLocationInfos = ClientServerLocationInfo.AddCategoryGaps(value.ServerToken.ServerLocations);
         }
     }
 
-    [JsonIgnore]
-    public ClientServerLocationInfo[] ServerLocationInfos { get; private set; } = [];
+    [JsonIgnore] public ClientServerLocationInfo[] ServerLocationInfos { get; private set; } = [];
 
 
     public ClientProfileInfo ToInfo()

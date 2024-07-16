@@ -25,13 +25,11 @@ public class ApiError
 
     public ApiError(Exception ex)
     {
-        if (ex is ApiException apiException)
-        {
+        if (ex is ApiException apiException) {
             TypeName = apiException.ExceptionTypeName ?? nameof(ApiException);
             TypeFullName = apiException.ExceptionTypeFullName;
         }
-        else
-        {
+        else {
             var exceptionType = GetExceptionType(ex);
             TypeName = exceptionType.Name;
             TypeFullName = exceptionType.FullName;
@@ -42,8 +40,7 @@ public class ApiError
         InnerMessage = ex.InnerException?.Message;
 
         // data
-        foreach (DictionaryEntry item in ex.Data)
-        {
+        foreach (DictionaryEntry item in ex.Data) {
             var key = item.Key.ToString();
             if (key != null)
                 Data.Add(key, item.Value?.ToString());
@@ -61,8 +58,7 @@ public class ApiError
     {
         apiError = null;
 
-        try
-        {
+        try {
             var res = JsonSerializer.Deserialize<ApiError>(value);
             if (res?.TypeName == null)
                 return false;
@@ -70,8 +66,7 @@ public class ApiError
             apiError = res;
             return true;
         }
-        catch
-        {
+        catch {
             return false;
         }
     }

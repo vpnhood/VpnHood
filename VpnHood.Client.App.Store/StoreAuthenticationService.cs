@@ -46,14 +46,11 @@ public class StoreAuthenticationService : IAppAuthenticationService
         _apiKey = VhUtil.JsonDeserializeFile<ApiKey>(ApiKeyFilePath, logger: VhLogger.Instance);
     }
 
-    private ApiKey? ApiKey
-    {
+    private ApiKey? ApiKey {
         get => _apiKey;
-        set
-        {
+        set {
             _apiKey = value;
-            if (value == null)
-            {
+            if (value == null) {
                 if (File.Exists(ApiKeyFilePath))
                     File.Delete(ApiKeyFilePath);
                 return;
@@ -74,37 +71,36 @@ public class StoreAuthenticationService : IAppAuthenticationService
         if (ApiKey.AccessToken.ExpirationTime - TimeSpan.FromMinutes(5) > DateTime.UtcNow)
             return ApiKey;
 
-        try
-        {
+        try {
             // refresh by refresh token
-            if (ApiKey.RefreshToken != null && ApiKey.RefreshToken.ExpirationTime < DateTime.UtcNow)
-            {
+            if (ApiKey.RefreshToken != null && ApiKey.RefreshToken.ExpirationTime < DateTime.UtcNow) {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-                ApiKey = await authenticationClient.RefreshTokenAsync(new RefreshTokenRequest { RefreshToken = ApiKey.RefreshToken.Value }).VhConfigureAwait();
+                ApiKey = await authenticationClient
+                    .RefreshTokenAsync(new RefreshTokenRequest { RefreshToken = ApiKey.RefreshToken.Value })
+                    .VhConfigureAwait();
                 return ApiKey;
             }
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not get refresh the access token.");
         }
 
-        try
-        {
+        try {
             // refresh by id token
             if (uiContext == null)
                 throw new Exception("UI context is not available.");
 
-            var idToken = _externalAuthenticationService != null ? await _externalAuthenticationService.SilentSignIn(uiContext).VhConfigureAwait() : null;
-            if (!string.IsNullOrWhiteSpace(idToken))
-            {
+            var idToken = _externalAuthenticationService != null
+                ? await _externalAuthenticationService.SilentSignIn(uiContext).VhConfigureAwait()
+                : null;
+            if (!string.IsNullOrWhiteSpace(idToken)) {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-                ApiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken }).VhConfigureAwait();
+                ApiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken })
+                    .VhConfigureAwait();
                 return ApiKey;
             }
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not refresh token by id token.");
         }
 
@@ -134,19 +130,16 @@ public class StoreAuthenticationService : IAppAuthenticationService
     private async Task SignInToVpnHoodStore(string idToken, bool autoSignUp)
     {
         var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-        try
-        {
+        try {
             ApiKey = await authenticationClient.SignInAsync(
-                new SignInRequest
-                {
-                    IdToken = idToken,
-                    RefreshTokenType = RefreshTokenType.None
-                })
+                    new SignInRequest {
+                        IdToken = idToken,
+                        RefreshTokenType = RefreshTokenType.None
+                    })
                 .VhConfigureAwait();
         }
         // store must update its nuget package to support UnregisteredUserException
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             if (ex.ExceptionTypeName == "UnregisteredUserException" && autoSignUp)
                 await SignUpToVpnHoodStore(idToken).VhConfigureAwait();
             else
@@ -158,11 +151,10 @@ public class StoreAuthenticationService : IAppAuthenticationService
     {
         var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
         ApiKey = await authenticationClient.SignUpAsync(
-            new SignUpRequest
-            {
-                IdToken = idToken,
-                RefreshTokenType = RefreshTokenType.None
-            })
+                new SignUpRequest {
+                    IdToken = idToken,
+                    RefreshTokenType = RefreshTokenType.None
+                })
             .VhConfigureAwait();
     }
 
@@ -178,10 +170,13 @@ public class StoreAuthenticationService : IAppAuthenticationService
 
     public class HttpClientHandlerAuth(StoreAuthenticationService accountService) : HttpClientHandler
     {
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+            CancellationToken cancellationToken)
         {
             var apiKey = await accountService.TryGetApiKey(ActiveUiContext.Context).VhConfigureAwait();
-            request.Headers.Authorization = apiKey != null ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value) : null;
+            request.Headers.Authorization = apiKey != null
+                ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value)
+                : null;
             return await base.SendAsync(request, cancellationToken).VhConfigureAwait();
         }
     }

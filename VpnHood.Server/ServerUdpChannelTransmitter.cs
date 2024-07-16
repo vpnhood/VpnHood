@@ -10,8 +10,8 @@ public class ServerUdpChannelTransmitter(UdpClient udpClient, SessionManager ses
     protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint,
         long channelCryptorPosition, byte[] buffer, int bufferIndex)
     {
-        var session = sessionManager.GetSessionById(sessionId) 
-            ?? throw new Exception($"Session does not found. SessionId: {sessionId}");
+        var session = sessionManager.GetSessionById(sessionId)
+                      ?? throw new Exception($"Session does not found. SessionId: {sessionId}");
 
         //make sure UDP channel is added
         session.UseUdpChannel = true;

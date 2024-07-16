@@ -18,13 +18,11 @@ public class NetProtectTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
 
-        try
-        {
+        try {
             await TestHelper.Test_Https();
             Assert.Fail("Exception expected!");
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             Assert.AreEqual(ex.GetType().Name, nameof(HttpRequestException));
         }
     }
@@ -45,5 +43,4 @@ public class NetProtectTest : TestBase
         await TestHelper.Test_Https();
         await TestHelper.Test_Https();
     }
-
 }

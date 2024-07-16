@@ -4,7 +4,7 @@ namespace VpnHood.Client.App;
 
 public class UiCultureInfo(CultureInfo cultureInfo)
 {
-    public UiCultureInfo(string code) 
+    public UiCultureInfo(string code)
         : this(new CultureInfo(code))
     {
     }

@@ -13,8 +13,7 @@ namespace VpnHood.Tunneling;
 
 public abstract class ProxyManager : IPacketProxyReceiver
 {
-    private readonly IPAddress[] _blockList =
-    [
+    private readonly IPAddress[] _blockList = [
         IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play) SSDP (Simple Service Discovery Protocol)
     ];
 
@@ -23,29 +22,45 @@ public abstract class ProxyManager : IPacketProxyReceiver
     private readonly IPacketProxyPool _pingProxyPool;
     private readonly IPacketProxyPool _udpProxyPool;
 
-    [SuppressMessage("ReSharper", "UnusedMember.Global")] 
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public int PingClientCount => _pingProxyPool.ClientCount;
+
     public int UdpClientCount => _udpProxyPool.ClientCount;
 
-    public int TcpConnectionCount { get { lock (_channels) return _channels.Count(x => x is not IDatagramChannel); } }
+    public int TcpConnectionCount {
+        get {
+            lock (_channels) return _channels.Count(x => x is not IDatagramChannel);
+        }
+    }
+
     public abstract Task OnPacketReceived(IPPacket ipPacket);
-    public virtual void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint) { }
-    public virtual void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint, bool isNewLocalEndPoint, bool isNewRemoteEndPoint) { }
+
+    public virtual void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint)
+    {
+    }
+
+    public virtual void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
+        bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
+    {
+    }
+
     protected abstract bool IsPingSupported { get; }
 
     protected ProxyManager(ISocketFactory socketFactory, ProxyManagerOptions options)
     {
-        _pingProxyPool = new PingProxyPool(this, options.IcmpTimeout, options.MaxIcmpClientCount,  logScope: options.LogScope);
+        _pingProxyPool = new PingProxyPool(this, options.IcmpTimeout, options.MaxIcmpClientCount,
+            logScope: options.LogScope);
         _udpProxyPool = options.UseUdpProxy2
-            ? new UdpProxyPoolEx(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount, logScope: options.LogScope)
-            : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount, logScope: options.LogScope);
+            ? new UdpProxyPoolEx(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount,
+                logScope: options.LogScope)
+            : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount,
+                logScope: options.LogScope);
     }
 
     public async Task SendPackets(IList<IPPacket> ipPackets)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++)
-        {
+        for (var i = 0; i < ipPackets.Count; i++) {
             var ipPacket = ipPackets[i];
             await SendPacket(ipPacket).VhConfigureAwait();
         }
@@ -64,10 +79,8 @@ public abstract class ProxyManager : IPacketProxyReceiver
         if (VhLogger.IsDiagnoseMode)
             PacketUtil.LogPacket(ipPacket, "Delegating packet to host via proxy.");
 
-        try
-        {
-            switch (ipPacket.Protocol)
-            {
+        try {
+            switch (ipPacket.Protocol) {
                 case ProtocolType.Udp:
                     await _udpProxyPool.SendPacket(ipPacket).VhConfigureAwait();
                     break;
@@ -83,11 +96,9 @@ public abstract class ProxyManager : IPacketProxyReceiver
                     throw new Exception($"{ipPacket.Protocol} packet should not be sent through this channel.");
             }
         }
-        catch (Exception ex) when (ex is ISelfLog)
-        {
+        catch (Exception ex) when (ex is ISelfLog) {
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             PacketUtil.LogPacket(ipPacket, "Error in delegating packet via proxy.", LogLevel.Error, ex);
         }
     }

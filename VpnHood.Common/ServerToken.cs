@@ -7,22 +7,17 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common;
 
-public class ServerToken 
+public class ServerToken
 {
-    [JsonPropertyName("ct")]
-    public required DateTime CreatedTime { get; set; }
+    [JsonPropertyName("ct")] public required DateTime CreatedTime { get; set; }
 
-    [JsonPropertyName("hname")]
-    public required string HostName { get; set; }
+    [JsonPropertyName("hname")] public required string HostName { get; set; }
 
-    [JsonPropertyName("hport")]
-    public required int HostPort { get; set; }
+    [JsonPropertyName("hport")] public required int HostPort { get; set; }
 
-    [JsonPropertyName("isv")]
-    public required bool IsValidHostName { get; set; }
+    [JsonPropertyName("isv")] public required bool IsValidHostName { get; set; }
 
-    [JsonPropertyName("sec")]
-    public required byte[]? Secret { get; set; }
+    [JsonPropertyName("sec")] public required byte[]? Secret { get; set; }
 
     [JsonPropertyName("ch")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -49,7 +44,7 @@ public class ServerToken
         using var rng = RandomNumberGenerator.Create();
         var iv = new byte[16];
         rng.GetBytes(iv);
-        
+
         // aes
         using var aesAlg = Aes.Create();
         aesAlg.Mode = CipherMode.CBC;
@@ -62,8 +57,7 @@ public class ServerToken
         // dispose CryptoStream and StreamWriter before using msEncrypt.ToArray()
         using (var encryptor = aesAlg.CreateEncryptor())
         using (var csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
-        using (var streamWriter = new StreamWriter(csEncrypt))
-        {
+        using (var streamWriter = new StreamWriter(csEncrypt)) {
             streamWriter.Write(json);
             streamWriter.Flush();
         }
@@ -76,7 +70,7 @@ public class ServerToken
     {
         var parts = base64.Trim().Split('.');
         if (parts.Length != 2)
-            throw new FormatException("Could not parse server token data.");    
+            throw new FormatException("Could not parse server token data.");
 
         // aes
         using var aesAlg = Aes.Create();
@@ -89,7 +83,7 @@ public class ServerToken
         using var msEncrypt = new MemoryStream(Convert.FromBase64String(parts[1]));
         using var csEncrypt = new CryptoStream(msEncrypt, decryptor, CryptoStreamMode.Read);
         using var streamReader = new StreamReader(csEncrypt);
-        
+
         var json = streamReader.ReadToEnd();
         var serverToken = VhUtil.JsonDeserialize<ServerToken>(json);
         return serverToken;

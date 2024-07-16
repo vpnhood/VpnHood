@@ -15,8 +15,7 @@ public class CommandListener(string commandFilePath) : IDisposable
         if (IsStarted)
             throw new Exception($"{nameof(CommandListener)} is already started!");
 
-        try
-        {
+        try {
             // delete old command
             if (File.Exists(commandFilePath))
                 File.Delete(commandFilePath);
@@ -25,8 +24,7 @@ public class CommandListener(string commandFilePath) : IDisposable
             Directory.CreateDirectory(watchFolderPath);
 
             // watch new commands
-            _fileSystemWatcher = new FileSystemWatcher
-            {
+            _fileSystemWatcher = new FileSystemWatcher {
                 Path = watchFolderPath,
                 NotifyFilter = NotifyFilters.LastWrite,
                 Filter = Path.GetFileName(commandFilePath),
@@ -34,14 +32,12 @@ public class CommandListener(string commandFilePath) : IDisposable
                 EnableRaisingEvents = true
             };
 
-            _fileSystemWatcher.Changed += (_, e) =>
-            {
+            _fileSystemWatcher.Changed += (_, e) => {
                 var command = ReadAllTextAndWait(e.FullPath);
                 OnCommand(VhUtil.ParseArguments(command).ToArray());
             };
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(
                 $"Could not start CommandListener! Message: {ex.Message}");
         }
@@ -57,12 +53,10 @@ public class CommandListener(string commandFilePath) : IDisposable
     {
         Exception exception = new($"Could not read {fileName}");
         for (var i = 0; i < retry; i++)
-            try
-            {
+            try {
                 return File.ReadAllText(fileName);
             }
-            catch (IOException ex)
-            {
+            catch (IOException ex) {
                 exception = ex;
                 Thread.Sleep(500);
             }
@@ -72,13 +66,11 @@ public class CommandListener(string commandFilePath) : IDisposable
 
     public void SendCommand(string command)
     {
-        try
-        {
+        try {
             Console.WriteLine($"Broadcasting a server command . command: {command}");
             File.WriteAllText(commandFilePath, command);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not send command.");
         }
     }

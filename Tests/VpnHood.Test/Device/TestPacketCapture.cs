@@ -10,11 +10,9 @@ internal class TestPacketCapture(TestDeviceOptions deviceOptions) : WinDivertPac
 
     public override bool IsDnsServersSupported => deviceOptions.IsDnsServerSupported;
 
-    public override IPAddress[]? DnsServers
-    {
+    public override IPAddress[]? DnsServers {
         get => IsDnsServersSupported ? _dnsServers : base.DnsServers;
-        set
-        {
+        set {
             if (IsDnsServersSupported)
                 _dnsServers = value;
             else

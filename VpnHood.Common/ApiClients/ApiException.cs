@@ -15,7 +15,8 @@ public sealed class ApiException : Exception
             : $"{message}\n\nStatus: {statusCode}\nResponse: \n{response?[..Math.Min(512, response.Length)]}";
     }
 
-    public ApiException(string message, int statusCode, string? response, IReadOnlyDictionary<string, IEnumerable<string>>? headers, Exception? innerException)
+    public ApiException(string message, int statusCode, string? response,
+        IReadOnlyDictionary<string, IEnumerable<string>>? headers, Exception? innerException)
         : base(BuildMessage(message, statusCode, response), innerException)
     {
         StatusCode = statusCode;
@@ -23,8 +24,7 @@ public sealed class ApiException : Exception
         Headers = headers ?? new Dictionary<string, IEnumerable<string>>();
 
         //try to deserialize response
-        if (response != null && ApiError.TryParse(response, out var apiError))
-        {
+        if (response != null && ApiError.TryParse(response, out var apiError)) {
             foreach (var item in apiError.Data)
                 Data.Add(item.Key, item.Value);
 

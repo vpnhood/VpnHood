@@ -15,7 +15,8 @@ public abstract class RewardedAdLoadCallback : Android.Gms.Ads.Rewarded.Rewarded
 
     private static void OnAdLoadedNative(IntPtr env, IntPtr nativeThis, IntPtr nativeP0)
     {
-        var rewardedAdLoadCallback = GetObject<RewardedAdLoadCallback>(env, nativeThis, JniHandleOwnership.DoNotTransfer);
+        var rewardedAdLoadCallback =
+            GetObject<RewardedAdLoadCallback>(env, nativeThis, JniHandleOwnership.DoNotTransfer);
         var rewardedAd = GetObject<RewardedAd>(nativeP0, JniHandleOwnership.DoNotTransfer);
         if (rewardedAd != null)
             rewardedAdLoadCallback?.OnAdLoaded(rewardedAd);

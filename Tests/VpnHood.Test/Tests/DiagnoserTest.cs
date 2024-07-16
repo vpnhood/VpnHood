@@ -26,12 +26,10 @@ public class DiagnoserTest : TestBase
         clientApp.Diagnoser.TestNsIpEndPoints = [TestConstants.InvalidEp];
         clientApp.Diagnoser.TestPingIpAddresses = [TestConstants.InvalidIp];
 
-        try
-        {
+        try {
             await clientApp.Connect(clientProfile.ClientProfileId);
         }
-        catch (Exception ex) 
-        {
+        catch (Exception ex) {
             Assert.AreEqual(nameof(NoInternetException), ex.GetType().Name);
         }
     }

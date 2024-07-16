@@ -8,13 +8,13 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class CheckNewVersionTest : TestBase
 {
-    private static void SetNewRelease(Version version, DateTime releaseDate, TimeSpan? notificationDelay = default, Version? deprecatedVersion = default)
+    private static void SetNewRelease(Version version, DateTime releaseDate, TimeSpan? notificationDelay = default,
+        Version? deprecatedVersion = default)
     {
         deprecatedVersion ??= new Version(1, 0, 0);
         notificationDelay ??= TimeSpan.Zero;
 
-        var publishInfo = new PublishInfo
-        {
+        var publishInfo = new PublishInfo {
             Version = version,
             UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1,
             PackageUrl = new Uri("https://localhost/package.msi"),
@@ -58,7 +58,8 @@ public class CheckNewVersionTest : TestBase
     [TestMethod]
     public async Task Current_is_deprecated()
     {
-        SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1), DateTime.UtcNow,
+        SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
+            DateTime.UtcNow,
             TimeSpan.Zero, CurrentAppVersion);
 
         var appOptions = TestHelper.CreateAppOptions();
@@ -138,7 +139,8 @@ public class CheckNewVersionTest : TestBase
         await VhTestUtil.AssertEqualsWait(VersionStatus.Unknown, () => app.State.VersionStatus);
 
         // set new version
-        SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1), DateTime.UtcNow, TimeSpan.Zero);
+        SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
+            DateTime.UtcNow, TimeSpan.Zero);
         await app.Connect(clientProfile.ClientProfileId);
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.State.VersionStatus);

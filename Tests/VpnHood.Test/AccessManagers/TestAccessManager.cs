@@ -33,6 +33,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     {
         return adData != null && _adsData.TryRemove(adData, out _);
     }
+
     public override async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
     {
         var ret = await base.Server_UpdateStatus(serverStatus);
@@ -64,25 +65,21 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
             return ret;
 
         if (RedirectHostEndPoint != null &&
-            !sessionRequestEx.HostEndPoint.Equals(RedirectHostEndPoint))
-        {
+            !sessionRequestEx.HostEndPoint.Equals(RedirectHostEndPoint)) {
             ret.RedirectHostEndPoint = RedirectHostEndPoint;
             ret.ErrorCode = SessionErrorCode.RedirectHost;
         }
 
         // manage new redirects
-        if (RedirectHostEndPoints != null)
-        {
+        if (RedirectHostEndPoints != null) {
             ret.RedirectHostEndPoints = RedirectHostEndPoints;
             ret.ErrorCode = SessionErrorCode.RedirectHost;
         }
 
         // manage region
-        if (sessionRequestEx.ServerLocation != null)
-        {
+        if (sessionRequestEx.ServerLocation != null) {
             var redirectEndPoint = ServerLocations[sessionRequestEx.ServerLocation];
-            if (!sessionRequestEx.HostEndPoint.Equals(redirectEndPoint))
-            {
+            if (!sessionRequestEx.HostEndPoint.Equals(redirectEndPoint)) {
                 ret.RedirectHostEndPoint = ServerLocations[sessionRequestEx.ServerLocation];
                 ret.ErrorCode = SessionErrorCode.RedirectHost;
             }

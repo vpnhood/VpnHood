@@ -30,8 +30,7 @@ public class TestAdService(TestAccessManager accessManager) : IAppAdService
         if (AdLoadedTime == null)
             throw new ShowAdException("Not Ad has been loaded.");
 
-        try
-        {
+        try {
             if (FailShow)
                 throw new ShowAdException("Ad failed.");
 
@@ -40,8 +39,7 @@ public class TestAdService(TestAccessManager accessManager) : IAppAdService
 
             return Task.CompletedTask;
         }
-        finally
-        {
+        finally {
             AdLoadedTime = null;
         }
     }

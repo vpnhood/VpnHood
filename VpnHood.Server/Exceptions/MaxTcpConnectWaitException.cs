@@ -16,5 +16,4 @@ internal class MaxTcpConnectWaitException(IPEndPoint remoteEndPoint, Session ses
 
     protected override LogLevel LogLevel => LogLevel.Warning;
     protected override EventId EventId => GeneralEventId.NetProtect;
-
 }

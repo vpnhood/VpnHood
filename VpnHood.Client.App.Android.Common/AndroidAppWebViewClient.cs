@@ -12,7 +12,8 @@ internal class AndroidAppWebViewClient : WebViewClient
 
     private bool IsMainHost(string? url)
     {
-        return _mainHost != null && url != null && _mainHost.Equals(new Uri(url).Host, StringComparison.OrdinalIgnoreCase);
+        return _mainHost != null && url != null &&
+               _mainHost.Equals(new Uri(url).Host, StringComparison.OrdinalIgnoreCase);
     }
 
     public override bool ShouldOverrideUrlLoading(WebView? webView, string? url)
@@ -25,14 +26,12 @@ internal class AndroidAppWebViewClient : WebViewClient
         if (uri.AbsolutePath == "/" || string.IsNullOrEmpty(uri.AbsolutePath))
             return false;
 
-        try
-        {
+        try {
             var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(url));
             intent.SetFlags(ActivityFlags.NewTask);
             Application.Context.StartActivity(intent);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, $"Could not launch any activity for {url}");
         }
 

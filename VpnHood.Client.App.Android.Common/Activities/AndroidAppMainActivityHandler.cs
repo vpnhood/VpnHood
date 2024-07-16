@@ -23,8 +23,10 @@ public class AndroidAppMainActivityHandler
 
         activityEvent.CreateEvent += (_, args) => OnCreate(args.SavedInstanceState);
         activityEvent.NewIntentEvent += (_, args) => OnNewIntent(args.Intent);
-        activityEvent.RequestPermissionsResultEvent += (_, args) => OnRequestPermissionsResult(args.RequestCode, args.Permissions, args.GrantResults);
-        activityEvent.ActivityResultEvent += (_, args) => OnActivityResult(args.RequestCode, args.ResultCode, args.Data);
+        activityEvent.RequestPermissionsResultEvent += (_, args) =>
+            OnRequestPermissionsResult(args.RequestCode, args.Permissions, args.GrantResults);
+        activityEvent.ActivityResultEvent +=
+            (_, args) => OnActivityResult(args.RequestCode, args.ResultCode, args.Data);
         activityEvent.KeyDownEvent += (_, args) => args.IsHandled = OnKeyDown(args.KeyCode, args.KeyEvent);
         activityEvent.PauseEvent += (_, _) => OnPause();
         activityEvent.ResumeEvent += (_, _) => OnResume();
@@ -51,20 +53,18 @@ public class AndroidAppMainActivityHandler
             return false;
 
         // try to add the access key
-        try
-        {
+        try {
             var uri = intent.Data;
-            if (_accessKeySchemes.Contains(uri.Scheme, StringComparer.OrdinalIgnoreCase))
-            {
+            if (_accessKeySchemes.Contains(uri.Scheme, StringComparer.OrdinalIgnoreCase)) {
                 ImportAccessKey(uri.ToString()!);
                 return true;
             }
 
             // check mime
             var mimeType = ActivityEvent.Activity.ContentResolver.GetType(uri);
-            if (!_accessKeyMimes.Contains(mimeType, StringComparer.OrdinalIgnoreCase))
-            {
-                Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resource.Strings.MsgUnsupportedContent, ToastLength.Long)?.Show();
+            if (!_accessKeyMimes.Contains(mimeType, StringComparer.OrdinalIgnoreCase)) {
+                Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resource.Strings.MsgUnsupportedContent,
+                    ToastLength.Long)?.Show();
                 return false;
             }
 
@@ -82,9 +82,9 @@ public class AndroidAppMainActivityHandler
 
             ImportAccessKey(accessKey);
         }
-        catch
-        {
-            Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resource.Strings.MsgCantReadAccessKey, ToastLength.Long)?.Show();
+        catch {
+            Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resource.Strings.MsgCantReadAccessKey,
+                ToastLength.Long)?.Show();
         }
 
         return true;
@@ -94,7 +94,7 @@ public class AndroidAppMainActivityHandler
     {
         var profiles = VpnHoodApp.Instance.ClientProfileService.List();
         var profile = VpnHoodApp.Instance.ClientProfileService.ImportAccessKey(accessKey).ToInfo();
-        
+
         VpnHoodApp.Instance.UserSettings.ClientProfileId = profile.ClientProfileId;
 
         var isNew = profiles.Any(x => x.ClientProfileId == profile.ClientProfileId);
@@ -105,7 +105,8 @@ public class AndroidAppMainActivityHandler
         Toast.MakeText(ActivityEvent.Activity, message, ToastLength.Long)?.Show();
     }
 
-    protected virtual void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Permission[] grantResults)
+    protected virtual void OnRequestPermissionsResult(int requestCode, string[] permissions,
+        [GeneratedEnum] Permission[] grantResults)
     {
     }
 

@@ -11,24 +11,22 @@ namespace VpnHood.Test;
 public class TestWebServer : IDisposable
 {
     private readonly WebServer _webServer;
-    public IPEndPoint[] HttpsV4EndPoints { get; } =
-    [
+
+    public IPEndPoint[] HttpsV4EndPoints { get; } = [
         IPEndPoint.Parse("127.10.1.1:15001"),
         IPEndPoint.Parse("127.10.1.1:15002"),
         IPEndPoint.Parse("127.10.1.1:15003"),
         IPEndPoint.Parse("127.10.1.1:15004")
     ];
 
-    public IPEndPoint[] HttpV4EndPoints { get; } =
-    [
+    public IPEndPoint[] HttpV4EndPoints { get; } = [
         IPEndPoint.Parse("127.10.1.1:15005"),
         IPEndPoint.Parse("127.10.1.1:15006"),
         IPEndPoint.Parse("127.10.1.1:15007"),
         IPEndPoint.Parse("127.10.1.1:15008")
     ];
-    
-    public IPEndPoint[] UdpEndPoints { get;  } =
-    [
+
+    public IPEndPoint[] UdpEndPoints { get; } = [
         IPEndPoint.Parse("127.10.1.1:20101"),
         IPEndPoint.Parse("127.10.1.1:20102"),
         IPEndPoint.Parse("127.10.1.1:20103"),
@@ -45,8 +43,12 @@ public class TestWebServer : IDisposable
     public IPEndPoint UdpV4EndPoint2 => UdpV4EndPoints[1];
     public IPEndPoint UdpV6EndPoint1 => UdpV6EndPoints[0];
     public IPEndPoint UdpV6EndPoint2 => UdpV6EndPoints[1];
-    public IPEndPoint[] UdpV4EndPoints  => UdpEndPoints.Where(x=>x.AddressFamily== AddressFamily.InterNetwork).ToArray();
-    public IPEndPoint[] UdpV6EndPoints  => UdpEndPoints.Where(x=>x.AddressFamily== AddressFamily.InterNetworkV6).ToArray();
+
+    public IPEndPoint[] UdpV4EndPoints =>
+        UdpEndPoints.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
+
+    public IPEndPoint[] UdpV6EndPoints =>
+        UdpEndPoints.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
 
 
     public Uri[] HttpUrls { get; }
@@ -56,12 +58,14 @@ public class TestWebServer : IDisposable
     public string FileContent2 { get; set; }
 
     public Uri FileHttpUrl1 => new($"http://{HttpV4EndPoints.First()}/file1");
-    [SuppressMessage("ReSharper", "UnusedMember.Global")] 
+
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public Uri FileHttpUrl2 => new($"http://{HttpV4EndPoints.First()}/file2");
 
     private UdpClient[] UdpClients { get; }
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private CancellationToken CancellationToken => _cancellationTokenSource.Token;
+
     private TestWebServer()
     {
         HttpUrls = HttpV4EndPoints.Select(x => new Uri($"http://{x}/file1")).ToArray();
@@ -71,16 +75,15 @@ public class TestWebServer : IDisposable
         // Init files
         FileContent1 = string.Empty;
         FileContent2 = string.Empty;
-        for (var i = 0; i < 100; i++)
-        {
+        for (var i = 0; i < 100; i++) {
             FileContent1 += Guid.NewGuid().ToString();
             FileContent2 += Guid.NewGuid().ToString();
         }
 
         // Create web server
-        var webServerOptions = new WebServerOptions
-        {
-            Certificate = new X509Certificate2("Assets/VpnHood.UnitTest.pfx", (string?)null, X509KeyStorageFlags.Exportable),
+        var webServerOptions = new WebServerOptions {
+            Certificate = new X509Certificate2("Assets/VpnHood.UnitTest.pfx", (string?)null,
+                X509KeyStorageFlags.Exportable),
             AutoRegisterCertificate = false
         };
 
@@ -104,8 +107,7 @@ public class TestWebServer : IDisposable
 
     private void StartUdpEchoServer()
     {
-        foreach (var udpClient in UdpClients)
-        {
+        foreach (var udpClient in UdpClients) {
             udpClient.Client.IOControl(-1744830452, [0], [0]);
             _ = StartUdpEchoServer(udpClient);
         }
@@ -113,8 +115,7 @@ public class TestWebServer : IDisposable
 
     private async Task StartUdpEchoServer(UdpClient udpClient)
     {
-        while (!CancellationToken.IsCancellationRequested)
-        {
+        while (!CancellationToken.IsCancellationRequested) {
             var udpResult = await udpClient.ReceiveAsync(CancellationToken);
             await udpClient.SendAsync(udpResult.Buffer, udpResult.RemoteEndPoint, CancellationToken);
         }

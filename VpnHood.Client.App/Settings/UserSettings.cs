@@ -16,8 +16,10 @@ public class UserSettings
     public string? ServerLocation { get; set; }
     public int MaxDatagramChannelCount { get; set; } = DefaultClientOptions.MaxDatagramChannelCount;
     public bool TunnelClientCountry { get; set; } = true;
+
     [JsonConverter(typeof(NullToEmptyArrayConverter<string>))] //todo: remove nullable after migration 4.5.533
     public string[] AppFilters { get; set; } = [];
+
     public FilterMode AppFiltersMode { get; set; } = FilterMode.All;
     public bool UseUdpChannel { get; set; } = DefaultClientOptions.UseUdpChannel;
     public bool DropUdpPackets { get; set; } = DefaultClientOptions.DropUdpPackets;
@@ -34,6 +36,7 @@ public class UserSettings
 
     [JsonConverter(typeof(NullToEmptyArrayConverter<IpRange>))] //todo: remove nullable after migration 4.5.533
     public IpRange[] PacketCaptureExcludeIpRanges { get; set; } = IpNetwork.None.ToIpRanges().ToArray();
+
     public bool AllowAnonymousTracker { get; set; } = DefaultClientOptions.AllowAnonymousTracker;
     public IPAddress[]? DnsServers { get; set; }
     public DomainFilter DomainFilter { get; set; } = new();

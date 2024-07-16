@@ -4,8 +4,7 @@ public class BasicSystemInfoProvider : ISystemInfoProvider
 {
     public SystemInfo GetSystemInfo()
     {
-        return new SystemInfo
-        {
+        return new SystemInfo {
             OsInfo = Environment.OSVersion.ToString(),
             TotalMemory = null,
             AvailableMemory = null,

@@ -13,7 +13,7 @@ public sealed class AlreadyExistsException : Exception
 
     public static bool Is(Exception ex)
     {
-        if (ex is AlreadyExistsException) 
+        if (ex is AlreadyExistsException)
             return true;
 
         if (ex.Data.Contains("HelpLink.EvtID") && ex.Data["HelpLink.EvtID"]?.ToString() is "2601" or "2627")

@@ -61,8 +61,7 @@ public class StreamProxyChannel : IChannel, IJob
             throw new InvalidOperationException("StreamProxyChannel is already started.");
 
         Connected = true;
-        try
-        {
+        try {
             // let pass CancellationToken for the host only to save the tunnel for reuse
 
             var tunnelCopyTask = CopyToAsync(
@@ -75,8 +74,7 @@ public class StreamProxyChannel : IChannel, IJob
 
             await Task.WhenAny(tunnelCopyTask, hostCopyTask).VhConfigureAwait();
         }
-        finally
-        {
+        finally {
             _ = DisposeAsync();
         }
     }
@@ -104,17 +102,16 @@ public class StreamProxyChannel : IChannel, IJob
     }
 
     private bool _isFinished;
+
     private async Task CopyToAsync(Stream source, Stream destination, bool isDestinationTunnel, int bufferSize,
         CancellationToken sourceCancellationToken, CancellationToken destinationCancellationToken)
     {
-        try
-        {
+        try {
             await CopyToInternalAsync(source, destination, isDestinationTunnel, bufferSize,
                 sourceCancellationToken, destinationCancellationToken).VhConfigureAwait();
             _isFinished = true;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             // show error if the stream hasn't been finished
             if (_isFinished && VhLogger.IsSocketCloseException(ex))
                 return;
@@ -140,25 +137,27 @@ public class StreamProxyChannel : IChannel, IJob
 
         // use PreserveWriteBuffer if possible
         var preserveCount = 0;
-        if (destination is ChunkStream chunkStream)
-        {
+        if (destination is ChunkStream chunkStream) {
             chunkStream.PreserveWriteBuffer = true;
             preserveCount = chunkStream.PreserveWriteBufferLength;
         }
 
         // <<----------------- the MOST memory consuming in the APP! >> ----------------------
         var readBuffer = new byte[bufferSize + preserveCount];
-        while (!sourceCancellationToken.IsCancellationRequested && !destinationCancellationToken.IsCancellationRequested)
-        {
+        while (!sourceCancellationToken.IsCancellationRequested &&
+               !destinationCancellationToken.IsCancellationRequested) {
             // read from source
-            var bytesRead = await source.ReadAsync(readBuffer, preserveCount, readBuffer.Length - preserveCount, sourceCancellationToken).VhConfigureAwait();
+            var bytesRead = await source
+                .ReadAsync(readBuffer, preserveCount, readBuffer.Length - preserveCount, sourceCancellationToken)
+                .VhConfigureAwait();
 
             // check end of the stream
             if (bytesRead == 0)
                 break;
 
             // write to destination
-            await destination.WriteAsync(readBuffer, preserveCount, bytesRead, destinationCancellationToken).VhConfigureAwait();
+            await destination.WriteAsync(readBuffer, preserveCount, bytesRead, destinationCancellationToken)
+                .VhConfigureAwait();
 
             // calculate transferred bytes
             if (isSendingToTunnel)
@@ -178,6 +177,7 @@ public class StreamProxyChannel : IChannel, IJob
 
     private bool _disposed;
     private readonly AsyncLock _disposeLock = new();
+
     public async ValueTask DisposeAsync(bool graceful)
     {
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
@@ -186,8 +186,8 @@ public class StreamProxyChannel : IChannel, IJob
 
         Connected = false;
         await Task.WhenAll(
-            _hostTcpClientStream.DisposeAsync(graceful).AsTask(),
-            _tunnelTcpClientStream.DisposeAsync(graceful).AsTask())
+                _hostTcpClientStream.DisposeAsync(graceful).AsTask(),
+                _tunnelTcpClientStream.DisposeAsync(graceful).AsTask())
             .VhConfigureAwait();
     }
 }

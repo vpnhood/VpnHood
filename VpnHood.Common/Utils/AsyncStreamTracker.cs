@@ -6,10 +6,10 @@ namespace VpnHood.Common.Utils;
 
 // Use for debugging
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
-public class AsyncStreamTracker(Stream sourceStream, bool leaveOpen) 
+public class AsyncStreamTracker(Stream sourceStream, bool leaveOpen)
     : AsyncStreamDecorator(sourceStream, leaveOpen)
 {
-    public string LogPrefix { get; set; }= "";
+    public string LogPrefix { get; set; } = "";
 
     public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {

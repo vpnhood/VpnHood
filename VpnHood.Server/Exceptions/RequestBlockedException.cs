@@ -11,7 +11,7 @@ internal class RequestBlockedException(IPEndPoint remoteEndPoint, Session sessio
 {
     protected override LogLevel LogLevel => LogLevel.Information;
     protected override EventId EventId => GeneralEventId.NetFilter;
-    
+
     public override void Log()
     {
         //let EventReporter manage it

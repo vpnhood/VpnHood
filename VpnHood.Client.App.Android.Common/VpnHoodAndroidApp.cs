@@ -3,18 +3,17 @@ using VpnHood.Client.Device.Droid;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership transfer) 
+public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership transfer)
     : Application(javaReference, transfer)
 {
-    protected virtual AppOptions CreateAppOptions () => new();
+    protected virtual AppOptions CreateAppOptions() => new();
 
     public override void OnCreate()
     {
         base.OnCreate();
 
         //app init
-        if (!VpnHoodApp.IsInit)
-        {
+        if (!VpnHoodApp.IsInit) {
             var options = CreateAppOptions();
             options.UiService ??= new AndroidAppUiService();
             options.CultureService ??= AndroidAppAppCultureService.CreateIfSupported();
@@ -27,8 +26,7 @@ public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing)
-        {
+        if (disposing) {
             if (VpnHoodApp.IsInit) _ = VpnHoodApp.Instance.DisposeAsync();
         }
 

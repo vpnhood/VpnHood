@@ -36,7 +36,10 @@ public class ServerApp : IDisposable
     public IAccessManager AccessManager { get; }
     public FileAccessManager? FileAccessManager => AccessManager as FileAccessManager;
     public static string AppName => "VpnHoodServer";
-    public static string AppFolderPath => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ?? throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
+
+    public static string AppFolderPath => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ??
+                                          throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
+
     public AppSettings AppSettings { get; }
     public static string StoragePath => Directory.GetCurrentDirectory();
     public string InternalStoragePath { get; }
@@ -48,9 +51,10 @@ public class ServerApp : IDisposable
 
         // set storage folder
         var parentAppFolderPath = Path.GetDirectoryName(Path.GetDirectoryName(typeof(ServerApp).Assembly.Location));
-        var storagePath = (parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish)))
-            ? Path.Combine(parentAppFolderPath, FolderNameStorage)
-            : Path.Combine(Directory.GetCurrentDirectory(), FolderNameStorage);
+        var storagePath =
+            (parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish)))
+                ? Path.Combine(parentAppFolderPath, FolderNameStorage)
+                : Path.Combine(Directory.GetCurrentDirectory(), FolderNameStorage);
         Directory.CreateDirectory(storagePath);
         Directory.SetCurrentDirectory(storagePath);
 
@@ -81,18 +85,17 @@ public class ServerApp : IDisposable
 
         // tracker
         var anonyClientId = GetServerId(Path.Combine(InternalStoragePath, "server-id")).ToString();
-        _tracker = new Ga4TagTracker
-        {
+        _tracker = new Ga4TagTracker {
             // ReSharper disable once StringLiteralTypo
             MeasurementId = "G-9SWLGEX6BT",
             SessionCount = 1,
             ClientId = anonyClientId,
             SessionId = Guid.NewGuid().ToString(),
             IsEnabled = AppSettings.AllowAnonymousTracker,
-            UserProperties = new Dictionary<string, object>
-            {
+            UserProperties = new Dictionary<string, object> {
                 { "server_version", VpnHoodServer.ServerVersion },
-                { "access_manager", AccessManager.GetType().Name } }
+                { "access_manager", AccessManager.GetType().Name }
+            }
         };
     }
 
@@ -100,10 +103,8 @@ public class ServerApp : IDisposable
     {
         var configFilePath = Path.Combine(StoragePath, "NLog.config");
         if (!File.Exists(configFilePath)) configFilePath = Path.Combine(AppFolderPath, "NLog.config");
-        if (File.Exists(configFilePath))
-        {
-            using var loggerFactory = LoggerFactory.Create(builder =>
-            {
+        if (File.Exists(configFilePath)) {
+            using var loggerFactory = LoggerFactory.Create(builder => {
                 builder.AddNLog(configFilePath);
                 if (AppSettings.IsDiagnoseMode)
                     builder.SetMinimumLevel(LogLevel.Trace);
@@ -111,21 +112,20 @@ public class ServerApp : IDisposable
             LogManager.Configuration.Variables["mydir"] = storagePath;
             VhLogger.Instance = loggerFactory.CreateLogger("NLog");
         }
-        else
-        {
+        else {
             VhLogger.Instance.LogWarning("Could not find NLog file. ConfigFilePath: {configFilePath}", configFilePath);
         }
     }
 
     private void CurrentDomain_ProcessExit(object? sender, EventArgs e)
     {
-        if (_vpnHoodServer != null)
-        {
+        if (_vpnHoodServer != null) {
             VhLogger.Instance.LogInformation("Syncing all sessions and terminating the server...");
             _vpnHoodServer.SessionManager.SyncSessions().Wait();
             _vpnHoodServer.Dispose();
         }
     }
+
     public static Guid GetServerId(string serverIdFile)
     {
         if (File.Exists(serverIdFile) && Guid.TryParse(File.ReadAllText(serverIdFile), out var serverId))
@@ -137,7 +137,8 @@ public class ServerApp : IDisposable
     }
 
 
-    private static FileAccessManager CreateFileAccessManager(string storageFolderPath, FileAccessManagerOptions? options)
+    private static FileAccessManager CreateFileAccessManager(string storageFolderPath,
+        FileAccessManagerOptions? options)
     {
         options ??= new FileAccessManagerOptions();
         options.PublicEndPoints ??= GetDefaultPublicEndPoints(options.TcpEndPointsValue);
@@ -165,8 +166,7 @@ public class ServerApp : IDisposable
     private static HttpAccessManager CreateHttpAccessManager(HttpAccessManagerOptions options)
     {
         VhLogger.Instance.LogInformation("Initializing HttpAccessManager. BaseUrl: {BaseUrl}", options.BaseUrl);
-        var httpAccessManager = new HttpAccessManager(options)
-        {
+        var httpAccessManager = new HttpAccessManager(options) {
             Logger = VhLogger.Instance,
             LoggerEventId = GeneralEventId.AccessManager
         };
@@ -175,18 +175,17 @@ public class ServerApp : IDisposable
 
     private void CommandListener_CommandReceived(object? sender, CommandReceivedEventArgs e)
     {
-        if (!VhUtil.IsNullOrEmpty(e.Arguments) && e.Arguments[0] == "stop")
-        {
+        if (!VhUtil.IsNullOrEmpty(e.Arguments) && e.Arguments[0] == "stop") {
             VhLogger.Instance.LogInformation("I have received the stop command!");
             _vpnHoodServer?.SessionManager.SyncSessions().Wait();
             _vpnHoodServer?.Dispose();
         }
     }
+
     private void StopServer(CommandLineApplication cmdApp)
     {
         cmdApp.Description = "Stop all instances of VpnHoodServer that running from this folder";
-        cmdApp.OnExecute(() =>
-        {
+        cmdApp.OnExecute(() => {
             VhLogger.Instance.LogInformation("Sending stop server request...");
             _commandListener.SendCommand("stop");
         });
@@ -195,16 +194,14 @@ public class ServerApp : IDisposable
     private bool IsAnotherInstanceRunning()
     {
         var lockFile = Path.Combine(InternalStoragePath, "server.lock");
-        try
-        {
+        try {
             _lockStream = File.OpenWrite(lockFile);
             var stream = new StreamWriter(_lockStream, leaveOpen: true);
             stream.WriteLine(DateTime.UtcNow);
             stream.Dispose();
             return false;
         }
-        catch (IOException)
-        {
+        catch (IOException) {
             return true;
         }
     }
@@ -212,8 +209,7 @@ public class ServerApp : IDisposable
     private void StartServer(CommandLineApplication cmdApp)
     {
         cmdApp.Description = "Run the server (default command)";
-        cmdApp.OnExecuteAsync(async cancellationToken =>
-        {
+        cmdApp.OnExecuteAsync(async cancellationToken => {
             // LogAnonymizer is on by default
             VhLogger.IsAnonymousMode = AppSettings.ServerConfig?.LogAnonymizerValue ?? true;
 
@@ -237,8 +233,7 @@ public class ServerApp : IDisposable
                 : new WinSystemInfoProvider();
 
             // run server
-            _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions
-            {
+            _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions {
                 Tracker = _tracker,
                 SystemInfoProvider = systemInfoProvider,
                 StoragePath = InternalStoragePath,
@@ -274,8 +269,7 @@ public class ServerApp : IDisposable
 
         // set default
         if (args.Length == 0) args = ["start"];
-        var cmdApp = new CommandLineApplication
-        {
+        var cmdApp = new CommandLineApplication {
             AllowArgumentSeparator = true,
             Name = AppName,
             FullName = "VpnHood server",

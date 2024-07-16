@@ -40,9 +40,11 @@ public class VpnHoodWinApp : IDisposable
     private VpnHoodWinApp()
     {
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
-        _appLocalDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
-        _appIcon = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly()?.Location ?? throw new Exception("Could not get the location of Assembly."))
-            ?? throw new Exception("Could not get the icon of the executing assembly.");
+        _appLocalDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "VpnHood");
+        _appIcon = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly()?.Location ??
+                                              throw new Exception("Could not get the location of Assembly."))
+                   ?? throw new Exception("Could not get the icon of the executing assembly.");
 
         //create command Listener
         _commandListener = new CommandListener(Path.Combine(_appLocalDataPath, FileNameAppCommand));
@@ -51,6 +53,7 @@ public class VpnHoodWinApp : IDisposable
 
     [DllImport("DwmApi")]
     private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);
+
     public static void SetWindowTitleBarColor(IntPtr hWnd, Color color)
     {
         var attrValue = new[] { color.B << 16 | color.G << 8 | color.R };
@@ -60,8 +63,7 @@ public class VpnHoodWinApp : IDisposable
 
     public static void OpenUrlInExternalBrowser(Uri url)
     {
-        Process.Start(new ProcessStartInfo
-        {
+        Process.Start(new ProcessStartInfo {
             FileName = url.AbsoluteUri,
             UseShellExecute = true,
             Verb = "open"
@@ -87,12 +89,12 @@ public class VpnHoodWinApp : IDisposable
     public void PreStart(string[] args)
     {
         ConnectAfterStart = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
-        ShowWindowAfterStart = !ConnectAfterStart && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
+        ShowWindowAfterStart = !ConnectAfterStart &&
+                               !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
 
         // Make single instance
         // if you like to wait a few seconds in case that the instance is just shutting down
-        if (IsAnotherInstanceRunning())
-        {
+        if (IsAnotherInstanceRunning()) {
             // open main window if app is already running and user run the app again
             if (ShowWindowAfterStart)
                 _commandListener.SendCommand("/openWindow");
@@ -100,12 +102,10 @@ public class VpnHoodWinApp : IDisposable
         }
 
         // configuring Windows Firewall
-        try
-        {
+        try {
             OpenLocalFirewall(_appLocalDataPath);
         }
-        catch
-        {
+        catch {
             /*ignored*/
         }
     }
@@ -131,23 +131,31 @@ public class VpnHoodWinApp : IDisposable
         _sysTray = new SystemTray(VpnHoodApp.Instance.Resource.Strings.AppName, _appIcon.Handle);
         _sysTray.Clicked += (_, _) => OpenMainWindow();
         _sysTray.ContextMenu = new ContextMenu();
-        _openMainWindowMenuItemId = _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Open, (_, _) => OpenMainWindow());
-        _openMainWindowInBrowserMenuItemId = _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.OpenInBrowser, (_, _) => OpenMainWindowInBrowser());
+        _openMainWindowMenuItemId =
+            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Open, (_, _) => OpenMainWindow());
+        _openMainWindowInBrowserMenuItemId =
+            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.OpenInBrowser,
+                (_, _) => OpenMainWindowInBrowser());
         _sysTray.ContextMenu.AddMenuSeparator();
-        _connectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Connect, (_, _) => ConnectClicked());
-        _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Disconnect, (_, _) => _ = VpnHoodApp.Instance.Disconnect(true));
+        _connectMenuItemId =
+            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Connect, (_, _) => ConnectClicked());
+        _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Disconnect,
+            (_, _) => _ = VpnHoodApp.Instance.Disconnect(true));
         _sysTray.ContextMenu.AddMenuSeparator();
         _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Exit, (_, _) => Exit());
 
         // initialize icons
         if (VpnHoodApp.Instance.Resource.Icons.SystemTrayConnectingIcon != null)
-            _connectingIcon = new Icon(new MemoryStream(VpnHoodApp.Instance.Resource.Icons.SystemTrayConnectingIcon.Data));
+            _connectingIcon =
+                new Icon(new MemoryStream(VpnHoodApp.Instance.Resource.Icons.SystemTrayConnectingIcon.Data));
 
         if (VpnHoodApp.Instance.Resource.Icons.SystemTrayConnectedIcon != null)
-            _connectedIcon = new Icon(new MemoryStream(VpnHoodApp.Instance.Resource.Icons.SystemTrayConnectedIcon.Data));
+            _connectedIcon =
+                new Icon(new MemoryStream(VpnHoodApp.Instance.Resource.Icons.SystemTrayConnectedIcon.Data));
 
         if (VpnHoodApp.Instance.Resource.Icons.SystemTrayDisconnectedIcon != null)
-            _disconnectedIcon = new Icon(new MemoryStream(VpnHoodApp.Instance.Resource.Icons.SystemTrayDisconnectedIcon.Data));
+            _disconnectedIcon =
+                new Icon(new MemoryStream(VpnHoodApp.Instance.Resource.Icons.SystemTrayDisconnectedIcon.Data));
     }
 
     private void UpdateNotifyIcon()
@@ -168,7 +176,9 @@ public class VpnHoodWinApp : IDisposable
         _sysTray.Update($@"{VpnHoodApp.Instance.Resource.Strings.AppName} - {stateName}", icon.Handle);
         _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VpnHoodApp.Instance.IsIdle);
         _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VpnHoodApp.Instance.IsIdle);
-        _sysTray.ContextMenu?.EnableMenuItem(_disconnectMenuItemId, !VpnHoodApp.Instance.IsIdle && VpnHoodApp.Instance.State.ConnectionState != AppConnectionState.Disconnecting);
+        _sysTray.ContextMenu?.EnableMenuItem(_disconnectMenuItemId,
+            !VpnHoodApp.Instance.IsIdle &&
+            VpnHoodApp.Instance.State.ConnectionState != AppConnectionState.Disconnecting);
         _sysTray.ContextMenu?.EnableMenuItem(_openMainWindowMenuItemId, EnableOpenMainWindow);
         _sysTray.ContextMenu?.EnableMenuItem(_openMainWindowInBrowserMenuItemId, true);
     }
@@ -193,19 +203,15 @@ public class VpnHoodWinApp : IDisposable
 
     private void ConnectClicked()
     {
-        if (VpnHoodApp.Instance.Settings.UserSettings.ClientProfileId != null)
-        {
-            try
-            {
+        if (VpnHoodApp.Instance.Settings.UserSettings.ClientProfileId != null) {
+            try {
                 _ = VpnHoodApp.Instance.Connect(VpnHoodApp.Instance.Settings.UserSettings.ClientProfileId.Value);
             }
-            catch
-            {
+            catch {
                 OpenMainWindow();
             }
         }
-        else
-        {
+        else {
             OpenMainWindow();
         }
     }
@@ -217,8 +223,7 @@ public class VpnHoodWinApp : IDisposable
             return Path.GetFullPath(exe);
 
         if (Path.GetDirectoryName(exe) == string.Empty)
-            foreach (var test in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
-            {
+            foreach (var test in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';')) {
                 var path = test.Trim();
                 if (!string.IsNullOrEmpty(path) && File.Exists(path = Path.Combine(path, exe)))
                     return Path.GetFullPath(path);
@@ -241,18 +246,21 @@ public class VpnHoodWinApp : IDisposable
         //dotnet exe
         var exePath = FindExePath("dotnet.exe");
         ProcessStartNoWindow("netsh", $"advfirewall firewall delete rule name=\"{ruleName}\" dir=in").WaitForExit();
-        ProcessStartNoWindow("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=any dir=in")
+        ProcessStartNoWindow("netsh",
+                $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=any dir=in")
             .WaitForExit();
-        ProcessStartNoWindow("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=any dir=in")
+        ProcessStartNoWindow("netsh",
+                $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=any dir=in")
             .WaitForExit();
 
         // VpnHood exe
         exePath = curExePath;
-        if (File.Exists(exePath))
-        {
-            ProcessStartNoWindow("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=any dir=in")
+        if (File.Exists(exePath)) {
+            ProcessStartNoWindow("netsh",
+                    $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=any dir=in")
                 .WaitForExit();
-            ProcessStartNoWindow("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=any dir=in")
+            ProcessStartNoWindow("netsh",
+                    $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=any dir=in")
                 .WaitForExit();
         }
 
@@ -262,8 +270,7 @@ public class VpnHoodWinApp : IDisposable
 
     private static Process ProcessStartNoWindow(string filename, string argument)
     {
-        var processStart = new ProcessStartInfo(filename, argument)
-        {
+        var processStart = new ProcessStartInfo(filename, argument) {
             CreateNoWindow = true
         };
 
@@ -282,40 +289,34 @@ public class VpnHoodWinApp : IDisposable
     {
         // check default ip
         IPEndPoint? freeLocalEndPoint = null;
-        try
-        {
+        try {
             freeLocalEndPoint = VhUtil.GetFreeTcpEndPoint(hostEndPoint.Address, hostEndPoint.Port);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError("Could not find free port local host. LocalIp:{LocalIp}, Message: {Message}",
                 hostEndPoint.Address, ex.Message);
         }
 
         // check 127.0.0.1
-        if (freeLocalEndPoint == null)
-        {
-            try
-            {
+        if (freeLocalEndPoint == null) {
+            try {
                 freeLocalEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, 9090);
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 VhLogger.Instance.LogError("Could not find free port local host. LocalIp:{LocalIp}, Message: {Message}",
                     IPAddress.Loopback, ex.Message);
                 return null;
             }
         }
 
-        try
-        {
-            var hostsFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
+        try {
+            var hostsFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers",
+                "etc", "hosts");
             var hostLines = File.ReadLines(hostsFilePath).ToList();
 
             // remove wrong items
             var newHostLines = hostLines
-                .Where(x =>
-                {
+                .Where(x => {
                     var items = x.Split(" ");
                     var isWrongVpnHoodLine =
                         items.Length > 1 &&
@@ -327,8 +328,7 @@ public class VpnHoodWinApp : IDisposable
 
             // add item if it does not exist
             var isAlreadyAdded = newHostLines
-                .Any(x =>
-                {
+                .Any(x => {
                     var items = x.Split(" ");
                     var isVpnHoodLine =
                         items.Length > 1 &&
@@ -346,8 +346,7 @@ public class VpnHoodWinApp : IDisposable
 
             return new Uri($"http://{localHost}:{freeLocalEndPoint.Port}");
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not register local domain.");
             return null;
         }

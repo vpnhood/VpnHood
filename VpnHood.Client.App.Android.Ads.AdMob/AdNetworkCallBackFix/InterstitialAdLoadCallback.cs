@@ -15,7 +15,8 @@ public abstract class InterstitialAdLoadCallback : Android.Gms.Ads.Interstitial.
 
     private static void OnAdLoadedNative(IntPtr env, IntPtr nativeThis, IntPtr nativeP0)
     {
-        var interstitialAdLoadCallback = GetObject<InterstitialAdLoadCallback>(env, nativeThis, JniHandleOwnership.DoNotTransfer);
+        var interstitialAdLoadCallback =
+            GetObject<InterstitialAdLoadCallback>(env, nativeThis, JniHandleOwnership.DoNotTransfer);
         var interstitialAd = GetObject<InterstitialAd>(nativeP0, JniHandleOwnership.DoNotTransfer);
         if (interstitialAd != null)
             interstitialAdLoadCallback?.OnAdLoaded(interstitialAd);

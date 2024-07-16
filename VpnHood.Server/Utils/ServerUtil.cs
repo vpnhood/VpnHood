@@ -10,31 +10,25 @@ internal static class ServerUtil
     public static int GetFreeUdpPort(AddressFamily addressFamily, int? start)
     {
         start ??= new Random().Next(1024, 9000);
-        for (var port = start.Value; port < start + 1000; port++)
-        {
-            try
-            {
+        for (var port = start.Value; port < start + 1000; port++) {
+            try {
                 using var udpClient = new UdpClient(port, addressFamily);
                 return ((IPEndPoint)udpClient.Client.LocalEndPoint).Port;
             }
-            catch (SocketException ex) when (ex.SocketErrorCode != SocketError.AddressAlreadyInUse)
-            {
+            catch (SocketException ex) when (ex.SocketErrorCode != SocketError.AddressAlreadyInUse) {
                 break;
             }
-            catch
-            {
+            catch {
                 // try the next port
             }
         }
 
         // try any port
-        try
-        {
+        try {
             using var udpClient = new UdpClient(0, addressFamily);
             return ((IPEndPoint)udpClient.Client.LocalEndPoint).Port;
         }
-        catch
-        {
+        catch {
             return 0;
         }
     }
@@ -61,5 +55,4 @@ internal static class ServerUtil
             "MaxWorkerThreads: {MaxWorkerThreads}, MaxCompletionPortThreads: {newMaxCompletionPortThreads}",
             maxWorkerThreads, newMaxCompletionPortThreads);
     }
-
 }

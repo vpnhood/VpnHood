@@ -12,17 +12,16 @@ public static class JsonSerializerExt
     // Dynamically attach a JsonSerializerOptions copy that is configured using PopulateTypeInfoResolver
     private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> SPopulateMap = new();
 
-    public static void PopulateObject(string json, Type returnType, object destination, JsonSerializerOptions? options = null)
+    public static void PopulateObject(string json, Type returnType, object destination,
+        JsonSerializerOptions? options = null)
     {
         options = GetOptionsWithPopulateResolver(options);
         PopulateTypeInfoResolver.TargetPopulateObject = destination;
-        try
-        {
+        try {
             var result = JsonSerializer.Deserialize(json, returnType, options);
             Debug.Assert(ReferenceEquals(result, destination));
         }
-        finally
-        {
+        finally {
             PopulateTypeInfoResolver.TargetPopulateObject = null;
         }
     }
@@ -31,13 +30,11 @@ public static class JsonSerializerExt
     {
         options ??= JsonSerializerOptions.Default;
 
-        if (!SPopulateMap.TryGetValue(options, out var populateResolverOptions))
-        {
+        if (!SPopulateMap.TryGetValue(options, out var populateResolverOptions)) {
             JsonSerializer.Serialize(value: 0, options); // Force a serialization to mark options as read-only
             Debug.Assert(options.TypeInfoResolver != null);
 
-            populateResolverOptions = new JsonSerializerOptions(options)
-            {
+            populateResolverOptions = new JsonSerializerOptions(options) {
                 TypeInfoResolver = new PopulateTypeInfoResolver(options.TypeInfoResolver)
             };
 
@@ -50,26 +47,22 @@ public static class JsonSerializerExt
 
     private class PopulateTypeInfoResolver(IJsonTypeInfoResolver jsonTypeInfoResolver) : IJsonTypeInfoResolver
     {
-        [ThreadStatic]
-        internal static object? TargetPopulateObject;
+        [ThreadStatic] internal static object? TargetPopulateObject;
 
         public JsonTypeInfo? GetTypeInfo(Type type, JsonSerializerOptions options)
         {
             var typeInfo = jsonTypeInfoResolver.GetTypeInfo(type, options);
-            if (typeInfo == null || typeInfo.Kind == JsonTypeInfoKind.None) 
+            if (typeInfo == null || typeInfo.Kind == JsonTypeInfoKind.None)
                 return typeInfo;
-            
+
             var defaultCreateObjectDelegate = typeInfo.CreateObject;
-            typeInfo.CreateObject = () =>
-            {
+            typeInfo.CreateObject = () => {
                 var result = TargetPopulateObject;
-                if (result != null)
-                {
+                if (result != null) {
                     // clean up to prevent reuse in recursive scenario
                     TargetPopulateObject = null;
                 }
-                else
-                {
+                else {
                     // fall back to the default delegate
                     result = defaultCreateObjectDelegate?.Invoke();
                 }

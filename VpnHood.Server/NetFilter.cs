@@ -14,8 +14,7 @@ public class NetFilter : INetFilter
         BlockedIpRanges = _loopbackIpRange;
     }
 
-    public IpRangeOrderedList BlockedIpRanges
-    {
+    public IpRangeOrderedList BlockedIpRanges {
         get => _blockedIpRanges;
         set => _blockedIpRanges = _loopbackIpRange.Union(value);
     }

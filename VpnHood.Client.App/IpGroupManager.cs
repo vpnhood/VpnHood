@@ -30,8 +30,8 @@ public class IpGroupManager
     public Task<string[]> GetIpGroupIds()
     {
         _ipGroupIds ??= _zipArchive.Entries
-            .Where(x=>Path.GetExtension(x.Name)==".ips")
-            .Select(x=>Path.GetFileNameWithoutExtension(x.Name))
+            .Where(x => Path.GetExtension(x.Name) == ".ips")
+            .Select(x => Path.GetFileNameWithoutExtension(x.Name))
             .ToArray();
 
         return Task.FromResult(_ipGroupIds);
@@ -49,13 +49,12 @@ public class IpGroupManager
         if (_ipGroupIpRanges.TryGetValue(ipGroupId, out var ipGroupRangeCache))
             return ipGroupRangeCache;
 
-        try
-        {
-            await using var stream = _zipArchive.GetEntry($"{ipGroupId.ToLower()}.ips")?.Open() ?? throw new NotExistsException();
+        try {
+            await using var stream = _zipArchive.GetEntry($"{ipGroupId.ToLower()}.ips")?.Open() ??
+                                     throw new NotExistsException();
             return IpRangeOrderedList.Deserialize(stream);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not load ip ranges for {IpGroupId}", ipGroupId);
             return IpRangeOrderedList.Empty;
         }
@@ -63,21 +62,19 @@ public class IpGroupManager
 
     public async Task<IpGroup> GetIpGroup(IPAddress ipAddress, string? lastIpGroupId)
     {
-        return await FindIpGroup(ipAddress, lastIpGroupId).VhConfigureAwait() 
-               ?? throw new NotExistsException($"Could not find any ip group for the given ip. IP: {VhLogger.Format(ipAddress)}");
+        return await FindIpGroup(ipAddress, lastIpGroupId).VhConfigureAwait()
+               ?? throw new NotExistsException(
+                   $"Could not find any ip group for the given ip. IP: {VhLogger.Format(ipAddress)}");
     }
 
     public async Task<IpGroup?> FindIpGroup(IPAddress ipAddress, string? lastIpGroupId)
     {
         // IpGroup
-        if (lastIpGroupId != null)
-        {
+        if (lastIpGroupId != null) {
             var ipRanges = await GetIpRanges(lastIpGroupId).VhConfigureAwait();
-            if (ipRanges.Any(x => x.IsInRange(ipAddress)))
-            {
+            if (ipRanges.Any(x => x.IsInRange(ipAddress))) {
                 _ipGroupIpRanges.TryAdd(lastIpGroupId, ipRanges);
-                return new IpGroup
-                {
+                return new IpGroup {
                     IpGroupId = lastIpGroupId,
                     IpRanges = ipRanges
                 };
@@ -86,14 +83,11 @@ public class IpGroupManager
 
         // iterate through all groups
         var ipGroupIds = await GetIpGroupIds();
-        foreach (var ipGroupId in ipGroupIds)
-        {
+        foreach (var ipGroupId in ipGroupIds) {
             var ipRanges = await GetIpRanges(ipGroupId).VhConfigureAwait();
-            if (ipRanges.Any(x => x.IsInRange(ipAddress)))
-            {
+            if (ipRanges.Any(x => x.IsInRange(ipAddress))) {
                 _ipGroupIpRanges.TryAdd(ipGroupId, ipRanges);
-                return new IpGroup
-                {
+                return new IpGroup {
                     IpGroupId = ipGroupId,
                     IpRanges = ipRanges
                 };
@@ -105,8 +99,7 @@ public class IpGroupManager
 
     public async Task<string?> GetCountryCodeByCurrentIp()
     {
-        try
-        {
+        try {
             var ipAddress =
                 await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork).VhConfigureAwait() ??
                 await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6).VhConfigureAwait();
@@ -117,8 +110,7 @@ public class IpGroupManager
             var ipGroup = await FindIpGroup(ipAddress, null).VhConfigureAwait();
             return ipGroup?.IpGroupId;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not retrieve client country from public ip services.");
             return null;
         }

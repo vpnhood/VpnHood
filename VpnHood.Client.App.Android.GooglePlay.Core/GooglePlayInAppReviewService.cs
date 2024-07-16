@@ -19,22 +19,19 @@ public class GooglePlayInAppReviewService
         var ret = new GooglePlayInAppReviewService();
         return ret;
     }
-    
+
     public async Task InitializeReview(IUiContext uiContext)
     {
-        try
-        {
+        try {
             var appUiContext = (AndroidUiContext)uiContext;
             //var reviewManager = ReviewManagerFactory.Create(appUiContext.Activity);
             using var reviewManager = new FakeReviewManager(appUiContext.Activity);
             using var reviewInfo = await reviewManager.RequestReviewFlow().AsTask<ReviewInfo>().VhConfigureAwait();
             await reviewManager.LaunchReviewFlow(appUiContext.Activity, reviewInfo).AsTask().VhConfigureAwait();
         }
-        catch (Exception e)
-        {
+        catch (Exception e) {
             Console.WriteLine(e);
             throw;
         }
-        
     }
 }

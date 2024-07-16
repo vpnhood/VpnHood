@@ -15,6 +15,7 @@ public class AndroidAppUiService : IAppUiService
     private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
 
     public bool IsQuickLaunchSupported => OperatingSystem.IsAndroidVersionAtLeast(33);
+
     public async Task<bool> RequestQuickLaunch(IUiContext context, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)context;
@@ -32,6 +33,7 @@ public class AndroidAppUiService : IAppUiService
     }
 
     public bool IsNotificationSupported => OperatingSystem.IsAndroidVersionAtLeast(33);
+
     public async Task<bool> RequestNotification(IUiContext context, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)context;
@@ -44,25 +46,25 @@ public class AndroidAppUiService : IAppUiService
         if (appUiContext.Activity.CheckSelfPermission(Manifest.Permission.PostNotifications) == Permission.Granted)
             return true;
 
-        try
-        {
+        try {
             appUiContext.ActivityEvent.RequestPermissionsResultEvent += OnRequestPermissionsResult;
 
             // request for notification
             _requestPostNotificationsCompletionTask = new TaskCompletionSource<Permission>();
-            appUiContext.Activity.RequestPermissions([Manifest.Permission.PostNotifications], RequestPostNotificationId);
+            appUiContext.Activity.RequestPermissions([Manifest.Permission.PostNotifications],
+                RequestPostNotificationId);
             var res = await _requestPostNotificationsCompletionTask.Task
                 .WaitAsync(cancellationToken)
                 .VhConfigureAwait();
             return res == Permission.Granted;
         }
-        finally
-        {
+        finally {
             appUiContext.ActivityEvent.RequestPermissionsResultEvent -= OnRequestPermissionsResult;
         }
     }
 
     public bool IsOpenAlwaysOnPageSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
+
     public void OpenAlwaysOnPage(IUiContext context)
     {
         if (!IsOpenAlwaysOnPageSupported)

@@ -15,6 +15,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Test.Device;
+
 // ReSharper disable DisposeOnUsingVariable
 
 namespace VpnHood.Test.Tests;
@@ -27,15 +28,13 @@ public class ClientAppTest : TestBase
     private Token CreateToken()
     {
         var randomId = Guid.NewGuid();
-        var token = new Token
-        {
+        var token = new Token {
             Name = "Default Test Server",
             IssuedAt = DateTime.UtcNow,
             SupportId = _lastSupportId++.ToString(),
             TokenId = randomId.ToString(),
             Secret = randomId.ToByteArray(),
-            ServerToken = new ServerToken
-            {
+            ServerToken = new ServerToken {
                 HostEndPoints = [IPEndPoint.Parse("127.0.0.1:443")],
                 CertificateHash = randomId.ToByteArray(),
                 HostName = randomId.ToString(),
@@ -65,10 +64,8 @@ public class ClientAppTest : TestBase
             clientProfiles.Single(x => x.ClientProfileId == app1.Features.BuiltInClientProfileId).Token.TokenId);
 
         // BuiltIn token should not be removed
-        foreach (var clientProfile in clientProfiles)
-        {
-            Assert.ThrowsException<UnauthorizedAccessException>(() =>
-            {
+        foreach (var clientProfile in clientProfiles) {
+            Assert.ThrowsException<UnauthorizedAccessException>(() => {
                 // ReSharper disable once AccessToDisposedClosure
                 app1.ClientProfileService.Remove(clientProfile.ClientProfileId);
             });
@@ -254,20 +251,16 @@ public class ClientAppTest : TestBase
 
         // ************
         // *** TEST ***: Update throw NotExistsException exception if tokenId does not exist
-        Assert.ThrowsException<NotExistsException>(() =>
-        {
+        Assert.ThrowsException<NotExistsException>(() => {
             // ReSharper disable once AccessToDisposedClosure
-            app.ClientProfileService.Update(Guid.NewGuid(), new ClientProfileUpdateParams
-            {
+            app.ClientProfileService.Update(Guid.NewGuid(), new ClientProfileUpdateParams {
                 ClientProfileName = "Hi"
             });
-
         });
 
         // ************
         // *** TEST ***: Update should update the old node if ClientProfileId already exists
-        app.ClientProfileService.Update(clientProfile1.ClientProfileId, new ClientProfileUpdateParams
-        {
+        app.ClientProfileService.Update(clientProfile1.ClientProfileId, new ClientProfileUpdateParams {
             ClientProfileName = "Hi2",
             IsFavorite = true
         });
@@ -385,23 +378,22 @@ public class ClientAppTest : TestBase
         appOptions.SessionTimeout = TimeSpan.FromSeconds(20);
         appOptions.ReconnectTimeout = TimeSpan.FromSeconds(1);
         appOptions.AutoWaitTimeout = TimeSpan.FromSeconds(2);
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
+        await using var app =
+            TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId);
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
 
         // dispose server and wait for waiting state
         await server1.DisposeAsync();
-        await VhTestUtil.AssertEqualsWait(AppConnectionState.Waiting, async () =>
-        {
+        await VhTestUtil.AssertEqualsWait(AppConnectionState.Waiting, async () => {
             await TestHelper.Test_Https(throwError: false, timeout: 100);
             return app.State.ConnectionState;
         });
 
         // start a new server & waiting for connected state
         await using var server2 = await TestHelper.CreateServer(accessManager);
-        await VhTestUtil.AssertEqualsWait(AppConnectionState.Connected, async () =>
-        {
+        await VhTestUtil.AssertEqualsWait(AppConnectionState.Connected, async () => {
             await TestHelper.Test_Https(throwError: false, timeout: 100);
             return app.State.ConnectionState;
         });
@@ -439,8 +431,7 @@ public class ClientAppTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
-        var deviceOptions = new TestDeviceOptions
-        {
+        var deviceOptions = new TestDeviceOptions {
             CanSendPacketToOutbound = usePassthru,
             IsDnsServerSupported = isDnsServerSupported,
             CaptureDnsAddresses = TestHelper.TestIpAddresses.ToArray()
@@ -450,8 +441,7 @@ public class ClientAppTest : TestBase
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         var customIps = (await Dns.GetHostAddressesAsync(TestConstants.HttpsUri1.Host))
             .Select(x => new IpRange(x))
-            .Concat(new[]
-            {
+            .Concat(new[] {
                 new IpRange(TestConstants.PingV4Address1),
                 new IpRange(TestConstants.NsEndPoint1.Address),
                 new IpRange(TestConstants.UdpV4EndPoint1.Address),
@@ -493,8 +483,7 @@ public class ClientAppTest : TestBase
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
         Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
-        if (testPing)
-        {
+        if (testPing) {
             // ping
             oldReceivedByteCount = app.State.SessionTraffic.Received;
             await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
@@ -502,21 +491,18 @@ public class ClientAppTest : TestBase
 
             // ping
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            try
-            {
+            try {
                 await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address2, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 Assert.AreEqual(nameof(PingException), ex.GetType().Name);
             }
 
             Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
         }
 
-        if (testUdp)
-        {
+        if (testUdp) {
             // UDP
             oldReceivedByteCount = app.State.SessionTraffic.Received;
             await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint1);
@@ -524,13 +510,11 @@ public class ClientAppTest : TestBase
 
             // UDP
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            try
-            {
+            try {
                 await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint2, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 Assert.AreEqual(nameof(OperationCanceledException), ex.GetType().Name);
             }
 
@@ -538,8 +522,7 @@ public class ClientAppTest : TestBase
         }
 
         // DNS should always use tunnel regarding of any exclude or include option
-        if (testDns)
-        {
+        if (testDns) {
             oldReceivedByteCount = app.State.SessionTraffic.Received;
             TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint1);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
@@ -562,17 +545,14 @@ public class ClientAppTest : TestBase
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
         Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
-        if (testPing)
-        {
+        if (testPing) {
             // ping
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            try
-            {
+            try {
                 await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 Assert.AreEqual(nameof(PingException), ex.GetType().Name);
             }
 
@@ -584,18 +564,15 @@ public class ClientAppTest : TestBase
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
         }
 
-        if (testUdp)
-        {
+        if (testUdp) {
             // UDP
             VhLogger.Instance.LogTrace("Testing UDP include...");
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            try
-            {
+            try {
                 await TestHelper.Test_Udp(udpEndPoint: TestConstants.UdpV4EndPoint1, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 Assert.AreEqual(nameof(OperationCanceledException), ex.GetType().Name);
             }
 
@@ -609,8 +586,7 @@ public class ClientAppTest : TestBase
         }
 
         // DNS should always use tunnel regarding of any exclude or include option
-        if (testDns)
-        {
+        if (testDns) {
             oldReceivedByteCount = app.State.SessionTraffic.Received;
             TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint1);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
@@ -704,8 +680,7 @@ public class ClientAppTest : TestBase
 
         //update web server enc_server_token
         var isTokenRetrieved = false;
-        webServer.WithAction("/accesskey", HttpVerbs.Get, context =>
-        {
+        webServer.WithAction("/accesskey", HttpVerbs.Get, context => {
             isTokenRetrieved = true;
             return context.SendStringAsync(token2.ServerToken.Encrypt(), "text/plain", Encoding.UTF8);
         });
@@ -755,7 +730,8 @@ public class ClientAppTest : TestBase
 
         // create app
         var appOptions = TestHelper.CreateAppOptions();
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
+        await using var app =
+            TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
         app.UserSettings.DomainFilter.Includes = [TestConstants.HttpsUri1.Host];
 
         // connect
@@ -783,7 +759,8 @@ public class ClientAppTest : TestBase
 
         // create app
         var appOptions = TestHelper.CreateAppOptions();
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
+        await using var app =
+            TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
         app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsUri1.Host];
 
         // connect

@@ -11,11 +11,9 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
     public override long Length => SourceStream.Length;
     public override bool CanTimeout => SourceStream.CanTimeout;
 
-    public override long Position
-    {
+    public override long Position {
         get => SourceStream.Position;
-        set
-        {
+        set {
             if (!CanSeek)
                 throw new NotSupportedException();
 
@@ -67,19 +65,18 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
     }
 
     // Sealed
-    public sealed override int WriteTimeout
-    {
+    public sealed override int WriteTimeout {
         get => SourceStream.WriteTimeout;
         set => SourceStream.WriteTimeout = value;
     }
 
-    public sealed override int ReadTimeout
-    {
+    public sealed override int ReadTimeout {
         get => SourceStream.ReadTimeout;
         set => SourceStream.ReadTimeout = value;
     }
 
-    public sealed override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    public sealed override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer,
+        CancellationToken cancellationToken = default)
     {
         return base.WriteAsync(buffer, cancellationToken);
     }
@@ -93,6 +90,7 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
     {
         throw new NotSupportedException("Use DisposeAsync.");
     }
+
     protected sealed override void Dispose(bool disposing)
     {
         throw new NotSupportedException("Use DisposeAsync.");
@@ -133,7 +131,8 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
         throw new NotSupportedException("Use ReadAsync.");
     }
 
-    public sealed override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+    public sealed override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback,
+        object state)
     {
         throw new NotSupportedException("Use ReadAsync.");
     }
@@ -143,7 +142,8 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
         throw new NotSupportedException("Use ReadAsync.");
     }
 
-    public sealed override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+    public sealed override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback,
+        object state)
     {
         throw new NotSupportedException("Use WriteAsync.");
     }

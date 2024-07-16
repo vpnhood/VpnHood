@@ -15,7 +15,8 @@ internal class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountService accou
         new AppAuthenticationService(vpnHoodApp, accountService.Authentication);
 
     public IAppBillingService? Billing { get; } = accountService.Billing != null
-        ? new AppBillingService(vpnHoodApp, accountService.Billing) : null;
+        ? new AppBillingService(vpnHoodApp, accountService.Billing)
+        : null;
 
     public async Task<AppAccount?> GetAccount()
     {
@@ -37,7 +38,7 @@ internal class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountService accou
 
     public void ClearCache()
     {
-         File.Delete(AppAccountFilePath);
+        File.Delete(AppAccountFilePath);
         _appAccount = null;
     }
 

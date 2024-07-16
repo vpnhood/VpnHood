@@ -23,5 +23,4 @@ public static class VhTaskExtensions
     {
         return task.ConfigureAwait(false);
     }
-
 }

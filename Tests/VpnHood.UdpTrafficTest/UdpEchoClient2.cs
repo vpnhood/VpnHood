@@ -26,27 +26,25 @@ public class UdpEchoClient2
 
     private async Task StartAsync2(IPEndPoint serverEp, int echoCount, int bufferSize, int timeout = 3000)
     {
-        Console.WriteLine($"Sending udp packets to {serverEp}... EchoCount: {echoCount}, BufferSize: {bufferSize}, Timeout: {timeout}");
+        Console.WriteLine(
+            $"Sending udp packets to {serverEp}... EchoCount: {echoCount}, BufferSize: {bufferSize}, Timeout: {timeout}");
 
         bufferSize += 8;
         var buffer = new byte[bufferSize];
         new Random().NextBytes(buffer);
 
-        while (true)
-        {
-            for (var i = 0; i<3000 ; i++)
-            {
+        while (true) {
+            for (var i = 0; i < 3000; i++) {
                 //send buffer
                 Array.Copy(BitConverter.GetBytes(i), 0, buffer, 0, 4);
                 Array.Copy(BitConverter.GetBytes(1), 0, buffer, 4, 4);
                 Array.Copy(BitConverter.GetBytes(Environment.TickCount), 0, buffer, 8, 4);
                 var res = await _udpClient.SendAsync(buffer, serverEp, CancellationToken.None);
-                if (res != buffer.Length)
-                {
+                if (res != buffer.Length) {
                     Console.WriteLine("Could not send all data.");
                 }
-
             }
+
             await Task.Delay(1000);
         }
         // ReSharper disable once FunctionNeverReturns
@@ -56,17 +54,16 @@ public class UdpEchoClient2
     {
         // wait for buffer
         var maxCount = 1000;
-        while (true)
-        {
+        while (true) {
             var delaySum = 0;
-            for( var i=0; i<maxCount ; i++)
-            {
+            for (var i = 0; i < maxCount; i++) {
                 var udpResult = await _udpClient.ReceiveAsync();
                 var resBuffer = udpResult.Buffer;
                 var tickCount = BitConverter.ToInt32(resBuffer, 8);
                 delaySum += Environment.TickCount - tickCount;
             }
-            Console.Write($"{delaySum/maxCount}  ");
+
+            Console.Write($"{delaySum / maxCount}  ");
         }
         // ReSharper disable once FunctionNeverReturns
     }

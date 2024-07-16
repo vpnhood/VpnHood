@@ -1,4 +1,5 @@
 ﻿// ReSharper disable once CheckNamespace
+
 namespace VpnHood.Common.Trackers;
 
 public class TrackEventNames

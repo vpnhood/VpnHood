@@ -9,7 +9,6 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class NetScanTest : TestBase
 {
-
     [TestMethod]
     public async Task Reject_by_server()
     {
@@ -25,12 +24,10 @@ public class NetScanTest : TestBase
 
         var tcpClient1 = new TcpClient();
         await tcpClient1.ConnectAsync(TestConstants.TcpEndPoint1);
-        try
-        {
+        try {
             await VhUtil.RunTask(tcpClient1.GetStream().ReadAsync(new byte[100]).AsTask(), TimeSpan.FromSeconds(2));
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             Assert.AreEqual(nameof(TimeoutException), ex.GetType().Name);
         }
 
@@ -64,5 +61,4 @@ public class NetScanTest : TestBase
         Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.4")));
         Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:444")));
     }
-
 }

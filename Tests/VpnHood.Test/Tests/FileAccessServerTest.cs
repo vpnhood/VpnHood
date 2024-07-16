@@ -8,7 +8,7 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class FileAccessManagerTest : TestBase
 {
-     [TestMethod]
+    [TestMethod]
     public async Task Create_access_token_with_valid_domain()
     {
         var options = TestHelper.CreateFileAccessManagerOptions();
@@ -18,7 +18,8 @@ public class FileAccessManagerTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         var accessItem = accessManager.AccessItem_Create();
-        Assert.AreEqual(accessManager.ServerConfig.TcpEndPointsValue.First().Port, accessItem.Token.ServerToken.HostPort);
+        Assert.AreEqual(accessManager.ServerConfig.TcpEndPointsValue.First().Port,
+            accessItem.Token.ServerToken.HostPort);
         Assert.AreEqual(accessManager.ServerConfig.IsValidHostName, accessItem.Token.ServerToken.IsValidHostName);
         Assert.IsNull(accessItem.Token.ServerToken.CertificateHash);
     }
@@ -58,7 +59,8 @@ public class FileAccessManagerTest : TestBase
 
         // ************
         // *** TEST: Get AdditionalDat
-        var sessionResponse = await accessManager1.Session_Get(sessionResponseEx1.SessionId, sessionRequestEx1.HostEndPoint, sessionRequestEx1.ClientIp);
+        var sessionResponse = await accessManager1.Session_Get(sessionResponseEx1.SessionId,
+            sessionRequestEx1.HostEndPoint, sessionRequestEx1.ClientIp);
         Assert.AreEqual(sessionRequestEx1.ExtraData, sessionResponse.ExtraData);
 
         // ************

@@ -3,5 +3,5 @@
 public interface IJob
 {
     public Task RunJob();
-    public JobSection JobSection { get; } 
+    public JobSection JobSection { get; }
 }

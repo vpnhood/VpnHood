@@ -26,51 +26,48 @@ internal static class ClientProfileServiceLegacy
         if (!File.Exists(legacyProfilesFilePath) && !File.Exists(legacyTokensFilePath))
             return;
 
-        try
-        {
-            var legacyClientProfiles = VhUtil.JsonDeserialize<ClientProfileLegacy[]>(File.ReadAllText(legacyProfilesFilePath));
+        try {
+            var legacyClientProfiles =
+                VhUtil.JsonDeserialize<ClientProfileLegacy[]>(File.ReadAllText(legacyProfilesFilePath));
 #pragma warning disable CS0618 // Type or member is obsolete
-            var tokens = VhUtil.JsonDeserialize<TokenV3[]>(File.ReadAllText(legacyTokensFilePath)).Select(x => x.ToToken()).ToArray();
+            var tokens = VhUtil.JsonDeserialize<TokenV3[]>(File.ReadAllText(legacyTokensFilePath))
+                .Select(x => x.ToToken()).ToArray();
 #pragma warning restore CS0618 // Type or member is obsolete
             var clientProfiles = new List<ClientProfile>();
 
             // Create a file for each profile
             foreach (var legacyClientProfile in legacyClientProfiles)
-                try
-                {
-
+                try {
                     var token = tokens.First(x => x.TokenId == legacyClientProfile.TokenId);
-                    var clientProfile = new ClientProfile
-                    {
+                    var clientProfile = new ClientProfile {
                         ClientProfileId = legacyClientProfile.ClientProfileId,
                         ClientProfileName = legacyClientProfile.Name,
                         Token = token
                     };
                     clientProfiles.Add(clientProfile);
                 }
-                catch (Exception ex)
-                {
+                catch (Exception ex) {
                     VhLogger.Instance.LogError($"Could not load token {legacyClientProfile.TokenId}", ex.Message);
                 }
 
             var json = JsonSerializer.Serialize(clientProfiles);
             File.WriteAllText(clientProfilesFilePath, json);
-
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not migrate legacy ClientProfiles.");
         }
 
-        try { File.Move(legacyProfilesFilePath, legacyProfilesFilePath + ".backup"); }
-        catch (Exception ex)
-        {
+        try {
+            File.Move(legacyProfilesFilePath, legacyProfilesFilePath + ".backup");
+        }
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, $"Could not delete legacy file. {legacyProfilesFilePath}");
         }
 
-        try { File.Move(legacyTokensFilePath, legacyTokensFilePath + ".backup"); }
-        catch (Exception ex)
-        {
+        try {
+            File.Move(legacyTokensFilePath, legacyTokensFilePath + ".backup");
+        }
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, $"Could not delete a legacy file. {legacyTokensFilePath}");
         }
     }

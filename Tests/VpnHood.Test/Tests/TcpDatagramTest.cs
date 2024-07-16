@@ -40,32 +40,31 @@ public class TcpDatagramChannelTest : TestBase
 
         // create server channel
         var serverTcpClient = await listenerTask;
-        await using var serverStream = new TcpClientStream(serverTcpClient, serverTcpClient.GetStream(), Guid.NewGuid() + ":server");
+        await using var serverStream =
+            new TcpClientStream(serverTcpClient, serverTcpClient.GetStream(), Guid.NewGuid() + ":server");
         await using var serverChannel = new StreamDatagramChannel(serverStream, Guid.NewGuid().ToString());
-        
+
         var serverTunnel = new Tunnel(new TunnelOptions());
         serverTunnel.AddChannel(serverChannel);
         IPPacket? lastServerReceivedPacket = null;
-        serverTunnel.PacketReceived += (_, args) =>
-        {
-            lastServerReceivedPacket = args.IpPackets.Last();
-        };
+        serverTunnel.PacketReceived += (_, args) => { lastServerReceivedPacket = args.IpPackets.Last(); };
 
         // create client channel
-        await using var clientStream = new TcpClientStream(tcpClient, tcpClient.GetStream(), Guid.NewGuid() + ":client");
-        await using var clientChannel = new StreamDatagramChannel(clientStream, Guid.NewGuid().ToString(), TimeSpan.FromMilliseconds(1000));
+        await using var clientStream =
+            new TcpClientStream(tcpClient, tcpClient.GetStream(), Guid.NewGuid() + ":client");
+        await using var clientChannel =
+            new StreamDatagramChannel(clientStream, Guid.NewGuid().ToString(), TimeSpan.FromMilliseconds(1000));
         await using var clientTunnel = new Tunnel(new TunnelOptions());
         clientTunnel.AddChannel(clientChannel);
 
         // -------
         // Check sending packet to server
         // ------
-        var testPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("1.1.1.1:1"), IPEndPoint.Parse("1.1.1.1:2"), [1, 2, 3]);
+        var testPacket =
+            PacketUtil.CreateUdpPacket(IPEndPoint.Parse("1.1.1.1:1"), IPEndPoint.Parse("1.1.1.1:2"), [1, 2, 3]);
         await clientTunnel.SendPacketsAsync([testPacket], CancellationToken.None);
         await VhTestUtil.AssertEqualsWait(testPacket.ToString(), () => lastServerReceivedPacket?.ToString());
         await VhTestUtil.AssertEqualsWait(0, () => clientTunnel.DatagramChannelCount);
         await VhTestUtil.AssertEqualsWait(0, () => serverTunnel.DatagramChannelCount);
     }
-
-
 }

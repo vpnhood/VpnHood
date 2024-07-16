@@ -24,6 +24,7 @@ internal class TestDevice(TestDeviceOptions options, bool useNullPacketCapture) 
 
         return Task.FromResult(res);
     }
+
     public void Dispose()
     {
     }

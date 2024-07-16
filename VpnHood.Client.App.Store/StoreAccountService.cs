@@ -31,11 +31,11 @@ public class StoreAccountService : IAppAccountService, IDisposable
         var currentUser = await authenticationClient.GetCurrentUserAsync().VhConfigureAwait();
 
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
-        var activeSubscription = await currentVpnUserClient.ListSubscriptionsAsync(_storeAppId, false, false).VhConfigureAwait();
+        var activeSubscription =
+            await currentVpnUserClient.ListSubscriptionsAsync(_storeAppId, false, false).VhConfigureAwait();
         var subscriptionLastOrder = activeSubscription.SingleOrDefault()?.LastOrder;
 
-        var appAccount = new AppAccount
-        {
+        var appAccount = new AppAccount {
             UserId = currentUser.UserId,
             Name = currentUser.Name,
             Email = currentUser.Email,
@@ -52,17 +52,15 @@ public class StoreAccountService : IAppAccountService, IDisposable
         var httpClient = Authentication.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
 
-        for (var counter = 0; ; counter++)
-        {
-            try
-            {
-                var subscriptionOrder = await currentVpnUserClient.GetSubscriptionOrderByProviderOrderIdAsync(_storeAppId, providerOrderId).VhConfigureAwait();
+        for (var counter = 0;; counter++) {
+            try {
+                var subscriptionOrder = await currentVpnUserClient
+                    .GetSubscriptionOrderByProviderOrderIdAsync(_storeAppId, providerOrderId).VhConfigureAwait();
                 if (subscriptionOrder.IsProcessed)
                     return;
                 throw new Exception("Order has not processed yet.");
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 // We might encounter a ‘not exist’ exception. Therefore, we need to wait for Google to send the provider order to the Store.
                 VhLogger.Instance.LogWarning(ex, ex.Message);
                 if (counter == 5) throw;
@@ -75,12 +73,13 @@ public class StoreAccountService : IAppAccountService, IDisposable
     {
         var httpClient = Authentication.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
-        var accessTokens = await currentVpnUserClient.ListAccessTokensAsync(_storeAppId, subscriptionId: Guid.Parse(subscriptionId)).VhConfigureAwait();
+        var accessTokens = await currentVpnUserClient
+            .ListAccessTokensAsync(_storeAppId, subscriptionId: Guid.Parse(subscriptionId)).VhConfigureAwait();
 
         var accessKeyList = new List<string>();
-        foreach (var accessToken in accessTokens)
-        {
-            var accessKey = await currentVpnUserClient.GetAccessKeyAsync(_storeAppId, accessToken.AccessTokenId).VhConfigureAwait();
+        foreach (var accessToken in accessTokens) {
+            var accessKey = await currentVpnUserClient.GetAccessKeyAsync(_storeAppId, accessToken.AccessTokenId)
+                .VhConfigureAwait();
             accessKeyList.Add(accessKey);
         }
 

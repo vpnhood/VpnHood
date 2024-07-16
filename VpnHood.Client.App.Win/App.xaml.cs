@@ -16,16 +16,15 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        try
-        {
+        try {
             // check command line
             VpnHoodWinApp.Instance.PreStart(e.Args);
 
             // initialize VpnHoodApp
-            VpnHoodApp.Init(new WinDivertDevice(), new AppOptions
-            {
+            VpnHoodApp.Init(new WinDivertDevice(), new AppOptions {
                 Resource = DefaultAppResource.Resource,
-                UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json"),
+                UpdateInfoUrl =
+                    new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json"),
                 IsAddAccessKeySupported = true,
                 UpdaterService = new WinAppUpdaterService(),
                 SingleLineConsoleLog = false,
@@ -35,16 +34,18 @@ public partial class App : Application
             // initialize SPA
             ArgumentNullException.ThrowIfNull(DefaultAppResource.Resource.SpaZipData);
             using var spaResource = new MemoryStream(DefaultAppResource.Resource.SpaZipData);
-            VpnHoodAppWebServer.Init(spaResource, url: VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), 80), "myvpnhood"));
+            VpnHoodAppWebServer.Init(spaResource,
+                url: VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), 80),
+                    "myvpnhood"));
 
             // initialize Win
             VpnHoodWinApp.Instance.ExitRequested += (_, _) => Shutdown();
-            VpnHoodWinApp.Instance.OpenMainWindowInBrowserRequested += (_, _) => VpnHoodWinApp.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
+            VpnHoodWinApp.Instance.OpenMainWindowInBrowserRequested += (_, _) =>
+                VpnHoodWinApp.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
             VpnHoodWinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
             VpnHoodWinApp.Instance.Start();
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not run the app.");
             Shutdown();
             throw;
@@ -53,8 +54,7 @@ public partial class App : Application
 
     private void OpenMainWindowRequested(object? sender, EventArgs e)
     {
-        Dispatcher.Invoke(() =>
-        {
+        Dispatcher.Invoke(() => {
             if (MainWindow == null)
                 return;
 
@@ -73,10 +73,8 @@ public partial class App : Application
         base.OnExit(e);
     }
 
-    public static bool IsDebugMode
-    {
-        get
-        {
+    public static bool IsDebugMode {
+        get {
 #if DEBUG
             return true;
 #else

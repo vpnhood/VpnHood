@@ -6,5 +6,4 @@ public class IpGroupRange
 {
     public required string IpGroupId { get; init; }
     public required IpRangeOrderedList IpRanges { get; init; }
-
 }

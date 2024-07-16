@@ -14,7 +14,7 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
     private InterstitialAd? _loadedAd;
     public string NetworkName => "AdMob";
     public AppAdType AdType => AppAdType.InterstitialAd;
-    public DateTime? AdLoadedTime {get; private set; }
+    public DateTime? AdLoadedTime { get; private set; }
     public TimeSpan AdLifeSpan => AdMobUtil.DefaultAdTimeSpan;
 
     public static AdMobInterstitialAdService Create(string adUnitId, bool hasVideo)
@@ -26,7 +26,7 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
     public bool IsCountrySupported(string countryCode)
     {
         // Make sure it is upper case
-        countryCode = countryCode.Trim().ToUpper(); 
+        countryCode = countryCode.Trim().ToUpper();
 
         // these countries are not supported at all
         if (countryCode == "CN")
@@ -78,11 +78,9 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
         if (_loadedAd == null)
             throw new ShowAdException($"The {AdType} has not been loaded.");
 
-        try
-        {
+        try {
             var fullScreenContentCallback = new MyFullScreenContentCallback();
-            activity.RunOnUiThread(() =>
-            {
+            activity.RunOnUiThread(() => {
                 _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
                 _loadedAd.Show(activity);
             });
@@ -97,12 +95,10 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
             if (fullScreenContentCallback.DismissedTask.IsFaulted)
                 throw fullScreenContentCallback.DismissedTask.Exception;
         }
-        finally
-        {
+        finally {
             _loadedAd = null;
             AdLoadedTime = null;
         }
-
     }
 
     private class MyInterstitialAdLoadCallback : AdNetworkCallBackFix.InterstitialAdLoadCallback

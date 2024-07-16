@@ -17,15 +17,13 @@ public class ReadCacheStream : AsyncStreamDecorator
         : base(sourceStream, leaveOpen)
     {
         _cache = new byte[cacheSize];
-        if (cacheData != null)
-        {
+        if (cacheData != null) {
             cacheData.CopyTo(_cache, 0);
             _cacheRemain = cacheData.Length;
         }
     }
 
-    public override long Position
-    {
+    public override long Position {
         get => base.Position - _cacheOffset;
         set => throw new NotSupportedException();
     }
@@ -37,11 +35,9 @@ public class ReadCacheStream : AsyncStreamDecorator
             return await base.ReadAsync(buffer, offset, count, cancellationToken).VhConfigureAwait();
 
         // fill cache
-        if (_cacheRemain == 0 && count <= _cache.Length)
-        {
+        if (_cacheRemain == 0 && count <= _cache.Length) {
             _cacheRemain = await base.ReadAsync(_cache, 0, _cache.Length, cancellationToken).VhConfigureAwait();
             _cacheOffset = 0;
-
         }
 
         // Warning: if there is data in cache we are not allowed to fill the cache again

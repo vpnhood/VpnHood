@@ -8,8 +8,7 @@ using VpnHood.Common.Utils;
 namespace VpnHood.Common.Net;
 
 // ReSharper disable once InconsistentNaming
-public static class IPAddressUtil
-{
+public static class IPAddressUtil {
     public static IPAddress[] GoogleDnsServers { get; } =
     [
         IPAddress.Parse("8.8.8.8"),
@@ -35,8 +34,7 @@ public static class IPAddressUtil
     ];
 
 
-    public static async Task<IPAddress[]> GetPrivateIpAddresses()
-    {
+    public static async Task<IPAddress[]> GetPrivateIpAddresses() {
         var ret = new List<IPAddress>();
 
         var ipV4Task = GetPrivateIpAddress(AddressFamily.InterNetwork);
@@ -49,40 +47,33 @@ public static class IPAddressUtil
         return ret.ToArray();
     }
 
-    public static async Task<bool> IsIpv6Supported()
-    {
-        try
-        {
+    public static async Task<bool> IsIpv6Supported() {
+        try {
             // it may throw error if IPv6 is not supported before creating task
             var ping = new Ping();
             var pingTasks = ReliableDnsServers
                 .Where(x => x.IsV6())
                 .Select(x => ping.SendPingAsync(x));
 
-            foreach (var pingTask in pingTasks)
-            {
-                try
-                {
+            foreach (var pingTask in pingTasks) {
+                try {
                     if ((await pingTask.VhConfigureAwait()).Status == IPStatus.Success)
                         return true;
                 }
-                catch
-                {
+                catch {
                     //ignore
                 }
             }
 
         }
-        catch
-        {
+        catch {
             // ignore
         }
 
         return false;
     }
 
-    public static async Task<IPAddress[]> GetPublicIpAddresses()
-    {
+    public static async Task<IPAddress[]> GetPublicIpAddresses() {
         var ret = new List<IPAddress>();
 
         //note: api.ipify.org may not work in parallel call
@@ -95,23 +86,18 @@ public static class IPAddressUtil
         return ret.ToArray();
     }
 
-    public static Task<IPAddress?> GetPrivateIpAddress(AddressFamily addressFamily)
-    {
-        try
-        {
+    public static Task<IPAddress?> GetPrivateIpAddress(AddressFamily addressFamily) {
+        try {
             using var udpClient = new UdpClient(addressFamily); // it may throw exception
             return GetPrivateIpAddress(udpClient);
         }
-        catch
-        {
+        catch {
             return Task.FromResult<IPAddress?>(null);
         }
     }
 
-    public static Task<IPAddress?> GetPrivateIpAddress(UdpClient udpClient)
-    {
-        try
-        {
+    public static Task<IPAddress?> GetPrivateIpAddress(UdpClient udpClient) {
+        try {
             var addressFamily = udpClient.Client.AddressFamily;
             var remoteIp = KidsSafeCloudflareDnsServers.First(x => x.AddressFamily == addressFamily);
             udpClient.Connect(remoteIp, 53);
@@ -119,14 +105,12 @@ public static class IPAddressUtil
             var ipAddress = endPoint.Address;
             return Task.FromResult(ipAddress.AddressFamily == addressFamily ? ipAddress : null);
         }
-        catch
-        {
+        catch {
             return Task.FromResult<IPAddress?>(null);
         }
     }
 
-    public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily, TimeSpan? timeout = null)
-    {
+    public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily, TimeSpan? timeout = null) {
         try { return await GetPublicIpAddressByCloudflare(addressFamily, timeout); }
         catch { /* continue next service */ }
 
@@ -136,8 +120,7 @@ public static class IPAddressUtil
         return null;
     }
 
-    private static async Task<IPAddress?> GetPublicIpAddressByCloudflare(AddressFamily addressFamily, TimeSpan? timeout = null)
-    {
+    private static async Task<IPAddress?> GetPublicIpAddressByCloudflare(AddressFamily addressFamily, TimeSpan? timeout = null) {
         var url = addressFamily == AddressFamily.InterNetwork
             ? "https://1.1.1.1/cdn-cgi/trace"
             : "https://[2606:4700:4700::1111]/cdn-cgi/trace";
@@ -152,8 +135,7 @@ public static class IPAddressUtil
         return ipLine != null ? IPAddress.Parse(ipLine.Split('=')[1]) : null;
     }
 
-    public static async Task<string?> GetCountryCodeByCloudflare(TimeSpan? timeout = default, CancellationToken cancellationToken = default)
-    {
+    public static async Task<string?> GetCountryCodeByCloudflare(TimeSpan? timeout = default, CancellationToken cancellationToken = default) {
         const string url = "https://cloudflare.com/cdn-cgi/trace";
 
         using var httpClient = new HttpClient();
@@ -168,8 +150,7 @@ public static class IPAddressUtil
         return ipLine?.Split('=')[1];
     }
 
-    private static async Task<IPAddress?> GetPublicIpAddressByIpify(AddressFamily addressFamily, TimeSpan? timeout = null)
-    {
+    private static async Task<IPAddress?> GetPublicIpAddressByIpify(AddressFamily addressFamily, TimeSpan? timeout = null) {
         //var url = addressFamily == AddressFamily.InterNetwork
         //    ? "https://api.ipify.org?format=json"
         //    : "https://api6.ipify.org?format=json";
@@ -188,36 +169,30 @@ public static class IPAddressUtil
         return ipAddress.AddressFamily == addressFamily ? ipAddress : null;
     }
 
-    public static IPAddress GetAnyIpAddress(AddressFamily addressFamily)
-    {
-        return addressFamily switch
-        {
+    public static IPAddress GetAnyIpAddress(AddressFamily addressFamily) {
+        return addressFamily switch {
             AddressFamily.InterNetwork => IPAddress.Any,
             AddressFamily.InterNetworkV6 => IPAddress.IPv6Any,
             _ => throw new NotSupportedException($"{addressFamily} is not supported!")
         };
     }
 
-    public static bool IsSupported(AddressFamily addressFamily)
-    {
+    public static bool IsSupported(AddressFamily addressFamily) {
         return addressFamily
             is AddressFamily.InterNetworkV6
             or AddressFamily.InterNetwork;
     }
 
-    public static void Verify(AddressFamily addressFamily)
-    {
+    public static void Verify(AddressFamily addressFamily) {
         if (!IsSupported(addressFamily))
             throw new NotSupportedException($"{addressFamily} is not supported!");
     }
 
-    public static void Verify(IPAddress ipAddress)
-    {
+    public static void Verify(IPAddress ipAddress) {
         Verify(ipAddress.AddressFamily);
     }
 
-    public static int Compare(IPAddress ipAddress1, IPAddress ipAddress2)
-    {
+    public static int Compare(IPAddress ipAddress1, IPAddress ipAddress2) {
         Verify(ipAddress1);
         Verify(ipAddress2);
 
@@ -237,8 +212,7 @@ public static class IPAddressUtil
         var bytes1 = ipAddress1.GetAddressBytes();
         var bytes2 = ipAddress2.GetAddressBytes();
 
-        for (var i = 0; i < bytes1.Length; i++)
-        {
+        for (var i = 0; i < bytes1.Length; i++) {
             if (bytes1[i] < bytes2[i]) return -1;
             if (bytes1[i] > bytes2[i]) return +1;
         }
@@ -246,8 +220,7 @@ public static class IPAddressUtil
         return 0;
     }
 
-    public static long ToLong(IPAddress ipAddress)
-    {
+    public static long ToLong(IPAddress ipAddress) {
         if (ipAddress.AddressFamily != AddressFamily.InterNetwork)
             throw new InvalidOperationException($"Only {AddressFamily.InterNetwork} family can be converted into long!");
 
@@ -255,18 +228,15 @@ public static class IPAddressUtil
         return ((long)bytes[0] << 24) | ((long)bytes[1] << 16) | ((long)bytes[2] << 8) | bytes[3];
     }
 
-    public static IPAddress FromLong(long ipAddress)
-    {
+    public static IPAddress FromLong(long ipAddress) {
         return new IPAddress((uint)IPAddress.NetworkToHostOrder((int)ipAddress));
     }
 
-    public static BigInteger ToBigInteger(IPAddress value)
-    {
+    public static BigInteger ToBigInteger(IPAddress value) {
         return new BigInteger(value.GetAddressBytes(), true, true);
     }
 
-    public static IPAddress FromBigInteger(BigInteger value, AddressFamily addressFamily)
-    {
+    public static IPAddress FromBigInteger(BigInteger value, AddressFamily addressFamily) {
         Verify(addressFamily);
 
         var bytes = new byte[addressFamily == AddressFamily.InterNetworkV6 ? 16 : 4];
@@ -275,16 +245,13 @@ public static class IPAddressUtil
         return new IPAddress(bytes);
     }
 
-    public static IPAddress Increment(IPAddress ipAddress)
-    {
+    public static IPAddress Increment(IPAddress ipAddress) {
         Verify(ipAddress);
 
         var bytes = ipAddress.GetAddressBytes();
 
-        for (var k = bytes.Length - 1; k >= 0; k--)
-        {
-            if (bytes[k] == byte.MaxValue)
-            {
+        for (var k = bytes.Length - 1; k >= 0; k--) {
+            if (bytes[k] == byte.MaxValue) {
                 bytes[k] = byte.MinValue;
                 continue;
             }
@@ -298,16 +265,13 @@ public static class IPAddressUtil
         return ipAddress;
     }
 
-    public static IPAddress Decrement(IPAddress ipAddress)
-    {
+    public static IPAddress Decrement(IPAddress ipAddress) {
         Verify(ipAddress);
 
         var bytes = ipAddress.GetAddressBytes();
 
-        for (var k = bytes.Length - 1; k >= 0; k--)
-        {
-            if (bytes[k] == byte.MinValue)
-            {
+        for (var k = bytes.Length - 1; k >= 0; k--) {
+            if (bytes[k] == byte.MinValue) {
                 bytes[k] = byte.MaxValue;
                 continue;
             }
@@ -326,38 +290,31 @@ public static class IPAddressUtil
     public static IPAddress MaxIPv4Value { get; } = IPAddress.Parse("255.255.255.255");
     public static IPAddress MinIPv4Value { get; } = IPAddress.Parse("0.0.0.0");
 
-    public static bool IsMaxValue(IPAddress ipAddress)
-    {
+    public static bool IsMaxValue(IPAddress ipAddress) {
         Verify(ipAddress);
-        return ipAddress.AddressFamily switch
-        {
+        return ipAddress.AddressFamily switch {
             AddressFamily.InterNetworkV6 => ipAddress.Equals(MaxIPv6Value),
             AddressFamily.InterNetwork => ipAddress.Equals(MaxIPv4Value),
             _ => throw new NotSupportedException($"{ipAddress.AddressFamily} is not supported!")
         };
     }
 
-    public static bool IsMinValue(IPAddress ipAddress)
-    {
+    public static bool IsMinValue(IPAddress ipAddress) {
         Verify(ipAddress);
-        return ipAddress.AddressFamily switch
-        {
+        return ipAddress.AddressFamily switch {
             AddressFamily.InterNetwork => ipAddress.Equals(MinIPv4Value),
             AddressFamily.InterNetworkV6 => ipAddress.Equals(MinIPv6Value),
             _ => throw new NotSupportedException($"{ipAddress.AddressFamily} is not supported!")
         };
     }
 
-    public static IPAddress Anonymize(IPAddress ipAddress)
-    {
-        if (ipAddress.AddressFamily == AddressFamily.InterNetwork)
-        {
+    public static IPAddress Anonymize(IPAddress ipAddress) {
+        if (ipAddress.AddressFamily == AddressFamily.InterNetwork) {
             var bytes = ipAddress.GetAddressBytes();
             bytes[^1] = 0;
             return new IPAddress(bytes);
         }
-        else
-        {
+        else {
             var bytes = ipAddress.GetAddressBytes();
             for (var i = 6; i < bytes.Length; i++)
                 bytes[i] = 0;
@@ -365,12 +322,10 @@ public static class IPAddressUtil
         }
     }
 
-    public static IPAddress Min(IPAddress ipAddress1, IPAddress ipAddress2)
-    {
+    public static IPAddress Min(IPAddress ipAddress1, IPAddress ipAddress2) {
         return Compare(ipAddress1, ipAddress2) < 0 ? ipAddress1 : ipAddress2;
     }
-    public static IPAddress Max(IPAddress ipAddress1, IPAddress ipAddress2)
-    {
+    public static IPAddress Max(IPAddress ipAddress1, IPAddress ipAddress2) {
         return Compare(ipAddress1, ipAddress2) > 0 ? ipAddress1 : ipAddress2;
     }
 }

@@ -5,8 +5,8 @@ dotnet_analyzer_diagnostic.severity = none
 csharp_indent_labels = one_less_than_current
 csharp_using_directive_placement = outside_namespace:silent
 csharp_prefer_simple_using_statement = true:suggestion
-csharp_prefer_braces = true:silent
-csharp_style_namespace_declarations = block_scoped:silent
+csharp_prefer_braces = false:silent
+csharp_style_namespace_declarations = file_scoped:silent
 csharp_style_prefer_method_group_conversion = true:silent
 csharp_style_prefer_top_level_statements = true:silent
 csharp_style_prefer_primary_constructors = true:suggestion
@@ -19,6 +19,8 @@ csharp_style_expression_bodied_accessors = true:silent
 csharp_style_expression_bodied_lambdas = true:silent
 csharp_style_expression_bodied_local_functions = false:silent
 csharp_space_around_binary_operators = before_and_after
+csharp_style_allow_blank_lines_between_consecutive_braces_experimental = true:silent
+csharp_new_line_before_open_brace = methods
 
 [*.{cs,vb}]
 #### Naming styles ####
@@ -75,3 +77,4 @@ dotnet_style_coalesce_expression = true:suggestion
 dotnet_style_null_propagation = true:suggestion
 dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
 dotnet_style_prefer_auto_properties = true:silent
+dotnet_style_namespace_match_folder = true:suggestion

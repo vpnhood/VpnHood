@@ -333,8 +333,7 @@ public class ClientAppTest : TestBase
         Assert.IsTrue(app.State.IsIdle);
 
         app.ClearLastError();
-        Assert.IsFalse(app.State.HasDiagnoseStarted);
-        Assert.IsFalse(app.State.HasDisconnectedByUser);
+        Assert.IsNull(app.State.LastError);
         Assert.IsFalse(app.State.HasProblemDetected);
 
         // ************
@@ -430,7 +429,7 @@ public class ClientAppTest : TestBase
     [DataRow(false, true)]
     [DataRow(true, false)]
     [DataRow(true, true)]
-    public async Task IpFilters(bool usePassthru, bool isDnsServerSupported)
+    public async Task IpFilters(bool isDnsServerSupported, bool usePassthru)
     {
         var testDns =
             !isDnsServerSupported; //dns will work as normal UDP when DnsServerSupported, otherwise it should be redirected

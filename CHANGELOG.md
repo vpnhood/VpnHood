@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: Android: IPv6 over IPv4
+
 # v4.6.546
 ### Server
 * Fix: AddressFamilyNotSupported error when server does not have IPv6

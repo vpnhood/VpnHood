@@ -97,7 +97,8 @@ public class ServerFinder(
 
         _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionAttempt(connected: false, serverLocation: ServerLocation,
             isIpV6Supported: IncludeIpV6));
-        throw new UnreachableServer(serverLocation: ServerLocation);
+        
+        throw new UnreachableServerLocation(serverLocation: ServerLocation);
     }
 
     private Task TrackEndPointsAvailability(HostStatus[] oldStatuses, HostStatus[] newStatuses)

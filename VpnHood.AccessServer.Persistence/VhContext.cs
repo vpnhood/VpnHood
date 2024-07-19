@@ -121,9 +121,14 @@ public class VhContext : DbContext
                 .Property(e => e.Thumbprint)
                 .HasMaxLength(200);
 
+            // Add milliseconds to the datetime (Required for sorting)
             entity
-                .HasIndex(e => new { e.ServerFarmId, e.IsDefault })
-                .HasFilter($"{nameof(CertificateModel.IsDeleted)} = 0 and {nameof(CertificateModel.IsDefault)} = 1")
+                .Property(e => e.CreatedTime)
+                .HasPrecision(3);
+
+            entity
+                .HasIndex(e => new { e.ServerFarmId, IsDefault = e.IsInToken })
+                .HasFilter($"{nameof(CertificateModel.IsDeleted)} = 0 and {nameof(CertificateModel.IsInToken)} = 1")
                 .IsUnique();
 
             entity
@@ -144,8 +149,11 @@ public class VhContext : DbContext
             entity
                 .HasOne(e => e.ServerFarm)
                 .WithMany(d => d.Certificates)
-                .HasForeignKey(e => e.ServerFarmId)
+                .HasForeignKey(e => new { e.ProjectId, e.ServerFarmId})
+                .HasPrincipalKey(p => new { p.ProjectId, p.ServerFarmId })
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // make sure the certificate farm belong to the same project
         });
 
         modelBuilder.Entity<AccessTokenModel>(entity =>

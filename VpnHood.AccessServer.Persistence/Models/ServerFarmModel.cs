@@ -13,6 +13,7 @@ public class ServerFarmModel
     public required string? TokenUrl { get; set; }
     public required bool PushTokenToClient { get; set; }
     public required string? TokenError { get; set; }
+    public required int MaxCertificateCount { get; set; }
     public bool IsDeleted { get; set; } = false;
 
     public virtual ServerProfileModel? ServerProfile { get; set; }

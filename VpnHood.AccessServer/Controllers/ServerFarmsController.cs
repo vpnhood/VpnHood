@@ -90,4 +90,12 @@ public class ServerFarmsController(
     {
         return certificateService.Replace(projectId, serverFarmId, createParams);
     }
+
+    [HttpPost("{serverFarmId:guid}/certificates")]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
+    public Task<Certificate[]> CertificateList(Guid projectId, Guid serverFarmId)
+    {
+        return certificateService.List(projectId, serverFarmId);
+    }
+
 }

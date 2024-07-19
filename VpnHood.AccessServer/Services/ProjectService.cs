@@ -9,8 +9,6 @@ using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.AccessServer.Report.Services;
-using VpnHood.AccessServer.Report.Views;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common.Messaging;
 
@@ -60,6 +58,7 @@ public class ProjectService(
             TokenUrl = null,
             TokenError = null,
             PushTokenToClient = true,
+            MaxCertificateCount = 1,
             Servers = []
         };
 

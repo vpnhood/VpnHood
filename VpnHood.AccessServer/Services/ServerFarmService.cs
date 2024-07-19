@@ -41,7 +41,6 @@ public class ServerFarmService(
         var serverFarm = new ServerFarmModel
         {
             ProjectId = projectId,
-            Servers = [],
             ServerFarmId = serverFarmId,
             ServerProfileId = serverProfile.ServerProfileId,
             ServerFarmName = createParams.ServerFarmName,
@@ -51,7 +50,9 @@ public class ServerFarmService(
             TokenJson = null,
             TokenError = null,
             TokenUrl = createParams.TokenUrl?.ToString(),
-            PushTokenToClient = true
+            PushTokenToClient = true,
+            MaxCertificateCount = 1,
+            Servers = [],
         };
 
         FarmTokenBuilder.UpdateIfChanged(serverFarm);
@@ -123,8 +124,8 @@ public class ServerFarmService(
 
     public async Task<ServerFarmData> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
     {
-        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId, includeCertificate: true);
-        var reconfigure = false;
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId, includeCertificates: true);
+        var reconfigureServers = false;
 
         // change other properties
         if (updateParams.ServerFarmName != null) serverFarm.ServerFarmName = updateParams.ServerFarmName.Value;
@@ -136,7 +137,7 @@ public class ServerFarmService(
         if (updateParams.Secret != null && !updateParams.Secret.Value.SequenceEqual(serverFarm.Secret))
         {
             serverFarm.Secret = updateParams.Secret;
-            reconfigure = true;
+            reconfigureServers = true;
         }
 
         // Set ServerProfileId
@@ -145,7 +146,7 @@ public class ServerFarmService(
             // makes sure that the serverProfile belongs to this project
             var serverProfile = await vhRepo.ServerProfileGet(projectId, updateParams.ServerProfileId);
             serverFarm.ServerProfileId = serverProfile.ServerProfileId;
-            reconfigure = true;
+            reconfigureServers = true;
         }
 
         // set certificate
@@ -158,8 +159,32 @@ public class ServerFarmService(
             serverFarm.Certificate.ValidateInprogress = updateParams.AutoValidateCertificate.Value;
         }
 
+        // set certificate history count
+        if (updateParams.MaxCertificateCount != null && updateParams.MaxCertificateCount != serverFarm.MaxCertificateCount)
+        {
+
+            if (serverFarm.MaxCertificateCount < 1) 
+                throw new ArgumentException("MaxCertificateCount can not be negative.", nameof(serverFarm.MaxCertificateCount));
+
+            if (serverFarm.MaxCertificateCount > 10)
+                throw new ArgumentException("MaxCertificateCount can be more than 10.", nameof(serverFarm.MaxCertificateCount));
+
+            serverFarm.MaxCertificateCount = updateParams.MaxCertificateCount.Value;
+
+            var certificates = serverFarm.Certificates!
+                .Where(x=>!x.IsInToken)
+                .OrderByDescending(x => x.CreatedTime)
+                .ToArray();
+
+            // delete the rest
+            foreach (var cert in certificates.Skip(serverFarm.MaxCertificateCount - 1))
+                cert.IsDeleted = true;
+
+            reconfigureServers = true;
+        }
+
         // update
-        await serverConfigureService.SaveChangesAndInvalidateServerFarm(projectId, serverFarmId, reconfigure);
+        await serverConfigureService.SaveChangesAndInvalidateServerFarm(projectId, serverFarmId, reconfigureServers);
 
         // validate certificate
         if (validateCertificate)

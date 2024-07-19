@@ -21,7 +21,8 @@ public static class CertificateConverter
             ValidateCount = model.ValidateCount,
             ValidateError = model.ValidateError,
             ValidateErrorTime = model.ValidateErrorTime,
-            ValidateErrorCount = model.ValidateErrorCount
+            ValidateErrorCount = model.ValidateErrorCount,
+            IsInToken = model.IsInToken
         };
         return certificate;
     }

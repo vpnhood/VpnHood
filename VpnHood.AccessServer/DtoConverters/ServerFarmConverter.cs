@@ -19,6 +19,7 @@ public static class ServerFarmConverter
             TokenUrl = string.IsNullOrEmpty(model.TokenUrl) ? null : new Uri(model.TokenUrl),
             TokenError = model.TokenError,
             PushTokenToClient = model.PushTokenToClient,
+            MaxCertificateCount = model.MaxCertificateCount,
             Certificate = model.Certificate?.ToDto()
         };
 

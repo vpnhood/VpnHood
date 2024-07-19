@@ -20,7 +20,7 @@ public class CertificateModel
     public required int ValidateErrorCount { get; set; }
     public required string? ValidateError { get; set; }
     public required DateTime? ValidateErrorTime { get; set; }
-    public required bool IsDefault { get; set; }
+    public required bool IsInToken { get; set; }
     public required bool IsDeleted { get; set; }
 
     public virtual ServerFarmModel? ServerFarm { get; set; }

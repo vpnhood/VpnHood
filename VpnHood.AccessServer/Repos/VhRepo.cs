@@ -13,7 +13,7 @@ public class VhRepo(VhContext vhContext)
     private static void FillCertificate(ServerFarmModel serverFarmModel)
     {
         serverFarmModel.Certificate = serverFarmModel.Certificates?
-            .SingleOrDefault(x => x is { IsDefault: true, IsDeleted: false });
+            .SingleOrDefault(x => x is { IsInToken: true, IsDeleted: false });
     }
 
     public Task<ServerModel> ServerGet(Guid projectId, Guid serverId, bool includeFarm = false, bool includeFarmProfile = false)
@@ -268,7 +268,7 @@ public class VhRepo(VhContext vhContext)
             query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted));
 
         else if (includeCertificate)
-            query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted && y.IsDefault));
+            query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted && y.IsInToken));
 
         if (includeServers)
             query = query.Include(farm => farm.Servers!.Where(server => !server.IsDeleted))
@@ -290,7 +290,7 @@ public class VhRepo(VhContext vhContext)
             .Include(x => x.ServerFarm)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => !x.ServerFarm!.IsDeleted)
-            .Where(x => x.IsDefault)
+            .Where(x => x.IsInToken)
             .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
@@ -317,7 +317,7 @@ public class VhRepo(VhContext vhContext)
                     CertificateId = x.CertificateId,
                     CreatedTime = x.CreatedTime,
                     IsDeleted = x.IsDeleted,
-                    IsDefault = x.IsDefault,
+                    IsInToken = x.IsInToken,
                     ProjectId = x.ProjectId,
                     ServerFarmId = x.ServerFarmId
                 },

@@ -413,7 +413,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         if (includeCertificates)
             query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted));
         else if (includeCertificate)
-            query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted && y.IsDefault));
+            query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted && y.IsInToken));
 
         if (includeServersAndAccessPoints)
             query = query
@@ -430,7 +430,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
 
     private static void FillCertificate(ServerFarmModel serverFarmModel)
     {
-        serverFarmModel.Certificate = serverFarmModel.Certificates?.SingleOrDefault(x => x.IsDefault);
+        serverFarmModel.Certificate = serverFarmModel.Certificates?.SingleOrDefault(x => x.IsInToken);
     }
 
 

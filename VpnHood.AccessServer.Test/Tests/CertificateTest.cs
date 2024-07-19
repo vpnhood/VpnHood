@@ -156,7 +156,7 @@ public class CertificateTest
 
         // disable old AutoValidate to prevent jon validate old certificates in test
         var validatingCertificates = await testApp.VhContext.Certificates
-            .Where(x=>x.AutoValidate).ToArrayAsync();
+            .Where(x => x.AutoValidate).ToArrayAsync();
         foreach (var validatingCertificate in validatingCertificates)
             validatingCertificate.AutoValidate = false;
         await testApp.VhContext.SaveChangesAsync();
@@ -236,5 +236,207 @@ public class CertificateTest
         Assert.AreEqual(0, farm.ServerFarm.Certificate.ValidateErrorCount);
         Assert.AreEqual(1, farm.ServerFarm.Certificate.ValidateCount);
         Assert.IsNull(farm.ServerFarm.Certificate.ValidateError);
+    }
+
+    [TestMethod]
+    public async Task Certificate_history_should_not_have_duplicate_common_name()
+    {
+        var testApp = await TestApp.Create();
+        var dnsName1 = $"{Guid.NewGuid()}.com";
+        var farm1 = await ServerFarmDom.Create(testApp);
+        await farm1.Update(new ServerFarmUpdateParams { MaxCertificateCount = new PatchOfInteger { Value = 3 } });
+        await farm1.CertificateReplace(new CertificateCreateParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
+        });
+
+        await farm1.CertificateReplace(new CertificateCreateParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
+        });
+
+        var certificates = await farm1.CertificateList();
+        Assert.AreEqual(2, certificates.Length);
+    }
+
+    [TestMethod]
+    public async Task Changing_CertificateHistoryCount_should_delete_additions()
+    {
+        var testApp = await TestApp.Create();
+        var dnsName1 = $"{Guid.NewGuid()}.com";
+        var farm1 = await ServerFarmDom.Create(testApp);
+        await farm1.Update(new ServerFarmUpdateParams { MaxCertificateCount = new PatchOfInteger { Value = 3 } });
+        await farm1.CertificateReplace(new CertificateCreateParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
+        });
+
+        var dnsName2 = $"{Guid.NewGuid()}.com";
+        await farm1.CertificateReplace(new CertificateCreateParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName2 }
+        });
+
+        var dnsName3 = $"{Guid.NewGuid()}.com";
+        await farm1.CertificateReplace(new CertificateCreateParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName3 }
+        });
+
+        var certificates = await farm1.CertificateList();
+        Assert.AreEqual(3, certificates.Length);
+
+        await farm1.Update(new ServerFarmUpdateParams { MaxCertificateCount = new PatchOfInteger { Value = 2 } });
+        certificates = await farm1.CertificateList();
+        Assert.AreEqual(2, certificates.Length);
+
+        Assert.IsTrue(certificates.Any(x => dnsName2 == x.CommonName));
+        Assert.IsTrue(certificates.Any(x => dnsName3 == x.CommonName && x.IsInToken));
+    }
+
+    [TestMethod]
+    public async Task Previous_IsInToken_must_reset_by_create()
+    {
+        var testApp = await TestApp.Create();
+        var dnsName1 = $"{Guid.NewGuid()}.com";
+        var farm = await ServerFarmDom.Create(testApp);
+        await farm.Update(new ServerFarmUpdateParams { MaxCertificateCount = new PatchOfInteger { Value = 2 } });
+        await farm.CertificateReplace(new CertificateCreateParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
+        });
+
+        var dnsName2 = $"{Guid.NewGuid()}.com";
+        await farm.CertificateReplace(new CertificateCreateParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName2 }
+        });
+
+
+        var certificates = await farm.CertificateList();
+        Assert.AreEqual(2, certificates.Length);
+
+        Assert.IsTrue(certificates.Any(x => dnsName1 == x.CommonName && !x.IsInToken));
+        Assert.IsTrue(certificates.Any(x => dnsName2 == x.CommonName && x.IsInToken));
+    }
+
+    [TestMethod]
+    public async Task Previous_IsInToken_must_reset_by_import()
+    {
+        var testApp = await TestApp.Create();
+        var farm = await ServerFarmDom.Create(testApp);
+        await farm.Update(new ServerFarmUpdateParams { MaxCertificateCount = new PatchOfInteger { Value = 2 } });
+
+        var dnsName1 = $"{Guid.NewGuid()}.com";
+        var x509Certificate1 = CertificateUtil.CreateSelfSigned($"CN={dnsName1},O=Foo");
+        const string? password = "123";
+        await farm.CertificateImport(new CertificateImportParams
+        {
+            RawData = x509Certificate1.Export(X509ContentType.Pfx, password),
+            Password = password
+        });
+
+        var dnsName2 = $"{Guid.NewGuid()}.com";
+        var x509Certificate2 = CertificateUtil.CreateSelfSigned($"CN={dnsName2},O=Foo");
+        await farm.CertificateImport(new CertificateImportParams
+        {
+            RawData = x509Certificate2.Export(X509ContentType.Pfx, password),
+            Password = password
+        });
+
+        var certificates = await farm.CertificateList();
+        Assert.AreEqual(2, certificates.Length);
+
+        Assert.IsTrue(certificates.Any(x => dnsName1 == x.CommonName && !x.IsInToken));
+        Assert.IsTrue(certificates.Any(x => dnsName2 == x.CommonName && x.IsInToken));
+    }
+
+    [TestMethod]
+    public Task Create_should_update_all_servers_and_treat_as_active_while_configuring()
+    {
+        throw new NotImplementedException();
+    }
+
+    [TestMethod]
+    public async Task Previous_certificates_should_have_auto_validate()
+    {
+        var testApp = await TestApp.Create();
+        var dnsName1 = $"{Guid.NewGuid()}.com";
+        var farm = await ServerFarmDom.Create(testApp);
+        await farm.Update(new ServerFarmUpdateParams
+        {
+            AutoValidateCertificate = new PatchOfBoolean { Value = true },
+            MaxCertificateCount = new PatchOfInteger { Value = 2 }
+        });
+        
+        var certificates = await farm.CertificateList();
+        Assert.IsTrue(certificates.First().AutoValidate);
+
+        // create new
+        await farm.CertificateReplace(new CertificateCreateParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
+        });
+
+        certificates = await farm.CertificateList();
+        Assert.IsFalse(certificates[0].AutoValidate);
+        Assert.IsFalse(certificates[1].AutoValidate);
+        Assert.AreEqual(dnsName1, certificates[0].CommonName);
+    }
+
+    [TestMethod]
+    public async Task Configure_should_return_all_certificates()
+    {
+        var testApp = await TestApp.Create();
+        var dnsName1 = $"{Guid.NewGuid()}.com";
+        var farm1 = await ServerFarmDom.Create(testApp);
+        await farm1.Update(new ServerFarmUpdateParams { MaxCertificateCount = new PatchOfInteger { Value = 3 } });
+
+        await farm1.CertificateReplace(new CertificateCreateParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
+        });
+
+        var dnsName2 = $"{Guid.NewGuid()}.com";
+        await farm1.CertificateReplace(new CertificateCreateParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName2 }
+        });
+
+        var dnsName3 = $"{Guid.NewGuid()}.com";
+        await farm1.CertificateReplace(new CertificateCreateParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName3 }
+        });
+
+        var dnsName4 = $"{Guid.NewGuid()}.com";
+        await farm1.CertificateReplace(new CertificateCreateParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName4 }
+        });
+
+        //-----------
+        // check: get certificate by publicIp
+        //-----------
+        await farm1.DefaultServer.Configure();
+        Assert.AreEqual(3, farm1.DefaultServer.ServerConfig.Certificates.Length);
+
+        Assert.IsTrue(farm1.DefaultServer.ServerConfig.Certificates.Any(x =>
+        {
+            var certificate = new X509Certificate2(x.RawData);
+            return dnsName2 == certificate.GetNameInfo(X509NameType.DnsName, false);
+        }));
+
+        Assert.IsTrue(farm1.DefaultServer.ServerConfig.Certificates.Any(x =>
+        {
+            var certificate = new X509Certificate2(x.RawData);
+            return dnsName3 == certificate.GetNameInfo(X509NameType.DnsName, false);
+        }));
+
+        Assert.IsTrue(farm1.DefaultServer.ServerConfig.Certificates.Any(x =>
+        {
+            var certificate = new X509Certificate2(x.RawData);
+            return dnsName4 == certificate.GetNameInfo(X509NameType.DnsName, false);
+        }));
     }
 }

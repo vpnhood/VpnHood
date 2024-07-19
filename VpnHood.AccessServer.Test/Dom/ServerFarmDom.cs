@@ -136,6 +136,13 @@ public class ServerFarmDom : IDisposable
         return TestApp.ServerFarmsClient.CertificateReplaceAsync(ProjectId, ServerFarmId, createParams);
     }
 
+    public async Task<Certificate[]> CertificateList()
+    {
+        var ret = await TestApp.ServerFarmsClient.CertificateListAsync(ProjectId, ServerFarmId);
+        return ret.ToArray();
+    }
+
+
     public Task<Certificate> CertificateImport(CertificateImportParams importParams)
     {
         return TestApp.ServerFarmsClient.CertificateImportAsync(ProjectId, ServerFarmId, importParams);

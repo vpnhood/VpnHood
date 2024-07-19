@@ -124,7 +124,7 @@ public class AgentService(
         UpdateServerStatus(server, serverInfo.Status, true);
 
         // ready for update
-        var serverFarmModel = await vhAgentRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId, includeServersAndAccessPoints: true, includeCertificate: true);
+        var serverFarmModel = await vhAgentRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId, includeServersAndAccessPoints: true, includeCertificates: true);
         var serverModel = serverFarmModel.Servers!.Single(x => x.ServerId == serverId);
 
         // update cache

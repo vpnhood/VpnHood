@@ -11,4 +11,5 @@ public class ServerFarmUpdateParams
     public Patch<byte[]>? Secret { get; set; }
     public Patch<bool>? PushTokenToClient { get; set; }
     public Patch<bool>? AutoValidateCertificate { get; set; }
+    public Patch<int>? MaxCertificateCount { get; set; }
 }

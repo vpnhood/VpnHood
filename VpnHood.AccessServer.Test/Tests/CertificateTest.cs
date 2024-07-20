@@ -326,7 +326,7 @@ public class CertificateTest
     }
 
     [TestMethod]
-    public async Task Previous_certificates_should_have_auto_validate()
+    public async Task Previous_certificates_should_not_have_auto_validate()
     {
         var dnsName1 = $"{Guid.NewGuid()}.com";
         var farm = await ServerFarmDom.Create();

@@ -8758,11 +8758,11 @@ namespace VpnHood.AccessServer.Api
         [System.Runtime.Serialization.EnumMember(Value = @"Lost")]
         Lost = 2,
 
-        [System.Runtime.Serialization.EnumMember(Value = @"Configuring")]
-        Configuring = 3,
-
         [System.Runtime.Serialization.EnumMember(Value = @"Error")]
-        Error = 4,
+        Error = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Configuring")]
+        Configuring = 4,
 
         [System.Runtime.Serialization.EnumMember(Value = @"Idle")]
         Idle = 5,

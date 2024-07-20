@@ -6772,8 +6772,8 @@ export enum ServerState {
     NotInstalled = "NotInstalled",
     Disabled = "Disabled",
     Lost = "Lost",
-    Configuring = "Configuring",
     Error = "Error",
+    Configuring = "Configuring",
     Idle = "Idle",
     Active = "Active",
 }

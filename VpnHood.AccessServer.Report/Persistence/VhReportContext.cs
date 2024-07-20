@@ -57,8 +57,7 @@ public partial class VhReportContext(DbContextOptions<VhReportContext> options) 
                 .ValueGeneratedNever();
 
             entity
-                .Property(e => e.ServerFarmId)
-                .HasDefaultValue(Guid.Empty); //todo: for migration
+                .Property(e => e.ServerFarmId);
 
             entity
                 .HasIndex(e => new { e.ProjectId, e.CreatedTime })

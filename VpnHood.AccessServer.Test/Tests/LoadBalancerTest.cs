@@ -63,8 +63,6 @@ public class LoadBalancerTest
 
         // mark as error
         await serverDom3.SendStatus(new ServerStatus { ConfigError = "error" });
-        //todo
-        Console.WriteLine("zzzw: " + serverDom3.ServerId);
 
         // configure serverDom5 with ipv6
         serverDom5.ServerInfo.PublicIpAddresses = [await serverDom5.TestApp.NewIpV6(), await serverDom5.TestApp.NewIpV6()];

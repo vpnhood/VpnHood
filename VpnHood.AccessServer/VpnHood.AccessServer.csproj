@@ -20,7 +20,7 @@
 		<PackageIcon>VpnHood.AccessServer.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
-		<Version>3.0.204</Version>
+		<Version>3.0.205</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 

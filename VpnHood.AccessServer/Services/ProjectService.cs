@@ -34,8 +34,7 @@ public class ProjectService(
             .Replace("=", "");
 
         // ServerProfile
-        var serverProfile = new ServerProfileModel
-        {
+        var serverProfile = new ServerProfileModel {
             ServerProfileId = Guid.NewGuid(),
             ServerProfileName = Resource.DefaultServerProfile,
             IsDefault = true,
@@ -44,8 +43,7 @@ public class ProjectService(
         };
 
         // Farm
-        var serverFarm = new ServerFarmModel
-        {
+        var serverFarm = new ServerFarmModel {
             ProjectId = projectId,
             ServerFarmId = Guid.NewGuid(),
             ServerFarmName = "Server Farm 1",
@@ -63,8 +61,7 @@ public class ProjectService(
         };
 
         // create project
-        var project = new ProjectModel
-        {
+        var project = new ProjectModel {
             ProjectId = projectId,
             ProjectName = null,
             SubscriptionType = SubscriptionType.Free,
@@ -75,18 +72,14 @@ public class ProjectService(
             LetsEncryptAccount = null,
             IsDeleted = false,
             IsEnabled = true,
-            ServerProfiles = new HashSet<ServerProfileModel>
-            {
+            ServerProfiles = new HashSet<ServerProfileModel> {
                 serverProfile
             },
-            ServerFarms = new HashSet<ServerFarmModel>
-            {
+            ServerFarms = new HashSet<ServerFarmModel> {
                 serverFarm
             },
-            AccessTokens = new HashSet<AccessTokenModel>
-            {
-                new()
-                {
+            AccessTokens = new HashSet<AccessTokenModel> {
+                new() {
                     ProjectId = projectId,
                     AccessTokenId = Guid.NewGuid(),
                     ServerFarm = serverFarm,
@@ -95,9 +88,9 @@ public class ProjectService(
                     Secret = GmUtil.GenerateKey(),
                     IsPublic = true,
                     AdRequirement = AdRequirement.None,
-                    IsEnabled= true,
+                    IsEnabled = true,
                     IsDeleted = false,
-                    CreatedTime= DateTime.UtcNow,
+                    CreatedTime = DateTime.UtcNow,
                     ModifiedTime = DateTime.UtcNow,
                     ExpirationTime = null,
                     LastUsedTime = null,
@@ -109,11 +102,10 @@ public class ProjectService(
                     Description = null
                 },
 
-                new()
-                {
+                new() {
                     ProjectId = projectId,
                     AccessTokenId = Guid.NewGuid(),
-                    ServerFarmId = serverFarm.ServerFarmId ,
+                    ServerFarmId = serverFarm.ServerFarmId,
                     ServerFarm = serverFarm,
                     AccessTokenName = "Private 1",
                     IsPublic = false,
@@ -121,9 +113,9 @@ public class ProjectService(
                     SupportCode = 1001,
                     MaxDevice = 5,
                     Secret = GmUtil.GenerateKey(),
-                    IsEnabled= true,
+                    IsEnabled = true,
                     IsDeleted = false,
-                    CreatedTime= DateTime.UtcNow,
+                    CreatedTime = DateTime.UtcNow,
                     ModifiedTime = DateTime.UtcNow,
                     FirstUsedTime = null,
                     ExpirationTime = null,

@@ -28,8 +28,10 @@ public class AgentServerTest
 
         //Configure
         await serverDom.Configure();
-        Assert.AreEqual(testApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval, serverDom.ServerConfig.UpdateStatusInterval);
-        Assert.AreEqual(serverDom.ServerConfig.TcpEndPointsValue.Length, serverDom.ServerInfo.PrivateIpAddresses.Distinct().Count(),
+        Assert.AreEqual(testApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval,
+            serverDom.ServerConfig.UpdateStatusInterval);
+        Assert.AreEqual(serverDom.ServerConfig.TcpEndPointsValue.Length,
+            serverDom.ServerInfo.PrivateIpAddresses.Distinct().Count(),
             "Duplicate listener!");
 
         //-----------
@@ -39,11 +41,13 @@ public class AgentServerTest
         var accessPoints = serverDom.Server.AccessPoints.ToArray();
         var serverInfo = serverDom.ServerInfo;
         var serverConfig = serverDom.ServerConfig;
-        var totalServerInfoIpAddress = serverInfo.PrivateIpAddresses.Concat(serverInfo.PublicIpAddresses).Distinct().Count();
+        var totalServerInfoIpAddress =
+            serverInfo.PrivateIpAddresses.Concat(serverInfo.PublicIpAddresses).Distinct().Count();
         Assert.AreEqual(totalServerInfoIpAddress, accessPoints.Length);
 
         // private[0]
-        var accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses.ToArray()[0].ToString());
+        var accessPoint =
+            accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses.ToArray()[0].ToString());
         var accessEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort);
         Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken,
             "shared publicIp and privateIp must be see as publicIp");
@@ -118,12 +122,20 @@ public class AgentServerTest
         CollectionAssert.AreNotEqual(publicInTokenAccessPoints1, publicInTokenAccessPoints2);
         var accessPoints = serverDom.Server.AccessPoints.ToArray();
 
-        Assert.AreEqual(publicInTokenAccessPoints2.Single(x => IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetwork).IpAddress,
-            accessPoints.Single(x => x.AccessPointMode == AccessPointMode.PublicInToken && IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetwork).IpAddress,
+        Assert.AreEqual(
+            publicInTokenAccessPoints2
+                .Single(x => IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetwork).IpAddress,
+            accessPoints.Single(x =>
+                x.AccessPointMode == AccessPointMode.PublicInToken &&
+                IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetwork).IpAddress,
             "public access point should have on IPv4");
 
-        Assert.AreEqual(publicInTokenAccessPoints2.Single(x => IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetworkV6).IpAddress,
-            accessPoints.Single(x => x.AccessPointMode == AccessPointMode.PublicInToken && IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetworkV6).IpAddress,
+        Assert.AreEqual(
+            publicInTokenAccessPoints2
+                .Single(x => IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetworkV6).IpAddress,
+            accessPoints.Single(x =>
+                x.AccessPointMode == AccessPointMode.PublicInToken &&
+                IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetworkV6).IpAddress,
             "public access point should have on IPv6");
 
 
@@ -133,8 +145,7 @@ public class AgentServerTest
 
         // create serverInfo
         serverDom.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()];
-        serverDom.ServerInfo.PublicIpAddresses =
-        [
+        serverDom.ServerInfo.PublicIpAddresses = [
             await farm.TestApp.NewIpV4(),
             await farm.TestApp.NewIpV6(),
             IPAddress.Parse(publicInTokenAccessPoints2[0].IpAddress),
@@ -146,12 +157,20 @@ public class AgentServerTest
         await serverDom.Reload();
         accessPoints = serverDom.Server.AccessPoints.ToArray();
 
-        Assert.AreEqual(publicInTokenAccessPoints2.Single(x => IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetwork).IpAddress,
-            accessPoints.Single(x => x.AccessPointMode == AccessPointMode.PublicInToken && IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetwork).IpAddress,
+        Assert.AreEqual(
+            publicInTokenAccessPoints2
+                .Single(x => IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetwork).IpAddress,
+            accessPoints.Single(x =>
+                x.AccessPointMode == AccessPointMode.PublicInToken &&
+                IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetwork).IpAddress,
             "public access point should have on IPv4");
 
-        Assert.AreEqual(publicInTokenAccessPoints2.Single(x => IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetworkV6).IpAddress,
-            accessPoints.Single(x => x.AccessPointMode == AccessPointMode.PublicInToken && IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetworkV6).IpAddress,
+        Assert.AreEqual(
+            publicInTokenAccessPoints2
+                .Single(x => IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetworkV6).IpAddress,
+            accessPoints.Single(x =>
+                x.AccessPointMode == AccessPointMode.PublicInToken &&
+                IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetworkV6).IpAddress,
             "public access point should have on IPv6");
 
         // --------
@@ -175,8 +194,7 @@ public class AgentServerTest
     {
         // create serverInfo
         using var farm = await ServerFarmDom.Create();
-        await farm.DefaultServer.Update(new ServerUpdateParams
-        {
+        await farm.DefaultServer.Update(new ServerUpdateParams {
             AutoConfigure = new PatchOfBoolean { Value = false },
             AccessPoints = new PatchOfAccessPointOf { Value = new[] { await farm.TestApp.NewAccessPoint(udpPort: -1) } }
         });
@@ -193,7 +211,7 @@ public class AgentServerTest
         // create serverInfo
         using var farm = await ServerFarmDom.Create(serverCount: 0);
         var serverDom = await farm.AddNewServer();
-        
+
         // create a session to make sure agent cache the objects
         var accessToken = await farm.CreateAccessToken();
         await accessToken.CreateSession();
@@ -208,7 +226,7 @@ public class AgentServerTest
         var token = Common.Token.FromAccessKey(sessionDom.SessionResponseEx.AccessKey!);
         Assert.IsNotNull(token.ServerToken.HostEndPoints);
         Assert.AreEqual(
-            token.ServerToken.HostEndPoints.First(x=>x.AddressFamily==AddressFamily.InterNetwork).Address, 
+            token.ServerToken.HostEndPoints.First(x => x.AddressFamily == AddressFamily.InterNetwork).Address,
             serverDom.ServerInfo.PublicIpAddresses.First());
     }
 
@@ -230,8 +248,10 @@ public class AgentServerTest
         await serverDom.Configure();
         await serverDom.Reload();
         Assert.IsNotNull(serverDom.ServerConfig.UdpEndPoints);
-        Assert.IsTrue(serverDom.ServerConfig.UdpEndPoints.Any(x => x.AddressFamily == AddressFamily.InterNetwork && x.Port == freeUdpPortV4));
-        Assert.IsTrue(serverDom.ServerConfig.UdpEndPoints.Any(x => x.AddressFamily == AddressFamily.InterNetworkV6 && x.Port == freeUdpPortV6));
+        Assert.IsTrue(serverDom.ServerConfig.UdpEndPoints.Any(x =>
+            x.AddressFamily == AddressFamily.InterNetwork && x.Port == freeUdpPortV4));
+        Assert.IsTrue(serverDom.ServerConfig.UdpEndPoints.Any(x =>
+            x.AddressFamily == AddressFamily.InterNetworkV6 && x.Port == freeUdpPortV6));
 
         // create new serverInfo and configure
         serverInfo.FreeUdpPortV4 = new Random().Next(20000, 30000);
@@ -239,8 +259,10 @@ public class AgentServerTest
         await serverDom.Configure();
         await serverDom.Reload();
         Assert.IsNotNull(serverDom.ServerConfig.UdpEndPoints);
-        Assert.IsTrue(serverDom.ServerConfig.UdpEndPoints.Any(x => x.AddressFamily == AddressFamily.InterNetwork && x.Port == freeUdpPortV4));
-        Assert.IsTrue(serverDom.ServerConfig.UdpEndPoints.Any(x => x.AddressFamily == AddressFamily.InterNetworkV6 && x.Port == freeUdpPortV6));
+        Assert.IsTrue(serverDom.ServerConfig.UdpEndPoints.Any(x =>
+            x.AddressFamily == AddressFamily.InterNetwork && x.Port == freeUdpPortV4));
+        Assert.IsTrue(serverDom.ServerConfig.UdpEndPoints.Any(x =>
+            x.AddressFamily == AddressFamily.InterNetworkV6 && x.Port == freeUdpPortV6));
     }
 
 
@@ -332,9 +354,11 @@ public class AgentServerTest
         // make sure new IP has been configured
         await serverDom.Reload();
         Assert.IsTrue(serverDom.Server.AccessPoints.Any(
-            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV4.ToString() && !x.IsListen));
+            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV4.ToString() &&
+                 !x.IsListen));
         Assert.IsTrue(serverDom.Server.AccessPoints.Any(
-            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV6.ToString() && !x.IsListen));
+            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV6.ToString() &&
+                 !x.IsListen));
         Assert.IsTrue(serverDom.Server.AccessPoints.Any(
             x => x.AccessPointMode == AccessPointMode.Private && x.IpAddress == privateIpV4.ToString() && x.IsListen));
         Assert.IsTrue(serverDom.Server.AccessPoints.Any(
@@ -348,9 +372,11 @@ public class AgentServerTest
         await serverDom.Reload();
 
         Assert.IsTrue(serverDom.Server.AccessPoints.Any(
-            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV4.ToString() && !x.IsListen));
+            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV4.ToString() &&
+                 !x.IsListen));
         Assert.IsTrue(serverDom.Server.AccessPoints.Any(
-            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV6.ToString() && !x.IsListen));
+            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV6.ToString() &&
+                 !x.IsListen));
         Assert.IsTrue(serverDom.Server.AccessPoints.Any(
             x => x.AccessPointMode == AccessPointMode.Private && x.IpAddress == privateIpV4.ToString() && x.IsListen));
         Assert.IsTrue(serverDom.Server.AccessPoints.Any(
@@ -364,9 +390,11 @@ public class AgentServerTest
         await serverDom.Reload();
 
         Assert.IsTrue(serverDom.Server.AccessPoints.Any(
-            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV4.ToString() && !x.IsListen));
+            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV4.ToString() &&
+                 !x.IsListen));
         Assert.IsTrue(serverDom.Server.AccessPoints.Any(
-            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV6.ToString() && !x.IsListen));
+            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV6.ToString() &&
+                 !x.IsListen));
         Assert.IsTrue(serverDom.Server.AccessPoints.Any(
             x => x.AccessPointMode == AccessPointMode.Private && x.IpAddress == privateIpV4.ToString() && x.IsListen));
         Assert.IsTrue(serverDom.Server.AccessPoints.Any(
@@ -386,8 +414,7 @@ public class AgentServerTest
         //-----------
         var oldCode = serverDom.ServerStatus.ConfigCode;
         var accessPoint = await testApp.NewAccessPoint();
-        await serverDom.Update(new ServerUpdateParams
-        {
+        await serverDom.Update(new ServerUpdateParams {
             AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint } }
         });
 
@@ -400,8 +427,7 @@ public class AgentServerTest
         //-----------
         oldCode = serverCommand.ConfigCode;
         accessPoint = await testApp.NewAccessPoint();
-        await serverDom.Update(new ServerUpdateParams
-        {
+        await serverDom.Update(new ServerUpdateParams {
             AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint } }
         });
         serverCommand = await serverDom.SendStatus();
@@ -415,7 +441,8 @@ public class AgentServerTest
         serverDom.ServerInfo = await testApp.NewServerInfo(randomStatus: true);
         serverDom.ServerInfo.Status.ConfigCode = Guid.NewGuid().ToString();
         await serverDom.SendStatus(false);
-        var serverModel = await testApp.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverDom.ServerId);
+        var serverModel = await testApp.VhContext.Servers.AsNoTracking()
+            .SingleAsync(x => x.ServerId == serverDom.ServerId);
         Assert.AreEqual(serverDom.ServerInfo.Status.ConfigCode, serverModel.LastConfigCode.ToString(),
             "LastConfigCode should be set by Server_UpdateStatus.");
 
@@ -450,8 +477,7 @@ public class AgentServerTest
         //-----------
         // check Reconfig After Config finish
         //-----------
-        await serverDom.Update(new ServerUpdateParams
-        {
+        await serverDom.Update(new ServerUpdateParams {
             AccessPoints = new PatchOfAccessPointOf { Value = new[] { await testApp.NewAccessPoint() } }
         });
         await serverDom.Reload();
@@ -479,14 +505,15 @@ public class AgentServerTest
         // create serverInfo
         using var farm = await ServerFarmDom.Create();
         var accessPoints = farm.DefaultServer.Server.AccessPoints.ToArray();
-        await farm.DefaultServer.Update(new ServerUpdateParams
-        {
+        await farm.DefaultServer.Update(new ServerUpdateParams {
             AutoConfigure = new PatchOfBoolean { Value = false }
         });
 
-        farm.DefaultServer.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()
+        farm.DefaultServer.ServerInfo.PrivateIpAddresses = [
+            await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()
         ];
-        farm.DefaultServer.ServerInfo.PublicIpAddresses = [await farm.TestApp.NewIpV6(), await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()
+        farm.DefaultServer.ServerInfo.PublicIpAddresses = [
+            await farm.TestApp.NewIpV6(), await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()
         ];
 
         // Configure
@@ -504,7 +531,8 @@ public class AgentServerTest
         //Configure
         await VhTestUtil.AssertApiException<NotSupportedException>(farm.DefaultServer.Configure());
         await farm.DefaultServer.Reload();
-        Assert.IsTrue(farm.DefaultServer.Server.LastConfigError?.Contains("version", StringComparison.OrdinalIgnoreCase));
+        Assert.IsTrue(
+            farm.DefaultServer.Server.LastConfigError?.Contains("version", StringComparison.OrdinalIgnoreCase));
 
         // LastConfigError must be removed after successful configuration
         farm.DefaultServer.ServerInfo.Version = AgentOptions.MinServerVersion;
@@ -568,15 +596,13 @@ public class AgentServerTest
         var testApp = await TestApp.Create();
         var dnsName1 = $"{Guid.NewGuid()}.com";
         var farm1 = await ServerFarmDom.Create(testApp);
-        await farm1.CertificateReplace(new CertificateCreateParams
-        {
+        await farm1.CertificateReplace(new CertificateCreateParams {
             CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
         });
 
         var dnsName2 = $"{Guid.NewGuid()}.com";
         var farm2 = await ServerFarmDom.Create(testApp);
-        await farm2.CertificateReplace(new CertificateCreateParams
-        {
+        await farm2.CertificateReplace(new CertificateCreateParams {
             CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName2 }
         });
 

@@ -7,8 +7,7 @@ public class TestIpLocationProvider : IIpLocationProvider
 {
     public Task<IpLocation> GetLocation(HttpClient httpClient, IPAddress ipAddress, CancellationToken cancellationToken)
     {
-        return Task.FromResult(new IpLocation
-        {
+        return Task.FromResult(new IpLocation {
             IpAddress = ipAddress,
             CountryName = ipAddress.GetAddressBytes()[0].ToString(),
             CountryCode = ipAddress.GetAddressBytes()[0].ToString(),

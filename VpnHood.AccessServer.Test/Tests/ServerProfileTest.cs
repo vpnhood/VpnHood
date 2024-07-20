@@ -29,29 +29,24 @@ public class ServerProfileTest
         // -----------
         // Default can not be deleted
         // -----------
-        try
-        {
+        try {
             await serverProfileDom.Delete();
             Assert.Fail("Default ServerProfile should not be deletable.");
         }
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             Assert.AreEqual(ex.ExceptionTypeName, nameof(InvalidOperationException));
         }
 
         // -----------
         // Default can not be renamed
         // -----------
-        try
-        {
-            await serverProfileDom.Update(new ServerProfileUpdateParams
-            {
+        try {
+            await serverProfileDom.Update(new ServerProfileUpdateParams {
                 ServerProfileName = new PatchOfString { Value = Guid.NewGuid().ToString() }
             });
             Assert.Fail("Default ServerProfile should not be deletable.");
         }
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             Assert.AreEqual(ex.ExceptionTypeName, nameof(InvalidOperationException));
         }
     }
@@ -67,8 +62,7 @@ public class ServerProfileTest
         // ReSharper disable once UseObjectOrCollectionInitializer
         var serverConfig = new ServerConfig();
         serverConfig.SessionOptions.NetScanLimit = 1000;
-        var serverProfileDom = await ServerProfileDom.Create(testApp, new ServerProfileCreateParams
-        {
+        var serverProfileDom = await ServerProfileDom.Create(testApp, new ServerProfileCreateParams {
             ServerConfig = JsonSerializer.Serialize(serverConfig)
         });
         Assert.IsNotNull(serverProfileDom.ServerProfile.ServerConfig);
@@ -86,8 +80,7 @@ public class ServerProfileTest
         // update
         // -----------
         serverConfig.SessionOptions.NetScanLimit = 2000;
-        await serverProfileDom.Update(new ServerProfileUpdateParams
-        {
+        await serverProfileDom.Update(new ServerProfileUpdateParams {
             ServerConfig = new PatchOfString { Value = JsonSerializer.Serialize(serverConfig) }
         });
         serverConfig2 = GmUtil.JsonDeserialize<ServerConfig>(serverProfileDom.ServerProfile.ServerConfig);
@@ -97,13 +90,11 @@ public class ServerProfileTest
         // Delete
         // -----------
         await serverProfileDom.Delete();
-        try
-        {
+        try {
             await serverProfileDom.Reload();
             Assert.Fail("NotExistsException was expected");
         }
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
     }
@@ -115,16 +106,14 @@ public class ServerProfileTest
         var serverProfileDom = await ServerProfileDom.Create(testApp);
 
         // farm1
-        var farm1 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams
-        {
+        var farm1 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
             ServerProfileId = serverProfileDom.ServerProfileId
         });
         var serverDom1 = await farm1.AddNewServer();
         var serverDom2 = await farm1.AddNewServer();
 
         // farm2
-        var farm2 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams
-        {
+        var farm2 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
             ServerProfileId = serverProfileDom.ServerProfileId
         });
         var serverDom3 = await farm2.AddNewServer();
@@ -132,8 +121,7 @@ public class ServerProfileTest
 
         // update ServerProfile
         var config = new ServerConfig { SessionOptions = new SessionOptions { TcpBufferSize = 0x2000 } };
-        await serverProfileDom.Update(new ServerProfileUpdateParams
-        {
+        await serverProfileDom.Update(new ServerProfileUpdateParams {
             ServerConfig = new PatchOfString { Value = JsonSerializer.Serialize(config) }
         });
 
@@ -147,7 +135,8 @@ public class ServerProfileTest
         await serverDom1.Configure();
         Assert.AreEqual(config.SessionOptions.TcpBufferSize, serverDom1.ServerConfig.SessionOptions.TcpBufferSize);
         Assert.AreEqual(true, serverDom1.ServerConfig.TrackingOptions.TrackTcp, "TrackTcp must be set by default.");
-        Assert.AreEqual(true, serverDom1.ServerConfig.TrackingOptions.TrackLocalPort, "TrackTcp must be set by default.");
+        Assert.AreEqual(true, serverDom1.ServerConfig.TrackingOptions.TrackLocalPort,
+            "TrackTcp must be set by default.");
     }
 
     [TestMethod]
@@ -157,8 +146,7 @@ public class ServerProfileTest
         var serverProfileDom1 = await ServerProfileDom.Create(testApp);
 
         // farm1
-        var farm1 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams
-        {
+        var farm1 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
             ServerProfileId = serverProfileDom1.ServerProfileId
         }, serverCount: 0);
         await farm1.AddNewServer();
@@ -166,15 +154,12 @@ public class ServerProfileTest
         await farm1.AddNewServer();
 
         // farm2
-        await ServerFarmDom.Create(testApp, new ServerFarmCreateParams
-        {
+        await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
             ServerProfileId = serverProfileDom1.ServerProfileId
         }, serverCount: 0);
 
         var data = await serverProfileDom1.Reload();
         Assert.AreEqual(2, data.Summary?.ServerFarmCount);
         Assert.AreEqual(3, data.Summary?.ServerCount);
-        
-
     }
 }

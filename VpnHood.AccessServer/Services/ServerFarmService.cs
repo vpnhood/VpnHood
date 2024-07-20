@@ -19,15 +19,15 @@ public class ServerFarmService(
     CertificateService certificateService,
     CertificateValidatorService certificateValidatorService,
     HttpClient httpClient
-    )
+)
 {
     public async Task<ServerFarmData> Create(Guid projectId, ServerFarmCreateParams createParams)
     {
         // create default name
         createParams.ServerFarmName = createParams.ServerFarmName?.Trim();
-        if (string.IsNullOrWhiteSpace(createParams.ServerFarmName)) createParams.ServerFarmName = Resource.NewServerFarmTemplate;
-        if (createParams.ServerFarmName.Contains("##"))
-        {
+        if (string.IsNullOrWhiteSpace(createParams.ServerFarmName))
+            createParams.ServerFarmName = Resource.NewServerFarmTemplate;
+        if (createParams.ServerFarmName.Contains("##")) {
             var names = await vhRepo.ServerFarmNames(projectId);
             createParams.ServerFarmName = AccessServerUtil.FindUniqueName(createParams.ServerFarmName, names);
         }
@@ -38,8 +38,7 @@ public class ServerFarmService(
             : await vhRepo.ServerProfileGetDefault(projectId);
 
         var serverFarmId = Guid.NewGuid();
-        var serverFarm = new ServerFarmModel
-        {
+        var serverFarm = new ServerFarmModel {
             ProjectId = projectId,
             ServerFarmId = serverFarmId,
             ServerProfileId = serverProfile.ServerProfileId,
@@ -52,7 +51,7 @@ public class ServerFarmService(
             TokenUrl = createParams.TokenUrl?.ToString(),
             PushTokenToClient = true,
             MaxCertificateCount = 1,
-            Servers = [],
+            Servers = []
         };
 
         FarmTokenBuilder.UpdateIfChanged(serverFarm);
@@ -74,19 +73,21 @@ public class ServerFarmService(
         return serverFarmData;
     }
 
-    public async Task<ValidateTokenUrlResult> ValidateTokenUrl(Guid projectId, Guid serverFarmId, CancellationToken cancellationToken)
+    public async Task<ValidateTokenUrlResult> ValidateTokenUrl(Guid projectId, Guid serverFarmId,
+        CancellationToken cancellationToken)
     {
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
 
         if (string.IsNullOrEmpty(serverFarm.TokenUrl))
-            throw new InvalidOperationException($"{nameof(serverFarm.TokenUrl)} has not been set."); // there is no token at the moment
+            throw new InvalidOperationException(
+                $"{nameof(serverFarm.TokenUrl)} has not been set."); // there is no token at the moment
 
         if (string.IsNullOrEmpty(serverFarm.TokenJson))
-            throw new InvalidOperationException("Farm has not been initialized yet."); // there is no token at the moment
+            throw new InvalidOperationException(
+                "Farm has not been initialized yet."); // there is no token at the moment
 
         var curFarmToken = GmUtil.JsonDeserialize<ServerToken>(serverFarm.TokenJson);
-        try
-        {
+        try {
             if (curFarmToken.IsValidHostName && string.IsNullOrEmpty(curFarmToken.HostName))
                 throw new Exception("You farm needs a valid certificate.");
 
@@ -104,17 +105,14 @@ public class ServerFarmService(
             var encFarmToken = Encoding.UTF8.GetString(buf, 0, read);
             var remoteFarmToken = ServerToken.Decrypt(curFarmToken.Secret!, encFarmToken);
             var isUpToDate = !remoteFarmToken.IsTokenUpdated(curFarmToken);
-            return new ValidateTokenUrlResult
-            {
+            return new ValidateTokenUrlResult {
                 RemoteTokenTime = remoteFarmToken.CreatedTime,
                 IsUpToDate = isUpToDate,
                 ErrorMessage = isUpToDate ? null : "The token uploaded to the URL is old and needs to be updated."
             };
         }
-        catch (Exception ex)
-        {
-            return new ValidateTokenUrlResult
-            {
+        catch (Exception ex) {
+            return new ValidateTokenUrlResult {
                 RemoteTokenTime = null,
                 IsUpToDate = false,
                 ErrorMessage = ex.Message
@@ -136,15 +134,13 @@ public class ServerFarmService(
         if (updateParams.TokenUrl != null) serverFarm.TokenUrl = updateParams.TokenUrl?.ToString();
 
         // set secret
-        if (updateParams.Secret != null && !updateParams.Secret.Value.SequenceEqual(serverFarm.Secret))
-        {
+        if (updateParams.Secret != null && !updateParams.Secret.Value.SequenceEqual(serverFarm.Secret)) {
             serverFarm.Secret = updateParams.Secret;
             reconfigureServers = true;
         }
 
         // Set ServerProfileId
-        if (updateParams.ServerProfileId != null && updateParams.ServerProfileId != serverFarm.ServerProfileId)
-        {
+        if (updateParams.ServerProfileId != null && updateParams.ServerProfileId != serverFarm.ServerProfileId) {
             // makes sure that the serverProfile belongs to this project
             var serverProfile = await vhRepo.ServerProfileGet(projectId, updateParams.ServerProfileId);
             serverFarm.ServerProfileId = serverProfile.ServerProfileId;
@@ -153,27 +149,28 @@ public class ServerFarmService(
 
         // set certificate
         var validateCertificate = false;
-        if (updateParams.AutoValidateCertificate != null && updateParams.AutoValidateCertificate != certificate.AutoValidate)
-        {
+        if (updateParams.AutoValidateCertificate != null &&
+            updateParams.AutoValidateCertificate != certificate.AutoValidate) {
             validateCertificate = updateParams.AutoValidateCertificate.Value;
             certificate.AutoValidate = updateParams.AutoValidateCertificate.Value;
             certificate.ValidateInprogress = updateParams.AutoValidateCertificate.Value;
         }
 
         // set certificate history count
-        if (updateParams.MaxCertificateCount != null && updateParams.MaxCertificateCount != serverFarm.MaxCertificateCount)
-        {
-
-            if (serverFarm.MaxCertificateCount < 1) 
-                throw new ArgumentException("MaxCertificateCount can not be negative.", nameof(serverFarm.MaxCertificateCount));
+        if (updateParams.MaxCertificateCount != null &&
+            updateParams.MaxCertificateCount != serverFarm.MaxCertificateCount) {
+            if (serverFarm.MaxCertificateCount < 1)
+                throw new ArgumentException("MaxCertificateCount can not be negative.",
+                    nameof(serverFarm.MaxCertificateCount));
 
             if (serverFarm.MaxCertificateCount > 10)
-                throw new ArgumentException("MaxCertificateCount can be more than 10.", nameof(serverFarm.MaxCertificateCount));
+                throw new ArgumentException("MaxCertificateCount can be more than 10.",
+                    nameof(serverFarm.MaxCertificateCount));
 
             serverFarm.MaxCertificateCount = updateParams.MaxCertificateCount.Value;
 
             var certificates = serverFarm.Certificates!
-                .Where(x=>!x.IsInToken)
+                .Where(x => !x.IsInToken)
                 .OrderByDescending(x => x.CreatedTime)
                 .ToArray();
 
@@ -205,11 +202,10 @@ public class ServerFarmService(
 
         var accessPoints = await GetPublicInTokenAccessPoints(farmViews.Select(x => x.ServerFarm.ServerFarmId));
         var dtos = farmViews
-            .Select(x => new ServerFarmData
-            {
+            .Select(x => new ServerFarmData {
                 ServerFarm = x.ServerFarm.ToDto(x.ServerProfileName),
                 AccessPoints = accessPoints.Where(y => y.ServerFarmId == x.ServerFarm.ServerFarmId),
-                Certificates = x.ServerFarm.Certificates?.Select(z=>z.ToDto()).ToArray()
+                Certificates = x.ServerFarm.Certificates?.Select(z => z.ToDto()).ToArray()
             });
 
         return dtos.ToArray();
@@ -226,13 +222,11 @@ public class ServerFarmService(
         // create result
         var accessPoints = await GetPublicInTokenAccessPoints(farmViews.Select(x => x.ServerFarm.ServerFarmId));
         var now = DateTime.UtcNow;
-        var ret = farmViews.Select(x => new ServerFarmData
-        {
+        var ret = farmViews.Select(x => new ServerFarmData {
             ServerFarm = x.ServerFarm.ToDto(x.ServerProfileName),
             AccessPoints = accessPoints.Where(y => y.ServerFarmId == x.ServerFarm.ServerFarmId),
             Certificates = x.ServerFarm.Certificates?.Select(z => z.ToDto()).ToArray(),
-            Summary = new ServerFarmSummary
-            {
+            Summary = new ServerFarmSummary {
                 ActiveTokenCount = x.AccessTokens!.Count(accessToken => accessToken.LastUsedTime >= now.AddDays(-7)),
                 InactiveTokenCount = x.AccessTokens!.Count(accessToken => accessToken.LastUsedTime < now.AddDays(-7)),
                 UnusedTokenCount = x.AccessTokens!.Count(accessToken => accessToken.FirstUsedTime == null),
@@ -252,8 +246,7 @@ public class ServerFarmService(
         foreach (var farmAccessPoint in farmAccessPoints)
             items.AddRange(farmAccessPoint.AccessPoints
                 .Where(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken)
-                .Select(accessPoint => new AccessPointView
-                {
+                .Select(accessPoint => new AccessPointView {
                     ServerFarmId = farmAccessPoint.ServerFarmId,
                     ServerId = farmAccessPoint.ServerId,
                     ServerName = farmAccessPoint.ServerName,
@@ -284,5 +277,4 @@ public class ServerFarmService(
         var farmToken = FarmTokenBuilder.GetRequiredServerToken(serverFarm.TokenJson);
         return farmToken.Encrypt();
     }
-
 }

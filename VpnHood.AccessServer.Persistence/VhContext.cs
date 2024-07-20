@@ -29,13 +29,15 @@ public class VhContext : DbContext
     }
 
     public VhContext(DbContextOptions options)
-            : base(options)
+        : base(options)
     {
     }
 
     public async Task<IDbContextTransaction?> WithNoLockTransaction()
     {
-        return Database.CurrentTransaction == null ? await Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted) : null;
+        return Database.CurrentTransaction == null
+            ? await Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted)
+            : null;
     }
 
     protected override void ConfigureConventions(
@@ -54,8 +56,7 @@ public class VhContext : DbContext
 
         modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_100_CI_AS_SC_UTF8");
 
-        modelBuilder.Entity<ProjectModel>(entity =>
-        {
+        modelBuilder.Entity<ProjectModel>(entity => {
             entity
                 .HasKey(e => e.ProjectId);
 
@@ -90,8 +91,7 @@ public class VhContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<IpLockModel>(entity =>
-        {
+        modelBuilder.Entity<IpLockModel>(entity => {
             entity
                 .HasKey(e => new { e.ProjectId, e.IpAddress });
 
@@ -104,8 +104,7 @@ public class VhContext : DbContext
                 .HasMaxLength(MaxDescriptionLength);
         });
 
-        modelBuilder.Entity<CertificateModel>(entity =>
-        {
+        modelBuilder.Entity<CertificateModel>(entity => {
             entity
                 .HasKey(e => e.CertificateId);
 
@@ -149,15 +148,14 @@ public class VhContext : DbContext
             entity
                 .HasOne(e => e.ServerFarm)
                 .WithMany(d => d.Certificates)
-                .HasForeignKey(e => new { e.ProjectId, e.ServerFarmId})
+                .HasForeignKey(e => new { e.ProjectId, e.ServerFarmId })
                 .HasPrincipalKey(p => new { p.ProjectId, p.ServerFarmId })
                 .OnDelete(DeleteBehavior.Cascade);
 
             // make sure the certificate farm belong to the same project
         });
 
-        modelBuilder.Entity<AccessTokenModel>(entity =>
-        {
+        modelBuilder.Entity<AccessTokenModel>(entity => {
             entity
                 .HasKey(e => e.AccessTokenId);
 
@@ -193,8 +191,7 @@ public class VhContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<DeviceModel>(entity =>
-        {
+        modelBuilder.Entity<DeviceModel>(entity => {
             entity
                 .HasKey(e => e.DeviceId);
 
@@ -231,8 +228,7 @@ public class VhContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<PublicCycleModel>(entity =>
-        {
+        modelBuilder.Entity<PublicCycleModel>(entity => {
             entity
                 .HasKey(e => e.PublicCycleId);
 
@@ -242,8 +238,7 @@ public class VhContext : DbContext
                 .IsFixedLength();
         });
 
-        modelBuilder.Entity<ServerModel>(entity =>
-        {
+        modelBuilder.Entity<ServerModel>(entity => {
             entity.HasKey(e => e.ServerId);
 
             entity
@@ -306,8 +301,7 @@ public class VhContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
 
             entity
-                .OwnsMany(e => e.AccessPoints, ap =>
-                {
+                .OwnsMany(e => e.AccessPoints, ap => {
                     ap.ToTable(nameof(ServerModel.AccessPoints));
                     ap.WithOwner().HasForeignKey(nameof(ServerModel.ServerId));
                 });
@@ -328,11 +322,9 @@ public class VhContext : DbContext
             //            (c1, c2) => Common.Utils.Util.SequenceNullOrEquals(c1, c2),
             //            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
             //            c => c));
-
         });
 
-        modelBuilder.Entity<ServerStatusModel>(entity =>
-        {
+        modelBuilder.Entity<ServerStatusModel>(entity => {
             entity
                 .HasKey(e => e.ServerStatusId);
 
@@ -351,8 +343,7 @@ public class VhContext : DbContext
 
             entity
                 .HasIndex(e => new { e.ProjectId, e.ServerId, e.IsLast })
-                .IncludeProperties(e => new
-                {
+                .IncludeProperties(e => new {
                     e.SessionCount,
                     e.TcpConnectionCount,
                     e.UdpConnectionCount,
@@ -378,8 +369,7 @@ public class VhContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<ServerFarmModel>(entity =>
-        {
+        modelBuilder.Entity<ServerFarmModel>(entity => {
             entity
                 .HasKey(e => e.ServerFarmId);
 
@@ -427,8 +417,7 @@ public class VhContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<AccessModel>(entity =>
-        {
+        modelBuilder.Entity<AccessModel>(entity => {
             entity
                 .HasKey(e => e.AccessId);
 
@@ -443,7 +432,8 @@ public class VhContext : DbContext
 
             entity
                 .Property(e => e.LastCycleTraffic)
-                .HasComputedColumnSql($"{nameof(AccessModel.LastCycleSentTraffic)} + {nameof(AccessModel.LastCycleReceivedTraffic)} - {nameof(AccessModel.LastCycleSentTraffic)} - {nameof(AccessModel.LastCycleReceivedTraffic)}");
+                .HasComputedColumnSql(
+                    $"{nameof(AccessModel.LastCycleSentTraffic)} + {nameof(AccessModel.LastCycleReceivedTraffic)} - {nameof(AccessModel.LastCycleSentTraffic)} - {nameof(AccessModel.LastCycleReceivedTraffic)}");
 
 
             entity
@@ -451,11 +441,13 @@ public class VhContext : DbContext
 
             entity
                 .Property(e => e.CycleTraffic)
-                .HasComputedColumnSql($"{nameof(AccessModel.TotalSentTraffic)} + {nameof(AccessModel.TotalReceivedTraffic)} - {nameof(AccessModel.LastCycleSentTraffic)} - {nameof(AccessModel.LastCycleReceivedTraffic)}");
+                .HasComputedColumnSql(
+                    $"{nameof(AccessModel.TotalSentTraffic)} + {nameof(AccessModel.TotalReceivedTraffic)} - {nameof(AccessModel.LastCycleSentTraffic)} - {nameof(AccessModel.LastCycleReceivedTraffic)}");
 
             entity
                 .Property(e => e.TotalTraffic)
-                .HasComputedColumnSql($"{nameof(AccessModel.TotalSentTraffic)} + {nameof(AccessModel.TotalReceivedTraffic)}");
+                .HasComputedColumnSql(
+                    $"{nameof(AccessModel.TotalSentTraffic)} + {nameof(AccessModel.TotalReceivedTraffic)}");
 
             entity.HasOne(e => e.Device)
                 .WithMany(d => d.Accesses)
@@ -463,8 +455,7 @@ public class VhContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<SessionModel>(entity =>
-        {
+        modelBuilder.Entity<SessionModel>(entity => {
             entity
                 .HasKey(e => e.SessionId);
 
@@ -514,8 +505,7 @@ public class VhContext : DbContext
         });
 
 
-        modelBuilder.Entity<AccessUsageModel>(entity =>
-        {
+        modelBuilder.Entity<AccessUsageModel>(entity => {
             entity
                 .HasKey(x => x.AccessUsageId);
 
@@ -524,8 +514,7 @@ public class VhContext : DbContext
                 .ValueGeneratedOnAdd();
         });
 
-        modelBuilder.Entity<ServerProfileModel>(entity =>
-        {
+        modelBuilder.Entity<ServerProfileModel>(entity => {
             entity
                 .HasKey(x => x.ServerProfileId);
 
@@ -555,8 +544,7 @@ public class VhContext : DbContext
                 .HasDefaultValue(false);
         });
 
-        modelBuilder.Entity<LocationModel>(entity =>
-        {
+        modelBuilder.Entity<LocationModel>(entity => {
             entity
                 .HasKey(x => x.LocationId);
 
@@ -568,6 +556,5 @@ public class VhContext : DbContext
                 .Property(x => x.RegionName)
                 .HasMaxLength(50);
         });
-
     }
 }

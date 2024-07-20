@@ -16,7 +16,7 @@ public class ServerFarmsController(
     SubscriptionService subscriptionService,
     ServerFarmService serverFarmService,
     CertificateService certificateService
-    ) : ControllerBase
+) : ControllerBase
 {
     [HttpPost]
     [AuthorizeProjectPermission(Permissions.ServerFarmWrite)]
@@ -47,7 +47,8 @@ public class ServerFarmsController(
 
     [HttpGet("{serverFarmId:guid}/validate-token-url")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<ValidateTokenUrlResult> ValidateTokenUrl(Guid projectId, Guid serverFarmId, CancellationToken cancellationToken)
+    public Task<ValidateTokenUrlResult> ValidateTokenUrl(Guid projectId, Guid serverFarmId,
+        CancellationToken cancellationToken)
     {
         return serverFarmService.ValidateTokenUrl(projectId, serverFarmId: serverFarmId, cancellationToken);
     }
@@ -58,8 +59,10 @@ public class ServerFarmsController(
         int recordIndex = 0, int recordCount = 101)
     {
         return includeSummary
-            ? await serverFarmService.ListWithSummary(projectId, search, serverFarmId: null, recordIndex: recordIndex, recordCount: recordCount) 
-            : await serverFarmService.List(projectId, search, serverFarmId: null, recordIndex: recordIndex, recordCount: recordCount);
+            ? await serverFarmService.ListWithSummary(projectId, search, serverFarmId: null, recordIndex: recordIndex,
+                recordCount: recordCount)
+            : await serverFarmService.List(projectId, search, serverFarmId: null, recordIndex: recordIndex,
+                recordCount: recordCount);
     }
 
     [HttpDelete("{serverFarmId:guid}")]
@@ -86,7 +89,8 @@ public class ServerFarmsController(
 
     [HttpPost("{serverFarmId:guid}/certificate/replace")]
     [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public Task<Certificate> CertificateReplace(Guid projectId, Guid serverFarmId, CertificateCreateParams? createParams = null)
+    public Task<Certificate> CertificateReplace(Guid projectId, Guid serverFarmId,
+        CertificateCreateParams? createParams = null)
     {
         return certificateService.Replace(projectId, serverFarmId, createParams);
     }
@@ -97,5 +101,4 @@ public class ServerFarmsController(
     {
         return certificateService.List(projectId, serverFarmId);
     }
-
 }

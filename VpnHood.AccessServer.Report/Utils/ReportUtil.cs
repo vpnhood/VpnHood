@@ -2,7 +2,8 @@
 
 public static class ReportUtil
 {
-    public static string? GenerateCacheKey(string keyBase, DateTime? beginTime, DateTime? endTime, out TimeSpan? cacheExpiration)
+    public static string? GenerateCacheKey(string keyBase, DateTime? beginTime, DateTime? endTime,
+        out TimeSpan? cacheExpiration)
     {
         cacheExpiration = null;
         if (endTime != null && DateTime.UtcNow - endTime >= TimeSpan.FromMinutes(5))

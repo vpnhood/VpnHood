@@ -11,8 +11,7 @@ public static class ServerConverter
     {
         var serverState = model.ConfigureTime == null ? ServerState.NotInstalled : ServerState.Lost;
 
-        return new VpnServer
-        {
+        return new VpnServer {
             ServerFarmId = model.ServerFarmId,
             ServerFarmName = model.ServerFarm?.ServerFarmName,
             Location = model.Location?.ToDto(),
@@ -34,8 +33,7 @@ public static class ServerConverter
             Version = model.Version,
             AutoConfigure = model.AutoConfigure,
             AccessPoints = model.AccessPoints.Select(x => x.ToDto()).ToArray(),
-            HostPanelUrl = model.HostPanelUrl!=null ? new Uri(model.HostPanelUrl) : null,
+            HostPanelUrl = model.HostPanelUrl != null ? new Uri(model.HostPanelUrl) : null
         };
     }
-
 }

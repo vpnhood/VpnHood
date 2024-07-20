@@ -23,17 +23,16 @@ public class ReportWriterService
 
     private static bool IsDuplicateKeyException(Exception ex)
     {
-        return ex.InnerException is 
-                DbException { ErrorCode: 2627 } or 
-                PostgresException{ SqlState: "23505"  };
+        return ex.InnerException is
+            DbException { ErrorCode: 2627 } or
+            PostgresException { SqlState: "23505" };
     }
 
     public async Task Write(IEnumerable<ServerStatusArchive> serverStatuses)
     {
         var items = serverStatuses.ToArray();
 
-        try
-        {
+        try {
             if (items.Length == 0)
                 return;
 
@@ -45,17 +44,16 @@ public class ReportWriterService
             await _vhReportContext.ServerStatuses.AddRangeAsync(items);
             await _vhReportContext.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
-        {
+        catch (DbUpdateException ex) when (IsDuplicateKeyException(ex)) {
             // remove duplicates
             _logger.LogWarning("Managing duplicate ServerStatuses...");
             _vhReportContext.ChangeTracker.Clear();
 
             var ids = items.Select(x => x.ServerStatusId);
-            var duplicates = await _vhReportContext.ServerStatuses.Where(x => ids.Contains(x.ServerStatusId)).ToArrayAsync();
+            var duplicates = await _vhReportContext.ServerStatuses.Where(x => ids.Contains(x.ServerStatusId))
+                .ToArrayAsync();
             var items2 = items.Where(x => duplicates.All(y => x.ServerStatusId != y.ServerStatusId)).ToArray();
-            if (items2.Any())
-            {
+            if (items2.Any()) {
                 await _vhReportContext.ServerStatuses.AddRangeAsync(items2);
                 await _vhReportContext.SaveChangesAsync();
             }
@@ -66,16 +64,14 @@ public class ReportWriterService
     {
         var items = sessions.ToArray();
 
-        try
-        {
+        try {
             if (items.Length == 0)
                 return;
 
-            foreach (var item in items)
-            {
+            foreach (var item in items) {
                 item.CreatedTime = DateTime.SpecifyKind(item.CreatedTime, DateTimeKind.Utc);
                 item.LastUsedTime = DateTime.SpecifyKind(item.LastUsedTime, DateTimeKind.Utc);
-                item.EndTime = item.EndTime!=null ? DateTime.SpecifyKind(item.EndTime.Value, DateTimeKind.Utc) : null;
+                item.EndTime = item.EndTime != null ? DateTime.SpecifyKind(item.EndTime.Value, DateTimeKind.Utc) : null;
             }
 
             _logger.LogInformation($"Copy old Sessions to report database. Count: {items.Length}");
@@ -83,8 +79,7 @@ public class ReportWriterService
             await _vhReportContext.Sessions.AddRangeAsync(items);
             await _vhReportContext.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
-        {
+        catch (DbUpdateException ex) when (IsDuplicateKeyException(ex)) {
             // remove duplicates
             _logger.LogInformation("Managing duplicate Sessions...");
             _vhReportContext.ChangeTracker.Clear();
@@ -92,8 +87,7 @@ public class ReportWriterService
             var ids = items.Select(x => x.SessionId);
             var duplicates = await _vhReportContext.Sessions.Where(x => ids.Contains(x.SessionId)).ToArrayAsync();
             var items2 = items.Where(x => duplicates.All(y => x.SessionId != y.SessionId)).ToArray();
-            if (items2.Any())
-            {
+            if (items2.Any()) {
                 await _vhReportContext.Sessions.AddRangeAsync(items2);
                 await _vhReportContext.SaveChangesAsync();
             }
@@ -104,8 +98,7 @@ public class ReportWriterService
     {
         var items = accessUsages.ToArray();
 
-        try
-        {
+        try {
             if (items.Length == 0)
                 return;
 
@@ -117,17 +110,16 @@ public class ReportWriterService
             await _vhReportContext.AccessUsages.AddRangeAsync(items);
             await _vhReportContext.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
-        {
+        catch (DbUpdateException ex) when (IsDuplicateKeyException(ex)) {
             // remove duplicates
             _logger.LogInformation("Managing duplicate AccessUsages...");
             _vhReportContext.ChangeTracker.Clear();
 
             var ids = items.Select(x => x.AccessUsageId);
-            var duplicates = await _vhReportContext.AccessUsages.Where(x => ids.Contains(x.AccessUsageId)).ToArrayAsync();
+            var duplicates = await _vhReportContext.AccessUsages.Where(x => ids.Contains(x.AccessUsageId))
+                .ToArrayAsync();
             var items2 = items.Where(x => duplicates.All(y => x.AccessUsageId != y.AccessUsageId)).ToArray();
-            if (items2.Any())
-            {
+            if (items2.Any()) {
                 await _vhReportContext.AccessUsages.AddRangeAsync(items2);
                 await _vhReportContext.SaveChangesAsync();
             }

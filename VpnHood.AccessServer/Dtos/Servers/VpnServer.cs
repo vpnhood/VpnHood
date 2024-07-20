@@ -1,6 +1,7 @@
 ﻿using VpnHood.AccessServer.Persistence.Enums;
 
 namespace VpnHood.AccessServer.Dtos.Servers;
+
 public class VpnServer
 {
     public required Guid ServerId { get; init; }

@@ -13,10 +13,9 @@ public class AdTest
     public async Task Create_session_with_temporary_expiration()
     {
         var farm = await ServerFarmDom.Create();
-        
+
         // create token
-        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
-        {
+        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams {
             ServerFarmId = farm.ServerFarmId,
             AccessTokenName = Guid.NewGuid().ToString(),
             Description = Guid.NewGuid().ToString(),
@@ -48,11 +47,10 @@ public class AdTest
         var farm = await ServerFarmDom.Create();
 
         // create token
-        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
-        {
+        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams {
             ServerFarmId = farm.ServerFarmId,
             AccessTokenName = Guid.NewGuid().ToString(),
-            AdRequirement =  AdRequirement.Required,
+            AdRequirement = AdRequirement.Required,
             IsEnabled = true,
             Description = Guid.NewGuid().ToString()
         });
@@ -77,5 +75,4 @@ public class AdTest
         var sessionDom2 = await accessTokenDom.CreateSession(clientId: clientId);
         Assert.IsNull(sessionDom2.SessionResponseEx.AccessUsage?.ExpirationTime);
     }
-
 }

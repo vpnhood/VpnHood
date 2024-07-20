@@ -1,6 +1,7 @@
 ﻿using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Dtos.AccessTokens;
+
 public class AccessTokenCreateParams
 {
     public Guid? AccessTokenId { get; init; }

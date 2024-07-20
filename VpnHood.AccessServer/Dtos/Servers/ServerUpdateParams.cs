@@ -1,6 +1,7 @@
 ﻿using GrayMint.Common.Utils;
 
 namespace VpnHood.AccessServer.Dtos.Servers;
+
 public class ServerUpdateParams
 {
     public Patch<string>? ServerName { get; set; }

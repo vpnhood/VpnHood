@@ -23,40 +23,36 @@ public class Program
 
     public static async Task Main(string[] args)
     {
-        try
-        {
+        try {
             var builder = WebApplication.CreateBuilder(args);
 
             // logger (Microsoft)
-            builder.Logging.AddSimpleConsole(c =>
-            {
-                c.TimestampFormat = "[HH:mm:ss] ";
-            });
+            builder.Logging.AddSimpleConsole(c => { c.TimestampFormat = "[HH:mm:ss] "; });
 
             // NLog: Setup NLog for Dependency injection
             builder.Logging.ClearProviders();
             builder.Host.UseNLog();
 
-            var agentOptions = builder.Configuration.GetSection("App").Get<AgentOptions>() ?? throw new Exception("Could not read AgentOptions.");
+            var agentOptions = builder.Configuration.GetSection("App").Get<AgentOptions>() ??
+                               throw new Exception("Could not read AgentOptions.");
             builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("App"));
             builder.Services.AddGrayMintCommonServices(new RegisterServicesOptions());
             builder.Services.AddGrayMintSwagger("VpnHood Agent Server", false);
-            builder.Services.AddGrayMintJob<CacheService>(new GrayMintJobOptions
-            {
+            builder.Services.AddGrayMintJob<CacheService>(new GrayMintJobOptions {
                 DueTime = agentOptions.SaveCacheInterval,
                 Interval = agentOptions.SaveCacheInterval
             });
 
             //Authentication
             builder.Services
-                 .AddAuthentication()
-                 .AddGrayMintAuthentication(builder.Configuration.GetSection("Auth").Get<GrayMintAuthenticationOptions>()!,
-                     builder.Environment.IsProduction());
+                .AddAuthentication()
+                .AddGrayMintAuthentication(
+                    builder.Configuration.GetSection("Auth").Get<GrayMintAuthenticationOptions>()!,
+                    builder.Environment.IsProduction());
 
             // Authorization Policies
             builder.Services
-                .AddAuthorization(options =>
-                {
+                .AddAuthorization(options => {
                     var policy = new AuthorizationPolicyBuilder()
                         .AddAuthenticationSchemes(GrayMintAuthenticationDefaults.AuthenticationScheme)
                         .RequireRole("System")
@@ -74,10 +70,8 @@ public class Program
 
             // DbContext
             builder.Services
-                .AddDbContextPool<VhContext>(options =>
-                {
-                    options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
-                }, 100);
+                .AddDbContextPool<VhContext>(
+                    options => { options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")); }, 100);
 
 
             builder.Services
@@ -89,7 +83,8 @@ public class Program
                 .AddScoped<CacheService>()
                 .AddScoped<AgentService>()
                 .AddScoped<LoadBalancerService>()
-                .AddKeyedSingleton<IIpLocationProvider>(LocationProviderServer, (_, _) => new IpApiCoLocationProvider("VpnHood-AccessManager"))
+                .AddKeyedSingleton<IIpLocationProvider>(LocationProviderServer,
+                    (_, _) => new IpApiCoLocationProvider("VpnHood-AccessManager"))
                 .AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
 
             //---------------------
@@ -104,11 +99,11 @@ public class Program
             // Log Configs
             var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("App: {Config}",
-                JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AgentOptions>>().Value, new JsonSerializerOptions { WriteIndented = true }));
+                JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AgentOptions>>().Value,
+                    new JsonSerializerOptions { WriteIndented = true }));
 
             // init cache
-            await using (var scope = webApp.Services.CreateAsyncScope())
-            {
+            await using (var scope = webApp.Services.CreateAsyncScope()) {
                 var cacheService = scope.ServiceProvider.GetRequiredService<CacheService>();
                 await cacheService.Init(false);
             }
@@ -116,10 +111,8 @@ public class Program
 
             await GrayMintApp.RunAsync(webApp, args);
         }
-        finally
-        {
+        finally {
             NLog.LogManager.Shutdown();
         }
     }
-
 }

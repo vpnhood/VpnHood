@@ -25,7 +25,8 @@ public class AgentService(
     IOptions<AgentOptions> agentOptions,
     CacheService cacheService,
     SessionService sessionService,
-    [FromKeyedServices(Program.LocationProviderServer)] IIpLocationProvider ipLocationProvider,
+    [FromKeyedServices(Program.LocationProviderServer)]
+    IIpLocationProvider ipLocationProvider,
     IHttpClientFactory httpClientFactory,
     VhAgentRepo vhAgentRepo)
 {
@@ -46,7 +47,8 @@ public class AgentService(
     }
 
     [HttpGet("sessions/{sessionId}")]
-    public async Task<SessionResponseEx> GetSession(Guid serverId, uint sessionId, string hostEndPoint, string? clientIp)
+    public async Task<SessionResponseEx> GetSession(Guid serverId, uint sessionId, string hostEndPoint,
+        string? clientIp)
     {
         var server = await GetServer(serverId);
         return await sessionService.GetSession(server, sessionId, hostEndPoint, clientIp);
@@ -65,15 +67,15 @@ public class AgentService(
         if (!string.IsNullOrEmpty(version) && Version.Parse(version) >= AgentOptions.MinServerVersion)
             return;
 
-        var errorMessage = $"Your server version is not supported. Please update your server. MinSupportedVersion: {AgentOptions.MinServerVersion}";
-        if (server.LastConfigError != errorMessage)
-        {
+        var errorMessage =
+            $"Your server version is not supported. Please update your server. MinSupportedVersion: {AgentOptions.MinServerVersion}";
+        if (server.LastConfigError != errorMessage) {
             // update db & cache
-            var serverModel = await vhAgentRepo.FindServerAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
+            var serverModel = await vhAgentRepo.FindServerAsync(server.ServerId) ??
+                              throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
             serverModel.LastConfigError = errorMessage;
             await vhAgentRepo.SaveChangesAsync();
             await cacheService.InvalidateServer(serverModel.ServerId);
-
         }
 
         logger.LogInformation("OldServer. ServerId: {ServerId}, Version: {Version}", server.ServerId, version);
@@ -89,19 +91,23 @@ public class AgentService(
         await CheckServerVersion(server, server.Version);
 
         // update status
-        serverStatusLogger.LogInformation("Updating server status. ServerId: {ServerId}, SessionCount: {SessionCount}", server.ServerId, serverStatus.SessionCount);
+        serverStatusLogger.LogInformation("Updating server status. ServerId: {ServerId}, SessionCount: {SessionCount}",
+            server.ServerId, serverStatus.SessionCount);
         UpdateServerStatus(server, serverStatus, false);
 
         // remove LastConfigCode if server send its status
-        if (server.LastConfigCode?.ToString() != serverStatus.ConfigCode || server.LastConfigError != serverStatus.ConfigError)
-        {
+        if (server.LastConfigCode?.ToString() != serverStatus.ConfigCode ||
+            server.LastConfigError != serverStatus.ConfigError) {
             logger.LogInformation("Updating a server's LastConfigCode. ServerId: {ServerId}, ConfigCode: {ConfigCode}",
                 server.ServerId, serverStatus.ConfigCode);
 
             // update db & cache
-            var serverUpdate = await vhAgentRepo.FindServerAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
+            var serverUpdate = await vhAgentRepo.FindServerAsync(server.ServerId) ??
+                               throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
             serverUpdate.LastConfigError = serverStatus.ConfigError;
-            serverUpdate.LastConfigCode = !string.IsNullOrEmpty(serverStatus.ConfigCode) ? Guid.Parse(serverStatus.ConfigCode) : null;
+            serverUpdate.LastConfigCode = !string.IsNullOrEmpty(serverStatus.ConfigCode)
+                ? Guid.Parse(serverStatus.ConfigCode)
+                : null;
             serverUpdate.ConfigureTime = DateTime.UtcNow;
             await vhAgentRepo.SaveChangesAsync();
             await cacheService.InvalidateServer(serverUpdate.ServerId);
@@ -124,12 +130,15 @@ public class AgentService(
         UpdateServerStatus(server, serverInfo.Status, true);
 
         // ready for update
-        var serverFarmModel = await vhAgentRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId, includeServersAndAccessPoints: true, includeCertificates: true);
+        var serverFarmModel = await vhAgentRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId,
+            includeServersAndAccessPoints: true, includeCertificates: true);
         var serverModel = serverFarmModel.Servers!.Single(x => x.ServerId == serverId);
 
         // update cache
-        var gatewayIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
-        var gatewayIpV6 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
+        var gatewayIpV4 =
+            serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
+        var gatewayIpV6 =
+            serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
         serverModel.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
         serverModel.OsInfo = serverInfo.OsInfo;
         serverModel.MachineName = serverInfo.MachineName;
@@ -143,7 +152,8 @@ public class AgentService(
 
         // calculate access points
         if (serverModel.AutoConfigure)
-            serverModel.AccessPoints = BuildServerAccessPoints(serverModel.ServerId, serverFarmModel.Servers!, serverInfo);
+            serverModel.AccessPoints =
+                BuildServerAccessPoints(serverModel.ServerId, serverFarmModel.Servers!, serverInfo);
 
         // update if there is any change & update cache
         var isFarmUpdated = FarmTokenBuilder.UpdateIfChanged(serverFarmModel);
@@ -162,15 +172,13 @@ public class AgentService(
         if (ipAddress == null)
             return null;
 
-        try
-        {
+        try {
             using var httpClient = httpClientFactory.CreateClient();
             var ipLocation = await ipLocationProvider.GetLocation(httpClient, ipAddress, cancellationToken);
-            var location = await vhAgentRepo.LocationFind(ipLocation.CountryCode, ipLocation.RegionCode, ipLocation.CityCode);
-            if (location == null)
-            {
-                location = new LocationModel
-                {
+            var location =
+                await vhAgentRepo.LocationFind(ipLocation.CountryCode, ipLocation.RegionCode, ipLocation.CityCode);
+            if (location == null) {
+                location = new LocationModel {
                     LocationId = 0,
                     CountryCode = ipLocation.CountryCode,
                     CountryName = ipLocation.CountryName,
@@ -185,8 +193,7 @@ public class AgentService(
 
             return location;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             logger.LogError(ex, "Could not retrieve IP location. IP: {IP}", VhUtil.RedactIpAddress(ipAddress));
             return null;
         }
@@ -209,10 +216,8 @@ public class AgentService(
             .ToArray();
 
         // defaults
-        var serverConfig = new ServerConfig
-        {
-            TrackingOptions = new TrackingOptions
-            {
+        var serverConfig = new ServerConfig {
+            TrackingOptions = new TrackingOptions {
                 TrackTcp = true,
                 TrackUdp = true,
                 TrackIcmp = true,
@@ -221,13 +226,11 @@ public class AgentService(
                 TrackDestinationPort = true,
                 TrackDestinationIp = true
             },
-            SessionOptions = new SessionOptions
-            {
+            SessionOptions = new SessionOptions {
                 TcpBufferSize = AgentUtil.GetBestTcpBufferSize(serverModel.TotalMemory)
             },
             ServerSecret = serverFarmModel.Secret,
-            Certificates = serverFarmModel.Certificates.Select(x => new CertificateData
-            {
+            Certificates = serverFarmModel.Certificates.Select(x => new CertificateData {
                 CommonName = x.CommonName,
                 RawData = x.RawData
             }).ToArray()
@@ -235,27 +238,22 @@ public class AgentService(
 
         // merge with profile
         var serverProfileConfigJson = serverFarmModel.ServerProfile.ServerConfig;
-        if (!string.IsNullOrEmpty(serverProfileConfigJson))
-        {
-            try
-            {
+        if (!string.IsNullOrEmpty(serverProfileConfigJson)) {
+            try {
                 var serverProfileConfig = GmUtil.JsonDeserialize<ServerConfig>(serverProfileConfigJson);
                 serverConfig.Merge(serverProfileConfig);
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 logger.LogError(ex, "Could not deserialize ServerProfile's ServerConfig.");
             }
         }
 
         // enforced items
-        serverConfig.Merge(new ServerConfig
-        {
+        serverConfig.Merge(new ServerConfig {
             TcpEndPoints = tcpEndPoints,
             UdpEndPoints = udpEndPoints,
             UpdateStatusInterval = _agentOptions.ServerUpdateStatusInterval,
-            SessionOptions = new SessionOptions
-            {
+            SessionOptions = new SessionOptions {
                 Timeout = _agentOptions.SessionTemporaryTimeout,
                 SyncInterval = _agentOptions.SessionSyncInterval,
                 SyncCacheSize = _agentOptions.SyncCacheSize
@@ -265,8 +263,7 @@ public class AgentService(
         // renew certificate
         var certificate = serverFarmModel.GetCertificateInToken();
         if (certificate.ValidateInprogress)
-            serverConfig.DnsChallenge = new DnsChallenge
-            {
+            serverConfig.DnsChallenge = new DnsChallenge {
                 Token = certificate.ValidateToken ?? "",
                 KeyAuthorization = certificate.ValidateKeyAuthorization ?? ""
             };
@@ -299,8 +296,10 @@ public class AgentService(
         ServerInfo serverInfo,
         AddressFamily addressFamily)
     {
-        if (serverInfo.PrivateIpAddresses.All(x => x.AddressFamily != addressFamily) || // there is no private IP anymore
-            serverInfo.PublicIpAddresses.Any(x => x.AddressFamily == addressFamily)) // there is no problem because server could report its public IP
+        if (serverInfo.PrivateIpAddresses.All(x =>
+                x.AddressFamily != addressFamily) || // there is no private IP anymore
+            serverInfo.PublicIpAddresses.Any(x =>
+                x.AddressFamily == addressFamily)) // there is no problem because server could report its public IP
             return Array.Empty<IPAddress>();
 
         return oldAccessPoints
@@ -308,7 +307,8 @@ public class AgentService(
             .Select(x => x.IpAddress);
     }
 
-    private static List<AccessPointModel> BuildServerAccessPoints(Guid serverId, ICollection<ServerModel> farmServers, ServerInfo serverInfo)
+    private static List<AccessPointModel> BuildServerAccessPoints(Guid serverId, ICollection<ServerModel> farmServers,
+        ServerInfo serverInfo)
     {
         // all old PublicInToken AccessPoints in the same farm
         var oldTokenAccessPoints = farmServers
@@ -322,37 +322,39 @@ public class AgentService(
         // prepare server addresses
         var privateIpAddresses = serverInfo.PrivateIpAddresses;
         var publicIpAddresses = serverInfo.PublicIpAddresses.ToList();
-        publicIpAddresses.AddRange(GetMissedServerPublicIps(server.AccessPoints, serverInfo, AddressFamily.InterNetwork));
-        publicIpAddresses.AddRange(GetMissedServerPublicIps(server.AccessPoints, serverInfo, AddressFamily.InterNetworkV6));
+        publicIpAddresses.AddRange(
+            GetMissedServerPublicIps(server.AccessPoints, serverInfo, AddressFamily.InterNetwork));
+        publicIpAddresses.AddRange(GetMissedServerPublicIps(server.AccessPoints, serverInfo,
+            AddressFamily.InterNetworkV6));
 
         // create private addresses
         var accessPoints = privateIpAddresses
             .Distinct()
             .Where(ipAddress => !publicIpAddresses.Any(x => x.Equals(ipAddress)))
-            .Select(ipAddress => new AccessPointModel
-            {
+            .Select(ipAddress => new AccessPointModel {
                 AccessPointMode = AccessPointMode.Private,
                 IsListen = true,
                 IpAddress = ipAddress,
                 TcpPort = 443,
-                UdpPort = GetBestUdpPort(oldTokenAccessPoints, ipAddress, serverInfo.FreeUdpPortV4, serverInfo.FreeUdpPortV6)
+                UdpPort = GetBestUdpPort(oldTokenAccessPoints, ipAddress, serverInfo.FreeUdpPortV4,
+                    serverInfo.FreeUdpPortV6)
             })
             .ToList();
 
         // create public addresses and try to save last publicInToken state
         accessPoints
             .AddRange(publicIpAddresses
-            .Distinct()
-            .Select(ipAddress => new AccessPointModel
-            {
-                AccessPointMode = oldTokenAccessPoints.Any(x => x.IpAddress.Equals(ipAddress))
-                    ? AccessPointMode.PublicInToken // prefer last value
-                    : AccessPointMode.Public,
-                IsListen = privateIpAddresses.Any(x => x.Equals(ipAddress)),
-                IpAddress = ipAddress,
-                TcpPort = 443,
-                UdpPort = GetBestUdpPort(oldTokenAccessPoints, ipAddress, serverInfo.FreeUdpPortV4, serverInfo.FreeUdpPortV6)
-            }));
+                .Distinct()
+                .Select(ipAddress => new AccessPointModel {
+                    AccessPointMode = oldTokenAccessPoints.Any(x => x.IpAddress.Equals(ipAddress))
+                        ? AccessPointMode.PublicInToken // prefer last value
+                        : AccessPointMode.Public,
+                    IsListen = privateIpAddresses.Any(x => x.Equals(ipAddress)),
+                    IpAddress = ipAddress,
+                    TcpPort = 443,
+                    UdpPort = GetBestUdpPort(oldTokenAccessPoints, ipAddress, serverInfo.FreeUdpPortV4,
+                        serverInfo.FreeUdpPortV6)
+                }));
 
         // has other server in the farm offer any PublicInToken
         var hasOtherServerOwnPublicToken = farmServers.Any(x =>
@@ -360,17 +362,19 @@ public class AgentService(
             x.AccessPoints.Any(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken));
 
         // make sure at least one PublicInToken is selected
-        if (!hasOtherServerOwnPublicToken)
-        {
+        if (!hasOtherServerOwnPublicToken) {
             SelectAccessPointAsPublicInToken(accessPoints, AddressFamily.InterNetwork);
             SelectAccessPointAsPublicInToken(accessPoints, AddressFamily.InterNetworkV6);
         }
 
         return accessPoints.ToList();
     }
-    private static void SelectAccessPointAsPublicInToken(ICollection<AccessPointModel> accessPoints, AddressFamily addressFamily)
+
+    private static void SelectAccessPointAsPublicInToken(ICollection<AccessPointModel> accessPoints,
+        AddressFamily addressFamily)
     {
-        if (accessPoints.Any(x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress.AddressFamily == addressFamily))
+        if (accessPoints.Any(x =>
+                x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress.AddressFamily == addressFamily))
             return; // already set
 
         var firstPublic = accessPoints.FirstOrDefault(x =>
@@ -381,8 +385,7 @@ public class AgentService(
             return; // not public found to select as PublicInToken
 
         accessPoints.Remove(firstPublic);
-        accessPoints.Add(new AccessPointModel
-        {
+        accessPoints.Add(new AccessPointModel {
             AccessPointMode = AccessPointMode.PublicInToken,
             IsListen = firstPublic.IsListen,
             IpAddress = firstPublic.IpAddress,
@@ -393,8 +396,7 @@ public class AgentService(
 
     private static void UpdateServerStatus(ServerCache server, ServerStatus serverStatus, bool isConfigure)
     {
-        server.ServerStatus = new ServerStatusModel
-        {
+        server.ServerStatus = new ServerStatusModel {
             ServerStatusId = 0,
             ProjectId = server.ProjectId,
             ServerId = server.ServerId,

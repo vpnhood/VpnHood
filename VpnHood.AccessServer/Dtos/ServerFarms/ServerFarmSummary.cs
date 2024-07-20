@@ -8,4 +8,3 @@ public class ServerFarmSummary
     public required int UnusedTokenCount { get; init; }
     public required int ServerCount { get; init; }
 }
-

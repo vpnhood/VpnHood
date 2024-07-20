@@ -9,8 +9,7 @@ public class SessionCache : SessionBaseModel
 
     public SessionModel ToModel()
     {
-        return new SessionModel
-        {
+        return new SessionModel {
             ProjectId = ProjectId,
             AccessId = AccessId,
             DeviceId = DeviceId,

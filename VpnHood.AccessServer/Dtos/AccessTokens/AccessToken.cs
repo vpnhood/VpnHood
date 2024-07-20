@@ -22,5 +22,4 @@ public class AccessToken
     public required DateTime CreatedTime { get; init; }
     public required DateTime ModifiedTime { get; init; }
     public required string? Description { get; init; }
-
 }

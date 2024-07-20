@@ -1,7 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.Common.Messaging;
-using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -37,7 +35,8 @@ public class ReportTest
     public async Task GetStatusHistory()
     {
         using var farm = await ServerFarmDom.Create();
-        var res = await farm.TestApp.ReportClient.GetServerStatusHistoryAsync(farm.ProjectId, DateTime.UtcNow.AddDays(-1));
+        var res = await farm.TestApp.ReportClient.GetServerStatusHistoryAsync(farm.ProjectId,
+            DateTime.UtcNow.AddDays(-1));
         Assert.IsTrue(res.Count > 0);
     }
 }

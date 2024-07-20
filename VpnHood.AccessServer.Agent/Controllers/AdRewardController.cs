@@ -9,13 +9,14 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 [Authorize(AgentPolicy.SystemPolicy)]
 public class AdRewardController(
     ILogger<AdRewardController> logger,
-    CacheService cacheService) 
+    CacheService cacheService)
     : ControllerBase
 {
     [HttpGet("{adRewardSecret}")]
     [AllowAnonymous]
-    public async Task RewardAd(Guid projectId, string adRewardSecret, 
-        [FromQuery(Name = "custom_data")] string? customData, [FromQuery(Name = "reward_item")] string? rewardItem = null)
+    public async Task RewardAd(Guid projectId, string adRewardSecret,
+        [FromQuery(Name = "custom_data")] string? customData,
+        [FromQuery(Name = "reward_item")] string? rewardItem = null)
     {
         logger.LogTrace("RewardAd has been received. ProjectId: {ProjectId}, AdData: {AdData}", projectId, customData);
 

@@ -5,7 +5,7 @@ public class ServerModel
     public required Guid ProjectId { get; init; }
     public required Guid ServerId { get; init; }
     public required string ServerName { get; set; }
-    public required string? Version { get; set; } 
+    public required string? Version { get; set; }
     public required string? EnvironmentVersion { get; set; }
     public required string? OsInfo { get; set; }
     public required string? MachineName { get; set; }
@@ -16,7 +16,7 @@ public class ServerModel
     public required bool IsEnabled { get; set; }
     public required string? Description { get; set; }
     public required Guid AuthorizationCode { get; set; }
-    public required byte[] ManagementSecret { get; set; } 
+    public required byte[] ManagementSecret { get; set; }
     public required Guid ServerFarmId { get; set; }
     public required Guid ConfigCode { get; set; }
     public required Guid? LastConfigCode { get; set; }

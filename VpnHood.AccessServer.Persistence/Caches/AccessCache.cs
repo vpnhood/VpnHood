@@ -14,8 +14,7 @@ public class AccessCache : AccessBaseModel
 
     public AccessModel ToModel()
     {
-        return new AccessModel
-        {
+        return new AccessModel {
             AccessId = AccessId,
             AccessTokenId = AccessTokenId,
             DeviceId = DeviceId,

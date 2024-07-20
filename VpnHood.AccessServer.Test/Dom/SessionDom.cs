@@ -15,7 +15,8 @@ public class SessionDom
     public SessionResponseEx SessionResponseEx { get; private set; }
     public long SessionId => (long)SessionResponseEx.SessionId;
 
-    private SessionDom(TestApp testApp, AgentClient agentClient, AccessToken accessToken, SessionRequestEx sessionRequestEx, SessionResponseEx sessionResponseEx)
+    private SessionDom(TestApp testApp, AgentClient agentClient, AccessToken accessToken,
+        SessionRequestEx sessionRequestEx, SessionResponseEx sessionResponseEx)
     {
         TestApp = testApp;
         AgentClient = agentClient;
@@ -24,7 +25,8 @@ public class SessionDom
         SessionResponseEx = sessionResponseEx;
     }
 
-    public static async Task<SessionDom> Create(TestApp testApp, Guid serverId, AccessToken accessToken, SessionRequestEx sessionRequestEx, AgentClient? agentClient = null, bool assertError = true)
+    public static async Task<SessionDom> Create(TestApp testApp, Guid serverId, AccessToken accessToken,
+        SessionRequestEx sessionRequestEx, AgentClient? agentClient = null, bool assertError = true)
     {
         agentClient ??= testApp.CreateAgentClient(serverId);
         var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
@@ -37,7 +39,7 @@ public class SessionDom
 
     public Task<SessionResponse> AddUsage(long traffic = 100)
     {
-        return AddUsage(traffic/2, traffic/2);
+        return AddUsage(traffic / 2, traffic / 2);
     }
 
     public Task<SessionResponse> AddUsage(long sendTraffic, long receivedTraffic)
@@ -57,7 +59,8 @@ public class SessionDom
 
     public async Task Reload()
     {
-        SessionResponseEx = await AgentClient.Session_Get((uint)SessionId, SessionRequestEx.HostEndPoint, SessionRequestEx.ClientIp);
+        SessionResponseEx =
+            await AgentClient.Session_Get((uint)SessionId, SessionRequestEx.HostEndPoint, SessionRequestEx.ClientIp);
     }
 
     public Task<SessionCache> GetSessionFromCache()

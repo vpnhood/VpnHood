@@ -2,6 +2,7 @@
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Dtos.AccessTokens;
+
 public class AccessTokenUpdateParams
 {
     public Patch<string>? AccessTokenName { get; set; }

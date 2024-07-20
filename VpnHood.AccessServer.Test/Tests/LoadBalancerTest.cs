@@ -28,9 +28,9 @@ public class LoadBalancerTest
         Assert.AreEqual(SessionErrorCode.AccessError, sessionDom.SessionResponseEx.ErrorCode);
 
         // fail if the location in set
-        sessionDom = await accessTokenDom.CreateSession(autoRedirect: false, assertError: false, serverLocation: "10/*");
+        sessionDom =
+            await accessTokenDom.CreateSession(autoRedirect: false, assertError: false, serverLocation: "10/*");
         Assert.AreEqual(SessionErrorCode.Ok, sessionDom.SessionResponseEx.ErrorCode);
-
     }
 
     [TestMethod]
@@ -65,7 +65,8 @@ public class LoadBalancerTest
         await serverDom3.SendStatus(new ServerStatus { ConfigError = "error" });
 
         // configure serverDom5 with ipv6
-        serverDom5.ServerInfo.PublicIpAddresses = [await serverDom5.TestApp.NewIpV6(), await serverDom5.TestApp.NewIpV6()];
+        serverDom5.ServerInfo.PublicIpAddresses =
+            [await serverDom5.TestApp.NewIpV6(), await serverDom5.TestApp.NewIpV6()];
         serverDom5.ServerInfo.PrivateIpAddresses = serverDom5.ServerInfo.PublicIpAddresses;
         await serverDom5.Configure();
 
@@ -76,9 +77,9 @@ public class LoadBalancerTest
         var accessTokenDom = await farm.CreateAccessToken();
 
         // create sessions
-        for (var i = 0; i < 10; i++)
-        {
-            var addressFamily = i == 9 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork; //only one IPv6 request
+        for (var i = 0; i < 10; i++) {
+            var addressFamily =
+                i == 9 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork; //only one IPv6 request
             var sessionDom = await accessTokenDom.CreateSession(addressFamily: addressFamily, autoRedirect: true);
 
             // find the server that create the session
@@ -116,8 +117,7 @@ public class LoadBalancerTest
         var accessTokenDom = await farm.CreateAccessToken();
 
         // create sessions
-        for (var i = 0; i < 10; i++)
-        {
+        for (var i = 0; i < 10; i++) {
             var sessionDom = await accessTokenDom.CreateSession(autoRedirect: true);
 
             // find the server that create the session
@@ -152,8 +152,7 @@ public class LoadBalancerTest
         var accessTokenDom = await farm.CreateAccessToken();
 
         // create sessions
-        for (var i = 0; i < 6; i++)
-        {
+        for (var i = 0; i < 6; i++) {
             var sessionDom = await accessTokenDom.CreateSession(autoRedirect: true, serverLocation: "10");
             Assert.AreEqual(sessionDom.SessionResponseEx.ServerLocation, "10/0");
 
@@ -169,7 +168,6 @@ public class LoadBalancerTest
         Assert.AreEqual(0, serverDom3.ServerStatus.SessionCount);
         Assert.AreEqual(0, serverDom4.ServerStatus.SessionCount);
         Assert.AreEqual(0, serverDom5.ServerStatus.SessionCount);
-
     }
 
     [TestMethod]
@@ -179,13 +177,12 @@ public class LoadBalancerTest
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
 
         // Create and init servers
-        var serverDoms = new List<ServerDom>
-        {
+        var serverDoms = new List<ServerDom> {
             await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.0")),
             await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.1")),
             await farm.AddNewServer(publicIpV4: IPAddress.Parse("20.0.0.2")),
             await farm.AddNewServer(publicIpV4: IPAddress.Parse("30.0.0.3")),
-            await farm.AddNewServer(publicIpV4: IPAddress.Parse("40.0.0.4")),
+            await farm.AddNewServer(publicIpV4: IPAddress.Parse("40.0.0.4"))
         };
 
         serverDoms[0].ServerStatus.SessionCount = 10;
@@ -200,23 +197,33 @@ public class LoadBalancerTest
         var accessTokenDom = await farm.CreateAccessToken();
 
         // check redirect list for location 10
-        var sessionDom2 = await accessTokenDom.CreateSession(autoRedirect: false, serverLocation: "10", assertError: false);
-        var redirectHostEndPoints = sessionDom2.SessionResponseEx.RedirectHostEndPoints!.Where(x=>x.Address.IsV4()).ToArray();
+        var sessionDom2 =
+            await accessTokenDom.CreateSession(autoRedirect: false, serverLocation: "10", assertError: false);
+        var redirectHostEndPoints =
+            sessionDom2.SessionResponseEx.RedirectHostEndPoints!.Where(x => x.Address.IsV4()).ToArray();
         Assert.AreEqual(sessionDom2.SessionResponseEx.ErrorCode, SessionErrorCode.RedirectHost);
         Assert.AreEqual(2, redirectHostEndPoints.Length);
-        Assert.AreEqual(serverDoms[1].ServerInfo.PublicIpAddresses.First(x=>x.IsV4()), redirectHostEndPoints[0].Address);
-        Assert.AreEqual(serverDoms[0].ServerInfo.PublicIpAddresses.First(x=>x.IsV4()), redirectHostEndPoints[1].Address);
+        Assert.AreEqual(serverDoms[1].ServerInfo.PublicIpAddresses.First(x => x.IsV4()),
+            redirectHostEndPoints[0].Address);
+        Assert.AreEqual(serverDoms[0].ServerInfo.PublicIpAddresses.First(x => x.IsV4()),
+            redirectHostEndPoints[1].Address);
 
         // check redirect list for location auto
         sessionDom2 = await accessTokenDom.CreateSession(autoRedirect: false, serverLocation: null, assertError: false);
-        redirectHostEndPoints = sessionDom2.SessionResponseEx.RedirectHostEndPoints!.Where(x=>x.Address.IsV4()).ToArray();
+        redirectHostEndPoints =
+            sessionDom2.SessionResponseEx.RedirectHostEndPoints!.Where(x => x.Address.IsV4()).ToArray();
         Assert.AreEqual(sessionDom2.SessionResponseEx.ErrorCode, SessionErrorCode.RedirectHost);
         Assert.AreEqual(5, redirectHostEndPoints.Length);
-        Assert.AreEqual(serverDoms[4].ServerInfo.PublicIpAddresses.First(x => x.IsV4()), redirectHostEndPoints[0].Address);
-        Assert.AreEqual(serverDoms[3].ServerInfo.PublicIpAddresses.First(x => x.IsV4()), redirectHostEndPoints[1].Address);
-        Assert.AreEqual(serverDoms[2].ServerInfo.PublicIpAddresses.First(x => x.IsV4()), redirectHostEndPoints[2].Address);
-        Assert.AreEqual(serverDoms[1].ServerInfo.PublicIpAddresses.First(x => x.IsV4()), redirectHostEndPoints[3].Address);
-        Assert.AreEqual(serverDoms[0].ServerInfo.PublicIpAddresses.First(x => x.IsV4()), redirectHostEndPoints[4].Address);
+        Assert.AreEqual(serverDoms[4].ServerInfo.PublicIpAddresses.First(x => x.IsV4()),
+            redirectHostEndPoints[0].Address);
+        Assert.AreEqual(serverDoms[3].ServerInfo.PublicIpAddresses.First(x => x.IsV4()),
+            redirectHostEndPoints[1].Address);
+        Assert.AreEqual(serverDoms[2].ServerInfo.PublicIpAddresses.First(x => x.IsV4()),
+            redirectHostEndPoints[2].Address);
+        Assert.AreEqual(serverDoms[1].ServerInfo.PublicIpAddresses.First(x => x.IsV4()),
+            redirectHostEndPoints[3].Address);
+        Assert.AreEqual(serverDoms[0].ServerInfo.PublicIpAddresses.First(x => x.IsV4()),
+            redirectHostEndPoints[4].Address);
     }
 
 
@@ -238,8 +245,7 @@ public class LoadBalancerTest
         var accessTokenDom = await farm.CreateAccessToken();
 
         // create sessions
-        for (var i = 0; i < 10; i++)
-        {
+        for (var i = 0; i < 10; i++) {
             var sessionDom = await accessTokenDom.CreateSession(autoRedirect: true);
 
             // find the server that create the session
@@ -295,9 +301,9 @@ public class LoadBalancerTest
         var accessTokenDom = await farm.CreateAccessToken();
 
         // create sessions for IpV6 clients
-        for (var i = 0; i < 4; i++)
-        {
-            var sessionDom = await accessTokenDom.CreateSession(autoRedirect: true, addressFamily: AddressFamily.InterNetworkV6);
+        for (var i = 0; i < 4; i++) {
+            var sessionDom =
+                await accessTokenDom.CreateSession(autoRedirect: true, addressFamily: AddressFamily.InterNetworkV6);
 
             // find the server that create the session
             var serverDom = farm.FindServerByEndPoint(sessionDom.SessionRequestEx.HostEndPoint);
@@ -317,8 +323,7 @@ public class LoadBalancerTest
         // config farm
         using var farmDom = await ServerFarmDom.Create(serverCount: 0);
         farmDom.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
-        await farmDom.Update(new ServerFarmUpdateParams
-        {
+        await farmDom.Update(new ServerFarmUpdateParams {
             MaxCertificateCount = new PatchOfInteger { Value = 2 }
         });
 
@@ -331,8 +336,7 @@ public class LoadBalancerTest
 
         // make sure session after adding certificate
         var dnsName1 = $"{Guid.NewGuid()}.com";
-        await farmDom.CertificateReplace(new CertificateCreateParams
-        {
+        await farmDom.CertificateReplace(new CertificateCreateParams {
             CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
         });
 
@@ -340,8 +344,7 @@ public class LoadBalancerTest
         Assert.IsTrue(farmDom.Servers.All(x => x.Server.ServerState == ServerState.Configuring));
 
         // create sessions for IpV6 clients
-        for (var i = 0; i < 4; i++)
-        {
+        for (var i = 0; i < 4; i++) {
             var sessionDom = await accessTokenDom.CreateSession(autoRedirect: true);
 
             // find the server that create the session

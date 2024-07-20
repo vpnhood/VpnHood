@@ -43,10 +43,12 @@ public class ServersController(
 
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<ServerData[]> List(Guid projectId, string? search = null, Guid? serverId = null, Guid? serverFarmId = null,
+    public Task<ServerData[]> List(Guid projectId, string? search = null, Guid? serverId = null,
+        Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = 1000)
     {
-        return serverService.List(projectId, search: search, serverId: serverId, serverFarmId: serverFarmId, recordIndex, recordCount);
+        return serverService.List(projectId, search: search, serverId: serverId, serverFarmId: serverFarmId,
+            recordIndex, recordCount);
     }
 
     [HttpPost("{serverId:guid}/reconfigure")]
@@ -55,10 +57,11 @@ public class ServersController(
     {
         return serverService.Reconfigure(projectId, serverId);
     }
-    
+
     [HttpPost("{serverId}/install-by-ssh-user-password")]
     [AuthorizeProjectPermission(Permissions.ServerInstall)]
-    public Task InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
+    public Task InstallBySshUserPassword(Guid projectId, Guid serverId,
+        ServerInstallBySshUserPasswordParams installParams)
     {
         return serverService.InstallBySshUserPassword(projectId, serverId, installParams);
     }
@@ -69,7 +72,7 @@ public class ServersController(
     {
         return serverService.InstallBySshUserKey(projectId, serverId, installParams);
     }
-    
+
     [HttpGet("{serverId}/install/manual")]
     [AuthorizeProjectPermission(Permissions.ServerInstall)]
     public Task<ServerInstallManual> GetInstallManual(Guid projectId, Guid serverId)

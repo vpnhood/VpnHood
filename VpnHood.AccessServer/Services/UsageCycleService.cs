@@ -9,7 +9,7 @@ namespace VpnHood.AccessServer.Services;
 public class UsageCycleService(
     ILogger<UsageCycleService> logger,
     VhContext vhContext,
-    AgentCacheClient agentCacheClient) 
+    AgentCacheClient agentCacheClient)
     : IGrayMintJob
 {
     private string? _lastCycleIdCache;
@@ -34,8 +34,7 @@ public class UsageCycleService(
         logger.LogInformation("Checking usage cycles. CurrentCycleId: {CurrentCycleId}", CurrentCycleId);
 
         // check is current cycle already processed from db
-        if (await vhContext.PublicCycles.AnyAsync(e => e.PublicCycleId == CurrentCycleId))
-        {
+        if (await vhContext.PublicCycles.AnyAsync(e => e.PublicCycleId == CurrentCycleId)) {
             _lastCycleIdCache = CurrentCycleId;
             return;
         }
@@ -48,8 +47,8 @@ public class UsageCycleService(
         await vhContext.Accesses
             .Where(access => access.CycleTraffic > 0)
             .ExecuteUpdateAsync(p => p
-            .SetProperty(access => access.LastCycleSentTraffic, access => access.TotalSentTraffic)
-            .SetProperty(access => access.LastCycleReceivedTraffic, access => access.TotalReceivedTraffic));
+                .SetProperty(access => access.LastCycleSentTraffic, access => access.TotalSentTraffic)
+                .SetProperty(access => access.LastCycleReceivedTraffic, access => access.TotalReceivedTraffic));
 
         // add current cycle
         await vhContext.PublicCycles.AddAsync(new PublicCycleModel { PublicCycleId = CurrentCycleId });
@@ -60,12 +59,10 @@ public class UsageCycleService(
 
         _lastCycleIdCache = CurrentCycleId;
         logger.LogInformation("All usage cycles has been reset. CurrentCycleId: {CurrentCycleId}", CurrentCycleId);
-
     }
 
     public Task RunJob(CancellationToken cancellationToken)
     {
         return UpdateCycle();
     }
-
 }

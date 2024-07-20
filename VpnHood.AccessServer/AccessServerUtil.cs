@@ -7,8 +7,7 @@ public static class AccessServerUtil
 {
     public static string FindUniqueName(string template, string?[] names)
     {
-        for (var i = 1; ; i++)
-        {
+        for (var i = 1;; i++) {
             var name = template.Replace("##", i.ToString());
             if (names.All(x => x != name))
                 return name;
@@ -26,11 +25,9 @@ public static class AccessServerUtil
         var result = new StringBuilder();
         var isCompleted = false;
         var passwordTried = false;
-        while (!isCompleted)
-        {
+        while (!isCompleted) {
             // password prompt action
-            var expectAction1 = new ExpectAction("password for ", str =>
-            {
+            var expectAction1 = new ExpectAction("password for ", str => {
                 result.Append(str);
 
                 if (string.IsNullOrEmpty(loginPassword))
@@ -44,8 +41,7 @@ public static class AccessServerUtil
                 passwordTried = true;
             });
 
-            var expectAction2 = new ExpectAction("CommandExecuted!", str =>
-            {
+            var expectAction2 = new ExpectAction("CommandExecuted!", str => {
                 result.Append(str);
                 isCompleted = true;
             });

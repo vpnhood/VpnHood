@@ -21,15 +21,16 @@ public class ServerConfigureService(
             server.ConfigCode = Guid.NewGuid();
 
         await vhRepo.SaveChangesAsync();
-        await agentCacheClient.InvalidateServers(projectId: projectId, serverFarmId: serverFarmId, serverProfileId: serverProfileId);
+        await agentCacheClient.InvalidateServers(projectId: projectId, serverFarmId: serverFarmId,
+            serverProfileId: serverProfileId);
     }
 
     public async Task SaveChangesAndInvalidateServerFarm(Guid projectId, Guid serverFarmId, bool reconfigureServers)
     {
-        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId: serverFarmId, includeCertificates: true, includeServers: true);
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId: serverFarmId, includeCertificates: true,
+            includeServers: true);
         FarmTokenBuilder.UpdateIfChanged(serverFarm);
-        if (reconfigureServers)
-        {
+        if (reconfigureServers) {
             foreach (var server in serverFarm.Servers!)
                 server.ConfigCode = Guid.NewGuid();
         }
@@ -40,14 +41,12 @@ public class ServerConfigureService(
 
     public async Task<ServerCache?> SaveChangesAndInvalidateServer(Guid projectId, Guid serverId, bool reconfigure)
     {
-        if (reconfigure)
-        {
+        if (reconfigure) {
             var server = await vhRepo.ServerGet(projectId, serverId);
             server.ConfigCode = Guid.NewGuid();
             await SaveChangesAndInvalidateServerFarm(projectId, server.ServerFarmId, false);
         }
-        else
-        {
+        else {
             await vhRepo.SaveChangesAsync();
             await agentCacheClient.InvalidateServers(projectId: projectId, serverId: serverId);
         }
@@ -57,8 +56,7 @@ public class ServerConfigureService(
 
     public async Task WaitForFarmConfiguration(Guid projectId, Guid serverFarmId, CancellationToken cancellationToken)
     {
-        while (true)
-        {
+        while (true) {
             cancellationToken.ThrowIfCancellationRequested();
 
             var servers = await agentCacheClient.GetServers(projectId, serverFarmId: serverFarmId);

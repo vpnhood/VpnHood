@@ -35,4 +35,3 @@ public class TestAuthorizationProvider(IServiceScopeFactory serviceScopeFactory)
         throw new NotSupportedException();
     }
 }
-

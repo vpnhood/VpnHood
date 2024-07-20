@@ -1,5 +1,4 @@
-﻿using System.Runtime.ConstrainedExecution;
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography.X509Certificates;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.Certificates;
 using VpnHood.AccessServer.Persistence.Models;
@@ -18,7 +17,8 @@ public class CertificateService(
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId, includeCertificates: true);
 
         // build new certificate
-        var certificate = BuildSelfSinged(serverFarm.ProjectId, serverFarmId: serverFarm.ServerFarmId, createParams: createParams);
+        var certificate = BuildSelfSinged(serverFarm.ProjectId, serverFarmId: serverFarm.ServerFarmId,
+            createParams: createParams);
         serverFarm.UseHostName = certificate.IsValidated; // disable hostname for self-signed certificate
 
         // keep the recent certificates by MaxCertificateCount and delete the rest
@@ -61,16 +61,15 @@ public class CertificateService(
             .ToList();
 
         // reset archive certificates
-        foreach (var cert in certificates)
-        {
+        foreach (var cert in certificates) {
             cert.AutoValidate = false;
             cert.IsInToken = false;
         }
 
         // delete duplicate common name
-        var duplicates = certificates.Where(x => x.CommonName.Equals(newCertificate.CommonName, StringComparison.OrdinalIgnoreCase));
-        foreach (var cert in duplicates.ToArray())
-        {
+        var duplicates = certificates.Where(x =>
+            x.CommonName.Equals(newCertificate.CommonName, StringComparison.OrdinalIgnoreCase));
+        foreach (var cert in duplicates.ToArray()) {
             cert.IsDeleted = true;
             certificates.Remove(cert);
         }
@@ -111,29 +110,32 @@ public class CertificateService(
             .ContinueWith(x => x.Result.ToDto());
     }
 
-    public static CertificateModel BuildByImport(Guid projectId, Guid serverFarmId, CertificateImportParams importParams)
+    public static CertificateModel BuildByImport(Guid projectId, Guid serverFarmId,
+        CertificateImportParams importParams)
     {
-        var x509Certificate2 = new X509Certificate2(importParams.RawData, importParams.Password, X509KeyStorageFlags.Exportable);
+        var x509Certificate2 =
+            new X509Certificate2(importParams.RawData, importParams.Password, X509KeyStorageFlags.Exportable);
         return BuildModel(projectId, serverFarmId, x509Certificate2);
     }
 
-    private static CertificateModel BuildSelfSinged(Guid projectId, Guid serverFarmId, CertificateCreateParams? createParams)
+    private static CertificateModel BuildSelfSinged(Guid projectId, Guid serverFarmId,
+        CertificateCreateParams? createParams)
     {
         // check user quota
-        createParams ??= new CertificateCreateParams
-        {
+        createParams ??= new CertificateCreateParams {
             CertificateSigningRequest = new CertificateSigningRequest { CommonName = CertificateUtil.CreateRandomDns() }
         };
 
         var expirationTime = createParams.ExpirationTime ?? DateTime.UtcNow.AddYears(Random.Shared.Next(8, 12));
-        var x509Certificate2 = CertificateUtil.CreateSelfSigned(subjectName: createParams.CertificateSigningRequest.BuildSubjectName(), expirationTime);
+        var x509Certificate2 =
+            CertificateUtil.CreateSelfSigned(subjectName: createParams.CertificateSigningRequest.BuildSubjectName(),
+                expirationTime);
         return BuildModel(projectId, serverFarmId, x509Certificate2);
     }
 
     private static CertificateModel BuildModel(Guid projectId, Guid serverFarmId, X509Certificate2 x509Certificate2)
     {
-        var certificate = new CertificateModel
-        {
+        var certificate = new CertificateModel {
             CertificateId = Guid.NewGuid(),
             ServerFarmId = serverFarmId,
             ProjectId = projectId,

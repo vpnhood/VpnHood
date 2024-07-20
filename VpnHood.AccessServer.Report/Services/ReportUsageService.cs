@@ -31,12 +31,23 @@ public class ReportUsageService(
         usageBeginTime = ToUtcWithKind(usageBeginTime);
         usageEndTime = ToUtcWithKind(usageEndTime);
 
-        if (deviceId != null && serverId != null) throw new ArgumentException("serverId must be null when deviceId is provided.");
-        if (deviceId != null && serverFarmId != null) throw new ArgumentException("serverFarmId must be null when deviceId is provided.");
+        if (deviceId != null && serverId != null)
+            throw new ArgumentException("serverId must be null when deviceId is provided.");
+        if (deviceId != null && serverFarmId != null)
+            throw new ArgumentException("serverFarmId must be null when deviceId is provided.");
 
-        if (serverFarmId != null) { projectId = null; }
-        if (serverId != null) { projectId = null; serverFarmId = null; }
-        if (deviceId != null) { projectId = null; }
+        if (serverFarmId != null) {
+            projectId = null;
+        }
+
+        if (serverId != null) {
+            projectId = null;
+            serverFarmId = null;
+        }
+
+        if (deviceId != null) {
+            projectId = null;
+        }
 
         // check cache
         var cacheKey = ReportUtil.GenerateCacheKey($"project_usage_{projectId}_{serverFarmId}_{serverId}_{deviceId}",
@@ -55,14 +66,12 @@ public class ReportUsageService(
                 (accessUsage.CreatedTime >= usageBeginTime) &&
                 (accessUsage.CreatedTime <= usageEndTime || usageEndTime == null))
             .GroupBy(accessUsage => accessUsage.DeviceId)
-            .Select(g => new
-            {
+            .Select(g => new {
                 SentTraffic = g.Sum(y => y.SentTraffic),
                 ReceivedTraffic = g.Sum(y => y.ReceivedTraffic)
             })
             .GroupBy(g => true)
-            .Select(g => new Usage
-            {
+            .Select(g => new Usage {
                 DeviceCount = g.Count(),
                 SentTraffic = g.Sum(y => y.SentTraffic),
                 ReceivedTraffic = g.Sum(y => y.ReceivedTraffic)
@@ -87,8 +96,14 @@ public class ReportUsageService(
         usageEndTime = ToUtcWithKind(usageEndTime);
         usageEndTime ??= DateTime.UtcNow;
 
-        if (serverFarmId != null) { projectId = null; }
-        if (serverId != null) { projectId = null; serverFarmId = null; }
+        if (serverFarmId != null) {
+            projectId = null;
+        }
+
+        if (serverId != null) {
+            projectId = null;
+            serverFarmId = null;
+        }
 
         // no lock
         await using var transReport = await vhReportContext.WithNoLockTransaction();
@@ -96,11 +111,13 @@ public class ReportUsageService(
         // check cache
         var cacheKey = ReportUtil.GenerateCacheKey($"project_usage_{projectId}_{serverFarmId}_{serverId}",
             usageBeginTime, usageEndTime, out var cacheExpiration);
-        if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out ServerStatusHistory[]? cacheRes) && cacheRes != null)
+        if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out ServerStatusHistory[]? cacheRes) &&
+            cacheRes != null)
             return cacheRes;
 
         // go back to the time that ensure all servers sent their status
-        usageEndTime = usageEndTime.Value.Subtract(options.Value.ServerUpdateStatusInterval * 2).Subtract(TimeSpan.FromMinutes(5));
+        usageEndTime = usageEndTime.Value.Subtract(options.Value.ServerUpdateStatusInterval * 2)
+            .Subtract(TimeSpan.FromMinutes(5));
         var step1 = Math.Max(5, options.Value.ServerUpdateStatusInterval.TotalMinutes);
         var step2 = (int)Math.Max(step1, (usageEndTime.Value - usageBeginTime).TotalMinutes / 12 / step1);
         var baseTime = usageBeginTime;
@@ -114,33 +131,30 @@ public class ReportUsageService(
                 (x.ServerId == serverId || serverId == null) &&
                 x.CreatedTime >= usageBeginTime &&
                 x.CreatedTime <= usageEndTime)
-            .GroupBy(serverStatus => new
-            {
+            .GroupBy(serverStatus => new {
                 //Minutes = (long)(VhReportContext.DateDiffMinute(baseTime, serverStatus.CreatedTime) / step1),
                 //Minutes = (long)(EF.Functions.DateDiffMinute(baseTime, serverStatus.CreatedTime) / step1),
                 Minutes = (long)(serverStatus.CreatedTime - baseTime).TotalMinutes / step1,
                 serverStatus.ServerId
             })
-            .Select(g => new
-            {
+            .Select(g => new {
                 g.Key.Minutes,
                 g.Key.ServerId,
                 SessionCount = g.Max(x => x.SessionCount),
                 TunnelTransferSpeed = g.Max(x => x.TunnelReceiveSpeed + x.TunnelSendSpeed),
                 CpuUsage = serverId != null ? g.Max(x => x.CpuUsage ?? 0) : 0,
-                AvailableMemory = serverId != null ? g.Max(x => x.AvailableMemory ?? 0) : 0,
+                AvailableMemory = serverId != null ? g.Max(x => x.AvailableMemory ?? 0) : 0
             });
 
         // sum of max in status interval
         var serverStatuses2 = serverStatuses
             .GroupBy(x => x.Minutes)
-            .Select(g => new
-            {
+            .Select(g => new {
                 Minutes = g.Key,
                 SessionCount = g.Sum(x => x.SessionCount),
                 TunnelTransferSpeed = g.Sum(x => x.TunnelTransferSpeed),
                 CpuUsage = serverId != null ? g.Max(x => x.CpuUsage) : 0,
-                AvailableMemory = serverId != null ? g.Max(x => x.AvailableMemory) : 0,
+                AvailableMemory = serverId != null ? g.Max(x => x.AvailableMemory) : 0
                 // ServerCount = g.Count() 
             });
 
@@ -148,13 +162,12 @@ public class ReportUsageService(
         var totalStatuses = serverStatuses2
             .GroupBy(x => (int)(x.Minutes / step2))
             .Select(g =>
-                new ServerStatusHistory
-                {
+                new ServerStatusHistory {
                     Time = baseTime.AddMinutes(g.Key * step2 * step1),
                     SessionCount = g.Max(y => y.SessionCount),
                     TunnelTransferSpeed = g.Max(y => y.TunnelTransferSpeed),
                     CpuUsage = serverId != null ? g.Max(x => x.CpuUsage) : 0,
-                    AvailableMemory = serverId != null ? g.Max(x => x.AvailableMemory) : 0,
+                    AvailableMemory = serverId != null ? g.Max(x => x.AvailableMemory) : 0
                     // ServerCount = g.Max(y=>y.ServerCount) 
                 })
             .OrderBy(x => x.Time);
@@ -164,8 +177,7 @@ public class ReportUsageService(
         // add missed step
         var stepSize = step2 * step1;
         var stepCount = (int)((usageEndTime - usageBeginTime).Value.TotalMinutes / stepSize) + 1;
-        for (var i = 0; i < stepCount; i++)
-        {
+        for (var i = 0; i < stepCount; i++) {
             var time = usageBeginTime.AddMinutes(i * stepSize);
             if (res.Count <= i || res[i].Time != time)
                 res.Insert(i, new ServerStatusHistory { Time = time });
@@ -178,7 +190,8 @@ public class ReportUsageService(
         return res.ToArray();
     }
 
-    public async Task<Dictionary<Guid, Usage>> GetAccessTokensUsage(Guid projectId, Guid[]? accessTokenIds = null, Guid? serverFarmId = null,
+    public async Task<Dictionary<Guid, Usage>> GetAccessTokensUsage(Guid projectId, Guid[]? accessTokenIds = null,
+        Guid? serverFarmId = null,
         DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
     {
         usageBeginTime = ToUtcWithKind(usageBeginTime);
@@ -187,21 +200,19 @@ public class ReportUsageService(
             usageBeginTime, usageEndTime, out var cacheExpiration);
 
         // look from big cache
-        if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out Dictionary<Guid, Usage>? usages) && usages != null)
-        {
+        if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out Dictionary<Guid, Usage>? usages) &&
+            usages != null) {
             // filter result by given accessTokenIds
             if (accessTokenIds != null)
                 usages = usages.Where(x => accessTokenIds.Contains(x.Key))
                     .ToDictionary(p => p.Key, p => p.Value);
 
             return usages;
-
         }
 
         // look for small cache
         var queryAccessTokenIds = accessTokenIds is { Length: <= SmallCacheLength } ? accessTokenIds : null;
-        if (queryAccessTokenIds != null)
-        {
+        if (queryAccessTokenIds != null) {
             cacheKey = ReportUtil.GenerateCacheKey(
                 $"accessToken_usage_{projectId}_{serverFarmId}_{string.Join(',', queryAccessTokenIds)}",
                 usageBeginTime, usageEndTime, out _);
@@ -220,11 +231,9 @@ public class ReportUsageService(
                 (accessUsage.CreatedTime >= usageBeginTime) &&
                 (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime))
             .GroupBy(accessUsage => accessUsage.AccessTokenId)
-            .Select(g => new
-            {
+            .Select(g => new {
                 AccessTokenId = g.Key,
-                Usage = new Usage
-                {
+                Usage = new Usage {
                     SentTraffic = g.Sum(y => y.SentTraffic),
                     ReceivedTraffic = g.Sum(y => y.ReceivedTraffic),
                     DeviceCount = g.Select(y => y.DeviceId).Distinct().Count(),
@@ -259,8 +268,8 @@ public class ReportUsageService(
             usageBeginTime, usageEndTime, out var cacheExpiration);
 
         // look from big cache
-        if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out Dictionary<Guid, TrafficUsage>? usages) && usages != null)
-        {
+        if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out Dictionary<Guid, TrafficUsage>? usages) &&
+            usages != null) {
             // filter result by given deviceIds
             if (deviceIds != null)
                 usages = usages.Where(x => deviceIds.Contains(x.Key))
@@ -272,8 +281,7 @@ public class ReportUsageService(
         // look for small cache
         await using var transReport = await vhReportContext.WithNoLockTransaction();
         var queryDeviceIds = deviceIds is { Length: <= SmallCacheLength } ? deviceIds : null;
-        if (queryDeviceIds != null)
-        {
+        if (queryDeviceIds != null) {
             cacheKey = ReportUtil.GenerateCacheKey(
                 $"device_usage_{projectId}_{accessTokenId}_{serverFarmId}_{string.Join(',', queryDeviceIds)}",
                 usageBeginTime, usageEndTime, out _);
@@ -293,12 +301,10 @@ public class ReportUsageService(
                 (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime)
             group new { accessUsage } by (Guid?)accessUsage.DeviceId
             into g
-            select new
-            {
+            select new {
                 DeviceId = g.Key,
                 Usage = g.Key != null
-                    ? new TrafficUsage
-                    {
+                    ? new TrafficUsage {
                         SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
                         ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
                         LastUsedTime = g.Max(y => y.accessUsage.CreatedTime)

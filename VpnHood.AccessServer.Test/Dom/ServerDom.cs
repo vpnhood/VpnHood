@@ -27,26 +27,25 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
 
     public static ServerDom Attach(TestApp testApp, VpnServer server)
     {
-        var serverInfo = new ServerInfo
-        {
+        var serverInfo = new ServerInfo {
             Version = server.Version != null ? Version.Parse(server.Version) : new Version(),
-            EnvironmentVersion = server.EnvironmentVersion != null ? Version.Parse(server.EnvironmentVersion) : new Version(),
+            EnvironmentVersion = server.EnvironmentVersion != null
+                ? Version.Parse(server.EnvironmentVersion)
+                : new Version(),
             PrivateIpAddresses = [],
             PublicIpAddresses = [],
             MachineName = server.MachineName,
             LogicalCoreCount = server.LogicalCoreCount ?? 0,
             OsInfo = server.OsInfo,
             TotalMemory = server.TotalMemory,
-            Status = new ServerStatus
-            {
+            Status = new ServerStatus {
                 AvailableMemory = server.ServerStatus?.AvailableMemory ?? 0,
                 ConfigCode = Guid.Empty.ToString(),
                 CpuUsage = server.ServerStatus?.CpuUsage ?? 0,
                 SessionCount = server.ServerStatus?.SessionCount ?? 0,
                 TcpConnectionCount = server.ServerStatus?.TcpConnectionCount ?? 0,
                 ThreadCount = server.ServerStatus?.ThreadCount ?? 0,
-                TunnelSpeed = new Traffic
-                {
+                TunnelSpeed = new Traffic {
                     Sent = server.ServerStatus?.TunnelReceiveSpeed ?? 0,
                     Received = server.ServerStatus?.TunnelSendSpeed ?? 0
                 },
@@ -80,10 +79,9 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
                 randomStatus: false,
                 logicalCore: logicalCore,
                 publicIpV4: publicIpV4)
-            );
+        );
 
-        if (configure)
-        {
+        if (configure) {
             await myServer.Configure(sendStatus);
             await myServer.Reload();
         }
@@ -138,7 +136,8 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
             clientId,
             await TestApp.NewIpV4());
 
-        var testSession = await SessionDom.Create(TestApp, ServerId, accessToken, sessionRequestEx, AgentClient, assertError);
+        var testSession =
+            await SessionDom.Create(TestApp, ServerId, accessToken, sessionRequestEx, AgentClient, assertError);
         Sessions.Add(testSession);
         return testSession;
     }
@@ -150,8 +149,7 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
 
     public async Task WaitForState(ServerState state)
     {
-        await TestUtil.AssertEqualsWait(state, async () =>
-        {
+        await TestUtil.AssertEqualsWait(state, async () => {
             await Reload();
             return Server.ServerState;
         });

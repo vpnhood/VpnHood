@@ -7,8 +7,7 @@ public static class AccessTokenConverter
 {
     public static AccessToken ToDto(this AccessTokenModel model, string? serverFarmName)
     {
-        var accessToken = new AccessToken
-        {
+        var accessToken = new AccessToken {
             ServerFarmId = model.ServerFarmId,
             AccessTokenId = model.AccessTokenId,
             ServerFarmName = serverFarmName,

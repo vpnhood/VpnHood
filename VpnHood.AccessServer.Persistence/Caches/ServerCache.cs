@@ -36,7 +36,8 @@ public class ServerCache
     {
         if (ConfigureTime == null) return ServerState.NotInstalled;
         if (!string.IsNullOrEmpty(LastConfigError)) return ServerState.Error;
-        if (ServerStatus == null || ServerStatus.CreatedTime < DateTime.UtcNow - lostServerThreshold) return ServerState.Lost;
+        if (ServerStatus == null || ServerStatus.CreatedTime < DateTime.UtcNow - lostServerThreshold)
+            return ServerState.Lost;
         if (ConfigCode != LastConfigCode) return ServerState.Configuring;
         if (!IsEnabled) return ServerState.Disabled;
         if (ServerStatus.SessionCount == 0) return ServerState.Idle;

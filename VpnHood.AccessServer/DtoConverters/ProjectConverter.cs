@@ -7,8 +7,7 @@ public static class ProjectConverter
 {
     public static Project ToDto(this ProjectModel model, Uri agentUrl)
     {
-        var project = new Project
-        {
+        var project = new Project {
             ProjectId = model.ProjectId,
             ProjectName = model.ProjectName,
             GaApiSecret = model.GaApiSecret,

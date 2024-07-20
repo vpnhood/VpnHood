@@ -12,8 +12,7 @@ public class SyncTest
     private static async Task<ServerStatusModel> AddServerStatus(VhContext vhContext, Guid projectId, Guid serverId,
         bool isLast)
     {
-        var entityEntry = await vhContext.ServerStatuses.AddAsync(new ServerStatusModel
-        {
+        var entityEntry = await vhContext.ServerStatuses.AddAsync(new ServerStatusModel {
             ProjectId = projectId,
             ServerId = serverId,
             CreatedTime = DateTime.UtcNow,
@@ -91,7 +90,8 @@ public class SyncTest
         // check: Copy to Report
         //-----------
         foreach (var entity in entities)
-            Assert.IsTrue(await testApp.VhReportContext.AccessUsages.AnyAsync(x => x.AccessUsageId == entity.AccessUsageId));
+            Assert.IsTrue(
+                await testApp.VhReportContext.AccessUsages.AnyAsync(x => x.AccessUsageId == entity.AccessUsageId));
     }
 
     [TestMethod]
@@ -131,8 +131,10 @@ public class SyncTest
         await farm.TestApp.Sync();
         Assert.IsFalse(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom1.SessionId));
         Assert.IsFalse(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom2.SessionId));
-        Assert.IsTrue(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom3.SessionId), "Should not remove open sessions");
-        Assert.IsTrue(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom4.SessionId), "Should not remove open sessions");
+        Assert.IsTrue(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom3.SessionId),
+            "Should not remove open sessions");
+        Assert.IsTrue(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom4.SessionId),
+            "Should not remove open sessions");
 
         //-----------
         // check: Copy to Report
@@ -140,9 +142,9 @@ public class SyncTest
         await using var vhReportContext = farm.TestApp.VhReportContext;
         Assert.IsTrue(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom1.SessionId));
         Assert.IsTrue(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom2.SessionId));
-        Assert.IsFalse(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom3.SessionId), "Should not remove open sessions");
-        Assert.IsFalse(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom4.SessionId), "Should not remove open sessions");
+        Assert.IsFalse(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom3.SessionId),
+            "Should not remove open sessions");
+        Assert.IsFalse(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom4.SessionId),
+            "Should not remove open sessions");
     }
-
 }
-

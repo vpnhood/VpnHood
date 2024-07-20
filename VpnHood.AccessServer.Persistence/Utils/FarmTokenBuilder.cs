@@ -13,12 +13,10 @@ public static class FarmTokenBuilder
 {
     public static bool UpdateIfChanged(ServerFarmModel serverFarm)
     {
-        try
-        {
+        try {
             return UpdateIfChangedInternal(serverFarm);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             var isChanged = serverFarm.TokenJson != null || serverFarm.TokenError != ex.Message;
             serverFarm.TokenJson = null;
             serverFarm.TokenError = ex.Message;
@@ -32,8 +30,7 @@ public static class FarmTokenBuilder
         var farmTokenNew = Build(serverFarm);
 
         // check for change
-        if (!string.IsNullOrEmpty(serverFarm.TokenJson))
-        {
+        if (!string.IsNullOrEmpty(serverFarm.TokenJson)) {
             var farmTokenOld = JsonSerializer.Deserialize<ServerToken>(serverFarm.TokenJson);
             if (farmTokenOld != null && !farmTokenOld.IsTokenUpdated(farmTokenNew))
                 return false;
@@ -65,8 +62,7 @@ public static class FarmTokenBuilder
 
         // find all token tcp port
         var hostPort = 0;
-        if (serverFarm.UseHostName)
-        {
+        if (serverFarm.UseHostName) {
             var hostPorts = accessPoints.DistinctBy(x => x.TcpPort).ToArray();
             hostPort = hostPorts.FirstOrDefault()?.TcpPort ?? 443;
             if (hostPorts.Any(x => x.TcpPort != hostPort))
@@ -76,9 +72,9 @@ public static class FarmTokenBuilder
             if (hostPort < 0)
                 throw new InvalidOperationException("The host port must be greater than 0 when using valid domain.");
         }
-        else if (accessPoints.Length == 0)
-        {
-            throw new InvalidOperationException("The farm must have at least one server with PublicInToken access points.");
+        else if (accessPoints.Length == 0) {
+            throw new InvalidOperationException(
+                "The farm must have at least one server with PublicInToken access points.");
         }
 
         // serverLocations
@@ -91,11 +87,11 @@ public static class FarmTokenBuilder
             .ToArray();
 
         // create token
-        var serverToken = new ServerToken
-        {
+        var serverToken = new ServerToken {
             CertificateHash = certificate.IsValidated ? null : x509Certificate.GetCertHash(),
             HostName = x509Certificate.GetNameInfo(X509NameType.DnsName, false),
-            HostEndPoints = accessPoints.Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort)).ToArray(),
+            HostEndPoints = accessPoints
+                .Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort)).ToArray(),
             Secret = serverFarm.Secret,
             HostPort = hostPort,
             IsValidHostName = serverFarm.UseHostName,
@@ -111,16 +107,14 @@ public static class FarmTokenBuilder
 
     public static ServerToken? GetServerToken(string? serverFarmTokenJson)
     {
-        try
-        {
+        try {
             return serverFarmTokenJson != null ? GmUtil.JsonDeserialize<ServerToken>(serverFarmTokenJson) : null;
         }
-        catch
-        {
+        catch {
             return null;
         }
     }
-    
+
     public static ServerToken GetRequiredServerToken(string? serverFarmTokenJson)
     {
         if (string.IsNullOrEmpty(serverFarmTokenJson))
@@ -128,5 +122,4 @@ public static class FarmTokenBuilder
 
         return GmUtil.JsonDeserialize<ServerToken>(serverFarmTokenJson);
     }
-
 }

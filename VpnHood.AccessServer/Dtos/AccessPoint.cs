@@ -8,7 +8,8 @@ namespace VpnHood.AccessServer.Dtos;
 public class AccessPoint
 {
     [JsonConverter(typeof(IPAddressConverter))]
-    public required IPAddress IpAddress { get; init; } 
+    public required IPAddress IpAddress { get; init; }
+
     public required AccessPointMode AccessPointMode { get; init; }
     public required bool IsListen { get; init; }
     public required int TcpPort { get; init; }

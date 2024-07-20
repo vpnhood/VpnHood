@@ -16,7 +16,7 @@ public class CertificateSigningRequest
         if (!string.IsNullOrWhiteSpace(CommonName)) parts.Add($"CN={CommonName}");
         if (!string.IsNullOrWhiteSpace(Organization)) parts.Add($"O={Organization}");
         if (!string.IsNullOrWhiteSpace(OrganizationUnit)) parts.Add($"OU={OrganizationUnit}");
-        if (!string.IsNullOrWhiteSpace(LocationCountry))  parts.Add($"C={LocationCountry}");
+        if (!string.IsNullOrWhiteSpace(LocationCountry)) parts.Add($"C={LocationCountry}");
         if (!string.IsNullOrWhiteSpace(LocationState)) parts.Add($"ST={LocationState}");
         if (!string.IsNullOrWhiteSpace(LocationCity)) parts.Add($"L={LocationCity}");
         return string.Join(", ", parts);

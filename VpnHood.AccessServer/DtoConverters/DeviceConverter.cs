@@ -7,8 +7,7 @@ public static class DeviceConverter
 {
     public static Device ToDto(this DeviceModel model)
     {
-        var device = new Device
-        {
+        var device = new Device {
             DeviceId = model.DeviceId,
             ClientId = model.ClientId,
             ClientVersion = model.ClientVersion,
@@ -21,4 +20,3 @@ public static class DeviceConverter
         return device;
     }
 }
-

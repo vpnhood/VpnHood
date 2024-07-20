@@ -9,7 +9,8 @@ namespace VpnHood.AccessServer.Repos;
 public class VhRepo(VhContext vhContext)
     : RepoBase(vhContext)
 {
-    public Task<ServerModel> ServerGet(Guid projectId, Guid serverId, bool includeFarm = false, bool includeFarmProfile = false)
+    public Task<ServerModel> ServerGet(Guid projectId, Guid serverId, bool includeFarm = false,
+        bool includeFarmProfile = false)
     {
         var query = vhContext.Servers
             .Include(x => x.Location)
@@ -59,7 +60,6 @@ public class VhRepo(VhContext vhContext)
             .ToArrayAsync();
 
         return servers;
-
     }
 
 
@@ -89,7 +89,6 @@ public class VhRepo(VhContext vhContext)
             .ToArrayAsync();
 
         return names;
-
     }
 
     public async Task<int> AccessTokenGetMaxSupportCode(Guid projectId)
@@ -129,7 +128,7 @@ public class VhRepo(VhContext vhContext)
             from accessToken in vhContext.AccessTokens
             join serverFarm in vhContext.ServerFarms on accessToken.ServerFarmId equals serverFarm.ServerFarmId
             join access in vhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new
-            { access.AccessTokenId, access.DeviceId } into accessGrouping
+                { access.AccessTokenId, access.DeviceId } into accessGrouping
             from access in accessGrouping.DefaultIfEmpty()
             where
                 (accessToken.ProjectId == projectId && !accessToken.IsDeleted) &&
@@ -143,8 +142,7 @@ public class VhRepo(VhContext vhContext)
                  (accessToken.ServerFarmId == searchGuid && searchGuid != Guid.Empty) ||
                  accessToken.AccessTokenName!.StartsWith(search))
             orderby accessToken.SupportCode descending
-            select new AccessTokenView
-            {
+            select new AccessTokenView {
                 ServerFarmName = serverFarm.ServerFarmName,
                 AccessToken = accessToken,
                 Access = access
@@ -158,8 +156,7 @@ public class VhRepo(VhContext vhContext)
         var results = await query
             .ToArrayAsync();
 
-        var ret = new ListResult<AccessTokenView>
-        {
+        var ret = new ListResult<AccessTokenView> {
             Items = results,
             TotalCount = results.Length < recordCount ? recordIndex + results.Length : await baseQuery.LongCountAsync()
         };
@@ -228,8 +225,7 @@ public class VhRepo(VhContext vhContext)
         var query = vhContext.Servers
             .Where(x => !x.IsDeleted)
             .Where(x => farmIds.Contains(x.ServerFarmId))
-            .Select(x => new AccessPointView
-            {
+            .Select(x => new AccessPointView {
                 ServerFarmId = x.ServerFarmId,
                 ServerId = x.ServerId,
                 ServerName = x.ServerName,
@@ -242,15 +238,15 @@ public class VhRepo(VhContext vhContext)
     }
 
     public async Task<ServerFarmModel> ServerFarmGet(Guid projectId, Guid serverFarmId,
-        bool includeServers = false, bool includeAccessTokens = false, bool includeCertificates = false, bool includeProject = false,
+        bool includeServers = false, bool includeAccessTokens = false, bool includeCertificates = false,
+        bool includeProject = false,
         bool includeLetsEncryptAccount = false)
     {
         var query = vhContext.ServerFarms
             .Where(farm => farm.ProjectId == projectId && !farm.IsDeleted)
             .Where(farm => farm.ServerFarmId == serverFarmId);
 
-        if (includeProject)
-        {
+        if (includeProject) {
             query = query.Include(x => x.Project);
             if (includeLetsEncryptAccount)
                 query = query.Include(x => x.Project!.LetsEncryptAccount);
@@ -281,7 +277,8 @@ public class VhRepo(VhContext vhContext)
     }
 
 
-    public async Task<ServerFarmView[]> ServerFarmListView(Guid projectId, string? search = null, Guid? serverFarmId = null,
+    public async Task<ServerFarmView[]> ServerFarmListView(Guid projectId, string? search = null,
+        Guid? serverFarmId = null,
         bool includeSummary = false, int recordIndex = 0, int recordCount = int.MaxValue)
     {
         var query = vhContext.ServerFarms
@@ -291,16 +288,14 @@ public class VhRepo(VhContext vhContext)
                 string.IsNullOrEmpty(search) ||
                 x.ServerFarmName.Contains(search) ||
                 x.ServerFarmId.ToString() == search)
-            .Select(x => new ServerFarmView
-            {
+            .Select(x => new ServerFarmView {
                 ServerFarm = x,
                 ServerProfileName = x.ServerProfile!.ServerProfileName,
                 ServerCount = includeSummary ? x.Servers!.Count(y => !y.IsDeleted) : null,
                 AccessTokens = includeSummary
                     ? x.AccessTokens!
                         .Where(y => !y.IsDeleted)
-                        .Select(y => new ServerFarmView.AccessTokenView
-                        {
+                        .Select(y => new ServerFarmView.AccessTokenView {
                             FirstUsedTime = y.FirstUsedTime,
                             LastUsedTime = y.LastUsedTime
                         }).ToArray()
@@ -317,7 +312,8 @@ public class VhRepo(VhContext vhContext)
         return results;
     }
 
-    public Task<CertificateModel[]> CertificateExpiringList(TimeSpan expireBy, int maxErrorCount, TimeSpan retryInterval)
+    public Task<CertificateModel[]> CertificateExpiringList(TimeSpan expireBy, int maxErrorCount,
+        TimeSpan retryInterval)
     {
         var expirationTime = DateTime.UtcNow + expireBy;
         var errorTime = DateTime.UtcNow - retryInterval;
@@ -332,4 +328,3 @@ public class VhRepo(VhContext vhContext)
         return certificates;
     }
 }
-

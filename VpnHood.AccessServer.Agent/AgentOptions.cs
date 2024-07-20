@@ -10,12 +10,15 @@ public class AgentOptions
 
     public TimeSpan AdRewardDeviceTimeout { get; set; } = TimeSpan.FromMinutes(60);
     public TimeSpan AdRewardTimeout { get; set; } = TimeSpan.FromMinutes(4);
-    public TimeSpan ServerUpdateStatusInterval { get; set; } = new SessionOptions.ServerConfig().UpdateStatusIntervalValue;
-    public TimeSpan LostServerThreshold
-    {
+
+    public TimeSpan ServerUpdateStatusInterval { get; set; } =
+        new SessionOptions.ServerConfig().UpdateStatusIntervalValue;
+
+    public TimeSpan LostServerThreshold {
         get => _lostServerThreshold ?? ServerUpdateStatusInterval * 3 + TimeSpan.FromSeconds(15);
         set => _lostServerThreshold = value;
     }
+
     public TimeSpan SessionSyncInterval { get; set; } = new SessionOptions.SessionOptions().SyncIntervalValue;
     public TimeSpan SessionTemporaryTimeout { get; set; } = new SessionOptions.SessionOptions().TimeoutValue;
     public long SyncCacheSize { get; set; } = new SessionOptions.SessionOptions().SyncCacheSizeValue;

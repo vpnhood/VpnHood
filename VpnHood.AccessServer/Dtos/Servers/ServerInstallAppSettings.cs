@@ -1,5 +1,4 @@
-﻿
-using VpnHood.Server.Access.Managers.Http;
+﻿using VpnHood.Server.Access.Managers.Http;
 
 namespace VpnHood.AccessServer.Dtos.Servers;
 

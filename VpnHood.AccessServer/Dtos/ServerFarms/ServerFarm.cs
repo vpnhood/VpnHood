@@ -17,4 +17,3 @@ public class ServerFarm
     public required int MaxCertificateCount { get; init; }
     public required Certificate? Certificate { get; init; }
 }
-

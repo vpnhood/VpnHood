@@ -11,7 +11,7 @@ namespace VpnHood.AccessServer.Controllers;
 [Authorize]
 [Route("/api/v{version:apiVersion}/projects/{projectId}/report")]
 public class ReportController(
-    ReportService reportService, 
+    ReportService reportService,
     SubscriptionService subscriptionService,
     ReportUsageService reportUsageService)
     : ControllerBase
@@ -36,7 +36,7 @@ public class ReportController(
 
         var ret = await reportUsageService.GetServersStatusHistory(
             projectId: projectId,
-            usageBeginTime: usageBeginTime.Value, usageEndTime: usageEndTime, 
+            usageBeginTime: usageBeginTime.Value, usageEndTime: usageEndTime,
             serverFarmId: serverFarmId, serverId: serverId);
 
         return ret;

@@ -8,7 +8,7 @@ public class ServerFarmModel
     public required Guid ServerProfileId { get; set; }
     public required DateTime CreatedTime { get; set; }
     public required bool UseHostName { get; set; }
-    public required byte[] Secret { get; set; } 
+    public required byte[] Secret { get; set; }
     public required string? TokenJson { get; set; }
     public required string? TokenUrl { get; set; }
     public required bool PushTokenToClient { get; set; }

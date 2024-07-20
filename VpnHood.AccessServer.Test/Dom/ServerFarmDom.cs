@@ -23,12 +23,12 @@ public class ServerFarmDom : IDisposable
         ServerFarm = serverFarm;
     }
 
-    public static async Task<ServerFarmDom> Create(TestApp? testApp = default, ServerFarmCreateParams? createParams = default, int serverCount = 1)
+    public static async Task<ServerFarmDom> Create(TestApp? testApp = default,
+        ServerFarmCreateParams? createParams = default, int serverCount = 1)
     {
         var autoDisposeApp = testApp == null;
         testApp ??= await TestApp.Create();
-        createParams ??= new ServerFarmCreateParams
-        {
+        createParams ??= new ServerFarmCreateParams {
             ServerFarmName = Guid.NewGuid().ToString()
         };
 
@@ -81,8 +81,7 @@ public class ServerFarmDom : IDisposable
     public async Task<AccessTokenDom> CreateAccessToken(bool isPublic = false)
     {
         var ret = await TestApp.AccessTokensClient.CreateAsync(TestApp.ProjectId,
-            new AccessTokenCreateParams
-            {
+            new AccessTokenCreateParams {
                 ServerFarmId = ServerFarm.ServerFarmId,
                 IsPublic = isPublic,
                 IsEnabled = true
@@ -102,25 +101,26 @@ public class ServerFarmDom : IDisposable
         return new AccessTokenDom(TestApp, ret);
     }
 
-    public async Task<ServerDom> AddNewServer(bool configure = true, bool sendStatus = true, 
+    public async Task<ServerDom> AddNewServer(bool configure = true, bool sendStatus = true,
         IPAddress? publicIpV4 = null, int? logicalCore = null)
     {
-        var sampleServer = await ServerDom.Create(TestApp, ServerFarmId, configure, 
+        var sampleServer = await ServerDom.Create(TestApp, ServerFarmId, configure,
             sendStatus, publicIpV4, logicalCore: logicalCore);
 
         Servers.Add(sampleServer);
         return sampleServer;
     }
 
-    public async Task<ServerDom> AddNewServer(ServerCreateParams createParams, bool configure = true, 
+    public async Task<ServerDom> AddNewServer(ServerCreateParams createParams, bool configure = true,
         bool sendStatus = true, IPAddress? publicIpV4 = null)
     {
         // ReSharper disable once LocalizableElement
         if (createParams.ServerFarmId != ServerFarmId && createParams.ServerFarmId != Guid.Empty)
-            throw new ArgumentException($"{nameof(createParams.ServerFarmId)} must be the same as this farm", nameof(createParams));
+            throw new ArgumentException($"{nameof(createParams.ServerFarmId)} must be the same as this farm",
+                nameof(createParams));
 
         createParams.ServerFarmId = ServerFarmId;
-        var sampleServer = await ServerDom.Create(TestApp, createParams, configure, sendStatus, 
+        var sampleServer = await ServerDom.Create(TestApp, createParams, configure, sendStatus,
             publicIpV4: publicIpV4);
 
         Servers.Add(sampleServer);
@@ -130,7 +130,7 @@ public class ServerFarmDom : IDisposable
     public ServerDom FindServerByEndPoint(IPEndPoint ipEndPoint)
     {
         var serverDom = Servers.First(x =>
-            x.Server.AccessPoints.Any(accessPoint => 
+            x.Server.AccessPoints.Any(accessPoint =>
                 new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort).Equals(ipEndPoint)));
         return serverDom;
     }
@@ -149,7 +149,7 @@ public class ServerFarmDom : IDisposable
     private async Task<Certificate> GetCertificateInToken()
     {
         var ret = await TestApp.ServerFarmsClient.CertificateListAsync(ProjectId, ServerFarmId);
-        return ret.Single(x=>x.IsInToken);
+        return ret.Single(x => x.IsInToken);
     }
 
 

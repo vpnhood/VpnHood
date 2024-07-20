@@ -9,7 +9,7 @@ namespace VpnHood.AccessServer.Services.Acme;
 public class AcmeOrderService(
     IOrderContext orderContext,
     IChallengeContext challengeContext,
-    CertificateSigningRequest csr) 
+    CertificateSigningRequest csr)
     : IAcmeOrderService
 {
     public string KeyAuthorization => challengeContext.KeyAuthz;
@@ -18,8 +18,7 @@ public class AcmeOrderService(
     public async Task<X509Certificate2?> Validate()
     {
         var res = await challengeContext.Validate();
-        return res.Status switch
-        {
+        return res.Status switch {
             ChallengeStatus.Pending => null,
             ChallengeStatus.Processing => null,
             ChallengeStatus.Valid => await GenerateCertificate(orderContext, csr),
@@ -30,8 +29,7 @@ public class AcmeOrderService(
     private static async Task<X509Certificate2> GenerateCertificate(IOrderContext order, CertificateSigningRequest csr)
     {
         var privateKey = KeyFactory.NewKey(KeyAlgorithm.ES256);
-        var cert = await order.Generate(new CsrInfo
-        {
+        var cert = await order.Generate(new CsrInfo {
             CommonName = csr.CommonName,
             Organization = csr.Organization,
             OrganizationUnit = csr.OrganizationUnit,

@@ -24,17 +24,16 @@ public class AgentTestApp : IDisposable
     public AgentTestApp(Dictionary<string, string?> appSettings, string environment)
     {
         AgentApp = new WebApplicationFactory<Agent.Program>()
-            .WithWebHostBuilder(builder =>
-            {
+            .WithWebHostBuilder(builder => {
                 foreach (var appSetting in appSettings)
                     builder.UseSetting(appSetting.Key, appSetting.Value);
                 builder.UseSetting(nameof(AgentOptions.AllowRedirect), "false");
 
                 builder.UseEnvironment(environment);
-                builder.ConfigureServices(services =>
-                {
+                builder.ConfigureServices(services => {
                     services.AddKeyedSingleton<IIpLocationProvider,
-                        TestIpLocationProvider>(Agent.Program.LocationProviderServer, (_, _) => new TestIpLocationProvider());
+                        TestIpLocationProvider>(Agent.Program.LocationProviderServer,
+                        (_, _) => new TestIpLocationProvider());
                 });
             });
 

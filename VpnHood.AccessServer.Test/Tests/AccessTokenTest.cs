@@ -41,8 +41,7 @@ public class AccessTokenTest
         //-----------
         var expirationTime1 = DateTime.Today.AddDays(1);
         expirationTime1 = expirationTime1.AddMilliseconds(-expirationTime1.Millisecond);
-        var createParam1 = new AccessTokenCreateParams
-        {
+        var createParam1 = new AccessTokenCreateParams {
             ServerFarmId = farm1.ServerFarmId,
             AccessTokenName = Guid.NewGuid().ToString(),
             Description = Guid.NewGuid().ToString(),
@@ -65,8 +64,7 @@ public class AccessTokenTest
 
         var farm2 = await ServerFarmDom.Create(testApp);
         var expirationTime2 = DateTime.UtcNow.AddDays(2);
-        var createParam2 = new AccessTokenCreateParams
-        {
+        var createParam2 = new AccessTokenCreateParams {
             ServerFarmId = farm2.ServerFarmId,
             AccessTokenName = Guid.NewGuid().ToString(),
             Description = Guid.NewGuid().ToString(),
@@ -93,9 +91,11 @@ public class AccessTokenTest
         //-----------
         // check: get
         //-----------
-        var accessToken2B = (await testApp.AccessTokensClient.GetAsync(testApp.ProjectId, accessTokenDom2.AccessTokenId))
+        var accessToken2B =
+            (await testApp.AccessTokensClient.GetAsync(testApp.ProjectId, accessTokenDom2.AccessTokenId))
             .AccessToken;
-        Assert.IsTrue((accessToken2B.ExpirationTime!.Value - accessTokenDom2.AccessToken.ExpirationTime!.Value) < TimeSpan.FromSeconds(1));
+        Assert.IsTrue((accessToken2B.ExpirationTime!.Value - accessTokenDom2.AccessToken.ExpirationTime!.Value) <
+                      TimeSpan.FromSeconds(1));
         Assert.AreEqual(accessTokenDom2.AccessToken.AccessTokenId, accessToken2B.AccessTokenId);
         Assert.AreEqual(accessTokenDom2.AccessToken.ServerFarmId, accessToken2B.ServerFarmId);
         Assert.AreEqual(accessTokenDom2.AccessToken.AccessTokenName, accessToken2B.AccessTokenName);
@@ -110,8 +110,7 @@ public class AccessTokenTest
         //-----------
         // check: update
         //-----------
-        var updateParams = new AccessTokenUpdateParams
-        {
+        var updateParams = new AccessTokenUpdateParams {
             AccessTokenName = new PatchOfString { Value = $"new_name_{Guid.NewGuid()}" },
             ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId },
             ExpirationTime = new PatchOfNullableDateTime { Value = DateTime.UtcNow.AddDays(4) },
@@ -126,7 +125,8 @@ public class AccessTokenTest
         accessToken2B = (await testApp.AccessTokensClient.GetAsync(testApp.ProjectId, accessTokenDom2.AccessTokenId))
             .AccessToken;
 
-        Assert.IsTrue(accessToken2B.ExpirationTime!.Value - updateParams.ExpirationTime.Value < TimeSpan.FromSeconds(1));
+        Assert.IsTrue(accessToken2B.ExpirationTime!.Value - updateParams.ExpirationTime.Value <
+                      TimeSpan.FromSeconds(1));
         Assert.AreEqual(accessTokenDom2.AccessTokenId, accessToken2B.AccessTokenId);
         Assert.AreEqual(updateParams.ServerFarmId.Value, accessToken2B.ServerFarmId);
         Assert.AreEqual(updateParams.AccessTokenName.Value, accessToken2B.AccessTokenName);
@@ -148,7 +148,8 @@ public class AccessTokenTest
         var certificateData = farm2.DefaultServer.ServerConfig.Certificates.First().RawData;
         var x509Certificate2 = new X509Certificate2(certificateData);
 
-        var accessKey = await farm2.TestApp.AccessTokensClient.GetAccessKeyAsync(testApp.ProjectId, accessToken2B.AccessTokenId);
+        var accessKey =
+            await farm2.TestApp.AccessTokensClient.GetAccessKeyAsync(testApp.ProjectId, accessToken2B.AccessTokenId);
         var token = Token.FromAccessKey(accessKey);
         Assert.AreEqual(x509Certificate2.GetNameInfo(X509NameType.DnsName, false), token.ServerToken.HostName);
         Assert.AreEqual(accessToken2B.AccessTokenName, token.Name);
@@ -156,34 +157,32 @@ public class AccessTokenTest
             Convert.ToBase64String(token.ServerToken.CertificateHash!));
 
         Assert.AreEqual(Convert.ToBase64String(secret2B), Convert.ToBase64String(token.Secret));
-        Assert.IsFalse(token.ServerToken.HostEndPoints?.Any(x => x.Equals(farm1.DefaultServer.ServerConfig.TcpEndPointsValue.First())));
-        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x => x.Address.Equals(farm2.DefaultServer.ServerInfo.PublicIpAddresses.First())));
+        Assert.IsFalse(token.ServerToken.HostEndPoints?.Any(x =>
+            x.Equals(farm1.DefaultServer.ServerConfig.TcpEndPointsValue.First())));
+        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x =>
+            x.Address.Equals(farm2.DefaultServer.ServerInfo.PublicIpAddresses.First())));
         Assert.AreEqual(accessToken2B.SupportCode.ToString(), token.SupportId);
 
         //-----------
         // Check: Delete
         //-----------
         await testApp.AccessTokensClient.DeleteAsync(testApp.ProjectId, accessTokenDom2.AccessTokenId);
-        try
-        {
+        try {
             await testApp.AccessTokensClient.GetAsync(testApp.ProjectId, accessTokenDom2.AccessTokenId);
             Assert.Fail("AccessToken should not exist!");
         }
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
 
         //-----------
         // Check: Should not be able to create a session by deleted token
         //-----------
-        try
-        {
+        try {
             await accessTokenDom2.CreateSession();
             Assert.Fail("Not found expected.");
         }
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
     }
@@ -191,8 +190,7 @@ public class AccessTokenTest
     [TestMethod]
     public async Task GetAccessKey_fail_if_server_token_not_usable()
     {
-        using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
-        {
+        using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams {
             ServerFarmName = Guid.NewGuid().ToString()
         }, serverCount: 0);
 
@@ -204,35 +202,29 @@ public class AccessTokenTest
     public async Task GetAccessKey_fail_if_use_hostname_with_multiple_port()
     {
         // create farm with UseHostName
-        using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
-        {
+        using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams {
             ServerFarmName = Guid.NewGuid().ToString()
         }, serverCount: 0);
-        
+
         // add different port
         var serverDom = await farm.AddNewServer();
-        await serverDom.Update(new ServerUpdateParams
-        {
-            AccessPoints = new PatchOfAccessPointOf
-            {
-                Value =[await farm.TestApp.NewAccessPoint(await farm.TestApp.NewEndPointIp6(4443))]
+        await serverDom.Update(new ServerUpdateParams {
+            AccessPoints = new PatchOfAccessPointOf {
+                Value = [await farm.TestApp.NewAccessPoint(await farm.TestApp.NewEndPointIp6(4443))]
             }
         });
 
         serverDom = await farm.AddNewServer();
-        await serverDom.Update(new ServerUpdateParams
-        {
-            AccessPoints = new PatchOfAccessPointOf
-            {
+        await serverDom.Update(new ServerUpdateParams {
+            AccessPoints = new PatchOfAccessPointOf {
                 Value = [await farm.TestApp.NewAccessPoint(await farm.TestApp.NewEndPoint())]
             }
         });
 
-        var serverFarmData = await farm.Update(new ServerFarmUpdateParams
-        {
+        var serverFarmData = await farm.Update(new ServerFarmUpdateParams {
             UseHostName = new PatchOfBoolean { Value = true }
         });
-        
+
         Assert.IsNull(serverFarmData.ServerFarm.TokenUrl);
         var accessTokenDom = await farm.CreateAccessToken();
         await VhTestUtil.AssertApiException<InvalidOperationException>(accessTokenDom.GetAccessKey());
@@ -241,8 +233,7 @@ public class AccessTokenTest
     [TestMethod]
     public async Task GetAccessKey_ForIp()
     {
-        using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
-        {
+        using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams {
             ServerFarmName = Guid.NewGuid().ToString()
         });
 
@@ -262,8 +253,7 @@ public class AccessTokenTest
     public async Task GetAccessKey_With_ServerLocations()
     {
         // create farm
-        using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
-        {
+        using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams {
             ServerFarmName = Guid.NewGuid().ToString()
         }, serverCount: 0);
 
@@ -288,13 +278,11 @@ public class AccessTokenTest
     public async Task GetAccessKey_ForDomain()
     {
         var testApp = await TestApp.Create();
-        using var farm = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
-        {
+        using var farm = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams {
             ServerFarmName = Guid.NewGuid().ToString()
         });
 
-        await farm.Update(new ServerFarmUpdateParams
-        {
+        await farm.Update(new ServerFarmUpdateParams {
             UseHostName = new PatchOfBoolean { Value = true }
         });
 
@@ -322,13 +310,11 @@ public class AccessTokenTest
         // check: Quota
         //-----------
         QuotaConstants.AccessTokenCount = accessTokens.Items.Count;
-        try
-        {
+        try {
             await farm.CreateAccessToken();
             Assert.Fail($"{nameof(QuotaException)} was expected.");
         }
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             Assert.AreEqual(nameof(QuotaException), ex.ExceptionTypeName);
         }
     }
@@ -338,14 +324,12 @@ public class AccessTokenTest
     {
         var farm1 = await ServerFarmDom.Create();
         var farm2 = await ServerFarmDom.Create();
-        try
-        {
+        try {
             await farm1.TestApp.AccessTokensClient.CreateAsync(farm1.ProjectId,
                 new AccessTokenCreateParams { ServerFarmId = farm2.ServerFarmId });
             Assert.Fail("KeyNotFoundException is expected!");
         }
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
     }
@@ -357,8 +341,7 @@ public class AccessTokenTest
         var farm2 = await ServerFarmDom.Create();
 
         var accessTokenDom1 = await farm1.CreateAccessToken();
-        await VhTestUtil.AssertApiException<NotExistsException>(accessTokenDom1.Update(new AccessTokenUpdateParams
-        {
+        await VhTestUtil.AssertApiException<NotExistsException>(accessTokenDom1.Update(new AccessTokenUpdateParams {
             ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId }
         }));
     }
@@ -429,8 +412,7 @@ public class AccessTokenTest
         var farm1 = await ServerFarmDom.Create();
 
         // create access token
-        var accessTokenDom1 = await farm1.CreateAccessToken(new AccessTokenCreateParams
-        {
+        var accessTokenDom1 = await farm1.CreateAccessToken(new AccessTokenCreateParams {
             ServerFarmId = farm1.ServerFarmId,
             AccessTokenName = "tokenName1",
             MaxDevice = 12,
@@ -446,8 +428,7 @@ public class AccessTokenTest
         // update after creating session
         var expirationTime1 = DateTime.Today.AddDays(5);
         await accessTokenDom1.Update(
-            new AccessTokenUpdateParams
-            {
+            new AccessTokenUpdateParams {
                 ExpirationTime = new PatchOfNullableDateTime { Value = expirationTime1 }
             });
 
@@ -463,8 +444,7 @@ public class AccessTokenTest
         var farm1 = await ServerFarmDom.Create();
 
         // create access token
-        var accessTokenDom1 = await farm1.CreateAccessToken(new AccessTokenCreateParams
-        {
+        var accessTokenDom1 = await farm1.CreateAccessToken(new AccessTokenCreateParams {
             ServerFarmId = farm1.ServerFarmId,
             AccessTokenName = "tokenName1",
             MaxDevice = 12,

@@ -42,14 +42,12 @@ public class ServerService(
         // Resolve Name Template
         var serverName = createParams.ServerName?.Trim();
         if (string.IsNullOrWhiteSpace(serverName)) serverName = Resource.NewServerTemplate;
-        if (serverName.Contains("##"))
-        {
+        if (serverName.Contains("##")) {
             var names = await vhRepo.ServerGetNames(projectId);
             serverName = AccessServerUtil.FindUniqueName(serverName, names);
         }
 
-        var server = new ServerModel
-        {
+        var server = new ServerModel {
             ProjectId = projectId,
             ServerId = Guid.NewGuid(),
             CreatedTime = DateTime.UtcNow,
@@ -76,15 +74,14 @@ public class ServerService(
             LocationId = null,
             AllowInAutoLocation = true,
             HostPanelUrl = createParams.HostPanelUrl?.ToString(),
-            IsDeleted = false,
+            IsDeleted = false
         };
 
         // add server and update FarmToken
         serverFarm.Servers!.Add(server);
         await vhRepo.AddAsync(server); // to help server farm to update token
         await serverConfigureService.SaveChangesAndInvalidateServerFarm(projectId, server.ServerFarmId, false);
-        var serverData = new ServerData
-        {
+        var serverData = new ServerData {
             Server = server.ToDto(null)
         };
         return serverData;
@@ -93,25 +90,26 @@ public class ServerService(
     public async Task<ServerData> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
         if (updateParams.AutoConfigure?.Value == true && updateParams.AccessPoints != null)
-            throw new ArgumentException($"{nameof(updateParams.AutoConfigure)} can not be true when {nameof(updateParams.AccessPoints)} is set", nameof(updateParams));
+            throw new ArgumentException(
+                $"{nameof(updateParams.AutoConfigure)} can not be true when {nameof(updateParams.AccessPoints)} is set",
+                nameof(updateParams));
 
         // validate
         var server = await vhRepo.ServerGet(projectId, serverId, includeFarm: true);
         var oldServerFarmId = server.ServerFarmId;
 
-        if (updateParams.ServerFarmId != null)
-        {
+        if (updateParams.ServerFarmId != null) {
             // make sure new farm belong to this account and ready for update farm token
             var serverFarm = await vhRepo.ServerFarmGet(projectId, updateParams.ServerFarmId);
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
+
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
         if (updateParams.AllowInAutoLocation != null) server.AllowInAutoLocation = updateParams.AllowInAutoLocation;
         if (updateParams.HostPanelUrl != null) server.HostPanelUrl = updateParams.HostPanelUrl?.ToString();
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
         if (updateParams.AutoConfigure != null) server.AutoConfigure = updateParams.AutoConfigure;
-        if (updateParams.AccessPoints != null)
-        {
+        if (updateParams.AccessPoints != null) {
             server.AutoConfigure = false;
             server.AccessPoints = ValidateAccessPoints(updateParams.AccessPoints);
         }
@@ -122,13 +120,13 @@ public class ServerService(
             await serverConfigureService.SaveChangesAndInvalidateServerFarm(projectId, oldServerFarmId, false);
 
         // reconfig current server if required
-        var reconfigure = updateParams.AccessPoints != null || updateParams.AutoConfigure != null || updateParams.ServerFarmId != null;
+        var reconfigure = updateParams.AccessPoints != null || updateParams.AutoConfigure != null ||
+                          updateParams.ServerFarmId != null;
         var serverCache = await serverConfigureService.SaveChangesAndInvalidateServer(projectId, serverId, reconfigure);
 
         // get server again to resolve region and farm
         server = await vhRepo.ServerGet(projectId, serverId: serverId, includeFarm: true);
-        var serverData = new ServerData
-        {
+        var serverData = new ServerData {
             Server = server.ToDto(serverCache)
         };
         return serverData;
@@ -155,14 +153,14 @@ public class ServerService(
         // create Dto
         var cachedServers = await agentCacheClient.GetServers(projectId);
         var serverDatas = servers
-            .Select(serverModel => new ServerData
-            {
+            .Select(serverModel => new ServerData {
                 Server = serverModel.ToDto(cachedServers.FirstOrDefault(x => x.ServerId == serverModel.ServerId))
             })
             .ToArray();
 
         // update server status if it is lost
-        foreach (var serverData in serverDatas.Where(x => x.Server.ServerState is ServerState.Lost or ServerState.NotInstalled))
+        foreach (var serverData in serverDatas.Where(x =>
+                     x.Server.ServerState is ServerState.Lost or ServerState.NotInstalled))
             serverData.Server.ServerStatus = null;
 
         return serverDatas;
@@ -177,11 +175,13 @@ public class ServerService(
         var anyIpAddress4Public = accessPoints.SingleOrDefault(x =>
             x.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken &&
             (x.IpAddress.Equals(IPAddress.Any) || x.IpAddress.Equals(IPAddress.IPv6Any)))?.IpAddress;
-        if (anyIpAddress4Public != null) throw new InvalidOperationException($"Can not use {anyIpAddress4Public} as public a address.");
+        if (anyIpAddress4Public != null)
+            throw new InvalidOperationException($"Can not use {anyIpAddress4Public} as public a address.");
 
         // validate TcpEndPoints
         _ = accessPoints.Select(x => new IPEndPoint(x.IpAddress, x.TcpPort));
-        if (accessPoints.Any(x => x.TcpPort == 0)) throw new InvalidOperationException("Invalid TcpEndPoint. Port can not be zero.");
+        if (accessPoints.Any(x => x.TcpPort == 0))
+            throw new InvalidOperationException("Invalid TcpEndPoint. Port can not be zero.");
 
         //find duplicate tcp
         var duplicate = accessPoints
@@ -191,7 +191,8 @@ public class ServerService(
             .FirstOrDefault();
 
         if (duplicate != null)
-            throw new InvalidOperationException($"Duplicate TCP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.TcpPort}");
+            throw new InvalidOperationException(
+                $"Duplicate TCP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.TcpPort}");
 
         //find duplicate tcp on any ipv4
         var anyPorts = accessPoints.Where(x => x.IsListen && x.IpAddress.Equals(IPAddress.Any)).Select(x => x.TcpPort);
@@ -199,7 +200,8 @@ public class ServerService(
             x is { IsListen: true, IpAddress.AddressFamily: AddressFamily.InterNetwork } &&
             !x.IpAddress.Equals(IPAddress.Any) && anyPorts.Contains(x.TcpPort));
         if (duplicate != null)
-            throw new InvalidOperationException($"Duplicate TCP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.TcpPort}");
+            throw new InvalidOperationException(
+                $"Duplicate TCP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.TcpPort}");
 
         //find duplicate tcp on any ipv6
         anyPorts = accessPoints.Where(x => x.IsListen && x.IpAddress.Equals(IPAddress.IPv6Any)).Select(x => x.TcpPort);
@@ -207,11 +209,13 @@ public class ServerService(
             x is { IsListen: true, IpAddress.AddressFamily: AddressFamily.InterNetworkV6 } &&
             !x.IpAddress.Equals(IPAddress.IPv6Any) && anyPorts.Contains(x.TcpPort));
         if (duplicate != null)
-            throw new InvalidOperationException($"Duplicate TCP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.TcpPort}");
+            throw new InvalidOperationException(
+                $"Duplicate TCP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.TcpPort}");
 
         // validate UdpEndPoints
         _ = accessPoints.Where(x => x.UdpPort != -1).Select(x => new IPEndPoint(x.IpAddress, x.UdpPort));
-        if (accessPoints.Any(x => x.UdpPort == 0)) throw new InvalidOperationException("Invalid UdpEndPoint. Port can not be zero.");
+        if (accessPoints.Any(x => x.UdpPort == 0))
+            throw new InvalidOperationException("Invalid UdpEndPoint. Port can not be zero.");
 
         //find duplicate udp
         duplicate = accessPoints
@@ -222,7 +226,8 @@ public class ServerService(
             .FirstOrDefault();
 
         if (duplicate != null)
-            throw new InvalidOperationException($"Duplicate UDP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
+            throw new InvalidOperationException(
+                $"Duplicate UDP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
 
         //find duplicate udp on any ipv4
         anyPorts = accessPoints.Where(x =>
@@ -232,7 +237,8 @@ public class ServerService(
             x is { IsListen: true, UdpPort: > 0, IpAddress.AddressFamily: AddressFamily.InterNetwork } &&
             !x.IpAddress.Equals(IPAddress.Any) && anyPorts.Contains(x.UdpPort));
         if (duplicate != null)
-            throw new InvalidOperationException($"Duplicate UDP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
+            throw new InvalidOperationException(
+                $"Duplicate UDP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
 
         //find duplicate udp on any ipv6
         anyPorts = accessPoints.Where(x =>
@@ -241,7 +247,8 @@ public class ServerService(
             x is { IsListen: true, UdpPort: > 0, IpAddress.AddressFamily: AddressFamily.InterNetworkV6 } &&
             !x.IpAddress.Equals(IPAddress.IPv6Any) && anyPorts.Contains(x.UdpPort));
         if (duplicate != null)
-            throw new InvalidOperationException($"Duplicate UDP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
+            throw new InvalidOperationException(
+                $"Duplicate UDP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
 
         return accessPoints.Select(x => x.ToModel()).ToList();
     }
@@ -283,16 +290,18 @@ public class ServerService(
             .ToArray();
 
         // create usage summary
-        var usageSummary = new ServersStatusSummary
-        {
+        var usageSummary = new ServersStatusSummary {
             TotalServerCount = servers.Length,
             NotInstalledServerCount = servers.Count(x => x.ServerState is ServerState.NotInstalled),
             ActiveServerCount = servers.Count(x => x.ServerState is ServerState.Active),
             IdleServerCount = servers.Count(x => x.ServerState is ServerState.Idle),
             LostServerCount = servers.Count(x => x.ServerState is ServerState.Lost),
-            SessionCount = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.SessionCount),
-            TunnelSendSpeed = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.TunnelSendSpeed),
-            TunnelReceiveSpeed = servers.Where(x => x.ServerState == ServerState.Active).Sum(x => x.ServerStatus!.TunnelReceiveSpeed)
+            SessionCount = servers.Where(x => x.ServerState is ServerState.Active)
+                .Sum(x => x.ServerStatus!.SessionCount),
+            TunnelSendSpeed = servers.Where(x => x.ServerState is ServerState.Active)
+                .Sum(x => x.ServerStatus!.TunnelSendSpeed),
+            TunnelReceiveSpeed = servers.Where(x => x.ServerState == ServerState.Active)
+                .Sum(x => x.ServerStatus!.TunnelReceiveSpeed)
         };
 
         return usageSummary;
@@ -301,29 +310,28 @@ public class ServerService(
     public async Task Delete(Guid projectId, Guid serverId)
     {
         var server = await vhRepo.ServerGet(projectId, serverId);
-        var serverFarm = await vhRepo.ServerFarmGet(projectId, server.ServerFarmId, includeServers: true, includeCertificates: true);
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, server.ServerFarmId, includeServers: true,
+            includeCertificates: true);
         server.IsDeleted = true;
         server.IsEnabled = true;
 
         var isFarmUpdated = FarmTokenBuilder.UpdateIfChanged(serverFarm);
         await vhContext.SaveChangesAsync();
-        if (isFarmUpdated)
-        {
+        if (isFarmUpdated) {
             var includeSevers = server.AccessPoints.Any(x => x.AccessPointMode == AccessPointMode.PublicInToken);
-            await agentCacheClient.InvalidateServerFarm(server.ServerFarmId, 
+            await agentCacheClient.InvalidateServerFarm(server.ServerFarmId,
                 includeSevers: includeSevers);
         }
-
     }
 
-    public async Task InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
+    public async Task InstallBySshUserPassword(Guid projectId, Guid serverId,
+        ServerInstallBySshUserPasswordParams installParams)
     {
-
         var hostPort = installParams.HostPort == 0 ? 22 : installParams.HostPort;
         var connectionInfo = new ConnectionInfo(
-            installParams.HostName.Trim(), 
-            hostPort, 
-            installParams.LoginUserName.Trim(), 
+            installParams.HostName.Trim(),
+            hostPort,
+            installParams.LoginUserName.Trim(),
             new PasswordAuthenticationMethod(installParams.LoginUserName.Trim(), installParams.LoginPassword.Trim()));
 
         var appSettings = await GetInstallAppSettings(projectId, serverId);
@@ -336,26 +344,27 @@ public class ServerService(
         using var privateKey = new PrivateKeyFile(keyStream, installParams.UserPrivateKeyPassphrase?.Trim());
 
         var connectionInfo = new ConnectionInfo(
-            installParams.HostName.Trim(), installParams.HostPort, 
-            installParams.LoginUserName.Trim(), 
+            installParams.HostName.Trim(), installParams.HostPort,
+            installParams.LoginUserName.Trim(),
             new PrivateKeyAuthenticationMethod(installParams.LoginUserName.Trim(), privateKey));
 
         var appSettings = await GetInstallAppSettings(projectId, serverId);
         await InstallBySsh(appSettings, connectionInfo, installParams.LoginPassword);
     }
 
-    private static async Task InstallBySsh(ServerInstallAppSettings appSettings, ConnectionInfo connectionInfo, string? loginPassword)
+    private static async Task InstallBySsh(ServerInstallAppSettings appSettings, ConnectionInfo connectionInfo,
+        string? loginPassword)
     {
         using var sshClient = new SshClient(connectionInfo);
         sshClient.Connect();
 
         var linuxCommand = GetInstallScriptForLinux(appSettings, false);
-        var res = await AccessServerUtil.ExecuteSshCommand(sshClient, linuxCommand, loginPassword?.Trim(), TimeSpan.FromMinutes(5));
+        var res = await AccessServerUtil.ExecuteSshCommand(sshClient, linuxCommand, loginPassword?.Trim(),
+            TimeSpan.FromMinutes(5));
 
         var check = sshClient.RunCommand("dir /opt/VpnHoodServer");
         var checkResult = check.Execute();
-        if (checkResult.IndexOf("publish.json", StringComparison.Ordinal) == -1)
-        {
+        if (checkResult.IndexOf("publish.json", StringComparison.Ordinal) == -1) {
             var ex = new Exception("Installation failed! Check detail for more information.");
             ex.Data.Add("log", res);
             throw ex;
@@ -365,8 +374,7 @@ public class ServerService(
     public async Task<ServerInstallManual> GetInstallManual(Guid projectId, Guid serverId)
     {
         var appSettings = await GetInstallAppSettings(projectId, serverId);
-        var ret = new ServerInstallManual(appSettings)
-        {
+        var ret = new ServerInstallManual(appSettings) {
             LinuxCommand = GetInstallScriptForLinux(appSettings, true),
             WindowsCommand = GetInstallScriptForWindows(appSettings, true)
         };
@@ -383,8 +391,7 @@ public class ServerService(
 
         // create jwt
         var authorization = await agentSystemClient.GetServerAgentAuthorization(server.ServerId);
-        var appSettings = new ServerInstallAppSettings
-        {
+        var appSettings = new ServerInstallAppSettings {
             HttpAccessManager = new HttpAccessManagerOptions(appOptions.Value.AgentUrl, authorization),
             ManagementSecret = server.ManagementSecret
         };
@@ -422,7 +429,7 @@ public class ServerService(
 
     public Task<ServerCache?> Reconfigure(Guid projectId, Guid serverId)
     {
-        return serverConfigureService.SaveChangesAndInvalidateServer(projectId: projectId, serverId: serverId, reconfigure: true);
+        return serverConfigureService.SaveChangesAndInvalidateServer(projectId: projectId, serverId: serverId,
+            reconfigure: true);
     }
-
 }

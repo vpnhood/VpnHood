@@ -7,8 +7,7 @@ public static class LocationConverter
 {
     public static Location ToDto(this LocationModel location)
     {
-        return new Location
-        {
+        return new Location {
             CountryCode = location.CountryCode,
             CountryName = location.CountryName,
             RegionCode = location.RegionCode,
@@ -17,5 +16,4 @@ public static class LocationConverter
             CityName = location.CityName
         };
     }
-
 }

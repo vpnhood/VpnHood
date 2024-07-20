@@ -18,10 +18,10 @@ public class AgentCacheClient : ApiClientBase
         return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate", null, null);
     }
 
-    public Task InvalidateServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? serverId = null)
+    public Task InvalidateServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null,
+        Guid? serverId = null)
     {
-        var parameters = new Dictionary<string, object?>
-        {
+        var parameters = new Dictionary<string, object?> {
             [nameof(projectId)] = projectId,
             [nameof(serverFarmId)] = serverFarmId,
             [nameof(serverProfileId)] = serverProfileId,
@@ -33,8 +33,7 @@ public class AgentCacheClient : ApiClientBase
 
     public Task<ServerCache[]> GetServers(Guid projectId, Guid? serverFarmId = null)
     {
-        var parameters = new Dictionary<string, object?>
-        {
+        var parameters = new Dictionary<string, object?> {
             [nameof(projectId)] = projectId,
             [nameof(serverFarmId)] = serverFarmId
         };
@@ -50,8 +49,7 @@ public class AgentCacheClient : ApiClientBase
 
     public Task InvalidateServerFarm(Guid serverFarmId, bool includeSevers)
     {
-        var parameters = new Dictionary<string, object?>
-        {
+        var parameters = new Dictionary<string, object?> {
             [nameof(includeSevers)] = includeSevers
         };
 
@@ -67,6 +65,7 @@ public class AgentCacheClient : ApiClientBase
     {
         return HttpPostAsync("/api/cache/sessions/invalidate", null, null);
     }
+
     public Task InvalidateAccessToken(Guid accessTokenId)
     {
         return HttpPostAsync($"/api/cache/access-tokens/{accessTokenId}/invalidate", null, null);

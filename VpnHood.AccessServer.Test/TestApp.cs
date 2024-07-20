@@ -52,7 +52,10 @@ public class TestApp : IHttpClientFactory, IDisposable
     public ILogger<TestApp> Logger => Scope.ServiceProvider.GetRequiredService<ILogger<TestApp>>();
 
     public ApiKey SystemAdminApiKey { get; private set; } = default!;
-    public AuthenticationHeaderValue SystemAdminAuthorization => new(SystemAdminApiKey.AccessToken.Scheme, SystemAdminApiKey.AccessToken.Value);
+
+    public AuthenticationHeaderValue SystemAdminAuthorization =>
+        new(SystemAdminApiKey.AccessToken.Scheme, SystemAdminApiKey.AccessToken.Value);
+
     public ApiKey ProjectOwnerApiKey { get; private set; } = default!;
     public Project Project { get; private set; } = default!;
     public Guid ProjectId => Project.ProjectId;
@@ -67,15 +70,13 @@ public class TestApp : IHttpClientFactory, IDisposable
 
         // create main app
         WebApp = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
+            .WithWebHostBuilder(builder => {
                 builder.UseSetting("IsTest", "1");
                 foreach (var appSetting in appSettings)
                     builder.UseSetting(appSetting.Key, appSetting.Value);
 
                 builder.UseEnvironment(environment);
-                builder.ConfigureServices(services =>
-                {
+                builder.ConfigureServices(services => {
                     services.AddScoped<IAuthorizationProvider, TestAuthorizationProvider>();
                     services.AddSingleton<IHttpClientFactory>(this);
                     services.AddSingleton<IAcmeOrderFactory, TestAcmeOrderFactory>();
@@ -103,13 +104,13 @@ public class TestApp : IHttpClientFactory, IDisposable
         // create default project
         Project = await ProjectsClient.CreateAsync();
         ProjectOwnerApiKey = await AddNewUser(Roles.ProjectOwner);
-        await TeamClient.RemoveUserAsync(Project.ProjectId.ToString(), Roles.ProjectOwner.RoleId, SystemAdminApiKey.UserId);
+        await TeamClient.RemoveUserAsync(Project.ProjectId.ToString(), Roles.ProjectOwner.RoleId,
+            SystemAdminApiKey.UserId);
     }
 
     public Task<IPAddress> NewIpV4()
     {
-        lock (_lastIp)
-        {
+        lock (_lastIp) {
             _lastIp = IPAddressUtil.Increment(_lastIp);
             return Task.FromResult(_lastIp);
         }
@@ -121,6 +122,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     }
 
     public async Task<string> NewIpV4String() => (await NewIpV4()).ToString();
+
     // ReSharper disable once UnusedMember.Global
     public async Task<string> NewIpV6String() => (await NewIpV6()).ToString();
 
@@ -134,16 +136,17 @@ public class TestApp : IHttpClientFactory, IDisposable
     }
 
     public async Task<IPEndPoint> NewEndPoint(int port = 443) => new(await NewIpV4(), port);
+
     // ReSharper disable once UnusedMember.Global
     public async Task<IPEndPoint> NewEndPointIp6(int port = 443) => new(await NewIpV6(), port);
 
 
-    public async Task<AccessPoint> NewAccessPoint(IPEndPoint? ipEndPoint = null, AccessPointMode accessPointMode = AccessPointMode.PublicInToken,
+    public async Task<AccessPoint> NewAccessPoint(IPEndPoint? ipEndPoint = null,
+        AccessPointMode accessPointMode = AccessPointMode.PublicInToken,
         bool isListen = true, int? udpPort = null)
     {
         ipEndPoint ??= await NewEndPoint();
-        return new AccessPoint
-        {
+        return new AccessPoint {
             UdpPort = udpPort ?? ipEndPoint.Port,
             IpAddress = ipEndPoint.Address.ToString(),
             TcpPort = ipEndPoint.Port,
@@ -161,19 +164,18 @@ public class TestApp : IHttpClientFactory, IDisposable
         return ret;
     }
 
-    public WebApplicationFactory<T> CreateWebApp<T>(Dictionary<string, string?> appSettings, string environment) where T : class
+    public WebApplicationFactory<T> CreateWebApp<T>(Dictionary<string, string?> appSettings, string environment)
+        where T : class
     {
         // Application
         var webApp = new WebApplicationFactory<T>()
-            .WithWebHostBuilder(builder =>
-            {
+            .WithWebHostBuilder(builder => {
                 foreach (var appSetting in appSettings)
                     builder.UseSetting(appSetting.Key, appSetting.Value);
 
                 builder.UseEnvironment(environment);
 
-                builder.ConfigureServices(services =>
-                {
+                builder.ConfigureServices(services => {
                     services.AddScoped<IAuthorizationProvider, TestAuthorizationProvider>();
                     services.AddSingleton<IHttpClientFactory>(this);
                 });
@@ -188,10 +190,12 @@ public class TestApp : IHttpClientFactory, IDisposable
         HttpClient.DefaultRequestHeaders.Authorization = SystemAdminAuthorization;
 
         var resourceId = role.IsRoot ? Guid.Empty : Project.ProjectId;
-        var apiKey = await TeamClient.AddNewBotAsync(resourceId.ToString(), role.RoleId, new TeamAddBotParam { Name = Guid.NewGuid().ToString() });
+        var apiKey = await TeamClient.AddNewBotAsync(resourceId.ToString(), role.RoleId,
+            new TeamAddBotParam { Name = Guid.NewGuid().ToString() });
 
         HttpClient.DefaultRequestHeaders.Authorization = setAsCurrent
-            ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value) : oldAuthorization;
+            ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value)
+            : oldAuthorization;
 
         return apiKey;
     }
@@ -205,8 +209,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     {
         var rand = new Random();
         var ret = randomStatus
-            ? new ServerStatus
-            {
+            ? new ServerStatus {
                 SessionCount = rand.Next(1, 1000),
                 AvailableMemory = rand.Next(150, 300) * 1000000000L,
                 UsedMemory = rand.Next(0, 150) * 1000000000L,
@@ -215,14 +218,12 @@ public class TestApp : IHttpClientFactory, IDisposable
                 ThreadCount = rand.Next(0, 50),
                 ConfigCode = configCode,
                 CpuUsage = rand.Next(0, 100),
-                TunnelSpeed = new Traffic
-                {
+                TunnelSpeed = new Traffic {
                     Sent = 1000000,
                     Received = 2000000
                 }
             }
-            : new ServerStatus
-            {
+            : new ServerStatus {
                 SessionCount = 0,
                 AvailableMemory = 16 * 1000000000L,
                 UsedMemory = 1 * 1000000000L,
@@ -237,22 +238,20 @@ public class TestApp : IHttpClientFactory, IDisposable
         return ret;
     }
 
-    public async Task<ServerInfo> NewServerInfo(bool randomStatus = false, int? logicalCore = null, IPAddress? publicIpV4 = null)
+    public async Task<ServerInfo> NewServerInfo(bool randomStatus = false, int? logicalCore = null,
+        IPAddress? publicIpV4 = null)
     {
         var rand = new Random();
         var publicIp = await NewIpV6();
-        var serverInfo = new ServerInfo
-        {
+        var serverInfo = new ServerInfo {
             Version = Version.Parse($"999.{rand.Next(0, 255)}.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
             EnvironmentVersion = Environment.Version,
-            PrivateIpAddresses =
-            [
+            PrivateIpAddresses = [
                 IPAddress.Parse($"192.168.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
                 IPAddress.Parse($"192.168.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
                 publicIp
             ],
-            PublicIpAddresses =
-            [
+            PublicIpAddresses = [
                 publicIpV4 ?? await NewIpV4(),
                 await NewIpV6(),
                 publicIp
@@ -269,15 +268,17 @@ public class TestApp : IHttpClientFactory, IDisposable
         return serverInfo;
     }
 
-    public async Task<SessionRequestEx> CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint, Guid? clientId = null, IPAddress? clientIp = null
-        , string? extraData = null, string? locationPath = null, bool allowRedirect = false, ClientInfo? clientInfo = null)
+    public async Task<SessionRequestEx> CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint,
+        Guid? clientId = null, IPAddress? clientIp = null
+        , string? extraData = null, string? locationPath = null, bool allowRedirect = false,
+        ClientInfo? clientInfo = null)
     {
         var rand = new Random();
         if (clientInfo != null && clientId != null)
-            throw new InvalidOperationException("Could not set both clientInfo & clientId parameters at the same time.");
+            throw new InvalidOperationException(
+                "Could not set both clientInfo & clientId parameters at the same time.");
 
-        clientInfo ??= new ClientInfo
-        {
+        clientInfo ??= new ClientInfo {
             ClientId = clientId ?? Guid.NewGuid(),
             ClientVersion = $"999.{rand.Next(0, 999)}.{rand.Next(0, 999)}",
             UserAgent = "agent",
@@ -288,8 +289,7 @@ public class TestApp : IHttpClientFactory, IDisposable
         var vhToken = Token.FromAccessKey(accessKey);
 
         var secret = vhToken.Secret;
-        var sessionRequestEx = new SessionRequestEx
-        {
+        var sessionRequestEx = new SessionRequestEx {
             ClientInfo = clientInfo,
             TokenId = accessToken.AccessTokenId.ToString(),
             EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, secret),
@@ -334,14 +334,13 @@ public class TestApp : IHttpClientFactory, IDisposable
     public HttpClient CreateClient(string name)
     {
         // this for simulating Agent HTTP
-        return name == AppOptions.AgentHttpClientName 
-            ? AgentTestApp.HttpClient 
+        return name == AppOptions.AgentHttpClientName
+            ? AgentTestApp.HttpClient
             : WebApp.CreateClient();
     }
 
     public void Dispose()
     {
-
         Scope.Dispose();
         HttpClient.Dispose();
         AgentTestApp.Dispose();

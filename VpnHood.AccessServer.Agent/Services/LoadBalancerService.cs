@@ -1,5 +1,4 @@
-﻿using System.IO.IsolatedStorage;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -41,7 +40,8 @@ public class LoadBalancerService(
         // accept current server (no redirect) if it is in acceptable list
         if (!allowRedirect) {
             if (servers.All(x => x.ServerId != currentServer.ServerId))
-                throw new SessionExceptionEx(SessionErrorCode.AccessError, "This server can not serve you at this moment.");
+                throw new SessionExceptionEx(SessionErrorCode.AccessError,
+                    "This server can not serve you at this moment.");
 
             return;
         }
@@ -68,7 +68,8 @@ public class LoadBalancerService(
 
         // no server found
         if (bestTcpEndPoint == null)
-            throw new SessionExceptionEx(SessionErrorCode.AccessError, "Could not find any available server in the given location.");
+            throw new SessionExceptionEx(SessionErrorCode.AccessError,
+                "Could not find any available server in the given location.");
 
         // todo
         // deprecated: 505 client and later
@@ -136,6 +137,6 @@ public class LoadBalancerService(
             .ToArray();
 
         // at-least one server must be ready
-        return servers.Length > 0 && servers.All(x => x.ServerState is ServerState.Idle or ServerState.Active );
+        return servers.Length > 0 && servers.All(x => x.ServerState is ServerState.Idle or ServerState.Active);
     }
 }

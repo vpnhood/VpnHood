@@ -27,6 +27,4 @@ public class TeamController(
         var ret = await projectService.List(projectIds);
         return ret;
     }
-
 }
-

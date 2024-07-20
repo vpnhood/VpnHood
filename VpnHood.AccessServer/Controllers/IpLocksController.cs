@@ -18,8 +18,7 @@ public class IpLocksController(VhContext vhContext) : ControllerBase
     [AuthorizeProjectPermission(Permissions.IpLockWrite)]
     public async Task<IpLock> Create(Guid projectId, IpLockCreateParams createParams)
     {
-        var ipLock = new IpLockModel
-        {
+        var ipLock = new IpLockModel {
             IpAddress = createParams.IpAddress.ToString(),
             Description = createParams.Description,
             LockedTime = createParams.IsLocked ? DateTime.UtcNow : null,
@@ -35,7 +34,8 @@ public class IpLocksController(VhContext vhContext) : ControllerBase
     public async Task<IpLock> Update(Guid projectId, string ip, IpLockUpdateParams updateParams)
     {
         var ipLock = await vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.IpAddress == ip);
-        if (updateParams.IsLocked != null) ipLock.LockedTime = updateParams.IsLocked && ipLock.LockedTime == null ? DateTime.UtcNow : null;
+        if (updateParams.IsLocked != null)
+            ipLock.LockedTime = updateParams.IsLocked && ipLock.LockedTime == null ? DateTime.UtcNow : null;
         if (updateParams.Description != null) ipLock.Description = updateParams.Description;
 
         var res = vhContext.IpLocks.Update(ipLock);
@@ -56,7 +56,8 @@ public class IpLocksController(VhContext vhContext) : ControllerBase
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<IpLock> Get(Guid projectId, string ip)
     {
-        var ipLockModel = await vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.IpAddress == ip.ToLower());
+        var ipLockModel =
+            await vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.IpAddress == ip.ToLower());
         return ipLockModel.ToDto();
     }
 

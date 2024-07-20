@@ -7,7 +7,7 @@ public class CertificateModel
     public required Guid ServerFarmId { get; init; }
     public required string CommonName { get; set; }
     public required byte[] RawData { get; set; }
-    public required DateTime IssueTime { get; set; } 
+    public required DateTime IssueTime { get; set; }
     public required DateTime ExpirationTime { get; set; }
     public required string Thumbprint { get; set; }
     public required DateTime CreatedTime { get; set; }

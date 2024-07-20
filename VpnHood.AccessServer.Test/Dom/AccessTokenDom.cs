@@ -20,12 +20,15 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
         // get server ip
         var accessKey = await GetAccessKey();
         var token = Token.FromAccessKey(accessKey);
-        var serverEndPoint = token.ServerToken.HostEndPoints?.FirstOrDefault(x => x.Address.AddressFamily == addressFamily) ?? throw new Exception("There is no HostEndPoint.");
+        var serverEndPoint =
+            token.ServerToken.HostEndPoints?.FirstOrDefault(x => x.Address.AddressFamily == addressFamily) ??
+            throw new Exception("There is no HostEndPoint.");
         return await CreateSession(serverEndPoint, clientId, clientIp, assertError, serverLocation:
             serverLocation, autoRedirect: autoRedirect, clientInfo: clientInfo);
     }
 
-    public async Task<SessionDom> CreateSession(IPEndPoint serverEndPoint, Guid? clientId = null, IPAddress? clientIp = null,
+    public async Task<SessionDom> CreateSession(IPEndPoint serverEndPoint, Guid? clientId = null,
+        IPAddress? clientIp = null,
         bool assertError = true, string? serverLocation = null, bool autoRedirect = false, bool allowRedirect = true,
         ClientInfo? clientInfo = null)
     {
@@ -36,7 +39,8 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
                 new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort).Equals(serverEndPoint)));
 
         clientIp ??= serverEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6
-            ? await TestApp.NewIpV6() : await TestApp.NewIpV4();
+            ? await TestApp.NewIpV6()
+            : await TestApp.NewIpV4();
 
         var sessionRequestEx = await TestApp.CreateSessionRequestEx(
             AccessToken,
@@ -49,19 +53,21 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
 
         // create session
         var ret = await SessionDom.Create(
-            TestApp, serverData.Server.ServerId, AccessToken, sessionRequestEx, assertError: assertError && !autoRedirect);
+            TestApp, serverData.Server.ServerId, AccessToken, sessionRequestEx,
+            assertError: assertError && !autoRedirect);
 
         // redirect 
-        if (autoRedirect && ret.SessionResponseEx.ErrorCode == SessionErrorCode.RedirectHost)
-        {
+        if (autoRedirect && ret.SessionResponseEx.ErrorCode == SessionErrorCode.RedirectHost) {
             Assert.IsNotNull(ret.SessionResponseEx.RedirectHostEndPoint);
             Assert.IsNotNull(ret.SessionResponseEx.RedirectHostEndPoints);
-            Assert.IsTrue(ret.SessionResponseEx.RedirectHostEndPoints.Any(x => x.Equals(ret.SessionResponseEx.RedirectHostEndPoint)));
-            
+            Assert.IsTrue(ret.SessionResponseEx.RedirectHostEndPoints.Any(x =>
+                x.Equals(ret.SessionResponseEx.RedirectHostEndPoint)));
+
             // if clientIp is IPv4, then redirectHostEndPoint must be IPv4
             if (ret.SessionRequestEx.HostEndPoint.AddressFamily == AddressFamily.InterNetwork)
-                Assert.AreEqual(ret.SessionRequestEx.HostEndPoint.AddressFamily, ret.SessionResponseEx.RedirectHostEndPoint.AddressFamily);
-            
+                Assert.AreEqual(ret.SessionRequestEx.HostEndPoint.AddressFamily,
+                    ret.SessionResponseEx.RedirectHostEndPoint.AddressFamily);
+
             return await CreateSession(
                 ret.SessionResponseEx.RedirectHostEndPoint,
                 clientId: sessionRequestEx.ClientInfo.ClientId,

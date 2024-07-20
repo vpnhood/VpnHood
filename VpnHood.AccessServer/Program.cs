@@ -26,24 +26,23 @@ public class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        try
-        {
-
+        try {
             // logger
-            builder.Logging.AddSimpleConsole(c =>
-            {
-                c.TimestampFormat = "[HH:mm:ss] ";
-            });
+            builder.Logging.AddSimpleConsole(c => { c.TimestampFormat = "[HH:mm:ss] "; });
 
             // NLog: Setup NLog for Dependency injection
             builder.Logging.ClearProviders();
             builder.Host.UseNLog();
 
             // app options
-            var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ?? throw new Exception("Could not load AppOptions.");
-            var certificateValidatorOptions = builder.Configuration.GetSection("CertificateValidator").Get<CertificateValidatorOptions>() ?? new CertificateValidatorOptions();
+            var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ??
+                             throw new Exception("Could not load AppOptions.");
+            var certificateValidatorOptions =
+                builder.Configuration.GetSection("CertificateValidator").Get<CertificateValidatorOptions>() ??
+                new CertificateValidatorOptions();
             builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
-            builder.Services.Configure<CertificateValidatorOptions>(builder.Configuration.GetSection("CertificateValidator"));
+            builder.Services.Configure<CertificateValidatorOptions>(
+                builder.Configuration.GetSection("CertificateValidator"));
 
             // Graymint
             builder.Services
@@ -60,13 +59,14 @@ public class Program
                 options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);
 
             // HttpClient
-            builder.Services.AddHttpClient(AppOptions.AgentHttpClientName, httpClient =>
-            {
+            builder.Services.AddHttpClient(AppOptions.AgentHttpClientName, httpClient => {
                 if (string.IsNullOrEmpty(appOptions.AgentSystemAuthorization))
-                    GrayMintApp.ThrowOptionsValidationException(nameof(AppOptions.AgentSystemAuthorization), typeof(string));
+                    GrayMintApp.ThrowOptionsValidationException(nameof(AppOptions.AgentSystemAuthorization),
+                        typeof(string));
 
                 httpClient.BaseAddress = appOptions.AgentUrlPrivate ?? appOptions.AgentUrl;
-                httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(appOptions.AgentSystemAuthorization);
+                httpClient.DefaultRequestHeaders.Authorization =
+                    AuthenticationHeaderValue.Parse(appOptions.AgentSystemAuthorization);
             });
 
             // Update Cycle every 1 hour
@@ -78,14 +78,12 @@ public class Program
                         Interval = certificateValidatorOptions.Interval
                     })
                 .AddGrayMintJob<UsageCycleService>(
-                    new GrayMintJobOptions
-                    {
+                    new GrayMintJobOptions {
                         DueTime = appOptions.AutoMaintenanceInterval,
                         Interval = appOptions.AutoMaintenanceInterval
                     })
                 .AddGrayMintJob<SyncService>(
-                    new GrayMintJobOptions
-                    {
+                    new GrayMintJobOptions {
                         DueTime = appOptions.AutoMaintenanceInterval,
                         Interval = appOptions.AutoMaintenanceInterval
                     });
@@ -110,9 +108,9 @@ public class Program
                 .AddSingleton<IAcmeOrderFactory, AcmeOrderFactory>();
 
             // Report Service
-            builder.Services.AddVhReportServices(new ReportServiceOptions
-            {
-                ConnectionString = builder.Configuration.GetConnectionString("VhReportDatabase") ?? throw new Exception("Could not find VhReportDatabase."),
+            builder.Services.AddVhReportServices(new ReportServiceOptions {
+                ConnectionString = builder.Configuration.GetConnectionString("VhReportDatabase") ??
+                                   throw new Exception("Could not find VhReportDatabase."),
                 ServerUpdateStatusInterval = appOptions.ServerUpdateStatusInterval
             });
 
@@ -130,14 +128,14 @@ public class Program
 
             // Log Configs
             var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
-            var configJson = JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value, new JsonSerializerOptions { WriteIndented = true });
-            logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, [nameof(AppOptions.AgentSystemAuthorization)]));
+            var configJson = JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value,
+                new JsonSerializerOptions { WriteIndented = true });
+            logger.LogInformation("App: {Config}",
+                GmUtil.RedactJsonValue(configJson, [nameof(AppOptions.AgentSystemAuthorization)]));
 
             await GrayMintApp.RunAsync(webApp, args);
-
         }
-        finally
-        {
+        finally {
             NLog.LogManager.Shutdown();
         }
     }

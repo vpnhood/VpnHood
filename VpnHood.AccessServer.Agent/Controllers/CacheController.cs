@@ -36,7 +36,8 @@ public class CacheController(CacheService cacheService)
     }
 
     [HttpPost("servers/invalidate")]
-    public Task InvalidateServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? serverId = null)
+    public Task InvalidateServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null,
+        Guid? serverId = null)
     {
         return cacheService.InvalidateServers(projectId: projectId, serverFarmId: serverFarmId,
             serverProfileId: serverProfileId, serverId: serverId);

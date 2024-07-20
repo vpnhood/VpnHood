@@ -7,8 +7,7 @@ public sealed class SessionExceptionEx(SessionResponseEx response)
     : Exception(response.ErrorMessage)
 {
     public SessionExceptionEx(SessionErrorCode errorCode, string message)
-        : this(new SessionResponseEx
-        {
+        : this(new SessionResponseEx {
             ErrorCode = errorCode,
             ErrorMessage = message
         })

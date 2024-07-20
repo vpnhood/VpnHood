@@ -196,7 +196,6 @@ public class AgentService(
         ServerFarmModel serverFarmModel)
     {
         ArgumentNullException.ThrowIfNull(serverFarmModel.ServerProfile);
-        ArgumentNullException.ThrowIfNull(serverFarmModel.Certificate);
         ArgumentNullException.ThrowIfNull(serverFarmModel.Certificates);
 
         var tcpEndPoints = serverModel.AccessPoints
@@ -264,11 +263,12 @@ public class AgentService(
         });
 
         // renew certificate
-        if (serverFarmModel.Certificate.ValidateInprogress)
+        var certificate = serverFarmModel.GetCertificateInToken();
+        if (certificate.ValidateInprogress)
             serverConfig.DnsChallenge = new DnsChallenge
             {
-                Token = serverFarmModel.Certificate.ValidateToken ?? "",
-                KeyAuthorization = serverFarmModel.Certificate.ValidateKeyAuthorization ?? ""
+                Token = certificate.ValidateToken ?? "",
+                KeyAuthorization = certificate.ValidateKeyAuthorization ?? ""
             };
 
         serverConfig.ConfigCode = serverModel.ConfigCode.ToString(); // merge does not apply this

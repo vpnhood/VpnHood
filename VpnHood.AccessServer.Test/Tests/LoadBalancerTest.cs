@@ -5,6 +5,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -60,6 +61,11 @@ public class LoadBalancerTest
         var serverDom5 = await farm.AddNewServer(configure: false, sendStatus: false);
         var serverDom6 = await farm.AddNewServer();
 
+        // mark as error
+        await serverDom3.SendStatus(new ServerStatus { ConfigError = "error" });
+        //todo
+        Console.WriteLine("zzzw: " + serverDom3.ServerId);
+
         // configure serverDom5 with ipv6
         serverDom5.ServerInfo.PublicIpAddresses = [await serverDom5.TestApp.NewIpV6(), await serverDom5.TestApp.NewIpV6()];
         serverDom5.ServerInfo.PrivateIpAddresses = serverDom5.ServerInfo.PublicIpAddresses;
@@ -84,8 +90,8 @@ public class LoadBalancerTest
         }
 
         // some server should not be selected
-        Assert.AreEqual(0, serverDom3.ServerStatus.SessionCount, "Should not use server in Configuring state.");
-        Assert.AreEqual(0, serverDom4.ServerStatus.SessionCount, "Should not use server in Configuring state.");
+        Assert.AreEqual(0, serverDom3.ServerStatus.SessionCount, "Should not use server in error state.");
+        Assert.AreEqual(0, serverDom4.ServerStatus.SessionCount, "Should not use server in NotInstalled state.");
         Assert.AreEqual(1, serverDom5.ServerStatus.SessionCount, "IpVersion was not respected.");
 
         // each server sessions must be 3
@@ -305,5 +311,48 @@ public class LoadBalancerTest
         Assert.AreEqual(1, serverDom2.ServerStatus.SessionCount);
         Assert.AreEqual(1, serverDom3.ServerStatus.SessionCount);
         Assert.AreEqual(1, serverDom4.ServerStatus.SessionCount);
+    }
+
+    [TestMethod]
+    public async Task All_servers_must_be_treated_as_active_while_configuring()
+    {
+        // config farm
+        using var farmDom = await ServerFarmDom.Create(serverCount: 0);
+        farmDom.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
+        await farmDom.Update(new ServerFarmUpdateParams
+        {
+            MaxCertificateCount = new PatchOfInteger { Value = 2 }
+        });
+
+        // create servers
+        var serverDom1 = await farmDom.AddNewServer();
+        var serverDom2 = await farmDom.AddNewServer();
+
+        // create access token
+        var accessTokenDom = await farmDom.CreateAccessToken();
+
+        // make sure session after adding certificate
+        var dnsName1 = $"{Guid.NewGuid()}.com";
+        await farmDom.CertificateReplace(new CertificateCreateParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
+        });
+
+        await farmDom.ReloadServers();
+        Assert.IsTrue(farmDom.Servers.All(x => x.Server.ServerState == ServerState.Configuring));
+
+        // create sessions for IpV6 clients
+        for (var i = 0; i < 4; i++)
+        {
+            var sessionDom = await accessTokenDom.CreateSession(autoRedirect: true);
+
+            // find the server that create the session
+            var serverDom = farmDom.FindServerByEndPoint(sessionDom.SessionRequestEx.HostEndPoint);
+            serverDom.ServerInfo.Status.SessionCount++;
+            await serverDom.SendStatus();
+        }
+
+        Assert.AreEqual(2, serverDom1.ServerStatus.SessionCount);
+        Assert.AreEqual(2, serverDom2.ServerStatus.SessionCount);
     }
 }

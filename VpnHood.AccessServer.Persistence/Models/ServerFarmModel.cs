@@ -18,7 +18,6 @@ public class ServerFarmModel
 
     public virtual ServerProfileModel? ServerProfile { get; set; }
     public virtual ProjectModel? Project { get; set; }
-    public virtual CertificateModel? Certificate { get; set; }
     public virtual ICollection<CertificateModel>? Certificates { get; set; }
     public virtual ICollection<AccessTokenModel>? AccessTokens { get; set; }
     public virtual ICollection<ServerModel>? Servers { get; set; }

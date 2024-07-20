@@ -301,7 +301,7 @@ public class ServerService(
     public async Task Delete(Guid projectId, Guid serverId)
     {
         var server = await vhRepo.ServerGet(projectId, serverId);
-        var serverFarm = await vhRepo.ServerFarmGet(projectId, server.ServerFarmId, includeServers: true, includeCertificate: true);
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, server.ServerFarmId, includeServers: true, includeCertificates: true);
         server.IsDeleted = true;
         server.IsEnabled = true;
 

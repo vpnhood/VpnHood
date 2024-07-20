@@ -5617,6 +5617,7 @@ export interface IServerStatusHistory {
 
 export class ServerFarmData implements IServerFarmData {
     serverFarm!: ServerFarm;
+    certificates?: Certificate[] | null;
     accessPoints!: AccessPointView[];
     summary?: ServerFarmSummary | null;
 
@@ -5636,6 +5637,14 @@ export class ServerFarmData implements IServerFarmData {
     init(_data?: any) {
         if (_data) {
             this.serverFarm = _data["serverFarm"] ? ServerFarm.fromJS(_data["serverFarm"]) : new ServerFarm();
+            if (Array.isArray(_data["certificates"])) {
+                this.certificates = [] as any;
+                for (let item of _data["certificates"])
+                    this.certificates!.push(Certificate.fromJS(item));
+            }
+            else {
+                this.certificates = <any>null;
+            }
             if (Array.isArray(_data["accessPoints"])) {
                 this.accessPoints = [] as any;
                 for (let item of _data["accessPoints"])
@@ -5658,6 +5667,11 @@ export class ServerFarmData implements IServerFarmData {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["serverFarm"] = this.serverFarm ? this.serverFarm.toJSON() : <any>null;
+        if (Array.isArray(this.certificates)) {
+            data["certificates"] = [];
+            for (let item of this.certificates)
+                data["certificates"].push(item.toJSON());
+        }
         if (Array.isArray(this.accessPoints)) {
             data["accessPoints"] = [];
             for (let item of this.accessPoints)
@@ -5670,6 +5684,7 @@ export class ServerFarmData implements IServerFarmData {
 
 export interface IServerFarmData {
     serverFarm: ServerFarm;
+    certificates?: Certificate[] | null;
     accessPoints: AccessPointView[];
     summary?: ServerFarmSummary | null;
 }
@@ -5685,8 +5700,8 @@ export class ServerFarm implements IServerFarm {
     secret!: string;
     createdTime!: Date;
     pushTokenToClient!: boolean;
-    certificate?: Certificate | null;
     maxCertificateCount!: number;
+    certificate?: Certificate | null;
 
     constructor(data?: IServerFarm) {
         if (data) {
@@ -5709,8 +5724,8 @@ export class ServerFarm implements IServerFarm {
             this.secret = _data["secret"] !== undefined ? _data["secret"] : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
             this.pushTokenToClient = _data["pushTokenToClient"] !== undefined ? _data["pushTokenToClient"] : <any>null;
-            this.certificate = _data["certificate"] ? Certificate.fromJS(_data["certificate"]) : <any>null;
             this.maxCertificateCount = _data["maxCertificateCount"] !== undefined ? _data["maxCertificateCount"] : <any>null;
+            this.certificate = _data["certificate"] ? Certificate.fromJS(_data["certificate"]) : <any>null;
         }
     }
 
@@ -5733,8 +5748,8 @@ export class ServerFarm implements IServerFarm {
         data["secret"] = this.secret !== undefined ? this.secret : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
         data["pushTokenToClient"] = this.pushTokenToClient !== undefined ? this.pushTokenToClient : <any>null;
-        data["certificate"] = this.certificate ? this.certificate.toJSON() : <any>null;
         data["maxCertificateCount"] = this.maxCertificateCount !== undefined ? this.maxCertificateCount : <any>null;
+        data["certificate"] = this.certificate ? this.certificate.toJSON() : <any>null;
         return data;
     }
 }
@@ -5750,8 +5765,8 @@ export interface IServerFarm {
     secret: string;
     createdTime: Date;
     pushTokenToClient: boolean;
-    certificate?: Certificate | null;
     maxCertificateCount: number;
+    certificate?: Certificate | null;
 }
 
 export class Certificate implements ICertificate {
@@ -6758,6 +6773,7 @@ export enum ServerState {
     Disabled = "Disabled",
     Lost = "Lost",
     Configuring = "Configuring",
+    Error = "Error",
     Idle = "Idle",
     Active = "Active",
 }

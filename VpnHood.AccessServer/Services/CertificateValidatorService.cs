@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Dtos.Certificates;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Services.Acme;
 
@@ -28,8 +29,7 @@ public class CertificateValidatorService(
     private async Task Validate(Guid projectId, Guid serverFarmId, bool force, CancellationToken cancellationToken)
     {
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId, includeCertificates: true, includeProject: true, includeLetsEncryptAccount: true);
-        var certificate = serverFarm.Certificate!;
-        await Validate(certificate, force, cancellationToken);
+        await Validate(serverFarm.GetCertificateInToken(), force, cancellationToken);
     }
 
     private async Task Validate(CertificateModel certificate, bool force, CancellationToken cancellationToken)

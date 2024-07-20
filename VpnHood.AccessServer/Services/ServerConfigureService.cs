@@ -26,7 +26,7 @@ public class ServerConfigureService(
 
     public async Task SaveChangesAndInvalidateServerFarm(Guid projectId, Guid serverFarmId, bool reconfigureServers)
     {
-        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId: serverFarmId, includeCertificate: true, includeServers: true);
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId: serverFarmId, includeCertificates: true, includeServers: true);
         FarmTokenBuilder.UpdateIfChanged(serverFarm);
         if (reconfigureServers)
         {

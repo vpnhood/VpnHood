@@ -149,7 +149,6 @@ public class ServerFarmTest
         Assert.AreEqual(3, farms.Count);
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm1.ServerFarmId));
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm2.ServerFarmId));
-        Assert.IsNotNull(farms.First().ServerFarm.Certificate?.CommonName);
     }
 
 
@@ -165,7 +164,6 @@ public class ServerFarmTest
         Assert.AreEqual(3, farms.Count);
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm1.ServerFarmId));
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm2.ServerFarmId));
-        Assert.IsNotNull(farms.First().ServerFarm.Certificate?.CommonName);
     }
 
     [TestMethod]

@@ -399,9 +399,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
     }
 
     public async Task<ServerFarmModel> ServerFarmGet(Guid projectId, Guid serverFarmId,
-        bool includeServersAndAccessPoints = false, bool includeServerProfile = true,
-        bool includeCertificate = false, bool includeCertificates = false
-        )
+        bool includeServersAndAccessPoints = false, bool includeServerProfile = true, bool includeCertificates = false)
     {
         var query = vhContext.ServerFarms
             .Where(farm => farm.ProjectId == projectId && !farm.IsDeleted)
@@ -412,8 +410,6 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
 
         if (includeCertificates)
             query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted));
-        else if (includeCertificate)
-            query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted && y.IsInToken));
 
         if (includeServersAndAccessPoints)
             query = query
@@ -424,15 +420,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 .AsSingleQuery();
 
         var farmModel = await query.SingleAsync();
-        FillCertificate(farmModel);
         return farmModel;
     }
-
-    private static void FillCertificate(ServerFarmModel serverFarmModel)
-    {
-        serverFarmModel.Certificate = serverFarmModel.Certificates?.SingleOrDefault(x => x.IsInToken);
-    }
-
 
     public ValueTask<ServerModel?> FindServerAsync(Guid serverServerId)
     {

@@ -14,7 +14,7 @@ public class ServerFarm
     public required byte[] Secret { get; init; }
     public required DateTime CreatedTime { get; init; }
     public required bool PushTokenToClient { get; init; }
-    public required Certificate? Certificate { get; init; }
     public required int MaxCertificateCount { get; init; }
+    public required Certificate? Certificate { get; init; }
 }
 

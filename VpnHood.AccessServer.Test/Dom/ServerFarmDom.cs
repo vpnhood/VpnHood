@@ -8,6 +8,7 @@ public class ServerFarmDom : IDisposable
     private readonly bool _autoDisposeApp;
     public TestApp TestApp { get; }
     public ServerFarm ServerFarm { get; private set; }
+    public Certificate CertificateInToken { get; private set; } = default!;
     public List<ServerDom> Servers { get; private set; } = [];
     public Guid ServerFarmId => ServerFarm.ServerFarmId;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
@@ -33,6 +34,8 @@ public class ServerFarmDom : IDisposable
 
         var serverFarmData = await testApp.ServerFarmsClient.CreateAsync(testApp.ProjectId, createParams);
         var ret = new ServerFarmDom(testApp, serverFarmData.ServerFarm, autoDisposeApp);
+        ret.CertificateInToken = await ret.GetCertificateInToken();
+
         for (var i = 0; i < serverCount; i++)
             await ret.AddNewServer();
 
@@ -58,6 +61,7 @@ public class ServerFarmDom : IDisposable
     {
         var serverFarmData = await TestApp.ServerFarmsClient.GetAsync(ProjectId, ServerFarmId, includeSummary: true);
         ServerFarm = serverFarmData.ServerFarm;
+        CertificateInToken = await GetCertificateInToken();
         return serverFarmData;
     }
 
@@ -140,6 +144,12 @@ public class ServerFarmDom : IDisposable
     {
         var ret = await TestApp.ServerFarmsClient.CertificateListAsync(ProjectId, ServerFarmId);
         return ret.ToArray();
+    }
+
+    private async Task<Certificate> GetCertificateInToken()
+    {
+        var ret = await TestApp.ServerFarmsClient.CertificateListAsync(ProjectId, ServerFarmId);
+        return ret.Single(x=>x.IsInToken);
     }
 
 

@@ -24,8 +24,8 @@ public class ServerCache
     public required AccessPointModel[] AccessPoints { get; init; }
     public required ServerStatusBaseModel? ServerStatus { get; set; }
     public required bool AllowInAutoLocation { get; set; }
-    public bool IsReady => ServerState is ServerState.Idle or ServerState.Active;
     public ServerState ServerState { get; set; }
+
     public ServerCache UpdateState(TimeSpan lostServerThreshold)
     {
         ServerState = CalculateState(lostServerThreshold);
@@ -35,8 +35,8 @@ public class ServerCache
     private ServerState CalculateState(TimeSpan lostServerThreshold)
     {
         if (ConfigureTime == null) return ServerState.NotInstalled;
-        if (ServerStatus == null || ServerStatus.CreatedTime < DateTime.UtcNow - lostServerThreshold)
-            return ServerState.Lost;
+        if (!string.IsNullOrEmpty(LastConfigError)) return ServerState.Error;
+        if (ServerStatus == null || ServerStatus.CreatedTime < DateTime.UtcNow - lostServerThreshold) return ServerState.Lost;
         if (ConfigCode != LastConfigCode) return ServerState.Configuring;
         if (!IsEnabled) return ServerState.Disabled;
         if (ServerStatus.SessionCount == 0) return ServerState.Idle;

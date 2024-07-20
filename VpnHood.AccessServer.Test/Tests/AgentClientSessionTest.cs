@@ -9,6 +9,7 @@ using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
+using VpnHood.Server.Access;
 using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -74,9 +75,10 @@ public class AgentClientSessionTest
         // Check: a when server is not ready
         // ------------
         var badServer = await farm.AddNewServer();
-        badServer.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.Public).AccessPointMode =
-            AccessPointMode.PublicInToken;
-        await badServer.Update(new ServerUpdateParams()
+        await badServer.SendStatus(new ServerStatus { ConfigError = "error1" });
+
+        badServer.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.Public).AccessPointMode = AccessPointMode.PublicInToken;
+        await badServer.Update(new ServerUpdateParams
         {
             AccessPoints = new PatchOfAccessPointOf { Value = badServer.Server.AccessPoints }
         });

@@ -8268,6 +8268,9 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required]
         public ServerFarm ServerFarm { get; set; } = new ServerFarm();
 
+        [System.Text.Json.Serialization.JsonPropertyName("certificates")]
+        public System.Collections.Generic.ICollection<Certificate>? Certificates { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
         [System.ComponentModel.DataAnnotations.Required]
         public System.Collections.Generic.ICollection<AccessPointView> AccessPoints { get; set; } = new System.Collections.ObjectModel.Collection<AccessPointView>();
@@ -8317,11 +8320,11 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("pushTokenToClient")]
         public bool PushTokenToClient { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("certificate")]
-        public Certificate? Certificate { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("maxCertificateCount")]
         public int MaxCertificateCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("certificate")]
+        public Certificate? Certificate { get; set; } = default!;
 
     }
 
@@ -8758,11 +8761,14 @@ namespace VpnHood.AccessServer.Api
         [System.Runtime.Serialization.EnumMember(Value = @"Configuring")]
         Configuring = 3,
 
+        [System.Runtime.Serialization.EnumMember(Value = @"Error")]
+        Error = 4,
+
         [System.Runtime.Serialization.EnumMember(Value = @"Idle")]
-        Idle = 4,
+        Idle = 5,
 
         [System.Runtime.Serialization.EnumMember(Value = @"Active")]
-        Active = 5,
+        Active = 6,
 
     }
 

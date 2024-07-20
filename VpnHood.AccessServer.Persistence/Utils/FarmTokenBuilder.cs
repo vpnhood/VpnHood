@@ -49,8 +49,8 @@ public static class FarmTokenBuilder
     public static ServerToken Build(ServerFarmModel serverFarm)
     {
         ArgumentNullException.ThrowIfNull(serverFarm.Servers);
-        ArgumentNullException.ThrowIfNull(serverFarm.Certificate);
-        var x509Certificate = new X509Certificate2(serverFarm.Certificate.RawData);
+        var certificate = serverFarm.GetCertificateInToken();
+        var x509Certificate = new X509Certificate2(certificate.RawData);
 
         var servers = serverFarm.Servers!
             .Where(server => server.IsEnabled)
@@ -93,7 +93,7 @@ public static class FarmTokenBuilder
         // create token
         var serverToken = new ServerToken
         {
-            CertificateHash = serverFarm.Certificate.IsValidated ? null : x509Certificate.GetCertHash(),
+            CertificateHash = certificate.IsValidated ? null : x509Certificate.GetCertHash(),
             HostName = x509Certificate.GetNameInfo(X509NameType.DnsName, false),
             HostEndPoints = accessPoints.Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort)).ToArray(),
             Secret = serverFarm.Secret,

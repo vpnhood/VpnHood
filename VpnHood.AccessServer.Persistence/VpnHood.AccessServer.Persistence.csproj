@@ -23,10 +23,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="GrayMint.Common" Version="2.0.205" />
+		<PackageReference Include="GrayMint.Common" Version="2.0.206" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.7" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.7" />
-		<PackageReference Include="VpnHood.Common" Version="4.6.537-prerelease" />
+		<PackageReference Include="VpnHood.Common" Version="4.6.546" />
 	</ItemGroup>
 
 </Project>

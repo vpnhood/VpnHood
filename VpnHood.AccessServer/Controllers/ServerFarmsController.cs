@@ -58,8 +58,8 @@ public class ServerFarmsController(
         int recordIndex = 0, int recordCount = 101)
     {
         return includeSummary
-            ? await serverFarmService.ListWithSummary(projectId, search, null, recordIndex, recordCount)
-            : await serverFarmService.List(projectId, search, null, recordIndex, recordCount);
+            ? await serverFarmService.ListWithSummary(projectId, search, serverFarmId: null, recordIndex: recordIndex, recordCount: recordCount) 
+            : await serverFarmService.List(projectId, search, serverFarmId: null, recordIndex: recordIndex, recordCount: recordCount);
     }
 
     [HttpDelete("{serverFarmId:guid}")]

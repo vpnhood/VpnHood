@@ -67,8 +67,8 @@ public class ServerFarmService(
     public async Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary)
     {
         var dtos = includeSummary
-            ? await ListWithSummary(projectId, serverFarmId: serverFarmId)
-            : await List(projectId, serverFarmId: serverFarmId);
+            ? await ListWithSummary(projectId, serverFarmId: serverFarmId, includeCertificates: true)
+            : await List(projectId, serverFarmId: serverFarmId, includeCertificates: true);
 
         var serverFarmData = dtos.Single();
         return serverFarmData;
@@ -125,6 +125,8 @@ public class ServerFarmService(
     public async Task<ServerFarmData> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
     {
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId, includeCertificates: true);
+        var certificate = serverFarm.GetCertificateInToken();
+
         var reconfigureServers = false;
 
         // change other properties
@@ -150,13 +152,12 @@ public class ServerFarmService(
         }
 
         // set certificate
-        ArgumentNullException.ThrowIfNull(serverFarm.Certificate);
         var validateCertificate = false;
-        if (updateParams.AutoValidateCertificate != null && updateParams.AutoValidateCertificate != serverFarm.Certificate.AutoValidate)
+        if (updateParams.AutoValidateCertificate != null && updateParams.AutoValidateCertificate != certificate.AutoValidate)
         {
             validateCertificate = updateParams.AutoValidateCertificate.Value;
-            serverFarm.Certificate.AutoValidate = updateParams.AutoValidateCertificate.Value;
-            serverFarm.Certificate.ValidateInprogress = updateParams.AutoValidateCertificate.Value;
+            certificate.AutoValidate = updateParams.AutoValidateCertificate.Value;
+            certificate.ValidateInprogress = updateParams.AutoValidateCertificate.Value;
         }
 
         // set certificate history count
@@ -196,27 +197,31 @@ public class ServerFarmService(
     }
 
     public async Task<ServerFarmData[]> List(Guid projectId, string? search = null,
-        Guid? serverFarmId = null,
+        Guid? serverFarmId = null, bool includeCertificates = false,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
-        var farmViews = await vhRepo.ServerFarmListView(projectId, search: search, serverFarmId: serverFarmId, recordIndex: recordIndex, recordCount: recordCount);
+        var farmViews = await vhRepo.ServerFarmListView(projectId, search: search, serverFarmId: serverFarmId,
+            recordIndex: recordIndex, recordCount: recordCount);
+
         var accessPoints = await GetPublicInTokenAccessPoints(farmViews.Select(x => x.ServerFarm.ServerFarmId));
         var dtos = farmViews
             .Select(x => new ServerFarmData
             {
                 ServerFarm = x.ServerFarm.ToDto(x.ServerProfileName),
-                AccessPoints = accessPoints.Where(y => y.ServerFarmId == x.ServerFarm.ServerFarmId)
+                AccessPoints = accessPoints.Where(y => y.ServerFarmId == x.ServerFarm.ServerFarmId),
+                Certificates = x.ServerFarm.Certificates?.Select(z=>z.ToDto()).ToArray()
             });
 
         return dtos.ToArray();
     }
 
     public async Task<ServerFarmData[]> ListWithSummary(Guid projectId, string? search = null,
-        Guid? serverFarmId = null,
+        Guid? serverFarmId = null, bool includeCertificates = false,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
-        var farmViews = await vhRepo.ServerFarmListView(projectId, search: search, includeSummary: true,
-            serverFarmId: serverFarmId, recordIndex: recordIndex, recordCount: recordCount);
+        var farmViews = await vhRepo.ServerFarmListView(projectId, search: search, serverFarmId: serverFarmId,
+            includeSummary: true,
+            recordIndex: recordIndex, recordCount: recordCount);
 
         // create result
         var accessPoints = await GetPublicInTokenAccessPoints(farmViews.Select(x => x.ServerFarm.ServerFarmId));
@@ -225,6 +230,7 @@ public class ServerFarmService(
         {
             ServerFarm = x.ServerFarm.ToDto(x.ServerProfileName),
             AccessPoints = accessPoints.Where(y => y.ServerFarmId == x.ServerFarm.ServerFarmId),
+            Certificates = x.ServerFarm.Certificates?.Select(z => z.ToDto()).ToArray(),
             Summary = new ServerFarmSummary
             {
                 ActiveTokenCount = x.AccessTokens!.Count(accessToken => accessToken.LastUsedTime >= now.AddDays(-7)),

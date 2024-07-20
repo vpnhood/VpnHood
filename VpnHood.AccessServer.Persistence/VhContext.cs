@@ -384,9 +384,6 @@ public class VhContext : DbContext
                 .HasKey(e => e.ServerFarmId);
 
             entity
-                .Ignore(e => e.Certificate);
-
-            entity
                 .HasIndex(e => new { e.ProjectId, e.ServerFarmName })
                 .HasFilter($"{nameof(ServerFarmModel.IsDeleted)} = 0")
                 .IsUnique();

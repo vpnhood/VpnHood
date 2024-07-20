@@ -126,6 +126,7 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
     public Task<ServerCommand> SendStatus(ServerStatus serverStatus, bool overwriteConfigCode = true)
     {
         if (overwriteConfigCode) serverStatus.ConfigCode = ServerConfig.ConfigCode;
+        ServerInfo.Status = serverStatus;
         return AgentClient.Server_UpdateStatus(serverStatus);
     }
 

@@ -44,8 +44,8 @@ public class CacheService(
     public Task<ServerCache[]> GetServers(Guid? projectId = null, Guid? serverFarmId = null)
     {
         var servers = cacheRepo.Servers.Values
-            .Where(x=> projectId==null || x.ProjectId == projectId)
-            .Where(x=> serverFarmId==null || x.ServerFarmId == serverFarmId)
+            .Where(x => projectId == null || x.ProjectId == projectId)
+            .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Select(x => x.UpdateState(agentOptions.Value.LostServerThreshold));
         return Task.FromResult(servers.ToArray());
     }
@@ -215,7 +215,7 @@ public class CacheService(
             .Where(x => x.ServerFarmId == serverFarmId)
             .Select(x => x.ServerId)
             .ToArray();
-        
+
         return InvalidateServers(serverIds);
 
     }
@@ -242,8 +242,7 @@ public class CacheService(
 
         // recover server status
         foreach (var serverId in serverIds)
-            if (cacheRepo.Servers.TryRemove(serverId, out var oldServer))
-            {
+            if (cacheRepo.Servers.TryRemove(serverId, out var oldServer)) {
                 var server = servers.FirstOrDefault(x => x.ServerId == serverId);
                 if (server != null)
                     server.ServerStatus = oldServer.ServerStatus;
@@ -260,12 +259,10 @@ public class CacheService(
         if (accessUsage.ReceivedTraffic + accessUsage.SentTraffic == 0)
             return;
 
-        if (!cacheRepo.SessionUsages.TryGetValue(accessUsage.SessionId, out var oldUsage))
-        {
+        if (!cacheRepo.SessionUsages.TryGetValue(accessUsage.SessionId, out var oldUsage)) {
             cacheRepo.SessionUsages.TryAdd(accessUsage.SessionId, accessUsage);
         }
-        else
-        {
+        else {
             oldUsage.ReceivedTraffic += accessUsage.ReceivedTraffic;
             oldUsage.SentTraffic += accessUsage.SentTraffic;
             oldUsage.LastCycleReceivedTraffic = accessUsage.LastCycleReceivedTraffic;
@@ -279,15 +276,13 @@ public class CacheService(
 
     private IEnumerable<SessionCache> GetUpdatedSessions()
     {
-        foreach (var session in cacheRepo.Sessions.Values)
-        {
+        foreach (var session in cacheRepo.Sessions.Values) {
             // check is updated from last usage
             var isUpdated = session.LastUsedTime > cacheRepo.LastSavedTime || session.EndTime > cacheRepo.LastSavedTime;
 
             // check timeout
             var minSessionTime = DateTime.UtcNow - agentOptions.Value.SessionPermanentlyTimeout;
-            if (session.EndTime == null && session.LastUsedTime < minSessionTime)
-            {
+            if (session.EndTime == null && session.LastUsedTime < minSessionTime) {
                 if (session.ErrorCode != SessionErrorCode.Ok) logger.LogWarning(
                     "Session has error but it has not been closed. SessionId: {SessionId}", session.SessionId);
                 session.EndTime = DateTime.UtcNow;
@@ -299,8 +294,7 @@ public class CacheService(
 
             // archive the CloseWait sessions; keep closed session shortly in memory to report the session owner
             var minCloseWaitTime = DateTime.UtcNow - agentOptions.Value.SessionTemporaryTimeout;
-            if (session.EndTime != null && session.LastUsedTime < minCloseWaitTime && !session.IsArchived)
-            {
+            if (session.EndTime != null && session.LastUsedTime < minCloseWaitTime && !session.IsArchived) {
                 session.IsArchived = true;
                 isUpdated = true;
             }
@@ -315,8 +309,7 @@ public class CacheService(
 
     private static async Task ResolveDbUpdateConcurrencyException(DbUpdateConcurrencyException ex)
     {
-        foreach (var entry in ex.Entries)
-        {
+        foreach (var entry in ex.Entries) {
             //var proposedValues = entry.CurrentValues;
             var databaseValues = await entry.GetDatabaseValuesAsync();
 
@@ -347,15 +340,13 @@ public class CacheService(
 
         // update accesses
         var accessIds = updatedSessions.Select(x => x.AccessId).Distinct();
-        foreach (var accessId in accessIds)
-        {
+        foreach (var accessId in accessIds) {
             var access = await GetAccess(accessId);
             vhAgentRepo.AccessUpdate(access);
         }
 
         // save updated sessions
-        try
-        {
+        try {
             logger.LogInformation("Saving Sessions... Projects: {Projects}, Servers: {Servers}, Sessions: {Sessions}, ModifiedSessions: {ModifiedSessions}",
                 updatedSessions.DistinctBy(x => x.ProjectId).Count(), updatedSessions.DistinctBy(x => x.ServerId).Count(), cacheRepo.Sessions.Count, updatedSessions.Length);
 
@@ -365,14 +356,12 @@ public class CacheService(
             foreach (var sessionPair in cacheRepo.Sessions.Where(pair => pair.Value.IsArchived))
                 cacheRepo.Sessions.TryRemove(sessionPair);
         }
-        catch (DbUpdateConcurrencyException ex)
-        {
+        catch (DbUpdateConcurrencyException ex) {
             await ResolveDbUpdateConcurrencyException(ex);
             vhAgentRepo.ClearChangeTracker();
             logger.LogError(ex, "Could not flush sessions. I will resolve it for the next try.");
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             vhAgentRepo.ClearChangeTracker();
             logger.LogError(ex, "Could not flush sessions.");
         }
@@ -380,8 +369,7 @@ public class CacheService(
         // save access usages
         var sessionUsages = cacheRepo.SessionUsages.Values.ToArray();
         cacheRepo.SessionUsages = new ConcurrentDictionary<long, AccessUsageModel>();
-        try
-        {
+        try {
             await vhAgentRepo.AccessUsageAdd(sessionUsages);
             await vhAgentRepo.SaveChangesAsync();
 
@@ -390,15 +378,13 @@ public class CacheService(
             foreach (var accessPair in cacheRepo.Accesses.Where(pair => pair.Value.LastUsedTime < minSessionTime))
                 cacheRepo.Accesses.TryRemove(accessPair);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             vhAgentRepo.ClearChangeTracker();
             logger.LogError(ex, "Could not write AccessUsages.");
         }
 
         // ServerStatus
-        try
-        {
+        try {
             var serverStatuses = cacheRepo.Servers.Values
                 .Where(server => server.ServerStatus?.CreatedTime > cacheRepo.LastSavedTime)
                 .Select(server => server.ServerStatus!)
@@ -416,14 +402,12 @@ public class CacheService(
                 cacheRepo.Servers.TryRemove(serverPair);
 
         }
-        catch (DbUpdateConcurrencyException ex)
-        {
+        catch (DbUpdateConcurrencyException ex) {
             await ResolveDbUpdateConcurrencyException(ex);
             vhAgentRepo.ClearChangeTracker();
             logger.LogError(ex, "Could not save servers status. I've resolved it for the next try.");
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             vhAgentRepo.ClearChangeTracker();
             logger.LogError(ex, "Could not save servers status.");
         }

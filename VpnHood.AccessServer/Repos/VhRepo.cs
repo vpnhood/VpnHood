@@ -9,13 +9,6 @@ namespace VpnHood.AccessServer.Repos;
 public class VhRepo(VhContext vhContext)
     : RepoBase(vhContext)
 {
-
-    private static void FillCertificate(ServerFarmModel serverFarmModel)
-    {
-        serverFarmModel.Certificate = serverFarmModel.Certificates?
-            .SingleOrDefault(x => x is { IsInToken: true, IsDeleted: false });
-    }
-
     public Task<ServerModel> ServerGet(Guid projectId, Guid serverId, bool includeFarm = false, bool includeFarmProfile = false)
     {
         var query = vhContext.Servers
@@ -249,8 +242,7 @@ public class VhRepo(VhContext vhContext)
     }
 
     public async Task<ServerFarmModel> ServerFarmGet(Guid projectId, Guid serverFarmId,
-        bool includeServers = false, bool includeAccessTokens = false,
-        bool includeCertificate = false, bool includeCertificates = false, bool includeProject = false,
+        bool includeServers = false, bool includeAccessTokens = false, bool includeCertificates = false, bool includeProject = false,
         bool includeLetsEncryptAccount = false)
     {
         var query = vhContext.ServerFarms
@@ -267,9 +259,6 @@ public class VhRepo(VhContext vhContext)
         if (includeCertificates)
             query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted));
 
-        else if (includeCertificate)
-            query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted && y.IsInToken));
-
         if (includeServers)
             query = query.Include(farm => farm.Servers!.Where(server => !server.IsDeleted))
                 .ThenInclude(x => x.Location);
@@ -278,54 +267,37 @@ public class VhRepo(VhContext vhContext)
             query = query.Include(farm => farm.AccessTokens!.Where(accessToken => !accessToken.IsDeleted));
 
         var serverFarm = await query.SingleAsync();
-        FillCertificate(serverFarm);
         return serverFarm;
+    }
+
+    public Task<CertificateModel> ServerFarmGetInTokenCertificate(Guid projectId, Guid serverFarmId)
+    {
+        return vhContext.Certificates
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x => x.ServerFarmId == serverFarmId)
+            .Where(x => !x.ServerFarm!.IsDeleted)
+            .Where(x => x.IsInToken && !x.IsDeleted)
+            .SingleAsync();
     }
 
 
     public async Task<ServerFarmView[]> ServerFarmListView(Guid projectId, string? search = null, Guid? serverFarmId = null,
         bool includeSummary = false, int recordIndex = 0, int recordCount = int.MaxValue)
     {
-        var query = vhContext.Certificates
-            .Include(x => x.ServerFarm)
+        var query = vhContext.ServerFarms
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .Where(x => !x.ServerFarm!.IsDeleted)
-            .Where(x => x.IsInToken)
             .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
-                x.ServerFarm!.ServerFarmName.Contains(search) ||
+                x.ServerFarmName.Contains(search) ||
                 x.ServerFarmId.ToString() == search)
             .Select(x => new ServerFarmView
             {
-                Certificate = new CertificateModel
-                {
-                    RawData = Array.Empty<byte>(),
-                    AutoValidate = x.AutoValidate,
-                    ValidateInprogress = x.ValidateInprogress,
-                    ValidateCount = x.ValidateCount,
-                    ValidateError = x.ValidateError,
-                    ValidateErrorCount = x.ValidateErrorCount,
-                    ValidateErrorTime = x.ValidateErrorTime,
-                    ValidateKeyAuthorization = x.ValidateKeyAuthorization,
-                    ValidateToken = x.ValidateToken,
-                    IssueTime = x.IssueTime,
-                    ExpirationTime = x.ExpirationTime,
-                    IsValidated = x.IsValidated,
-                    Thumbprint = x.Thumbprint,
-                    CommonName = x.CommonName,
-                    CertificateId = x.CertificateId,
-                    CreatedTime = x.CreatedTime,
-                    IsDeleted = x.IsDeleted,
-                    IsInToken = x.IsInToken,
-                    ProjectId = x.ProjectId,
-                    ServerFarmId = x.ServerFarmId
-                },
-                ServerFarm = x.ServerFarm!,
-                ServerProfileName = x.ServerFarm!.ServerProfile!.ServerProfileName,
-                ServerCount = includeSummary ? x.ServerFarm.Servers!.Count(y => !y.IsDeleted) : null,
+                ServerFarm = x,
+                ServerProfileName = x.ServerProfile!.ServerProfileName,
+                ServerCount = includeSummary ? x.Servers!.Count(y => !y.IsDeleted) : null,
                 AccessTokens = includeSummary
-                    ? x.ServerFarm.AccessTokens!
+                    ? x.AccessTokens!
                         .Where(y => !y.IsDeleted)
                         .Select(y => new ServerFarmView.AccessTokenView
                         {
@@ -333,17 +305,15 @@ public class VhRepo(VhContext vhContext)
                             LastUsedTime = y.LastUsedTime
                         }).ToArray()
                     : null
-            })
-            .OrderByDescending(x => x.ServerFarm.ServerFarmName)
+            });
+
+        query = query.OrderByDescending(x => x.ServerFarm.ServerFarmName)
             .Skip(recordIndex)
             .Take(recordCount)
             .AsSplitQuery()
             .AsNoTracking();
 
         var results = await query.ToArrayAsync();
-        foreach (var result in results)
-            result.ServerFarm.Certificate = result.Certificate;
-
         return results;
     }
 

@@ -180,6 +180,7 @@ public class SessionService(
                 access.AccessId, project.ProjectName, serverFarmCache.ServerFarmName);
         }
         else {
+            // ReSharper disable once DisposeOnUsingVariable
             accessLock.Dispose(); // access is already exists so the next call will not create new
         }
 

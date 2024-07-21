@@ -148,8 +148,7 @@ public class VhContext : DbContext
             entity
                 .HasOne(e => e.ServerFarm)
                 .WithMany(d => d.Certificates)
-                .HasForeignKey(e => new { e.ProjectId, e.ServerFarmId })
-                .HasPrincipalKey(p => new { p.ProjectId, p.ServerFarmId })
+                .HasForeignKey(e => e.ServerFarmId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // make sure the certificate farm belong to the same project
@@ -402,6 +401,9 @@ public class VhContext : DbContext
                 .Property(e => e.Secret)
                 .HasMaxLength(16)
                 .IsFixedLength();
+
+            entity.Property(e => e.MaxCertificateCount)
+                .HasDefaultValue(1);
 
             entity
                 .HasOne(e => e.Project)

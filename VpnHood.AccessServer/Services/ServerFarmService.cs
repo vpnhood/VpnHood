@@ -66,10 +66,12 @@ public class ServerFarmService(
     public async Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary)
     {
         var dtos = includeSummary
-            ? await ListWithSummary(projectId, serverFarmId: serverFarmId, includeCertificates: true)
-            : await List(projectId, serverFarmId: serverFarmId, includeCertificates: true);
+            ? await ListWithSummary(projectId, serverFarmId: serverFarmId)
+            : await List(projectId, serverFarmId: serverFarmId);
 
+        var certificateModel = await vhRepo.ServerFarmGetInTokenCertificate(projectId, serverFarmId);
         var serverFarmData = dtos.Single();
+        serverFarmData.ServerFarm.Certificate = certificateModel.ToDto();
         return serverFarmData;
     }
 
@@ -159,13 +161,9 @@ public class ServerFarmService(
         // set certificate history count
         if (updateParams.MaxCertificateCount != null &&
             updateParams.MaxCertificateCount != serverFarm.MaxCertificateCount) {
-            if (serverFarm.MaxCertificateCount < 1)
-                throw new ArgumentException("MaxCertificateCount can not be negative.",
-                    nameof(serverFarm.MaxCertificateCount));
-
-            if (serverFarm.MaxCertificateCount > 10)
-                throw new ArgumentException("MaxCertificateCount can be more than 10.",
-                    nameof(serverFarm.MaxCertificateCount));
+            if (updateParams.MaxCertificateCount < 1 || updateParams.MaxCertificateCount > 10)
+                throw new ArgumentException("MaxCertificateCount must be between 1 and 10.",
+                    nameof(updateParams.MaxCertificateCount));
 
             serverFarm.MaxCertificateCount = updateParams.MaxCertificateCount.Value;
 
@@ -194,7 +192,7 @@ public class ServerFarmService(
     }
 
     public async Task<ServerFarmData[]> List(Guid projectId, string? search = null,
-        Guid? serverFarmId = null, bool includeCertificates = false,
+        Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
         var farmViews = await vhRepo.ServerFarmListView(projectId, search: search, serverFarmId: serverFarmId,
@@ -212,7 +210,7 @@ public class ServerFarmService(
     }
 
     public async Task<ServerFarmData[]> ListWithSummary(Guid projectId, string? search = null,
-        Guid? serverFarmId = null, bool includeCertificates = false,
+        Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
         var farmViews = await vhRepo.ServerFarmListView(projectId, search: search, serverFarmId: serverFarmId,

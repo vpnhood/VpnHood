@@ -11,6 +11,7 @@ using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.Common.IpLocations;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
@@ -135,10 +136,8 @@ public class AgentService(
         var serverModel = serverFarmModel.Servers!.Single(x => x.ServerId == serverId);
 
         // update cache
-        var gatewayIpV4 =
-            serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
-        var gatewayIpV6 =
-            serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
+        var gatewayIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.IsV4());
+        var gatewayIpV6 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.IsV6());
         serverModel.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
         serverModel.OsInfo = serverInfo.OsInfo;
         serverModel.MachineName = serverInfo.MachineName;
@@ -152,8 +151,7 @@ public class AgentService(
 
         // calculate access points
         if (serverModel.AutoConfigure)
-            serverModel.AccessPoints =
-                BuildServerAccessPoints(serverModel.ServerId, serverFarmModel.Servers!, serverInfo);
+            serverModel.AccessPoints = BuildServerAccessPoints(serverModel.ServerId, serverFarmModel.Servers!, serverInfo);
 
         // update if there is any change & update cache
         var isFarmUpdated = FarmTokenBuilder.UpdateIfChanged(serverFarmModel);
@@ -307,8 +305,7 @@ public class AgentService(
             .Select(x => x.IpAddress);
     }
 
-    private static List<AccessPointModel> BuildServerAccessPoints(Guid serverId, ICollection<ServerModel> farmServers,
-        ServerInfo serverInfo)
+    private static List<AccessPointModel> BuildServerAccessPoints(Guid serverId, ICollection<ServerModel> farmServers, ServerInfo serverInfo)
     {
         // all old PublicInToken AccessPoints in the same farm
         var oldTokenAccessPoints = farmServers

@@ -4,6 +4,7 @@ using VpnHood.AccessServer.Persistence.Utils;
 namespace VpnHood.AccessServer.Agent.Services;
 
 public class FarmTokenUpdater(
+    CacheRepo cacheRepo,
     VhAgentRepo vhAgentRepo,
     ILogger<FarmTokenUpdater> logger)
 
@@ -25,8 +26,15 @@ public class FarmTokenUpdater(
 
     public async Task Update(Guid farmId, bool saveChanged)
     {
-        var farm = await vhAgentRepo.ServerFarmGet(farmId, includeServersAndAccessPoints: true, includeCertificates: true);
-        if (FarmTokenBuilder.UpdateIfChanged(farm) && saveChanged)
+        var serverFarm = await vhAgentRepo.ServerFarmGet(farmId, 
+            includeServersAndAccessPoints: true, 
+            includeCertificates: true);
+
+        if (FarmTokenBuilder.UpdateIfChanged(serverFarm) &&
+            cacheRepo.ServerFarms.TryGetValue(farmId, out var farmCache))
+            farmCache.TokenJson = serverFarm.TokenJson;
+
+        if (saveChanged)
             await vhAgentRepo.SaveChangesAsync();
     }
 

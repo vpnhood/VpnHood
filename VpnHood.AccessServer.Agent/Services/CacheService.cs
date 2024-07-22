@@ -215,8 +215,8 @@ public class CacheService(
     public Task InvalidateServerFarm(Guid serverFarmId, bool includeServers = true)
     {
         cacheRepo.ServerFarms.TryRemove(serverFarmId, out _);
-        if (!includeServers)
-            return Task.CompletedTask;
+        if (!includeServers) 
+            return farmTokenUpdater.Update([serverFarmId], saveChanged: true);
 
         // invalidate all servers in the farm
         var serverIds = cacheRepo.Servers.Values

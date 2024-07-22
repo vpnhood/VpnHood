@@ -6,6 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
+using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 
@@ -226,7 +227,7 @@ public class AgentServerTest
         var token = Common.Token.FromAccessKey(sessionDom.SessionResponseEx.AccessKey!);
         Assert.IsNotNull(token.ServerToken.HostEndPoints);
         Assert.AreEqual(
-            token.ServerToken.HostEndPoints.First(x => x.AddressFamily == AddressFamily.InterNetwork).Address,
+            token.ServerToken.HostEndPoints.First(x => x.Address.IsV4()).Address,
             serverDom.ServerInfo.PublicIpAddresses.First());
     }
 

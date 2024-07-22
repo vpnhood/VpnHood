@@ -29,7 +29,7 @@ public class ServerConfigureService(
     {
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId: serverFarmId, includeCertificates: true,
             includeServers: true);
-        FarmTokenBuilder.UpdateIfChanged(serverFarm);
+        
         if (reconfigureServers) {
             foreach (var server in serverFarm.Servers!)
                 server.ConfigCode = Guid.NewGuid();

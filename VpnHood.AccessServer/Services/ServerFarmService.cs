@@ -54,7 +54,6 @@ public class ServerFarmService(
             Servers = []
         };
 
-        FarmTokenBuilder.UpdateIfChanged(serverFarm);
         await vhRepo.AddAsync(serverFarm);
         await vhRepo.SaveChangesAsync();
 

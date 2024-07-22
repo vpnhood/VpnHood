@@ -7,7 +7,7 @@ using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.AccessServer.Persistence.Utils;
+namespace VpnHood.AccessServer.Agent.Utils;
 
 public static class FarmTokenBuilder
 {

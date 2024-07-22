@@ -1,4 +1,7 @@
-﻿namespace VpnHood.AccessServer.Persistence.Models;
+﻿using GrayMint.Common.Utils;
+using VpnHood.Common;
+
+namespace VpnHood.AccessServer.Persistence.Models;
 
 public class ServerFarmModel
 {
@@ -27,5 +30,13 @@ public class ServerFarmModel
         ArgumentNullException.ThrowIfNull(Certificates);
         return Certificates.FirstOrDefault(x => x.IsInToken)
                ?? throw new InvalidOperationException("The farm must have at least one certificate in token.");
+    }
+
+    public ServerToken GetRequiredServerToken()
+    {
+        if (string.IsNullOrEmpty(TokenJson))
+            throw new InvalidOperationException("The server farm token has not been initialized properly.");
+
+        return GmUtil.JsonDeserialize<ServerToken>(TokenJson);
     }
 }

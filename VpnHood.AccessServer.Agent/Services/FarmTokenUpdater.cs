@@ -1,5 +1,5 @@
 ﻿using VpnHood.AccessServer.Agent.Repos;
-using VpnHood.AccessServer.Persistence.Utils;
+using VpnHood.AccessServer.Agent.Utils;
 
 namespace VpnHood.AccessServer.Agent.Services;
 

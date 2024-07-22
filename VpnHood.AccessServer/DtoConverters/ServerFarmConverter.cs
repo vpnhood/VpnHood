@@ -1,6 +1,5 @@
 ﻿using VpnHood.AccessServer.Dtos.ServerFarms;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.AccessServer.Persistence.Utils;
 
 namespace VpnHood.AccessServer.DtoConverters;
 

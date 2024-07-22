@@ -6,7 +6,6 @@ using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.ServerFarms;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.AccessServer.Repos;
 using VpnHood.Common;
 using AccessPointView = VpnHood.AccessServer.Dtos.ServerFarms.AccessPointView;
@@ -271,7 +270,7 @@ public class ServerFarmService(
     public async Task<string> GetEncryptedToken(Guid projectId, Guid serverFarmId)
     {
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
-        var farmToken = FarmTokenBuilder.GetRequiredServerToken(serverFarm.TokenJson);
+        var farmToken = serverFarm.GetRequiredServerToken();
         return farmToken.Encrypt();
     }
 }

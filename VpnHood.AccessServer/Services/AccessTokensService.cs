@@ -4,7 +4,6 @@ using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.AccessTokens;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Repos;
 using VpnHood.Common;
@@ -87,10 +86,11 @@ public class AccessTokensService(
     public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
     {
         var accessToken = await vhRepo.AccessTokenGet(projectId, accessTokenId, includeFarm: true);
+        ArgumentNullException.ThrowIfNull(accessToken.ServerFarm);
 
         // create token
         var token = new Token {
-            ServerToken = FarmTokenBuilder.GetRequiredServerToken(accessToken.ServerFarm?.TokenJson),
+            ServerToken = accessToken.ServerFarm.GetRequiredServerToken(),
             Secret = accessToken.Secret,
             TokenId = accessToken.AccessTokenId.ToString(),
             Name = accessToken.AccessTokenName,

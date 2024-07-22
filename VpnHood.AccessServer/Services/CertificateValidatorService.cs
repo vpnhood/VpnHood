@@ -4,7 +4,6 @@ using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Dtos.Certificates;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Services.Acme;
 

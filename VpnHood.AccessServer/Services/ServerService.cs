@@ -14,7 +14,6 @@ using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.AccessServer.Repos;
 using VpnHood.Server.Access.Managers.Http;
 using ConnectionInfo = Renci.SshNet.ConnectionInfo;
@@ -310,18 +309,11 @@ public class ServerService(
     public async Task Delete(Guid projectId, Guid serverId)
     {
         var server = await vhRepo.ServerGet(projectId, serverId);
-        var serverFarm = await vhRepo.ServerFarmGet(projectId, server.ServerFarmId, includeServers: true,
-            includeCertificates: true);
         server.IsDeleted = true;
         server.IsEnabled = true;
 
-        var isFarmUpdated = FarmTokenBuilder.UpdateIfChanged(serverFarm);
         await vhContext.SaveChangesAsync();
-        if (isFarmUpdated) {
-            var includeSevers = server.AccessPoints.Any(x => x.AccessPointMode == AccessPointMode.PublicInToken);
-            await agentCacheClient.InvalidateServerFarm(server.ServerFarmId,
-                includeSevers: includeSevers);
-        }
+        await agentCacheClient.InvalidateServers(projectId, serverId: serverId);
     }
 
     public async Task InstallBySshUserPassword(Guid projectId, Guid serverId,

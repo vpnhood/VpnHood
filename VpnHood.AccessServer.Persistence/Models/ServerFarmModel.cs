@@ -21,4 +21,11 @@ public class ServerFarmModel
     public virtual ICollection<CertificateModel>? Certificates { get; set; }
     public virtual ICollection<AccessTokenModel>? AccessTokens { get; set; }
     public virtual ICollection<ServerModel>? Servers { get; set; }
+
+    public CertificateModel GetCertificateInToken()
+    {
+        ArgumentNullException.ThrowIfNull(Certificates);
+        return Certificates.FirstOrDefault(x => x.IsInToken)
+               ?? throw new InvalidOperationException("The farm must have at least one certificate in token.");
+    }
 }

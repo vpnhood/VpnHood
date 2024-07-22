@@ -8,6 +8,7 @@ using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -166,8 +167,7 @@ public class ServerTest
         using var farm = await ServerFarmDom.Create();
         try {
             await farm.DefaultServer.Client.InstallBySshUserPasswordAsync(farm.ProjectId, farm.DefaultServer.ServerId,
-                new ServerInstallBySshUserPasswordParams
-                    { HostName = "127.0.0.1", LoginUserName = "user", LoginPassword = "pass" });
+                new ServerInstallBySshUserPasswordParams { HostName = "127.0.0.1", LoginUserName = "user", LoginPassword = "pass" });
         }
         catch (ApiException ex) {
             Assert.AreEqual(nameof(SocketException), ex.ExceptionTypeName);
@@ -175,8 +175,7 @@ public class ServerTest
 
         try {
             await farm.DefaultServer.Client.InstallBySshUserKeyAsync(farm.ProjectId, farm.DefaultServer.ServerId,
-                new ServerInstallBySshUserKeyParams
-                    { HostName = "127.0.0.1", LoginUserName = "user", UserPrivateKey = TestResource.test_ssh_key });
+                new ServerInstallBySshUserKeyParams { HostName = "127.0.0.1", LoginUserName = "user", UserPrivateKey = TestResource.test_ssh_key });
         }
         catch (ApiException ex) {
             Assert.AreEqual(nameof(SocketException), ex.ExceptionTypeName);
@@ -334,11 +333,9 @@ public class ServerTest
 
         // active 2
         sampleServer = await farm.AddNewServer();
-        await sampleServer.SendStatus(new ServerStatus
-            { SessionCount = 1, TunnelSpeed = new Traffic { Received = 100, Sent = 50 } });
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 1, TunnelSpeed = new Traffic { Received = 100, Sent = 50 } });
         sampleServer = await farm.AddNewServer();
-        await sampleServer.SendStatus(new ServerStatus
-            { SessionCount = 2, TunnelSpeed = new Traffic { Received = 300, Sent = 200 } });
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 2, TunnelSpeed = new Traffic { Received = 300, Sent = 200 } });
 
         // notInstalled 4
         await farm.AddNewServer(configure: false);
@@ -366,5 +363,31 @@ public class ServerTest
         Assert.AreEqual(3, liveUsageSummary.IdleServerCount);
         Assert.AreEqual(250, liveUsageSummary.TunnelSendSpeed);
         Assert.AreEqual(400, liveUsageSummary.TunnelReceiveSpeed);
+    }
+
+    [TestMethod]
+    public async Task Delete_should_change_farm_token()
+    {
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        var accessToken = await farm.CreateAccessToken();
+        
+        // error expected when there is no public in token access point
+        await VhTestUtil.AssertApiException("InvalidOperationException", accessToken.GetToken(), contains: "token has not been initialized");
+
+        var serverDom1 = await farm.AddNewServer(new ServerCreateParams
+        {
+            AccessPoints = [await farm.TestApp.NewAccessPoint(accessPointMode: AccessPointMode.PublicInToken)]
+        });
+
+        await farm.AddNewServer(new ServerCreateParams {
+            AccessPoints = [await farm.TestApp.NewAccessPoint(accessPointMode: AccessPointMode.Public)]
+        });
+
+        // work without error
+        await accessToken.GetToken();
+
+        // first server should generate new farm token
+        await serverDom1.Delete();
+        await VhTestUtil.AssertApiException("InvalidOperationException", accessToken.GetToken(), contains: "token has not been initialized");
     }
 }

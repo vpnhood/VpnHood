@@ -83,6 +83,7 @@ public class Program
                 .AddScoped<CacheService>()
                 .AddScoped<AgentService>()
                 .AddScoped<LoadBalancerService>()
+                .AddScoped<FarmTokenUpdater>()
                 .AddKeyedSingleton<IIpLocationProvider>(LocationProviderServer,
                     (_, _) => new IpApiCoLocationProvider("VpnHood-AccessManager"))
                 .AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();

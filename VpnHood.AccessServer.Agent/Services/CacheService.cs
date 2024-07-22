@@ -15,6 +15,7 @@ public class CacheService(
     IOptions<AgentOptions> agentOptions,
     ILogger<CacheService> logger,
     VhAgentRepo vhAgentRepo,
+    FarmTokenUpdater farmTokenUpdater,
     CacheRepo cacheRepo)
     : IGrayMintJob, IGrayMintApplicationLifetime
 {
@@ -257,6 +258,10 @@ public class CacheService(
         // set new servers
         foreach (var server in servers)
             cacheRepo.Servers.TryAdd(server.ServerId, server);
+
+        // find involved farms
+        var farmIds = servers.Select(x => x.ServerFarmId).Distinct().ToArray();
+        await farmTokenUpdater.Update(farmIds, saveChanged: true);
     }
 
 

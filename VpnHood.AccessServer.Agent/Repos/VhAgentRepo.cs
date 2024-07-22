@@ -384,11 +384,11 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .SingleAsync();
     }
 
-    public async Task<ServerFarmModel> ServerFarmGet(Guid projectId, Guid serverFarmId,
-        bool includeServersAndAccessPoints = false, bool includeServerProfile = true, bool includeCertificates = false)
+    public async Task<ServerFarmModel> ServerFarmGet(Guid serverFarmId, 
+        bool includeServersAndAccessPoints, bool includeCertificates, bool includeServerProfile = true)
     {
         var query = vhContext.ServerFarms
-            .Where(farm => farm.ProjectId == projectId && !farm.IsDeleted)
+            .Where(farm => !farm.Project!.IsDeleted)
             .Where(farm => farm.ServerFarmId == serverFarmId);
 
         if (includeServerProfile)

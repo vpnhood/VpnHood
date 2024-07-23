@@ -11,14 +11,15 @@ namespace VpnHood.AccessServer.Agent.Utils;
 
 public static class FarmTokenBuilder
 {
+    //todo update token from servers that are ready
     public static bool UpdateIfChanged(ServerFarmModel serverFarm)
     {
         try {
             return UpdateIfChangedInternal(serverFarm);
         }
         catch (Exception ex) {
-            var isChanged = serverFarm.TokenJson != null || serverFarm.TokenError != ex.Message;
-            serverFarm.TokenJson = null;
+            var isChanged = serverFarm.TokenJson != null || serverFarm.TokenError != ex.Message; 
+            // serverFarm.TokenJson = null; lets leave the old token intact
             serverFarm.TokenError = ex.Message;
             return isChanged;
         }

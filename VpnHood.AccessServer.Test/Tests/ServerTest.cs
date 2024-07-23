@@ -384,10 +384,12 @@ public class ServerTest
         });
 
         // work without error
-        await accessToken.GetToken();
+        await farm.Reload();
+        Assert.IsNull(farm.ServerFarm.TokenError);
 
         // first server should generate new farm token
         await serverDom1.Delete();
-        await VhTestUtil.AssertApiException("InvalidOperationException", accessToken.GetToken(), contains: "token has not been initialized");
+        await farm.Reload();
+        Assert.IsNotNull(farm.ServerFarm.TokenError);
     }
 }

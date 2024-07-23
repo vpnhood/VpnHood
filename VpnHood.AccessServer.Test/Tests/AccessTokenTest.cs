@@ -226,8 +226,7 @@ public class AccessTokenTest
         });
 
         Assert.IsNull(serverFarmData.ServerFarm.TokenUrl);
-        var accessTokenDom = await farm.CreateAccessToken();
-        await VhTestUtil.AssertApiException<InvalidOperationException>(accessTokenDom.GetAccessKey());
+        Assert.IsNotNull(serverFarmData.ServerFarm.TokenError);
     }
 
     [TestMethod]

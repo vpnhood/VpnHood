@@ -148,7 +148,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 TotalMemory = providerSystemInfo.TotalMemory,
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 FreeUdpPortV4 = freeUdpPortV4,
-                FreeUdpPortV6 = freeUdpPortV6
+                NetworkInterfaceNames = _netConfigurationService !=null 
+                    ? await _netConfigurationService.GetNetworkInterfaceNames()
+                    : null
             };
 
             var publicIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);

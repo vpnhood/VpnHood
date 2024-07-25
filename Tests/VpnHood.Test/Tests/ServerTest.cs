@@ -43,13 +43,13 @@ public class ServerTest : TestBase
         var netConfigurationProvider = new TestNetConfigurationProvider();
         await using var server = await TestHelper.CreateServer(accessManager, netConfigurationProvider: netConfigurationProvider);
 
+        CollectionAssert.AreEqual(await netConfigurationProvider.GetInterfaceNames(), accessManager.LastServerInfo?.NetworkInterfaceNames);
         Assert.AreEqual(1, netConfigurationProvider.IpAddresses.Count);
         Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Key, accessManager.ServerConfig.TcpEndPointsValue.First().Address);
         Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Value, (await netConfigurationProvider.GetInterfaceNames()).First());
 
         await server.DisposeAsync();
         Assert.AreEqual(0, netConfigurationProvider.IpAddresses.Count);
-
     }
 
 

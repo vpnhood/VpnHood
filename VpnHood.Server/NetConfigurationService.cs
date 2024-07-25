@@ -10,6 +10,17 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
 {
     private readonly ConcurrentDictionary<IPAddress, string> _ipAddresses = [];
 
+    public async Task<string[]?> GetNetworkInterfaceNames()
+    {
+        try {
+            return await netConfigurationProvider.GetInterfaceNames();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not find the default network interface name.");
+            return null;
+        }
+    }
+
     public async Task AddIpAddress(IPAddress ipAddress, string? interfaceName)
     {
         try {

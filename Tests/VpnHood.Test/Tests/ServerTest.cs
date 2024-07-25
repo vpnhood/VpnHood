@@ -10,6 +10,7 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Test.Device;
+using VpnHood.Test.Services;
 using VpnHood.Tunneling;
 
 // ReSharper disable DisposeOnUsingVariable
@@ -32,6 +33,25 @@ public class ServerTest : TestBase
                 x => x.AddressFamily != AddressFamily.InterNetworkV6) ||
             accessManager.LastServerInfo?.FreeUdpPortV6 > 0);
     }
+
+    [TestMethod]
+    public async Task Add_IpAddress_ToSystem()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        accessManager.ServerConfig.AddListenerIpToNetwork = "*";
+
+        var netConfigurationProvider = new TestNetConfigurationProvider();
+        await using var server = await TestHelper.CreateServer(accessManager, netConfigurationProvider: netConfigurationProvider);
+
+        Assert.AreEqual(1, netConfigurationProvider.IpAddresses.Count);
+        Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Key, accessManager.ServerConfig.TcpEndPointsValue.First().Address);
+        Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Value, (await netConfigurationProvider.GetInterfaceNames()).First());
+
+        await server.DisposeAsync();
+        Assert.AreEqual(0, netConfigurationProvider.IpAddresses.Count);
+
+    }
+
 
     [TestMethod]
     public async Task Auto_sync_sessions_by_interval()

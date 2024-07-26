@@ -63,12 +63,11 @@ public class ServerFinder(
         if (res != null)
             return res;
 
-        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionAttempt(connected: false, serverLocation: ServerLocation,
-            isIpV6Supported: IncludeIpV6));
+        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation, isIpV6Supported: IncludeIpV6, hasRedirected: false));
         throw new UnreachableServer(serverLocation: ServerLocation);
     }
 
-    public async Task<IPEndPoint> FindBestServerAsync(IPEndPoint[] hostEndPoints, CancellationToken cancellationToken)
+    public async Task<IPEndPoint> FindBestRedirectedServerAsync(IPEndPoint[] hostEndPoints, CancellationToken cancellationToken)
     {
         if (!hostEndPoints.Any())
             throw new Exception("There is no server endpoint. Please check server configuration.");
@@ -95,9 +94,9 @@ public class ServerFinder(
         if (res != null)
             return res;
 
-        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionAttempt(connected: false, serverLocation: ServerLocation,
-            isIpV6Supported: IncludeIpV6));
-        throw new UnreachableServer(serverLocation: ServerLocation);
+        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation, isIpV6Supported: IncludeIpV6, hasRedirected: true));
+        
+        throw new UnreachableServerLocation(serverLocation: ServerLocation);
     }
 
     private Task TrackEndPointsAvailability(HostStatus[] oldStatuses, HostStatus[] newStatuses)

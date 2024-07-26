@@ -10,14 +10,13 @@ namespace VpnHood.Tunneling;
 public class NatItem
 {
     public ushort NatId { get; internal set; }
-    public object? Tag { get; set; }
+    public object? CustomData { get; set; }
     public IPVersion IpVersion { get; }
     public ProtocolType Protocol { get; }
     public IPAddress SourceAddress { get; }
     public ushort SourcePort { get; }
     public ushort IcmpId { get; }
     public DateTime AccessTime { get; internal set; }
-    public bool? IsInProcess { get; set; }
 
     public NatItem(IPPacket ipPacket)
     {

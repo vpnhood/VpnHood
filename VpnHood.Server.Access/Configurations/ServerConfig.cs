@@ -30,6 +30,7 @@ public class ServerConfig
     public string ConfigCode { get; set; } = string.Empty;
     public int? MinCompletionPortThreads { get; set; }
     public int? MaxCompletionPortThreads { get; set; }
+    public string? AddListenerIpToNetwork { get; set; }
     public DnsChallenge? DnsChallenge { get; set; }
     public CertificateData[] Certificates { get; set; } = [];
 
@@ -61,6 +62,7 @@ public class ServerConfig
         if (obj.ServerSecret != null) ServerSecret = obj.ServerSecret;
         if (obj.MinCompletionPortThreads != null) MinCompletionPortThreads = obj.MinCompletionPortThreads;
         if (obj.MaxCompletionPortThreads != null) MaxCompletionPortThreads = obj.MaxCompletionPortThreads;
+        if (obj.AddListenerIpToNetwork != null) AddListenerIpToNetwork = obj.AddListenerIpToNetwork;
         if (obj.DnsChallenge != null) DnsChallenge = obj.DnsChallenge;
     }
 

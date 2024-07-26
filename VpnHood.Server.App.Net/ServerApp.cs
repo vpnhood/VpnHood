@@ -14,7 +14,8 @@ using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Access.Managers.File;
 using VpnHood.Server.Access.Managers.Http;
-using VpnHood.Server.App.SystemInformation;
+using VpnHood.Server.App.Providers.Linux;
+using VpnHood.Server.App.Services.Win;
 using VpnHood.Server.SystemInformation;
 using VpnHood.Tunneling;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
@@ -227,15 +228,21 @@ public class ServerApp : IDisposable
             if (AccessManager is HttpAccessManager httpAccessManager)
                 httpAccessManager.Logger = VhLogger.Instance;
 
-            // systemInfoProvider
+            // SystemInfoProvider
             ISystemInfoProvider systemInfoProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                 ? new LinuxSystemInfoProvider()
                 : new WinSystemInfoProvider();
+
+            // NetConfigurationProvider
+            INetConfigurationProvider? configurationProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+                ? new LinuxNetConfigurationProvider()
+                : null;
 
             // run server
             _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions {
                 Tracker = _tracker,
                 SystemInfoProvider = systemInfoProvider,
+                NetConfigurationProvider = configurationProvider,
                 StoragePath = InternalStoragePath,
                 Config = AppSettings.ServerConfig
             });

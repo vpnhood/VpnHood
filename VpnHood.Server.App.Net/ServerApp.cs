@@ -14,7 +14,7 @@ using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Access.Managers.File;
 using VpnHood.Server.Access.Managers.Http;
-using VpnHood.Server.App.Services.Linux;
+using VpnHood.Server.App.Providers.Linux;
 using VpnHood.Server.App.Services.Win;
 using VpnHood.Server.SystemInformation;
 using VpnHood.Tunneling;

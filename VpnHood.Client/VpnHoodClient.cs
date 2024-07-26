@@ -688,8 +688,12 @@ public class VpnHoodClient : IAsyncDisposable
 
                 // Anonymous app usage tracker
                 if (_usageTracker != null) {
-                    _ = _usageTracker.Track(ClientTrackerBuilder.BuildConnectionAttempt(connected: true,
-                        _serverFinder.ServerLocation, isIpV6Supported: IsIpV6SupportedByClient));
+                    _ = _usageTracker.Track(ClientTrackerBuilder.BuildConnectionSucceeded(
+                        _serverFinder.ServerLocation, 
+                        isIpV6Supported: IsIpV6SupportedByClient,
+                        hasRedirected: !allowRedirect,
+                        endPoint: ConnectorService.EndPointInfo.TcpEndPoint,
+                        adNetwork: null)); //todo: fill ad network
                     _clientUsageTracker = new ClientUsageTracker(Stat, _usageTracker);
                 }
             }
@@ -779,7 +783,8 @@ public class VpnHoodClient : IAsyncDisposable
         catch (RedirectHostException ex) when (allowRedirect) {
             // todo: init new connector
             ConnectorService.EndPointInfo.TcpEndPoint =
-                await _serverFinder.FindBestServerAsync(ex.RedirectHostEndPoints, cancellationToken);
+                await _serverFinder.FindBestRedirectedServerAsync(ex.RedirectHostEndPoints, cancellationToken);
+
             await ConnectInternal(cancellationToken, false).VhConfigureAwait();
         }
     }
@@ -925,6 +930,8 @@ public class VpnHoodClient : IAsyncDisposable
                 throw new Exception("AppAdService has not been initialized.");
 
             _isWaitingForAd = true;
+            //todo: add adnetwork name
+            //todo: don't cancel already sent server query
             var adData = await _adProvider.ShowAd(SessionId.ToString(), cancellationToken).VhConfigureAwait();
             if (!string.IsNullOrEmpty(adData) && required)
                 _ = SendAdReward(adData, cancellationToken);

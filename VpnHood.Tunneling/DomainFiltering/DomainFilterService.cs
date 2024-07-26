@@ -8,12 +8,17 @@ namespace VpnHood.Tunneling.DomainFiltering;
 
 public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni)
 {
+    public bool IsEnabled => 
+        forceLogSni || 
+        domainFilter.Includes.Length>0 || 
+        domainFilter.Excludes.Length>0 || 
+        domainFilter.Blocks.Length > 0;
+
     public async Task<DomainFilterResult> Process(Stream tlsStream, IPAddress remoteAddress,
         CancellationToken cancellationToken)
     {
         // none if domain filter is empty
-        if (!forceLogSni && domainFilter.Includes.Length == 0 && domainFilter.Excludes.Length == 0 &&
-            domainFilter.Blocks.Length == 0)
+        if (!IsEnabled)
             return new DomainFilterResult {
                 Action = DomainFilterAction.None
             };

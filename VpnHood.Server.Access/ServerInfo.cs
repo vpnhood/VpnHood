@@ -26,4 +26,5 @@ public class ServerInfo
     public int LogicalCoreCount { get; set; }
     public int FreeUdpPortV4 { get; set; }
     public int FreeUdpPortV6 { get; set; }
+    public string[]? NetworkInterfaceNames { get; set; }
 }

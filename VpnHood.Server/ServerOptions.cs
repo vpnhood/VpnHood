@@ -11,6 +11,7 @@ public class ServerOptions
     public ITracker? Tracker { get; init; }
     public ISystemInfoProvider? SystemInfoProvider { get; init; }
     public INetFilter NetFilter { get; init; } = new NetFilter();
+    public INetConfigurationProvider? NetConfigurationProvider { get; init; }
     public bool AutoDisposeAccessManager { get; init; } = true;
     public TimeSpan ConfigureInterval { get; init; } = TimeSpan.FromSeconds(60);
     public string StoragePath { get; init; } = Directory.GetCurrentDirectory();

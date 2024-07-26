@@ -34,6 +34,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private Task _configureTask = Task.CompletedTask;
     private Task _sendStatusTask = Task.CompletedTask;
     private Http01ChallengeService? _http01ChallengeService;
+    private readonly NetConfigurationService? _netConfigurationService;
 
     public ServerHost ServerHost { get; }
     public JobSection JobSection { get; }
@@ -61,6 +62,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _publicIpDiscovery = options.PublicIpDiscovery;
+        _netConfigurationService = options.NetConfigurationProvider != null ? new NetConfigurationService(options.NetConfigurationProvider) : null;
         _config = options.Config;
         ServerHost = new ServerHost(SessionManager);
 
@@ -146,13 +148,13 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 TotalMemory = providerSystemInfo.TotalMemory,
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 FreeUdpPortV4 = freeUdpPortV4,
-                FreeUdpPortV6 = freeUdpPortV6
+                NetworkInterfaceNames = _netConfigurationService !=null 
+                    ? await _netConfigurationService.GetNetworkInterfaceNames()
+                    : null
             };
 
-            var publicIpV4 =
-                serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
-            var publicIpV6 =
-                serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
+            var publicIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
+            var publicIpV6 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
             var isIpV6Supported = publicIpV6 != null || await IPAddressUtil.IsIpv6Supported().VhConfigureAwait();
             VhLogger.Instance.LogInformation("Public IPv4: {IPv4}, Public IPv6: {IpV6}, IsV6Supported: {IsV6Supported}",
                 VhLogger.Format(publicIpV4), VhLogger.Format(publicIpV6), isIpV6Supported);
@@ -173,6 +175,12 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
             ConfigNetFilter(SessionManager.NetFilter, ServerHost, serverConfig.NetFilterOptions,
                 privateAddresses: allServerIps, isIpV6Supported, dnsServers: serverConfig.DnsServersValue);
+
+            // Add listener ip addresses to the ip address manager if requested
+            if (serverConfig.AddListenerIpToNetwork != null && _netConfigurationService != null) {
+                foreach (var ipEndPoint in serverConfig.TcpEndPointsValue)
+                    await _netConfigurationService.AddIpAddress(ipEndPoint.Address, serverConfig.AddListenerIpToNetwork).VhConfigureAwait();
+            }
 
             // Reconfigure server host
             await ServerHost.Configure(
@@ -258,8 +266,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private async Task<ServerConfig> ReadConfig(ServerInfo serverInfo)
     {
         var serverConfig = await ReadConfigImpl(serverInfo).VhConfigureAwait();
-        serverConfig.SessionOptions.TcpBufferSize =
-            GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
+        serverConfig.SessionOptions.TcpBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
         serverConfig.ApplyDefaults();
         VhLogger.Instance.LogInformation("RemoteConfig: {RemoteConfig}", GetServerConfigReport(serverConfig));
 
@@ -406,10 +413,11 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             /* no error*/
         }
 
-        await ServerHost.DisposeAsync()
-            .VhConfigureAwait(); // before disposing session manager to prevent recovering sessions
+        await ServerHost.DisposeAsync().VhConfigureAwait(); // before disposing session manager to prevent recovering sessions
         await SessionManager.DisposeAsync().VhConfigureAwait();
         _http01ChallengeService?.Dispose();
+        if (_netConfigurationService != null)
+            await _netConfigurationService.DisposeAsync().VhConfigureAwait();
 
         if (_autoDisposeAccessManager)
             AccessManager.Dispose();

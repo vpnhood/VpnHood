@@ -9,7 +9,7 @@ using VpnHood.Server.SystemInformation;
 // ReSharper disable MemberCanBePrivate.Local
 // ReSharper disable StructCanBeMadeReadOnly
 
-namespace VpnHood.Server.App.SystemInformation;
+namespace VpnHood.Server.App.Services.Win;
 
 public class WinSystemInfoProvider : ISystemInfoProvider
 {

@@ -7,14 +7,40 @@ namespace VpnHood.Client;
 
 public static class ClientTrackerBuilder
 {
-    public static TrackEvent BuildConnectionAttempt(bool connected, string? serverLocation, bool isIpV6Supported)
+    public static TrackEvent BuildConnectionSucceeded(string? serverLocation,
+        bool isIpV6Supported, bool hasRedirected, IPEndPoint endPoint, string? adNetwork)
+    {
+        return BuildConnectionAttempt(connected: true, 
+            serverLocation: serverLocation, 
+            isIpV6Supported: isIpV6Supported,
+            hasRedirected: hasRedirected, 
+            endPoint: endPoint,
+            adNetwork: adNetwork);
+    }
+
+    public static TrackEvent BuildConnectionFailed(string? serverLocation,
+        bool isIpV6Supported, bool hasRedirected)
+    {
+        return BuildConnectionAttempt(connected: false,
+            serverLocation: serverLocation,
+            isIpV6Supported: isIpV6Supported,
+            hasRedirected: hasRedirected,
+            endPoint: null,
+            adNetwork: null);
+    }
+
+    private static TrackEvent BuildConnectionAttempt(bool connected, string? serverLocation, 
+        bool isIpV6Supported, bool hasRedirected, IPEndPoint? endPoint, string? adNetwork)
     {
         return new TrackEvent {
             EventName = "vh_connect_attempt",
             Parameters = new Dictionary<string, object> {
-                { "server_location", serverLocation ?? "" },
+                { "server_location", serverLocation ?? string.Empty },
                 { "connected", connected.ToString() },
-                { "ipv6_supported", isIpV6Supported.ToString() }
+                { "ipv6_supported", isIpV6Supported.ToString() },
+                { "redirected", hasRedirected.ToString() },
+                { "ad_network", adNetwork ?? string.Empty },
+                { "endpoint", endPoint?.ToString() ?? string.Empty },
             }
         };
     }

@@ -24,9 +24,7 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
     private Task<bool> IpAddressExists(IPAddress ipAddress)
     {
         if (ipAddress.Equals(IPAddress.Any) || 
-            ipAddress.Equals(IPAddress.Loopback) ||
-            ipAddress.Equals(IPAddress.IPv6Any) ||
-            ipAddress.Equals(IPAddress.IPv6Loopback) )
+            ipAddress.Equals(IPAddress.IPv6Any))
             return Task.FromResult(true);
 
         return netConfigurationProvider.IpAddressExists(ipAddress);

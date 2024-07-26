@@ -746,7 +746,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         await _internalAdService.LoadAd(uiContext, countryCode: countryCode, forceReload: false, cancellationToken);
     }
 
-    public async Task<string> ShowAd(string sessionId, CancellationToken cancellationToken)
+    public async Task<ShowedAdResult> ShowAd(string sessionId, CancellationToken cancellationToken)
     {
         if (_internalAdService == null)
             throw new Exception("AdService has not been initialized.");
@@ -754,8 +754,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
         try {
             await LoadAd(ActiveUiContext.RequiredContext, cancellationToken);
-            await _internalAdService.ShowAd(ActiveUiContext.RequiredContext, adData, cancellationToken);
-            return adData;
+            var networkName = await _internalAdService.ShowAd(ActiveUiContext.RequiredContext, adData, cancellationToken);
+            var showAdResult = new ShowedAdResult {
+                AdData = adData,
+                NetworkName = networkName
+            };
+
+            return showAdResult;
         }
         catch (UiContextNotAvailableException) {
             throw new ShowAdNoUiException();

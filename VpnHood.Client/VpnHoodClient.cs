@@ -670,34 +670,6 @@ public class VpnHoodClient : IAsyncDisposable
                 $"ServerProtocolVersion: {sessionResponse.ServerProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}");
 
-            // usage tracker
-            if (_allowAnonymousTracker) {
-                // Anonymous server usage tracker
-                if (!string.IsNullOrEmpty(sessionResponse.GaMeasurementId)) {
-                    var ga4Tracking = new Ga4TagTracker() {
-                        SessionCount = 1,
-                        MeasurementId = sessionResponse.GaMeasurementId,
-                        ClientId = ClientId.ToString(),
-                        SessionId = SessionId.ToString(),
-                        UserAgent = UserAgent,
-                        UserProperties = new Dictionary<string, object> { { "client_version", Version.ToString(3) } }
-                    };
-
-                    _ = ga4Tracking.Track(new Ga4TagEvent { EventName = TrackEventNames.SessionStart });
-                }
-
-                // Anonymous app usage tracker
-                if (_usageTracker != null) {
-                    _ = _usageTracker.Track(ClientTrackerBuilder.BuildConnectionSucceeded(
-                        _serverFinder.ServerLocation, 
-                        isIpV6Supported: IsIpV6SupportedByClient,
-                        hasRedirected: !allowRedirect,
-                        endPoint: ConnectorService.EndPointInfo.TcpEndPoint,
-                        adNetwork: null)); //todo: fill ad network
-                    _clientUsageTracker = new ClientUsageTracker(Stat, _usageTracker);
-                }
-            }
-
             // get session id
             SessionId = sessionResponse.SessionId != 0
                 ? sessionResponse.SessionId
@@ -766,9 +738,38 @@ public class VpnHoodClient : IAsyncDisposable
                 VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
             // show ad if required
+            string? adNetworkName = null;
             if (sessionResponse.AdRequirement is not AdRequirement.None)
-                await ShowAd(sessionResponse.AdRequirement is AdRequirement.Required, cancellationToken)
+                adNetworkName = await ShowAd(sessionResponse.AdRequirement is AdRequirement.Required, cancellationToken)
                     .VhConfigureAwait();
+
+            // usage trackers
+            if (_allowAnonymousTracker) {
+                // Anonymous server usage tracker
+                if (!string.IsNullOrEmpty(sessionResponse.GaMeasurementId)) {
+                    var ga4Tracking = new Ga4TagTracker() {
+                        SessionCount = 1,
+                        MeasurementId = sessionResponse.GaMeasurementId,
+                        ClientId = ClientId.ToString(),
+                        SessionId = SessionId.ToString(),
+                        UserAgent = UserAgent,
+                        UserProperties = new Dictionary<string, object> { { "client_version", Version.ToString(3) } }
+                    };
+
+                    _ = ga4Tracking.Track(new Ga4TagEvent { EventName = TrackEventNames.SessionStart });
+                }
+
+                // Anonymous app usage tracker
+                if (_usageTracker != null) {
+                    _ = _usageTracker.Track(ClientTrackerBuilder.BuildConnectionSucceeded(
+                        _serverFinder.ServerLocation,
+                        isIpV6Supported: IsIpV6SupportedByClient,
+                        hasRedirected: !allowRedirect,
+                        endPoint: ConnectorService.EndPointInfo.TcpEndPoint,
+                        adNetworkName: adNetworkName));
+                    _clientUsageTracker = new ClientUsageTracker(Stat, _usageTracker);
+                }
+            }
 
             // Preparing tunnel
             VhLogger.Instance.LogInformation("Configuring Datagram Channels...");
@@ -920,7 +921,8 @@ public class VpnHoodClient : IAsyncDisposable
         }
     }
 
-    private async Task ShowAd(bool required, CancellationToken cancellationToken)
+    /// <returns>NetworkName</returns>
+    private async Task<string?> ShowAd(bool required, CancellationToken cancellationToken)
     {
         if (SessionId == 0)
             throw new Exception("SessionId is not set.");
@@ -930,11 +932,11 @@ public class VpnHoodClient : IAsyncDisposable
                 throw new Exception("AppAdService has not been initialized.");
 
             _isWaitingForAd = true;
-            //todo: add adnetwork name
-            //todo: don't cancel already sent server query
-            var adData = await _adProvider.ShowAd(SessionId.ToString(), cancellationToken).VhConfigureAwait();
-            if (!string.IsNullOrEmpty(adData) && required)
-                _ = SendAdReward(adData, cancellationToken);
+            var adResult = await _adProvider.ShowAd(SessionId.ToString(), cancellationToken).VhConfigureAwait();
+            if (!string.IsNullOrEmpty(adResult.AdData) && required)
+                _ = SendAdReward(adResult.AdData, cancellationToken);
+
+            return adResult.NetworkName;
         }
         catch (LoadAdException ex) {
             if (required)
@@ -942,6 +944,8 @@ public class VpnHoodClient : IAsyncDisposable
 
             VhLogger.Instance.LogInformation(ex, "Could not load or show the flexible ad.");
             // ignore exception for flexible ad if load failed
+
+            return null;
         }
         finally {
             _isWaitingForAd = false;

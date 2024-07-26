@@ -8,14 +8,14 @@ namespace VpnHood.Client;
 public static class ClientTrackerBuilder
 {
     public static TrackEvent BuildConnectionSucceeded(string? serverLocation,
-        bool isIpV6Supported, bool hasRedirected, IPEndPoint endPoint, string? adNetwork)
+        bool isIpV6Supported, bool hasRedirected, IPEndPoint endPoint, string? adNetworkName)
     {
         return BuildConnectionAttempt(connected: true, 
             serverLocation: serverLocation, 
             isIpV6Supported: isIpV6Supported,
             hasRedirected: hasRedirected, 
             endPoint: endPoint,
-            adNetwork: adNetwork);
+            adNetwork: adNetworkName);
     }
 
     public static TrackEvent BuildConnectionFailed(string? serverLocation,

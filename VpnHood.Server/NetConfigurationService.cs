@@ -21,6 +21,17 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
         }
     }
 
+    private Task<bool> IpAddressExists(IPAddress ipAddress)
+    {
+        if (ipAddress.Equals(IPAddress.Any) || 
+            ipAddress.Equals(IPAddress.Loopback) ||
+            ipAddress.Equals(IPAddress.IPv6Any) ||
+            ipAddress.Equals(IPAddress.IPv6Loopback) )
+            return Task.FromResult(true);
+
+        return netConfigurationProvider.IpAddressExists(ipAddress);
+    }
+
     public async Task AddIpAddress(IPAddress ipAddress, string? interfaceName)
     {
         try {
@@ -38,7 +49,7 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
             }
 
             // add new ip address if it does not exist in the system
-            if (await netConfigurationProvider.IpAddressExists(ipAddress).VhConfigureAwait())
+            if (await IpAddressExists(ipAddress).VhConfigureAwait())
                 return;
 
             VhLogger.Instance.LogInformation("Adding IP address to system. IP: {IP}, InterfaceName: {interfaceName}",

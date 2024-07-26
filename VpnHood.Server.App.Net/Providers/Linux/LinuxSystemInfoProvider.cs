@@ -3,11 +3,11 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.Server.SystemInformation;
 
-namespace VpnHood.Server.App.SystemInformation;
+namespace VpnHood.Server.App.Providers.Linux;
 
 public class LinuxSystemInfoProvider : ISystemInfoProvider
 {
-    private long? GetMemInfoValue(string key)
+    private static long? GetMemInfoValue(string key)
     {
         try {
             var meminfo = File.ReadAllText("/proc/meminfo");

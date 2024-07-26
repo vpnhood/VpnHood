@@ -70,7 +70,7 @@ internal class AppInternalAdService(IAppAdService[] adServices, AppAdOptions adO
         throw new LoadAdException($"Could not load any AD. Country: {GetCountryName(countryCode)}");
     }
 
-    public async Task ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
+    public async Task<string> ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
     {
         if (LoadedAdService == null)
             throw new LoadAdException("Could not load any ad.");
@@ -81,6 +81,8 @@ internal class AppInternalAdService(IAppAdService[] adServices, AppAdOptions adO
             await Task.Delay(adOptions.ShowAdPostDelay, cancellationToken); //wait for finishing trackers
             if (ActiveUiContext.Context != uiContext) // some ad provider may not raise exception on minimize
                 throw new ShowAdNoUiException();
+
+            return LoadedAdService.NetworkName;
         }
         catch (Exception ex) {
             if (ActiveUiContext.Context != uiContext)

@@ -2,5 +2,5 @@
 
 public interface IAdProvider
 {
-    Task<string> ShowAd(string sessionId, CancellationToken cancellationToken);
+    Task<ShowedAdResult> ShowAd(string sessionId, CancellationToken cancellationToken);
 }

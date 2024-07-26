@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Net;
 
-namespace VpnHood.Server.App.Services.Linux;
+namespace VpnHood.Server.App.Providers.Linux;
 
 
 // add & remove ip address for linux server
@@ -9,28 +9,33 @@ public class LinuxNetConfigurationProvider : INetConfigurationProvider
 {
     public async Task<string[]> GetInterfaceNames()
     {
-        const string command = "ip link show | grep \"^[0-9]\" | awk '{print $2}' | sed 's/://' | grep -v lo";
+        const string command = "ip link show | grep '^[0-9]' | awk '{print $2}' | sed 's/://'";
         var output = await ExecuteCommandAsync(command);
-        return output.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var names = output
+            .Split(new[] { ' ', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(x => !x.Equals("lo", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        return names;
     }
 
     public Task AddIpAddress(IPAddress ipAddress, string interfaceName)
     {
-        var command = $"sudo ip addr add {ipAddress}/32 dev {interfaceName}";
+        var command = $"ip addr add {ipAddress}/32 dev {interfaceName}";
         return ExecuteCommandAsync(command);
     }
 
     public Task RemoveIpAddress(IPAddress ipAddress, string interfaceName)
     {
-        var command = $"sudo ip addr del {ipAddress}/32 dev {interfaceName}";
+        var command = $"ip addr del {ipAddress}/32 dev {interfaceName}";
         return ExecuteCommandAsync(command);
     }
 
     public async Task<bool> IpAddressExists(IPAddress ipAddress)
     {
-        var command = $"ip addr show | grep \" {ipAddress}/\"";
+        const string command = "ip addr show";
         var output = await ExecuteCommandAsync(command);
-        return !string.IsNullOrEmpty(output);
+        return output.Contains($" {ipAddress}/");
     }
 
     private static async Task<string> ExecuteCommandAsync(string command)

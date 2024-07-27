@@ -38,7 +38,7 @@ public class ServerTest : TestBase
     public async Task Add_IpAddress_ToSystem()
     {
         using var accessManager = TestHelper.CreateAccessManager();
-        accessManager.ServerConfig.AddListenerIpToNetwork = "*";
+        accessManager.ServerConfig.AddListenerIpsToNetwork = "*";
 
         var netConfigurationProvider = new TestNetConfigurationProvider();
         await using var server = await TestHelper.CreateServer(accessManager, netConfigurationProvider: netConfigurationProvider);

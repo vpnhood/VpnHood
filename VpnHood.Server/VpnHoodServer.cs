@@ -178,9 +178,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 privateAddresses: allServerIps, isIpV6Supported, dnsServers: serverConfig.DnsServersValue);
 
             // Add listener ip addresses to the ip address manager if requested
-            if (serverConfig.AddListenerIpToNetwork != null && _netConfigurationService != null) {
+            if (serverConfig.AddListenerIpsToNetwork != null && _netConfigurationService != null) {
                 foreach (var ipEndPoint in serverConfig.TcpEndPointsValue)
-                    await _netConfigurationService.AddIpAddress(ipEndPoint.Address, serverConfig.AddListenerIpToNetwork).VhConfigureAwait();
+                    await _netConfigurationService.AddIpAddress(ipEndPoint.Address, serverConfig.AddListenerIpsToNetwork).VhConfigureAwait();
             }
 
             // Reconfigure server host

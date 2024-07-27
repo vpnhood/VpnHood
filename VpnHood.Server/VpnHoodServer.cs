@@ -148,7 +148,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 TotalMemory = providerSystemInfo.TotalMemory,
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 FreeUdpPortV4 = freeUdpPortV4,
-                NetworkInterfaceNames = _netConfigurationService !=null 
+                FreeUdpPortV6 = freeUdpPortV6,
+                NetworkInterfaceNames = _netConfigurationService != null
                     ? await _netConfigurationService.GetNetworkInterfaceNames()
                     : null
             };
@@ -291,7 +292,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 nameof(ServerConfig.TcpEndPoints),
                 nameof(ServerConfig.UdpEndPoints)
             ])
-            : JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
+            : VhUtil.RedactJsonValue(json, [
+                nameof(CertificateData.RawData), // it will ruin the report and useless to see
+            ]);
     }
 
     private async Task<ServerConfig> ReadConfigImpl(ServerInfo serverInfo)

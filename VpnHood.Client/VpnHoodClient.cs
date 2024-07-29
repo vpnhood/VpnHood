@@ -7,6 +7,7 @@ using PacketDotNet;
 using VpnHood.Client.Abstractions;
 using VpnHood.Client.ConnectorServices;
 using VpnHood.Client.Device;
+using VpnHood.Client.Device.Exceptions;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common;
 using VpnHood.Common.ApiClients;
@@ -40,7 +41,7 @@ public class VpnHoodClient : IAsyncDisposable
     private readonly ClientHost _clientHost;
     private readonly SemaphoreSlim _datagramChannelsSemaphore = new(1, 1);
     private readonly IIpRangeProvider? _ipRangeProvider;
-    private readonly IAdProvider? _adProvider;
+    private readonly IAdService? _adService;
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private readonly bool _allowAnonymousTracker;
@@ -121,7 +122,7 @@ public class VpnHoodClient : IAsyncDisposable
         _usageTracker = options.Tracker;
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
-        _adProvider = options.AdProvider;
+        _adService = options.AdService;
         _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken,
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
@@ -925,18 +926,21 @@ public class VpnHoodClient : IAsyncDisposable
     private async Task<string?> ShowAd(bool required, CancellationToken cancellationToken)
     {
         if (SessionId == 0)
-            throw new Exception("SessionId is not set.");
+            throw new InvalidOperationException("SessionId is not set.");
 
         try {
-            if (_adProvider == null)
-                throw new Exception("AppAdService has not been initialized.");
+            if (_adService == null)
+                throw new InvalidOperationException("Client's AdService has not been initialized.");
 
             _isWaitingForAd = true;
-            var adResult = await _adProvider.ShowAd(SessionId.ToString(), cancellationToken).VhConfigureAwait();
+            var adResult = await _adService.ShowAd(ActiveUiContext.RequiredContext, SessionId.ToString(), cancellationToken).VhConfigureAwait();
             if (!string.IsNullOrEmpty(adResult.AdData) && required)
                 _ = SendAdReward(adResult.AdData, cancellationToken);
 
             return adResult.NetworkName;
+        }
+        catch (UiContextNotAvailableException) {
+            throw new ShowAdNoUiException();
         }
         catch (LoadAdException ex) {
             if (required)

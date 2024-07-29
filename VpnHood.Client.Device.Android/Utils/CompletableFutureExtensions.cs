@@ -2,7 +2,7 @@
 
 namespace VpnHood.Client.Device.Droid.Utils;
 
-internal static class CompletableFutureExtensions
+public static class CompletableFutureExtensions
 {
     public static Task<Java.Lang.Object?> AsTask(this CompletableFuture completableFuture)
     {

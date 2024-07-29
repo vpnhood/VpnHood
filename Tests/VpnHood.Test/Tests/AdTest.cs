@@ -1,7 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client.App;
-using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.Device;
+using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Test.Services;
@@ -24,11 +24,12 @@ public class AdTest : TestBase
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
-        var adService = new TestAdService(accessManager);
+        var adProvider = new TestAdProvider(accessManager);
+        var adService = new AppAdService { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdServices = [adService];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
-        adService.FailLoad = true;
-        adService.FailShow = true; // should not reach this state
+        adProvider.FailLoad = true;
+        adProvider.FailShow = true; // should not reach this state
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
@@ -48,7 +49,7 @@ public class AdTest : TestBase
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
-        var adService = new TestAdService(accessManager);
+        var adService = new AppAdService { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdServices = [adService];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         ActiveUiContext.Context = null;
@@ -73,7 +74,7 @@ public class AdTest : TestBase
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
-        var adService = new TestAdService(accessManager);
+        var adService = new AppAdService { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdServices = [adService];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         ActiveUiContext.Context = null;
@@ -98,7 +99,8 @@ public class AdTest : TestBase
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
-        appOptions.AdServices = [new TestAdService(accessManager)];
+        var adService = new AppAdService { AdProvider = new TestAdProvider(accessManager) };
+        appOptions.AdServices = [adService];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
         // connect
@@ -113,17 +115,18 @@ public class AdTest : TestBase
     public async Task Session_exception_should_be_short_if_ad_is_not_accepted()
     {
         // create server
-        using var testManager = TestHelper.CreateAccessManager();
-        await using var server = await TestHelper.CreateServer(testManager);
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
-        var accessItem = testManager.AccessItem_Create(adRequirement: AdRequirement.Required);
+        var accessItem = accessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
         accessItem.Token.ToAccessKey();
-        testManager.RejectAllAds = true; // server will reject all ads
+        accessManager.RejectAllAds = true; // server will reject all ads
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
-        appOptions.AdServices = [new TestAdService(testManager)];
+        var adService = new AppAdService { AdProvider = new TestAdProvider(accessManager) };
+        appOptions.AdServices = [adService];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
         // connect

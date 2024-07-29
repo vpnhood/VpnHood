@@ -1,5 +1,9 @@
 # Upcoming
+### Client
 * Fix: Android: IPv6 over IPv4
+
+### Server
+* Feature: Linux: Add or remove listener IPs on the server at runtime via "AddListenerIpsToNetwork".
 
 # v4.6.546
 ### Server

@@ -3,6 +3,7 @@ using Android.Runtime;
 using Firebase.Analytics;
 using Firebase.Crashlytics;
 using VpnHood.Client.App.Droid.Ads.VhAdMob;
+using VpnHood.Client.App.Droid.Ads.VhChartboost;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Client.App.Resources;
@@ -86,11 +87,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 ServiceName = "AdMob",
             },
 
-            //new AppAdService {
-            //    AdProvider = ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),
-            //    ExcludeCountryCodes = ["IR", "CN"],
-            //    ServiceName = "AdMob",
-            //},
+            new AppAdService {
+                AdProvider = ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),
+                ExcludeCountryCodes = ["IR", "CN"],
+                ServiceName = "AdMob",
+            },
 
             new AppAdService {
                 AdProvider = AdMobInterstitialAdProvider.Create(appSettings.AdMobInterstitialNoVideoAdUnitId),

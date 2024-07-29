@@ -1,44 +1,26 @@
-using Android.Gms.Ads;
-using Android.Gms.Ads.AppOpen;
+﻿using Android.Gms.Ads;
+using Android.Gms.Ads.Rewarded;
 using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackFix;
 using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Exceptions;
-using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
 
-public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdService
+public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
 {
-    private AppOpenAd? _loadedAd;
+    private RewardedAd? _loadedAd;
     public string NetworkName => "AdMob";
-    public AppAdType AdType => AppAdType.AppOpenAd;
+    public AppAdType AdType => AppAdType.RewardedAd;
     public DateTime? AdLoadedTime { get; private set; }
     public TimeSpan AdLifeSpan => AdMobUtil.DefaultAdTimeSpan;
 
-    public static AdMobAppOpenAdService Create(string adUnitId, bool hasVideo)
+    public static AdMobRewardedAdProvider Create(string adUnitId)
     {
-        var ret = new AdMobAppOpenAdService(adUnitId, hasVideo);
+        var ret = new AdMobRewardedAdProvider(adUnitId);
         return ret;
     }
-
-    public bool IsCountrySupported(string countryCode)
-    {
-        countryCode = countryCode.Trim().ToUpper();
-
-        // these countries are not supported at all
-        if (countryCode == "CN")
-            return false;
-
-        // these countries video ad is not supported
-        if (hasVideo)
-            return countryCode != "IR";
-
-        return true;
-    }
-
 
     public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
@@ -54,16 +36,16 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
         AdLoadedTime = null;
         _loadedAd = null;
 
-        var adLoadCallback = new MyAppOpenAdLoadCallback();
+        var adLoadCallback = new MyRewardedAdLoadCallback();
         var adRequest = new AdRequest.Builder().Build();
-        activity.RunOnUiThread(() => AppOpenAd.Load(activity, adUnitId, adRequest, adLoadCallback));
+        activity.RunOnUiThread(() => RewardedAd.Load(activity, adUnitId, adRequest, adLoadCallback));
 
         var cancellationTask = new TaskCompletionSource();
         cancellationToken.Register(cancellationTask.SetResult);
-        await Task.WhenAny(adLoadCallback.Task, cancellationTask.Task).VhConfigureAwait();
+        await Task.WhenAny(adLoadCallback.Task, cancellationTask.Task).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
 
-        _loadedAd = await adLoadCallback.Task.VhConfigureAwait();
+        _loadedAd = await adLoadCallback.Task.ConfigureAwait(false);
         AdLoadedTime = DateTime.Now;
     }
 
@@ -78,16 +60,25 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
             throw new ShowAdException($"The {AdType} has not been loaded.");
 
         try {
+            // create ad custom data
+            var verificationOptions = new ServerSideVerificationOptions.Builder()
+                .SetCustomData(customData ?? "")
+                .Build();
+
             var fullScreenContentCallback = new MyFullScreenContentCallback();
+            var userEarnedRewardListener = new MyOnUserEarnedRewardListener();
+
             activity.RunOnUiThread(() => {
+                _loadedAd.SetServerSideVerificationOptions(verificationOptions);
                 _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
-                _loadedAd.Show(activity);
+                _loadedAd.Show(activity, userEarnedRewardListener);
             });
 
-            // wait for show or dismiss
+            // wait for earn reward or dismiss
             var cancellationTask = new TaskCompletionSource();
             cancellationToken.Register(cancellationTask.SetResult);
-            await Task.WhenAny(fullScreenContentCallback.DismissedTask, cancellationTask.Task).VhConfigureAwait();
+            await Task.WhenAny(fullScreenContentCallback.DismissedTask, userEarnedRewardListener.UserEarnedRewardTask,
+                cancellationTask.Task).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
 
             // check task errors
@@ -100,9 +91,29 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
         }
     }
 
+    private class MyRewardedAdLoadCallback : AdNetworkCallBackFix.RewardedAdLoadCallback
+    {
+        private readonly TaskCompletionSource<RewardedAd> _loadedCompletionSource = new();
+        public Task<RewardedAd> Task => _loadedCompletionSource.Task;
+
+        protected override void OnAdLoaded(RewardedAd rewardedAd)
+        {
+            _loadedCompletionSource.TrySetResult(rewardedAd);
+        }
+
+        public override void OnAdFailedToLoad(LoadAdError addError)
+        {
+            _loadedCompletionSource.TrySetException(
+                addError.Message.Contains("No fill.", StringComparison.OrdinalIgnoreCase)
+                    ? new NoFillAdException(addError.Message)
+                    : new LoadAdException(addError.Message));
+        }
+    }
+
     private class MyFullScreenContentCallback : FullScreenContentCallback
     {
         private readonly TaskCompletionSource _dismissedCompletionSource = new();
+
         public Task DismissedTask => _dismissedCompletionSource.Task;
 
         public override void OnAdDismissedFullScreenContent()
@@ -116,22 +127,14 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
         }
     }
 
-    private class MyAppOpenAdLoadCallback : AppOpenAdLoadCallback
+    private class MyOnUserEarnedRewardListener : Java.Lang.Object, IOnUserEarnedRewardListener
     {
-        private readonly TaskCompletionSource<AppOpenAd> _loadedCompletionSource = new();
-        public Task<AppOpenAd> Task => _loadedCompletionSource.Task;
+        private readonly TaskCompletionSource<IRewardItem> _earnedRewardCompletionSource = new();
+        public Task<IRewardItem> UserEarnedRewardTask => _earnedRewardCompletionSource.Task;
 
-        protected override void OnAdLoaded(AppOpenAd appOpenAd)
+        public void OnUserEarnedReward(IRewardItem rewardItem)
         {
-            _loadedCompletionSource.TrySetResult(appOpenAd);
-        }
-
-        public override void OnAdFailedToLoad(LoadAdError addError)
-        {
-            _loadedCompletionSource.TrySetException(
-                addError.Message.Contains("No fill.", StringComparison.OrdinalIgnoreCase)
-                    ? new NoFillAdException(addError.Message)
-                    : new LoadAdException(addError.Message));
+            _earnedRewardCompletionSource.TrySetResult(rewardItem);
         }
     }
 

@@ -5,13 +5,12 @@ using VpnHood.Test.AccessManagers;
 
 namespace VpnHood.Test.Services;
 
-public class TestAdService(TestAccessManager accessManager) : IAppAdService
+public class TestAdProvider(TestAccessManager accessManager) : IAppAdProvider
 {
     public bool FailShow { get; set; }
     public bool FailLoad { get; set; }
     public string NetworkName => "";
     public AppAdType AdType => AppAdType.InterstitialAd;
-    public bool IsCountrySupported(string countryCode) => true;
     public DateTime? AdLoadedTime { get; private set; }
     public TimeSpan AdLifeSpan { get; } = TimeSpan.FromMinutes(60);
 

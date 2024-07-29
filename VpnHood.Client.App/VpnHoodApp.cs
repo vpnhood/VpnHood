@@ -8,11 +8,9 @@ using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
-using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.App.Services;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
-using VpnHood.Client.Device.Exceptions;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
 using VpnHood.Common.ApiClients;
@@ -30,7 +28,7 @@ using VpnHood.Tunneling.Factory;
 namespace VpnHood.Client.App;
 
 public class VpnHoodApp : Singleton<VpnHoodApp>,
-    IAsyncDisposable, IIpRangeProvider, IAdProvider, IJob
+    IAsyncDisposable, IIpRangeProvider, IJob
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
@@ -67,7 +65,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly bool? _logAnonymous;
     private UserSettings _oldUserSettings;
     private readonly bool _autoDiagnose;
-    private readonly AppInternalAdService? _internalAdService;
+    private readonly Services.AppAdService _adService;
     private readonly bool _allowEndPointTracker;
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
@@ -118,9 +116,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _logAnonymous = options.LogAnonymous;
         _autoDiagnose = options.AutoDiagnose;
         _serverQueryTimeout = options.ServerQueryTimeout;
-        _internalAdService = options.AdServices.Length > 0
-            ? new AppInternalAdService(options.AdServices, options.AdOptions)
-            : null;
+        _adService = new Services.AppAdService(this, options.AdServices, options.AdOptions);
         _allowEndPointTracker = options.AllowEndPointTracker;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), options.SingleLineConsoleLog);
@@ -179,9 +175,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // initialize services
         Services = new AppServices {
             AppCultureService = options.CultureService ?? new AppCultureService(this),
-            AdServices = options.AdServices,
-            AccountService =
-                options.AccountService != null ? new AppAccountService(this, options.AccountService) : null,
+            AdService = _adService,
+            AccountService = options.AccountService,
             UpdaterService = options.UpdaterService,
             UiService = uiService,
             Tracker = options.Tracker
@@ -273,8 +268,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private void ActiveUiContext_OnChanged(object sender, EventArgs e)
     {
         var uiContext = ActiveUiContext.Context;
-        if (IsIdle && _internalAdService?.IsPreloadApEnabled == true && uiContext != null)
-            _ = LoadAd(uiContext, CancellationToken.None);
+        if (IsIdle && _adService.IsPreloadApEnabled && uiContext != null)
+            _ = _adService.LoadAd(uiContext, CancellationToken.None);
     }
 
     public ClientProfile? CurrentClientProfile {
@@ -556,7 +551,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AutoWaitTimeout = _autoWaitTimeout,
             IncludeLocalNetwork = UserSettings.IncludeLocalNetwork,
             IpRangeProvider = this,
-            AdProvider = this,
+            AdService = Services.AdService,
             PacketCaptureIncludeIpRanges = packetCaptureIpRanges,
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
@@ -735,31 +730,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // return last country
         _isFindingCountryCode = false;
         return _appPersistState.ClientCountryCode ?? RegionInfo.CurrentRegion.Name;
-    }
-
-    public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
-    {
-        if (_internalAdService == null)
-            throw new Exception("AdService has not been initialized.");
-
-        var countryCode = await GetClientCountryCode(cancellationToken);
-        await _internalAdService.LoadAd(uiContext, countryCode: countryCode, forceReload: false, cancellationToken);
-    }
-
-    public async Task<string> ShowAd(string sessionId, CancellationToken cancellationToken)
-    {
-        if (_internalAdService == null)
-            throw new Exception("AdService has not been initialized.");
-
-        var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
-        try {
-            await LoadAd(ActiveUiContext.RequiredContext, cancellationToken);
-            await _internalAdService.ShowAd(ActiveUiContext.RequiredContext, adData, cancellationToken);
-            return adData;
-        }
-        catch (UiContextNotAvailableException) {
-            throw new ShowAdNoUiException();
-        }
     }
 
     private void Client_StateChanged(object sender, EventArgs e)

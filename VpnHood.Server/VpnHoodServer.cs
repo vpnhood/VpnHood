@@ -148,7 +148,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 TotalMemory = providerSystemInfo.TotalMemory,
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 FreeUdpPortV4 = freeUdpPortV4,
-                NetworkInterfaceNames = _netConfigurationService !=null 
+                FreeUdpPortV6 = freeUdpPortV6,
+                NetworkInterfaceNames = _netConfigurationService != null
                     ? await _netConfigurationService.GetNetworkInterfaceNames()
                     : null
             };
@@ -177,9 +178,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 privateAddresses: allServerIps, isIpV6Supported, dnsServers: serverConfig.DnsServersValue);
 
             // Add listener ip addresses to the ip address manager if requested
-            if (serverConfig.AddListenerIpToNetwork != null && _netConfigurationService != null) {
+            if (serverConfig.AddListenerIpsToNetwork != null && _netConfigurationService != null) {
                 foreach (var ipEndPoint in serverConfig.TcpEndPointsValue)
-                    await _netConfigurationService.AddIpAddress(ipEndPoint.Address, serverConfig.AddListenerIpToNetwork).VhConfigureAwait();
+                    await _netConfigurationService.AddIpAddress(ipEndPoint.Address, serverConfig.AddListenerIpsToNetwork).VhConfigureAwait();
             }
 
             // Reconfigure server host
@@ -291,7 +292,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 nameof(ServerConfig.TcpEndPoints),
                 nameof(ServerConfig.UdpEndPoints)
             ])
-            : JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
+            : VhUtil.RedactJsonValue(json, [
+                nameof(CertificateData.RawData), // it will ruin the report and useless to see
+            ]);
     }
 
     private async Task<ServerConfig> ReadConfigImpl(ServerInfo serverInfo)

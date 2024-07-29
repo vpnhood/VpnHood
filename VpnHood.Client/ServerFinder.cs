@@ -131,8 +131,7 @@ public class ServerFinder(
         try {
             // check all servers
             using var cancellationTokenSource = new CancellationTokenSource();
-            using var linkedCancellationTokenSource =
-                CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
+            using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
             await VhUtil.ParallelForEachAsync(hostStatuses, async hostStatus => {
                 var connector = CreateConnector(hostStatus.TcpEndPoint);
 

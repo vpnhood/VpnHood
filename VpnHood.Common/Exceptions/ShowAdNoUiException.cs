@@ -1,6 +1,4 @@
-﻿using VpnHood.Common.Exceptions;
-
-namespace VpnHood.Client.App.Exceptions;
+﻿namespace VpnHood.Common.Exceptions;
 
 public class ShowAdNoUiException : ShowAdException
 {

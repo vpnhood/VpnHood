@@ -1,44 +1,27 @@
-﻿using Android.Gms.Ads;
-using Android.Gms.Ads.Interstitial;
+using Android.Gms.Ads;
+using Android.Gms.Ads.AppOpen;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackFix;
 using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Exceptions;
-using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
 
-public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAdService
+public class AdMobAppOpenAdProvider(string adUnitId) : IAppAdProvider
 {
-    private InterstitialAd? _loadedAd;
+    private AppOpenAd? _loadedAd;
     public string NetworkName => "AdMob";
-    public AppAdType AdType => AppAdType.InterstitialAd;
+    public AppAdType AdType => AppAdType.AppOpenAd;
     public DateTime? AdLoadedTime { get; private set; }
     public TimeSpan AdLifeSpan => AdMobUtil.DefaultAdTimeSpan;
 
-    public static AdMobInterstitialAdService Create(string adUnitId, bool hasVideo)
+    public static AdMobAppOpenAdProvider Create(string adUnitId)
     {
-        var ret = new AdMobInterstitialAdService(adUnitId, hasVideo);
+        var ret = new AdMobAppOpenAdProvider(adUnitId);
         return ret;
     }
-
-    public bool IsCountrySupported(string countryCode)
-    {
-        // Make sure it is upper case
-        countryCode = countryCode.Trim().ToUpper();
-
-        // these countries are not supported at all
-        if (countryCode == "CN")
-            return false;
-
-        // these countries video ad is not supported
-        if (hasVideo)
-            return countryCode != "IR";
-
-        return true;
-    }
-
 
     public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
@@ -54,17 +37,16 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
         AdLoadedTime = null;
         _loadedAd = null;
 
-        var adLoadCallback = new MyInterstitialAdLoadCallback();
+        var adLoadCallback = new MyAppOpenAdLoadCallback();
         var adRequest = new AdRequest.Builder().Build();
-        // AdMob load ad must call from main thread
-        activity.RunOnUiThread(() => InterstitialAd.Load(activity, adUnitId, adRequest, adLoadCallback));
+        activity.RunOnUiThread(() => AppOpenAd.Load(activity, adUnitId, adRequest, adLoadCallback));
 
         var cancellationTask = new TaskCompletionSource();
         cancellationToken.Register(cancellationTask.SetResult);
-        await Task.WhenAny(adLoadCallback.Task, cancellationTask.Task).VhConfigureAwait();
+        await Task.WhenAny(adLoadCallback.Task, cancellationTask.Task).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
 
-        _loadedAd = await adLoadCallback.Task.VhConfigureAwait();
+        _loadedAd = await adLoadCallback.Task.ConfigureAwait(false);
         AdLoadedTime = DateTime.Now;
     }
 
@@ -88,7 +70,7 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
             // wait for show or dismiss
             var cancellationTask = new TaskCompletionSource();
             cancellationToken.Register(cancellationTask.SetResult);
-            await Task.WhenAny(fullScreenContentCallback.DismissedTask, cancellationTask.Task).VhConfigureAwait();
+            await Task.WhenAny(fullScreenContentCallback.DismissedTask, cancellationTask.Task).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
 
             // check task errors
@@ -98,25 +80,6 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
         finally {
             _loadedAd = null;
             AdLoadedTime = null;
-        }
-    }
-
-    private class MyInterstitialAdLoadCallback : AdNetworkCallBackFix.InterstitialAdLoadCallback
-    {
-        private readonly TaskCompletionSource<InterstitialAd> _loadedCompletionSource = new();
-        public Task<InterstitialAd> Task => _loadedCompletionSource.Task;
-
-        protected override void OnAdLoaded(InterstitialAd interstitialAd)
-        {
-            _loadedCompletionSource.TrySetResult(interstitialAd);
-        }
-
-        public override void OnAdFailedToLoad(LoadAdError addError)
-        {
-            _loadedCompletionSource.TrySetException(
-                addError.Message.Contains("No fill.", StringComparison.OrdinalIgnoreCase)
-                    ? new NoFillAdException(addError.Message)
-                    : new LoadAdException(addError.Message));
         }
     }
 
@@ -133,6 +96,25 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
         public override void OnAdFailedToShowFullScreenContent(AdError adError)
         {
             _dismissedCompletionSource.TrySetException(new ShowAdException(adError.Message));
+        }
+    }
+
+    private class MyAppOpenAdLoadCallback : AppOpenAdLoadCallback
+    {
+        private readonly TaskCompletionSource<AppOpenAd> _loadedCompletionSource = new();
+        public Task<AppOpenAd> Task => _loadedCompletionSource.Task;
+
+        protected override void OnAdLoaded(AppOpenAd appOpenAd)
+        {
+            _loadedCompletionSource.TrySetResult(appOpenAd);
+        }
+
+        public override void OnAdFailedToLoad(LoadAdError addError)
+        {
+            _loadedCompletionSource.TrySetException(
+                addError.Message.Contains("No fill.", StringComparison.OrdinalIgnoreCase)
+                    ? new NoFillAdException(addError.Message)
+                    : new LoadAdException(addError.Message));
         }
     }
 

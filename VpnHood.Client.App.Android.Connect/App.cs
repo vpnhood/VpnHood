@@ -3,7 +3,6 @@ using Android.Runtime;
 using Firebase.Analytics;
 using Firebase.Crashlytics;
 using VpnHood.Client.App.Droid.Ads.VhAdMob;
-using VpnHood.Client.App.Droid.Ads.VhChartboost;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Client.App.Resources;
@@ -62,12 +61,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AccountService = CreateAppAccountService(appSettings, storageFolderPath),
             AllowEndPointTracker = appSettings.AllowEndPointTracker,
             Tracker = _analytics != null ? new AnalyticsTracker(_analytics) : null,
-            AdServices = [
-                AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialAdUnitId, true),
-                AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialNoVideoAdUnitId, false),
-                ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature,
-                    appSettings.ChartboostAdLocation)
-            ],
+            AdServices = CreateAppAdServices(appSettings),
             UiService = new AndroidAppUiService(),
             LogAnonymous = !AppSettings.IsDebugMode,
             AdOptions = new AppAdOptions {
@@ -81,6 +75,30 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         base.OnCreate();
         _analytics?.SetUserId(VpnHoodApp.Instance.Settings.ClientId.ToString());
+    }
+
+    private static AppAdService[] CreateAppAdServices(AppSettings appSettings)
+    {
+        return [
+            new AppAdService {
+                AdProvider = AdMobInterstitialAdProvider.Create(appSettings.AdMobInterstitialAdUnitId),
+                ExcludeCountryCodes = ["IR", "CN"],
+                ServiceName = "AdMob",
+            },
+
+            //new AppAdService {
+            //    AdProvider = ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),
+            //    ExcludeCountryCodes = ["IR", "CN"],
+            //    ServiceName = "AdMob",
+            //},
+
+            new AppAdService {
+                AdProvider = AdMobInterstitialAdProvider.Create(appSettings.AdMobInterstitialNoVideoAdUnitId),
+                ExcludeCountryCodes = ["CN"],
+                ServiceName = "AdMob-NoVideo",
+            }
+        ];
+
     }
 
     private static StoreAccountService? CreateAppAccountService(AppSettings appSettings, string storageFolderPath)

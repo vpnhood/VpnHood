@@ -27,7 +27,7 @@ public class AppOptions
     public IAppCultureService? CultureService { get; set; }
     public IAppUpdaterService? UpdaterService { get; set; }
     public IAppAccountService? AccountService { get; set; }
-    public IAppAdService[] AdServices { get; set; } = [];
+    public AppAdService[] AdServices { get; set; } = [];
     public ITracker? Tracker { get; set; }
     public TimeSpan ReconnectTimeout { get; set; } = ClientOptions.Default.ReconnectTimeout;
     public TimeSpan AutoWaitTimeout { get; set; } = ClientOptions.Default.AutoWaitTimeout;

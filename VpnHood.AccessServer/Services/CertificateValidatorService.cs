@@ -107,6 +107,8 @@ public class CertificateValidatorService(
             certificate.ValidateError = ex.Message;
             certificate.ValidateErrorTime = DateTime.UtcNow;
             certificate.ValidateErrorCount++;
+            logger.LogError("Could not validate a certificate. ProjectId: {ProjectId}, CommonName: {CommonName}",
+                certificate.ProjectId, certificate.CommonName);
         }
         finally {
             certificate.ValidateToken = null;
@@ -158,14 +160,21 @@ public class CertificateValidatorService(
 
     public async Task RunJob(CancellationToken cancellationToken)
     {
+        logger.LogInformation("Certificates validation has been started...");
+
         // retryInterval is 90% AutoValidate interval to make sure we don't miss it
         var certificates = await vhRepo.CertificateExpiringList(
             certificateValidatorOptions.Value.ExpirationThreshold,
             certificateValidatorOptions.Value.MaxRetry,
             certificateValidatorOptions.Value.Interval * 0.9);
 
+
+        logger.LogInformation("Validating certificates... CertificateCount: {CertificateCount}", 
+            certificates.Length);
+
         var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 10 };
-        await Parallel.ForEachAsync(certificates, parallelOptions,
-            async (certificate, ct) => { await Validate(certificate.ProjectId, certificate.ServerFarmId, true, ct); });
+        await Parallel.ForEachAsync(certificates, parallelOptions, async (certificate, ct) => {
+            await Validate(certificate.ProjectId, certificate.ServerFarmId, true, ct);
+        });
     }
 }

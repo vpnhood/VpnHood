@@ -23,6 +23,9 @@ $remote = "$remoteUser@" + "$remoteHost";
 $remoteDir = "/opt/$AppName";
 $serviceFileName = "$AppName.service";
 
+# update project version
+UpdateProjectVersion($projectFile);
+
 # publish 
 Write-Host "Building app..." -ForegroundColor Blue;
 if (Test-Path -Path $publishDir -PathType Container) {Remove-Item -path "$publishDir" -Force -Recurse};

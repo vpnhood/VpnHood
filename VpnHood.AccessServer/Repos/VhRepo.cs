@@ -320,7 +320,7 @@ public class VhRepo(VhContext vhContext)
         var certificates = vhContext.Certificates
             .Where(x => !x.IsDeleted && x.AutoValidate)
             .Where(x => x.ValidateErrorCount < maxErrorCount)
-            .Where(x => x.ValidateErrorTime < errorTime)
+            .Where(x => x.ValidateErrorTime == null || x.ValidateErrorTime < errorTime)
             .Where(x => x.ExpirationTime < expirationTime || !x.IsValidated)
             .ToArrayAsync();
 

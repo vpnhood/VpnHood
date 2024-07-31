@@ -40,6 +40,7 @@ public class Program
             var certificateValidatorOptions =
                 builder.Configuration.GetSection("CertificateValidator").Get<CertificateValidatorOptions>() ??
                 new CertificateValidatorOptions();
+            
             builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
             builder.Services.Configure<CertificateValidatorOptions>(
                 builder.Configuration.GetSection("CertificateValidator"));

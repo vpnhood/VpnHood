@@ -41,8 +41,8 @@ public class CertificateValidatorService(
 
         try {
             // create Csr from certificate
-            logger.LogInformation("Renewing certificate. ProjectId: {ProjectId}, CommonName: {CommonName}",
-                project.ProjectId, certificate.CommonName);
+            logger.LogInformation("Renewing certificate. ProjectId: {ProjectId}, CertificateId: {CertificateId}, CommonName: {CommonName}",
+                certificate.ProjectId, certificate.CertificateId, certificate.CommonName);
             certificate.ValidateInprogress = true;
 
             // create account if not exists
@@ -70,16 +70,17 @@ public class CertificateValidatorService(
 
             // validate order by manager
             logger.LogInformation(
-                "Validating certificate by the access server. ProjectId: {ProjectId}, CommonName: {CommonName}",
-                project.ProjectId, certificate.CommonName);
+                "Validating certificate by the access server. ProjectId: {ProjectId}, CertificateId: {CertificateId}, CommonName: {CommonName}",
+                certificate.ProjectId, certificate.CertificateId, certificate.CommonName);
             await ValidateByAccessServer(certificate.CommonName, certificate.ValidateToken,
                 certificate.ValidateKeyAuthorization);
 
             // Validate
             while (true) {
                 logger.LogInformation(
-                    "Validating certificate by the provider. ProjectId: {ProjectId}, CommonName: {CommonName}",
-                    project.ProjectId, certificate.CommonName);
+                    "Validating certificate by the provider. ProjectId: {ProjectId}, CertificateId: {CertificateId}, CommonName: {CommonName}",
+                    certificate.ProjectId, certificate.CertificateId, certificate.CommonName);
+
                 var res = await acmeOrderService.Validate();
                 if (res != null) {
                     certificate.ValidateError = null;
@@ -99,7 +100,8 @@ public class CertificateValidatorService(
                     break;
                 }
 
-                logger.LogInformation("Acme validate in pending. CommonName: {CommonName}", certificate.CommonName);
+                logger.LogInformation("Acme validate in pending. ProjectId: {ProjectId}, CertificateId: {CertificateId}, CommonName: {CommonName}",
+                    certificate.ProjectId, certificate.CertificateId, certificate.CommonName);
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }
         }
@@ -107,8 +109,8 @@ public class CertificateValidatorService(
             certificate.ValidateError = ex.Message;
             certificate.ValidateErrorTime = DateTime.UtcNow;
             certificate.ValidateErrorCount++;
-            logger.LogError("Could not validate a certificate. ProjectId: {ProjectId}, CommonName: {CommonName}",
-                certificate.ProjectId, certificate.CommonName);
+            logger.LogError("Could not validate a certificate.  ProjectId: {ProjectId}, CertificateId: {CertificateId}, CommonName: {CommonName}",
+                certificate.ProjectId, certificate.CertificateId, certificate.CommonName);
         }
         finally {
             certificate.ValidateToken = null;
@@ -174,7 +176,7 @@ public class CertificateValidatorService(
 
         var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 10 };
         await Parallel.ForEachAsync(certificates, parallelOptions, async (certificate, ct) => {
-            await Validate(certificate.ProjectId, certificate.ServerFarmId, true, ct);
+            await ValidateJob(certificate.ProjectId, certificate.ServerFarmId, true, ct);
         });
     }
 }

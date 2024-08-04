@@ -1,4 +1,4 @@
-# v4.6.552
+# v4.6.553
 ### Client
 * Fix: Could not open websites on some devices
 * Fix: "Connection is already in progress" error when the connection is already established

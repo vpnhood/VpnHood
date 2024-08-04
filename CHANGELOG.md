@@ -1,9 +1,12 @@
 # Upcoming
 ### Client
+* Fix: Could not open websites on some devices
+* Fix: "Connection is already in progress" error when the connection is already established
 * Fix: Android: IPv6 over IPv4
 
 ### Server
 * Feature: Linux: Add or remove listener IPs on the server at runtime via "AddListenerIpsToNetwork".
+* Fix: DNS list
 
 # v4.6.546
 ### Server

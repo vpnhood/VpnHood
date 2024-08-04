@@ -404,7 +404,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // protect double call
         if (!IsIdle) {
-            if (_activeClientProfileId == clientProfileId &&
+            if (_activeClientProfileId == clientProfileId && 
+                diagnose == _hasDiagnoseStarted && // client may request diagnose the current connection
                 string.Equals(_activeServerLocation, serverLocation, StringComparison.OrdinalIgnoreCase))
                 throw new Exception("Connection is already in progress.");
 

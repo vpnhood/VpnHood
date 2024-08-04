@@ -731,6 +731,9 @@ public class VpnHoodClient : IAsyncDisposable
                     .ToArray())) // make sure there is at least one DNS server
                 throw new Exception("Could not specify any DNS server. The server is not configured properly.");
 
+            VhLogger.Instance.LogInformation("DnsServers: {DnsServers}", 
+                string.Join(", ", DnsServers.Select(x => x.ToString())));
+
             // report Suppressed
             if (sessionResponse.SuppressedTo == SessionSuppressType.YourSelf)
                 VhLogger.Instance.LogWarning("You suppressed a session of yourself!");

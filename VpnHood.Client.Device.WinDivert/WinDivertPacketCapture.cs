@@ -146,9 +146,10 @@ public class WinDivertPacketCapture : IPacketCapture
         }
 
         // add outbound; filter loopback
-        var filter =
-            $"(ip or ipv6) and outbound and !loopback and ip.TTL!={ProtectedTtl} and (udp.DstPort==53 or ({phraseX}))";
-        // filter = $"(ip or ipv6) and outbound and !loopback and (protocol!=6 or tcp.DstPort!=3389) and (protocol!=6 or tcp.SrcPort!=3389) and (udp.DstPort==53 or ({phraseX}))";
+        var filter = $"(ip.TTL!={ProtectedTtl} or ipv6.HopLimit!={ProtectedTtl}) and " +
+                     $"outbound and !loopback and " +
+                     $"(udp.DstPort==53 or ({phraseX}))";
+
         filter = filter.Replace("ipv6.DstAddr>=::", "ipv6"); // WinDivert bug
         try {
             _device.Filter = filter;

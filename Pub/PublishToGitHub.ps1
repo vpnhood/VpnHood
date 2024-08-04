@@ -45,12 +45,14 @@ if (!$prerelease)
 
 # publish using github CLI: https://github.com/github/hub
 $releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootDir}})
-$androidStore = (&{if($prerelease) {"-web"} else {""}});
+$androidGoogleLatestDir = Join-Path $pubDir "Android.GooglePlay/apk/latest";
 
 gh release create "$versionTag" `
 	--title "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `
 	-F $releaseRootDir/ReleaseNote.txt `
+	$androidGoogleLatestDir/VpnHoodClient-android.apk `
+	$androidGoogleLatestDir/VpnHoodClient-android.json `
 	$releaseRootDir/$packageClientDirName/android-web/VpnHoodClient-android-web.apk `
 	$releaseRootDir/$packageClientDirName/android-web/VpnHoodClient-android-web.json `
 	$releaseRootDir/$packageClientDirName/windows/VpnHoodClient-win-x64.msi  `

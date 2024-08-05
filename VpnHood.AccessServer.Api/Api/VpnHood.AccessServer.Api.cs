@@ -4820,7 +4820,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerData>> ListAsync(System.Guid projectId, string? search = null, System.Guid? serverId = null, System.Guid? serverFarmId = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerData>> ListAsync(System.Guid projectId, string? search = null, System.Guid? serverId = null, System.Guid? serverFarmId = null, string? ipAddress = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -4852,6 +4852,10 @@ namespace VpnHood.AccessServer.Api
                     if (serverFarmId != null)
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("serverFarmId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (ipAddress != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("ipAddress")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(ipAddress, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     }
                     if (recordIndex != null)
                     {

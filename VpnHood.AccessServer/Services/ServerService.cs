@@ -142,11 +142,12 @@ public class ServerService(
         string? search = null,
         Guid? serverId = null,
         Guid? serverFarmId = null,
+        IPAddress? ipAddress = null,
         int recordIndex = 0,
         int recordCount = int.MaxValue)
     {
         var servers = await vhRepo.ServerSearch(projectId: projectId,
-            search: search, serverId: serverId, serverFarmId: serverFarmId,
+            search: search, serverId: serverId, serverFarmId: serverFarmId, ipAddress: ipAddress,
             recordIndex: recordIndex, recordCount: recordCount);
 
         // create Dto

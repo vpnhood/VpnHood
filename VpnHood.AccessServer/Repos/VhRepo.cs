@@ -1,5 +1,7 @@
 ﻿using GrayMint.Common.Generics;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
+using System.Net;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos.Views;
@@ -38,6 +40,7 @@ public class VhRepo(VhContext vhContext)
         string? search,
         Guid? serverId = null,
         Guid? serverFarmId = null,
+        IPAddress? ipAddress = null,
         int recordIndex = 0,
         int recordCount = int.MaxValue)
     {
@@ -48,6 +51,7 @@ public class VhRepo(VhContext vhContext)
             .Where(server => server.ProjectId == projectId && !server.IsDeleted)
             .Where(server => serverId == null || server.ServerId == serverId)
             .Where(server => serverFarmId == null || server.ServerFarmId == serverFarmId)
+            .Where(server => ipAddress == null || server.AccessPoints.Any(y => y.IpAddress.Equals(ipAddress)))
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
                 x.ServerName.Contains(search) ||
@@ -127,8 +131,7 @@ public class VhRepo(VhContext vhContext)
         var baseQuery =
             from accessToken in vhContext.AccessTokens
             join serverFarm in vhContext.ServerFarms on accessToken.ServerFarmId equals serverFarm.ServerFarmId
-            join access in vhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new
-                { access.AccessTokenId, access.DeviceId } into accessGrouping
+            join access in vhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new { access.AccessTokenId, access.DeviceId } into accessGrouping
             from access in accessGrouping.DefaultIfEmpty()
             where
                 (accessToken.ProjectId == projectId && !accessToken.IsDeleted) &&

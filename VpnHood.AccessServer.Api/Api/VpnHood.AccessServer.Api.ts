@@ -2599,7 +2599,7 @@ export class ServersClient {
         return Promise.resolve<ServerData>(null as any);
     }
 
-    list(projectId: string, search?: string | null | undefined, serverId?: string | null | undefined, serverFarmId?: string | null | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<ServerData[]> {
+    list(projectId: string, search?: string | null | undefined, serverId?: string | null | undefined, serverFarmId?: string | null | undefined, ipAddress?: string | null | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<ServerData[]> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/servers?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -2610,6 +2610,8 @@ export class ServersClient {
             url_ += "serverId=" + encodeURIComponent("" + serverId) + "&";
         if (serverFarmId !== undefined && serverFarmId !== null)
             url_ += "serverFarmId=" + encodeURIComponent("" + serverFarmId) + "&";
+        if (ipAddress !== undefined && ipAddress !== null)
+            url_ += "ipAddress=" + encodeURIComponent("" + ipAddress) + "&";
         if (recordIndex === null)
             throw new Error("The parameter 'recordIndex' cannot be null.");
         else if (recordIndex !== undefined)

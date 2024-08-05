@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 using VpnHood.AccessServer.Dtos.Servers;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
@@ -44,10 +45,11 @@ public class ServersController(
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<ServerData[]> List(Guid projectId, string? search = null, Guid? serverId = null,
-        Guid? serverFarmId = null,
+        Guid? serverFarmId = null, IPAddress? ipAddress = null,
         int recordIndex = 0, int recordCount = 1000)
     {
-        return serverService.List(projectId, search: search, serverId: serverId, serverFarmId: serverFarmId,
+        return serverService.List(projectId, search: search, 
+            serverId: serverId, serverFarmId: serverFarmId, ipAddress: ipAddress,
             recordIndex, recordCount);
     }
 

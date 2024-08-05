@@ -10,6 +10,7 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
+using VpnHood.Server.Access.Configurations;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -28,10 +29,24 @@ public class ServerTest
     }
 
     [TestMethod]
+    public async Task List()
+    {
+        var testApp = await TestApp.Create();
+        var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
+        var server1 = await farm.AddNewServer();
+        await farm.AddNewServer();
+
+        // list by ip address
+        var servers = await server1.Client.ListAsync(farm.ProjectId, ipAddress: server1.ServerConfig.TcpEndPoints!.First().Address.ToString());
+        Assert.AreEqual(1, servers.Count);
+        Assert.AreEqual(server1.ServerId, servers.Single().Server.ServerId);
+    }
+
+    [TestMethod]
     public async Task Crud()
     {
         var testApp = await TestApp.Create();
-        var farm1 = await ServerFarmDom.Create(testApp, serverCount: 0);
+        var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
 
         //-----------
         // check: Create
@@ -40,8 +55,8 @@ public class ServerTest
             ServerName = $"{Guid.NewGuid()}",
             HostPanelUrl = new Uri("http://localhost/foo")
         };
-        var serverDom = await farm1.AddNewServer(server1ACreateParam, configure: false);
-        var install1A = await farm1.TestApp.ServersClient.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
+        var serverDom = await farm.AddNewServer(server1ACreateParam, configure: false);
+        var install1A = await farm.TestApp.ServersClient.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
 
         //-----------
         // check: Get
@@ -104,7 +119,7 @@ public class ServerTest
         //-----------
         // check: Update (serverFarmId)
         //-----------
-        var farm2 = await ServerFarmDom.Create(farm1.TestApp);
+        var farm2 = await ServerFarmDom.Create(farm.TestApp);
         serverUpdateParam = new ServerUpdateParams { ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId } };
         await serverDom.Client.UpdateAsync(testApp.ProjectId, serverDom.ServerId, serverUpdateParam);
         await serverDom.Reload();

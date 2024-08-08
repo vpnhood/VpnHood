@@ -2,6 +2,7 @@
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.Certificates;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Providers.Acme;
 using VpnHood.AccessServer.Repos;
 using VpnHood.Server.Access;
 

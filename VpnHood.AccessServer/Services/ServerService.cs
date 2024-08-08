@@ -1,16 +1,14 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using GrayMint.Common.Utils;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Renci.SshNet;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.AccessPoints;
 using VpnHood.AccessServer.Dtos.Servers;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Options;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
@@ -22,7 +20,6 @@ namespace VpnHood.AccessServer.Services;
 
 public class ServerService(
     VhRepo vhRepo,
-    VhContext vhContext,
     IOptions<AppOptions> appOptions,
     AgentCacheClient agentCacheClient,
     ServerConfigureService serverConfigureService,
@@ -256,7 +253,6 @@ public class ServerService(
     public async Task<ServersStatusSummary> GetStatusSummary(Guid projectId, Guid? serverFarmId = null)
     {
         // no lock
-        await using var trans = await vhContext.WithNoLockTransaction();
 
         /*
         var query = VhContext.Servers
@@ -278,10 +274,8 @@ public class ServerService(
             .ToArray();
         */
 
-        var serverModels = await vhContext.Servers
-            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
-            .Where(server => serverFarmId == null || server.ServerFarmId == serverFarmId)
-            .ToArrayAsync();
+        await using var trans = await vhRepo.WithNoLockTransaction();
+        var serverModels = await vhRepo.ServerList(projectId: projectId, serverFarmId: serverFarmId, tracking: false);
 
         // update model ServerStatusEx
         var cachedServers = await agentCacheClient.GetServers(projectId);
@@ -312,8 +306,8 @@ public class ServerService(
         var server = await vhRepo.ServerGet(projectId, serverId);
         server.IsDeleted = true;
         server.IsEnabled = true;
+        await vhRepo.SaveChangesAsync();
 
-        await vhContext.SaveChangesAsync();
         await agentCacheClient.InvalidateServers(projectId, serverId: serverId);
     }
 
@@ -378,9 +372,7 @@ public class ServerService(
     private async Task<ServerInstallAppSettings> GetInstallAppSettings(Guid projectId, Guid serverId)
     {
         // make sure server belongs to project
-        var server = await vhContext.Servers
-            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
-            .SingleAsync(server => server.ServerId == serverId);
+        var server = await vhRepo.ServerGet(projectId, serverId: serverId);
 
         // create jwt
         var authorization = await agentSystemClient.GetServerAgentAuthorization(server.ServerId);

@@ -28,7 +28,8 @@ public static class Roles
             Permissions.ServerWrite,
             Permissions.ServerInstall,
             Permissions.ServerFarmWrite,
-            Permissions.IpLockWrite
+            Permissions.IpLockWrite,
+            Permissions.HostOrderWrite
         }.Concat(ProjectReader.Permissions).ToArray()
     };
 

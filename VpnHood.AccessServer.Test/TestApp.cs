@@ -11,9 +11,10 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Providers.Acme;
+using VpnHood.AccessServer.Providers.Hosts;
 using VpnHood.AccessServer.Report.Persistence;
 using VpnHood.AccessServer.Security;
-using VpnHood.AccessServer.Services.Acme;
 using VpnHood.AccessServer.Test.Helper;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -47,7 +48,9 @@ public class TestApp : IHttpClientFactory, IDisposable
     public DevicesClient DevicesClient => new(HttpClient);
     public SystemClient SystemClient => new(HttpClient);
     public ServerProfilesClient ServerProfilesClient => new(HttpClient);
+    public HostOrdersClient HostOrdersClient => new(HttpClient);
     public TeamClient TeamClient => new(HttpClient);
+    public TestHostProvider HostProvider => throw new NotImplementedException(); //todo
     public AgentCacheClient AgentCacheClient => Scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
     public ILogger<TestApp> Logger => Scope.ServiceProvider.GetRequiredService<ILogger<TestApp>>();
 
@@ -80,6 +83,7 @@ public class TestApp : IHttpClientFactory, IDisposable
                     services.AddScoped<IAuthorizationProvider, TestAuthorizationProvider>();
                     services.AddSingleton<IHttpClientFactory>(this);
                     services.AddSingleton<IAcmeOrderFactory, TestAcmeOrderFactory>();
+                    services.AddSingleton<IHostProviderFactory, TestHostProviderFactory>();
                 });
             });
 

@@ -3,6 +3,7 @@
 		<Description>VpnHood Access Agent</Description>
 		<TargetFramework>net8.0</TargetFramework>
 		<UserSecretsId>6d43aac0-39ba-4f92-8e1b-742a1203d301</UserSecretsId>
+		<IsPackable>false</IsPackable>
 	</PropertyGroup>
 
 	<PropertyGroup>

@@ -1,8 +1,8 @@
 ﻿using GrayMint.Common.Generics;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
 using System.Net;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos.Views;
 
@@ -25,13 +25,16 @@ public class VhRepo(VhContext vhContext)
         return query.SingleAsync();
     }
 
-    public Task<ServerModel[]> ServerList(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
+    public Task<ServerModel[]> ServerList(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null, bool tracking = true)
     {
         var query = vhContext.Servers
             .Include(x => x.Location)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => x.ServerFarmId == serverFarmId || serverFarmId == null)
             .Where(x => x.ServerFarm!.ServerProfileId == serverProfileId || serverProfileId == null);
+
+        if (!tracking)
+            query = query.AsNoTracking();
 
         return query.ToArrayAsync();
     }
@@ -328,5 +331,22 @@ public class VhRepo(VhContext vhContext)
             .ToArrayAsync();
 
         return certificates;
+    }
+
+    public Task<ProviderModel[]> ProviderList(Guid projectId, ProviderType providerType)
+    {
+        return vhContext.Providers
+            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.ProviderType == providerType)
+            .ToArrayAsync();
+    }
+
+    public Task<ProviderModel> ProviderGet(Guid projectId, ProviderType providerType, string providerName)
+    {
+        return vhContext.Providers
+            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.ProviderType == providerType)
+            .Where(x => x.ProviderName == providerName)
+            .SingleAsync();
     }
 }

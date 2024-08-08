@@ -954,6 +954,352 @@ export class HealthClient {
     }
 }
 
+export class HostOrdersClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "";
+
+    }
+
+    listIps(projectId: string, cancelToken?: CancelToken): Promise<HostIp[]> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/ips";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processListIps(_response);
+        });
+    }
+
+    protected processListIps(response: AxiosResponse): Promise<HostIp[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(HostIp.fromJS(item));
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<HostIp[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<HostIp[]>(null as any);
+    }
+
+    list(projectId: string, cancelToken?: CancelToken): Promise<HostOrder[]> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processList(_response);
+        });
+    }
+
+    protected processList(response: AxiosResponse): Promise<HostOrder[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(HostOrder.fromJS(item));
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<HostOrder[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<HostOrder[]>(null as any);
+    }
+
+    get(projectId: string, orderId: string, cancelToken?: CancelToken): Promise<HostOrder> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/{orderId}";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (orderId === undefined || orderId === null)
+            throw new Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGet(_response);
+        });
+    }
+
+    protected processGet(response: AxiosResponse): Promise<HostOrder> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = HostOrder.fromJS(resultData200);
+            return Promise.resolve<HostOrder>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<HostOrder>(null as any);
+    }
+
+    orderNewIp(projectId: string, serverId: string, cancelToken?: CancelToken): Promise<HostOrder> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/order-new-ip?";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (serverId === undefined || serverId === null)
+            throw new Error("The parameter 'serverId' must be defined and cannot be null.");
+        else
+            url_ += "serverId=" + encodeURIComponent("" + serverId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processOrderNewIp(_response);
+        });
+    }
+
+    protected processOrderNewIp(response: AxiosResponse): Promise<HostOrder> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = HostOrder.fromJS(resultData200);
+            return Promise.resolve<HostOrder>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<HostOrder>(null as any);
+    }
+
+    orderReleaseIp(projectId: string, ipAddress: string, ignoreProviderError: boolean, cancelToken?: CancelToken): Promise<string> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/order-release-ip?";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (ipAddress === undefined || ipAddress === null)
+            throw new Error("The parameter 'ipAddress' must be defined and cannot be null.");
+        else
+            url_ += "ipAddress=" + encodeURIComponent("" + ipAddress) + "&";
+        if (ignoreProviderError === undefined || ignoreProviderError === null)
+            throw new Error("The parameter 'ignoreProviderError' must be defined and cannot be null.");
+        else
+            url_ += "ignoreProviderError=" + encodeURIComponent("" + ignoreProviderError) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processOrderReleaseIp(_response);
+        });
+    }
+
+    protected processOrderReleaseIp(response: AxiosResponse): Promise<string> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+                result200 = resultData200 !== undefined ? resultData200 : <any>null;
+    
+            return Promise.resolve<string>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<string>(null as any);
+    }
+
+    sync(projectId: string, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/sync";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processSync(_response);
+        });
+    }
+
+    protected processSync(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+}
+
 export class IpLocksClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
@@ -5314,6 +5660,137 @@ export class DeviceUpdateParams implements IDeviceUpdateParams {
 
 export interface IDeviceUpdateParams {
     isLocked?: PatchOfBoolean | null;
+}
+
+export class HostIp implements IHostIp {
+    ipAddress!: string;
+    hostProviderName!: string;
+    createdTime!: Date;
+    releasedTime?: Date | null;
+    serverId?: string | null;
+    isExtra!: boolean;
+
+    constructor(data?: IHostIp) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.ipAddress = _data["ipAddress"] !== undefined ? _data["ipAddress"] : <any>null;
+            this.hostProviderName = _data["hostProviderName"] !== undefined ? _data["hostProviderName"] : <any>null;
+            this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
+            this.releasedTime = _data["releasedTime"] ? new Date(_data["releasedTime"].toString()) : <any>null;
+            this.serverId = _data["serverId"] !== undefined ? _data["serverId"] : <any>null;
+            this.isExtra = _data["isExtra"] !== undefined ? _data["isExtra"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): HostIp {
+        data = typeof data === 'object' ? data : {};
+        let result = new HostIp();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["ipAddress"] = this.ipAddress !== undefined ? this.ipAddress : <any>null;
+        data["hostProviderName"] = this.hostProviderName !== undefined ? this.hostProviderName : <any>null;
+        data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
+        data["releasedTime"] = this.releasedTime ? this.releasedTime.toISOString() : <any>null;
+        data["serverId"] = this.serverId !== undefined ? this.serverId : <any>null;
+        data["isExtra"] = this.isExtra !== undefined ? this.isExtra : <any>null;
+        return data;
+    }
+}
+
+export interface IHostIp {
+    ipAddress: string;
+    hostProviderName: string;
+    createdTime: Date;
+    releasedTime?: Date | null;
+    serverId?: string | null;
+    isExtra: boolean;
+}
+
+export class HostOrder implements IHostOrder {
+    orderId!: string;
+    createdTime!: Date;
+    orderType!: HostOrderType;
+    status!: HostOrderStatus;
+    errorMessage?: string | null;
+    completedTime?: Date | null;
+    providerOrderId!: string;
+    ipAddress?: string | null;
+
+    constructor(data?: IHostOrder) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.orderId = _data["orderId"] !== undefined ? _data["orderId"] : <any>null;
+            this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
+            this.orderType = _data["orderType"] !== undefined ? _data["orderType"] : <any>null;
+            this.status = _data["status"] !== undefined ? _data["status"] : <any>null;
+            this.errorMessage = _data["errorMessage"] !== undefined ? _data["errorMessage"] : <any>null;
+            this.completedTime = _data["completedTime"] ? new Date(_data["completedTime"].toString()) : <any>null;
+            this.providerOrderId = _data["providerOrderId"] !== undefined ? _data["providerOrderId"] : <any>null;
+            this.ipAddress = _data["ipAddress"] !== undefined ? _data["ipAddress"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): HostOrder {
+        data = typeof data === 'object' ? data : {};
+        let result = new HostOrder();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["orderId"] = this.orderId !== undefined ? this.orderId : <any>null;
+        data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
+        data["orderType"] = this.orderType !== undefined ? this.orderType : <any>null;
+        data["status"] = this.status !== undefined ? this.status : <any>null;
+        data["errorMessage"] = this.errorMessage !== undefined ? this.errorMessage : <any>null;
+        data["completedTime"] = this.completedTime ? this.completedTime.toISOString() : <any>null;
+        data["providerOrderId"] = this.providerOrderId !== undefined ? this.providerOrderId : <any>null;
+        data["ipAddress"] = this.ipAddress !== undefined ? this.ipAddress : <any>null;
+        return data;
+    }
+}
+
+export interface IHostOrder {
+    orderId: string;
+    createdTime: Date;
+    orderType: HostOrderType;
+    status: HostOrderStatus;
+    errorMessage?: string | null;
+    completedTime?: Date | null;
+    providerOrderId: string;
+    ipAddress?: string | null;
+}
+
+export enum HostOrderType {
+    NewIp = "NewIp",
+    ReleaseIp = "ReleaseIp",
+}
+
+export enum HostOrderStatus {
+    Pending = "Pending",
+    Completed = "Completed",
+    Failed = "Failed",
 }
 
 export class IpLock implements IIpLock {

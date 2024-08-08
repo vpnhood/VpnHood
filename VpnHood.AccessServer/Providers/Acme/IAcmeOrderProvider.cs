@@ -1,8 +1,8 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 
-namespace VpnHood.AccessServer.Services.Acme;
+namespace VpnHood.AccessServer.Providers.Acme;
 
-public interface IAcmeOrderService
+public interface IAcmeOrderProvider
 {
     string KeyAuthorization { get; }
     string Token { get; }

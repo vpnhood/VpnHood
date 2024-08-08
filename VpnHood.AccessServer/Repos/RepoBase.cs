@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace VpnHood.AccessServer.Repos;
 
@@ -14,6 +16,14 @@ public abstract class RepoBase(DbContext dbContext)
         var entityEntry = await dbContext.AddAsync(model);
         return entityEntry.Entity;
     }
+
+    public async Task<IDbContextTransaction?> WithNoLockTransaction()
+    {
+        return dbContext.Database.CurrentTransaction == null
+            ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted)
+            : null;
+    }
+
 
     public Task SaveChangesAsync()
     {

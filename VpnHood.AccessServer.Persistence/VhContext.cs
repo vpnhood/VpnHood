@@ -22,6 +22,7 @@ public class VhContext : DbContext
     public virtual DbSet<CertificateModel> Certificates { get; set; } = default!;
     public virtual DbSet<IpLockModel> IpLocks { get; set; } = default!;
     public virtual DbSet<ServerProfileModel> ServerProfiles { get; set; } = default!;
+    public virtual DbSet<ProviderModel> Providers { get; set; } = default!;
     public virtual DbSet<LocationModel> Locations { get; set; } = default!;
 
     protected VhContext()
@@ -557,6 +558,12 @@ public class VhContext : DbContext
             entity
                 .Property(x => x.RegionName)
                 .HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<ProviderModel>(entity => {
+            entity
+                .HasIndex(e => new { e.ProjectId, e.ProviderType, e.ProviderName })
+                .IsUnique();
         });
     }
 }

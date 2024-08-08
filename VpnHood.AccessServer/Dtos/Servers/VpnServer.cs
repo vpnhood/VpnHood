@@ -1,4 +1,5 @@
-﻿using VpnHood.AccessServer.Persistence.Enums;
+﻿using VpnHood.AccessServer.Dtos.AccessPoints;
+using VpnHood.AccessServer.Persistence.Enums;
 
 namespace VpnHood.AccessServer.Dtos.Servers;
 

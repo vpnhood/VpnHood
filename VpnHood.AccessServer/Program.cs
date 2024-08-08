@@ -12,12 +12,13 @@ using NLog.Web;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Providers.Acme;
+using VpnHood.AccessServer.Providers.Hosts;
 using VpnHood.AccessServer.Report;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
-using VpnHood.AccessServer.Services.Acme;
 
 namespace VpnHood.AccessServer;
 
@@ -106,7 +107,9 @@ public class Program
                 .AddScoped<AgentSystemClient>()
                 .AddScoped<AccessTokensService>()
                 .AddScoped<ReportService>()
-                .AddSingleton<IAcmeOrderFactory, AcmeOrderFactory>();
+                .AddScoped<HostOrdersService>()
+                .AddSingleton<IAcmeOrderFactory, AcmeOrderFactory>()
+                .AddSingleton<IHostProviderFactory, HostProviderFactory>();
 
             // Report Service
             builder.Services.AddVhReportServices(new ReportServiceOptions {

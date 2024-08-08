@@ -31,13 +31,13 @@ jobs:
         dotnet-version: 8.0.x
 
     - name: Restore dependencies
-      run: dotnet restore VpnHood.AccessServer.Api
+      run: dotnet restore 
 
-    - name: Build Solution
-      run: dotnet build VpnHood.AccessServer.Api --no-restore --configuration $BUILD_CONFIG
-
-    - name: Pack All Projects
+    - name: Pack API Project
       run: dotnet pack VpnHood.AccessServer.Api --configuration $BUILD_CONFIG -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg 
+          
+    - name: Pack Abstractions Project
+      run: dotnet pack VpnHood.AccessServer.Abstractions --configuration $BUILD_CONFIG -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg 
 
     - name: Publish
       run: nuget push **\*.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{secrets.NUGET_API_KEY}}

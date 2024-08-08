@@ -1,8 +1,7 @@
 ﻿using Certes;
 using Certes.Acme;
-using VpnHood.AccessServer.Dtos.Certificates;
 
-namespace VpnHood.AccessServer.Services.Acme;
+namespace VpnHood.AccessServer.Providers.Acme;
 
 public class AcmeOrderFactory : IAcmeOrderFactory
 {
@@ -15,7 +14,7 @@ public class AcmeOrderFactory : IAcmeOrderFactory
         return pemKey;
     }
 
-    public async Task<IAcmeOrderService> CreateOrder(string accountPem, CertificateSigningRequest csr)
+    public async Task<IAcmeOrderProvider> CreateOrder(string accountPem, CertificateSigningRequest csr)
     {
         var accountKey = KeyFactory.FromPem(accountPem);
         var acmeContext = new AcmeContext(WellKnownServers.LetsEncryptV2, accountKey);
@@ -23,6 +22,6 @@ public class AcmeOrderFactory : IAcmeOrderFactory
 
         var authorizations = await orderContext.Authorizations();
         var challenge = await authorizations.Single().Http();
-        return new AcmeOrderService(orderContext, challenge, csr);
+        return new AcmeOrderProvider(orderContext, challenge, csr);
     }
 }

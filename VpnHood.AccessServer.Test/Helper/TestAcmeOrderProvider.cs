@@ -1,12 +1,11 @@
 ﻿using System.Security.Cryptography.X509Certificates;
-using VpnHood.AccessServer.Dtos.Certificates;
-using VpnHood.AccessServer.Services.Acme;
+using VpnHood.AccessServer.Providers.Acme;
 using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Test.Helper;
 
-public class TestAcmeOrderService(CertificateSigningRequest csr)
-    : IAcmeOrderService
+public class TestAcmeOrderProvider(CertificateSigningRequest csr)
+    : IAcmeOrderProvider
 {
     public string KeyAuthorization { get; } = Guid.NewGuid().ToString();
     public string Token { get; } = Guid.NewGuid().ToString();

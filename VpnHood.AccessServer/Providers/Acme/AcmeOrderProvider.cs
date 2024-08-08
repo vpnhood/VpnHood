@@ -2,15 +2,14 @@
 using Certes;
 using Certes.Acme;
 using Certes.Acme.Resource;
-using VpnHood.AccessServer.Dtos.Certificates;
 
-namespace VpnHood.AccessServer.Services.Acme;
+namespace VpnHood.AccessServer.Providers.Acme;
 
-public class AcmeOrderService(
+public class AcmeOrderProvider(
     IOrderContext orderContext,
     IChallengeContext challengeContext,
     CertificateSigningRequest csr)
-    : IAcmeOrderService
+    : IAcmeOrderProvider
 {
     public string KeyAuthorization => challengeContext.KeyAuthz;
     public string Token => challengeContext.Token;

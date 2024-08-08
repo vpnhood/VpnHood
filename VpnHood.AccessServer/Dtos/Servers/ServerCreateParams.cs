@@ -1,4 +1,6 @@
-﻿namespace VpnHood.AccessServer.Dtos.Servers;
+﻿using VpnHood.AccessServer.Dtos.AccessPoints;
+
+namespace VpnHood.AccessServer.Dtos.Servers;
 
 public class ServerCreateParams
 {

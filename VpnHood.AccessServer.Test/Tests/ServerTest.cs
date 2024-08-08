@@ -10,7 +10,6 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
-using VpnHood.Server.Access.Configurations;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -385,12 +384,11 @@ public class ServerTest
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);
         var accessToken = await farm.CreateAccessToken();
-        
+
         // error expected when there is no public in token access point
         await VhTestUtil.AssertApiException("InvalidOperationException", accessToken.GetToken(), contains: "token has not been initialized");
 
-        var serverDom1 = await farm.AddNewServer(new ServerCreateParams
-        {
+        var serverDom1 = await farm.AddNewServer(new ServerCreateParams {
             AccessPoints = [await farm.TestApp.NewAccessPoint(accessPointMode: AccessPointMode.PublicInToken)]
         });
 

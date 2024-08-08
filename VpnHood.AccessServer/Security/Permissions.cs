@@ -5,6 +5,7 @@ public static class Permissions
     public const string ProjectRead = nameof(ProjectRead);
     public const string ProjectWrite = nameof(ProjectWrite);
     public const string ProjectList = nameof(ProjectList);
+    public const string HostOrderWrite = nameof(HostOrderWrite);
     public const string CertificateRead = nameof(CertificateRead);
     public const string CertificateWrite = nameof(CertificateWrite);
     public const string CertificateExport = nameof(CertificateExport);

@@ -3,6 +3,7 @@
 		<Description>VpnHood Access Manager</Description>
 		<TargetFramework>net8.0</TargetFramework>
 		<UserSecretsId>67757bbf-2268-48cc-a4ce-14c926266081</UserSecretsId>
+		<IsPackable>false</IsPackable>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -37,6 +38,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AccessServer.Abstractions\VpnHood.AccessServer.Abstractions.csproj" />
 		<ProjectReference Include="..\VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj" />
 		<ProjectReference Include="..\VpnHood.AccessServer.Report\VpnHood.AccessServer.Report.csproj" />
 	</ItemGroup>

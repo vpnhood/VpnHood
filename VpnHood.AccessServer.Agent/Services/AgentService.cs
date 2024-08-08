@@ -366,10 +366,11 @@ public class AgentService(
     private static void SelectAccessPointAsPublicInToken(ICollection<AccessPointModel> accessPoints,
         AddressFamily addressFamily)
     {
-        if (accessPoints.Any(x =>
-                x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress.AddressFamily == addressFamily))
-            return; // already set
+        // return if already selected
+        if (accessPoints.Any(x =>x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress.AddressFamily == addressFamily))
+            return;
 
+        // select first public as PublicInToken
         var firstPublic = accessPoints.FirstOrDefault(x =>
             x.AccessPointMode == AccessPointMode.Public &&
             x.IpAddress.AddressFamily == addressFamily);

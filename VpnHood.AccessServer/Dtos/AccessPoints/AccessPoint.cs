@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.Common.Converters;
 
-namespace VpnHood.AccessServer.Dtos;
+namespace VpnHood.AccessServer.Dtos.AccessPoints;
 
 public class AccessPoint
 {
@@ -14,4 +14,13 @@ public class AccessPoint
     public required bool IsListen { get; init; }
     public required int TcpPort { get; init; }
     public required int UdpPort { get; init; }
+}
+
+public class AccessPointUpdateParams
+{
+    public required AccessPointMode AccessPointMode { get; init; }
+    public required bool IsListen { get; init; }
+    public required int TcpPort { get; init; }
+    public required int UdpPort { get; init; }
+    public string? CustomData { get; init; }
 }

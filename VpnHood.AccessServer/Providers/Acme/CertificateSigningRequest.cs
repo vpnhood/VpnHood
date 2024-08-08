@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AccessServer.Dtos.Certificates;
+﻿namespace VpnHood.AccessServer.Providers.Acme;
 
 public class CertificateSigningRequest
 {

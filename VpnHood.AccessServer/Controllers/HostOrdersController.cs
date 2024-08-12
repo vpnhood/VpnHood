@@ -16,21 +16,21 @@ public class HostOrdersController(HostOrdersService hostOrdersService)
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<HostIp[]> ListIps(Guid projectId)
     {
-        throw new NotImplementedException();
+        return hostOrdersService.ListIps(projectId);
     }
 
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<HostOrder[]> List(Guid projectId)
+    public Task<HostOrder[]> List(Guid projectId, int recordIndex = 0, int recordCount = 200)
     {
-        throw new NotImplementedException();
+        return hostOrdersService.List(projectId, recordIndex: recordIndex, recordCount: recordIndex);
     }
 
     [HttpGet("{orderId}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<HostOrder> Get(Guid projectId, string orderId)
     {
-        throw new NotImplementedException();
+        return hostOrdersService.Get(projectId, orderId);
     }
 
     [HttpPost("order-new-ip")]
@@ -43,12 +43,6 @@ public class HostOrdersController(HostOrdersService hostOrdersService)
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
     [HttpDelete("order-release-ip")]
     public Task<string> OrderReleaseIp(Guid projectId, IPAddress ipAddress, bool ignoreProviderError)
-    {
-        throw new NotImplementedException();
-    }
-
-    [HttpPost("sync")]
-    public Task Sync(Guid projectId)
     {
         throw new NotImplementedException();
     }

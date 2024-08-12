@@ -4,6 +4,7 @@ using System.Net;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Persistence.Models.HostOrders;
 using VpnHood.AccessServer.Repos.Views;
 
 namespace VpnHood.AccessServer.Repos;
@@ -25,13 +26,17 @@ public class VhRepo(VhContext vhContext)
         return query.SingleAsync();
     }
 
-    public Task<ServerModel[]> ServerList(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null, bool tracking = true)
+    public Task<ServerModel[]> ServerList(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null,
+        bool includeServerFarm = false, bool tracking = true)
     {
         var query = vhContext.Servers
             .Include(x => x.Location)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => x.ServerFarmId == serverFarmId || serverFarmId == null)
             .Where(x => x.ServerFarm!.ServerProfileId == serverProfileId || serverProfileId == null);
+
+        if (includeServerFarm)
+            query = query.Include(x => x.ServerFarm);
 
         if (!tracking)
             query = query.AsNoTracking();
@@ -348,5 +353,33 @@ public class VhRepo(VhContext vhContext)
             .Where(x => x.ProviderType == providerType)
             .Where(x => x.ProviderName == providerName)
             .SingleAsync();
+    }
+
+    public Task<HostOrderModel[]> HostOrdersList(Guid projectId, HostOrderStatus? status = null, int recordIndex = 0,
+        int recordCount = int.MaxValue)
+    {
+        return vhContext.HostOrders
+            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.Status == status || status == null)
+            .OrderByDescending(x => x.CreatedTime)
+            .Skip(recordIndex)
+            .Take(recordCount)
+            .ToArrayAsync();
+    }
+
+    public Task<HostOrderModel> HostOrderGet(Guid projectId, Guid hostOrderOd)
+    {
+        return vhContext.HostOrders
+            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.HostOrderId == hostOrderOd)
+            .SingleAsync();
+    }
+
+    public Task<HostIpModel[]> HostIpList(Guid projectId)
+    {
+        return vhContext.HostIps
+            .Where(x => x.ProjectId == projectId)
+            .Where(x => !x.IsDeleted)
+            .ToArrayAsync();
     }
 }

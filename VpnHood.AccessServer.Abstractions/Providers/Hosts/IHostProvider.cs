@@ -1,11 +1,12 @@
 ﻿using System.Net;
+using System.Threading;
 
 namespace VpnHood.AccessServer.Abstractions.Providers.Hosts;
 
 public interface IHostProvider
 {
-    Task<string> GetServerIdFromIp(IPAddress serverIp);
-    Task<HostProviderIpOrder> OrderNewIp(string serverId, string? description);
-    Task<HostProviderIpOrder> GetOrderForNewIp(string orderId);
-    Task<HostProviderIp[]> LisIps();
+    Task<string?> GetServerIdFromIp(IPAddress serverIp, TimeSpan timeout);
+    Task<string> OrderNewIp(string serverId, string? description, TimeSpan timeout);
+    Task ReleaseIp(IPAddress ipAddress, TimeSpan timeout);
+    Task<HostProviderIp[]> LisIps(TimeSpan timeout);
 }

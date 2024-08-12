@@ -1,7 +1,9 @@
 ﻿using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Persistence.Models.HostOrders;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Persistence;
@@ -24,6 +26,8 @@ public class VhContext : DbContext
     public virtual DbSet<ServerProfileModel> ServerProfiles { get; set; } = default!;
     public virtual DbSet<ProviderModel> Providers { get; set; } = default!;
     public virtual DbSet<LocationModel> Locations { get; set; } = default!;
+    public virtual DbSet<HostOrderModel> HostOrders { get; set; } = default!;
+    public virtual DbSet<HostIpModel> HostIps { get; set; } = default!;
 
     protected VhContext()
     {
@@ -564,6 +568,29 @@ public class VhContext : DbContext
             entity
                 .HasIndex(e => new { e.ProjectId, e.ProviderType, e.ProviderName })
                 .IsUnique();
+        });
+
+        modelBuilder.Entity<HostIpModel>(entity => {
+            entity
+                .HasKey(e => e.HostIpId);
+
+            entity
+                .HasIndex(e => new {e.ProjectId, e.CreatedTime})
+                .HasFilter($"{nameof(HostIpModel.IsDeleted)} = 0");
+
+        });
+
+        modelBuilder.Entity<HostOrderModel>(entity => {
+            entity
+                .HasKey(e => e.HostOrderId);
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.Status })
+                .HasFilter($"{nameof(HostOrderModel.Status)} = {(int)HostOrderStatus.Pending}");
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.CreatedTime })
+                .IsDescending();
         });
     }
 }

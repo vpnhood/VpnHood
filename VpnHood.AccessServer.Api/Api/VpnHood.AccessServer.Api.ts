@@ -5664,11 +5664,16 @@ export interface IDeviceUpdateParams {
 
 export class HostIp implements IHostIp {
     ipAddress!: string;
-    hostProviderName!: string;
+    providerName!: string;
     createdTime!: Date;
     releasedTime?: Date | null;
     serverId?: string | null;
-    isExtra!: boolean;
+    existsInProvider!: boolean;
+    providerDescription?: string | null;
+    serverName?: string | null;
+    serverLocation?: Location | null;
+    serverFarmId?: string | null;
+    serverFarmName?: string | null;
 
     constructor(data?: IHostIp) {
         if (data) {
@@ -5682,11 +5687,16 @@ export class HostIp implements IHostIp {
     init(_data?: any) {
         if (_data) {
             this.ipAddress = _data["ipAddress"] !== undefined ? _data["ipAddress"] : <any>null;
-            this.hostProviderName = _data["hostProviderName"] !== undefined ? _data["hostProviderName"] : <any>null;
+            this.providerName = _data["providerName"] !== undefined ? _data["providerName"] : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
             this.releasedTime = _data["releasedTime"] ? new Date(_data["releasedTime"].toString()) : <any>null;
             this.serverId = _data["serverId"] !== undefined ? _data["serverId"] : <any>null;
-            this.isExtra = _data["isExtra"] !== undefined ? _data["isExtra"] : <any>null;
+            this.existsInProvider = _data["existsInProvider"] !== undefined ? _data["existsInProvider"] : <any>null;
+            this.providerDescription = _data["providerDescription"] !== undefined ? _data["providerDescription"] : <any>null;
+            this.serverName = _data["serverName"] !== undefined ? _data["serverName"] : <any>null;
+            this.serverLocation = _data["serverLocation"] ? Location.fromJS(_data["serverLocation"]) : <any>null;
+            this.serverFarmId = _data["serverFarmId"] !== undefined ? _data["serverFarmId"] : <any>null;
+            this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
         }
     }
 
@@ -5700,22 +5710,92 @@ export class HostIp implements IHostIp {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["ipAddress"] = this.ipAddress !== undefined ? this.ipAddress : <any>null;
-        data["hostProviderName"] = this.hostProviderName !== undefined ? this.hostProviderName : <any>null;
+        data["providerName"] = this.providerName !== undefined ? this.providerName : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
         data["releasedTime"] = this.releasedTime ? this.releasedTime.toISOString() : <any>null;
         data["serverId"] = this.serverId !== undefined ? this.serverId : <any>null;
-        data["isExtra"] = this.isExtra !== undefined ? this.isExtra : <any>null;
+        data["existsInProvider"] = this.existsInProvider !== undefined ? this.existsInProvider : <any>null;
+        data["providerDescription"] = this.providerDescription !== undefined ? this.providerDescription : <any>null;
+        data["serverName"] = this.serverName !== undefined ? this.serverName : <any>null;
+        data["serverLocation"] = this.serverLocation ? this.serverLocation.toJSON() : <any>null;
+        data["serverFarmId"] = this.serverFarmId !== undefined ? this.serverFarmId : <any>null;
+        data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
         return data;
     }
 }
 
 export interface IHostIp {
     ipAddress: string;
-    hostProviderName: string;
+    providerName: string;
     createdTime: Date;
     releasedTime?: Date | null;
     serverId?: string | null;
-    isExtra: boolean;
+    existsInProvider: boolean;
+    providerDescription?: string | null;
+    serverName?: string | null;
+    serverLocation?: Location | null;
+    serverFarmId?: string | null;
+    serverFarmName?: string | null;
+}
+
+export class Location implements ILocation {
+    countryName!: string;
+    countryCode!: string;
+    regionName?: string | null;
+    regionCode?: string | null;
+    cityName?: string | null;
+    cityCode?: string | null;
+    displayName!: string;
+
+    constructor(data?: ILocation) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.countryName = _data["countryName"] !== undefined ? _data["countryName"] : <any>null;
+            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
+            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
+            this.regionCode = _data["regionCode"] !== undefined ? _data["regionCode"] : <any>null;
+            this.cityName = _data["cityName"] !== undefined ? _data["cityName"] : <any>null;
+            this.cityCode = _data["cityCode"] !== undefined ? _data["cityCode"] : <any>null;
+            this.displayName = _data["displayName"] !== undefined ? _data["displayName"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): Location {
+        data = typeof data === 'object' ? data : {};
+        let result = new Location();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["countryName"] = this.countryName !== undefined ? this.countryName : <any>null;
+        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
+        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
+        data["regionCode"] = this.regionCode !== undefined ? this.regionCode : <any>null;
+        data["cityName"] = this.cityName !== undefined ? this.cityName : <any>null;
+        data["cityCode"] = this.cityCode !== undefined ? this.cityCode : <any>null;
+        data["displayName"] = this.displayName !== undefined ? this.displayName : <any>null;
+        return data;
+    }
+}
+
+export interface ILocation {
+    countryName: string;
+    countryCode: string;
+    regionName?: string | null;
+    regionCode?: string | null;
+    cityName?: string | null;
+    cityCode?: string | null;
+    displayName: string;
 }
 
 export class HostOrder implements IHostOrder {
@@ -5726,7 +5806,8 @@ export class HostOrder implements IHostOrder {
     errorMessage?: string | null;
     completedTime?: Date | null;
     providerOrderId!: string;
-    ipAddress?: string | null;
+    newIpOrderIpAddress?: string | null;
+    newIpOrderServer?: VpnServer | null;
 
     constructor(data?: IHostOrder) {
         if (data) {
@@ -5746,7 +5827,8 @@ export class HostOrder implements IHostOrder {
             this.errorMessage = _data["errorMessage"] !== undefined ? _data["errorMessage"] : <any>null;
             this.completedTime = _data["completedTime"] ? new Date(_data["completedTime"].toString()) : <any>null;
             this.providerOrderId = _data["providerOrderId"] !== undefined ? _data["providerOrderId"] : <any>null;
-            this.ipAddress = _data["ipAddress"] !== undefined ? _data["ipAddress"] : <any>null;
+            this.newIpOrderIpAddress = _data["newIpOrderIpAddress"] !== undefined ? _data["newIpOrderIpAddress"] : <any>null;
+            this.newIpOrderServer = _data["newIpOrderServer"] ? VpnServer.fromJS(_data["newIpOrderServer"]) : <any>null;
         }
     }
 
@@ -5766,7 +5848,8 @@ export class HostOrder implements IHostOrder {
         data["errorMessage"] = this.errorMessage !== undefined ? this.errorMessage : <any>null;
         data["completedTime"] = this.completedTime ? this.completedTime.toISOString() : <any>null;
         data["providerOrderId"] = this.providerOrderId !== undefined ? this.providerOrderId : <any>null;
-        data["ipAddress"] = this.ipAddress !== undefined ? this.ipAddress : <any>null;
+        data["newIpOrderIpAddress"] = this.newIpOrderIpAddress !== undefined ? this.newIpOrderIpAddress : <any>null;
+        data["newIpOrderServer"] = this.newIpOrderServer ? this.newIpOrderServer.toJSON() : <any>null;
         return data;
     }
 }
@@ -5779,7 +5862,8 @@ export interface IHostOrder {
     errorMessage?: string | null;
     completedTime?: Date | null;
     providerOrderId: string;
-    ipAddress?: string | null;
+    newIpOrderIpAddress?: string | null;
+    newIpOrderServer?: VpnServer | null;
 }
 
 export enum HostOrderType {
@@ -5791,6 +5875,276 @@ export enum HostOrderStatus {
     Pending = "Pending",
     Completed = "Completed",
     Failed = "Failed",
+}
+
+export class VpnServer implements IVpnServer {
+    serverId!: string;
+    serverName!: string;
+    serverFarmId!: string;
+    serverFarmName?: string | null;
+    location?: Location | null;
+    version?: string | null;
+    environmentVersion?: string | null;
+    osInfo?: string | null;
+    machineName?: string | null;
+    totalMemory?: number | null;
+    logicalCoreCount?: number | null;
+    configureTime?: Date | null;
+    createdTime!: Date;
+    autoConfigure!: boolean;
+    isEnabled!: boolean;
+    description?: string | null;
+    lastConfigError?: string | null;
+    serverState!: ServerState;
+    serverStatus?: ServerStatusEx | null;
+    accessPoints!: AccessPoint[];
+    allowInAutoLocation!: boolean;
+    hostPanelUrl?: string | null;
+
+    constructor(data?: IVpnServer) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.accessPoints = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.serverId = _data["serverId"] !== undefined ? _data["serverId"] : <any>null;
+            this.serverName = _data["serverName"] !== undefined ? _data["serverName"] : <any>null;
+            this.serverFarmId = _data["serverFarmId"] !== undefined ? _data["serverFarmId"] : <any>null;
+            this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
+            this.location = _data["location"] ? Location.fromJS(_data["location"]) : <any>null;
+            this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
+            this.environmentVersion = _data["environmentVersion"] !== undefined ? _data["environmentVersion"] : <any>null;
+            this.osInfo = _data["osInfo"] !== undefined ? _data["osInfo"] : <any>null;
+            this.machineName = _data["machineName"] !== undefined ? _data["machineName"] : <any>null;
+            this.totalMemory = _data["totalMemory"] !== undefined ? _data["totalMemory"] : <any>null;
+            this.logicalCoreCount = _data["logicalCoreCount"] !== undefined ? _data["logicalCoreCount"] : <any>null;
+            this.configureTime = _data["configureTime"] ? new Date(_data["configureTime"].toString()) : <any>null;
+            this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
+            this.autoConfigure = _data["autoConfigure"] !== undefined ? _data["autoConfigure"] : <any>null;
+            this.isEnabled = _data["isEnabled"] !== undefined ? _data["isEnabled"] : <any>null;
+            this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
+            this.lastConfigError = _data["lastConfigError"] !== undefined ? _data["lastConfigError"] : <any>null;
+            this.serverState = _data["serverState"] !== undefined ? _data["serverState"] : <any>null;
+            this.serverStatus = _data["serverStatus"] ? ServerStatusEx.fromJS(_data["serverStatus"]) : <any>null;
+            if (Array.isArray(_data["accessPoints"])) {
+                this.accessPoints = [] as any;
+                for (let item of _data["accessPoints"])
+                    this.accessPoints!.push(AccessPoint.fromJS(item));
+            }
+            else {
+                this.accessPoints = <any>null;
+            }
+            this.allowInAutoLocation = _data["allowInAutoLocation"] !== undefined ? _data["allowInAutoLocation"] : <any>null;
+            this.hostPanelUrl = _data["hostPanelUrl"] !== undefined ? _data["hostPanelUrl"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): VpnServer {
+        data = typeof data === 'object' ? data : {};
+        let result = new VpnServer();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["serverId"] = this.serverId !== undefined ? this.serverId : <any>null;
+        data["serverName"] = this.serverName !== undefined ? this.serverName : <any>null;
+        data["serverFarmId"] = this.serverFarmId !== undefined ? this.serverFarmId : <any>null;
+        data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
+        data["location"] = this.location ? this.location.toJSON() : <any>null;
+        data["version"] = this.version !== undefined ? this.version : <any>null;
+        data["environmentVersion"] = this.environmentVersion !== undefined ? this.environmentVersion : <any>null;
+        data["osInfo"] = this.osInfo !== undefined ? this.osInfo : <any>null;
+        data["machineName"] = this.machineName !== undefined ? this.machineName : <any>null;
+        data["totalMemory"] = this.totalMemory !== undefined ? this.totalMemory : <any>null;
+        data["logicalCoreCount"] = this.logicalCoreCount !== undefined ? this.logicalCoreCount : <any>null;
+        data["configureTime"] = this.configureTime ? this.configureTime.toISOString() : <any>null;
+        data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
+        data["autoConfigure"] = this.autoConfigure !== undefined ? this.autoConfigure : <any>null;
+        data["isEnabled"] = this.isEnabled !== undefined ? this.isEnabled : <any>null;
+        data["description"] = this.description !== undefined ? this.description : <any>null;
+        data["lastConfigError"] = this.lastConfigError !== undefined ? this.lastConfigError : <any>null;
+        data["serverState"] = this.serverState !== undefined ? this.serverState : <any>null;
+        data["serverStatus"] = this.serverStatus ? this.serverStatus.toJSON() : <any>null;
+        if (Array.isArray(this.accessPoints)) {
+            data["accessPoints"] = [];
+            for (let item of this.accessPoints)
+                data["accessPoints"].push(item.toJSON());
+        }
+        data["allowInAutoLocation"] = this.allowInAutoLocation !== undefined ? this.allowInAutoLocation : <any>null;
+        data["hostPanelUrl"] = this.hostPanelUrl !== undefined ? this.hostPanelUrl : <any>null;
+        return data;
+    }
+}
+
+export interface IVpnServer {
+    serverId: string;
+    serverName: string;
+    serverFarmId: string;
+    serverFarmName?: string | null;
+    location?: Location | null;
+    version?: string | null;
+    environmentVersion?: string | null;
+    osInfo?: string | null;
+    machineName?: string | null;
+    totalMemory?: number | null;
+    logicalCoreCount?: number | null;
+    configureTime?: Date | null;
+    createdTime: Date;
+    autoConfigure: boolean;
+    isEnabled: boolean;
+    description?: string | null;
+    lastConfigError?: string | null;
+    serverState: ServerState;
+    serverStatus?: ServerStatusEx | null;
+    accessPoints: AccessPoint[];
+    allowInAutoLocation: boolean;
+    hostPanelUrl?: string | null;
+}
+
+export enum ServerState {
+    NotInstalled = "NotInstalled",
+    Disabled = "Disabled",
+    Lost = "Lost",
+    Error = "Error",
+    Configuring = "Configuring",
+    Idle = "Idle",
+    Active = "Active",
+}
+
+export class ServerStatusEx implements IServerStatusEx {
+    sessionCount!: number;
+    tcpConnectionCount!: number;
+    udpConnectionCount!: number;
+    availableMemory?: number | null;
+    cpuUsage?: number | null;
+    threadCount!: number;
+    tunnelSendSpeed!: number;
+    tunnelReceiveSpeed!: number;
+    createdTime!: Date;
+
+    constructor(data?: IServerStatusEx) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.sessionCount = _data["sessionCount"] !== undefined ? _data["sessionCount"] : <any>null;
+            this.tcpConnectionCount = _data["tcpConnectionCount"] !== undefined ? _data["tcpConnectionCount"] : <any>null;
+            this.udpConnectionCount = _data["udpConnectionCount"] !== undefined ? _data["udpConnectionCount"] : <any>null;
+            this.availableMemory = _data["availableMemory"] !== undefined ? _data["availableMemory"] : <any>null;
+            this.cpuUsage = _data["cpuUsage"] !== undefined ? _data["cpuUsage"] : <any>null;
+            this.threadCount = _data["threadCount"] !== undefined ? _data["threadCount"] : <any>null;
+            this.tunnelSendSpeed = _data["tunnelSendSpeed"] !== undefined ? _data["tunnelSendSpeed"] : <any>null;
+            this.tunnelReceiveSpeed = _data["tunnelReceiveSpeed"] !== undefined ? _data["tunnelReceiveSpeed"] : <any>null;
+            this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
+        }
+    }
+
+    static fromJS(data: any): ServerStatusEx {
+        data = typeof data === 'object' ? data : {};
+        let result = new ServerStatusEx();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["sessionCount"] = this.sessionCount !== undefined ? this.sessionCount : <any>null;
+        data["tcpConnectionCount"] = this.tcpConnectionCount !== undefined ? this.tcpConnectionCount : <any>null;
+        data["udpConnectionCount"] = this.udpConnectionCount !== undefined ? this.udpConnectionCount : <any>null;
+        data["availableMemory"] = this.availableMemory !== undefined ? this.availableMemory : <any>null;
+        data["cpuUsage"] = this.cpuUsage !== undefined ? this.cpuUsage : <any>null;
+        data["threadCount"] = this.threadCount !== undefined ? this.threadCount : <any>null;
+        data["tunnelSendSpeed"] = this.tunnelSendSpeed !== undefined ? this.tunnelSendSpeed : <any>null;
+        data["tunnelReceiveSpeed"] = this.tunnelReceiveSpeed !== undefined ? this.tunnelReceiveSpeed : <any>null;
+        data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
+        return data;
+    }
+}
+
+export interface IServerStatusEx {
+    sessionCount: number;
+    tcpConnectionCount: number;
+    udpConnectionCount: number;
+    availableMemory?: number | null;
+    cpuUsage?: number | null;
+    threadCount: number;
+    tunnelSendSpeed: number;
+    tunnelReceiveSpeed: number;
+    createdTime: Date;
+}
+
+export class AccessPoint implements IAccessPoint {
+    ipAddress!: string;
+    accessPointMode!: AccessPointMode;
+    isListen!: boolean;
+    tcpPort!: number;
+    udpPort!: number;
+
+    constructor(data?: IAccessPoint) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.ipAddress = _data["ipAddress"] !== undefined ? _data["ipAddress"] : <any>null;
+            this.accessPointMode = _data["accessPointMode"] !== undefined ? _data["accessPointMode"] : <any>null;
+            this.isListen = _data["isListen"] !== undefined ? _data["isListen"] : <any>null;
+            this.tcpPort = _data["tcpPort"] !== undefined ? _data["tcpPort"] : <any>null;
+            this.udpPort = _data["udpPort"] !== undefined ? _data["udpPort"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AccessPoint {
+        data = typeof data === 'object' ? data : {};
+        let result = new AccessPoint();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["ipAddress"] = this.ipAddress !== undefined ? this.ipAddress : <any>null;
+        data["accessPointMode"] = this.accessPointMode !== undefined ? this.accessPointMode : <any>null;
+        data["isListen"] = this.isListen !== undefined ? this.isListen : <any>null;
+        data["tcpPort"] = this.tcpPort !== undefined ? this.tcpPort : <any>null;
+        data["udpPort"] = this.udpPort !== undefined ? this.udpPort : <any>null;
+        return data;
+    }
+}
+
+export interface IAccessPoint {
+    ipAddress: string;
+    accessPointMode: AccessPointMode;
+    isListen: boolean;
+    tcpPort: number;
+    udpPort: number;
+}
+
+export enum AccessPointMode {
+    Private = "Private",
+    Public = "Public",
+    PublicInToken = "PublicInToken",
 }
 
 export class IpLock implements IIpLock {
@@ -7051,336 +7405,6 @@ export class ServerData implements IServerData {
 
 export interface IServerData {
     server: VpnServer;
-}
-
-export class VpnServer implements IVpnServer {
-    serverId!: string;
-    serverName!: string;
-    serverFarmId!: string;
-    serverFarmName?: string | null;
-    location?: Location | null;
-    version?: string | null;
-    environmentVersion?: string | null;
-    osInfo?: string | null;
-    machineName?: string | null;
-    totalMemory?: number | null;
-    logicalCoreCount?: number | null;
-    configureTime?: Date | null;
-    createdTime!: Date;
-    autoConfigure!: boolean;
-    isEnabled!: boolean;
-    description?: string | null;
-    lastConfigError?: string | null;
-    serverState!: ServerState;
-    serverStatus?: ServerStatusEx | null;
-    accessPoints!: AccessPoint[];
-    allowInAutoLocation!: boolean;
-    hostPanelUrl?: string | null;
-
-    constructor(data?: IVpnServer) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-        if (!data) {
-            this.accessPoints = [];
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.serverId = _data["serverId"] !== undefined ? _data["serverId"] : <any>null;
-            this.serverName = _data["serverName"] !== undefined ? _data["serverName"] : <any>null;
-            this.serverFarmId = _data["serverFarmId"] !== undefined ? _data["serverFarmId"] : <any>null;
-            this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
-            this.location = _data["location"] ? Location.fromJS(_data["location"]) : <any>null;
-            this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
-            this.environmentVersion = _data["environmentVersion"] !== undefined ? _data["environmentVersion"] : <any>null;
-            this.osInfo = _data["osInfo"] !== undefined ? _data["osInfo"] : <any>null;
-            this.machineName = _data["machineName"] !== undefined ? _data["machineName"] : <any>null;
-            this.totalMemory = _data["totalMemory"] !== undefined ? _data["totalMemory"] : <any>null;
-            this.logicalCoreCount = _data["logicalCoreCount"] !== undefined ? _data["logicalCoreCount"] : <any>null;
-            this.configureTime = _data["configureTime"] ? new Date(_data["configureTime"].toString()) : <any>null;
-            this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
-            this.autoConfigure = _data["autoConfigure"] !== undefined ? _data["autoConfigure"] : <any>null;
-            this.isEnabled = _data["isEnabled"] !== undefined ? _data["isEnabled"] : <any>null;
-            this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
-            this.lastConfigError = _data["lastConfigError"] !== undefined ? _data["lastConfigError"] : <any>null;
-            this.serverState = _data["serverState"] !== undefined ? _data["serverState"] : <any>null;
-            this.serverStatus = _data["serverStatus"] ? ServerStatusEx.fromJS(_data["serverStatus"]) : <any>null;
-            if (Array.isArray(_data["accessPoints"])) {
-                this.accessPoints = [] as any;
-                for (let item of _data["accessPoints"])
-                    this.accessPoints!.push(AccessPoint.fromJS(item));
-            }
-            else {
-                this.accessPoints = <any>null;
-            }
-            this.allowInAutoLocation = _data["allowInAutoLocation"] !== undefined ? _data["allowInAutoLocation"] : <any>null;
-            this.hostPanelUrl = _data["hostPanelUrl"] !== undefined ? _data["hostPanelUrl"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): VpnServer {
-        data = typeof data === 'object' ? data : {};
-        let result = new VpnServer();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["serverId"] = this.serverId !== undefined ? this.serverId : <any>null;
-        data["serverName"] = this.serverName !== undefined ? this.serverName : <any>null;
-        data["serverFarmId"] = this.serverFarmId !== undefined ? this.serverFarmId : <any>null;
-        data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
-        data["location"] = this.location ? this.location.toJSON() : <any>null;
-        data["version"] = this.version !== undefined ? this.version : <any>null;
-        data["environmentVersion"] = this.environmentVersion !== undefined ? this.environmentVersion : <any>null;
-        data["osInfo"] = this.osInfo !== undefined ? this.osInfo : <any>null;
-        data["machineName"] = this.machineName !== undefined ? this.machineName : <any>null;
-        data["totalMemory"] = this.totalMemory !== undefined ? this.totalMemory : <any>null;
-        data["logicalCoreCount"] = this.logicalCoreCount !== undefined ? this.logicalCoreCount : <any>null;
-        data["configureTime"] = this.configureTime ? this.configureTime.toISOString() : <any>null;
-        data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
-        data["autoConfigure"] = this.autoConfigure !== undefined ? this.autoConfigure : <any>null;
-        data["isEnabled"] = this.isEnabled !== undefined ? this.isEnabled : <any>null;
-        data["description"] = this.description !== undefined ? this.description : <any>null;
-        data["lastConfigError"] = this.lastConfigError !== undefined ? this.lastConfigError : <any>null;
-        data["serverState"] = this.serverState !== undefined ? this.serverState : <any>null;
-        data["serverStatus"] = this.serverStatus ? this.serverStatus.toJSON() : <any>null;
-        if (Array.isArray(this.accessPoints)) {
-            data["accessPoints"] = [];
-            for (let item of this.accessPoints)
-                data["accessPoints"].push(item.toJSON());
-        }
-        data["allowInAutoLocation"] = this.allowInAutoLocation !== undefined ? this.allowInAutoLocation : <any>null;
-        data["hostPanelUrl"] = this.hostPanelUrl !== undefined ? this.hostPanelUrl : <any>null;
-        return data;
-    }
-}
-
-export interface IVpnServer {
-    serverId: string;
-    serverName: string;
-    serverFarmId: string;
-    serverFarmName?: string | null;
-    location?: Location | null;
-    version?: string | null;
-    environmentVersion?: string | null;
-    osInfo?: string | null;
-    machineName?: string | null;
-    totalMemory?: number | null;
-    logicalCoreCount?: number | null;
-    configureTime?: Date | null;
-    createdTime: Date;
-    autoConfigure: boolean;
-    isEnabled: boolean;
-    description?: string | null;
-    lastConfigError?: string | null;
-    serverState: ServerState;
-    serverStatus?: ServerStatusEx | null;
-    accessPoints: AccessPoint[];
-    allowInAutoLocation: boolean;
-    hostPanelUrl?: string | null;
-}
-
-export class Location implements ILocation {
-    countryName!: string;
-    countryCode!: string;
-    regionName?: string | null;
-    regionCode?: string | null;
-    cityName?: string | null;
-    cityCode?: string | null;
-    displayName!: string;
-
-    constructor(data?: ILocation) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.countryName = _data["countryName"] !== undefined ? _data["countryName"] : <any>null;
-            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
-            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
-            this.regionCode = _data["regionCode"] !== undefined ? _data["regionCode"] : <any>null;
-            this.cityName = _data["cityName"] !== undefined ? _data["cityName"] : <any>null;
-            this.cityCode = _data["cityCode"] !== undefined ? _data["cityCode"] : <any>null;
-            this.displayName = _data["displayName"] !== undefined ? _data["displayName"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): Location {
-        data = typeof data === 'object' ? data : {};
-        let result = new Location();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["countryName"] = this.countryName !== undefined ? this.countryName : <any>null;
-        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
-        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
-        data["regionCode"] = this.regionCode !== undefined ? this.regionCode : <any>null;
-        data["cityName"] = this.cityName !== undefined ? this.cityName : <any>null;
-        data["cityCode"] = this.cityCode !== undefined ? this.cityCode : <any>null;
-        data["displayName"] = this.displayName !== undefined ? this.displayName : <any>null;
-        return data;
-    }
-}
-
-export interface ILocation {
-    countryName: string;
-    countryCode: string;
-    regionName?: string | null;
-    regionCode?: string | null;
-    cityName?: string | null;
-    cityCode?: string | null;
-    displayName: string;
-}
-
-export enum ServerState {
-    NotInstalled = "NotInstalled",
-    Disabled = "Disabled",
-    Lost = "Lost",
-    Error = "Error",
-    Configuring = "Configuring",
-    Idle = "Idle",
-    Active = "Active",
-}
-
-export class ServerStatusEx implements IServerStatusEx {
-    sessionCount!: number;
-    tcpConnectionCount!: number;
-    udpConnectionCount!: number;
-    availableMemory?: number | null;
-    cpuUsage?: number | null;
-    threadCount!: number;
-    tunnelSendSpeed!: number;
-    tunnelReceiveSpeed!: number;
-    createdTime!: Date;
-
-    constructor(data?: IServerStatusEx) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.sessionCount = _data["sessionCount"] !== undefined ? _data["sessionCount"] : <any>null;
-            this.tcpConnectionCount = _data["tcpConnectionCount"] !== undefined ? _data["tcpConnectionCount"] : <any>null;
-            this.udpConnectionCount = _data["udpConnectionCount"] !== undefined ? _data["udpConnectionCount"] : <any>null;
-            this.availableMemory = _data["availableMemory"] !== undefined ? _data["availableMemory"] : <any>null;
-            this.cpuUsage = _data["cpuUsage"] !== undefined ? _data["cpuUsage"] : <any>null;
-            this.threadCount = _data["threadCount"] !== undefined ? _data["threadCount"] : <any>null;
-            this.tunnelSendSpeed = _data["tunnelSendSpeed"] !== undefined ? _data["tunnelSendSpeed"] : <any>null;
-            this.tunnelReceiveSpeed = _data["tunnelReceiveSpeed"] !== undefined ? _data["tunnelReceiveSpeed"] : <any>null;
-            this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
-        }
-    }
-
-    static fromJS(data: any): ServerStatusEx {
-        data = typeof data === 'object' ? data : {};
-        let result = new ServerStatusEx();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["sessionCount"] = this.sessionCount !== undefined ? this.sessionCount : <any>null;
-        data["tcpConnectionCount"] = this.tcpConnectionCount !== undefined ? this.tcpConnectionCount : <any>null;
-        data["udpConnectionCount"] = this.udpConnectionCount !== undefined ? this.udpConnectionCount : <any>null;
-        data["availableMemory"] = this.availableMemory !== undefined ? this.availableMemory : <any>null;
-        data["cpuUsage"] = this.cpuUsage !== undefined ? this.cpuUsage : <any>null;
-        data["threadCount"] = this.threadCount !== undefined ? this.threadCount : <any>null;
-        data["tunnelSendSpeed"] = this.tunnelSendSpeed !== undefined ? this.tunnelSendSpeed : <any>null;
-        data["tunnelReceiveSpeed"] = this.tunnelReceiveSpeed !== undefined ? this.tunnelReceiveSpeed : <any>null;
-        data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
-        return data;
-    }
-}
-
-export interface IServerStatusEx {
-    sessionCount: number;
-    tcpConnectionCount: number;
-    udpConnectionCount: number;
-    availableMemory?: number | null;
-    cpuUsage?: number | null;
-    threadCount: number;
-    tunnelSendSpeed: number;
-    tunnelReceiveSpeed: number;
-    createdTime: Date;
-}
-
-export class AccessPoint implements IAccessPoint {
-    ipAddress!: string;
-    accessPointMode!: AccessPointMode;
-    isListen!: boolean;
-    tcpPort!: number;
-    udpPort!: number;
-
-    constructor(data?: IAccessPoint) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.ipAddress = _data["ipAddress"] !== undefined ? _data["ipAddress"] : <any>null;
-            this.accessPointMode = _data["accessPointMode"] !== undefined ? _data["accessPointMode"] : <any>null;
-            this.isListen = _data["isListen"] !== undefined ? _data["isListen"] : <any>null;
-            this.tcpPort = _data["tcpPort"] !== undefined ? _data["tcpPort"] : <any>null;
-            this.udpPort = _data["udpPort"] !== undefined ? _data["udpPort"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): AccessPoint {
-        data = typeof data === 'object' ? data : {};
-        let result = new AccessPoint();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["ipAddress"] = this.ipAddress !== undefined ? this.ipAddress : <any>null;
-        data["accessPointMode"] = this.accessPointMode !== undefined ? this.accessPointMode : <any>null;
-        data["isListen"] = this.isListen !== undefined ? this.isListen : <any>null;
-        data["tcpPort"] = this.tcpPort !== undefined ? this.tcpPort : <any>null;
-        data["udpPort"] = this.udpPort !== undefined ? this.udpPort : <any>null;
-        return data;
-    }
-}
-
-export interface IAccessPoint {
-    ipAddress: string;
-    accessPointMode: AccessPointMode;
-    isListen: boolean;
-    tcpPort: number;
-    udpPort: number;
-}
-
-export enum AccessPointMode {
-    Private = "Private",
-    Public = "Public",
-    PublicInToken = "PublicInToken",
 }
 
 export class ServerCreateParams implements IServerCreateParams {

@@ -11,9 +11,11 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Providers.Acme;
 using VpnHood.AccessServer.Providers.Hosts;
 using VpnHood.AccessServer.Report.Persistence;
+using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Test.Helper;
 using VpnHood.Common.Messaging;
@@ -21,6 +23,7 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Messaging;
+using YamlDotNet.Serialization;
 using ApiKey = VpnHood.AccessServer.Api.ApiKey;
 using ClientInfo = VpnHood.Common.Messaging.ClientInfo;
 using HttpAccessManagerOptions = VpnHood.Server.Access.Managers.Http.HttpAccessManagerOptions;
@@ -34,6 +37,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     public AgentTestApp AgentTestApp { get; }
 
     public IServiceScope Scope { get; }
+    public VhRepo VhRepo => Scope.ServiceProvider.GetRequiredService<VhRepo>();
     public VhContext VhContext => Scope.ServiceProvider.GetRequiredService<VhContext>();
     public VhReportContext VhReportContext => Scope.ServiceProvider.GetRequiredService<VhReportContext>();
     public HttpClient HttpClient { get; }
@@ -50,7 +54,6 @@ public class TestApp : IHttpClientFactory, IDisposable
     public ServerProfilesClient ServerProfilesClient => new(HttpClient);
     public HostOrdersClient HostOrdersClient => new(HttpClient);
     public TeamClient TeamClient => new(HttpClient);
-    public TestHostProvider HostProvider => throw new NotImplementedException(); //todo
     public AgentCacheClient AgentCacheClient => Scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
     public ILogger<TestApp> Logger => Scope.ServiceProvider.GetRequiredService<ILogger<TestApp>>();
 
@@ -163,6 +166,8 @@ public class TestApp : IHttpClientFactory, IDisposable
         string environment = "Development")
     {
         appSettings ??= new Dictionary<string, string?>();
+        appSettings[$"App:{nameof(AppOptions.HostOrderMonitorCount)}"] = "1000";
+        appSettings[$"App:{nameof(AppOptions.HostOrderMonitorInterval)}"] = "00:00:00.500";
         var ret = new TestApp(appSettings, environment);
         await ret.Init();
         return ret;
@@ -343,6 +348,23 @@ public class TestApp : IHttpClientFactory, IDisposable
             : WebApp.CreateClient();
     }
 
+    public async Task<TestHostProvider> AddTestHostProvider(string? providerName = null, string settings = "")
+    {
+        providerName ??= Guid.NewGuid().ToString() + ".internal";
+
+        await VhRepo.AddAsync(new ProviderModel {
+            ProjectId = ProjectId,
+            ProviderName = providerName,
+            Settings = settings,
+            ProviderModelId = Guid.NewGuid()
+        });
+
+        await VhRepo.SaveChangesAsync();
+
+        var hostProviderFactory = Scope.ServiceProvider.GetRequiredService<IHostProviderFactory>();
+        return (TestHostProvider)hostProviderFactory.Create(providerName, settings);
+    }
+
     public void Dispose()
     {
         Scope.Dispose();
@@ -350,4 +372,5 @@ public class TestApp : IHttpClientFactory, IDisposable
         AgentTestApp.Dispose();
         WebApp.Dispose();
     }
+
 }

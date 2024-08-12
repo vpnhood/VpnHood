@@ -154,4 +154,11 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
             return Server.ServerState;
         });
     }
+
+    public Task SetHostPanelDomain(string domainName)
+    {
+        return Update(new ServerUpdateParams {
+            HostPanelUrl = new PatchOfUri { Value = new Uri($"https://{domainName}") }
+        });
+    }
 }

@@ -1,5 +1,8 @@
 ﻿using System.Net;
+using System.Text.Json.Serialization;
+using VpnHood.AccessServer.Dtos.Servers;
 using VpnHood.AccessServer.Persistence.Enums;
+using VpnHood.Common.Converters;
 
 namespace VpnHood.AccessServer.Dtos.HostOrders;
 
@@ -12,5 +15,8 @@ public class HostOrder
     public string? ErrorMessage { get; set; }
     public DateTime? CompletedTime { get; set; }
     public required string ProviderOrderId { get; init; }
-    public IPAddress? IpAddress { get; set; }
+    
+    [JsonConverter(typeof(IPAddressConverter))]
+    public IPAddress? NewIpOrderIpAddress { get; set; }
+    public VpnServer? NewIpOrderServer { get; set; }
 }

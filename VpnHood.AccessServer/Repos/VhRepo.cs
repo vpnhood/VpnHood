@@ -378,8 +378,15 @@ public class VhRepo(VhContext vhContext)
     public Task<HostIpModel[]> HostIpList(Guid projectId)
     {
         return vhContext.HostIps
-            .Where(x => x.ProjectId == projectId)
-            .Where(x => !x.IsDeleted)
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .ToArrayAsync();
+    }
+
+    public Task<HostIpModel> HostIpGet(Guid projectId, IPAddress ipAddress)
+    {
+        return vhContext.HostIps
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x => x.IpAddress == ipAddress)
+            .SingleAsync();
     }
 }

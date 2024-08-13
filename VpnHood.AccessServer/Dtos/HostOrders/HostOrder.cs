@@ -14,9 +14,12 @@ public class HostOrder
     public required HostOrderStatus Status { get; init; }
     public string? ErrorMessage { get; set; }
     public DateTime? CompletedTime { get; set; }
-    public required string ProviderOrderId { get; init; }
+    public required string? ProviderOrderId { get; init; }
     
     [JsonConverter(typeof(IPAddressConverter))]
     public IPAddress? NewIpOrderIpAddress { get; set; }
     public VpnServer? NewIpOrderServer { get; set; }
+    
+    [JsonConverter(typeof(IPAddressConverter))]
+    public IPAddress? ReleaseIpOrderIpAddress { get; set; }
 }

@@ -11,69 +11,99 @@ public class TestHostProvider(string providerName) : IHostProvider
 
     public class Order
     {
+        public enum OrderType
+        {
+            NewIp,
+            ReleaseIp
+        }
+
+        public required OrderType Type { get; set; }
         public string OrderId { get; } = Guid.NewGuid().ToString();
         public string? Description { get; set; }
         public bool IsCompleted { get; set; }
         public string? ServerId { get; set; }
+        public IPAddress? ReleaseIp { get; set; }
     }
 
-    public async Task FinishOrders(TestApp testApp)
+    public async Task CompleteOrders(TestApp testApp)
     {
         Order[]? orders;
         lock (Orders)
-            orders= Orders.ToArray();
+            orders = Orders.ToArray();
 
         // mark all orders as completed and add them to the ips
-        foreach (var order in orders) {
+        foreach (var order in orders.Where(x => x is { IsCompleted: false, Type: Order.OrderType.NewIp })) {
             order.IsCompleted = true;
-            HostIps.Add(new HostProviderIp {
-                IpAddress = await testApp.NewIpV4(),
-                Description = order.Description,
-                ServerId = order.ServerId,
-            });
+            var ipAddress = await testApp.NewIpV4();
+            lock (HostIps)
+                HostIps.Add(new HostProviderIp {
+                    IpAddress = ipAddress,
+                    Description = order.Description,
+                    ServerId = order.ServerId,
+                });
         }
+
+        foreach (var order in orders.Where(x => x is { IsCompleted: false, Type: Order.OrderType.ReleaseIp })) {
+            order.IsCompleted = true;
+            lock (HostIps)
+                HostIps.RemoveAll(x => x.IpAddress.Equals(order.ReleaseIp));
+        }
+
     }
 
     public async Task<string?> GetServerIdFromIp(IPAddress serverIp, TimeSpan timeout)
     {
         await Task.Delay(0);
-        return HostIps.FirstOrDefault(x => x.IpAddress.Equals(serverIp))?.ServerId;
+        lock (HostIps)
+            return HostIps.FirstOrDefault(x => x.IpAddress.Equals(serverIp))?.ServerId;
     }
 
-    public Task<string> OrderNewIp(string serverId, string? description, TimeSpan timeout)
+    public async Task<string> OrderNewIp(string serverId, string? description, TimeSpan timeout)
     {
+        await Task.Delay(0);
         var order = new Order {
+            Type = Order.OrderType.NewIp,
             Description = description,
             ServerId = serverId,
             IsCompleted = false
         };
 
-        lock (Orders) 
+        lock (Orders)
             Orders.Add(order);
 
-        return Task.FromResult(order.OrderId);
+        return order.OrderId;
     }
 
-    public Task ReleaseIp(IPAddress ipAddress, TimeSpan timeout)
+    public async Task ReleaseIp(IPAddress ipAddress, TimeSpan timeout)
     {
-        throw new NotImplementedException();
+        await Task.Delay(0);
+        var order = new Order {
+            Type = Order.OrderType.ReleaseIp,
+            IsCompleted = false,
+            ReleaseIp = ipAddress
+        };
+
+        lock (Orders)
+            Orders.Add(order);
     }
 
     public async Task<HostProviderIp[]> LisIps(TimeSpan timeout)
     {
         await Task.Delay(0);
-        return HostIps.ToArray();
+        lock (HostIps)
+            return HostIps.ToArray();
     }
 
     public void DefineIp(IPAddress[] ipAddresses)
     {
         var serverId = Guid.NewGuid().ToString();
         foreach (var ipAddress in ipAddresses) {
-            HostIps.Add(new HostProviderIp {
-                IpAddress = ipAddress,
-                ServerId = serverId,
-                Description = ""
-            });
+            lock (HostIps)
+                HostIps.Add(new HostProviderIp {
+                    IpAddress = ipAddress,
+                    ServerId = serverId,
+                    Description = ""
+                });
         }
     }
 }

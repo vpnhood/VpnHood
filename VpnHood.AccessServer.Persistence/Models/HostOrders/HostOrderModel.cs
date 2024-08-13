@@ -13,13 +13,15 @@ public class HostOrderModel
     public required HostOrderType OrderType { get; init; }
     public required HostOrderStatus Status { get; set; }
     public string? ErrorMessage { get; set; }
+    public string? ProviderOrderId { get; init; }
     public DateTime? CompletedTime { get; set; }
-    public required string ProviderOrderId { get; init; }
     public Guid? NewIpOrderServerId { get; init; }
     
     [JsonConverter(typeof(IPAddressConverter))]
     public IPAddress? NewIpOrderIpAddress { get; set; }
 
-    public virtual ServerModel? NewIpOrderServer { get; set; }
+    [JsonConverter(typeof(IPAddressConverter))]
+    public IPAddress? ReleaseOrderIpAddress { get; init; }
 
+    public virtual ServerModel? NewIpOrderServer { get; set; }
 }

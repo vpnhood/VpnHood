@@ -42,9 +42,9 @@ public class HostOrdersController(HostOrdersService hostOrdersService)
 
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
     [HttpDelete("order-release-ip")]
-    public Task<string> OrderReleaseIp(Guid projectId, IPAddress ipAddress, bool ignoreProviderError)
+    public Task<HostOrder> OrderReleaseIp(Guid projectId, string ipAddress, bool ignoreProviderError)
     {
-        throw new NotImplementedException();
+        return hostOrdersService.OrderReleaseIp(projectId, IPAddress.Parse(ipAddress), ignoreProviderError);
     }
 
 }

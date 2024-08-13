@@ -103,8 +103,8 @@ public class HostOrdersService(
         // list all pending orders
         var pendingOrders = await vhRepo.HostOrdersList(projectId, status: HostOrderStatus.Pending);
 
-        // update pending orders
-        foreach (var pendingOrder in pendingOrders) {
+        // update pending NewIp orders
+        foreach (var pendingOrder in pendingOrders.Where(x=>x.OrderType == HostOrderType.NewIp)) {
             var hostIp = hostIps.FirstOrDefault(x => x.Description?.Contains(BuildOrderTag(pendingOrder.HostOrderId)) == true);
             if (hostIp == null)
                 continue;
@@ -116,11 +116,20 @@ public class HostOrdersService(
             // update server endpoints
             if (pendingOrder.NewIpOrderServerId != null)
                 await AddIpToServer(projectId, pendingOrder.NewIpOrderServerId.Value, hostIp.IpAddress);
-
-            // list all ips from provider
-            await vhRepo.SaveChangesAsync();
         }
 
+        // update pending ReleaseIp orders
+        foreach (var pendingOrder in pendingOrders.Where(x => x.OrderType == HostOrderType.ReleaseIp)) {
+            var hostIp = hostIps.FirstOrDefault(x => x.IpAddress.Equals(pendingOrder.ReleaseOrderIpAddress) );
+            if (hostIp != null)
+                continue;
+
+            pendingOrder.Status = HostOrderStatus.Completed;
+            pendingOrder.CompletedTime = DateTime.UtcNow;
+        }
+
+
+        await vhRepo.SaveChangesAsync();
         return pendingOrders.All(x => x.Status != HostOrderStatus.Pending);
     }
 
@@ -228,5 +237,49 @@ public class HostOrdersService(
     {
         var hostOrders = await vhRepo.HostOrdersList(projectId, recordIndex: recordIndex, recordCount: recordCount);
         return hostOrders.Select(x => x.ToDto()).ToArray();
+    }
+
+    public async Task<HostOrder> OrderReleaseIp(Guid projectId, IPAddress ipAddress, bool ignoreProviderError)
+    {
+        Logger.LogInformation("Releasing and IP from provider. ProjectId: {ProjectId}, Ip: {ip}", projectId, ipAddress);
+
+        // get host ip and make sure ip exists in HostIps
+        var hostIp = await vhRepo.HostIpGet(projectId, ipAddress);
+
+        // find server that use the ip
+        var servers = await vhRepo.ServerList(projectId, tracking: false);
+        var server = FindServerFromIp(servers, ipAddress);
+        if (server != null) {
+            // remove ip from server and update farm
+            server.AccessPoints.RemoveAll(x => x.IpAddress.Equals(ipAddress));
+            await serverConfigureService.SaveChangesAndInvalidateServer(projectId, server.ServerId, true);
+        }
+
+        // get the provider
+        var providerName = hostIp.ProviderName;
+        var providerModel = await vhRepo.ProviderGet(projectId, providerType: ProviderType.HostOrder, providerName: providerName);
+        var provider = hostProviderFactory.Create(providerModel.ProviderName, providerModel.Settings);
+
+        // create release order
+        var orderId = Guid.NewGuid();
+        await provider.ReleaseIp(ipAddress, appOptions.Value.ServiceHttpTimeout);
+
+        // save order
+        var hostOrderModel = new HostOrderModel {
+            HostOrderId = orderId,
+            ProjectId = projectId,
+            Status = HostOrderStatus.Pending,
+            CreatedTime = DateTime.UtcNow,
+            ProviderOrderId = null,
+            OrderType = HostOrderType.ReleaseIp,
+            ReleaseOrderIpAddress = ipAddress,
+            NewIpOrderServerId = null,
+        };
+        await vhRepo.AddAsync(hostOrderModel);
+        await vhRepo.SaveChangesAsync();
+
+        // monitor the order
+        _ = MonitorOrder(serviceScopeFactory, projectId, appOptions.Value.HostOrderMonitorCount, appOptions.Value.HostOrderMonitorInterval);
+        return hostOrderModel.ToDto();
     }
 }

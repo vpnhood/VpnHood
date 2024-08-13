@@ -32,8 +32,10 @@ public class Program
             builder.Logging.AddSimpleConsole(c => { c.TimestampFormat = "[HH:mm:ss] "; });
 
             // NLog: Setup NLog for Dependency injection
-            builder.Logging.ClearProviders();
-            builder.Host.UseNLog();
+            if (Environment.OSVersion.Platform == PlatformID.Unix) {
+                builder.Logging.ClearProviders();
+                builder.Host.UseNLog();
+            }
 
             // app options
             var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ??

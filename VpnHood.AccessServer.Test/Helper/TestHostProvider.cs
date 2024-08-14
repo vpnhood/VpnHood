@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Collections.Concurrent;
+using System.Net;
 using VpnHood.AccessServer.Abstractions.Providers.Hosts;
 
 namespace VpnHood.AccessServer.Test.Helper;
@@ -7,7 +8,7 @@ public class TestHostProvider(string providerName) : IHostProvider
 {
     public string ProviderName => providerName;
     public List<Order> Orders { get; } = [];
-    public List<HostProviderIp> HostIps { get; } = [];
+    public ConcurrentDictionary<IPAddress, HostProviderIp> HostIps { get; } = [];
 
     public class Order
     {
@@ -35,18 +36,19 @@ public class TestHostProvider(string providerName) : IHostProvider
         foreach (var order in orders.Where(x => x is { IsCompleted: false, Type: Order.OrderType.NewIp })) {
             order.IsCompleted = true;
             var ipAddress = await testApp.NewIpV4();
-            lock (HostIps)
-                HostIps.Add(new HostProviderIp {
-                    IpAddress = ipAddress,
-                    Description = order.Description,
-                    ServerId = order.ServerId,
-                });
+            if (!HostIps.TryAdd(ipAddress, new HostProviderIp {
+                IpAddress = ipAddress,
+                Description = order.Description,
+                ServerId = order.ServerId
+            }))
+                throw new Exception("Ip already exists.");
         }
 
+        // mark all release orders as completed and remove them from the ips
         foreach (var order in orders.Where(x => x is { IsCompleted: false, Type: Order.OrderType.ReleaseIp })) {
             order.IsCompleted = true;
             lock (HostIps)
-                HostIps.RemoveAll(x => x.IpAddress.Equals(order.ReleaseIp));
+                HostIps.TryRemove(order.ReleaseIp!, out _);
         }
 
     }
@@ -55,7 +57,7 @@ public class TestHostProvider(string providerName) : IHostProvider
     {
         await Task.Delay(0);
         lock (HostIps)
-            return HostIps.FirstOrDefault(x => x.IpAddress.Equals(serverIp))?.ServerId;
+            return HostIps.FirstOrDefault(x => x.Value.IpAddress.Equals(serverIp)).Value.ServerId;
     }
 
     public async Task<string> OrderNewIp(string serverId, string? description, TimeSpan timeout)
@@ -87,23 +89,35 @@ public class TestHostProvider(string providerName) : IHostProvider
             Orders.Add(order);
     }
 
-    public async Task<HostProviderIp[]> LisIps(TimeSpan timeout)
+    public async Task<HostProviderIp> GetIp(IPAddress ipAddress, TimeSpan timeout)
     {
         await Task.Delay(0);
-        lock (HostIps)
-            return HostIps.ToArray();
+        return HostIps[ipAddress];
+    }
+
+    public async Task<string[]> ListIps(string? search, TimeSpan timeout)
+    {
+        await Task.Delay(0);
+        return HostIps.Values
+            .Where(x =>
+                string.IsNullOrEmpty(search) ||
+                x.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) == true)
+            .Select(x => x.IpAddress.ToString())
+            .ToArray();
     }
 
     public void DefineIp(IPAddress[] ipAddresses)
     {
         var serverId = Guid.NewGuid().ToString();
         foreach (var ipAddress in ipAddresses) {
-            lock (HostIps)
-                HostIps.Add(new HostProviderIp {
-                    IpAddress = ipAddress,
-                    ServerId = serverId,
-                    Description = ""
-                });
+            var item = new HostProviderIp {
+                IpAddress = ipAddress,
+                ServerId = serverId,
+                Description = ""
+            };
+
+            if (!HostIps.TryAdd(ipAddress, item))
+                throw new Exception("Ip could not be added.");
         }
     }
 }

@@ -11,6 +11,7 @@ public class HostOrderModel
     public required Guid HostOrderId { get; init; }
     public required DateTime CreatedTime { get; init; }
     public required HostOrderType OrderType { get; init; }
+    public required string ProviderName { get; init; }
     public required HostOrderStatus Status { get; set; }
     public string? ErrorMessage { get; set; }
     public string? ProviderOrderId { get; init; }

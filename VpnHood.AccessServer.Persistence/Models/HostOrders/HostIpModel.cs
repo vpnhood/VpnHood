@@ -16,5 +16,5 @@ public class HostIpModel
     public required bool ExistsInProvider { get; set; }
     public required string? Description { get; set; }
     public DateTime? ReleasedTime { get; set; }
-    public bool IsDeleted { get; init; }
+    public bool IsDeleted { get; set; }
 }

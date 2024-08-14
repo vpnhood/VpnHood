@@ -95,14 +95,14 @@ public class TestHostProvider(string providerName) : IHostProvider
         return HostIps[ipAddress];
     }
 
-    public async Task<string[]> ListIps(string? search, TimeSpan timeout)
+    public async Task<IPAddress[]> ListIps(string? search, TimeSpan timeout)
     {
         await Task.Delay(0);
         return HostIps.Values
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
                 x.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) == true)
-            .Select(x => x.IpAddress.ToString())
+            .Select(x => x.IpAddress)
             .ToArray();
     }
 

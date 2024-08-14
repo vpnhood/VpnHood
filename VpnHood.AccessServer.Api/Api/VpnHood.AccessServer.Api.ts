@@ -1200,7 +1200,7 @@ export class HostOrdersClient {
         return Promise.resolve<HostOrder>(null as any);
     }
 
-    orderReleaseIp(projectId: string, ipAddress: string, ignoreProviderError: boolean, cancelToken?: CancelToken): Promise<HostOrder> {
+    orderReleaseIp(projectId: string, ipAddress: string, ignoreProviderError?: boolean | undefined, cancelToken?: CancelToken): Promise<HostOrder> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/order-release-ip?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -1209,9 +1209,9 @@ export class HostOrdersClient {
             throw new Error("The parameter 'ipAddress' must be defined and cannot be null.");
         else
             url_ += "ipAddress=" + encodeURIComponent("" + ipAddress) + "&";
-        if (ignoreProviderError === undefined || ignoreProviderError === null)
-            throw new Error("The parameter 'ignoreProviderError' must be defined and cannot be null.");
-        else
+        if (ignoreProviderError === null)
+            throw new Error("The parameter 'ignoreProviderError' cannot be null.");
+        else if (ignoreProviderError !== undefined)
             url_ += "ignoreProviderError=" + encodeURIComponent("" + ignoreProviderError) + "&";
         url_ = url_.replace(/[?&]$/, "");
 

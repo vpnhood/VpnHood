@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using GrayMint.Common.Utils;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.HostOrders;
@@ -97,6 +98,10 @@ public class HostOrdersService(
     // return true if there is not pending order left
     private async Task<bool> Sync(Guid projectId)
     {
+        using var asyncLock = await AsyncLock.LockAsync($"HostOrderSync_{projectId}", TimeSpan.Zero);
+        if (!asyncLock.Succeeded)
+            return false;
+
         // update database with new ips
         var hostIps = await AddProvidersNewIps(projectId, appOptions.Value.ServiceHttpTimeout);
 
@@ -219,7 +224,7 @@ public class HostOrdersService(
 
         //combine all task results into Provider and Ip list
         var providerIpInfos = providerIpInfosTasks
-            .SelectMany(x => x.ListTask.Result.Select(y => new { x.Provider, x.ProviderName, IpAddress = IPAddress.Parse(y) }))
+            .SelectMany(x => x.ListTask.Result.Select(y => new { x.Provider, x.ProviderName, IpAddress = y }))
             .ToArray();
 
         // Get all HostIPs from database
@@ -265,7 +270,6 @@ public class HostOrdersService(
     }
     public async Task<HostIp[]> ListIps(Guid projectId)
     {
-        await Sync(projectId);
         var hostIps = await vhRepo.HostIpList(projectId);
 
         // get all servers
@@ -278,6 +282,7 @@ public class HostOrdersService(
 
     public async Task<HostOrder[]> List(Guid projectId, int recordIndex = 0, int recordCount = int.MaxValue)
     {
+        await Sync(projectId);
         var hostOrders = await vhRepo.HostOrdersList(projectId, recordIndex: recordIndex, recordCount: recordCount);
         return hostOrders.Select(x => x.ToDto()).ToArray();
     }

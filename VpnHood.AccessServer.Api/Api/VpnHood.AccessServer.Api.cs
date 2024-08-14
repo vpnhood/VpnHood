@@ -2224,16 +2224,13 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<HostOrder> OrderReleaseIpAsync(System.Guid projectId, string ipAddress, bool ignoreProviderError, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<HostOrder> OrderReleaseIpAsync(System.Guid projectId, string ipAddress, bool? ignoreProviderError = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
 
             if (ipAddress == null)
                 throw new System.ArgumentNullException("ipAddress");
-
-            if (ignoreProviderError == null)
-                throw new System.ArgumentNullException("ignoreProviderError");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -2252,7 +2249,10 @@ namespace VpnHood.AccessServer.Api
                     urlBuilder_.Append("/host-orders/order-release-ip");
                     urlBuilder_.Append('?');
                     urlBuilder_.Append(System.Uri.EscapeDataString("ipAddress")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(ipAddress, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
-                    urlBuilder_.Append(System.Uri.EscapeDataString("ignoreProviderError")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(ignoreProviderError, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    if (ignoreProviderError != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("ignoreProviderError")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(ignoreProviderError, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
                     urlBuilder_.Length--;
 
                     await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);

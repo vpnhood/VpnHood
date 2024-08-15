@@ -967,11 +967,23 @@ export class HostOrdersClient {
 
     }
 
-    listIps(projectId: string, cancelToken?: CancelToken): Promise<HostIp[]> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/ips";
+    listIps(projectId: string, search: string, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/ips?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (search === undefined || search === null)
+            throw new Error("The parameter 'search' must be defined and cannot be null.");
+        else
+            url_ += "search=" + encodeURIComponent("" + search) + "&";
+        if (recordIndex === null)
+            throw new Error("The parameter 'recordIndex' cannot be null.");
+        else if (recordIndex !== undefined)
+            url_ += "recordIndex=" + encodeURIComponent("" + recordIndex) + "&";
+        if (recordCount === null)
+            throw new Error("The parameter 'recordCount' cannot be null.");
+        else if (recordCount !== undefined)
+            url_ += "recordCount=" + encodeURIComponent("" + recordCount) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {

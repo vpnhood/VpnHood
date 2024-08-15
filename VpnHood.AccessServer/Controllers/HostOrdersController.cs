@@ -14,9 +14,9 @@ public class HostOrdersController(HostOrdersService hostOrdersService)
 {
     [HttpGet("ips")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<HostIp[]> ListIps(Guid projectId)
+    public Task<HostIp[]> ListIps(Guid projectId, string search, int recordIndex = 0, int recordCount = 200)
     {
-        return hostOrdersService.ListIps(projectId);
+        return hostOrdersService.ListIps(projectId, search: search, recordIndex: recordIndex, recordCount: recordIndex);
     }
 
     [HttpGet]

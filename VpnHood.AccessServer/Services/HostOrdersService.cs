@@ -268,9 +268,9 @@ public class HostOrdersService(
     {
         return servers.FirstOrDefault(y => y.AccessPoints.Any(z => z.IpAddress.Equals(ip)));
     }
-    public async Task<HostIp[]> ListIps(Guid projectId)
+    public async Task<HostIp[]> ListIps(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = int.MaxValue)
     {
-        var hostIps = await vhRepo.HostIpList(projectId);
+        var hostIps = await vhRepo.HostIpList(projectId, search: search, recordIndex: recordIndex, recordCount: recordCount);
 
         // get all servers
         var servers = await vhRepo.ServerList(projectId, includeServerFarm: true, tracking: false);

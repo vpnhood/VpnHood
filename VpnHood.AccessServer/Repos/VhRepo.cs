@@ -375,10 +375,13 @@ public class VhRepo(VhContext vhContext)
             .SingleAsync();
     }
 
-    public Task<HostIpModel[]> HostIpList(Guid projectId)
+    public Task<HostIpModel[]> HostIpList(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = int.MaxValue)
     {
         return vhContext.HostIps
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x=> x.IpAddress.Equals(search) || search == null)
+            .Skip(recordIndex)
+            .Take(recordCount)
             .ToArrayAsync();
     }
 

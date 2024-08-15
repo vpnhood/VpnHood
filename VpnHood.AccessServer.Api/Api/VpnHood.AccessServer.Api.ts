@@ -967,14 +967,12 @@ export class HostOrdersClient {
 
     }
 
-    listIps(projectId: string, search: string, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
+    listIps(projectId: string, search?: string | null | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/ips?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (search === undefined || search === null)
-            throw new Error("The parameter 'search' must be defined and cannot be null.");
-        else
+        if (search !== undefined && search !== null)
             url_ += "search=" + encodeURIComponent("" + search) + "&";
         if (recordIndex === null)
             throw new Error("The parameter 'recordIndex' cannot be null.");

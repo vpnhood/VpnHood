@@ -21,11 +21,11 @@ public class AgentServerTest
         var testApp = serverDom.TestApp;
 
         // create serverInfo
-        var publicIp = await testApp.NewIpV6();
-        var privateIp = await testApp.NewIpV4();
-        var ipAddresses = new[] { publicIp, privateIp, await testApp.NewIpV6(), privateIp };
+        var publicIp = testApp.NewIpV6();
+        var privateIp = testApp.NewIpV4();
+        var ipAddresses = new[] { publicIp, privateIp, testApp.NewIpV6(), privateIp };
         serverDom.ServerInfo.PrivateIpAddresses = ipAddresses;
-        serverDom.ServerInfo.PublicIpAddresses = [publicIp, await testApp.NewIpV4(), await testApp.NewIpV6()];
+        serverDom.ServerInfo.PublicIpAddresses = [publicIp, testApp.NewIpV4(), testApp.NewIpV6()];
 
         //Configure
         await serverDom.Configure();
@@ -145,10 +145,10 @@ public class AgentServerTest
         // --------
 
         // create serverInfo
-        serverDom.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()];
+        serverDom.ServerInfo.PrivateIpAddresses = [farm.TestApp.NewIpV4(), farm.TestApp.NewIpV6()];
         serverDom.ServerInfo.PublicIpAddresses = [
-            await farm.TestApp.NewIpV4(),
-            await farm.TestApp.NewIpV6(),
+            farm.TestApp.NewIpV4(),
+            farm.TestApp.NewIpV6(),
             IPAddress.Parse(publicInTokenAccessPoints2[0].IpAddress),
             IPAddress.Parse(publicInTokenAccessPoints2[1].IpAddress)
         ];
@@ -197,7 +197,7 @@ public class AgentServerTest
         using var farm = await ServerFarmDom.Create();
         await farm.DefaultServer.Update(new ServerUpdateParams {
             AutoConfigure = new PatchOfBoolean { Value = false },
-            AccessPoints = new PatchOfAccessPointOf { Value = new[] { await farm.TestApp.NewAccessPoint(udpPort: -1) } }
+            AccessPoints = new PatchOfAccessPointOf { Value = new[] { farm.TestApp.NewAccessPoint(udpPort: -1) } }
         });
 
         // Configure
@@ -218,8 +218,8 @@ public class AgentServerTest
         await accessToken.CreateSession();
 
         // reconfig server by new endpoints
-        serverDom.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()];
-        serverDom.ServerInfo.PublicIpAddresses = [await farm.TestApp.NewIpV4()];
+        serverDom.ServerInfo.PrivateIpAddresses = [farm.TestApp.NewIpV4(), farm.TestApp.NewIpV6()];
+        serverDom.ServerInfo.PublicIpAddresses = [farm.TestApp.NewIpV4()];
         await serverDom.Configure();
 
         // create new session to see if agent cache has been updated
@@ -239,13 +239,13 @@ public class AgentServerTest
         var serverDom = await farm.AddNewServer(configure: false);
 
         // create serverInfo and configure
-        var publicIp = await farm.TestApp.NewIpV6();
-        var serverInfo = await farm.TestApp.NewServerInfo(randomStatus: true);
+        var publicIp = farm.TestApp.NewIpV6();
+        var serverInfo = farm.TestApp.NewServerInfo(randomStatus: true);
         var freeUdpPortV4 = serverInfo.FreeUdpPortV4;
         var freeUdpPortV6 = serverInfo.FreeUdpPortV6;
         serverDom.ServerInfo = serverInfo;
-        serverInfo.PrivateIpAddresses = [publicIp, await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()];
-        serverInfo.PublicIpAddresses = [publicIp, await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()];
+        serverInfo.PrivateIpAddresses = [publicIp, farm.TestApp.NewIpV4(), farm.TestApp.NewIpV6()];
+        serverInfo.PublicIpAddresses = [publicIp, farm.TestApp.NewIpV4(), farm.TestApp.NewIpV6()];
         await serverDom.Configure();
         await serverDom.Reload();
         Assert.IsNotNull(serverDom.ServerConfig.UdpEndPoints);
@@ -276,11 +276,11 @@ public class AgentServerTest
         var serverDom = await farm.AddNewServer(configure: false);
 
         // create serverInfo and configure
-        var publicIp = await farm.TestApp.NewIpV6();
-        var serverInfo = await farm.TestApp.NewServerInfo(randomStatus: true);
+        var publicIp = farm.TestApp.NewIpV6();
+        var serverInfo = farm.TestApp.NewServerInfo(randomStatus: true);
         serverDom.ServerInfo = serverInfo;
-        serverInfo.PrivateIpAddresses = [publicIp, (await farm.TestApp.NewIpV4()), (await farm.TestApp.NewIpV6())];
-        serverInfo.PublicIpAddresses = [publicIp, (await farm.TestApp.NewIpV4()), (await farm.TestApp.NewIpV6())];
+        serverInfo.PrivateIpAddresses = [publicIp, (farm.TestApp.NewIpV4()), (farm.TestApp.NewIpV6())];
+        serverInfo.PublicIpAddresses = [publicIp, (farm.TestApp.NewIpV4()), (farm.TestApp.NewIpV6())];
         await serverDom.Configure(false);
         await serverDom.Reload();
 
@@ -342,10 +342,10 @@ public class AgentServerTest
         var serverDom = await farm.AddNewServer(configure: false, sendStatus: false);
 
         // create serverInfo
-        var privateIpV4 = await testApp.NewIpV4();
-        var privateIpV6 = await testApp.NewIpV6();
-        var publicIpV4 = await testApp.NewIpV4();
-        var publicIpV6 = await testApp.NewIpV6();
+        var privateIpV4 = testApp.NewIpV4();
+        var privateIpV6 = testApp.NewIpV6();
+        var publicIpV4 = testApp.NewIpV4();
+        var publicIpV6 = testApp.NewIpV6();
         serverDom.ServerInfo.PrivateIpAddresses = [privateIpV4, privateIpV6];
         serverDom.ServerInfo.PublicIpAddresses = [publicIpV4, publicIpV6];
 
@@ -414,7 +414,7 @@ public class AgentServerTest
         // check
         //-----------
         var oldCode = serverDom.ServerStatus.ConfigCode;
-        var accessPoint = await testApp.NewAccessPoint();
+        var accessPoint = testApp.NewAccessPoint();
         await serverDom.Update(new ServerUpdateParams {
             AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint } }
         });
@@ -427,7 +427,7 @@ public class AgentServerTest
         // check
         //-----------
         oldCode = serverCommand.ConfigCode;
-        accessPoint = await testApp.NewAccessPoint();
+        accessPoint = testApp.NewAccessPoint();
         await serverDom.Update(new ServerUpdateParams {
             AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint } }
         });
@@ -439,7 +439,7 @@ public class AgentServerTest
         // check
         //-----------
         oldCode = serverCommand.ConfigCode;
-        serverDom.ServerInfo = await testApp.NewServerInfo(randomStatus: true);
+        serverDom.ServerInfo = testApp.NewServerInfo(randomStatus: true);
         serverDom.ServerInfo.Status.ConfigCode = Guid.NewGuid().ToString();
         await serverDom.SendStatus(false);
         var serverModel = await testApp.VhContext.Servers.AsNoTracking()
@@ -479,7 +479,7 @@ public class AgentServerTest
         // check Reconfig After Config finish
         //-----------
         await serverDom.Update(new ServerUpdateParams {
-            AccessPoints = new PatchOfAccessPointOf { Value = new[] { await testApp.NewAccessPoint() } }
+            AccessPoints = new PatchOfAccessPointOf { Value = new[] { testApp.NewAccessPoint() } }
         });
         await serverDom.Reload();
         Assert.AreEqual(ServerState.Configuring, serverDom.Server.ServerState);
@@ -511,10 +511,10 @@ public class AgentServerTest
         });
 
         farm.DefaultServer.ServerInfo.PrivateIpAddresses = [
-            await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()
+            farm.TestApp.NewIpV4(), farm.TestApp.NewIpV4(), farm.TestApp.NewIpV6()
         ];
         farm.DefaultServer.ServerInfo.PublicIpAddresses = [
-            await farm.TestApp.NewIpV6(), await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()
+            farm.TestApp.NewIpV6(), farm.TestApp.NewIpV4(), farm.TestApp.NewIpV6()
         ];
 
         // Configure

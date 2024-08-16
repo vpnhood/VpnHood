@@ -127,31 +127,17 @@ public class TestApp : IHttpClientFactory, IDisposable
         return NewIpV4().MapToIPv6();
     }
 
-    public async Task<string> NewIpV4String() => (await NewIpV4()).ToString();
+    public IPEndPoint NewEndPoint(int port = 443) => new(NewIpV4(), port);
 
     // ReSharper disable once UnusedMember.Global
-    public async Task<string> NewIpV6String() => (await NewIpV6()).ToString();
-
-    // ReSharper disable once UnusedMember.Global
-    public async Task<IPAddress> NewIpV4Db()
-    {
-        await Task.Delay(0);
-        var address = new byte[4];
-        new Random().NextBytes(address);
-        return new IPAddress(address);
-    }
-
-    public async Task<IPEndPoint> NewEndPoint(int port = 443) => new(await NewIpV4(), port);
-
-    // ReSharper disable once UnusedMember.Global
-    public async Task<IPEndPoint> NewEndPointIp6(int port = 443) => new(await NewIpV6(), port);
+    public IPEndPoint NewEndPointIp6(int port = 443) => new(NewIpV6(), port);
 
 
-    public async Task<AccessPoint> NewAccessPoint(IPEndPoint? ipEndPoint = null,
+    public AccessPoint NewAccessPoint(IPEndPoint? ipEndPoint = null,
         AccessPointMode accessPointMode = AccessPointMode.PublicInToken,
         bool isListen = true, int? udpPort = null)
     {
-        ipEndPoint ??= await NewEndPoint();
+        ipEndPoint ??= NewEndPoint();
         return new AccessPoint {
             UdpPort = udpPort ?? ipEndPoint.Port,
             IpAddress = ipEndPoint.Address.ToString(),
@@ -246,11 +232,11 @@ public class TestApp : IHttpClientFactory, IDisposable
         return ret;
     }
 
-    public async Task<ServerInfo> NewServerInfo(bool randomStatus = false, int? logicalCore = null,
+    public ServerInfo NewServerInfo(bool randomStatus = false, int? logicalCore = null,
         IPAddress? publicIpV4 = null)
     {
         var rand = new Random();
-        var publicIp = await NewIpV6();
+        var publicIp = NewIpV6();
         var serverInfo = new ServerInfo {
             Version = Version.Parse($"999.{rand.Next(0, 255)}.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
             EnvironmentVersion = Environment.Version,
@@ -260,8 +246,8 @@ public class TestApp : IHttpClientFactory, IDisposable
                 publicIp
             ],
             PublicIpAddresses = [
-                publicIpV4 ?? await NewIpV4(),
-                await NewIpV6(),
+                publicIpV4 ?? NewIpV4(),
+                NewIpV6(),
                 publicIp
             ],
             Status = NewServerStatus(null, randomStatus),
@@ -301,7 +287,7 @@ public class TestApp : IHttpClientFactory, IDisposable
             ClientInfo = clientInfo,
             TokenId = accessToken.AccessTokenId.ToString(),
             EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, secret),
-            ClientIp = clientIp ?? NewIpV4().Result,
+            ClientIp = clientIp ?? NewIpV4(),
             HostEndPoint = hostEndPoint,
             ExtraData = extraData ?? Guid.NewGuid().ToString(),
             ServerLocation = locationPath,

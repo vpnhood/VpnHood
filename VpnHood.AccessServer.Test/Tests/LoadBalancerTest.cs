@@ -66,7 +66,7 @@ public class LoadBalancerTest
 
         // configure serverDom5 with ipv6
         serverDom5.ServerInfo.PublicIpAddresses =
-            [await serverDom5.TestApp.NewIpV6(), await serverDom5.TestApp.NewIpV6()];
+            [serverDom5.TestApp.NewIpV6(), serverDom5.TestApp.NewIpV6()];
         serverDom5.ServerInfo.PrivateIpAddresses = serverDom5.ServerInfo.PublicIpAddresses;
         await serverDom5.Configure();
 
@@ -271,27 +271,27 @@ public class LoadBalancerTest
 
         // Create and init servers
         var serverDom1 = await farm.AddNewServer(configure: false);
-        serverDom1.ServerInfo = await farm.TestApp.NewServerInfo();
-        serverDom1.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()];
-        serverDom1.ServerInfo.PublicIpAddresses = [await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()];
+        serverDom1.ServerInfo = farm.TestApp.NewServerInfo();
+        serverDom1.ServerInfo.PrivateIpAddresses = [farm.TestApp.NewIpV4(), farm.TestApp.NewIpV6()];
+        serverDom1.ServerInfo.PublicIpAddresses = [farm.TestApp.NewIpV4(), farm.TestApp.NewIpV6()];
         await serverDom1.Configure();
 
         var serverDom2 = await farm.AddNewServer(configure: false);
-        serverDom2.ServerInfo = await farm.TestApp.NewServerInfo();
-        serverDom2.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV4()];
-        serverDom2.ServerInfo.PublicIpAddresses = [await farm.TestApp.NewIpV4()];
+        serverDom2.ServerInfo = farm.TestApp.NewServerInfo();
+        serverDom2.ServerInfo.PrivateIpAddresses = [farm.TestApp.NewIpV4()];
+        serverDom2.ServerInfo.PublicIpAddresses = [farm.TestApp.NewIpV4()];
         await serverDom2.Configure();
 
         var serverDom3 = await farm.AddNewServer(configure: false);
-        serverDom3.ServerInfo = await farm.TestApp.NewServerInfo();
-        serverDom3.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV4()];
-        serverDom3.ServerInfo.PublicIpAddresses = [await farm.TestApp.NewIpV4()];
+        serverDom3.ServerInfo = farm.TestApp.NewServerInfo();
+        serverDom3.ServerInfo.PrivateIpAddresses = [farm.TestApp.NewIpV4()];
+        serverDom3.ServerInfo.PublicIpAddresses = [farm.TestApp.NewIpV4()];
         await serverDom3.Configure();
 
         var serverDom4 = await farm.AddNewServer(configure: false);
-        serverDom4.ServerInfo = await farm.TestApp.NewServerInfo();
-        serverDom4.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV6()];
-        serverDom4.ServerInfo.PublicIpAddresses = [await farm.TestApp.NewIpV6()];
+        serverDom4.ServerInfo = farm.TestApp.NewServerInfo();
+        serverDom4.ServerInfo.PrivateIpAddresses = [farm.TestApp.NewIpV6()];
+        serverDom4.ServerInfo.PublicIpAddresses = [farm.TestApp.NewIpV6()];
         await serverDom4.Configure();
 
 

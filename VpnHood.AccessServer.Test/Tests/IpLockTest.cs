@@ -20,14 +20,14 @@ public class IpLockTest
         // check: Create
         //-----------
         var createParams1 = new IpLockCreateParams {
-            IpAddress = await testApp1.NewIpV4String(),
+            IpAddress = testApp1.NewIpV4().ToString(),
             IsLocked = true,
             Description = "Sigma"
         };
         await ipLockClient.CreateAsync(testApp2.ProjectId, createParams1);
 
         var createParams2 = new IpLockCreateParams {
-            IpAddress = await testApp1.NewIpV4String(),
+            IpAddress = testApp1.NewIpV4().ToString(),
             IsLocked = false,
             Description = "Sigma2"
         };
@@ -89,7 +89,7 @@ public class IpLockTest
         using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken();
 
-        var clientIp = await farm.TestApp.NewIpV4();
+        var clientIp = farm.TestApp.NewIpV4();
         await accessTokenDom.CreateSession(clientIp: clientIp);
 
         // check lock

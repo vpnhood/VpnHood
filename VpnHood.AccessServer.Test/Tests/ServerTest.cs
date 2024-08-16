@@ -66,7 +66,7 @@ public class ServerTest
         Assert.AreEqual(ServerState.NotInstalled, serverDom.Server.ServerState);
 
         // ServerState.Configuring
-        serverDom.ServerInfo = await testApp.NewServerInfo(randomStatus: true, publicIpV4: IPAddress.Parse("5.0.0.1"));
+        serverDom.ServerInfo = testApp.NewServerInfo(randomStatus: true, publicIpV4: IPAddress.Parse("5.0.0.1"));
         serverDom.ServerInfo.Status.SessionCount = 0;
         await serverDom.Configure(false);
         await serverDom.Reload();
@@ -250,7 +250,7 @@ public class ServerTest
 
         // add another server
         var server2Dom = await farm.AddNewServer(new ServerCreateParams {
-            AccessPoints = new[] { await farm.TestApp.NewAccessPoint() }
+            AccessPoints = new[] { farm.TestApp.NewAccessPoint() }
         });
         var server2TokenIp =
             server2Dom.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.PublicInToken);
@@ -272,8 +272,8 @@ public class ServerTest
         var testApp = await TestApp.Create();
         using var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
 
-        var accessPoint1 = await testApp.NewAccessPoint();
-        var accessPoint2 = await testApp.NewAccessPoint();
+        var accessPoint1 = testApp.NewAccessPoint();
+        var accessPoint2 = testApp.NewAccessPoint();
 
         // create server
         var serverDom = await farm.AddNewServer(new ServerCreateParams {
@@ -308,7 +308,7 @@ public class ServerTest
         // check: update 
         //-----------
         var oldConfig = (await serverDom.SendStatus(serverDom.ServerInfo.Status)).ConfigCode;
-        var accessPoint3 = await testApp.NewAccessPoint();
+        var accessPoint3 = testApp.NewAccessPoint();
         await serverDom.Update(new ServerUpdateParams {
             AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint3 } }
         });
@@ -389,11 +389,11 @@ public class ServerTest
         await VhTestUtil.AssertApiException("InvalidOperationException", accessToken.GetToken(), contains: "token has not been initialized");
 
         var serverDom1 = await farm.AddNewServer(new ServerCreateParams {
-            AccessPoints = [await farm.TestApp.NewAccessPoint(accessPointMode: AccessPointMode.PublicInToken)]
+            AccessPoints = [farm.TestApp.NewAccessPoint(accessPointMode: AccessPointMode.PublicInToken)]
         });
 
         await farm.AddNewServer(new ServerCreateParams {
-            AccessPoints = [await farm.TestApp.NewAccessPoint(accessPointMode: AccessPointMode.Public)]
+            AccessPoints = [farm.TestApp.NewAccessPoint(accessPointMode: AccessPointMode.Public)]
         });
 
         // work without error

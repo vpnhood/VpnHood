@@ -39,8 +39,8 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
                 new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort).Equals(serverEndPoint)));
 
         clientIp ??= serverEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6
-            ? await TestApp.NewIpV6()
-            : await TestApp.NewIpV4();
+            ? TestApp.NewIpV6()
+            : TestApp.NewIpV4();
 
         var sessionRequestEx = await TestApp.CreateSessionRequestEx(
             AccessToken,

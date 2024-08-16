@@ -131,7 +131,7 @@ public class AgentClientSessionTest
         };
         sessionDom = await accessTokenDom.CreateSession(clientInfo: clientInfo);
         var sessionRequestEx = sessionDom.SessionRequestEx;
-        sessionRequestEx.ClientIp = await farm.TestApp.NewIpV4();
+        sessionRequestEx.ClientIp = farm.TestApp.NewIpV4();
         device = await farm.TestApp.DevicesClient.FindByClientIdAsync(farm.TestApp.ProjectId, clientInfo.ClientId);
         Assert.AreEqual(sessionRequestEx.ClientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);

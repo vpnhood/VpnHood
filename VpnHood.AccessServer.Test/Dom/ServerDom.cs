@@ -75,7 +75,7 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
         var myServer = new ServerDom(
             testApp: testApp,
             server: serverData.Server,
-            serverInfo: await testApp.NewServerInfo(
+            serverInfo: testApp.NewServerInfo(
                 randomStatus: false,
                 logicalCore: logicalCore,
                 publicIpV4: publicIpV4)
@@ -134,7 +134,7 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
             accessToken,
             ServerConfig.TcpEndPointsValue.First(),
             clientId,
-            await TestApp.NewIpV4());
+            TestApp.NewIpV4());
 
         var testSession =
             await SessionDom.Create(TestApp, ServerId, accessToken, sessionRequestEx, AgentClient, assertError);

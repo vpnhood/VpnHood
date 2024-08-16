@@ -210,14 +210,14 @@ public class AccessTokenTest
         var serverDom = await farm.AddNewServer();
         await serverDom.Update(new ServerUpdateParams {
             AccessPoints = new PatchOfAccessPointOf {
-                Value = [await farm.TestApp.NewAccessPoint(await farm.TestApp.NewEndPointIp6(4443))]
+                Value = [farm.TestApp.NewAccessPoint(farm.TestApp.NewEndPointIp6(4443))]
             }
         });
 
         serverDom = await farm.AddNewServer();
         await serverDom.Update(new ServerUpdateParams {
             AccessPoints = new PatchOfAccessPointOf {
-                Value = [await farm.TestApp.NewAccessPoint(await farm.TestApp.NewEndPoint())]
+                Value = [ farm.TestApp.NewAccessPoint(farm.TestApp.NewEndPoint())]
             }
         });
 

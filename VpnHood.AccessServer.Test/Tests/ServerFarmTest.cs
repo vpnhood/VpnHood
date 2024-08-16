@@ -30,8 +30,8 @@ public class ServerFarmTest
         //-----------
         // check: create
         //-----------
-        var publicIp1 = await testApp.NewIpV4();
-        var publicIp2 = await testApp.NewIpV4();
+        var publicIp1 = testApp.NewIpV4();
+        var publicIp2 = testApp.NewIpV4();
         await serverDom.Update(new ServerUpdateParams {
             AccessPoints = new PatchOfAccessPointOf {
                 Value = new[] {
@@ -281,8 +281,8 @@ public class ServerFarmTest
     public async Task FarmToken_should_not_have_deleted_server_ip()
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);
-        var accessPoint1 = await farm.TestApp.NewAccessPoint();
-        var accessPoint2 = await farm.TestApp.NewAccessPoint();
+        var accessPoint1 = farm.TestApp.NewAccessPoint();
+        var accessPoint2 = farm.TestApp.NewAccessPoint();
 
         // create farm with 2 servers
         var server1 = await farm.AddNewServer(configure: false);

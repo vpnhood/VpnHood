@@ -17,7 +17,6 @@ public class HostOrderTest
         var serverDom = farm.DefaultServer;
 
         var testHostProvider = await farm.TestApp.AddTestHostProvider();
-        testHostProvider.DefineIp(serverDom.ServerInfo.PublicIpAddresses);
         await serverDom.SetHostPanelDomain(testHostProvider.ProviderName);
 
         // Order a new IP for the server
@@ -75,7 +74,6 @@ public class HostOrderTest
 
         // prepare host provider for a server
         var testHostProvider = await farm.TestApp.AddTestHostProvider();
-        testHostProvider.DefineIp(serverDom.ServerInfo.PublicIpAddresses);
         await serverDom.SetHostPanelDomain(testHostProvider.ProviderName);
 
         // Order a new IP for the server
@@ -126,11 +124,9 @@ public class HostOrderTest
 
         // prepare host provider for a server
         var testHostProvider1 = await testApp.AddTestHostProvider();
-        testHostProvider1.DefineIp(serverDom1.ServerInfo.PublicIpAddresses);
         await serverDom1.SetHostPanelDomain(testHostProvider1.ProviderName);
 
         var testHostProvider2 = await testApp.AddTestHostProvider();
-        testHostProvider2.DefineIp(serverDom2.ServerInfo.PublicIpAddresses);
         await serverDom2.SetHostPanelDomain(testHostProvider2.ProviderName);
 
         // Order a new IP for the server

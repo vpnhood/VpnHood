@@ -81,10 +81,12 @@ public class HostOrdersService(
     {
         // extract fakeIp from server host panel url query string using HttpUtility.ParseQueryString
         if (server.HostPanelUrl?.Contains(FakeHostProvider.BaseProviderName) == true) {
-            var query = HttpUtility.ParseQueryString(new Uri(server.HostPanelUrl).Query);
-            var fakeIp = query["fakeIp"];
-            if (fakeIp != null)
-                return IPAddress.Parse(fakeIp);
+            // convert serverId to ipv6
+            var bytes = server.ServerId.ToByteArray();
+            bytes[0] = 255;
+            bytes[1] = 255;
+            var fakeIp = new IPAddress(bytes);
+            return fakeIp;
         }
 
         return IPAddress.Parse(server.GatewayIpV4 ?? server.GatewayIpV6 ??

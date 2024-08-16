@@ -92,7 +92,10 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
     public static async Task<ServerDom> Create(TestApp testApp, Guid serverFarmId, bool configure = true,
         bool sendStatus = true, IPAddress? gatewayIpV4 = null, int? logicalCore = null)
     {
-        var serverDom = await Create(testApp, new ServerCreateParams { ServerFarmId = serverFarmId },
+        var serverDom = await Create(testApp,
+            new ServerCreateParams {
+                ServerFarmId = serverFarmId
+            },
             configure: configure,
             sendStatus: sendStatus,
             logicalCore: logicalCore,

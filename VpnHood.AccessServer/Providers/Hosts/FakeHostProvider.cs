@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
 using VpnHood.AccessServer.Abstractions.Providers.Hosts;
+using VpnHood.Common.Net;
 
 namespace VpnHood.AccessServer.Providers.Hosts;
 
@@ -75,11 +76,10 @@ public class FakeHostProvider(string providerName,
     {
         await Task.Delay(0);
 
-        // return serverIp as its name if it is in 127.x.x.x range
-        if (serverIp.GetAddressBytes()[0] == 127)
-            return serverIp.ToString();
-
-        return HostIps.FirstOrDefault(x => x.Value.IpAddress.Equals(serverIp)).Value.ServerId;
+        var bytes = serverIp.GetAddressBytes();
+        return serverIp.IsV6() && bytes[0] == 255 && bytes[0] == 255
+            ? serverIp.ToString()
+            : HostIps.FirstOrDefault(x => x.Value.IpAddress.Equals(serverIp)).Value.ServerId;
     }
 
     public async Task<string> OrderNewIp(string serverId, string? description, TimeSpan timeout)
@@ -131,20 +131,5 @@ public class FakeHostProvider(string providerName,
                 x.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) == true)
             .Select(x => x.IpAddress)
             .ToArray();
-    }
-
-    public void DefineIp(IPAddress[] ipAddresses)
-    {
-        var serverId = Guid.NewGuid().ToString();
-        foreach (var ipAddress in ipAddresses) {
-            var item = new HostProviderIp {
-                IpAddress = ipAddress,
-                ServerId = serverId,
-                Description = ""
-            };
-
-            if (!HostIps.TryAdd(ipAddress, item))
-                throw new Exception("Ip could not be added.");
-        }
     }
 }

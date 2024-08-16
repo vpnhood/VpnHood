@@ -67,7 +67,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     public Guid ProjectId => Project.ProjectId;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
 
-    private static IPAddress _lastIp = IPAddress.Parse("1.0.0.0");
+    private static IPAddress _lastIp = IPAddress.Parse("127.0.0.0");
 
     private TestApp(Dictionary<string, string?> appSettings, string environment)
     {
@@ -117,6 +117,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     public IPAddress NewIpV4()
     {
         lock (_lastIp) {
+
             _lastIp = IPAddressUtil.Increment(_lastIp);
             return _lastIp;
         }

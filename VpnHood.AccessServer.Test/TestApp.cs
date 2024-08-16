@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
+using System.Text.Json;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.RoleManagement.RoleProviders.Dtos;
 using Microsoft.AspNetCore.Hosting;
@@ -23,7 +24,6 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Messaging;
-using YamlDotNet.Serialization;
 using ApiKey = VpnHood.AccessServer.Api.ApiKey;
 using ClientInfo = VpnHood.Common.Messaging.ClientInfo;
 using HttpAccessManagerOptions = VpnHood.Server.Access.Managers.Http.HttpAccessManagerOptions;
@@ -86,7 +86,6 @@ public class TestApp : IHttpClientFactory, IDisposable
                     services.AddScoped<IAuthorizationProvider, TestAuthorizationProvider>();
                     services.AddSingleton<IHttpClientFactory>(this);
                     services.AddSingleton<IAcmeOrderFactory, TestAcmeOrderFactory>();
-                    services.AddSingleton<IHostProviderFactory, TestHostProviderFactory>();
                 });
             });
 
@@ -115,17 +114,17 @@ public class TestApp : IHttpClientFactory, IDisposable
             SystemAdminApiKey.UserId);
     }
 
-    public Task<IPAddress> NewIpV4()
+    public IPAddress NewIpV4()
     {
         lock (_lastIp) {
             _lastIp = IPAddressUtil.Increment(_lastIp);
-            return Task.FromResult(_lastIp);
+            return _lastIp;
         }
     }
 
-    public async Task<IPAddress> NewIpV6()
+    public IPAddress NewIpV6()
     {
-        return (await NewIpV4()).MapToIPv6();
+        return NewIpV4().MapToIPv6();
     }
 
     public async Task<string> NewIpV4String() => (await NewIpV4()).ToString();
@@ -348,21 +347,26 @@ public class TestApp : IHttpClientFactory, IDisposable
             : WebApp.CreateClient();
     }
 
-    public async Task<TestHostProvider> AddTestHostProvider(string? providerName = null, string settings = "")
+    public async Task<FakeHostProvider> AddTestHostProvider(string? providerName = null, FakeHostProvider.Settings? settings = null)
     {
-        providerName ??= Guid.NewGuid().ToString() + ".internal";
+        providerName ??= Guid.NewGuid() + "." + FakeHostProvider.BaseProviderName;
+        settings ??= new FakeHostProvider.Settings() {
+            AutoCompleteDelay = null,
+            ProjectId = ProjectId
+        };
+        var settingsJson = JsonSerializer.Serialize(settings);
 
         await VhRepo.AddAsync(new ProviderModel {
             ProjectId = ProjectId,
             ProviderName = providerName,
-            Settings = settings,
+            Settings = settingsJson,
             ProviderModelId = Guid.NewGuid()
         });
 
         await VhRepo.SaveChangesAsync();
 
         var hostProviderFactory = Scope.ServiceProvider.GetRequiredService<IHostProviderFactory>();
-        return (TestHostProvider)hostProviderFactory.Create(providerName, settings);
+        return (FakeHostProvider)hostProviderFactory.Create(providerName, settingsJson);
     }
 
     public void Dispose()

@@ -160,6 +160,7 @@ public class VhRepo(VhContext vhContext)
             };
 
         var query = baseQuery
+            .OrderByDescending(x=>x.AccessToken.AccessTokenId)
             .Skip(recordIndex)
             .Take(recordCount)
             .AsNoTracking();
@@ -312,7 +313,8 @@ public class VhRepo(VhContext vhContext)
                     : null
             });
 
-        query = query.OrderByDescending(x => x.ServerFarm.ServerFarmName)
+        query = query
+            .OrderByDescending(x => x.ServerFarm.ServerFarmName)
             .Skip(recordIndex)
             .Take(recordCount)
             .AsSplitQuery()
@@ -380,6 +382,7 @@ public class VhRepo(VhContext vhContext)
         return vhContext.HostIps
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x=> x.IpAddress.Equals(search) || search == null)
+            .OrderBy(x=>x.HostIpId)
             .Skip(recordIndex)
             .Take(recordCount)
             .ToArrayAsync();

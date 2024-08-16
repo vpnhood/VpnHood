@@ -16,14 +16,14 @@ public class HostOrdersController(HostOrdersService hostOrdersService)
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<HostIp[]> ListIps(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = 200)
     {
-        return hostOrdersService.ListIps(projectId, search: search, recordIndex: recordIndex, recordCount: recordIndex);
+        return hostOrdersService.ListIps(projectId, search: search, recordIndex: recordIndex, recordCount: recordCount);
     }
 
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<HostOrder[]> List(Guid projectId, int recordIndex = 0, int recordCount = 200)
     {
-        return hostOrdersService.List(projectId, recordIndex: recordIndex, recordCount: recordIndex);
+        return hostOrdersService.List(projectId, recordIndex: recordIndex, recordCount: recordCount);
     }
 
     [HttpGet("{orderId}")]

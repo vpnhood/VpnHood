@@ -2,12 +2,22 @@
 using System.Net;
 using VpnHood.AccessServer.Abstractions.Providers.Hosts;
 
-namespace VpnHood.AccessServer.Test.Helper;
+namespace VpnHood.AccessServer.Providers.Hosts;
 
-public class TestHostProvider(string providerName) : IHostProvider
+public class FakeHostProvider(string providerName,
+    FakeHostProvider.Settings providerSettings)
+    : IHostProvider
 {
+    public static string BaseProviderName => "fake.internal";
+
+    public class Settings
+    {
+        public Guid ProjectId { get; init; }
+        public TimeSpan? AutoCompleteDelay { get; init; }
+    }
+
     public string ProviderName => providerName;
-    public List<Order> Orders { get; } = [];
+    public ConcurrentDictionary<string, Order> Orders { get; } = [];
     public ConcurrentDictionary<IPAddress, HostProviderIp> HostIps { get; } = [];
 
     public class Order
@@ -26,16 +36,25 @@ public class TestHostProvider(string providerName) : IHostProvider
         public IPAddress? ReleaseIp { get; set; }
     }
 
-    public async Task CompleteOrders(TestApp testApp)
+    private IPAddress BuildRandomIpAddress()
     {
-        Order[]? orders;
-        lock (Orders)
-            orders = Orders.ToArray();
+        return new IPAddress(new byte[] {
+            (byte) new Random().Next(128, 255),
+            (byte) new Random().Next(0, 255),
+            (byte) new Random().Next(0, 255),
+            (byte) new Random().Next(1, 255)
+        });
+    }
+
+    public async Task CompleteOrders(TimeSpan? delay = null)
+    {
+        delay ??= TimeSpan.Zero;
+        await Task.Delay(delay.Value);
 
         // mark all orders as completed and add them to the ips
-        foreach (var order in orders.Where(x => x is { IsCompleted: false, Type: Order.OrderType.NewIp })) {
+        foreach (var order in Orders.Values.Where(x => x is { IsCompleted: false, Type: Order.OrderType.NewIp })) {
             order.IsCompleted = true;
-            var ipAddress = await testApp.NewIpV4();
+            var ipAddress = BuildRandomIpAddress();
             if (!HostIps.TryAdd(ipAddress, new HostProviderIp {
                 IpAddress = ipAddress,
                 Description = order.Description,
@@ -45,10 +64,9 @@ public class TestHostProvider(string providerName) : IHostProvider
         }
 
         // mark all release orders as completed and remove them from the ips
-        foreach (var order in orders.Where(x => x is { IsCompleted: false, Type: Order.OrderType.ReleaseIp })) {
+        foreach (var order in Orders.Values.Where(x => x is { IsCompleted: false, Type: Order.OrderType.ReleaseIp })) {
             order.IsCompleted = true;
-            lock (HostIps)
-                HostIps.TryRemove(order.ReleaseIp!, out _);
+            HostIps.TryRemove(order.ReleaseIp!, out _);
         }
 
     }
@@ -56,13 +74,18 @@ public class TestHostProvider(string providerName) : IHostProvider
     public async Task<string?> GetServerIdFromIp(IPAddress serverIp, TimeSpan timeout)
     {
         await Task.Delay(0);
-        lock (HostIps)
-            return HostIps.FirstOrDefault(x => x.Value.IpAddress.Equals(serverIp)).Value.ServerId;
+
+        // return serverIp as its name if it is in 127.x.x.x range
+        if (serverIp.GetAddressBytes()[0] == 127)
+            return serverIp.ToString();
+
+        return HostIps.FirstOrDefault(x => x.Value.IpAddress.Equals(serverIp)).Value.ServerId;
     }
 
     public async Task<string> OrderNewIp(string serverId, string? description, TimeSpan timeout)
     {
         await Task.Delay(0);
+
         var order = new Order {
             Type = Order.OrderType.NewIp,
             Description = description,
@@ -70,8 +93,10 @@ public class TestHostProvider(string providerName) : IHostProvider
             IsCompleted = false
         };
 
-        lock (Orders)
-            Orders.Add(order);
+        Orders.TryAdd(order.OrderId, order);
+
+        if (providerSettings.AutoCompleteDelay != null)
+            _ = CompleteOrders(providerSettings.AutoCompleteDelay.Value);
 
         return order.OrderId;
     }
@@ -85,8 +110,10 @@ public class TestHostProvider(string providerName) : IHostProvider
             ReleaseIp = ipAddress
         };
 
-        lock (Orders)
-            Orders.Add(order);
+        Orders.TryAdd(order.OrderId, order);
+
+        if (providerSettings.AutoCompleteDelay != null)
+            _ = CompleteOrders(providerSettings.AutoCompleteDelay.Value);
     }
 
     public async Task<HostProviderIp> GetIp(IPAddress ipAddress, TimeSpan timeout)

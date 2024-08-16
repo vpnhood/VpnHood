@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Web;
 using GrayMint.Common.Utils;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.DtoConverters;
@@ -45,12 +46,11 @@ public class HostOrdersService(
         var provider = hostProviderFactory.Create(providerModel.ProviderName, providerModel.Settings);
 
         // Get the server IP by current IP
-        var serverIp = serverModel.GatewayIpV4 ?? serverModel.GatewayIpV6 ??
-            throw new InvalidOperationException("Server does not have any IP address.");
+        var serverIp = GetServerGatewayIp(serverModel);
 
         // order new ip
         var orderId = Guid.NewGuid();
-        var providerServerId = await provider.GetServerIdFromIp(IPAddress.Parse(serverIp), appOptions.Value.ServiceHttpTimeout)
+        var providerServerId = await provider.GetServerIdFromIp(serverIp, appOptions.Value.ServiceHttpTimeout)
             ?? throw new InvalidOperationException("Could not find the Server default gateway IP address in the provider.");
 
         var providerOrderId = await provider.OrderNewIp(providerServerId,
@@ -75,6 +75,20 @@ public class HostOrdersService(
 
         // return the order
         return hostOrderModel.ToDto();
+    }
+
+    private static IPAddress GetServerGatewayIp(ServerModel server)
+    {
+        // extract fakeIp from server host panel url query string using HttpUtility.ParseQueryString
+        if (server.HostPanelUrl?.Contains(FakeHostProvider.BaseProviderName) == true) {
+            var query = HttpUtility.ParseQueryString(new Uri(server.HostPanelUrl).Query);
+            var fakeIp = query["fakeIp"];
+            if (fakeIp != null)
+                return IPAddress.Parse(fakeIp);
+        }
+
+        return IPAddress.Parse(server.GatewayIpV4 ?? server.GatewayIpV6 ??
+            throw new InvalidOperationException("Server does not have any IP address."));
     }
 
     private static async Task MonitorOrder(IServiceScopeFactory serviceScopeFactory, Guid projectId, int count, TimeSpan delay)
@@ -122,6 +136,7 @@ public class HostOrdersService(
                 pendingOrder.Status = HostOrderStatus.Completed;
                 pendingOrder.CompletedTime = DateTime.UtcNow;
                 pendingOrder.NewIpOrderIpAddress = hostIp.IpAddress;
+                await vhRepo.SaveChangesAsync();
             }
             catch (Exception ex) {
                 logger.LogError(ex, "Error while adding ip to server. ProjectId: {ProjectId}, OrderId: {OrderId}",
@@ -144,6 +159,7 @@ public class HostOrdersService(
                 if (hostIp != null)
                     hostIp.IsDeleted = true;
 
+                await vhRepo.SaveChangesAsync();
             }
             catch (Exception ex) {
                 logger.LogError(ex, "Error while removing ip from server. ProjectId: {ProjectId}, OrderId: {OrderId}",
@@ -151,7 +167,6 @@ public class HostOrdersService(
             }
         }
 
-        await vhRepo.SaveChangesAsync();
         return pendingOrders.All(x => x.Status != HostOrderStatus.Pending);
     }
 

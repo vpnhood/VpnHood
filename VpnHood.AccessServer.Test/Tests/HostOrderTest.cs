@@ -39,7 +39,7 @@ public class HostOrderTest
         Assert.IsNull(hostOrder.NewIpOrderIpAddress);
 
         // finish order
-        await testHostProvider.CompleteOrders(farm.TestApp);
+        await testHostProvider.CompleteOrders();
 
         // wait for the order to complete
         await VhTestUtil.AssertEqualsWait(HostOrderStatus.Completed, async () => {
@@ -80,7 +80,7 @@ public class HostOrderTest
 
         // Order a new IP for the server
         var hostOrder = await farm.TestApp.HostOrdersClient.OrderNewIpAsync(farm.ProjectId, serverDom.ServerId);
-        await testHostProvider.CompleteOrders(farm.TestApp);
+        await testHostProvider.CompleteOrders();
 
         // make sure the order is completed
         await VhTestUtil.AssertEqualsWait(HostOrderStatus.Completed, async () => {
@@ -92,7 +92,7 @@ public class HostOrderTest
         Assert.IsNotNull(hostOrder.NewIpOrderIpAddress);
         hostOrder = await farm.TestApp.HostOrdersClient.OrderReleaseIpAsync(farm.ProjectId,
             hostOrder.NewIpOrderIpAddress, ignoreProviderError: false);
-        await testHostProvider.CompleteOrders(farm.TestApp);
+        await testHostProvider.CompleteOrders();
 
         // make sure the release order has been completed
         // make sure the order is completed
@@ -142,8 +142,8 @@ public class HostOrderTest
         }
 
         // complete orders
-        await testHostProvider1.CompleteOrders(testApp);
-        await testHostProvider2.CompleteOrders(testApp);
+        await testHostProvider1.CompleteOrders();
+        await testHostProvider2.CompleteOrders();
 
         // wait for the orders to complete
         foreach (var hostOrder in hostOrderS1.Concat(hostOrderS2)) {
@@ -181,8 +181,8 @@ public class HostOrderTest
         var removeOrder3 = await testApp.HostOrdersClient.OrderReleaseIpAsync(farm.ProjectId, hostIps[9].IpAddress);
 
         // complete orders
-        await testHostProvider1.CompleteOrders(testApp);
-        await testHostProvider2.CompleteOrders(testApp);
+        await testHostProvider1.CompleteOrders();
+        await testHostProvider2.CompleteOrders();
 
         await VhTestUtil.AssertEqualsWait(HostOrderStatus.Completed, async () => 
             (await testApp.HostOrdersClient.GetAsync(farm.ProjectId, removeOrder1.OrderId)).Status);

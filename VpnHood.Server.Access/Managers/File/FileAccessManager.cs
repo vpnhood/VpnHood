@@ -41,8 +41,7 @@ public class FileAccessManager : IAccessManager
 
         var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
         DefaultCert = System.IO.File.Exists(defaultCertFile)
-            ? new X509Certificate2(defaultCertFile, options.SslCertificatesPassword ?? string.Empty,
-                X509KeyStorageFlags.Exportable)
+            ? new X509Certificate2(defaultCertFile, options.SslCertificatesPassword ?? string.Empty, X509KeyStorageFlags.Exportable)
             : CreateSelfSignedCertificate(defaultCertFile, options.SslCertificatesPassword ?? string.Empty);
 
         ServerConfig.Certificates = [

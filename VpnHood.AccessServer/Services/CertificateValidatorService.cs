@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using GrayMint.Common.AspNetCore.Jobs;
+using GrayMint.Common.Utils;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence.Models;
@@ -17,12 +18,23 @@ public class CertificateValidatorService(
     IAcmeOrderFactory acmeOrderFactory)
     : IGrayMintJob
 {
-    public async Task ValidateJob(Guid projectId, Guid serverFarmId, bool force, CancellationToken cancellationToken)
+    public Task ValidateJob(Guid projectId, Guid serverFarmId, bool force, CancellationToken cancellationToken)
     {
+        return ValidateJob(serviceScopeFactory, projectId, serverFarmId, force, cancellationToken);
+    }
+
+    private static async Task ValidateJob(IServiceScopeFactory serviceScopeFactory, Guid projectId, Guid serverFarmId,
+        bool force, CancellationToken cancellationToken)
+    {
+        using var lockObject = await AsyncLock.LockAsync($"CertificateValidatorService_{projectId}_{serverFarmId}", TimeSpan.Zero, cancellationToken);
+        if (!lockObject.Succeeded)
+            return;
+
         await using var scope = serviceScopeFactory.CreateAsyncScope();
         var certificateService = scope.ServiceProvider.GetRequiredService<CertificateValidatorService>();
         await certificateService.Validate(projectId, serverFarmId, force, cancellationToken);
     }
+
 
     private async Task Validate(Guid projectId, Guid serverFarmId, bool force, CancellationToken cancellationToken)
     {
@@ -169,13 +181,12 @@ public class CertificateValidatorService(
             certificateValidatorOptions.Value.MaxRetry,
             certificateValidatorOptions.Value.Interval * 0.9);
 
-
         logger.LogInformation("Validating certificates... CertificateCount: {CertificateCount}", 
             certificates.Length);
 
         var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 10 };
         await Parallel.ForEachAsync(certificates, parallelOptions, async (certificate, ct) => {
-            await ValidateJob(certificate.ProjectId, certificate.ServerFarmId, true, ct);
+            await ValidateJob(serviceScopeFactory, certificate.ProjectId, certificate.ServerFarmId, true, ct);
         });
     }
 }

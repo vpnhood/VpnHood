@@ -15,7 +15,8 @@ public static class ProjectConverter
             AdRewardSecret = model.AdRewardSecret,
             AdRewardUrl = new Uri(agentUrl, $"api/projects/{model.ProjectId}/ad-rewards/{model.AdRewardSecret}"),
             SubscriptionType = model.SubscriptionType,
-            CreatedTime = model.CreatedTime
+            CreatedTime = model.CreatedTime,
+            HastHostProvider = model.HastHostProvider
         };
         return project;
     }

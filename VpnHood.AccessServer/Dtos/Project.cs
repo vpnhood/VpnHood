@@ -12,4 +12,5 @@ public class Project
     public required string? GaApiSecret { get; init; }
     public required string AdRewardSecret { get; init; }
     public required Uri AdRewardUrl { get; init; }
+    public required bool HastHostProvider { get; init; }
 }

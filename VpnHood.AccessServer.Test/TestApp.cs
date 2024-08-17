@@ -338,8 +338,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     {
         providerName ??= Guid.NewGuid() + "." + FakeHostProvider.BaseProviderName;
         settings ??= new FakeHostProvider.Settings() {
-            AutoCompleteDelay = null,
-            ProjectId = ProjectId
+            AutoCompleteDelay = null
         };
         var settingsJson = JsonSerializer.Serialize(settings);
 

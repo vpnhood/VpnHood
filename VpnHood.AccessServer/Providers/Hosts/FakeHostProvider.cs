@@ -13,8 +13,7 @@ public class FakeHostProvider(string providerName,
 
     public class Settings
     {
-        public Guid ProjectId { get; init; }
-        public TimeSpan? AutoCompleteDelay { get; init; }
+        public TimeSpan? AutoCompleteDelay { get; init; } = TimeSpan.FromSeconds(15);
     }
 
     public string ProviderName => providerName;

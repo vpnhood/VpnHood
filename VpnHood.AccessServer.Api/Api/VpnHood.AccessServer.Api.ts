@@ -6258,6 +6258,7 @@ export class Project implements IProject {
     gaApiSecret?: string | null;
     adRewardSecret!: string;
     adRewardUrl!: string;
+    hastHostProvider!: boolean;
 
     constructor(data?: IProject) {
         if (data) {
@@ -6278,6 +6279,7 @@ export class Project implements IProject {
             this.gaApiSecret = _data["gaApiSecret"] !== undefined ? _data["gaApiSecret"] : <any>null;
             this.adRewardSecret = _data["adRewardSecret"] !== undefined ? _data["adRewardSecret"] : <any>null;
             this.adRewardUrl = _data["adRewardUrl"] !== undefined ? _data["adRewardUrl"] : <any>null;
+            this.hastHostProvider = _data["hastHostProvider"] !== undefined ? _data["hastHostProvider"] : <any>null;
         }
     }
 
@@ -6298,6 +6300,7 @@ export class Project implements IProject {
         data["gaApiSecret"] = this.gaApiSecret !== undefined ? this.gaApiSecret : <any>null;
         data["adRewardSecret"] = this.adRewardSecret !== undefined ? this.adRewardSecret : <any>null;
         data["adRewardUrl"] = this.adRewardUrl !== undefined ? this.adRewardUrl : <any>null;
+        data["hastHostProvider"] = this.hastHostProvider !== undefined ? this.hastHostProvider : <any>null;
         return data;
     }
 }
@@ -6311,6 +6314,7 @@ export interface IProject {
     gaApiSecret?: string | null;
     adRewardSecret: string;
     adRewardUrl: string;
+    hastHostProvider: boolean;
 }
 
 export enum SubscriptionType {

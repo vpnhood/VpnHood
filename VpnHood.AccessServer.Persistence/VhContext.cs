@@ -90,6 +90,10 @@ public class VhContext : DbContext
                 .HasDefaultValue(true);
 
             entity
+                .Property(e => e.HastHostProvider)
+                .HasDefaultValue(false);
+
+            entity
                 .HasOne(e => e.LetsEncryptAccount)
                 .WithOne(d => d.Project)
                 .HasForeignKey<LetsEncryptAccount>(d => d.ProjectId)

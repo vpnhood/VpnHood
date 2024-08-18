@@ -3,6 +3,7 @@ using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
+using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos;
 
 namespace VpnHood.AccessServer.Services;
@@ -38,19 +39,18 @@ public class ServerConfigureService(
         await agentCacheClient.InvalidateServerFarm(serverFarmId: serverFarm.ServerFarmId, includeSevers: true);
     }
 
-    public async Task<ServerCache?> SaveChangesAndInvalidateServer(Guid projectId, Guid serverId, bool reconfigure)
+    public async Task<ServerCache?> SaveChangesAndInvalidateServer(Guid projectId, ServerModel server, bool reconfigure)
     {
         if (reconfigure) {
-            var server = await vhRepo.ServerGet(projectId, serverId);
             server.ConfigCode = Guid.NewGuid();
             await SaveChangesAndInvalidateServerFarm(projectId, server.ServerFarmId, false);
         }
         else {
             await vhRepo.SaveChangesAsync();
-            await agentCacheClient.InvalidateServers(projectId: projectId, serverId: serverId);
+            await agentCacheClient.InvalidateServers(projectId: projectId, serverId: server.ServerId);
         }
 
-        return await agentCacheClient.GetServer(serverId);
+        return await agentCacheClient.GetServer(server.ServerId);
     }
 
     public async Task WaitForFarmConfiguration(Guid projectId, Guid serverFarmId, CancellationToken cancellationToken)

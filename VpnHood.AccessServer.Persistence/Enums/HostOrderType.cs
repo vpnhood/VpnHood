@@ -6,5 +6,4 @@ namespace VpnHood.AccessServer.Persistence.Enums;
 public enum HostOrderType
 {
     NewIp = 1,
-    ReleaseIp = 2
 }

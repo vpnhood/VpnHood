@@ -20,7 +20,7 @@ public class HostOrderTest
         await serverDom.SetHostPanelDomain(testHostProvider.ProviderName);
 
         // Order a new IP for the server
-        var hostOrder = await farm.TestApp.HostOrdersClient.OrderNewIpAsync(farm.ProjectId, serverDom.ServerId);
+        var hostOrder = await farm.TestApp.HostOrdersClient.CreateNewIpOrderAsync(farm.ProjectId, serverDom.ServerId);
         Assert.AreEqual(hostOrder.Status, HostOrderStatus.Pending);
         Assert.AreEqual(hostOrder.OrderType, HostOrderType.NewIp);
         Assert.IsTrue(hostOrder.CreatedTime >= startTime);
@@ -77,7 +77,7 @@ public class HostOrderTest
         await serverDom.SetHostPanelDomain(testHostProvider.ProviderName);
 
         // Order a new IP for the server
-        var hostOrder = await farm.TestApp.HostOrdersClient.OrderNewIpAsync(farm.ProjectId, serverDom.ServerId);
+        var hostOrder = await farm.TestApp.HostOrdersClient.CreateNewIpOrderAsync(farm.ProjectId, serverDom.ServerId);
         await testHostProvider.CompleteOrders();
 
         // make sure the order is completed
@@ -88,20 +88,15 @@ public class HostOrderTest
 
         // release the ip
         Assert.IsNotNull(hostOrder.NewIpOrderIpAddress);
-        hostOrder = await farm.TestApp.HostOrdersClient.OrderReleaseIpAsync(farm.ProjectId,
+        await farm.TestApp.HostOrdersClient.ReleaseIpAsync(farm.ProjectId,
             hostOrder.NewIpOrderIpAddress, ignoreProviderError: false);
         await testHostProvider.CompleteOrders();
 
-        // make sure the release order has been completed
-        // make sure the order is completed
-        await VhTestUtil.AssertEqualsWait(HostOrderStatus.Completed, async () => {
-            hostOrder = await farm.TestApp.HostOrdersClient.GetAsync(farm.ProjectId, hostOrder.OrderId);
-            return hostOrder.Status;
-        });
-
         // the ip should not exist in list
-        var hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId);
-        Assert.IsFalse(hostIps.Any(x => x.IpAddress == hostOrder.NewIpOrderIpAddress));
+        await VhTestUtil.AssertEqualsWait(false, async () => {
+            var hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId);
+            return hostIps.Any(x=>x.IpAddress == hostOrder.NewIpOrderIpAddress);
+        });
 
         // the ip should not exist in server access points
         await serverDom.Reload();
@@ -133,8 +128,8 @@ public class HostOrderTest
         var hostOrderS1 = new List<HostOrder>();
         var hostOrderS2 = new List<HostOrder>();
         for (var i = 0; i < 5; i++) {
-            hostOrderS1.Add(await testApp.HostOrdersClient.OrderNewIpAsync(farm.ProjectId, serverDom1.ServerId));
-            hostOrderS2.Add(await testApp.HostOrdersClient.OrderNewIpAsync(farm.ProjectId, serverDom2.ServerId));
+            hostOrderS1.Add(await testApp.HostOrdersClient.CreateNewIpOrderAsync(farm.ProjectId, serverDom1.ServerId));
+            hostOrderS2.Add(await testApp.HostOrdersClient.CreateNewIpOrderAsync(farm.ProjectId, serverDom2.ServerId));
         }
 
         // complete orders
@@ -172,51 +167,60 @@ public class HostOrderTest
 
 
         // remove few ips
-        var removeOrder1 = await testApp.HostOrdersClient.OrderReleaseIpAsync(farm.ProjectId, hostIps[0].IpAddress);
-        var removeOrder2 = await testApp.HostOrdersClient.OrderReleaseIpAsync(farm.ProjectId, hostIps[1].IpAddress);
-        var removeOrder3 = await testApp.HostOrdersClient.OrderReleaseIpAsync(farm.ProjectId, hostIps[9].IpAddress);
+        var hostIp1 = hostIps[0];
+        var hostIp2 = hostIps[1];
+        var hostIp3 = hostIps[9];
+        await testApp.HostOrdersClient.ReleaseIpAsync(farm.ProjectId, hostIp1.IpAddress);
+        await testApp.HostOrdersClient.ReleaseIpAsync(farm.ProjectId, hostIp2.IpAddress);
+        await testApp.HostOrdersClient.ReleaseIpAsync(farm.ProjectId, hostIp3.IpAddress);
 
         // complete orders
         await testHostProvider1.CompleteOrders();
         await testHostProvider2.CompleteOrders();
 
-        await VhTestUtil.AssertEqualsWait(HostOrderStatus.Completed, async () => 
-            (await testApp.HostOrdersClient.GetAsync(farm.ProjectId, removeOrder1.OrderId)).Status);
-        await VhTestUtil.AssertEqualsWait(HostOrderStatus.Completed, async () =>
-            (await testApp.HostOrdersClient.GetAsync(farm.ProjectId, removeOrder2.OrderId)).Status);
-        await VhTestUtil.AssertEqualsWait(HostOrderStatus.Completed, async () =>
-            (await testApp.HostOrdersClient.GetAsync(farm.ProjectId, removeOrder3.OrderId)).Status);
-
-        
         // ips should be removed
+        await VhTestUtil.AssertEqualsWait(false, async () => {
+            hostIps = (await testApp.HostOrdersClient.ListIpsAsync(farm.ProjectId)).ToArray();
+            return hostIps.Any(x => x.IpAddress == hostIp1.IpAddress);
+        });
+
+        await VhTestUtil.AssertEqualsWait(false, async () => {
+            hostIps = (await testApp.HostOrdersClient.ListIpsAsync(farm.ProjectId)).ToArray();
+            return hostIps.Any(x => x.IpAddress == hostIp2.IpAddress);
+        });
+
+        await VhTestUtil.AssertEqualsWait(false, async () => {
+            hostIps = (await testApp.HostOrdersClient.ListIpsAsync(farm.ProjectId)).ToArray();
+            return hostIps.Any(x => x.IpAddress == hostIp3.IpAddress);
+        });
+
         hostIps = (await testApp.HostOrdersClient.ListIpsAsync(farm.ProjectId)).ToArray();
         Assert.AreEqual(7, hostIps.Length);
-        Assert.IsFalse(hostIps.Any(x => x.IpAddress == removeOrder1.NewIpOrderIpAddress));
-        Assert.IsFalse(hostIps.Any(x => x.IpAddress == removeOrder2.NewIpOrderIpAddress));
-        Assert.IsFalse(hostIps.Any(x => x.IpAddress == removeOrder3.NewIpOrderIpAddress));
+        Assert.IsFalse(hostIps.Any(x => x.IpAddress == hostIp2.IpAddress));
+        Assert.IsFalse(hostIps.Any(x => x.IpAddress == hostIp3.IpAddress));
 
         // the ips should not exist in server access points
         await serverDom1.Reload();
-        Assert.IsFalse(serverDom1.Server.AccessPoints.Any(x => x.IpAddress == removeOrder1.NewIpOrderIpAddress));
-        Assert.IsFalse(serverDom1.Server.AccessPoints.Any(x => x.IpAddress == removeOrder2.NewIpOrderIpAddress));
-        Assert.IsFalse(serverDom1.Server.AccessPoints.Any(x => x.IpAddress == removeOrder3.NewIpOrderIpAddress));
+        Assert.IsFalse(serverDom1.Server.AccessPoints.Any(x => x.IpAddress == hostIp1.IpAddress));
+        Assert.IsFalse(serverDom1.Server.AccessPoints.Any(x => x.IpAddress == hostIp2.IpAddress));
+        Assert.IsFalse(serverDom1.Server.AccessPoints.Any(x => x.IpAddress == hostIp3.IpAddress));
 
         await serverDom2.Reload();
-        Assert.IsFalse(serverDom2.Server.AccessPoints.Any(x => x.IpAddress == removeOrder1.NewIpOrderIpAddress));
-        Assert.IsFalse(serverDom2.Server.AccessPoints.Any(x => x.IpAddress == removeOrder2.NewIpOrderIpAddress));
-        Assert.IsFalse(serverDom2.Server.AccessPoints.Any(x => x.IpAddress == removeOrder3.NewIpOrderIpAddress));
+        Assert.IsFalse(serverDom2.Server.AccessPoints.Any(x => x.IpAddress == hostIp1.IpAddress));
+        Assert.IsFalse(serverDom2.Server.AccessPoints.Any(x => x.IpAddress == hostIp2.IpAddress));
+        Assert.IsFalse(serverDom2.Server.AccessPoints.Any(x => x.IpAddress == hostIp3.IpAddress));
 
 
         // the ips should not exist in server config
         await serverDom1.Configure();
-        Assert.IsFalse(serverDom1.ServerConfig.TcpEndPointsValue.Any(x => x.Address.ToString() == removeOrder1.NewIpOrderIpAddress));
-        Assert.IsFalse(serverDom1.ServerConfig.TcpEndPointsValue.Any(x => x.Address.ToString() == removeOrder2.NewIpOrderIpAddress));
-        Assert.IsFalse(serverDom1.ServerConfig.TcpEndPointsValue.Any(x => x.Address.ToString() == removeOrder3.NewIpOrderIpAddress));
+        Assert.IsFalse(serverDom1.ServerConfig.TcpEndPointsValue.Any(x => x.Address.ToString() == hostIp1.IpAddress));
+        Assert.IsFalse(serverDom1.ServerConfig.TcpEndPointsValue.Any(x => x.Address.ToString() == hostIp2.IpAddress));
+        Assert.IsFalse(serverDom1.ServerConfig.TcpEndPointsValue.Any(x => x.Address.ToString() == hostIp3.IpAddress));
 
         await serverDom2.Configure();
-        Assert.IsFalse(serverDom2.ServerConfig.TcpEndPointsValue.Any(x => x.Address.ToString() == removeOrder1.NewIpOrderIpAddress));
-        Assert.IsFalse(serverDom2.ServerConfig.TcpEndPointsValue.Any(x => x.Address.ToString() == removeOrder2.NewIpOrderIpAddress));
-        Assert.IsFalse(serverDom2.ServerConfig.TcpEndPointsValue.Any(x => x.Address.ToString() == removeOrder3.NewIpOrderIpAddress));
+        Assert.IsFalse(serverDom2.ServerConfig.TcpEndPointsValue.Any(x => x.Address.ToString() == hostIp1.IpAddress));
+        Assert.IsFalse(serverDom2.ServerConfig.TcpEndPointsValue.Any(x => x.Address.ToString() == hostIp2.IpAddress));
+        Assert.IsFalse(serverDom2.ServerConfig.TcpEndPointsValue.Any(x => x.Address.ToString() == hostIp3.IpAddress));
 
 
     }

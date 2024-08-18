@@ -16,7 +16,6 @@ public static class HostOrderConverter
             CompletedTime = model.CompletedTime,
             ProviderOrderId = model.ProviderOrderId,
             NewIpOrderIpAddress = model.NewIpOrderIpAddress,
-            ReleaseIpOrderIpAddress = model.ReleaseOrderIpAddress,
             NewIpOrderServer = model.NewIpOrderServer?.ToDto(null)
         };
 

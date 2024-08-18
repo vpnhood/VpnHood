@@ -118,7 +118,7 @@ public class ServerService(
         // reconfig current server if required
         var reconfigure = updateParams.AccessPoints != null || updateParams.AutoConfigure != null ||
                           updateParams.ServerFarmId != null;
-        var serverCache = await serverConfigureService.SaveChangesAndInvalidateServer(projectId, serverId, reconfigure);
+        var serverCache = await serverConfigureService.SaveChangesAndInvalidateServer(projectId, server, reconfigure);
 
         // get server again to resolve region and farm
         server = await vhRepo.ServerGet(projectId, serverId: serverId, includeFarm: true);
@@ -412,9 +412,11 @@ public class ServerService(
         return script;
     }
 
-    public Task<ServerCache?> Reconfigure(Guid projectId, Guid serverId)
+    public async Task<ServerCache?> Reconfigure(Guid projectId, Guid serverId)
     {
-        return serverConfigureService.SaveChangesAndInvalidateServer(projectId: projectId, serverId: serverId,
+        var server = await vhRepo.ServerGet(projectId, serverId);
+        var serverCache = await serverConfigureService.SaveChangesAndInvalidateServer(projectId: projectId, server: server,
             reconfigure: true);
+        return serverCache;
     }
 }

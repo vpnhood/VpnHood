@@ -10,7 +10,8 @@ public class HostIp
     public required IPAddress IpAddress { get; init; }
     public required string ProviderName { get; init; }
     public required DateTime CreatedTime { get; init; }
-    public required DateTime? ReleasedTime { get; init; }
+    public required DateTime? AutoReleaseTime { get; init; }
+    public required DateTime? ReleaseRequestTime { get; init; }
     public required Guid? ServerId { get; init; }
     public required bool ExistsInProvider { get; init; }
     public required string? ProviderDescription { get; init; }

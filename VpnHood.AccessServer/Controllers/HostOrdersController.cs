@@ -19,6 +19,20 @@ public class HostOrdersController(HostOrdersService hostOrdersService)
         return hostOrdersService.ListIps(projectId, search: search, recordIndex: recordIndex, recordCount: recordCount);
     }
 
+    [AuthorizeProjectPermission(Permissions.ProjectWrite)]
+    [HttpDelete("ips/{ipAddress}")]
+    public Task ReleaseIp(Guid projectId, string ipAddress, bool ignoreProviderError = false)
+    {
+        return hostOrdersService.ReleaseIp(projectId, IPAddress.Parse(ipAddress), ignoreProviderError);
+    }
+
+    [HttpPost("order-new-ip")]
+    [AuthorizeProjectPermission(Permissions.ProjectWrite)]
+    public Task<HostOrder> CreateNewIpOrder(Guid projectId, Guid serverId)
+    {
+        return hostOrdersService.CreateNewIpOrder(projectId, serverId);
+    }
+
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<HostOrder[]> List(Guid projectId, int recordIndex = 0, int recordCount = 200)
@@ -32,19 +46,4 @@ public class HostOrdersController(HostOrdersService hostOrdersService)
     {
         return hostOrdersService.Get(projectId, orderId);
     }
-
-    [HttpPost("order-new-ip")]
-    [AuthorizeProjectPermission(Permissions.ProjectWrite)]
-    public Task<HostOrder> OrderNewIp(Guid projectId, Guid serverId)
-    {
-        return hostOrdersService.OrderNewIp(projectId, serverId);
-    }
-
-    [AuthorizeProjectPermission(Permissions.ProjectWrite)]
-    [HttpDelete("order-release-ip")]
-    public Task<HostOrder> OrderReleaseIp(Guid projectId, string ipAddress, bool ignoreProviderError = false)
-    {
-        return hostOrdersService.OrderReleaseIp(projectId, IPAddress.Parse(ipAddress), ignoreProviderError);
-    }
-
 }

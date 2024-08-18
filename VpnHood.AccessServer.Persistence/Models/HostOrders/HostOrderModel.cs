@@ -21,8 +21,5 @@ public class HostOrderModel
     [JsonConverter(typeof(IPAddressConverter))]
     public IPAddress? NewIpOrderIpAddress { get; set; }
 
-    [JsonConverter(typeof(IPAddressConverter))]
-    public IPAddress? ReleaseOrderIpAddress { get; init; }
-
     public virtual ServerModel? NewIpOrderServer { get; set; }
 }

@@ -580,7 +580,7 @@ public class VhContext : DbContext
 
             entity
                 .HasIndex(e => new {e.ProjectId, e.CreatedTime})
-                .HasFilter($"{nameof(HostIpModel.IsDeleted)} = 0");
+                .HasFilter($"{nameof(HostIpModel.DeletedTime)} is null");
 
         });
 

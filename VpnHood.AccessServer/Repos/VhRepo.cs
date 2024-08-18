@@ -348,13 +348,13 @@ public class VhRepo(VhContext vhContext)
             .ToArrayAsync();
     }
 
-    public Task<ProviderModel> ProviderGet(Guid projectId, ProviderType providerType, string providerName)
+    public Task<ProviderModel?> ProviderGet(Guid projectId, ProviderType providerType, string providerName)
     {
         return vhContext.Providers
             .Where(x => x.ProjectId == projectId)
             .Where(x => x.ProviderType == providerType)
             .Where(x => x.ProviderName == providerName)
-            .SingleAsync();
+            .SingleOrDefaultAsync();
     }
 
     public Task<HostOrderModel[]> HostOrdersList(Guid projectId, HostOrderStatus? status = null, int recordIndex = 0,
@@ -380,7 +380,7 @@ public class VhRepo(VhContext vhContext)
     public Task<HostIpModel[]> HostIpList(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = int.MaxValue)
     {
         return vhContext.HostIps
-            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x => x.ProjectId == projectId && x.DeletedTime == null)
             .Where(x=> x.IpAddress.Equals(search) || search == null)
             .OrderBy(x=>x.HostIpId)
             .Skip(recordIndex)
@@ -391,7 +391,7 @@ public class VhRepo(VhContext vhContext)
     public Task<HostIpModel> HostIpGet(Guid projectId, IPAddress ipAddress)
     {
         return vhContext.HostIps
-            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x => x.ProjectId == projectId && x.DeletedTime == null)
             .Where(x => x.IpAddress == ipAddress)
             .SingleAsync();
     }

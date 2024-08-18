@@ -20,6 +20,4 @@ public class HostOrder
     public IPAddress? NewIpOrderIpAddress { get; set; }
     public VpnServer? NewIpOrderServer { get; set; }
     
-    [JsonConverter(typeof(IPAddressConverter))]
-    public IPAddress? ReleaseIpOrderIpAddress { get; set; }
 }

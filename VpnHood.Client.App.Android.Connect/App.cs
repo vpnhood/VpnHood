@@ -3,6 +3,7 @@ using Android.Runtime;
 using Firebase.Analytics;
 using Firebase.Crashlytics;
 using VpnHood.Client.App.Droid.Ads.VhAdMob;
+using VpnHood.Client.App.Droid.Ads.VhInMobi;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Client.App.Resources;
@@ -80,10 +81,16 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     private static AppAdService[] CreateAppAdServices(AppSettings appSettings)
     {
         return [
-            new AppAdService {
+            /*new AppAdService {
                 AdProvider = AdMobInterstitialAdProvider.Create(appSettings.AdMobInterstitialAdUnitId),
                 ExcludeCountryCodes = ["IR", "CN"],
                 ServiceName = "AdMob",
+            },*/
+            
+            new AppAdService {
+                AdProvider = InMobiAdProvider.Create(appSettings.InmobiAccountId, appSettings.InmobiPlacementId, appSettings.InmobiIsDebugMode),
+                ExcludeCountryCodes = [],
+                ServiceName = "Inmobi",
             },
 
             //new AppAdService {

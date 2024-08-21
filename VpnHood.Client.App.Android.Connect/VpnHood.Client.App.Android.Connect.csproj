@@ -7,7 +7,7 @@
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
 		<ApplicationVersion>542</ApplicationVersion>
 		<ApplicationDisplayVersion>4.6.542</ApplicationDisplayVersion>
-		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -67,6 +67,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="VpnHood.Client.App.Android.Ads.InMobi" Version="4.5.556" />
 		<PackageReference Include="Xamarin.Firebase.Analytics" Version="121.5.1" />
 		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="119.0.3" />
 	</ItemGroup>

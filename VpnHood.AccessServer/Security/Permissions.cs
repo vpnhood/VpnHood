@@ -2,6 +2,7 @@
 
 public static class Permissions
 {
+    public const string ProjectDelete = nameof(ProjectDelete);
     public const string ProjectRead = nameof(ProjectRead);
     public const string ProjectWrite = nameof(ProjectWrite);
     public const string ProjectList = nameof(ProjectList);

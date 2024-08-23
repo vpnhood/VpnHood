@@ -27,10 +27,10 @@
 
 	<ItemGroup>
 		<PackageReference Include="GrayMint.Authorization.Authentications" Version="3.0.113" />
-		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.206" />
-		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.206" />
+		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.208" />
+		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.208" />
 		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
-		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.11" />
+		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.12" />
 		<PackageReference Include="VpnHood.Common" Version="4.6.553" />
 		<PackageReference Include="VpnHood.Server.Access" Version="4.6.553" />
 	</ItemGroup>

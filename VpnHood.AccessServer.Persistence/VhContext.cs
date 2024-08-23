@@ -82,14 +82,6 @@ public class VhContext : DbContext
                 .HasMaxLength(200);
 
             entity
-                .Property(e => e.IsDeleted)
-                .HasDefaultValue(false);
-
-            entity
-                .Property(e => e.IsEnabled)
-                .HasDefaultValue(true);
-
-            entity
                 .Property(e => e.HastHostProvider)
                 .HasDefaultValue(false);
 
@@ -581,6 +573,11 @@ public class VhContext : DbContext
             entity
                 .HasIndex(e => new {e.ProjectId, e.CreatedTime})
                 .HasFilter($"{nameof(HostIpModel.DeletedTime)} is null");
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.CreatedTime })
+                .HasFilter($"{nameof(HostIpModel.DeletedTime)} is null and {nameof(HostIpModel.AutoReleaseTime)} is not null");
+
 
         });
 

@@ -1,12 +1,14 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
+using GrayMint.Common.Utils;
 using VpnHood.AccessServer.Abstractions.Providers.Hosts;
 using VpnHood.Common.Net;
 
 namespace VpnHood.AccessServer.Providers.Hosts;
 
 public class FakeHostProvider(string providerName,
-    FakeHostProvider.Settings providerSettings)
+    FakeHostProvider.Settings providerSettings,
+    ILogger<FakeHostProvider> logger)
     : IHostProvider
 {
     public static string BaseProviderName => "fake.internal";
@@ -36,18 +38,21 @@ public class FakeHostProvider(string providerName,
         public IPAddress? ReleaseIp { get; set; }
     }
 
-    private IPAddress BuildRandomIpAddress()
+    private static IPAddress BuildRandomIpAddress()
     {
-        return new IPAddress(new byte[] {
-            (byte) new Random().Next(128, 255),
-            (byte) new Random().Next(0, 255),
-            (byte) new Random().Next(0, 255),
-            (byte) new Random().Next(1, 255)
-        });
+        return new IPAddress([
+            (byte)new Random().Next(128, 255),
+            (byte)new Random().Next(0, 255),
+            (byte)new Random().Next(0, 255),
+            (byte)new Random().Next(1, 255)
+        ]);
     }
 
+    private readonly AsyncLock _completeOrdersLock = new();
     public async Task CompleteOrders(TimeSpan? delay = null)
     {
+        using var asyncLock = await _completeOrdersLock.LockAsync();
+
         delay ??= TimeSpan.Zero;
         await Task.Delay(delay.Value);
 
@@ -55,18 +60,22 @@ public class FakeHostProvider(string providerName,
         foreach (var order in Orders.Values.Where(x => x is { IsCompleted: false, Type: Order.OrderType.NewIp })) {
             order.IsCompleted = true;
             var ipAddress = BuildRandomIpAddress();
-            if (!HostIps.TryAdd(ipAddress, new HostProviderIp {
+            if (HostIps.TryAdd(ipAddress, new HostProviderIp {
                 IpAddress = ipAddress,
                 Description = order.Description,
                 ServerId = order.ServerId
-            }))
+            })) {
+                logger.LogInformation("FakeProvider allocate an IP. Ip: {Ip}", ipAddress);
+            }
+            else
                 throw new Exception("Ip already exists.");
         }
 
         // mark all release orders as completed and remove them from the ips
         foreach (var order in Orders.Values.Where(x => x is { IsCompleted: false, Type: Order.OrderType.ReleaseIp })) {
             order.IsCompleted = true;
-            HostIps.TryRemove(order.ReleaseIp!, out _);
+            if (HostIps.TryRemove(order.ReleaseIp!, out _))
+                logger.LogInformation("FakeProvider released an IP. Ip: {Ip}", order.ReleaseIp);
         }
 
     }

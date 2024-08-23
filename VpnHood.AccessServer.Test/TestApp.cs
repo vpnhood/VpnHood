@@ -5,6 +5,7 @@ using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.RoleManagement.RoleProviders.Dtos;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,6 +13,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Providers.Acme;
 using VpnHood.AccessServer.Providers.Hosts;
@@ -24,6 +26,7 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Messaging;
+using AccessPointMode = VpnHood.AccessServer.Api.AccessPointMode;
 using ApiKey = VpnHood.AccessServer.Api.ApiKey;
 using ClientInfo = VpnHood.Common.Messaging.ClientInfo;
 using HttpAccessManagerOptions = VpnHood.Server.Access.Managers.Http.HttpAccessManagerOptions;
@@ -149,12 +152,17 @@ public class TestApp : IHttpClientFactory, IDisposable
     }
 
     public static async Task<TestApp> Create(Dictionary<string, string?>? appSettings = null,
-        string environment = "Development")
+        string environment = "Development", bool aggressiveJob = false, bool deleteOthers = false)
     {
         appSettings ??= new Dictionary<string, string?>();
         appSettings[$"App:{nameof(AppOptions.HostOrderMonitorCount)}"] = "1000";
         appSettings[$"App:{nameof(AppOptions.HostOrderMonitorInterval)}"] = "00:00:00.500";
+        if (aggressiveJob)
+            appSettings[$"App:{nameof(AppOptions.AutoMaintenanceInterval)}"] = "00:00:00.500";
+
         var ret = new TestApp(appSettings, environment);
+        if (deleteOthers)
+            await ret.DeleteAllOtherProject();
         await ret.Init();
         return ret;
     }
@@ -334,25 +342,42 @@ public class TestApp : IHttpClientFactory, IDisposable
             : WebApp.CreateClient();
     }
 
-    public async Task<FakeHostProvider> AddTestHostProvider(string? providerName = null, FakeHostProvider.Settings? settings = null)
+    public Task<FakeHostProvider> AddTestHostProvider(TimeSpan? autoCompleteDelay = null)
     {
-        providerName ??= Guid.NewGuid() + "." + FakeHostProvider.BaseProviderName;
-        settings ??= new FakeHostProvider.Settings() {
-            AutoCompleteDelay = null
+        var settings = new FakeHostProvider.Settings() {
+            AutoCompleteDelay = autoCompleteDelay
         };
+
+        return AddTestHostProvider(settings: settings);
+    }
+
+    public async Task<FakeHostProvider> AddTestHostProvider(FakeHostProvider.Settings settings)
+    {
+        var providerName = Guid.NewGuid() + "." + FakeHostProvider.BaseProviderName;
         var settingsJson = JsonSerializer.Serialize(settings);
 
         await VhRepo.AddAsync(new ProviderModel {
             ProjectId = ProjectId,
             ProviderName = providerName,
+            ProviderType = ProviderType.HostProvider,
             Settings = settingsJson,
             ProviderModelId = Guid.NewGuid()
         });
 
         await VhRepo.SaveChangesAsync();
 
-        var hostProviderFactory = Scope.ServiceProvider.GetRequiredService<IHostProviderFactory>();
-        return (FakeHostProvider)hostProviderFactory.Create(providerName, settingsJson);
+        var hostProviderFactory1 = Scope.ServiceProvider.GetRequiredService<IHostProviderFactory>();
+        var hostProviderFactory2 = WebApp.Services.GetRequiredService<IHostProviderFactory>();
+        if (hostProviderFactory1 != hostProviderFactory2)
+            throw new InvalidOperationException("HostProviderFactory should be singleton.");
+        return (FakeHostProvider)hostProviderFactory1.Create(providerName, settingsJson);
+    }
+
+    private Task DeleteAllOtherProject()
+    {
+        // delete all projects
+        return VhContext.Projects
+            .ExecuteUpdateAsync(e => e.SetProperty(x => x.DeletedTime, DateTime.UtcNow));
     }
 
     public void Dispose()

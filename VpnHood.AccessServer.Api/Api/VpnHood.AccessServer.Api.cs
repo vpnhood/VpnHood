@@ -2071,13 +2071,13 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<HostOrder> CreateNewIpOrderAsync(System.Guid projectId, System.Guid serverId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<HostOrder> CreateNewIpOrderAsync(System.Guid projectId, HostOrderNewIp hostOrderNewIp, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
 
-            if (serverId == null)
-                throw new System.ArgumentNullException("serverId");
+            if (hostOrderNewIp == null)
+                throw new System.ArgumentNullException("hostOrderNewIp");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -2085,7 +2085,10 @@ namespace VpnHood.AccessServer.Api
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    request_.Content = new System.Net.Http.StringContent(string.Empty, System.Text.Encoding.UTF8, "application/json");
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(hostOrderNewIp, JsonSerializerSettings);
+                    var content_ = new System.Net.Http.ByteArrayContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
                     request_.Method = new System.Net.Http.HttpMethod("POST");
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
@@ -2095,9 +2098,6 @@ namespace VpnHood.AccessServer.Api
                     urlBuilder_.Append("api/v1/projects/");
                     urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
                     urlBuilder_.Append("/host-orders/order-new-ip");
-                    urlBuilder_.Append('?');
-                    urlBuilder_.Append(System.Uri.EscapeDataString("serverId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(serverId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
-                    urlBuilder_.Length--;
 
                     await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);
 
@@ -8994,6 +8994,22 @@ namespace VpnHood.AccessServer.Api
 
         [System.Runtime.Serialization.EnumMember(Value = @"PublicInToken")]
         PublicInToken = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class HostOrderNewIp
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid ServerId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("oldIpAddressReleaseTime")]
+        public System.DateTime? OldIpAddressReleaseTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("oldIpAddress")]
+        public string? OldIpAddress { get; set; } = default!;
 
     }
 

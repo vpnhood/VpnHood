@@ -20,6 +20,8 @@ public class HostOrderModel
     
     [JsonConverter(typeof(IPAddressConverter))]
     public IPAddress? NewIpOrderIpAddress { get; set; }
+    public DateTime? NewIpOrderOldIpAddressReleaseTime { get; set; }
 
     public virtual ServerModel? NewIpOrderServer { get; set; }
+    public virtual ProjectModel? Project { get; set; }
 }

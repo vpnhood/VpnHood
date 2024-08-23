@@ -388,7 +388,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         bool includeServersAndAccessPoints, bool includeCertificates, bool includeServerProfile = true)
     {
         var query = vhContext.ServerFarms
-            .Where(farm => !farm.Project!.IsDeleted)
+            .Where(farm => farm.Project!.DeletedTime == null)
             .Where(farm => farm.ServerFarmId == serverFarmId);
 
         if (includeServerProfile)

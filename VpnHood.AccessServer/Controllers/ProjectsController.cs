@@ -39,6 +39,14 @@ public class ProjectsController(
         return projectService.Update(projectId, updateParams);
     }
 
+    [HttpDelete("{projectId:guid}")]
+    [AuthorizeProjectPermission(Permissions.ProjectDelete)]
+    public Task Delete(Guid projectId)
+    {
+        return projectService.Delete(projectId);
+    }
+
+
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectList)]
     public Task<Project[]> List(string? search = null, int recordIndex = 0, int recordCount = 101)

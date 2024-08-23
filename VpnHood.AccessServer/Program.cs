@@ -29,7 +29,7 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         try {
             // logger
-            builder.Logging.AddSimpleConsole(c => { c.TimestampFormat = "[HH:mm:ss] "; });
+            builder.Logging.AddSimpleConsole(c => { c.TimestampFormat = "[HH:mm:ss.fff] "; });
 
             // NLog: Setup NLog for Dependency injection
             if (Environment.OSVersion.Platform == PlatformID.Unix) {
@@ -87,6 +87,11 @@ public class Program
                         Interval = appOptions.AutoMaintenanceInterval
                     })
                 .AddGrayMintJob<SyncService>(
+                    new GrayMintJobOptions {
+                        DueTime = appOptions.AutoMaintenanceInterval,
+                        Interval = appOptions.AutoMaintenanceInterval
+                    })
+                .AddGrayMintJob<HostOrdersService>(
                     new GrayMintJobOptions {
                         DueTime = appOptions.AutoMaintenanceInterval,
                         Interval = appOptions.AutoMaintenanceInterval

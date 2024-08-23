@@ -28,9 +28,9 @@ public class HostOrdersController(HostOrdersService hostOrdersService)
 
     [HttpPost("order-new-ip")]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
-    public Task<HostOrder> CreateNewIpOrder(Guid projectId, Guid serverId)
+    public Task<HostOrder> CreateNewIpOrder(Guid projectId, HostOrderNewIp hostOrderNewIp)
     {
-        return hostOrdersService.CreateNewIpOrder(projectId, serverId);
+        return hostOrdersService.CreateNewIpOrder(projectId, hostOrderNewIp);
     }
 
     [HttpGet]

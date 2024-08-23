@@ -2,5 +2,5 @@
 
 public enum ProviderType
 {
-    HostOrder = 0,
+    HostProvider = 1,
 }

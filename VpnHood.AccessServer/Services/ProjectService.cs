@@ -70,7 +70,7 @@ public class ProjectService(
             GaMeasurementId = null,
             AdRewardSecret = adRewardSecret,
             LetsEncryptAccount = null,
-            IsDeleted = false,
+            DeletedTime = null,
             IsEnabled = true,
             HastHostProvider = false,
             ServerProfiles = new HashSet<ServerProfileModel> {
@@ -185,5 +185,13 @@ public class ProjectService(
             .ToArrayAsync();
 
         return projects.Select(project => project.ToDto(appOptions.Value.AgentUrl));
+    }
+
+    public async Task Delete(Guid projectId)
+    {
+        var project = await vhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
+        project.DeletedTime = DateTime.UtcNow;
+        await vhContext.SaveChangesAsync();
+        await agentCacheClient.InvalidateProject(projectId);
     }
 }

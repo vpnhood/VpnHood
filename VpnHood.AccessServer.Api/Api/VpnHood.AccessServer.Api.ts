@@ -1089,21 +1089,21 @@ export class HostOrdersClient {
         return Promise.resolve<void>(null as any);
     }
 
-    createNewIpOrder(projectId: string, serverId: string, cancelToken?: CancelToken): Promise<HostOrder> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/order-new-ip?";
+    createNewIpOrder(projectId: string, hostOrderNewIp: HostOrderNewIp, cancelToken?: CancelToken): Promise<HostOrder> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/order-new-ip";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (serverId === undefined || serverId === null)
-            throw new Error("The parameter 'serverId' must be defined and cannot be null.");
-        else
-            url_ += "serverId=" + encodeURIComponent("" + serverId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
+        const content_ = JSON.stringify(hostOrderNewIp);
+
         let options_: AxiosRequestConfig = {
+            data: content_,
             method: "POST",
             url: url_,
             headers: {
+                "Content-Type": "application/json",
                 "Accept": "application/json"
             },
             cancelToken
@@ -6113,6 +6113,50 @@ export enum AccessPointMode {
     Private = "Private",
     Public = "Public",
     PublicInToken = "PublicInToken",
+}
+
+export class HostOrderNewIp implements IHostOrderNewIp {
+    serverId!: string;
+    oldIpAddressReleaseTime?: Date | null;
+    oldIpAddress?: string | null;
+
+    constructor(data?: IHostOrderNewIp) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.serverId = _data["serverId"] !== undefined ? _data["serverId"] : <any>null;
+            this.oldIpAddressReleaseTime = _data["oldIpAddressReleaseTime"] ? new Date(_data["oldIpAddressReleaseTime"].toString()) : <any>null;
+            this.oldIpAddress = _data["oldIpAddress"] !== undefined ? _data["oldIpAddress"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): HostOrderNewIp {
+        data = typeof data === 'object' ? data : {};
+        let result = new HostOrderNewIp();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["serverId"] = this.serverId !== undefined ? this.serverId : <any>null;
+        data["oldIpAddressReleaseTime"] = this.oldIpAddressReleaseTime ? this.oldIpAddressReleaseTime.toISOString() : <any>null;
+        data["oldIpAddress"] = this.oldIpAddress !== undefined ? this.oldIpAddress : <any>null;
+        return data;
+    }
+}
+
+export interface IHostOrderNewIp {
+    serverId: string;
+    oldIpAddressReleaseTime?: Date | null;
+    oldIpAddress?: string | null;
 }
 
 export class IpLock implements IIpLock {

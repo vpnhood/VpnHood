@@ -396,7 +396,7 @@ public class AccessTokenTest
         var accessTokenDom3 = await farm.CreateAccessToken();
 
         await farm.TestApp.AccessTokensClient.DeleteManyAsync(farm.ProjectId,
-            new[] { accessTokenDom1.AccessTokenId, accessTokenDom2.AccessTokenId });
+            [accessTokenDom1.AccessTokenId, accessTokenDom2.AccessTokenId]);
 
         var tokens2 = await farm.TestApp.AccessTokensClient.ListAsync(farm.ProjectId);
         Assert.AreEqual(tokens1.Items.Count + 1, tokens2.Items.Count);

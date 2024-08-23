@@ -197,7 +197,7 @@ public class AgentServerTest
         using var farm = await ServerFarmDom.Create();
         await farm.DefaultServer.Update(new ServerUpdateParams {
             AutoConfigure = new PatchOfBoolean { Value = false },
-            AccessPoints = new PatchOfAccessPointOf { Value = new[] { farm.TestApp.NewAccessPoint(udpPort: -1) } }
+            AccessPoints = new PatchOfAccessPointOf { Value = [farm.TestApp.NewAccessPoint(udpPort: -1)] }
         });
 
         // Configure
@@ -416,7 +416,7 @@ public class AgentServerTest
         var oldCode = serverDom.ServerStatus.ConfigCode;
         var accessPoint = testApp.NewAccessPoint();
         await serverDom.Update(new ServerUpdateParams {
-            AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint } }
+            AccessPoints = new PatchOfAccessPointOf { Value = [accessPoint] }
         });
 
         var serverCommand = await serverDom.SendStatus();
@@ -429,7 +429,7 @@ public class AgentServerTest
         oldCode = serverCommand.ConfigCode;
         accessPoint = testApp.NewAccessPoint();
         await serverDom.Update(new ServerUpdateParams {
-            AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint } }
+            AccessPoints = new PatchOfAccessPointOf { Value = [accessPoint] }
         });
         serverCommand = await serverDom.SendStatus();
         Assert.AreNotEqual(oldCode, serverCommand.ConfigCode,
@@ -479,7 +479,7 @@ public class AgentServerTest
         // check Reconfig After Config finish
         //-----------
         await serverDom.Update(new ServerUpdateParams {
-            AccessPoints = new PatchOfAccessPointOf { Value = new[] { testApp.NewAccessPoint() } }
+            AccessPoints = new PatchOfAccessPointOf { Value = [testApp.NewAccessPoint()] }
         });
         await serverDom.Reload();
         Assert.AreEqual(ServerState.Configuring, serverDom.Server.ServerState);

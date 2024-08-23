@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AccessServer.HostProvider.Ovh.Dto;
+﻿namespace VpnHood.AccessServer.HostProviders.Ovh.Dto;
 
 internal class RequestBodyForCreateCart
 {

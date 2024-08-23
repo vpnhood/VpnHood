@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AccessServer.HostProvider.Ovh.Dto;
+﻿namespace VpnHood.AccessServer.HostProviders.Ovh.Dto;
 
 internal class IpData
 {
@@ -11,9 +11,4 @@ internal class IpData
     public required string Type { get; set; }
     public string? Country { get; set; }
     public required RoutedTo RoutedTo { get; set; }
-}
-
-public class RoutedTo
-{
-    public required string ServiceName { get; set; }
 }

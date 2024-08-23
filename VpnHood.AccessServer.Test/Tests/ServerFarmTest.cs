@@ -34,7 +34,7 @@ public class ServerFarmTest
         var publicIp2 = testApp.NewIpV4();
         await serverDom.Update(new ServerUpdateParams {
             AccessPoints = new PatchOfAccessPointOf {
-                Value = new[] {
+                Value = [
                     new AccessPoint {
                         AccessPointMode = AccessPointMode.PublicInToken,
                         IpAddress = publicIp1.ToString(),
@@ -49,7 +49,7 @@ public class ServerFarmTest
                         IsListen = true,
                         UdpPort = 443
                     }
-                }
+                ]
             }
         });
 

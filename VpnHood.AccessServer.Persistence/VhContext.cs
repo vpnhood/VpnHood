@@ -577,8 +577,6 @@ public class VhContext : DbContext
             entity
                 .HasIndex(e => new { e.ProjectId, e.CreatedTime })
                 .HasFilter($"{nameof(HostIpModel.DeletedTime)} is null and {nameof(HostIpModel.AutoReleaseTime)} is not null");
-
-
         });
 
         modelBuilder.Entity<HostOrderModel>(entity => {

@@ -46,7 +46,7 @@ public partial class VhReportContext(DbContextOptions<VhReportContext> options) 
                 .IsBuiltIn()
                 .HasTranslation(parameters =>
                     new SqlFunctionExpression("EXTRACT", parameters.Prepend(new SqlFragmentExpression("MINUTE FROM")),
-                        true, new[] { false, true, true }, typeof(int), null));
+                        true, [false, true, true], typeof(int), null));
 
             entity
                 .ToTable(nameof(ServerStatuses))

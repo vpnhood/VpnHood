@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Ovh.Api;
 using VpnHood.AccessServer.Abstractions.Providers.Hosts;
-using VpnHood.AccessServer.HostProvider.Ovh.Dto;
+using VpnHood.AccessServer.HostProviders.Ovh.Dto;
 
 namespace VpnHood.AccessServer.HostProviders.Ovh;
 

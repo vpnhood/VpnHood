@@ -250,7 +250,7 @@ public class ServerTest
 
         // add another server
         var server2Dom = await farm.AddNewServer(new ServerCreateParams {
-            AccessPoints = new[] { farm.TestApp.NewAccessPoint() }
+            AccessPoints = [farm.TestApp.NewAccessPoint()]
         });
         var server2TokenIp =
             server2Dom.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.PublicInToken);
@@ -277,7 +277,7 @@ public class ServerTest
 
         // create server
         var serverDom = await farm.AddNewServer(new ServerCreateParams {
-            AccessPoints = new[] { accessPoint1, accessPoint2 }
+            AccessPoints = [accessPoint1, accessPoint2]
         });
 
         //-----------
@@ -310,7 +310,7 @@ public class ServerTest
         var oldConfig = (await serverDom.SendStatus(serverDom.ServerInfo.Status)).ConfigCode;
         var accessPoint3 = testApp.NewAccessPoint();
         await serverDom.Update(new ServerUpdateParams {
-            AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint3 } }
+            AccessPoints = new PatchOfAccessPointOf { Value = [accessPoint3] }
         });
         var newConfig = (await serverDom.SendStatus(serverDom.ServerInfo.Status)).ConfigCode;
         Assert.AreNotEqual(oldConfig, newConfig);

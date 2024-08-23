@@ -17,7 +17,7 @@ public static class AccessServerUtil
     public static async Task<string> ExecuteSshCommand(SshClient sshClient,
         string command, string? loginPassword, TimeSpan timeout)
     {
-        command += ";echo 'CommandExecuted''!'"; // use ''!' to avoid matching with any other text
+        command += ";echo 'CommandExecuted''!'"; // use '!' to avoid matching with any other text
         await using var shellStream = sshClient.CreateShellStream("ShellStreamCommand", 0, 0, 0, 0, 2048);
         shellStream.WriteLine(command);
         await shellStream.FlushAsync();

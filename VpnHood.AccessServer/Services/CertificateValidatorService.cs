@@ -145,7 +145,7 @@ public class CertificateValidatorService(
         var subject = certificate.Subject;
 
         // Split the subject into its components
-        var components = subject.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+        var components = subject.Split([','], StringSplitOptions.RemoveEmptyEntries)
             .Select(part => part.Trim())
             .Select(part => part.Split(['='], 2))
             .Where(part => part.Length == 2)

@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Threading;
 
 namespace VpnHood.AccessServer.Abstractions.Providers.Hosts;
 

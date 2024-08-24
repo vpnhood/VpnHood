@@ -12,12 +12,14 @@ public class HostOrder
     public required DateTime CreatedTime { get; init; }
     public required HostOrderType OrderType { get; init; }
     public required HostOrderStatus Status { get; init; }
-    public string? ErrorMessage { get; set; }
-    public DateTime? CompletedTime { get; set; }
-    public required string? ProviderOrderId { get; init; }
+    public required string ProviderOrderId { get; init; }
+    public required string ProviderId { get; init; }
+    public required string ProviderName { get; init; }
+    public required string? ErrorMessage { get; set; }
+    public required DateTime? CompletedTime { get; set; }
     
     [JsonConverter(typeof(IPAddressConverter))]
-    public IPAddress? NewIpOrderIpAddress { get; set; }
-    public VpnServer? NewIpOrderServer { get; set; }
+    public required IPAddress? NewIpOrderIpAddress { get; set; }
+    public required VpnServer? NewIpOrderServer { get; set; }
     
 }

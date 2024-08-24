@@ -361,7 +361,7 @@ public class TestApp : IHttpClientFactory, IDisposable
             ProviderName = providerName,
             ProviderType = ProviderType.HostProvider,
             Settings = settingsJson,
-            ProviderModelId = Guid.NewGuid()
+            ProviderId = Guid.NewGuid()
         });
 
         await VhRepo.SaveChangesAsync();

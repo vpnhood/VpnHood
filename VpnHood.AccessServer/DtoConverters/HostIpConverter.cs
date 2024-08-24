@@ -8,10 +8,13 @@ public static class HostIpConverter
 {
     public static HostIp ToDto(this HostIpModel model, ServerModel? serverModel)
     {
+        ArgumentNullException.ThrowIfNull(model.Provider);
+
         var hostIp = new HostIp {
             IpAddress = model.IpAddress,
             CreatedTime = model.CreatedTime,
-            ProviderName = model.ProviderName,
+            ProviderId = model.ProviderId.ToString(),
+            ProviderName = model.Provider.ProviderName,
             ExistsInProvider = model.ExistsInProvider,
             ProviderDescription = model.Description,
             AutoReleaseTime = model.AutoReleaseTime,

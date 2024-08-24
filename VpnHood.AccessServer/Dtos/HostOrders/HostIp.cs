@@ -8,6 +8,7 @@ public class HostIp
 {
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress IpAddress { get; init; }
+    public required string ProviderId { get; init; }
     public required string ProviderName { get; init; }
     public required DateTime CreatedTime { get; init; }
     public required DateTime? AutoReleaseTime { get; init; }

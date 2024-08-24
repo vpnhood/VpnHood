@@ -44,7 +44,7 @@ public class HostOrdersService(
         // Get the server and provider
         var serverModel = await vhRepo.ServerGet(projectId: projectId, serverId: hostOrderNewIp.ServerId);
         var hostProviderName = GetHostProviderName(serverModel);
-        var providerModel = await vhRepo.ProviderGet(projectId, providerType: ProviderType.HostProvider, providerName: hostProviderName);
+        var providerModel = await vhRepo.ProviderGetByName(projectId, providerType: ProviderType.HostProvider, providerName: hostProviderName);
         if (providerModel == null)
             throw new NotExistsException($"Could not find any host provider for this server. Provider: {hostProviderName}");
 
@@ -75,9 +75,12 @@ public class HostOrdersService(
             ProjectId = projectId,
             Status = HostOrderStatus.Pending,
             CreatedTime = DateTime.UtcNow,
-            ProviderName = providerModel.ProviderName,
+            ProviderId = providerModel.ProviderId,
+            Provider = providerModel,
             ProviderOrderId = providerOrderId,
             OrderType = HostOrderType.NewIp,
+            ErrorMessage = null,
+            CompletedTime = null,
             NewIpOrderServerId = hostOrderNewIp.ServerId,
             NewIpOrderOldIpAddressReleaseTime = hostOrderNewIp.OldIpAddressReleaseTime
         };
@@ -305,14 +308,19 @@ public class HostOrdersService(
         // create all host providers of the project
         var providerModels = await vhRepo.ProviderList(projectId, providerType: ProviderType.HostProvider);
         var hostProviders = providerModels.Select(x =>
-            new { x.ProviderName, Provider = hostProviderFactory.Create(x.ProviderName, x.Settings) })
+            new {
+                x.ProviderId,
+                x.ProviderName,
+                Provider = hostProviderFactory.Create(x.ProviderName, x.Settings)
+            })
             .ToArray();
 
         // list all ips from provider
         var providerIpInfosTasks = hostProviders.Select(
             x => new {
-                x.Provider,
+                x.ProviderId,
                 x.ProviderName,
+                x.Provider,
                 ListTask = x.Provider.ListIps(BuildProjectTag(projectId), timeout)
             }).ToArray();
 
@@ -320,7 +328,12 @@ public class HostOrdersService(
 
         //combine all task results into Provider and Ip list
         var providerIpInfos = providerIpInfosTasks
-            .SelectMany(x => x.ListTask.Result.Select(y => new { x.Provider, x.ProviderName, IpAddress = y }))
+            .SelectMany(x => x.ListTask.Result.Select(y => new {
+                x.Provider, 
+                x.ProviderName, 
+                x.ProviderId,
+                IpAddress = y
+            }))
             .ToArray();
 
         // Get all HostIPs from database
@@ -337,7 +350,7 @@ public class HostOrdersService(
             var hostProviderIp = await providerIpInfo.Provider.GetIp(providerIpInfo.IpAddress, timeout);
             var hostIpModel = new HostIpModel {
                 IpAddress = providerIpInfo.IpAddress,
-                ProviderName = providerIpInfo.ProviderName,
+                ProviderId = providerIpInfo.ProviderId,
                 Description = hostProviderIp.Description,
                 CreatedTime = DateTime.UtcNow,
                 ExistsInProvider = true,
@@ -409,9 +422,9 @@ public class HostOrdersService(
         }
 
         // get the provider
-        var providerModel = await vhRepo.ProviderGet(projectId, providerType: ProviderType.HostProvider, providerName: hostIp.ProviderName);
+        var providerModel = await vhRepo.ProviderGet(projectId, providerType: ProviderType.HostProvider, providerId: hostIp.ProviderId);
         if (providerModel == null)
-            throw new NotExistsException($"Could not find any host provider for this server. Provider: {hostIp.ProviderName}");
+            throw new NotExistsException($"Could not find any host provider for this server. ProviderName: {hostIp.Provider?.ProviderName}");
 
         try {
             var provider = hostProviderFactory.Create(providerModel.ProviderName, providerModel.Settings);

@@ -8756,6 +8756,10 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string IpAddress { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("providerId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ProviderId { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("providerName")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string ProviderName { get; set; } = default!;
@@ -8845,14 +8849,23 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
         public HostOrderStatus Status { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("providerOrderId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ProviderOrderId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("providerId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ProviderId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("providerName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ProviderName { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
         public string? ErrorMessage { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("completedTime")]
         public System.DateTime? CompletedTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("providerOrderId")]
-        public string? ProviderOrderId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("newIpOrderIpAddress")]
         public string? NewIpOrderIpAddress { get; set; } = default!;

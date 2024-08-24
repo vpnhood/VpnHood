@@ -1,4 +1,6 @@
-﻿namespace VpnHood.AccessServer.Persistence.Models;
+﻿using VpnHood.AccessServer.Persistence.Models.HostOrders;
+
+namespace VpnHood.AccessServer.Persistence.Models;
 
 public class ServerModel
 {
@@ -35,4 +37,5 @@ public class ServerModel
     public virtual LocationModel? Location { get; set; }
     public virtual ICollection<SessionModel>? Sessions { get; set; }
     public virtual ICollection<ServerStatusModel>? ServerStatuses { get; set; }
+    public virtual ICollection<HostOrderModel>? HostOrders { get; set; }
 }

@@ -1,4 +1,5 @@
 ﻿using VpnHood.AccessServer.Persistence.Enums;
+using VpnHood.AccessServer.Persistence.Models.HostOrders;
 
 namespace VpnHood.AccessServer.Persistence.Models;
 
@@ -24,5 +25,7 @@ public class ProjectModel
     public virtual ICollection<ServerStatusModel>? ServerStatuses { get; set; }
     public virtual ICollection<CertificateModel>? Certificates { get; set; }
     public virtual ICollection<ProviderModel>? ProviderConfigs { get; set; }
+    public virtual ICollection<HostOrderModel>? HostOrders { get; set; }
+    public virtual ICollection<HostIpModel>? HostIps { get; set; }
 
 }

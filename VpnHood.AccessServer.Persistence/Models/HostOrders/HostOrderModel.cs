@@ -11,17 +11,18 @@ public class HostOrderModel
     public required Guid HostOrderId { get; init; }
     public required DateTime CreatedTime { get; init; }
     public required HostOrderType OrderType { get; init; }
-    public required string ProviderName { get; init; }
+    public required Guid ProviderId { get; init; }
     public required HostOrderStatus Status { get; set; }
-    public string? ErrorMessage { get; set; }
-    public string? ProviderOrderId { get; init; }
-    public DateTime? CompletedTime { get; set; }
-    public Guid? NewIpOrderServerId { get; init; }
+    public required string? ErrorMessage { get; set; }
+    public required string ProviderOrderId { get; init; }
+    public required DateTime? CompletedTime { get; set; }
     
     [JsonConverter(typeof(IPAddressConverter))]
     public IPAddress? NewIpOrderIpAddress { get; set; }
+    public Guid? NewIpOrderServerId { get; init; }
     public DateTime? NewIpOrderOldIpAddressReleaseTime { get; set; }
 
     public virtual ServerModel? NewIpOrderServer { get; set; }
     public virtual ProjectModel? Project { get; set; }
+    public virtual ProviderModel? Provider { get; set; }
 }

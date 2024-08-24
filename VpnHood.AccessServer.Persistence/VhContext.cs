@@ -562,6 +562,9 @@ public class VhContext : DbContext
 
         modelBuilder.Entity<ProviderModel>(entity => {
             entity
+                .HasKey(e=> e.ProviderId);
+
+            entity
                 .HasIndex(e => new { e.ProjectId, e.ProviderType, e.ProviderName })
                 .IsUnique();
         });
@@ -577,6 +580,19 @@ public class VhContext : DbContext
             entity
                 .HasIndex(e => new { e.ProjectId, e.CreatedTime })
                 .HasFilter($"{nameof(HostIpModel.DeletedTime)} is null and {nameof(HostIpModel.AutoReleaseTime)} is not null");
+
+            entity
+                .HasOne(e => e.Project)
+                .WithMany(d => d.HostIps)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity
+                .HasOne(e => e.Provider)
+                .WithMany(d => d.HostIps)
+                .HasForeignKey(d => d.ProviderId)
+                .OnDelete(DeleteBehavior.NoAction);
+
         });
 
         modelBuilder.Entity<HostOrderModel>(entity => {
@@ -590,6 +606,24 @@ public class VhContext : DbContext
             entity
                 .HasIndex(e => new { e.ProjectId, e.CreatedTime })
                 .IsDescending();
+
+            entity
+                .HasOne(e => e.Project)
+                .WithMany(d => d.HostOrders)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity
+                .HasOne(e => e.NewIpOrderServer)
+                .WithMany(d => d.HostOrders)
+                .HasForeignKey(d => d.NewIpOrderServerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity
+                .HasOne(e => e.Provider)
+                .WithMany(d => d.HostOrders)
+                .HasForeignKey(d => d.ProviderId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
     }
 }

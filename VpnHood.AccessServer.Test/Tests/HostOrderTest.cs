@@ -13,7 +13,7 @@ public class HostOrderTest
     [TestMethod]
     public async Task Order_new_ip_for_a_server()
     {
-        var startTime = DateTime.UtcNow;
+        var startTime = DateTime.UtcNow.AddSeconds(-1);
         using var farm = await ServerFarmDom.Create();
         var serverDom = farm.DefaultServer;
 

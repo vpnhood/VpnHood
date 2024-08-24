@@ -348,7 +348,17 @@ public class VhRepo(VhContext vhContext)
             .ToArrayAsync();
     }
 
-    public Task<ProviderModel?> ProviderGet(Guid projectId, ProviderType providerType, string providerName)
+    public Task<ProviderModel> ProviderGet(Guid projectId, ProviderType providerType, Guid providerId)
+    {
+        return vhContext.Providers
+            .Where(x => x.ProjectId == projectId)
+            .Where(x =>
+                x.ProviderType == providerType &&
+                x.ProviderId == providerId)
+            .SingleAsync();
+    }
+
+    public Task<ProviderModel?> ProviderGetByName(Guid projectId, ProviderType providerType, string providerName)
     {
         return vhContext.Providers
             .Where(x => x.ProjectId == projectId)
@@ -357,6 +367,7 @@ public class VhRepo(VhContext vhContext)
                 x.ProviderName == providerName)
             .SingleOrDefaultAsync();
     }
+
 
     public Task<HostOrderModel[]> HostOrdersList(Guid? projectId = null, HostOrderStatus? status = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
@@ -367,6 +378,7 @@ public class VhRepo(VhContext vhContext)
             .OrderByDescending(x => x.CreatedTime)
             .Skip(recordIndex)
             .Take(recordCount)
+            .Include(x=>x.Provider)
             .ToArrayAsync();
     }
 
@@ -375,6 +387,7 @@ public class VhRepo(VhContext vhContext)
         return vhContext.HostOrders
             .Where(x => x.ProjectId == projectId)
             .Where(x => x.HostOrderId == hostOrderOd)
+            .Include(x=>x.Provider)
             .SingleAsync();
     }
 
@@ -385,6 +398,7 @@ public class VhRepo(VhContext vhContext)
             .Where(x =>
                 x.AutoReleaseTime <= DateTime.UtcNow &&
                 x.ReleaseRequestTime == null)
+            .Include(x=>x.Provider)
             .ToArrayAsync();
     }
 
@@ -397,6 +411,7 @@ public class VhRepo(VhContext vhContext)
             .OrderByDescending(x => x.HostIpId)
             .Skip(recordIndex)
             .Take(recordCount)
+            .Include(x=>x.Provider)
             .ToArrayAsync();
     }
 
@@ -405,6 +420,7 @@ public class VhRepo(VhContext vhContext)
         return vhContext.HostIps
             .Where(x => x.ProjectId == projectId && x.DeletedTime == null)
             .Where(x => x.IpAddress == ipAddress)
+            .Include(x=>x.Provider)
             .SingleAsync();
     }
 
@@ -413,6 +429,7 @@ public class VhRepo(VhContext vhContext)
         var hostIps = await vhContext.HostIps
             .Where(x => x.Project!.DeletedTime == null && x.DeletedTime == null)
             .Where(x => x.ReleaseRequestTime != null)
+            .Include(x=>x.Provider)
             .ToArrayAsync();
 
         return hostIps;

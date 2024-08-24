@@ -5676,6 +5676,7 @@ export interface IDeviceUpdateParams {
 
 export class HostIp implements IHostIp {
     ipAddress!: string;
+    providerId!: string;
     providerName!: string;
     createdTime!: Date;
     autoReleaseTime?: Date | null;
@@ -5700,6 +5701,7 @@ export class HostIp implements IHostIp {
     init(_data?: any) {
         if (_data) {
             this.ipAddress = _data["ipAddress"] !== undefined ? _data["ipAddress"] : <any>null;
+            this.providerId = _data["providerId"] !== undefined ? _data["providerId"] : <any>null;
             this.providerName = _data["providerName"] !== undefined ? _data["providerName"] : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
             this.autoReleaseTime = _data["autoReleaseTime"] ? new Date(_data["autoReleaseTime"].toString()) : <any>null;
@@ -5724,6 +5726,7 @@ export class HostIp implements IHostIp {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["ipAddress"] = this.ipAddress !== undefined ? this.ipAddress : <any>null;
+        data["providerId"] = this.providerId !== undefined ? this.providerId : <any>null;
         data["providerName"] = this.providerName !== undefined ? this.providerName : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
         data["autoReleaseTime"] = this.autoReleaseTime ? this.autoReleaseTime.toISOString() : <any>null;
@@ -5741,6 +5744,7 @@ export class HostIp implements IHostIp {
 
 export interface IHostIp {
     ipAddress: string;
+    providerId: string;
     providerName: string;
     createdTime: Date;
     autoReleaseTime?: Date | null;
@@ -5819,9 +5823,11 @@ export class HostOrder implements IHostOrder {
     createdTime!: Date;
     orderType!: HostOrderType;
     status!: HostOrderStatus;
+    providerOrderId!: string;
+    providerId!: string;
+    providerName!: string;
     errorMessage?: string | null;
     completedTime?: Date | null;
-    providerOrderId?: string | null;
     newIpOrderIpAddress?: string | null;
     newIpOrderServer?: VpnServer | null;
 
@@ -5840,9 +5846,11 @@ export class HostOrder implements IHostOrder {
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
             this.orderType = _data["orderType"] !== undefined ? _data["orderType"] : <any>null;
             this.status = _data["status"] !== undefined ? _data["status"] : <any>null;
+            this.providerOrderId = _data["providerOrderId"] !== undefined ? _data["providerOrderId"] : <any>null;
+            this.providerId = _data["providerId"] !== undefined ? _data["providerId"] : <any>null;
+            this.providerName = _data["providerName"] !== undefined ? _data["providerName"] : <any>null;
             this.errorMessage = _data["errorMessage"] !== undefined ? _data["errorMessage"] : <any>null;
             this.completedTime = _data["completedTime"] ? new Date(_data["completedTime"].toString()) : <any>null;
-            this.providerOrderId = _data["providerOrderId"] !== undefined ? _data["providerOrderId"] : <any>null;
             this.newIpOrderIpAddress = _data["newIpOrderIpAddress"] !== undefined ? _data["newIpOrderIpAddress"] : <any>null;
             this.newIpOrderServer = _data["newIpOrderServer"] ? VpnServer.fromJS(_data["newIpOrderServer"]) : <any>null;
         }
@@ -5861,9 +5869,11 @@ export class HostOrder implements IHostOrder {
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
         data["orderType"] = this.orderType !== undefined ? this.orderType : <any>null;
         data["status"] = this.status !== undefined ? this.status : <any>null;
+        data["providerOrderId"] = this.providerOrderId !== undefined ? this.providerOrderId : <any>null;
+        data["providerId"] = this.providerId !== undefined ? this.providerId : <any>null;
+        data["providerName"] = this.providerName !== undefined ? this.providerName : <any>null;
         data["errorMessage"] = this.errorMessage !== undefined ? this.errorMessage : <any>null;
         data["completedTime"] = this.completedTime ? this.completedTime.toISOString() : <any>null;
-        data["providerOrderId"] = this.providerOrderId !== undefined ? this.providerOrderId : <any>null;
         data["newIpOrderIpAddress"] = this.newIpOrderIpAddress !== undefined ? this.newIpOrderIpAddress : <any>null;
         data["newIpOrderServer"] = this.newIpOrderServer ? this.newIpOrderServer.toJSON() : <any>null;
         return data;
@@ -5875,9 +5885,11 @@ export interface IHostOrder {
     createdTime: Date;
     orderType: HostOrderType;
     status: HostOrderStatus;
+    providerOrderId: string;
+    providerId: string;
+    providerName: string;
     errorMessage?: string | null;
     completedTime?: Date | null;
-    providerOrderId?: string | null;
     newIpOrderIpAddress?: string | null;
     newIpOrderServer?: VpnServer | null;
 }

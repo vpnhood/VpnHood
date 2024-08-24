@@ -10,7 +10,7 @@ public class HostProviderFactory(IServiceProvider serviceProvider) : IHostProvid
 
     public IHostProvider Create(string providerName, string providerSettings)
     {
-        if (providerName.Contains("fake.internal")) {
+        if (providerName.Contains("fake.internal", StringComparison.OrdinalIgnoreCase)) {
             var settings = VhUtil.JsonDeserialize<FakeHostProvider.Settings>(providerSettings);
             var logger = serviceProvider.GetRequiredService<ILogger<FakeHostProvider>>();
             return _fakeProviders.GetOrAdd(providerName,
@@ -22,5 +22,4 @@ public class HostProviderFactory(IServiceProvider serviceProvider) : IHostProvid
 
         throw new Exception($"Unknown provider: {providerName}");
     }
-
 }

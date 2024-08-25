@@ -2,9 +2,9 @@
 using Android.Runtime;
 using Firebase.Analytics;
 using Firebase.Crashlytics;
-using VpnHood.Client.App.Droid.Ads.VhAdMob;
+//using VpnHood.Client.App.Droid.Ads.VhAdMob;
 using VpnHood.Client.App.Droid.Ads.VhInMobi;
-using VpnHood.Client.App.Droid.Ads.VhChartboost;
+//using VpnHood.Client.App.Droid.Ads.VhChartboost;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Client.App.Resources;
@@ -84,17 +84,17 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         return [
 
-            new AppAdService {
-                AdProvider = AdMobInterstitialAdProvider.Create(appSettings.AdMobInterstitialNoVideoAdUnitId),
-                ExcludeCountryCodes = ["CN"],
-                ServiceName = "AdMob-NoVideo",
-            },
+            //new AppAdService {
+            //    AdProvider = AdMobInterstitialAdProvider.Create(appSettings.AdMobInterstitialNoVideoAdUnitId),
+            //    ExcludeCountryCodes = ["CN"],
+            //    ServiceName = "AdMob-NoVideo",
+            //},
 
-            new AppAdService {
-                AdProvider = AdMobInterstitialAdProvider.Create(appSettings.AdMobInterstitialAdUnitId),
-                ExcludeCountryCodes = ["IR", "CN"],
-                ServiceName = "AdMob",
-            },
+            //new AppAdService {
+            //    AdProvider = AdMobInterstitialAdProvider.Create(appSettings.AdMobInterstitialAdUnitId),
+            //    ExcludeCountryCodes = ["IR", "CN"],
+            //    ServiceName = "AdMob",
+            //},
 
             new AppAdService {
                 AdProvider = InMobiAdProvider.Create(appSettings.InmobiAccountId, appSettings.InmobiPlacementId, true),
@@ -102,11 +102,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 ServiceName = "InMobi",
             },
 
-            new AppAdService {
-                AdProvider = ChartboostAdProvider.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),
-                ExcludeCountryCodes = ["IR", "CN"],
-                ServiceName = "Chartboost",
-            },
+            //new AppAdService {
+            //    AdProvider = ChartboostAdProvider.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),
+            //    ExcludeCountryCodes = ["IR", "CN"],
+            //    ServiceName = "Chartboost",
+            //},
 
         ];
 

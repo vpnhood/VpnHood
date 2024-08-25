@@ -83,6 +83,22 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     private static AppAdService[] CreateAppAdServices(AppSettings appSettings)
     {
         return [
+            new AppAdService {
+                AdProvider = AdMobInterstitialAdProvider.Create(appSettings.AdMobInterstitialAdUnitId),
+                ExcludeCountryCodes = ["IR", "CN"],
+                ServiceName = "AdMob",
+            },
+            
+            new AppAdService {
+                AdProvider = InMobiAdProvider.Create(appSettings.InmobiAccountId, appSettings.InmobiPlacementId, appSettings.InmobiIsDebugMode),
+                ServiceName = "InMobi",
+            },
+            
+            new AppAdService {
+                AdProvider = ChartboostAdProvider.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),
+                ExcludeCountryCodes = ["IR", "CN"],
+                ServiceName = "Chartboost",
+            },
 
             new AppAdService {
                 AdProvider = AdMobInterstitialAdProvider.Create(appSettings.AdMobInterstitialNoVideoAdUnitId),
@@ -90,23 +106,9 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 ServiceName = "AdMob-NoVideo",
             },
 
-            new AppAdService {
-                AdProvider = AdMobInterstitialAdProvider.Create(appSettings.AdMobInterstitialAdUnitId),
-                ExcludeCountryCodes = ["IR", "CN"],
-                ServiceName = "AdMob",
-            },
+            
 
-            new AppAdService {
-                AdProvider = InMobiAdProvider.Create(appSettings.InmobiAccountId, appSettings.InmobiPlacementId, appSettings.InmobiIsDebugMode),
-                ExcludeCountryCodes = ["CN"],
-                ServiceName = "InMobi",
-            },
 
-            new AppAdService {
-                AdProvider = ChartboostAdProvider.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),
-                ExcludeCountryCodes = ["IR", "CN"],
-                ServiceName = "Chartboost",
-            },
 
         ];
 

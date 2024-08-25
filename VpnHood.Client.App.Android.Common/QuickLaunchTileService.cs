@@ -6,7 +6,7 @@ using Android.Service.QuickSettings;
 using Java.Lang;
 using Java.Util.Functions;
 using Microsoft.Extensions.Logging;
-using VpnHood.Client.App.Droid.Common.Utils;
+using VpnHood.Client.Device.Droid.Utils;
 using VpnHood.Common.Logging;
 using Exception = System.Exception;
 using Object = Java.Lang.Object;

@@ -33,8 +33,8 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="VpnHood.Client.App.Abstractions" Version="4.6.553" />
-		<PackageReference Include="VpnHood.Client.Device.Android" Version="4.6.553" />
+		<PackageReference Include="VpnHood.Client.App.Abstractions" Version="4.6.555-prerelease" />
+		<PackageReference Include="VpnHood.Client.Device.Android" Version="4.6.555-prerelease" />
 		<PackageReference Include="Square.Picasso" Version="[2.8.0.14, 2.100.0.0)" />
 		<PackageReference Include="Xamarin.AndroidX.Browser" Version="1.8.0.4" />
 		<PackageReference Include="Xamarin.AndroidX.RecyclerView" Version="1.3.2.6" />

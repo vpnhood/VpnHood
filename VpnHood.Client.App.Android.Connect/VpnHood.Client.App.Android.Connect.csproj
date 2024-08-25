@@ -57,7 +57,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-    <ProjectReference Include="..\VpnHood.Client.App.Android.Ads.AdMob\VpnHood.Client.App.Android.Ads.AdMob.csproj" />
+    <ProjectReference Include="..\VhInMobi\VpnHood.Client.App.Android.Ads.InMobi.csproj" />
     <ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay.Core\VpnHood.Client.App.Android.GooglePlay.Core.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay\VpnHood.Client.App.Android.GooglePlay.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
@@ -67,8 +67,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-    <PackageReference Include="VpnHood.Client.App.Android.Ads.Chartboost" Version="4.5.549" />
-    <PackageReference Include="VpnHood.Client.App.Android.Ads.InMobi" Version="4.5.559" />
     <PackageReference Include="Xamarin.Firebase.Analytics" Version="121.5.1" />
 		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="119.0.3" />
 	</ItemGroup>

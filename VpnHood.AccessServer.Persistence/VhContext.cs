@@ -24,7 +24,7 @@ public class VhContext : DbContext
     public virtual DbSet<CertificateModel> Certificates { get; set; } = default!;
     public virtual DbSet<IpLockModel> IpLocks { get; set; } = default!;
     public virtual DbSet<ServerProfileModel> ServerProfiles { get; set; } = default!;
-    public virtual DbSet<ProviderModel> Providers { get; set; } = default!;
+    public virtual DbSet<HostProviderModel> HostProviders { get; set; } = default!;
     public virtual DbSet<LocationModel> Locations { get; set; } = default!;
     public virtual DbSet<HostOrderModel> HostOrders { get; set; } = default!;
     public virtual DbSet<HostIpModel> HostIps { get; set; } = default!;
@@ -560,12 +560,16 @@ public class VhContext : DbContext
                 .HasMaxLength(50);
         });
 
-        modelBuilder.Entity<ProviderModel>(entity => {
+        modelBuilder.Entity<HostProviderModel>(entity => {
             entity
-                .HasKey(e=> e.ProviderId);
+                .HasKey(e=> e.HostProviderId);
 
             entity
-                .HasIndex(e => new { e.ProjectId, e.ProviderType, e.ProviderName })
+                .Property(e => e.CustomData)
+                .HasMaxLength(int.MaxValue);
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.HostProviderName })
                 .IsUnique();
         });
 
@@ -588,9 +592,9 @@ public class VhContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity
-                .HasOne(e => e.Provider)
+                .HasOne(e => e.HostProvider)
                 .WithMany(d => d.HostIps)
-                .HasForeignKey(d => d.ProviderId)
+                .HasForeignKey(d => d.HostProviderId)
                 .OnDelete(DeleteBehavior.NoAction);
 
         });
@@ -620,9 +624,9 @@ public class VhContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
 
             entity
-                .HasOne(e => e.Provider)
+                .HasOne(e => e.HostProvider)
                 .WithMany(d => d.HostOrders)
-                .HasForeignKey(d => d.ProviderId)
+                .HasForeignKey(d => d.HostProviderId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
     }

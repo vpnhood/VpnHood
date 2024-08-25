@@ -12,6 +12,7 @@ namespace VpnHood.AccessServer.Repos;
 public class VhRepo(VhContext vhContext)
     : RepoBase(vhContext)
 {
+    public VhContext VhContext => vhContext; //todo
     public Task<ServerModel> ServerGet(Guid projectId, Guid serverId, bool includeFarm = false,
         bool includeFarmProfile = false)
     {
@@ -340,31 +341,42 @@ public class VhRepo(VhContext vhContext)
         return certificates;
     }
 
-    public Task<ProviderModel[]> ProviderList(Guid projectId, ProviderType providerType)
+    public Task<HostProviderModel[]> HostProviderList(Guid projectId)
     {
-        return vhContext.Providers
+        return vhContext.HostProviders
             .Where(x => x.ProjectId == projectId)
-            .Where(x => x.ProviderType == providerType)
             .ToArrayAsync();
     }
 
-    public Task<ProviderModel> ProviderGet(Guid projectId, ProviderType providerType, Guid providerId)
+    public Task<HostProviderModel> HostProviderGet(Guid projectId, Guid hostProviderId, bool asNoTracking = false)
     {
-        return vhContext.Providers
-            .Where(x => x.ProjectId == projectId)
+        var query = vhContext.HostProviders
+            .Where(x => x.ProjectId == projectId && x.Project!.DeletedTime == null)
             .Where(x =>
-                x.ProviderType == providerType &&
-                x.ProviderId == providerId)
+                x.HostProviderId == hostProviderId);
+
+        if (asNoTracking)
+            query = query.AsNoTracking();
+
+        return query
             .SingleAsync();
     }
 
-    public Task<ProviderModel?> ProviderGetByName(Guid projectId, ProviderType providerType, string providerName)
+    public Task<HostProviderModel> HostProviderGet(Guid hostProviderId)
     {
-        return vhContext.Providers
+        return vhContext.HostProviders
+            .Where(x => x.Project!.DeletedTime == null)
+            .Where(x =>
+                x.HostProviderId == hostProviderId)
+            .SingleAsync();
+    }
+
+    public Task<HostProviderModel?> HostProviderGetByName(Guid projectId, string hostProviderName)
+    {
+        return vhContext.HostProviders
             .Where(x => x.ProjectId == projectId)
             .Where(x =>
-                x.ProviderType == providerType &&
-                x.ProviderName == providerName)
+                x.HostProviderName == hostProviderName)
             .SingleOrDefaultAsync();
     }
 
@@ -373,32 +385,32 @@ public class VhRepo(VhContext vhContext)
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
         return vhContext.HostOrders
+            .Include(x => x.HostProvider)
             .Where(x => x.ProjectId == projectId || (projectId == null && x.Project!.DeletedTime == null))
             .Where(x => x.Status == status || status == null)
             .OrderByDescending(x => x.CreatedTime)
             .Skip(recordIndex)
             .Take(recordCount)
-            .Include(x=>x.Provider)
             .ToArrayAsync();
     }
 
     public Task<HostOrderModel> HostOrderGet(Guid projectId, Guid hostOrderOd)
     {
         return vhContext.HostOrders
+            .Include(x => x.HostProvider)
             .Where(x => x.ProjectId == projectId)
             .Where(x => x.HostOrderId == hostOrderOd)
-            .Include(x=>x.Provider)
             .SingleAsync();
     }
 
     public Task<HostIpModel[]> HostIpListAllExpired()
     {
         return vhContext.HostIps
+            .Include(x => x.HostProvider)
             .Where(x => x.Project!.DeletedTime == null && x.DeletedTime == null)
             .Where(x =>
                 x.AutoReleaseTime <= DateTime.UtcNow &&
                 x.ReleaseRequestTime == null)
-            .Include(x=>x.Provider)
             .ToArrayAsync();
     }
 
@@ -406,30 +418,30 @@ public class VhRepo(VhContext vhContext)
     public Task<HostIpModel[]> HostIpList(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = int.MaxValue)
     {
         return vhContext.HostIps
+            .Include(x => x.HostProvider)
             .Where(x => x.ProjectId == projectId && x.DeletedTime == null)
             .Where(x => x.IpAddress.Equals(search) || search == null)
             .OrderByDescending(x => x.HostIpId)
             .Skip(recordIndex)
             .Take(recordCount)
-            .Include(x=>x.Provider)
             .ToArrayAsync();
     }
 
     public Task<HostIpModel> HostIpGet(Guid projectId, IPAddress ipAddress)
     {
         return vhContext.HostIps
+            .Include(x => x.HostProvider)
             .Where(x => x.ProjectId == projectId && x.DeletedTime == null)
             .Where(x => x.IpAddress == ipAddress)
-            .Include(x=>x.Provider)
             .SingleAsync();
     }
 
     public async Task<HostIpModel[]> HostIpListReleasing()
     {
         var hostIps = await vhContext.HostIps
+            .Include(x => x.HostProvider)
             .Where(x => x.Project!.DeletedTime == null && x.DeletedTime == null)
             .Where(x => x.ReleaseRequestTime != null)
-            .Include(x=>x.Provider)
             .ToArrayAsync();
 
         return hostIps;

@@ -13,8 +13,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Persistence.Enums;
-using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Persistence.Models.HostOrders;
 using VpnHood.AccessServer.Providers.Acme;
 using VpnHood.AccessServer.Providers.Hosts;
 using VpnHood.AccessServer.Report.Persistence;
@@ -112,6 +111,11 @@ public class TestApp : IHttpClientFactory, IDisposable
 
         // create default project
         Project = await ProjectsClient.CreateAsync();
+        await ProjectsClient.UpdateAsync(Project.ProjectId,
+            new ProjectUpdateParams {
+                ProjectName = new PatchOfString { Value = $"test_{Project.ProjectId}" }
+            });
+
         ProjectOwnerApiKey = await AddNewUser(Roles.ProjectOwner);
         await TeamClient.RemoveUserAsync(Project.ProjectId.ToString(), Roles.ProjectOwner.RoleId,
             SystemAdminApiKey.UserId);
@@ -356,27 +360,25 @@ public class TestApp : IHttpClientFactory, IDisposable
         var providerName = Guid.NewGuid() + "." + FakeHostProvider.BaseProviderName;
         var settingsJson = JsonSerializer.Serialize(settings);
 
-        await VhRepo.AddAsync(new ProviderModel {
+        var model = await VhRepo.AddAsync(new HostProviderModel {
+            HostProviderId = Guid.NewGuid(),
             ProjectId = ProjectId,
-            ProviderName = providerName,
-            ProviderType = ProviderType.HostProvider,
+            HostProviderName = providerName,
             Settings = settingsJson,
-            ProviderId = Guid.NewGuid()
+            CustomData = null,
         });
 
         await VhRepo.SaveChangesAsync();
 
-        var hostProviderFactory1 = Scope.ServiceProvider.GetRequiredService<IHostProviderFactory>();
-        var hostProviderFactory2 = WebApp.Services.GetRequiredService<IHostProviderFactory>();
-        if (hostProviderFactory1 != hostProviderFactory2)
-            throw new InvalidOperationException("HostProviderFactory should be singleton.");
-        return (FakeHostProvider)hostProviderFactory1.Create(providerName, settingsJson);
+        var hostProviderFactory = Scope.ServiceProvider.GetRequiredService<IHostProviderFactory>();
+        return (FakeHostProvider)hostProviderFactory.Create(model.HostProviderId, providerName, settingsJson);
     }
 
     private Task DeleteAllOtherProject()
     {
         // delete all projects
         return VhContext.Projects
+            .Where(x => x.DeletedTime == null && x.ProjectName!.Contains("test_"))
             .ExecuteUpdateAsync(e => e.SetProperty(x => x.DeletedTime, DateTime.UtcNow));
     }
 

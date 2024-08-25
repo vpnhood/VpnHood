@@ -1,25 +1,17 @@
-﻿using System.Collections.Concurrent;
-using VpnHood.AccessServer.Abstractions.Providers.Hosts;
-using VpnHood.Common.Utils;
+﻿using VpnHood.AccessServer.Abstractions.Providers.Hosts;
 
 namespace VpnHood.AccessServer.Providers.Hosts;
 
-public class HostProviderFactory(IServiceProvider serviceProvider) : IHostProviderFactory
+public class HostProviderFactory(
+    IServiceScopeFactory serviceScopeFactory
+    ) : IHostProviderFactory
 {
-    private readonly ConcurrentDictionary<string, IHostProvider> _fakeProviders = new();
-
-    public IHostProvider Create(string providerName, string providerSettings)
+    public IHostProvider Create(Guid hostProviderId, string hostProviderName, string providerSettings)
     {
-        if (providerName.Contains("fake.internal", StringComparison.OrdinalIgnoreCase)) {
-            var settings = VhUtil.JsonDeserialize<FakeHostProvider.Settings>(providerSettings);
-            var logger = serviceProvider.GetRequiredService<ILogger<FakeHostProvider>>();
-            return _fakeProviders.GetOrAdd(providerName,
-                _ => {
-                    logger.LogInformation("Creating FakeHostProvider. ProviderName: {ProviderName}", providerName);
-                    return new FakeHostProvider(providerName, settings, logger);
-                });
+        if (hostProviderName.Contains("fake.internal", StringComparison.OrdinalIgnoreCase)) {
+            return FakeHostProvider.Create(serviceScopeFactory, hostProviderId).Result;
         }
 
-        throw new Exception($"Unknown provider: {providerName}");
+        throw new Exception($"Unknown provider: {hostProviderName}");
     }
 }

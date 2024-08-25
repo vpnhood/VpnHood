@@ -4,5 +4,5 @@ namespace VpnHood.AccessServer.Providers.Hosts;
 
 public interface IHostProviderFactory
 {
-    IHostProvider Create(string providerName, string providerSettings);
+    public IHostProvider Create(Guid hostProviderId, string hostProviderName, string providerSettings);
 }

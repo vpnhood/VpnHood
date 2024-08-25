@@ -44,9 +44,9 @@ public class HostOrdersService(
         // Get the server and provider
         var serverModel = await vhRepo.ServerGet(projectId: projectId, serverId: hostOrderNewIp.ServerId);
         var hostProviderName = GetHostProviderName(serverModel);
-        var providerModel = await vhRepo.ProviderGetByName(projectId, providerType: ProviderType.HostProvider, providerName: hostProviderName);
+        var providerModel = await vhRepo.HostProviderGetByName(projectId, hostProviderName: hostProviderName);
         if (providerModel == null)
-            throw new NotExistsException($"Could not find any host provider for this server. Provider: {hostProviderName}");
+            throw new NotExistsException($"Could not find any host provider for this server. HostProvider: {hostProviderName}");
 
         // throw exception if old ipaddress does not belong to the server
         var oldHostIp = hostOrderNewIp.OldIpAddress != null ? await vhRepo.HostIpGet(projectId, hostOrderNewIp.OldIpAddress) : null;
@@ -55,7 +55,7 @@ public class HostOrdersService(
             throw new InvalidOperationException("The old ip address does not belong to the server.");
 
         // Create the provider
-        var provider = hostProviderFactory.Create(providerModel.ProviderName, providerModel.Settings);
+        var provider = hostProviderFactory.Create(providerModel.HostProviderId, providerModel.HostProviderName, providerModel.Settings);
 
         // Get the server IP by current IP
         var serverIp = GetServerGatewayIp(serverModel);
@@ -75,8 +75,8 @@ public class HostOrdersService(
             ProjectId = projectId,
             Status = HostOrderStatus.Pending,
             CreatedTime = DateTime.UtcNow,
-            ProviderId = providerModel.ProviderId,
-            Provider = providerModel,
+            HostProviderId = providerModel.HostProviderId,
+            HostProvider = providerModel,
             ProviderOrderId = providerOrderId,
             OrderType = HostOrderType.NewIp,
             ErrorMessage = null,
@@ -173,10 +173,9 @@ public class HostOrdersService(
         // RunJob may be called by RequestMonitorJob, so we need to lock it
         Logger.LogInformation("Start processing pending host orders.");
 
-        using var asyncLock = await AsyncLock.LockAsync("HostOrdersService::ProcessJobs", TimeSpan.Zero, cancellationToken);
+        using var asyncLock = await AsyncLock.LockAsync("HostOrdersService:ProcessJobs", TimeSpan.Zero, cancellationToken);
         if (!asyncLock.Succeeded)
             return false;
-
 
         await ProcessAllPendingOrders();
         await ProcessAllAutoReleaseIps();
@@ -306,12 +305,12 @@ public class HostOrdersService(
     private async Task<HostIpModel[]> SyncProvidersManagedIps(Guid projectId, TimeSpan timeout)
     {
         // create all host providers of the project
-        var providerModels = await vhRepo.ProviderList(projectId, providerType: ProviderType.HostProvider);
+        var providerModels = await vhRepo.HostProviderList(projectId);
         var hostProviders = providerModels.Select(x =>
             new {
-                x.ProviderId,
-                x.ProviderName,
-                Provider = hostProviderFactory.Create(x.ProviderName, x.Settings)
+                ProviderId = x.HostProviderId,
+                ProviderName = x.HostProviderName,
+                Provider = hostProviderFactory.Create(x.HostProviderId, x.HostProviderName, x.Settings)
             })
             .ToArray();
 
@@ -326,7 +325,7 @@ public class HostOrdersService(
 
         await Task.WhenAll(providerIpInfosTasks.Select(providerTask => providerTask.ListTask));
 
-        //combine all task results into Provider and Ip list
+        //combine all task results into HostProvider and Ip list
         var providerIpInfos = providerIpInfosTasks
             .SelectMany(x => x.ListTask.Result.Select(y => new {
                 x.Provider, 
@@ -344,13 +343,13 @@ public class HostOrdersService(
             if (hostIps.Any(x => x.IpAddress.Equals(providerIpInfo.IpAddress)))
                 continue;
 
-            Logger.LogInformation("Adding a new ip from provider to db. ProjectId: {ProjectId}, ProviderName: {ProviderName}, Ip: {Ip}",
+            Logger.LogInformation("Adding a new ip from provider to db. ProjectId: {ProjectId}, HostProviderName: {HostProviderName}, Ip: {Ip}",
                 projectId, providerIpInfo.ProviderName, providerIpInfo.IpAddress);
 
             var hostProviderIp = await providerIpInfo.Provider.GetIp(providerIpInfo.IpAddress, timeout);
             var hostIpModel = new HostIpModel {
                 IpAddress = providerIpInfo.IpAddress,
-                ProviderId = providerIpInfo.ProviderId,
+                HostProviderId = providerIpInfo.ProviderId,
                 Description = hostProviderIp.Description,
                 CreatedTime = DateTime.UtcNow,
                 ExistsInProvider = true,
@@ -422,17 +421,18 @@ public class HostOrdersService(
         }
 
         // get the provider
-        var providerModel = await vhRepo.ProviderGet(projectId, providerType: ProviderType.HostProvider, providerId: hostIp.ProviderId);
+        var providerModel = await vhRepo.HostProviderGet(projectId,hostProviderId: hostIp.HostProviderId);
         if (providerModel == null)
-            throw new NotExistsException($"Could not find any host provider for this server. ProviderName: {hostIp.Provider?.ProviderName}");
+            throw new NotExistsException($"Could not find any host provider for this server. HostProviderName: {hostIp.HostProvider?.HostProviderName}");
 
         try {
-            var provider = hostProviderFactory.Create(providerModel.ProviderName, providerModel.Settings);
+            var provider = hostProviderFactory.Create(providerModel.HostProviderId, providerModel.HostProviderName, providerModel.Settings);
             await provider.ReleaseIp(ipAddress, appOptions.Value.ServiceHttpTimeout);
         }
         catch (Exception ex) when (ignoreProviderError) {
             logger.LogWarning(ex, "Could not release ip from provider. Ip: {Ip}", ipAddress);
         }
+
         // create release order
         hostIp.ReleaseRequestTime = DateTime.UtcNow;
         await vhRepo.SaveChangesAsync();

@@ -115,8 +115,8 @@ public class Program
                 .AddScoped<AccessTokensService>()
                 .AddScoped<ReportService>()
                 .AddScoped<HostOrdersService>()
-                .AddSingleton<IAcmeOrderFactory, AcmeOrderFactory>()
-                .AddSingleton<IHostProviderFactory, HostProviderFactory>();
+                .AddScoped<IHostProviderFactory, HostProviderFactory>()
+                .AddSingleton<IAcmeOrderFactory, AcmeOrderFactory>();
 
             // Report Service
             builder.Services.AddVhReportServices(new ReportServiceOptions {

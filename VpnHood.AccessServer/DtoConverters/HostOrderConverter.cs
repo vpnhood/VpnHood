@@ -7,7 +7,7 @@ public static class HostOrderConverter
 {
     public static HostOrder ToDto(this HostOrderModel model)
     {
-        ArgumentNullException.ThrowIfNull(model.Provider);
+        ArgumentNullException.ThrowIfNull(model.HostProvider);
 
         var hostOrder = new HostOrder {
             OrderId = model.HostOrderId.ToString(),
@@ -18,8 +18,8 @@ public static class HostOrderConverter
             CompletedTime = model.CompletedTime,
             ProviderOrderId = model.ProviderOrderId,
             NewIpOrderIpAddress = model.NewIpOrderIpAddress,
-            ProviderId = model.ProviderId.ToString(),
-            ProviderName = model.Provider.ProviderName,
+            ProviderId = model.HostProviderId.ToString(),
+            ProviderName = model.HostProvider.HostProviderName,
             NewIpOrderServer = model.NewIpOrderServer?.ToDto(null)
         };
 

@@ -12,7 +12,7 @@ public class HostIpModel
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress IpAddress { get; init; }
     public required DateTime CreatedTime { get; init; }
-    public required Guid ProviderId { get; set; }
+    public required Guid HostProviderId { get; set; }
     public required bool ExistsInProvider { get; set; }
     public required string? Description { get; set; }
     public Guid? RenewOrderId { get; set; }
@@ -22,5 +22,5 @@ public class HostIpModel
 
     public bool IsDeleted() => DeletedTime != null;
     public virtual ProjectModel? Project { get; set; }
-    public virtual ProviderModel? Provider { get; set; }
+    public virtual HostProviderModel? HostProvider { get; set; }
 }

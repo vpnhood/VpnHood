@@ -11,7 +11,7 @@ namespace VpnHood.AccessServer.Test.Tests;
 public class HostOrderTest
 {
     [TestMethod]
-    public async Task Order_new_ip_for_a_server()
+    public async Task Order_new_ip()
     {
         var startTime = DateTime.UtcNow.AddSeconds(-1);
         using var farm = await ServerFarmDom.Create();

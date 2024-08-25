@@ -11,7 +11,7 @@ public class HostOrderModel
     public required Guid HostOrderId { get; init; }
     public required DateTime CreatedTime { get; init; }
     public required HostOrderType OrderType { get; init; }
-    public required Guid ProviderId { get; init; }
+    public required Guid HostProviderId { get; init; }
     public required HostOrderStatus Status { get; set; }
     public required string? ErrorMessage { get; set; }
     public required string ProviderOrderId { get; init; }
@@ -24,5 +24,5 @@ public class HostOrderModel
 
     public virtual ServerModel? NewIpOrderServer { get; set; }
     public virtual ProjectModel? Project { get; set; }
-    public virtual ProviderModel? Provider { get; set; }
+    public virtual HostProviderModel? HostProvider { get; set; }
 }

@@ -30,4 +30,20 @@ public static class AndroidUtil
 
         return taskCompletionSource.Task;
     }
+
+    public static Task<T> RunOnUiThread<T>(Activity activity, Func<T> action)
+    {
+        var taskCompletionSource = new TaskCompletionSource<T>();
+        activity.RunOnUiThread(() => {
+            try {
+                var result = action();
+                taskCompletionSource.TrySetResult(result);
+            }
+            catch (Exception ex) {
+                taskCompletionSource.TrySetException(ex);
+            }
+        });
+
+        return taskCompletionSource.Task;
+    }
 }

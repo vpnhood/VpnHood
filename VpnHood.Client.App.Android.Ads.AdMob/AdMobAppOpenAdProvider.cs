@@ -5,7 +5,9 @@ using VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackFix;
 using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
+using VpnHood.Client.Device.Droid.Utils;
 using VpnHood.Common.Exceptions;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
 
@@ -39,14 +41,15 @@ public class AdMobAppOpenAdProvider(string adUnitId) : IAppAdProvider
 
         var adLoadCallback = new MyAppOpenAdLoadCallback();
         var adRequest = new AdRequest.Builder().Build();
-        activity.RunOnUiThread(() => AppOpenAd.Load(activity, adUnitId, adRequest, adLoadCallback));
+        await AndroidUtil.RunOnUiThread(activity, () => { AppOpenAd.Load(activity, adUnitId, adRequest, adLoadCallback); })
+            .WaitAsync(cancellationToken)
+            .ConfigureAwait(false);
 
-        var cancellationTask = new TaskCompletionSource();
-        cancellationToken.Register(cancellationTask.SetResult);
-        await Task.WhenAny(adLoadCallback.Task, cancellationTask.Task).ConfigureAwait(false);
-        cancellationToken.ThrowIfCancellationRequested();
+        // handle cancellation
+        _loadedAd = await adLoadCallback.Task
+            .WaitAsync(cancellationToken)
+            .ConfigureAwait(false);
 
-        _loadedAd = await adLoadCallback.Task.ConfigureAwait(false);
         AdLoadedTime = DateTime.Now;
     }
 
@@ -62,20 +65,17 @@ public class AdMobAppOpenAdProvider(string adUnitId) : IAppAdProvider
 
         try {
             var fullScreenContentCallback = new MyFullScreenContentCallback();
-            activity.RunOnUiThread(() => {
-                _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
-                _loadedAd.Show(activity);
-            });
+            await AndroidUtil
+                .RunOnUiThread(activity, () => {
+                        _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
+                        _loadedAd.Show(activity); })
+                .WaitAsync(cancellationToken)
+                .ConfigureAwait(false);
 
             // wait for show or dismiss
-            var cancellationTask = new TaskCompletionSource();
-            cancellationToken.Register(cancellationTask.SetResult);
-            await Task.WhenAny(fullScreenContentCallback.DismissedTask, cancellationTask.Task).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // check task errors
-            if (fullScreenContentCallback.DismissedTask.IsFaulted)
-                throw fullScreenContentCallback.DismissedTask.Exception;
+            await fullScreenContentCallback.DismissedTask
+                .WaitAsync(cancellationToken)
+                .ConfigureAwait(false);
         }
         finally {
             _loadedAd = null;

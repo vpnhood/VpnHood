@@ -51,6 +51,13 @@ public static class CertificateUtil
         return serverCertificate ?? throw new Exception("Could not extract certificate from url");
     }
 
+    public static X509Certificate2 CreateExportable(X509Certificate2 certificate, string password)
+    {
+        // Export with the Exportable flag to ensure the key is usable
+        return new X509Certificate2(certificate.Export(X509ContentType.Pfx, password), password,
+            X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
+    }
+
     public static X509Certificate2 CreateSelfSigned(string? subjectName = null, DateTimeOffset? notAfter = null)
     {
         using var rsa = RSA.Create();

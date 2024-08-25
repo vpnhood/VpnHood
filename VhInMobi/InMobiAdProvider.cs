@@ -7,7 +7,7 @@ using VpnHood.Common.Exceptions;
 
 namespace VpnHood.Client.App.Droid.Ads.VhInMobi;
 
-public class InMobiAdProvider(string accountId, string placementId, bool isDebugMode) 
+public class InMobiAdProvider(string accountId, string placementId, bool isDebugMode)
     : IAppAdProvider
 {
     private IInMobiAdProvider? _inMobiAdProvider;
@@ -22,7 +22,7 @@ public class InMobiAdProvider(string accountId, string placementId, bool isDebug
         var ret = new InMobiAdProvider(accountId, placementId, isDebugMode);
         return ret;
     }
-    
+
     public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)uiContext;
@@ -39,13 +39,13 @@ public class InMobiAdProvider(string accountId, string placementId, bool isDebug
                              ?? throw new AdException($"The {AdType} ad is not initialized");
 
         // initialize
-        Task? task = null;
-        activity.RunOnUiThread(() => {
-            task = _inMobiAdProvider.LoadAd(activity)!.AsTask();
-        });
-        
-        if (task != null)
-            await task.ConfigureAwait(false);
+        var loadAdTask = await AndroidUtil.RunOnUiThread(activity, () => _inMobiAdProvider.LoadAd(activity)!.AsTask())
+            .WaitAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        await loadAdTask
+            .WaitAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         AdLoadedTime = DateTime.Now;
     }
@@ -57,23 +57,20 @@ public class InMobiAdProvider(string accountId, string placementId, bool isDebug
         if (activity.IsDestroyed)
             throw new AdException("MainActivity has been destroyed before showing the ad.");
 
-        try
-        {
+        try {
             if (AdLoadedTime == null || _inMobiAdProvider == null)
                 throw new AdException($"The {AdType} has not been loaded.");
 
-            Task? task = null;
             // wait for show or dismiss
-            activity.RunOnUiThread(() =>
-            {
-                task = _inMobiAdProvider.ShowAd(activity)!.AsTask();
-            });
+            var showAdTask = await AndroidUtil.RunOnUiThread(activity, () => _inMobiAdProvider.ShowAd(activity)!.AsTask())
+                .WaitAsync(cancellationToken)
+                .ConfigureAwait(false);
 
-            if (task != null)
-                await task.ConfigureAwait(false);
+            await showAdTask
+                .WaitAsync(cancellationToken)
+                .ConfigureAwait(false);
         }
-        finally
-        {
+        finally {
             _inMobiAdProvider = null;
             AdLoadedTime = null;
         }

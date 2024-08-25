@@ -67,10 +67,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-    <PackageReference Include="VpnHood.Client.App.Android.Ads.Chartboost" Version="4.5.549" />
+    <PackageReference Include="VpnHood.Client.App.Android.Ads.Chartboost" Version="4.5.550" />
     <PackageReference Include="VpnHood.Client.App.Android.Ads.InMobi" Version="4.5.562" />
-    <PackageReference Include="Xamarin.Firebase.Analytics" Version="121.5.1" />
-		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="119.0.3" />
+    <PackageReference Include="Xamarin.Firebase.Analytics" Version="122.0.2" />
+		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="119.0.3.1" />
 	</ItemGroup>
 
 	<ItemGroup>

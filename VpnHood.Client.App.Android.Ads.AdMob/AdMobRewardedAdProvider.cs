@@ -4,6 +4,7 @@ using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
+using VpnHood.Client.Device.Droid.Utils;
 using VpnHood.Common.Exceptions;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
@@ -38,14 +39,14 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
 
         var adLoadCallback = new MyRewardedAdLoadCallback();
         var adRequest = new AdRequest.Builder().Build();
-        activity.RunOnUiThread(() => RewardedAd.Load(activity, adUnitId, adRequest, adLoadCallback));
+        await AndroidUtil.RunOnUiThread(activity, () => RewardedAd.Load(activity, adUnitId, adRequest, adLoadCallback))
+            .WaitAsync(cancellationToken)
+            .ConfigureAwait(false);
 
-        var cancellationTask = new TaskCompletionSource();
-        cancellationToken.Register(cancellationTask.SetResult);
-        await Task.WhenAny(adLoadCallback.Task, cancellationTask.Task).ConfigureAwait(false);
-        cancellationToken.ThrowIfCancellationRequested();
+        _loadedAd = await adLoadCallback.Task
+            .WaitAsync(cancellationToken)
+            .ConfigureAwait(false);
 
-        _loadedAd = await adLoadCallback.Task.ConfigureAwait(false);
         AdLoadedTime = DateTime.Now;
     }
 
@@ -68,22 +69,19 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
             var fullScreenContentCallback = new MyFullScreenContentCallback();
             var userEarnedRewardListener = new MyOnUserEarnedRewardListener();
 
-            activity.RunOnUiThread(() => {
-                _loadedAd.SetServerSideVerificationOptions(verificationOptions);
-                _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
-                _loadedAd.Show(activity, userEarnedRewardListener);
-            });
+            await AndroidUtil
+                .RunOnUiThread(activity, () => {
+                    _loadedAd.SetServerSideVerificationOptions(verificationOptions);
+                    _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
+                    _loadedAd.Show(activity, userEarnedRewardListener);
+                })
+                .WaitAsync(cancellationToken)
+                .ConfigureAwait(false);
 
-            // wait for earn reward or dismiss
-            var cancellationTask = new TaskCompletionSource();
-            cancellationToken.Register(cancellationTask.SetResult);
-            await Task.WhenAny(fullScreenContentCallback.DismissedTask, userEarnedRewardListener.UserEarnedRewardTask,
-                cancellationTask.Task).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
 
-            // check task errors
-            if (fullScreenContentCallback.DismissedTask.IsFaulted)
-                throw fullScreenContentCallback.DismissedTask.Exception;
+            await fullScreenContentCallback.DismissedTask
+                .WaitAsync(cancellationToken)
+                .ConfigureAwait(false);
         }
         finally {
             _loadedAd = null;

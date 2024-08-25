@@ -1,6 +1,6 @@
 ﻿using Android.Content;
-using VpnHood.Client.App.Droid.Common.Utils;
 using VpnHood.Client.Device.Droid;
+using VpnHood.Client.Device.Droid.Utils;
 
 namespace VpnHood.Client.App.Droid.Common;
 

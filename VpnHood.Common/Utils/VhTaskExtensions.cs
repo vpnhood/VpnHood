@@ -23,4 +23,11 @@ public static class VhTaskExtensions
     {
         return task.ConfigureAwait(false);
     }
+
+    public static async Task<T> VhWait<T>(Task<T> task, CancellationToken cancellationToken)
+    {
+        await Task.WhenAny(task, Task.Delay(Timeout.Infinite, cancellationToken));
+        cancellationToken.ThrowIfCancellationRequested();
+        return await task;
+    }
 }

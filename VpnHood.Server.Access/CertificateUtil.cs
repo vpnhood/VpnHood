@@ -35,21 +35,60 @@ public static class CertificateUtil
         return ret;
     }
 
+    public static async Task<X509Certificate2> GetCertificateFromUrl(Uri url)
+    {
+        X509Certificate2? serverCertificate = null;
+
+        using var handler = new HttpClientHandler();
+        handler.ServerCertificateCustomValidationCallback = (_, cert, _, _) => {
+            serverCertificate = cert != null ? new X509Certificate2(cert) : cert;
+            return true; // Accept all certificates for this example
+        };
+
+        using var client = new HttpClient(handler);
+        await client.GetAsync(url); // Trigger the request to capture the certificate
+
+        return serverCertificate ?? throw new Exception("Could not extract certificate from url");
+    }
+
+    public static X509Certificate2 CreateExportable(X509Certificate2 certificate, string password)
+    {
+        // Export with the Exportable flag to ensure the key is usable
+        return new X509Certificate2(certificate.Export(X509ContentType.Pfx, password), password,
+            X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
+    }
+
     public static X509Certificate2 CreateSelfSigned(string? subjectName = null, DateTimeOffset? notAfter = null)
     {
         using var rsa = RSA.Create();
         return CreateSelfSigned(rsa, subjectName, notAfter);
     }
 
-    public static X509Certificate2 CreateSelfSigned(RSA rsa, string? subjectName = null,
-        DateTimeOffset? notAfter = null)
+    public static X509Certificate2 CreateSelfSigned(X509Certificate2 originalCert, DateTime? noBefore = null, DateTime? notAfter = null)
+    {
+        using var rsa = RSA.Create();
+        var request = new CertificateRequest(originalCert.SubjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+
+        // Copy all extensions from the original certificate
+        foreach (var extension in originalCert.Extensions)
+            request.CertificateExtensions.Add(extension);
+
+        // Use the same validity period as the original certificate
+        noBefore ??= originalCert.NotBefore;
+        notAfter ??= originalCert.NotAfter;
+
+        var selfSignedCert = request.CreateSelfSigned(noBefore.Value, notAfter.Value);
+        selfSignedCert.FriendlyName = originalCert.FriendlyName;
+        return selfSignedCert;
+    }
+
+    public static X509Certificate2 CreateSelfSigned(RSA rsa, string? subjectName = null, DateTimeOffset? notAfter = null)
     {
         subjectName ??= $"CN={CreateRandomDns()}";
         notAfter ??= DateTimeOffset.Now.AddYears(20);
 
         // Create fake authority Root
-        var certRequest =
-            new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var certRequest = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         var rootCertificate = certRequest.CreateSelfSigned(DateTimeOffset.Now, notAfter.Value);
         return rootCertificate;
     }

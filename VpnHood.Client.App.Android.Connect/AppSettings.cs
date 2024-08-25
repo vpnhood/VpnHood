@@ -43,7 +43,7 @@ internal class AppSettings : Singleton<AppSettings>
     // Inmobi
     public string InmobiAccountId { get; init; } = "000000000000000000000000"; //YOUR_INMMOBI_ACCOUNT_ID
     public string InmobiPlacementId { get; init; } = "000000000000"; //YOUR_INMOBI_PLACEMENT_ID
-    public bool InmobiIsDebugMode { get; init; } = IsDebugMode;
+    public bool InmobiIsDebugMode { get; init; } = IsDebugMode; //TODO Check with trudy
     
 
     public static AppSettings Create()

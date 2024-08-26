@@ -3,6 +3,8 @@ using Android.Runtime;
 using Firebase.Analytics;
 using Firebase.Crashlytics;
 using VpnHood.Client.App.Droid.Ads.VhAdMob;
+using VpnHood.Client.App.Droid.Ads.VhInMobi;
+using VpnHood.Client.App.Droid.Ads.VhChartboost;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Client.App.Resources;
@@ -19,6 +21,7 @@ namespace VpnHood.Client.App.Droid.Connect;
 [MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AppSettings.AdMobApplicationId)]
 [MetaData("com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION", Value = "true")]
 [MetaData("com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING", Value = "true")]
+
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
@@ -85,18 +88,28 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 ExcludeCountryCodes = ["IR", "CN"],
                 ServiceName = "AdMob",
             },
-
-            //new AppAdService {
-            //    AdProvider = ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),
-            //    ExcludeCountryCodes = ["IR", "CN"],
-            //    ServiceName = "AdMob",
-            //},
+            
+            new AppAdService {
+                AdProvider = InMobiAdProvider.Create(appSettings.InmobiAccountId, appSettings.InmobiPlacementId, appSettings.InmobiIsDebugMode),
+                ServiceName = "InMobi",
+            },
+            
+            new AppAdService {
+                AdProvider = ChartboostAdProvider.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),
+                ExcludeCountryCodes = ["IR", "CN"],
+                ServiceName = "Chartboost",
+            },
 
             new AppAdService {
                 AdProvider = AdMobInterstitialAdProvider.Create(appSettings.AdMobInterstitialNoVideoAdUnitId),
                 ExcludeCountryCodes = ["CN"],
                 ServiceName = "AdMob-NoVideo",
-            }
+            },
+
+            
+
+
+
         ];
 
     }

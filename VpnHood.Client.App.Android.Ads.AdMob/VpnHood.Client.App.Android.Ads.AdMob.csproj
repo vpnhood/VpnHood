@@ -34,7 +34,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Xamarin.GooglePlayServices.Ads" Version="122.6.0" />
+		<PackageReference Include="Xamarin.GooglePlayServices.Ads" Version="122.6.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>

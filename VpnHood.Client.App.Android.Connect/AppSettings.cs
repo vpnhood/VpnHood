@@ -37,11 +37,14 @@ internal class AppSettings : Singleton<AppSettings>
 
     // Chartboost
     public string ChartboostAppId { get; init; } = "000000000000000000000000"; //YOUR_CHATBOOST_APP_ID
-
-    public string ChartboostAppSignature { get; init; } =
-        "0000000000000000000000000000000000000000"; //YOUR_CHATBOOST_APP_SIGNATURE
-
+    public string ChartboostAppSignature { get; init; } = "0000000000000000000000000000000000000000"; //YOUR_CHATBOOST_APP_SIGNATURE
     public string ChartboostAdLocation { get; init; } = "YOUR_CHARTBOOST_AD_LOCATION";
+
+    // Inmobi
+    public string InmobiAccountId { get; init; } = "000000000000000000000000"; //YOUR_INMMOBI_ACCOUNT_ID
+    public string InmobiPlacementId { get; init; } = "000000000000"; //YOUR_INMOBI_PLACEMENT_ID
+    public bool InmobiIsDebugMode { get; init; } = IsDebugMode;
+    
 
     public static AppSettings Create()
     {

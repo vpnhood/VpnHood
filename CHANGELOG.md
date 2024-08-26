@@ -1,10 +1,11 @@
-# v4.6.556
+# v4.6.557
 ### Client
 * Fix: ADs providers
 * Feature: Implement InMobi ads
 
 ### Server
-* Fix: Default FileAccessServer endpoints
+* Fix: Wrong IP in Default FileAccessServer Endpoints
+* Fix: Could not use UDP when listening to all IPs
 
 # v4.6.553
 ### Client

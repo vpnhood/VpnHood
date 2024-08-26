@@ -13,13 +13,18 @@ public class HostOrder
     public required HostOrderType OrderType { get; init; }
     public required HostOrderStatus Status { get; init; }
     public required string ProviderOrderId { get; init; }
-    public required string ProviderId { get; init; }
-    public required string ProviderName { get; init; }
+    public required string HostProviderId { get; init; }
+    public required string HostProviderName { get; init; }
     public required string? ErrorMessage { get; set; }
     public required DateTime? CompletedTime { get; set; }
-    
+
+    // Order Details
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress? NewIpOrderIpAddress { get; set; }
-    public required VpnServer? NewIpOrderServer { get; set; }
-    
+    public required Guid? ServerId { get; init; }
+    public required string? ServerName { get; set; }
+    public required Location? ServerLocation { get; set; }
+    public required Guid? ServerFarmId { get; set; }
+    public required string? ServerFarmName { get; set; }
+
 }

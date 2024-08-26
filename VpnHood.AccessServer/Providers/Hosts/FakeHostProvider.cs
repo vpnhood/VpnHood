@@ -37,7 +37,7 @@ public class FakeHostProvider : IHostProvider
         _hostProviderId = hostProviderModel.HostProviderId;
         _logger = logger;
         _projectId = hostProviderModel.ProjectId;
-        _providerSettings = GmUtil.JsonDeserialize<Settings>(hostProviderModel.Settings);
+        _providerSettings = GmUtil.JsonDeserialize<Settings>(string.IsNullOrEmpty(hostProviderModel.Settings) ? "{}" : hostProviderModel.Settings);
         ProviderName = hostProviderModel.HostProviderName;
     }
 

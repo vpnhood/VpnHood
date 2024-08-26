@@ -382,16 +382,20 @@ public class VhRepo(VhContext vhContext)
 
 
     public Task<HostOrderModel[]> HostOrdersList(Guid? projectId = null, HostOrderStatus? status = null,
-        int recordIndex = 0, int recordCount = int.MaxValue)
+        int recordIndex = 0, int recordCount = int.MaxValue, bool includeServer = false)
     {
-        return vhContext.HostOrders
+        var query = vhContext.HostOrders
             .Include(x => x.HostProvider)
             .Where(x => x.ProjectId == projectId || (projectId == null && x.Project!.DeletedTime == null))
             .Where(x => x.Status == status || status == null)
             .OrderByDescending(x => x.CreatedTime)
             .Skip(recordIndex)
-            .Take(recordCount)
-            .ToArrayAsync();
+            .Take(recordCount);
+
+        if (includeServer)
+            query = query.Include(x => x.NewIpOrderServer);
+
+        return query.ToArrayAsync();
     }
 
     public Task<HostOrderModel> HostOrderGet(Guid projectId, Guid hostOrderOd)

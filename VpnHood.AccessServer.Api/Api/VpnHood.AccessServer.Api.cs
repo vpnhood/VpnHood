@@ -8853,13 +8853,13 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string ProviderOrderId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("providerId")]
+        [System.Text.Json.Serialization.JsonPropertyName("hostProviderId")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string ProviderId { get; set; } = default!;
+        public string HostProviderId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("providerName")]
+        [System.Text.Json.Serialization.JsonPropertyName("hostProviderName")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string ProviderName { get; set; } = default!;
+        public string HostProviderName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
         public string? ErrorMessage { get; set; } = default!;
@@ -8870,8 +8870,20 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("newIpOrderIpAddress")]
         public string? NewIpOrderIpAddress { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("newIpOrderServer")]
-        public VpnServer? NewIpOrderServer { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("serverId")]
+        public System.Guid? ServerId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverName")]
+        public string? ServerName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverLocation")]
+        public Location? ServerLocation { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
+        public System.Guid? ServerFarmId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
+        public string? ServerFarmName { get; set; } = default!;
 
     }
 
@@ -8896,185 +8908,6 @@ namespace VpnHood.AccessServer.Api
 
         [System.Runtime.Serialization.EnumMember(Value = @"Failed")]
         Failed = 2,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class VpnServer
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("serverId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ServerId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("serverName")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string ServerName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ServerFarmId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
-        public string? ServerFarmName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("location")]
-        public Location? Location { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("version")]
-        public string? Version { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("environmentVersion")]
-        public string? EnvironmentVersion { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("osInfo")]
-        public string? OsInfo { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("machineName")]
-        public string? MachineName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalMemory")]
-        public long? TotalMemory { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("logicalCoreCount")]
-        public int? LogicalCoreCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("configureTime")]
-        public System.DateTime? ConfigureTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("autoConfigure")]
-        public bool AutoConfigure { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
-        public bool IsEnabled { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("description")]
-        public string? Description { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("lastConfigError")]
-        public string? LastConfigError { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("serverState")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
-        public ServerState ServerState { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("serverStatus")]
-        public ServerStatusEx? ServerStatus { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
-        [System.ComponentModel.DataAnnotations.Required]
-        public System.Collections.Generic.ICollection<AccessPoint> AccessPoints { get; set; } = new System.Collections.ObjectModel.Collection<AccessPoint>();
-
-        [System.Text.Json.Serialization.JsonPropertyName("allowInAutoLocation")]
-        public bool AllowInAutoLocation { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("hostPanelUrl")]
-        public System.Uri? HostPanelUrl { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ServerState
-    {
-
-        [System.Runtime.Serialization.EnumMember(Value = @"NotInstalled")]
-        NotInstalled = 0,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Disabled")]
-        Disabled = 1,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Lost")]
-        Lost = 2,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Error")]
-        Error = 3,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Configuring")]
-        Configuring = 4,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Idle")]
-        Idle = 5,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Active")]
-        Active = 6,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ServerStatusEx
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("sessionCount")]
-        public int SessionCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("tcpConnectionCount")]
-        public int TcpConnectionCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("udpConnectionCount")]
-        public int UdpConnectionCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("availableMemory")]
-        public long? AvailableMemory { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("cpuUsage")]
-        public int? CpuUsage { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("threadCount")]
-        public int ThreadCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("tunnelSendSpeed")]
-        public long TunnelSendSpeed { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("tunnelReceiveSpeed")]
-        public long TunnelReceiveSpeed { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class AccessPoint
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("ipAddress")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string IpAddress { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointMode")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
-        public AccessPointMode AccessPointMode { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("isListen")]
-        public bool IsListen { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("tcpPort")]
-        public int TcpPort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("udpPort")]
-        public int UdpPort { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum AccessPointMode
-    {
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Private")]
-        Private = 0,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Public")]
-        Public = 1,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"PublicInToken")]
-        PublicInToken = 2,
 
     }
 
@@ -9605,6 +9438,185 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("server")]
         [System.ComponentModel.DataAnnotations.Required]
         public VpnServer Server { get; set; } = new VpnServer();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class VpnServer
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid ServerId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ServerName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid ServerFarmId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
+        public string? ServerFarmName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("location")]
+        public Location? Location { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("version")]
+        public string? Version { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("environmentVersion")]
+        public string? EnvironmentVersion { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("osInfo")]
+        public string? OsInfo { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("machineName")]
+        public string? MachineName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalMemory")]
+        public long? TotalMemory { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("logicalCoreCount")]
+        public int? LogicalCoreCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("configureTime")]
+        public System.DateTime? ConfigureTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTime CreatedTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("autoConfigure")]
+        public bool AutoConfigure { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
+        public bool IsEnabled { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string? Description { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lastConfigError")]
+        public string? LastConfigError { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverState")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public ServerState ServerState { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverStatus")]
+        public ServerStatusEx? ServerStatus { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<AccessPoint> AccessPoints { get; set; } = new System.Collections.ObjectModel.Collection<AccessPoint>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("allowInAutoLocation")]
+        public bool AllowInAutoLocation { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("hostPanelUrl")]
+        public System.Uri? HostPanelUrl { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ServerState
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"NotInstalled")]
+        NotInstalled = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Disabled")]
+        Disabled = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Lost")]
+        Lost = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Error")]
+        Error = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Configuring")]
+        Configuring = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Idle")]
+        Idle = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Active")]
+        Active = 6,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ServerStatusEx
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("sessionCount")]
+        public int SessionCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tcpConnectionCount")]
+        public int TcpConnectionCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("udpConnectionCount")]
+        public int UdpConnectionCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("availableMemory")]
+        public long? AvailableMemory { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("cpuUsage")]
+        public int? CpuUsage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("threadCount")]
+        public int ThreadCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tunnelSendSpeed")]
+        public long TunnelSendSpeed { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tunnelReceiveSpeed")]
+        public long TunnelReceiveSpeed { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTime CreatedTime { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AccessPoint
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("ipAddress")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IpAddress { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("accessPointMode")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public AccessPointMode AccessPointMode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isListen")]
+        public bool IsListen { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tcpPort")]
+        public int TcpPort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("udpPort")]
+        public int UdpPort { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum AccessPointMode
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Private")]
+        Private = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Public")]
+        Public = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PublicInToken")]
+        PublicInToken = 2,
 
     }
 

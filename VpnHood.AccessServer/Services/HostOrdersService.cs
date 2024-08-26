@@ -394,7 +394,9 @@ public class HostOrdersService(
     public async Task<HostOrder[]> List(Guid projectId, int recordIndex = 0, int recordCount = int.MaxValue)
     {
         await Sync(projectId);
-        var hostOrders = await vhRepo.HostOrdersList(projectId, recordIndex: recordIndex, recordCount: recordCount);
+        var hostOrders = await vhRepo.HostOrdersList(projectId, includeServer: true, 
+            recordIndex: recordIndex, recordCount: recordCount);
+        
         return hostOrders.Select(x => x.ToDto()).ToArray();
     }
 

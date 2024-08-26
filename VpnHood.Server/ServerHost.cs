@@ -91,7 +91,7 @@ public class ServerHost : IAsyncDisposable, IJob
                 continue;
 
             // report if port is set
-            if (udpEndPoint.Port == 0)
+            if (udpEndPoint.Port != 0)
                 VhLogger.Instance.LogInformation("Start listening on UdpEndPoint: {UdpEndPoint}",
                     VhLogger.Format(udpEndPoint));
 

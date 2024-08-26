@@ -90,7 +90,7 @@ internal class AppMultiAdService
     {
         if (_loadedAdService == null)
             throw new LoadAdException("There is no loaded ad.");
-
+        
         // show the ad
         try {
             await _loadedAdService.AdProvider.ShowAd(uiContext, customData, cancellationToken).VhConfigureAwait();

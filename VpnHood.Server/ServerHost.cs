@@ -553,8 +553,11 @@ public class ServerHost : IAsyncDisposable, IJob
 
         // find udp port that match to the same tcp local IpAddress
         var udpPort = _udpChannelTransmitters
-            .SingleOrDefault(x => x.LocalEndPoint.Address.Equals(ipEndPointPair.LocalEndPoint.Address))?.LocalEndPoint
-            .Port;
+            .SingleOrDefault(x => 
+                (x.LocalEndPoint.Address.Equals(IPAddress.Any) && ipEndPointPair.LocalEndPoint.IsV4()) ||
+                (x.LocalEndPoint.Address.Equals(IPAddress.IPv6Any) && ipEndPointPair.LocalEndPoint.IsV6()) || 
+                x.LocalEndPoint.Address.Equals(ipEndPointPair.LocalEndPoint.Address))?
+            .LocalEndPoint.Port;
 
         var helloResponse = new HelloResponse {
             ErrorCode = sessionResponse.ErrorCode,

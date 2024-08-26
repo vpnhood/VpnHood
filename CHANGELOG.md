@@ -1,3 +1,8 @@
+# Upcoming
+### Client
+* Fix: ADs providers
+* Feature: Implement InMobi ads
+
 # v4.6.553
 ### Client
 * Fix: Could not open websites on some devices

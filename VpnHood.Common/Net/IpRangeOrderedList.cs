@@ -113,7 +113,7 @@ public class IpRangeOrderedList :
 
     public IpRangeOrderedList Exclude(IpRange ipRange)
     {
-        return Exclude(new[] { ipRange });
+        return Exclude([ipRange]);
     }
 
     public IpRangeOrderedList Exclude(IEnumerable<IpRange> ipRanges)

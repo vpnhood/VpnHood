@@ -325,10 +325,10 @@ public class VpnHoodClient : IAsyncDisposable
             includeIpRanges = includeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
 
         // Make sure CatcherAddress is included
-        includeIpRanges = includeIpRanges.Union(new[] {
+        includeIpRanges = includeIpRanges.Union([
             new IpRange(_clientHost.CatcherAddressIpV4),
             new IpRange(_clientHost.CatcherAddressIpV6)
-        });
+        ]);
 
         _packetCapture.IncludeNetworks = includeIpRanges.ToIpNetworks().ToArray(); //sort and unify
         VhLogger.Instance.LogInformation(

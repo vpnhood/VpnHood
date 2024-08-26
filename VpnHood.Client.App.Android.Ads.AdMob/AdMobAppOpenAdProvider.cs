@@ -7,7 +7,6 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Device.Droid.Utils;
 using VpnHood.Common.Exceptions;
-using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
 

@@ -1,7 +1,10 @@
-# Upcoming
+# v4.6.556
 ### Client
 * Fix: ADs providers
 * Feature: Implement InMobi ads
+
+### Server
+* Fix: Default FileAccessServer endpoints
 
 # v4.6.553
 ### Client

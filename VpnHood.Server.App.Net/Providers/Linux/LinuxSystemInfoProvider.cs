@@ -15,7 +15,7 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
             if (memTotalLine == null)
                 return null;
 
-            var tokenize = memTotalLine.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            var tokenize = memTotalLine.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
             if (tokenize.Length < 1)
                 return null;
 

@@ -441,12 +441,12 @@ public class ClientAppTest : TestBase
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         var customIps = (await Dns.GetHostAddressesAsync(TestConstants.HttpsUri1.Host))
             .Select(x => new IpRange(x))
-            .Concat(new[] {
+            .Concat([
                 new IpRange(TestConstants.PingV4Address1),
                 new IpRange(TestConstants.NsEndPoint1.Address),
                 new IpRange(TestConstants.UdpV4EndPoint1.Address),
                 new IpRange(TestConstants.UdpV6EndPoint1.Address)
-            })
+            ])
             .ToArray();
 
         // ************

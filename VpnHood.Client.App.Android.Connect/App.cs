@@ -105,11 +105,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 ExcludeCountryCodes = ["CN"],
                 ServiceName = "AdMob-NoVideo",
             },
-
-            
-
-
-
         ];
 
     }

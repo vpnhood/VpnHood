@@ -128,6 +128,8 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
     private class MyOnUserEarnedRewardListener : Java.Lang.Object, IOnUserEarnedRewardListener
     {
         private readonly TaskCompletionSource<IRewardItem> _earnedRewardCompletionSource = new();
+        
+        // ReSharper disable once UnusedMember.Local
         public Task<IRewardItem> UserEarnedRewardTask => _earnedRewardCompletionSource.Task;
 
         public void OnUserEarnedReward(IRewardItem rewardItem)

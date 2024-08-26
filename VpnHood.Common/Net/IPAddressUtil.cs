@@ -145,7 +145,7 @@ public static class IPAddressUtil
         var content = await httpClient.GetStringAsync(url).VhConfigureAwait();
 
         // Split the response into lines
-        var lines = content.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        var lines = content.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
         var ipLine = lines.SingleOrDefault(x => x.StartsWith("ip=", StringComparison.OrdinalIgnoreCase));
         return ipLine != null ? IPAddress.Parse(ipLine.Split('=')[1]) : null;
     }
@@ -162,7 +162,7 @@ public static class IPAddressUtil
         var content = await response.Content.ReadAsStringAsync();
 
         // Split the response into lines
-        var lines = content.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        var lines = content.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
         var ipLine = lines.SingleOrDefault(x => x.StartsWith("loc=", StringComparison.OrdinalIgnoreCase));
         return ipLine?.Split('=')[1];
     }

@@ -12,7 +12,7 @@ public class LinuxNetConfigurationProvider : INetConfigurationProvider
         const string command = "ip link show | grep '^[0-9]' | awk '{print $2}' | sed 's/://'";
         var output = await ExecuteCommandAsync(command);
         var names = output
-            .Split(new[] { ' ', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Split([' ', '\n'], StringSplitOptions.RemoveEmptyEntries)
             .Where(x => !x.Equals("lo", StringComparison.OrdinalIgnoreCase))
             .ToArray();
 

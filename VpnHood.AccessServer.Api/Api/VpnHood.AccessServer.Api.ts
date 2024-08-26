@@ -1144,11 +1144,13 @@ export class HostOrdersClient {
         return Promise.resolve<HostOrder>(null as any);
     }
 
-    list(projectId: string, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostOrder[]> {
+    list(projectId: string, search?: string | null | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostOrder[]> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (search !== undefined && search !== null)
+            url_ += "search=" + encodeURIComponent("" + search) + "&";
         if (recordIndex === null)
             throw new Error("The parameter 'recordIndex' cannot be null.");
         else if (recordIndex !== undefined)
@@ -5688,6 +5690,7 @@ export class HostIp implements IHostIp {
     serverLocation?: Location | null;
     serverFarmId?: string | null;
     serverFarmName?: string | null;
+    status!: HostIpStatus;
 
     constructor(data?: IHostIp) {
         if (data) {
@@ -5713,6 +5716,7 @@ export class HostIp implements IHostIp {
             this.serverLocation = _data["serverLocation"] ? Location.fromJS(_data["serverLocation"]) : <any>null;
             this.serverFarmId = _data["serverFarmId"] !== undefined ? _data["serverFarmId"] : <any>null;
             this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
+            this.status = _data["status"] !== undefined ? _data["status"] : <any>null;
         }
     }
 
@@ -5738,6 +5742,7 @@ export class HostIp implements IHostIp {
         data["serverLocation"] = this.serverLocation ? this.serverLocation.toJSON() : <any>null;
         data["serverFarmId"] = this.serverFarmId !== undefined ? this.serverFarmId : <any>null;
         data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
+        data["status"] = this.status !== undefined ? this.status : <any>null;
         return data;
     }
 }
@@ -5756,6 +5761,7 @@ export interface IHostIp {
     serverLocation?: Location | null;
     serverFarmId?: string | null;
     serverFarmName?: string | null;
+    status: HostIpStatus;
 }
 
 export class Location implements ILocation {
@@ -5816,6 +5822,13 @@ export interface ILocation {
     cityName?: string | null;
     cityCode?: string | null;
     displayName: string;
+}
+
+export enum HostIpStatus {
+    InUse = "InUse",
+    NotInUse = "NotInUse",
+    NotInProvider = "NotInProvider",
+    Releasing = "Releasing",
 }
 
 export class HostOrder implements IHostOrder {

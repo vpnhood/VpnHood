@@ -604,6 +604,13 @@ public class VhContext : DbContext
                 .HasKey(e => e.HostOrderId);
 
             entity
+                .Property(e => e.NewIpOrderIpAddress)
+                .HasMaxLength(50);
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.Status });
+
+            entity
                 .HasIndex(e => new { e.ProjectId, e.Status })
                 .HasFilter($"{nameof(HostOrderModel.Status)} = {(int)HostOrderStatus.Pending}");
 

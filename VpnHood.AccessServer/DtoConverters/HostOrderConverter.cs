@@ -1,4 +1,5 @@
-﻿using VpnHood.AccessServer.Dtos.HostOrders;
+﻿using System.Net;
+using VpnHood.AccessServer.Dtos.HostOrders;
 using VpnHood.AccessServer.Persistence.Models.HostOrders;
 
 namespace VpnHood.AccessServer.DtoConverters;
@@ -20,7 +21,7 @@ public static class HostOrderConverter
             ErrorMessage = model.ErrorMessage,
             CompletedTime = model.CompletedTime,
             ProviderOrderId = model.ProviderOrderId,
-            NewIpOrderIpAddress = model.NewIpOrderIpAddress,
+            NewIpOrderIpAddress = model.NewIpOrderIpAddress != null ? IPAddress.Parse(model.NewIpOrderIpAddress) : null,
             ServerId = serverModel?.ServerId,
             ServerName = serverModel?.ServerName,
             ServerLocation = serverModel?.Location?.ToDto(),

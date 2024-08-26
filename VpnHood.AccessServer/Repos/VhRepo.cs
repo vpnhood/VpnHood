@@ -381,19 +381,23 @@ public class VhRepo(VhContext vhContext)
     }
 
 
-    public Task<HostOrderModel[]> HostOrdersList(Guid? projectId = null, HostOrderStatus? status = null,
-        int recordIndex = 0, int recordCount = int.MaxValue, bool includeServer = false)
+    public Task<HostOrderModel[]> HostOrdersList(Guid? projectId = null, string? search = null, HostOrderStatus? status = null,
+        bool includeServer = false,
+        int recordIndex = 0, int recordCount = int.MaxValue)
     {
         var query = vhContext.HostOrders
             .Include(x => x.HostProvider)
             .Where(x => x.ProjectId == projectId || (projectId == null && x.Project!.DeletedTime == null))
             .Where(x => x.Status == status || status == null)
+            .Where(x => x.NewIpOrderIpAddress == search || search == null)
             .OrderByDescending(x => x.CreatedTime)
             .Skip(recordIndex)
             .Take(recordCount);
 
         if (includeServer)
-            query = query.Include(x => x.NewIpOrderServer);
+            query = query
+                .Include(x => x.NewIpOrderServer)
+                .ThenInclude(x => x!.ServerFarm);
 
         return query.ToArrayAsync();
     }
@@ -424,14 +428,14 @@ public class VhRepo(VhContext vhContext)
         return vhContext.HostIps
             .Include(x => x.HostProvider)
             .Where(x => x.ProjectId == projectId && x.DeletedTime == null)
-            .Where(x => x.IpAddress.Equals(search) || search == null)
+            .Where(x => x.IpAddress == search || search == null)
             .OrderByDescending(x => x.HostIpId)
             .Skip(recordIndex)
             .Take(recordCount)
             .ToArrayAsync();
     }
 
-    public Task<HostIpModel> HostIpGet(Guid projectId, IPAddress ipAddress)
+    public Task<HostIpModel> HostIpGet(Guid projectId, string ipAddress)
     {
         return vhContext.HostIps
             .Include(x => x.HostProvider)

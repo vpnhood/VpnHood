@@ -16,9 +16,8 @@ public class HostOrderModel
     public required string? ErrorMessage { get; set; }
     public required string ProviderOrderId { get; init; }
     public required DateTime? CompletedTime { get; set; }
-    
-    [JsonConverter(typeof(IPAddressConverter))]
-    public IPAddress? NewIpOrderIpAddress { get; set; }
+   
+    public string? NewIpOrderIpAddress { get; set; }
     public Guid? NewIpOrderServerId { get; init; }
     public DateTime? NewIpOrderOldIpAddressReleaseTime { get; set; }
 

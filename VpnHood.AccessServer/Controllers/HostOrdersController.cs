@@ -35,9 +35,9 @@ public class HostOrdersController(HostOrdersService hostOrdersService)
 
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<HostOrder[]> List(Guid projectId, int recordIndex = 0, int recordCount = 200)
+    public Task<HostOrder[]> List(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = 200)
     {
-        return hostOrdersService.List(projectId, recordIndex: recordIndex, recordCount: recordCount);
+        return hostOrdersService.List(projectId, search: search, recordIndex: recordIndex, recordCount: recordCount);
     }
 
     [HttpGet("{orderId}")]

@@ -380,6 +380,19 @@ public class HostOrdersService(
         return servers.FirstOrDefault(y => y.AccessPoints.Any(z => z.IpAddress.Equals(ip)));
     }
 
+    public async Task<HostIp> GetIp(Guid projectId, string ipAddress)
+    {
+        var hostIpModel = await vhRepo.HostIpGet(projectId, ipAddress: ipAddress);
+
+        // get all servers
+        var servers = await vhRepo.ServerList(projectId, includeServerFarm: true, tracking: false);
+
+        // return all host ips
+        var hostIps = hostIpModel.ToDto(FindServerFromIp(servers, hostIpModel.GetIpAddress()));
+        return hostIps;
+    }
+
+
     public async Task<HostIp[]> ListIps(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = int.MaxValue)
     {
         var hostIpModels = await vhRepo.HostIpList(projectId, search: search, recordIndex: recordIndex, recordCount: recordCount);
@@ -393,6 +406,7 @@ public class HostOrdersService(
 
         return hostIps;
     }
+
 
     public async Task<HostOrder[]> List(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = int.MaxValue)
     {

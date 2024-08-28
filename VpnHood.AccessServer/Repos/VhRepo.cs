@@ -422,7 +422,8 @@ public class VhRepo(VhContext vhContext)
     }
 
 
-    public Task<HostIpModel[]> HostIpList(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = int.MaxValue)
+    public Task<HostIpModel[]> HostIpList(Guid projectId, string? search = null, 
+        int recordIndex = 0, int recordCount = int.MaxValue)
     {
         return vhContext.HostIps
             .Include(x => x.HostProvider)

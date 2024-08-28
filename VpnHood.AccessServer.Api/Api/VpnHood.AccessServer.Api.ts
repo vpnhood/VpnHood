@@ -967,21 +967,14 @@ export class HostOrdersClient {
 
     }
 
-    listIps(projectId: string, search?: string | null | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/ips?";
+    getIp(projectId: string, ipAddress: string, cancelToken?: CancelToken): Promise<HostIp> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/ips/{ipAddress}";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (search !== undefined && search !== null)
-            url_ += "search=" + encodeURIComponent("" + search) + "&";
-        if (recordIndex === null)
-            throw new Error("The parameter 'recordIndex' cannot be null.");
-        else if (recordIndex !== undefined)
-            url_ += "recordIndex=" + encodeURIComponent("" + recordIndex) + "&";
-        if (recordCount === null)
-            throw new Error("The parameter 'recordCount' cannot be null.");
-        else if (recordCount !== undefined)
-            url_ += "recordCount=" + encodeURIComponent("" + recordCount) + "&";
+        if (ipAddress === undefined || ipAddress === null)
+            throw new Error("The parameter 'ipAddress' must be defined.");
+        url_ = url_.replace("{ipAddress}", encodeURIComponent("" + ipAddress));
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -1000,11 +993,11 @@ export class HostOrdersClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processListIps(_response);
+            return this.processGetIp(_response);
         });
     }
 
-    protected processListIps(response: AxiosResponse): Promise<HostIp[]> {
+    protected processGetIp(response: AxiosResponse): Promise<HostIp> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1018,21 +1011,14 @@ export class HostOrdersClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(HostIp.fromJS(item));
-            }
-            else {
-                result200 = <any>null;
-            }
-            return Promise.resolve<HostIp[]>(result200);
+            result200 = HostIp.fromJS(resultData200);
+            return Promise.resolve<HostIp>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<HostIp[]>(null as any);
+        return Promise.resolve<HostIp>(null as any);
     }
 
     releaseIp(projectId: string, ipAddress: string, ignoreProviderError?: boolean | undefined, cancelToken?: CancelToken): Promise<void> {
@@ -1141,6 +1127,74 @@ export class HostOrdersClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<void>(null as any);
+    }
+
+    listIps(projectId: string, search?: string | null | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/ips?";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (search !== undefined && search !== null)
+            url_ += "search=" + encodeURIComponent("" + search) + "&";
+        if (recordIndex === null)
+            throw new Error("The parameter 'recordIndex' cannot be null.");
+        else if (recordIndex !== undefined)
+            url_ += "recordIndex=" + encodeURIComponent("" + recordIndex) + "&";
+        if (recordCount === null)
+            throw new Error("The parameter 'recordCount' cannot be null.");
+        else if (recordCount !== undefined)
+            url_ += "recordCount=" + encodeURIComponent("" + recordCount) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processListIps(_response);
+        });
+    }
+
+    protected processListIps(response: AxiosResponse): Promise<HostIp[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(HostIp.fromJS(item));
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<HostIp[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<HostIp[]>(null as any);
     }
 
     createNewIpOrder(projectId: string, hostOrderNewIp: HostOrderNewIp, cancelToken?: CancelToken): Promise<HostOrder> {

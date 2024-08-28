@@ -31,16 +31,17 @@ public class HostOrderTest
             hostOrder = await farm.TestApp.HostOrdersClient.GetAsync(farm.ProjectId, hostOrder.OrderId);
             return hostOrder.Status;
         });
+        Assert.IsNotNull(hostOrder.NewIpOrderIpAddress);
 
         // update ip auto release time
         var autoReleaseTime = DateTime.UtcNow.Date.AddDays(3);
-        var hostIp = (await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId)).First();
+        var hostIp = await farm.TestApp.HostOrdersClient.GetIpAsync(farm.ProjectId, hostOrder.NewIpOrderIpAddress);
         await farm.TestApp.HostOrdersClient.UpdateIpAsync(farm.ProjectId, hostIp.IpAddress, new HostIpUpdateParams {
             AutoReleaseTime = new PatchOfNullableDateTime { Value = autoReleaseTime }
         });
 
         // Assert auto release time is updated
-        hostIp = (await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId)).Single(x=>x.IpAddress.Equals(hostIp.IpAddress));
+        hostIp = await farm.TestApp.HostOrdersClient.GetIpAsync(farm.ProjectId, hostOrder.NewIpOrderIpAddress);
         Assert.AreEqual(autoReleaseTime, hostIp.AutoReleaseTime);
     }
 

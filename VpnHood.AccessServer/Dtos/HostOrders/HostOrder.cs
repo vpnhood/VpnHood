@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.AccessServer.Dtos.Servers;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.Common.Converters;
 

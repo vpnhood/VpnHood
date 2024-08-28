@@ -328,8 +328,8 @@ public class HostOrdersService(
         //combine all task results into HostProvider and Ip list
         var providerIpInfos = providerIpInfosTasks
             .SelectMany(x => x.ListTask.Result.Select(y => new {
-                x.Provider, 
-                x.ProviderName, 
+                x.Provider,
+                x.ProviderName,
                 x.ProviderId,
                 IpAddress = y
             }))
@@ -399,7 +399,7 @@ public class HostOrdersService(
         await Sync(projectId);
         var hostOrders = await vhRepo.HostOrdersList(projectId, includeServer: true, search: search,
             recordIndex: recordIndex, recordCount: recordCount);
-        
+
         return hostOrders.Select(x => x.ToDto()).ToArray();
     }
 
@@ -425,12 +425,12 @@ public class HostOrdersService(
             await serverConfigureService.SaveChangesAndInvalidateServer(projectId, server, true);
         }
 
-        // get the provider
-        var providerModel = await vhRepo.HostProviderGet(projectId,hostProviderId: hostIp.HostProviderId);
-        if (providerModel == null)
-            throw new NotExistsException($"Could not find any host provider for this server. HostProviderName: {hostIp.HostProvider?.HostProviderName}");
-
         try {
+            // get the provider
+            var providerModel = await vhRepo.HostProviderGet(projectId, hostProviderId: hostIp.HostProviderId);
+            if (providerModel == null)
+                throw new NotExistsException($"Could not find any host provider for this server. HostProviderName: {hostIp.HostProvider?.HostProviderName}");
+
             var provider = hostProviderFactory.Create(providerModel.HostProviderId, providerModel.HostProviderName, providerModel.Settings);
             await provider.ReleaseIp(ipAddress, appOptions.Value.ServiceHttpTimeout);
         }
@@ -440,6 +440,16 @@ public class HostOrdersService(
 
         // create release order
         hostIp.ReleaseRequestTime = DateTime.UtcNow;
+        await vhRepo.SaveChangesAsync();
+    }
+
+    public async Task UpdateIp(Guid projectId, IPAddress parse, HostIpUpdateParams updateParams)
+    {
+        var hostIp = await vhRepo.HostIpGet(projectId, parse.ToString());
+
+        if (updateParams.AutoReleaseTime != null)
+            hostIp.AutoReleaseTime = updateParams.AutoReleaseTime;
+
         await vhRepo.SaveChangesAsync();
     }
 }

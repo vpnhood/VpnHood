@@ -39,6 +39,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.AccessServer.Abstractions\VpnHood.AccessServer.Abstractions.csproj" />
+		<ProjectReference Include="..\VpnHood.AccessServer.HostProviders\VpnHood.AccessServer.HostProviders.csproj" />
 		<ProjectReference Include="..\VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj" />
 		<ProjectReference Include="..\VpnHood.AccessServer.Report\VpnHood.AccessServer.Report.csproj" />
 	</ItemGroup>

@@ -186,6 +186,10 @@ public class FakeHostProvider : IHostProvider
         var vhRepo = scope.ServiceProvider.GetRequiredService<VhRepo>();
         var fakeDb = await GetFakeDb(vhRepo);
 
+        // check is the ip is allocated
+        if (!fakeDb.HostIps.ContainsKey(ipAddress.ToString()))
+            throw new Exception("Ip is not allocated in this provider.");
+
         var order = new Order {
             Type = Order.OrderType.ReleaseIp,
             IsCompleted = false,

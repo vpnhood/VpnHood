@@ -12,7 +12,6 @@ namespace VpnHood.AccessServer.Repos;
 public class VhRepo(VhContext vhContext)
     : RepoBase(vhContext)
 {
-    public VhContext VhContext => vhContext; //todo
     public Task<ServerModel> ServerGet(Guid projectId, Guid serverId, bool includeFarm = false,
         bool includeFarmProfile = false)
     {
@@ -441,7 +440,7 @@ public class VhRepo(VhContext vhContext)
             .Include(x => x.HostProvider)
             .Where(x => x.ProjectId == projectId && x.DeletedTime == null)
             .Where(x => x.IpAddress == ipAddress)
-            .SingleAsync();
+            .FirstAsync();
     }
 
     public async Task<HostIpModel[]> HostIpListReleasing()

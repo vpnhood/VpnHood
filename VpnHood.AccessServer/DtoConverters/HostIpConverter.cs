@@ -33,11 +33,11 @@ public static class HostIpConverter
 
     private static HostIpStatus GetHostIpStatus(HostIpModel hostIpModel, ServerModel? serverModel)
     {
-        if (!hostIpModel.ExistsInProvider)
-            return HostIpStatus.NotInProvider;
-
         if (hostIpModel.ReleaseRequestTime != null)
             return HostIpStatus.Releasing;
+
+        if (!hostIpModel.ExistsInProvider)
+            return HostIpStatus.NotInProvider;
 
         return serverModel != null ? HostIpStatus.InUse : HostIpStatus.NotInUse;
     }

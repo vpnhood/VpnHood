@@ -11,6 +11,4 @@ public class HostOrderNewIp
 
     [JsonConverter(typeof(IPAddressConverter))]
     public IPAddress? OldIpAddress { get; init; }
-    
-
 }

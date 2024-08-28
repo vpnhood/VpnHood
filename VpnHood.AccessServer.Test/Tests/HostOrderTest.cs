@@ -11,6 +11,40 @@ namespace VpnHood.AccessServer.Test.Tests;
 public class HostOrderTest
 {
     [TestMethod]
+    public async Task HostIp_CRUD()
+    {
+        using var farm = await ServerFarmDom.Create();
+        var serverDom = await farm.AddNewServer();
+
+        var testHostProvider = await farm.TestApp.AddTestHostProvider();
+        await serverDom.SetHostPanelDomain(testHostProvider.ProviderName);
+
+        // Order a new IP for the server
+        var hostOrder = await farm.TestApp.HostOrdersClient.CreateNewIpOrderAsync(farm.ProjectId,
+            new HostOrderNewIp { ServerId = serverDom.ServerId });
+
+        // finish order
+        await testHostProvider.CompleteOrders();
+
+        // wait for the order to complete
+        await VhTestUtil.AssertEqualsWait(HostOrderStatus.Completed, async () => {
+            hostOrder = await farm.TestApp.HostOrdersClient.GetAsync(farm.ProjectId, hostOrder.OrderId);
+            return hostOrder.Status;
+        });
+
+        // update ip auto release time
+        var autoReleaseTime = DateTime.UtcNow.Date.AddDays(3);
+        var hostIp = (await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId)).First();
+        await farm.TestApp.HostOrdersClient.UpdateIpAsync(farm.ProjectId, hostIp.IpAddress, new HostIpUpdateParams {
+            AutoReleaseTime = new PatchOfNullableDateTime { Value = autoReleaseTime }
+        });
+
+        // Assert auto release time is updated
+        hostIp = (await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId)).Single(x=>x.IpAddress.Equals(hostIp.IpAddress));
+        Assert.AreEqual(autoReleaseTime, hostIp.AutoReleaseTime);
+    }
+
+    [TestMethod]
     public async Task Order_new_ip()
     {
         var startTime = DateTime.UtcNow.AddSeconds(-1);

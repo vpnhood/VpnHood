@@ -26,6 +26,14 @@ public class HostOrdersController(HostOrdersService hostOrdersService)
         return hostOrdersService.ReleaseIp(projectId, IPAddress.Parse(ipAddress), ignoreProviderError);
     }
 
+    [AuthorizeProjectPermission(Permissions.ProjectWrite)]
+    [HttpPatch("ips/{ipAddress}")]
+    public Task UpdateIp(Guid projectId, string ipAddress, HostIpUpdateParams updateParams)
+    {
+        return hostOrdersService.UpdateIp(projectId, IPAddress.Parse(ipAddress), updateParams);
+    }
+
+
     [HttpPost("order-new-ip")]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
     public Task<HostOrder> CreateNewIpOrder(Guid projectId, HostOrderNewIp hostOrderNewIp)

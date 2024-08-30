@@ -54,6 +54,11 @@ public class HostOrdersService(
             !serverModel.AccessPoints.Any(x => x.IpAddress.Equals(hostOrderNewIp.OldIpAddress)))
             throw new InvalidOperationException("The old ip address does not belong to the server.");
 
+        // calculate the old ip release time
+        var oldIpAddressReleaseTime = hostOrderNewIp.OldIpAddress != null
+            ? hostOrderNewIp.OldIpAddressReleaseTime
+            : CalculateReleaseDate();
+
         // Create the provider
         var provider = hostProviderFactory.Create(providerModel.HostProviderId, providerModel.HostProviderName, providerModel.Settings);
 
@@ -82,7 +87,7 @@ public class HostOrdersService(
             ErrorMessage = null,
             CompletedTime = null,
             NewIpOrderServerId = hostOrderNewIp.ServerId,
-            NewIpOrderOldIpAddressReleaseTime = hostOrderNewIp.OldIpAddressReleaseTime
+            NewIpOrderOldIpAddressReleaseTime = oldIpAddressReleaseTime
         };
         await vhRepo.AddAsync(hostOrderModel);
 
@@ -170,23 +175,25 @@ public class HostOrdersService(
     // return true if there is not pending order left
     private async Task<bool> ProcessJobs(CancellationToken cancellationToken)
     {
-        // RunJob may be called by RequestMonitorJob, so we need to lock it
-        Logger.LogInformation("Start processing pending host orders.");
-
         using var asyncLock = await AsyncLock.LockAsync("HostOrdersService:ProcessJobs", TimeSpan.Zero, cancellationToken);
         if (!asyncLock.Succeeded)
             return false;
+
+        // RunJob may be called by RequestMonitorJob, so we need to lock it
+        Logger.LogInformation("Start processing pending host orders.");
 
         await ProcessAllPendingOrders();
         await ProcessAllAutoReleaseIps();
 
         // check if there is any pending order left
         var pendingOrders = await vhRepo.HostOrdersList(status: HostOrderStatus.Pending);
+        Logger.LogInformation("Finish processing pending host orders. RemainPendingOrder: {pendingOrders}", pendingOrders.Length);
         if (pendingOrders.Any())
             return false;
 
         // check if there is any releasing hostIp left
         var releasingHostIps = await vhRepo.HostIpListReleasing();
+
         return !releasingHostIps.Any();
     }
 
@@ -210,17 +217,22 @@ public class HostOrdersService(
                 if (hostIp == null)
                     continue;
 
-                Logger.LogInformation("Adding the ordered new ip from provider. ProjectId: {ProjectId}, OrderId: {OrderId}, NewIp: {NewIp}",
+                Logger.LogInformation("Adding the ordered IP from the provider. ProjectId: {ProjectId}, OrderId: {OrderId}, NewIp: {NewIp}",
                     pendingOrder.ProjectId, pendingOrder.HostOrderId, hostIp.IpAddress);
 
                 // update server endpoints
                 if (pendingOrder.NewIpOrderServerId != null)
                     await AddIpToServer(projectId, pendingOrder.NewIpOrderServerId.Value, hostIp.GetIpAddress());
 
+                //todo
+                foreach (var ss in hostIps) {
+                    Logger.LogInformation($"HostIp. {ss.IpAddress}, {ss.AutoReleaseTime}, {ss.RenewOrderId}");
+                }
+
                 // delete old ips
                 foreach (var oldHostIp in hostIps.Where(x => x.RenewOrderId == pendingOrder.HostOrderId)) {
                     oldHostIp.AutoReleaseTime = pendingOrder.NewIpOrderOldIpAddressReleaseTime ?? DateTime.UtcNow;
-                    Logger.LogWarning("Old ip will be released. ProjectId: {ProjectId}, OrderId: {OrderId}, OldIp: {OldIp}",
+                    Logger.LogInformation("Old IP will be released. ProjectId: {ProjectId}, OrderId: {OrderId}, OldIp: {OldIp}",
                         projectId, pendingOrder.HostOrderId, oldHostIp.IpAddress);
                 }
 
@@ -404,6 +416,7 @@ public class HostOrdersService(
         var hostIps = hostIpModels.Select(x =>
             x.ToDto(FindServerFromIp(servers, x.GetIpAddress()))).ToArray();
 
+
         return hostIps;
     }
 
@@ -465,5 +478,18 @@ public class HostOrdersService(
             hostIp.AutoReleaseTime = updateParams.AutoReleaseTime;
 
         await vhRepo.SaveChangesAsync();
+    }
+
+    private static DateTime CalculateReleaseDate()
+    {
+        // return the 28th day of the current month if there is more than 2 days left to 28th
+        // otherwise return the 28th day of the next month
+        // the release time should be always at 02:00 UTC
+        var now = DateTime.UtcNow;
+        var releaseTime = new DateTime(now.Year, now.Month, day: 28, hour: 2, minute: 0, second: 0);
+
+        var daysLeft = DateTime.DaysInMonth(now.Year, now.Month) - now.Day;
+        if (daysLeft < 2) releaseTime = releaseTime.AddMonths(1);
+        return releaseTime;
     }
 }

@@ -562,7 +562,7 @@ public class VhContext : DbContext
 
         modelBuilder.Entity<HostProviderModel>(entity => {
             entity
-                .HasKey(e=> e.HostProviderId);
+                .HasKey(e => e.HostProviderId);
 
             entity
                 .Property(e => e.CustomData)
@@ -578,12 +578,13 @@ public class VhContext : DbContext
                 .HasKey(e => e.HostIpId);
 
             entity
-                .HasIndex(e => new {e.ProjectId, e.CreatedTime})
+                .HasIndex(e => new { e.ProjectId, e.CreatedTime })
                 .HasFilter($"{nameof(HostIpModel.DeletedTime)} is null");
 
             entity
-                .HasIndex(e => new { e.ProjectId, e.CreatedTime })
-                .HasFilter($"{nameof(HostIpModel.DeletedTime)} is null and {nameof(HostIpModel.AutoReleaseTime)} is not null");
+                .HasIndex(e => new { e.ProjectId, e.IpAddress })
+                .HasFilter($"{nameof(HostIpModel.DeletedTime)} is null")
+                .IsUnique();
 
             entity
                 .HasOne(e => e.Project)

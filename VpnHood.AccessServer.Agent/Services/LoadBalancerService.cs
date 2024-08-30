@@ -71,7 +71,6 @@ public class LoadBalancerService(
             throw new SessionExceptionEx(SessionErrorCode.AccessError,
                 "Could not find any available server in the given location.");
 
-        // todo
         // deprecated: 505 client and later
         // client should send no redirect flag. for older version we keep last state in memory to prevent re-redirect
         var cacheKey = $"LastDeviceServer/{currentServer.ServerFarmId}/{device.DeviceId}/{locationPath}";

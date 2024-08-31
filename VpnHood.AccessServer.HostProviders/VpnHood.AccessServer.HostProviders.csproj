@@ -28,8 +28,10 @@
 	<ItemGroup>
 		<PackageReference Include="csharp-ovh" Version="4.0.5" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="VpnHood.AccessServer.Abstractions" Version="3.0.209-alpha" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\VpnHood.AccessServer.Abstractions\VpnHood.AccessServer.Abstractions.csproj" />
 	</ItemGroup>
 
 </Project>

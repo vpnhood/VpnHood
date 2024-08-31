@@ -24,7 +24,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         var autoServerLocation = ServerLocationInfo.Auto;
 
         // Statuses. Load Deleted Servers and Projects too but filter by minServerUsedTime
-        logger.LogTrace("Loading the recent server status, farms and projects ...");
+        logger.LogInformation("Loading the recent server status, farms and projects ...");
         var statuses = await vhContext.ServerStatuses
             .Where(x => x.IsLast && x.CreatedTime > minServerUsedTime)
             .Select(x => new {
@@ -69,7 +69,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .ToArrayAsync();
 
         // Sessions
-        logger.LogTrace("Loading the sessions and accesses ...");
+        logger.LogInformation("Loading the sessions and accesses ...");
         var sessions = await vhContext.Sessions
             .Where(session => !session.IsArchived)
             .Select(x => new {

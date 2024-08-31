@@ -224,11 +224,6 @@ public class HostOrdersService(
                 if (pendingOrder.NewIpOrderServerId != null)
                     await AddIpToServer(projectId, pendingOrder.NewIpOrderServerId.Value, hostIp.GetIpAddress());
 
-                //todo
-                foreach (var ss in hostIps) {
-                    Logger.LogInformation($"HostIp. {ss.IpAddress}, {ss.AutoReleaseTime}, {ss.RenewOrderId}");
-                }
-
                 // delete old ips
                 foreach (var oldHostIp in hostIps.Where(x => x.RenewOrderId == pendingOrder.HostOrderId)) {
                     oldHostIp.AutoReleaseTime = pendingOrder.NewIpOrderOldIpAddressReleaseTime ?? DateTime.UtcNow;

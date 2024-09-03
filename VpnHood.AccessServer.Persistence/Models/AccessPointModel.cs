@@ -52,12 +52,3 @@ public class AccessPointModel : IStructuralEquatable, IEquatable<AccessPointMode
             UdpPort == otherAccessPoint.UdpPort;
     }
 }
-
-public class FarmTokenRepoModel
-{
-    public required Uri PublicUrl { get; set; }
-    public required Uri UpdateUrl { get; set; }
-    public required string HttpCommand { get; set; }
-    public required string AuthorizationKey { get; set; }
-    public required string AuthorizationValue { get; set; }
-}

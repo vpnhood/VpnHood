@@ -19,6 +19,7 @@ public class VhContext : DbContext
     public virtual DbSet<ServerModel> Servers { get; set; } = default!;
     public virtual DbSet<ServerStatusModel> ServerStatuses { get; set; } = default!;
     public virtual DbSet<ServerFarmModel> ServerFarms { get; set; } = default!;
+    public virtual DbSet<FarmTokenRepoModel> FarmTokenRepos { get; set; } = default!;
     public virtual DbSet<SessionModel> Sessions { get; set; } = default!;
     public virtual DbSet<AccessUsageModel> AccessUsages { get; set; } = default!;
     public virtual DbSet<CertificateModel> Certificates { get; set; } = default!;
@@ -419,6 +420,11 @@ public class VhContext : DbContext
                 .HasPrincipalKey(e => new { e.ProjectId, e.ServerProfileId })
                 .OnDelete(DeleteBehavior.NoAction);
         });
+
+        modelBuilder.Entity<FarmTokenRepoModel>(entity => {
+            entity.HasKey(e => e.FarmTokenRepoId);
+        });
+
 
         modelBuilder.Entity<AccessModel>(entity => {
             entity

@@ -3,6 +3,7 @@ using GrayMint.Common.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos.Certificates;
+using VpnHood.AccessServer.Dtos.FarmTokenRepos;
 using VpnHood.AccessServer.Dtos.ServerFarms;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
@@ -52,6 +53,7 @@ public class ServerFarmsController(
     {
         return serverFarmService.ValidateTokenUrl(projectId, serverFarmId: serverFarmId, cancellationToken);
     }
+
 
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]

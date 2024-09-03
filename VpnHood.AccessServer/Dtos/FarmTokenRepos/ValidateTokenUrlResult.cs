@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AccessServer.Dtos.ServerFarms;
+﻿namespace VpnHood.AccessServer.Dtos.FarmTokenRepos;
 
 public class ValidateTokenUrlResult
 {

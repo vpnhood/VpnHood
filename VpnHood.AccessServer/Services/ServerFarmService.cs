@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using GrayMint.Common.Utils;
 using VpnHood.AccessServer.DtoConverters;
+using VpnHood.AccessServer.Dtos.FarmTokenRepos;
 using VpnHood.AccessServer.Dtos.ServerFarms;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
@@ -50,7 +51,8 @@ public class ServerFarmService(
             TokenUrl = createParams.TokenUrl?.ToString(),
             PushTokenToClient = true,
             MaxCertificateCount = 1,
-            Servers = []
+            Servers = [],
+            TokenRepos = []
         };
 
         await vhRepo.AddAsync(serverFarm);
@@ -70,9 +72,11 @@ public class ServerFarmService(
         var certificateModel = await vhRepo.ServerFarmGetInTokenCertificate(projectId, serverFarmId);
         var serverFarmData = dtos.Single();
         serverFarmData.ServerFarm.Certificate = certificateModel.ToDto();
+        serverFarmData.FarmTokenRepoNames = (await vhRepo.FarmTokenRepoListNames(projectId, serverFarmId)).ToArray();
         return serverFarmData;
     }
 
+    //todo remove
     public async Task<ValidateTokenUrlResult> ValidateTokenUrl(Guid projectId, Guid serverFarmId,
         CancellationToken cancellationToken)
     {

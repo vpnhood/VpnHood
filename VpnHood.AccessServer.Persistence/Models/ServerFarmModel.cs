@@ -18,6 +18,7 @@ public class ServerFarmModel
     public required string? TokenError { get; set; }
     public required int MaxCertificateCount { get; set; }
     public bool IsDeleted { get; set; } = false;
+    public required List<FarmTokenRepoModel> TokenRepos { get; set; } = [];
 
     public virtual ServerProfileModel? ServerProfile { get; set; }
     public virtual ProjectModel? Project { get; set; }

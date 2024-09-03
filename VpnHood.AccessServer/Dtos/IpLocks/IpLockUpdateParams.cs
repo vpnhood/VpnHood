@@ -1,6 +1,6 @@
 ﻿using GrayMint.Common.Utils;
 
-namespace VpnHood.AccessServer.Dtos;
+namespace VpnHood.AccessServer.Dtos.IpLocks;
 
 public class IpLockUpdateParams
 {

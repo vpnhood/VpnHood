@@ -1,4 +1,5 @@
-﻿using VpnHood.AccessServer.Dtos.ServerFarms;
+﻿using VpnHood.AccessServer.Dtos.FarmTokenRepos;
+using VpnHood.AccessServer.Dtos.ServerFarms;
 using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.DtoConverters;
@@ -23,5 +24,20 @@ public static class ServerFarmConverter
         };
 
         return dto;
+    }
+
+    public static FarmTokenRepo ToDto(this FarmTokenRepoModel model)
+    {
+        return new FarmTokenRepo {
+            FarmTokenRepoId = model.FarmTokenRepoId.ToString(),
+            FarmTokenRepoName = model.FarmTokenRepoName,
+            PublishUrl = model.PublishUrl,
+            UploadUrl = model.UploadUrl,
+            HttpMethod = model.HttpMethod,
+            AuthorizationKey = model.AuthorizationKey,
+            AuthorizationValue = model.AuthorizationValue,
+            IsUpToDate = null,
+            Error = model.Error
+        };
     }
 }

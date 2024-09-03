@@ -1,6 +1,6 @@
 ﻿using VpnHood.Common.Utils;
 
-namespace VpnHood.AccessServer.Dtos;
+namespace VpnHood.AccessServer.Dtos.Devices;
 
 public class Device
 {

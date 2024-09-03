@@ -26,7 +26,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="GrayMint.Authorization.Authentications" Version="3.0.113" />
+		<PackageReference Include="GrayMint.Authorization.Authentications" Version="3.0.115" />
 		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.208" />
 		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.208" />
 		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />

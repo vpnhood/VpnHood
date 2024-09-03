@@ -115,6 +115,7 @@ public class Program
                 .AddScoped<AccessTokensService>()
                 .AddScoped<ReportService>()
                 .AddScoped<HostOrdersService>()
+                .AddScoped<FarmTokenRepoService>()
                 .AddScoped<IHostProviderFactory, HostProviderFactory>()
                 .AddSingleton<IAcmeOrderFactory, AcmeOrderFactory>();
 

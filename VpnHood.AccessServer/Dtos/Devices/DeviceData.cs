@@ -1,6 +1,6 @@
 ﻿using VpnHood.AccessServer.Report.Views;
 
-namespace VpnHood.AccessServer.Dtos;
+namespace VpnHood.AccessServer.Dtos.Devices;
 
 public class DeviceData
 {

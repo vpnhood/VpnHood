@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AccessServer.Dtos;
+﻿namespace VpnHood.AccessServer.Dtos.IpLocks;
 
 public class IpLock
 {

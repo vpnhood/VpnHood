@@ -422,7 +422,7 @@ public class VhRepo(VhContext vhContext)
     }
 
 
-    public Task<HostIpModel[]> HostIpList(Guid projectId, string? search = null, 
+    public Task<HostIpModel[]> HostIpList(Guid projectId, string? search = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
         return vhContext.HostIps
@@ -444,14 +444,48 @@ public class VhRepo(VhContext vhContext)
             .FirstAsync();
     }
 
-    public async Task<HostIpModel[]> HostIpListReleasing()
+    public Task<HostIpModel[]> HostIpListReleasing()
     {
-        var hostIps = await vhContext.HostIps
+        return vhContext.HostIps
             .Include(x => x.HostProvider)
             .Where(x => x.Project!.DeletedTime == null && x.DeletedTime == null)
             .Where(x => x.ReleaseRequestTime != null)
             .ToArrayAsync();
+    }
 
-        return hostIps;
+    public Task<FarmTokenRepoModel[]> FarmTokenRepoList(Guid projectId, Guid serverFarmId)
+    {
+        return vhContext.FarmTokenRepos
+            .Where(x => x.ProjectId == projectId && x.Project!.DeletedTime == null)
+            .Where(x => x.ServerFarmId == serverFarmId)
+            .ToArrayAsync();
+    }
+
+    public Task<string[]> FarmTokenRepoListNames(Guid projectId, Guid serverFarmId)
+    {
+        return vhContext.FarmTokenRepos
+            .Where(x => x.ProjectId == projectId && x.Project!.DeletedTime == null)
+            .Where(x => x.ServerFarmId == serverFarmId)
+            .Select(x=>x.FarmTokenRepoName)
+            .ToArrayAsync();
+    }
+
+
+    public async Task<FarmTokenRepoModel> FarmTokenRepoGet(Guid projectId, Guid serverFarmId, Guid farmTokenRepoId)
+    {
+        var model = await vhContext.FarmTokenRepos
+            .Where(x => x.ProjectId == projectId && x.Project!.DeletedTime == null)
+            .Where(x => x.ServerFarmId == serverFarmId && x.FarmTokenRepoId == farmTokenRepoId)
+            .SingleAsync();
+
+        return model;
+    }
+
+    public Task FarmTokenRepoDelete(Guid projectId, Guid serverFarmId, Guid farmTokenRepoId)
+    {
+        return vhContext.FarmTokenRepos
+            .Where(x => x.ProjectId == projectId && x.Project!.DeletedTime == null)
+            .Where(x => x.ServerFarmId == serverFarmId && x.FarmTokenRepoId == farmTokenRepoId)
+            .ExecuteDeleteAsync();
     }
 }

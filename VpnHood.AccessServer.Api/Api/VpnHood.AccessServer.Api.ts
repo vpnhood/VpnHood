@@ -888,6 +888,372 @@ export class DevicesClient {
     }
 }
 
+export class FarmTokenReposClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "";
+
+    }
+
+    create(projectId: string, serverFarmId: string, createParams: FarmTokenRepoCreateParams, cancelToken?: CancelToken): Promise<FarmTokenRepo> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/server-farms/{serverFarmId}/farm-token-repos";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (serverFarmId === undefined || serverFarmId === null)
+            throw new Error("The parameter 'serverFarmId' must be defined.");
+        url_ = url_.replace("{serverFarmId}", encodeURIComponent("" + serverFarmId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(createParams);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processCreate(_response);
+        });
+    }
+
+    protected processCreate(response: AxiosResponse): Promise<FarmTokenRepo> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = FarmTokenRepo.fromJS(resultData200);
+            return Promise.resolve<FarmTokenRepo>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<FarmTokenRepo>(null as any);
+    }
+
+    list(projectId: string, serverFarmId: string, checkStatus?: boolean | undefined, cancelToken?: CancelToken): Promise<FarmTokenRepo[]> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/server-farms/{serverFarmId}/farm-token-repos?";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (serverFarmId === undefined || serverFarmId === null)
+            throw new Error("The parameter 'serverFarmId' must be defined.");
+        url_ = url_.replace("{serverFarmId}", encodeURIComponent("" + serverFarmId));
+        if (checkStatus === null)
+            throw new Error("The parameter 'checkStatus' cannot be null.");
+        else if (checkStatus !== undefined)
+            url_ += "checkStatus=" + encodeURIComponent("" + checkStatus) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processList(_response);
+        });
+    }
+
+    protected processList(response: AxiosResponse): Promise<FarmTokenRepo[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(FarmTokenRepo.fromJS(item));
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<FarmTokenRepo[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<FarmTokenRepo[]>(null as any);
+    }
+
+    getSummary(projectId: string, serverFarmId: string, cancelToken?: CancelToken): Promise<FarmTokenRepoSummary> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/server-farms/{serverFarmId}/farm-token-repos/Summary";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (serverFarmId === undefined || serverFarmId === null)
+            throw new Error("The parameter 'serverFarmId' must be defined.");
+        url_ = url_.replace("{serverFarmId}", encodeURIComponent("" + serverFarmId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetSummary(_response);
+        });
+    }
+
+    protected processGetSummary(response: AxiosResponse): Promise<FarmTokenRepoSummary> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = FarmTokenRepoSummary.fromJS(resultData200);
+            return Promise.resolve<FarmTokenRepoSummary>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<FarmTokenRepoSummary>(null as any);
+    }
+
+    get(projectId: string, serverFarmId: string, farmTokenRepoId: string, checkStatus?: boolean | undefined, cancelToken?: CancelToken): Promise<FarmTokenRepo> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/server-farms/{serverFarmId}/farm-token-repos/{farmTokenRepoId}?";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (serverFarmId === undefined || serverFarmId === null)
+            throw new Error("The parameter 'serverFarmId' must be defined.");
+        url_ = url_.replace("{serverFarmId}", encodeURIComponent("" + serverFarmId));
+        if (farmTokenRepoId === undefined || farmTokenRepoId === null)
+            throw new Error("The parameter 'farmTokenRepoId' must be defined.");
+        url_ = url_.replace("{farmTokenRepoId}", encodeURIComponent("" + farmTokenRepoId));
+        if (checkStatus === null)
+            throw new Error("The parameter 'checkStatus' cannot be null.");
+        else if (checkStatus !== undefined)
+            url_ += "checkStatus=" + encodeURIComponent("" + checkStatus) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGet(_response);
+        });
+    }
+
+    protected processGet(response: AxiosResponse): Promise<FarmTokenRepo> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = FarmTokenRepo.fromJS(resultData200);
+            return Promise.resolve<FarmTokenRepo>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<FarmTokenRepo>(null as any);
+    }
+
+    update(projectId: string, serverFarmId: string, farmTokenRepoId: string, updateParams: FarmTokenRepoUpdateParams, cancelToken?: CancelToken): Promise<FarmTokenRepo> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/server-farms/{serverFarmId}/farm-token-repos/{farmTokenRepoId}";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (serverFarmId === undefined || serverFarmId === null)
+            throw new Error("The parameter 'serverFarmId' must be defined.");
+        url_ = url_.replace("{serverFarmId}", encodeURIComponent("" + serverFarmId));
+        if (farmTokenRepoId === undefined || farmTokenRepoId === null)
+            throw new Error("The parameter 'farmTokenRepoId' must be defined.");
+        url_ = url_.replace("{farmTokenRepoId}", encodeURIComponent("" + farmTokenRepoId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(updateParams);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PATCH",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdate(_response);
+        });
+    }
+
+    protected processUpdate(response: AxiosResponse): Promise<FarmTokenRepo> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = FarmTokenRepo.fromJS(resultData200);
+            return Promise.resolve<FarmTokenRepo>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<FarmTokenRepo>(null as any);
+    }
+
+    delete(projectId: string, serverFarmId: string, farmTokenRepoId: string, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/server-farms/{serverFarmId}/farm-token-repos/{farmTokenRepoId}";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (serverFarmId === undefined || serverFarmId === null)
+            throw new Error("The parameter 'serverFarmId' must be defined.");
+        url_ = url_.replace("{serverFarmId}", encodeURIComponent("" + serverFarmId));
+        if (farmTokenRepoId === undefined || farmTokenRepoId === null)
+            throw new Error("The parameter 'farmTokenRepoId' must be defined.");
+        url_ = url_.replace("{farmTokenRepoId}", encodeURIComponent("" + farmTokenRepoId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDelete(_response);
+        });
+    }
+
+    protected processDelete(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+}
+
 export class HealthClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
@@ -4037,6 +4403,114 @@ export class TeamClient {
         return Promise.resolve<ListResultOfUserRole>(null as any);
     }
 
+    getUser(resourceId: string, userId: string, cancelToken?: CancelToken): Promise<TeamUserOfUserAndUserRoleAndRole> {
+        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/users/{userId}";
+        if (resourceId === undefined || resourceId === null)
+            throw new Error("The parameter 'resourceId' must be defined.");
+        url_ = url_.replace("{resourceId}", encodeURIComponent("" + resourceId));
+        if (userId === undefined || userId === null)
+            throw new Error("The parameter 'userId' must be defined.");
+        url_ = url_.replace("{userId}", encodeURIComponent("" + userId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetUser(_response);
+        });
+    }
+
+    protected processGetUser(response: AxiosResponse): Promise<TeamUserOfUserAndUserRoleAndRole> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = TeamUserOfUserAndUserRoleAndRole.fromJS(resultData200);
+            return Promise.resolve<TeamUserOfUserAndUserRoleAndRole>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<TeamUserOfUserAndUserRoleAndRole>(null as any);
+    }
+
+    getUserByEmail(resourceId: string, email: string, cancelToken?: CancelToken): Promise<TeamUserOfUserAndUserRoleAndRole> {
+        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/users/email:{email}";
+        if (resourceId === undefined || resourceId === null)
+            throw new Error("The parameter 'resourceId' must be defined.");
+        url_ = url_.replace("{resourceId}", encodeURIComponent("" + resourceId));
+        if (email === undefined || email === null)
+            throw new Error("The parameter 'email' must be defined.");
+        url_ = url_.replace("{email}", encodeURIComponent("" + email));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetUserByEmail(_response);
+        });
+    }
+
+    protected processGetUserByEmail(response: AxiosResponse): Promise<TeamUserOfUserAndUserRoleAndRole> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = TeamUserOfUserAndUserRoleAndRole.fromJS(resultData200);
+            return Promise.resolve<TeamUserOfUserAndUserRoleAndRole>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<TeamUserOfUserAndUserRoleAndRole>(null as any);
+    }
+
     addNewBot(resourceId: string, roleId: string, addParam: TeamAddBotParam, cancelToken?: CancelToken): Promise<ApiKey> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles/{roleId}/bots";
         if (resourceId === undefined || resourceId === null)
@@ -5784,6 +6258,292 @@ export interface IDeviceUpdateParams {
     isLocked?: PatchOfBoolean | null;
 }
 
+export class FarmTokenRepo implements IFarmTokenRepo {
+    farmTokenRepoId!: string;
+    farmTokenRepoName!: string;
+    publishUrl!: string;
+    uploadUrl?: string | null;
+    httpMethod!: string;
+    isUpToDate?: boolean | null;
+    authorizationKey?: string | null;
+    authorizationValue?: string | null;
+    error?: string | null;
+
+    constructor(data?: IFarmTokenRepo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.farmTokenRepoId = _data["farmTokenRepoId"] !== undefined ? _data["farmTokenRepoId"] : <any>null;
+            this.farmTokenRepoName = _data["farmTokenRepoName"] !== undefined ? _data["farmTokenRepoName"] : <any>null;
+            this.publishUrl = _data["publishUrl"] !== undefined ? _data["publishUrl"] : <any>null;
+            this.uploadUrl = _data["uploadUrl"] !== undefined ? _data["uploadUrl"] : <any>null;
+            this.httpMethod = _data["httpMethod"] !== undefined ? _data["httpMethod"] : <any>null;
+            this.isUpToDate = _data["isUpToDate"] !== undefined ? _data["isUpToDate"] : <any>null;
+            this.authorizationKey = _data["authorizationKey"] !== undefined ? _data["authorizationKey"] : <any>null;
+            this.authorizationValue = _data["authorizationValue"] !== undefined ? _data["authorizationValue"] : <any>null;
+            this.error = _data["error"] !== undefined ? _data["error"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): FarmTokenRepo {
+        data = typeof data === 'object' ? data : {};
+        let result = new FarmTokenRepo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["farmTokenRepoId"] = this.farmTokenRepoId !== undefined ? this.farmTokenRepoId : <any>null;
+        data["farmTokenRepoName"] = this.farmTokenRepoName !== undefined ? this.farmTokenRepoName : <any>null;
+        data["publishUrl"] = this.publishUrl !== undefined ? this.publishUrl : <any>null;
+        data["uploadUrl"] = this.uploadUrl !== undefined ? this.uploadUrl : <any>null;
+        data["httpMethod"] = this.httpMethod !== undefined ? this.httpMethod : <any>null;
+        data["isUpToDate"] = this.isUpToDate !== undefined ? this.isUpToDate : <any>null;
+        data["authorizationKey"] = this.authorizationKey !== undefined ? this.authorizationKey : <any>null;
+        data["authorizationValue"] = this.authorizationValue !== undefined ? this.authorizationValue : <any>null;
+        data["error"] = this.error !== undefined ? this.error : <any>null;
+        return data;
+    }
+}
+
+export interface IFarmTokenRepo {
+    farmTokenRepoId: string;
+    farmTokenRepoName: string;
+    publishUrl: string;
+    uploadUrl?: string | null;
+    httpMethod: string;
+    isUpToDate?: boolean | null;
+    authorizationKey?: string | null;
+    authorizationValue?: string | null;
+    error?: string | null;
+}
+
+export class FarmTokenRepoCreateParams implements IFarmTokenRepoCreateParams {
+    repoName!: string;
+    uploadUrl?: string | null;
+    httpMethod!: string;
+    authorizationKey?: string | null;
+    authorizationValue?: string | null;
+    publicUrl!: string;
+
+    constructor(data?: IFarmTokenRepoCreateParams) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.repoName = _data["repoName"] !== undefined ? _data["repoName"] : <any>null;
+            this.uploadUrl = _data["uploadUrl"] !== undefined ? _data["uploadUrl"] : <any>null;
+            this.httpMethod = _data["httpMethod"] !== undefined ? _data["httpMethod"] : <any>null;
+            this.authorizationKey = _data["authorizationKey"] !== undefined ? _data["authorizationKey"] : <any>null;
+            this.authorizationValue = _data["authorizationValue"] !== undefined ? _data["authorizationValue"] : <any>null;
+            this.publicUrl = _data["publicUrl"] !== undefined ? _data["publicUrl"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): FarmTokenRepoCreateParams {
+        data = typeof data === 'object' ? data : {};
+        let result = new FarmTokenRepoCreateParams();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["repoName"] = this.repoName !== undefined ? this.repoName : <any>null;
+        data["uploadUrl"] = this.uploadUrl !== undefined ? this.uploadUrl : <any>null;
+        data["httpMethod"] = this.httpMethod !== undefined ? this.httpMethod : <any>null;
+        data["authorizationKey"] = this.authorizationKey !== undefined ? this.authorizationKey : <any>null;
+        data["authorizationValue"] = this.authorizationValue !== undefined ? this.authorizationValue : <any>null;
+        data["publicUrl"] = this.publicUrl !== undefined ? this.publicUrl : <any>null;
+        return data;
+    }
+}
+
+export interface IFarmTokenRepoCreateParams {
+    repoName: string;
+    uploadUrl?: string | null;
+    httpMethod: string;
+    authorizationKey?: string | null;
+    authorizationValue?: string | null;
+    publicUrl: string;
+}
+
+export class FarmTokenRepoSummary implements IFarmTokenRepoSummary {
+    upToDateRepoNames!: string[];
+    outdatedRepoNames!: string[];
+    total!: number;
+
+    constructor(data?: IFarmTokenRepoSummary) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.upToDateRepoNames = [];
+            this.outdatedRepoNames = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["upToDateRepoNames"])) {
+                this.upToDateRepoNames = [] as any;
+                for (let item of _data["upToDateRepoNames"])
+                    this.upToDateRepoNames!.push(item);
+            }
+            else {
+                this.upToDateRepoNames = <any>null;
+            }
+            if (Array.isArray(_data["outdatedRepoNames"])) {
+                this.outdatedRepoNames = [] as any;
+                for (let item of _data["outdatedRepoNames"])
+                    this.outdatedRepoNames!.push(item);
+            }
+            else {
+                this.outdatedRepoNames = <any>null;
+            }
+            this.total = _data["total"] !== undefined ? _data["total"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): FarmTokenRepoSummary {
+        data = typeof data === 'object' ? data : {};
+        let result = new FarmTokenRepoSummary();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.upToDateRepoNames)) {
+            data["upToDateRepoNames"] = [];
+            for (let item of this.upToDateRepoNames)
+                data["upToDateRepoNames"].push(item);
+        }
+        if (Array.isArray(this.outdatedRepoNames)) {
+            data["outdatedRepoNames"] = [];
+            for (let item of this.outdatedRepoNames)
+                data["outdatedRepoNames"].push(item);
+        }
+        data["total"] = this.total !== undefined ? this.total : <any>null;
+        return data;
+    }
+}
+
+export interface IFarmTokenRepoSummary {
+    upToDateRepoNames: string[];
+    outdatedRepoNames: string[];
+    total: number;
+}
+
+export class FarmTokenRepoUpdateParams implements IFarmTokenRepoUpdateParams {
+    repoName?: PatchOfString | null;
+    publishUrl?: PatchOfUri | null;
+    uploadUrl?: PatchOfUri | null;
+    httpMethod?: PatchOfString | null;
+    authorizationKey?: PatchOfString | null;
+    authorizationValue?: PatchOfString | null;
+
+    constructor(data?: IFarmTokenRepoUpdateParams) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.repoName = _data["repoName"] ? PatchOfString.fromJS(_data["repoName"]) : <any>null;
+            this.publishUrl = _data["publishUrl"] ? PatchOfUri.fromJS(_data["publishUrl"]) : <any>null;
+            this.uploadUrl = _data["uploadUrl"] ? PatchOfUri.fromJS(_data["uploadUrl"]) : <any>null;
+            this.httpMethod = _data["httpMethod"] ? PatchOfString.fromJS(_data["httpMethod"]) : <any>null;
+            this.authorizationKey = _data["authorizationKey"] ? PatchOfString.fromJS(_data["authorizationKey"]) : <any>null;
+            this.authorizationValue = _data["authorizationValue"] ? PatchOfString.fromJS(_data["authorizationValue"]) : <any>null;
+        }
+    }
+
+    static fromJS(data: any): FarmTokenRepoUpdateParams {
+        data = typeof data === 'object' ? data : {};
+        let result = new FarmTokenRepoUpdateParams();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["repoName"] = this.repoName ? this.repoName.toJSON() : <any>null;
+        data["publishUrl"] = this.publishUrl ? this.publishUrl.toJSON() : <any>null;
+        data["uploadUrl"] = this.uploadUrl ? this.uploadUrl.toJSON() : <any>null;
+        data["httpMethod"] = this.httpMethod ? this.httpMethod.toJSON() : <any>null;
+        data["authorizationKey"] = this.authorizationKey ? this.authorizationKey.toJSON() : <any>null;
+        data["authorizationValue"] = this.authorizationValue ? this.authorizationValue.toJSON() : <any>null;
+        return data;
+    }
+}
+
+export interface IFarmTokenRepoUpdateParams {
+    repoName?: PatchOfString | null;
+    publishUrl?: PatchOfUri | null;
+    uploadUrl?: PatchOfUri | null;
+    httpMethod?: PatchOfString | null;
+    authorizationKey?: PatchOfString | null;
+    authorizationValue?: PatchOfString | null;
+}
+
+export class PatchOfUri implements IPatchOfUri {
+    value?: string | null;
+
+    constructor(data?: IPatchOfUri) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): PatchOfUri {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfUri();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["value"] = this.value !== undefined ? this.value : <any>null;
+        return data;
+    }
+}
+
+export interface IPatchOfUri {
+    value?: string | null;
+}
+
 export class HostIp implements IHostIp {
     ipAddress!: string;
     providerId!: string;
@@ -6431,6 +7191,7 @@ export class ServerFarmData implements IServerFarmData {
     certificates?: Certificate[] | null;
     accessPoints!: AccessPointView[];
     summary?: ServerFarmSummary | null;
+    farmTokenRepoNames?: string[] | null;
 
     constructor(data?: IServerFarmData) {
         if (data) {
@@ -6465,6 +7226,14 @@ export class ServerFarmData implements IServerFarmData {
                 this.accessPoints = <any>null;
             }
             this.summary = _data["summary"] ? ServerFarmSummary.fromJS(_data["summary"]) : <any>null;
+            if (Array.isArray(_data["farmTokenRepoNames"])) {
+                this.farmTokenRepoNames = [] as any;
+                for (let item of _data["farmTokenRepoNames"])
+                    this.farmTokenRepoNames!.push(item);
+            }
+            else {
+                this.farmTokenRepoNames = <any>null;
+            }
         }
     }
 
@@ -6489,6 +7258,11 @@ export class ServerFarmData implements IServerFarmData {
                 data["accessPoints"].push(item.toJSON());
         }
         data["summary"] = this.summary ? this.summary.toJSON() : <any>null;
+        if (Array.isArray(this.farmTokenRepoNames)) {
+            data["farmTokenRepoNames"] = [];
+            for (let item of this.farmTokenRepoNames)
+                data["farmTokenRepoNames"].push(item);
+        }
         return data;
     }
 }
@@ -6498,6 +7272,7 @@ export interface IServerFarmData {
     certificates?: Certificate[] | null;
     accessPoints: AccessPointView[];
     summary?: ServerFarmSummary | null;
+    farmTokenRepoNames?: string[] | null;
 }
 
 export class ServerFarm implements IServerFarm {
@@ -6821,6 +7596,7 @@ export class ServerFarmUpdateParams implements IServerFarmUpdateParams {
     pushTokenToClient?: PatchOfBoolean | null;
     autoValidateCertificate?: PatchOfBoolean | null;
     maxCertificateCount?: PatchOfInteger | null;
+    tokenRepos?: PatchOfFarmTokenRepoOf | null;
 
     constructor(data?: IServerFarmUpdateParams) {
         if (data) {
@@ -6841,6 +7617,7 @@ export class ServerFarmUpdateParams implements IServerFarmUpdateParams {
             this.pushTokenToClient = _data["pushTokenToClient"] ? PatchOfBoolean.fromJS(_data["pushTokenToClient"]) : <any>null;
             this.autoValidateCertificate = _data["autoValidateCertificate"] ? PatchOfBoolean.fromJS(_data["autoValidateCertificate"]) : <any>null;
             this.maxCertificateCount = _data["maxCertificateCount"] ? PatchOfInteger.fromJS(_data["maxCertificateCount"]) : <any>null;
+            this.tokenRepos = _data["tokenRepos"] ? PatchOfFarmTokenRepoOf.fromJS(_data["tokenRepos"]) : <any>null;
         }
     }
 
@@ -6861,6 +7638,7 @@ export class ServerFarmUpdateParams implements IServerFarmUpdateParams {
         data["pushTokenToClient"] = this.pushTokenToClient ? this.pushTokenToClient.toJSON() : <any>null;
         data["autoValidateCertificate"] = this.autoValidateCertificate ? this.autoValidateCertificate.toJSON() : <any>null;
         data["maxCertificateCount"] = this.maxCertificateCount ? this.maxCertificateCount.toJSON() : <any>null;
+        data["tokenRepos"] = this.tokenRepos ? this.tokenRepos.toJSON() : <any>null;
         return data;
     }
 }
@@ -6874,42 +7652,7 @@ export interface IServerFarmUpdateParams {
     pushTokenToClient?: PatchOfBoolean | null;
     autoValidateCertificate?: PatchOfBoolean | null;
     maxCertificateCount?: PatchOfInteger | null;
-}
-
-export class PatchOfUri implements IPatchOfUri {
-    value?: string | null;
-
-    constructor(data?: IPatchOfUri) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): PatchOfUri {
-        data = typeof data === 'object' ? data : {};
-        let result = new PatchOfUri();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["value"] = this.value !== undefined ? this.value : <any>null;
-        return data;
-    }
-}
-
-export interface IPatchOfUri {
-    value?: string | null;
+    tokenRepos?: PatchOfFarmTokenRepoOf | null;
 }
 
 export class PatchOfByteOf implements IPatchOfByteOf {
@@ -6946,6 +7689,53 @@ export class PatchOfByteOf implements IPatchOfByteOf {
 
 export interface IPatchOfByteOf {
     value?: string | null;
+}
+
+export class PatchOfFarmTokenRepoOf implements IPatchOfFarmTokenRepoOf {
+    value?: FarmTokenRepo[] | null;
+
+    constructor(data?: IPatchOfFarmTokenRepoOf) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["value"])) {
+                this.value = [] as any;
+                for (let item of _data["value"])
+                    this.value!.push(FarmTokenRepo.fromJS(item));
+            }
+            else {
+                this.value = <any>null;
+            }
+        }
+    }
+
+    static fromJS(data: any): PatchOfFarmTokenRepoOf {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfFarmTokenRepoOf();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.value)) {
+            data["value"] = [];
+            for (let item of this.value)
+                data["value"].push(item.toJSON());
+        }
+        return data;
+    }
+}
+
+export interface IPatchOfFarmTokenRepoOf {
+    value?: FarmTokenRepo[] | null;
 }
 
 export class ValidateTokenUrlResult implements IValidateTokenUrlResult {
@@ -8530,6 +9320,61 @@ export class UserRole extends UserRole2 implements IUserRole {
 
 export interface IUserRole extends IUserRole2 {
     user?: User | null;
+}
+
+export class TeamUserOfUserAndUserRoleAndRole implements ITeamUserOfUserAndUserRoleAndRole {
+    user!: User;
+    roles!: Role[];
+
+    constructor(data?: ITeamUserOfUserAndUserRoleAndRole) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.user = new User();
+            this.roles = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.user = _data["user"] ? User.fromJS(_data["user"]) : new User();
+            if (Array.isArray(_data["roles"])) {
+                this.roles = [] as any;
+                for (let item of _data["roles"])
+                    this.roles!.push(Role.fromJS(item));
+            }
+            else {
+                this.roles = <any>null;
+            }
+        }
+    }
+
+    static fromJS(data: any): TeamUserOfUserAndUserRoleAndRole {
+        data = typeof data === 'object' ? data : {};
+        let result = new TeamUserOfUserAndUserRoleAndRole();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["user"] = this.user ? this.user.toJSON() : <any>null;
+        if (Array.isArray(this.roles)) {
+            data["roles"] = [];
+            for (let item of this.roles)
+                data["roles"].push(item.toJSON());
+        }
+        return data;
+    }
+}
+
+export interface ITeamUserOfUserAndUserRoleAndRole {
+    user: User;
+    roles: Role[];
 }
 
 export class TeamAddBotParam implements ITeamAddBotParam {

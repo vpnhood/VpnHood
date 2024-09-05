@@ -2,6 +2,7 @@
 
 public class AppOptions
 {
+    public const string FarmTokenRepoHttpClientName = "AgentFarmTokenRepoHttpClientName";
     public const string AgentHttpClientName = "AgentHttpClient";
     public TimeSpan AutoMaintenanceInterval { get; set; } = TimeSpan.FromMinutes(5);
     public Uri AgentUrl { get; set; } = default!;

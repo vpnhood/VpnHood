@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.FarmTokenRepos;
+using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos;
 using VpnHood.Common;
@@ -10,10 +11,15 @@ using VpnHood.Common;
 namespace VpnHood.AccessServer.Services;
 
 
-public class FarmTokenRepoService(VhRepo vhRepo, HttpClient httpClient)
+public class FarmTokenRepoService(
+    ServerConfigureService serverConfigureService,
+    VhRepo vhRepo, 
+    IHttpClientFactory httpClientFactory)
 {
     public async Task<FarmTokenRepo> Create(Guid projectId, Guid serverFarmId, FarmTokenRepoCreateParams createParams)
     {
+        ValidateHttpMethod(createParams.HttpMethod);
+
         // make sure serverFamId belong to project
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
 
@@ -21,22 +27,28 @@ public class FarmTokenRepoService(VhRepo vhRepo, HttpClient httpClient)
             AuthorizationKey = createParams.AuthorizationKey,
             AuthorizationValue = createParams.AuthorizationValue,
             HttpMethod = createParams.HttpMethod,
-            PublishUrl = createParams.PublicUrl,
+            PublishUrl = createParams.PublishUrl,
             UploadUrl = createParams.UploadUrl,
             FarmTokenRepoName = createParams.RepoName,
             ServerFarmId = serverFarm.ServerFarmId,
             ProjectId = projectId,
             FarmTokenRepoId = Guid.NewGuid(),
+            IsPendingUpload = createParams.UploadUrl != null,
             Error = null,
             UploadedTime = null
         };
 
         var entity = await vhRepo.AddAsync(model);
         await vhRepo.SaveChangesAsync();
+
+        // invalidate farm
+        await serverConfigureService.SaveChangesAndInvalidateServerFarm(projectId,
+            serverFarmId: serverFarmId, reconfigureServers: false);
+
         return entity.ToDto();
     }
 
-    public async Task<FarmTokenRepo> Get(Guid projectId, Guid serverFarmId, Guid farmTokenRepoId, 
+    public async Task<FarmTokenRepo> Get(Guid projectId, Guid serverFarmId, Guid farmTokenRepoId,
         bool checkStatus, CancellationToken cancellationToken)
     {
         var farmTokenRepos = await List(projectId, serverFarmId: serverFarmId, checkStatus: checkStatus, farmTokenRepoId: farmTokenRepoId,
@@ -44,13 +56,13 @@ public class FarmTokenRepoService(VhRepo vhRepo, HttpClient httpClient)
         return farmTokenRepos.Single();
     }
 
-    public async Task<FarmTokenRepo[]> List(Guid projectId, Guid serverFarmId, bool checkStatus, 
+    public async Task<FarmTokenRepo[]> List(Guid projectId, Guid serverFarmId, bool checkStatus,
         Guid? farmTokenRepoId = null, CancellationToken cancellationToken = default)
     {
         var models = farmTokenRepoId != null
             ? [await vhRepo.FarmTokenRepoGet(projectId, serverFarmId: serverFarmId, farmTokenRepoId: farmTokenRepoId.Value)]
             : await vhRepo.FarmTokenRepoList(projectId, serverFarmId);
-            
+
         var farmTokenRepos = models.Select(x => x.ToDto()).ToArray();
 
         if (!checkStatus)
@@ -64,7 +76,7 @@ public class FarmTokenRepoService(VhRepo vhRepo, HttpClient httpClient)
                 ValidateTokenUrlResult = await CheckStatus(x, serverFarm.TokenJson, cancellationToken)
             })
             .ToArray();
-        
+
         await Task.WhenAll(tasks);
 
         foreach (var task in tasks) {
@@ -72,14 +84,24 @@ public class FarmTokenRepoService(VhRepo vhRepo, HttpClient httpClient)
             result.FarmTokenRepo.IsUpToDate = result.ValidateTokenUrlResult.IsUpToDate;
             result.FarmTokenRepo.Error ??= result.ValidateTokenUrlResult.ErrorMessage;
         }
-        
+
         return farmTokenRepos;
+    }
+
+    private static void ValidateHttpMethod(string httpMethod)
+    {
+        // check httpMethod is post or put regardless it is case-sensitive
+        if (!httpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
+            !httpMethod.Equals("PUt", StringComparison.OrdinalIgnoreCase))
+            throw new NotSupportedException("Invalid HTTP method. Only POST and PUT are supported.");
     }
 
     public async Task<FarmTokenRepo> Update(Guid projectId, Guid serverFarmId, Guid farmTokenRepoId, FarmTokenRepoUpdateParams updateParams)
     {
         // make sure serverFamId belong to project
         var farmTokenRepo = await vhRepo.FarmTokenRepoGet(projectId, serverFarmId, farmTokenRepoId);
+        if (updateParams.HttpMethod != null)
+            ValidateHttpMethod(updateParams.HttpMethod.Value);
 
         if (updateParams.AuthorizationKey != null) farmTokenRepo.AuthorizationKey = updateParams.AuthorizationKey;
         if (updateParams.AuthorizationValue != null) farmTokenRepo.AuthorizationValue = updateParams.AuthorizationValue;
@@ -87,7 +109,14 @@ public class FarmTokenRepoService(VhRepo vhRepo, HttpClient httpClient)
         if (updateParams.PublishUrl != null) farmTokenRepo.PublishUrl = updateParams.PublishUrl;
         if (updateParams.UploadUrl != null) farmTokenRepo.UploadUrl = updateParams.UploadUrl;
         if (updateParams.RepoName != null) farmTokenRepo.FarmTokenRepoName = updateParams.RepoName;
+        
+        farmTokenRepo.IsPendingUpload = farmTokenRepo.UploadUrl != null;
         await vhRepo.SaveChangesAsync();
+
+        // invalidate farm
+        await serverConfigureService.SaveChangesAndInvalidateServerFarm(projectId,
+            serverFarmId: serverFarmId, reconfigureServers: false);
+
         return farmTokenRepo.ToDto();
     }
 
@@ -116,9 +145,11 @@ public class FarmTokenRepoService(VhRepo vhRepo, HttpClient httpClient)
                 throw new Exception("You farm needs at-least a public in token endpoint");
 
             // create no cache request
+            using var httpClient = httpClientFactory.CreateClient(AppOptions.FarmTokenRepoHttpClientName);
             var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, farmTokenRepo.PublishUrl);
             httpRequestMessage.Headers.CacheControl = new CacheControlHeaderValue { NoStore = true };
             var responseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken);
+            responseMessage.EnsureSuccessStatusCode();
             var stream = await responseMessage.Content.ReadAsStreamAsync(cancellationToken);
 
             var buf = new byte[1024 * 8]; // make sure don't fetch a big data

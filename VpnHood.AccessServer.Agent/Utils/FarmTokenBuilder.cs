@@ -11,7 +11,6 @@ namespace VpnHood.AccessServer.Agent.Utils;
 
 public static class FarmTokenBuilder
 {
-    //todo update token from servers that are ready
     public static bool UpdateIfChanged(ServerFarmModel serverFarm)
     {
         try {
@@ -19,7 +18,7 @@ public static class FarmTokenBuilder
         }
         catch (Exception ex) {
             var isChanged = serverFarm.TokenJson != null || serverFarm.TokenError != ex.Message; 
-            // serverFarm.TokenJson = null; lets leave the old token intact
+            // serverFarm.TokenJson = null; Don't set to null and let leave the old token intact
             serverFarm.TokenError = ex.Message;
             return isChanged;
         }
@@ -47,6 +46,7 @@ public static class FarmTokenBuilder
     public static ServerToken Build(ServerFarmModel serverFarm)
     {
         ArgumentNullException.ThrowIfNull(serverFarm.Servers);
+        ArgumentNullException.ThrowIfNull(serverFarm.TokenRepos);
         var certificate = serverFarm.GetCertificateInToken();
         var x509Certificate = new X509Certificate2(certificate.RawData);
 

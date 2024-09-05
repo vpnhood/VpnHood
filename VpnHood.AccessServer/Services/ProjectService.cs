@@ -56,9 +56,7 @@ public class ProjectService(
             TokenUrl = null,
             TokenError = null,
             PushTokenToClient = true,
-            MaxCertificateCount = 1,
-            Servers = [],
-            TokenRepos = []
+            MaxCertificateCount = 1
         };
 
         // create project

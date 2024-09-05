@@ -9776,9 +9776,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("authorizationValue")]
         public string? AuthorizationValue { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("publicUrl")]
+        [System.Text.Json.Serialization.JsonPropertyName("publishUrl")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Uri PublicUrl { get; set; } = default!;
+        public System.Uri PublishUrl { get; set; } = default!;
 
     }
 

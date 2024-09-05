@@ -1,4 +1,5 @@
-﻿using VpnHood.AccessServer.Agent.Repos;
+﻿using Microsoft.Extensions.DependencyInjection;
+using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Agent.Utils;
 
 namespace VpnHood.AccessServer.Agent.Services;
@@ -6,10 +7,11 @@ namespace VpnHood.AccessServer.Agent.Services;
 public class FarmTokenUpdater(
     CacheRepo cacheRepo,
     VhAgentRepo vhAgentRepo,
+    IServiceScopeFactory serviceScopeFactory,
     ILogger<FarmTokenUpdater> logger)
 
 {
-    public async Task Update(Guid[] farmIds, bool saveChanged)
+    public async Task UpdateAndSaveChanges(Guid[] farmIds)
     {
         foreach (var farmId in farmIds) {
             try {
@@ -20,13 +22,18 @@ public class FarmTokenUpdater(
             }
         }
 
-        if (saveChanged)
-            await vhAgentRepo.SaveChangesAsync();
+        // reset IsPendingUpload
+        await vhAgentRepo.FarmTokenRepoSetPendingUpload(farmIds: farmIds);
+        await vhAgentRepo.SaveChangesAsync();
+
+        // upload pending tokens
+        _ = FarmTokenRepoUploader.UploadPendingTokensJob(serviceScopeFactory, CancellationToken.None);
     }
 
-    public async Task Update(Guid farmId, bool saveChanged)
+    private async Task Update(Guid farmId, bool saveChanged)
     {
         var serverFarm = await vhAgentRepo.ServerFarmGet(farmId, 
+            includeTokenRepos: true,
             includeServersAndAccessPoints: true, 
             includeCertificates: true);
 
@@ -37,5 +44,4 @@ public class FarmTokenUpdater(
         if (saveChanged)
             await vhAgentRepo.SaveChangesAsync();
     }
-
 }

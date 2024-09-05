@@ -14,17 +14,17 @@ public class ServerFarmModel
     public required byte[] Secret { get; set; }
     public required string? TokenJson { get; set; }
     public required string? TokenUrl { get; set; }
-    public required bool PushTokenToClient { get; set; }
     public required string? TokenError { get; set; }
+    public required bool PushTokenToClient { get; set; }
     public required int MaxCertificateCount { get; set; }
     public bool IsDeleted { get; set; } = false;
-    public required List<FarmTokenRepoModel> TokenRepos { get; set; } = [];
 
     public virtual ServerProfileModel? ServerProfile { get; set; }
     public virtual ProjectModel? Project { get; set; }
     public virtual ICollection<CertificateModel>? Certificates { get; set; }
     public virtual ICollection<AccessTokenModel>? AccessTokens { get; set; }
     public virtual ICollection<ServerModel>? Servers { get; set; }
+    public virtual ICollection<FarmTokenRepoModel>? TokenRepos { get; set; }
 
     public CertificateModel GetCertificateInToken()
     {

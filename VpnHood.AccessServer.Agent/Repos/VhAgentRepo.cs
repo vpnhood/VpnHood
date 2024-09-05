@@ -384,12 +384,15 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .SingleAsync();
     }
 
-    public async Task<ServerFarmModel> ServerFarmGet(Guid serverFarmId, 
-        bool includeServersAndAccessPoints, bool includeCertificates, bool includeServerProfile = true)
+    public async Task<ServerFarmModel> ServerFarmGet(Guid serverFarmId, bool includeServersAndAccessPoints, 
+        bool includeCertificates, bool includeServerProfile = true, bool includeTokenRepos = true)
     {
         var query = vhContext.ServerFarms
             .Where(farm => farm.Project!.DeletedTime == null)
             .Where(farm => farm.ServerFarmId == serverFarmId);
+
+        if (includeTokenRepos)
+            query = query.Include(x => x.TokenRepos);
 
         if (includeServerProfile)
             query = query.Include(x => x.ServerProfile);
@@ -500,5 +503,21 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
     {
         var entry = await vhContext.Devices.AddAsync(device);
         return entry.Entity;
+    }
+
+    public Task FarmTokenRepoSetPendingUpload(Guid[] farmIds)
+    {
+        return vhContext.FarmTokenRepos
+            .Where(x => farmIds.Contains(x.ServerFarmId) && x.UploadUrl != null)
+            .ExecuteUpdateAsync(propertyCalls => propertyCalls
+                .SetProperty(x => x.IsPendingUpload, x => true));
+    }
+
+    public Task<FarmTokenRepoModel[]> FarmTokenRepoListPendingUpload()
+    {
+        return vhContext.FarmTokenRepos
+            .Include(x=>x.ServerFarm)
+            .Where(x => x.IsPendingUpload)
+            .ToArrayAsync();
     }
 }

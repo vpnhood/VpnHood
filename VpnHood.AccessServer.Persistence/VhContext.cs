@@ -422,7 +422,13 @@ public class VhContext : DbContext
         });
 
         modelBuilder.Entity<FarmTokenRepoModel>(entity => {
-            entity.HasKey(e => e.FarmTokenRepoId);
+            entity
+                .HasKey(e => e.FarmTokenRepoId);
+
+            entity
+                .HasIndex(e => e.IsPendingUpload)
+                .HasFilter($"{nameof(FarmTokenRepoModel.IsPendingUpload)} = 1")
+                .IsUnique(false);
         });
 
 

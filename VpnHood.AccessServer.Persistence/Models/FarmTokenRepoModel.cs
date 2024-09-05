@@ -13,6 +13,7 @@ public class FarmTokenRepoModel
     public required string? AuthorizationValue { get; set; }
     public required string? Error { get; set; }
     public required DateTime? UploadedTime { get; set; }
+    public required bool IsPendingUpload { get; set; }
 
     public virtual ProjectModel? Project { get; set; }
     public virtual ServerFarmModel? ServerFarm { get; set; }

@@ -1,14 +1,10 @@
 ﻿using System.Net;
-using System.Net.Http.Headers;
-using System.Text;
 using GrayMint.Common.Utils;
 using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos.FarmTokenRepos;
 using VpnHood.AccessServer.Dtos.ServerFarms;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos;
-using VpnHood.Common;
 using AccessPointView = VpnHood.AccessServer.Dtos.ServerFarms.AccessPointView;
 
 namespace VpnHood.AccessServer.Services;
@@ -17,9 +13,7 @@ public class ServerFarmService(
     VhRepo vhRepo,
     ServerConfigureService serverConfigureService,
     CertificateService certificateService,
-    CertificateValidatorService certificateValidatorService,
-    HttpClient httpClient
-)
+    CertificateValidatorService certificateValidatorService)
 {
     public async Task<ServerFarmData> Create(Guid projectId, ServerFarmCreateParams createParams)
     {
@@ -50,9 +44,7 @@ public class ServerFarmService(
             TokenError = null,
             TokenUrl = createParams.TokenUrl?.ToString(),
             PushTokenToClient = true,
-            MaxCertificateCount = 1,
-            Servers = [],
-            TokenRepos = []
+            MaxCertificateCount = 1
         };
 
         await vhRepo.AddAsync(serverFarm);
@@ -74,54 +66,6 @@ public class ServerFarmService(
         serverFarmData.ServerFarm.Certificate = certificateModel.ToDto();
         serverFarmData.FarmTokenRepoNames = (await vhRepo.FarmTokenRepoListNames(projectId, serverFarmId)).ToArray();
         return serverFarmData;
-    }
-
-    //todo remove
-    public async Task<ValidateTokenUrlResult> ValidateTokenUrl(Guid projectId, Guid serverFarmId,
-        CancellationToken cancellationToken)
-    {
-        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
-
-        if (string.IsNullOrEmpty(serverFarm.TokenUrl))
-            throw new InvalidOperationException(
-                $"{nameof(serverFarm.TokenUrl)} has not been set."); // there is no token at the moment
-
-        if (string.IsNullOrEmpty(serverFarm.TokenJson))
-            throw new InvalidOperationException(
-                "Farm has not been initialized yet."); // there is no token at the moment
-
-        var curFarmToken = GmUtil.JsonDeserialize<ServerToken>(serverFarm.TokenJson);
-        try {
-            if (curFarmToken.IsValidHostName && string.IsNullOrEmpty(curFarmToken.HostName))
-                throw new Exception("You farm needs a valid certificate.");
-
-            if (!curFarmToken.IsValidHostName && GmUtil.IsNullOrEmpty(curFarmToken.HostEndPoints))
-                throw new Exception("You farm needs at-least a public in token endpoint");
-
-            // create no cache request
-            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, serverFarm.TokenUrl);
-            httpRequestMessage.Headers.CacheControl = new CacheControlHeaderValue { NoStore = true };
-            var responseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken);
-            var stream = await responseMessage.Content.ReadAsStreamAsync(cancellationToken);
-
-            var buf = new byte[1024 * 8]; // make sure don't fetch a big data
-            var read = stream.ReadAtLeast(buf, buf.Length, false);
-            var encFarmToken = Encoding.UTF8.GetString(buf, 0, read);
-            var remoteFarmToken = ServerToken.Decrypt(curFarmToken.Secret!, encFarmToken);
-            var isUpToDate = !remoteFarmToken.IsTokenUpdated(curFarmToken);
-            return new ValidateTokenUrlResult {
-                RemoteTokenTime = remoteFarmToken.CreatedTime,
-                IsUpToDate = isUpToDate,
-                ErrorMessage = isUpToDate ? null : "The token uploaded to the URL is old and needs to be updated."
-            };
-        }
-        catch (Exception ex) {
-            return new ValidateTokenUrlResult {
-                RemoteTokenTime = null,
-                IsUpToDate = false,
-                ErrorMessage = ex.Message
-            };
-        }
     }
 
     public async Task<ServerFarmData> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)

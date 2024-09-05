@@ -216,7 +216,7 @@ public class CacheService(
     {
         cacheRepo.ServerFarms.TryRemove(serverFarmId, out _);
         if (!includeServers) 
-            return farmTokenUpdater.Update([serverFarmId], saveChanged: true);
+            return farmTokenUpdater.UpdateAndSaveChanges([serverFarmId]);
 
         // invalidate all servers in the farm
         var serverIds = cacheRepo.Servers.Values
@@ -261,7 +261,7 @@ public class CacheService(
 
         // find involved farms
         var farmIds = servers.Select(x => x.ServerFarmId).Distinct().ToArray();
-        await farmTokenUpdater.Update(farmIds, saveChanged: true);
+        await farmTokenUpdater.UpdateAndSaveChanges(farmIds);
     }
 
 

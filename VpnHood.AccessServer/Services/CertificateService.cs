@@ -49,7 +49,9 @@ public class CertificateService(
         await vhRepo.AddAsync(certificate);
 
         // invalidate farm cache
-        await serverConfigureService.SaveChangesAndInvalidateServerFarm(certificate.ProjectId, serverFarmId, true);
+        await serverConfigureService.SaveChangesAndInvalidateServerFarm(certificate.ProjectId, 
+            serverFarmId: serverFarmId, reconfigureServers: true);
+
         return certificate.ToDto();
     }
 

@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
@@ -55,6 +56,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     public SystemClient SystemClient => new(HttpClient);
     public ServerProfilesClient ServerProfilesClient => new(HttpClient);
     public HostOrdersClient HostOrdersClient => new(HttpClient);
+    public FarmTokenReposClient FarmTokenReposClient => new(HttpClient);
     public TeamClient TeamClient => new(HttpClient);
     public AgentCacheClient AgentCacheClient => Scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
     public ILogger<TestApp> Logger => Scope.ServiceProvider.GetRequiredService<ILogger<TestApp>>();
@@ -340,6 +342,9 @@ public class TestApp : IHttpClientFactory, IDisposable
     // IHttpClientFactory.CreateClient
     public HttpClient CreateClient(string name)
     {
+        if (name is AgentOptions.FarmTokenRepoHttpClientName or AppOptions.FarmTokenRepoHttpClientName)
+            return new HttpClient();
+
         // this for simulating Agent HTTP
         return name == AppOptions.AgentHttpClientName
             ? AgentTestApp.HttpClient

@@ -4,6 +4,7 @@ namespace VpnHood.AccessServer.Agent;
 
 public class AgentOptions
 {
+    public const string FarmTokenRepoHttpClientName = "FarmTokenRepoHttpClientName";
     public static readonly Version MinClientVersion = Version.Parse("2.3.289");
     public static readonly Version MinServerVersion = Version.Parse("3.0.411");
     private TimeSpan? _lostServerThreshold;
@@ -26,4 +27,5 @@ public class AgentOptions
     public TimeSpan SaveCacheInterval { get; set; } = TimeSpan.FromMinutes(5);
     public string SystemAuthorizationCode { get; set; } = "";
     public bool AllowRedirect { get; set; } = true;
+    public TimeSpan FarmTokenRepoUpdaterInterval { get; set; } = TimeSpan.FromMinutes(60);
 }

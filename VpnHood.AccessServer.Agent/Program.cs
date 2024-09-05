@@ -38,10 +38,17 @@ public class Program
             builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("App"));
             builder.Services.AddGrayMintCommonServices(new RegisterServicesOptions());
             builder.Services.AddGrayMintSwagger("VpnHood Agent Server", false);
-            builder.Services.AddGrayMintJob<CacheService>(new GrayMintJobOptions {
-                DueTime = agentOptions.SaveCacheInterval,
-                Interval = agentOptions.SaveCacheInterval
-            });
+
+            builder.Services
+                .AddGrayMintJob<CacheService>(new GrayMintJobOptions {
+                    DueTime = agentOptions.SaveCacheInterval,
+                    Interval = agentOptions.SaveCacheInterval
+                })
+                .AddGrayMintJob<FarmTokenRepoUploader>(new GrayMintJobOptions {
+                    DueTime = agentOptions.FarmTokenRepoUpdaterInterval,
+                    Interval = agentOptions.FarmTokenRepoUpdaterInterval
+                });
+
 
             //Authentication
             builder.Services
@@ -84,6 +91,7 @@ public class Program
                 .AddScoped<AgentService>()
                 .AddScoped<LoadBalancerService>()
                 .AddScoped<FarmTokenUpdater>()
+                .AddScoped<FarmTokenRepoUploader>()
                 .AddKeyedSingleton<IIpLocationProvider>(LocationProviderServer,
                     (_, _) => new IpApiCoLocationProvider("VpnHood-AccessManager"))
                 .AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();

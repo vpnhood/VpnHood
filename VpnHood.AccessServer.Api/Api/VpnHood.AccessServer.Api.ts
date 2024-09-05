@@ -6332,7 +6332,7 @@ export class FarmTokenRepoCreateParams implements IFarmTokenRepoCreateParams {
     httpMethod!: string;
     authorizationKey?: string | null;
     authorizationValue?: string | null;
-    publicUrl!: string;
+    publishUrl!: string;
 
     constructor(data?: IFarmTokenRepoCreateParams) {
         if (data) {
@@ -6350,7 +6350,7 @@ export class FarmTokenRepoCreateParams implements IFarmTokenRepoCreateParams {
             this.httpMethod = _data["httpMethod"] !== undefined ? _data["httpMethod"] : <any>null;
             this.authorizationKey = _data["authorizationKey"] !== undefined ? _data["authorizationKey"] : <any>null;
             this.authorizationValue = _data["authorizationValue"] !== undefined ? _data["authorizationValue"] : <any>null;
-            this.publicUrl = _data["publicUrl"] !== undefined ? _data["publicUrl"] : <any>null;
+            this.publishUrl = _data["publishUrl"] !== undefined ? _data["publishUrl"] : <any>null;
         }
     }
 
@@ -6368,7 +6368,7 @@ export class FarmTokenRepoCreateParams implements IFarmTokenRepoCreateParams {
         data["httpMethod"] = this.httpMethod !== undefined ? this.httpMethod : <any>null;
         data["authorizationKey"] = this.authorizationKey !== undefined ? this.authorizationKey : <any>null;
         data["authorizationValue"] = this.authorizationValue !== undefined ? this.authorizationValue : <any>null;
-        data["publicUrl"] = this.publicUrl !== undefined ? this.publicUrl : <any>null;
+        data["publishUrl"] = this.publishUrl !== undefined ? this.publishUrl : <any>null;
         return data;
     }
 }
@@ -6379,7 +6379,7 @@ export interface IFarmTokenRepoCreateParams {
     httpMethod: string;
     authorizationKey?: string | null;
     authorizationValue?: string | null;
-    publicUrl: string;
+    publishUrl: string;
 }
 
 export class FarmTokenRepoSummary implements IFarmTokenRepoSummary {

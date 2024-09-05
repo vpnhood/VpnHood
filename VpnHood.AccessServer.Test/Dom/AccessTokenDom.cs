@@ -22,7 +22,7 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
         var token = Token.FromAccessKey(accessKey);
         var serverEndPoint =
             token.ServerToken.HostEndPoints?.FirstOrDefault(x => x.Address.AddressFamily == addressFamily) ??
-            throw new Exception("There is no HostEndPoint.");
+            throw new Exception("There is no ApiUrl.");
         return await CreateSession(serverEndPoint, clientId, clientIp, assertError, serverLocation:
             serverLocation, autoRedirect: autoRedirect, clientInfo: clientInfo);
     }

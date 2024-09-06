@@ -25,7 +25,18 @@ public class ServerToken
 
     [JsonPropertyName("url")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public string? Url { get; set; }
+    [Obsolete("Use Urls. Version 558 or upper")]
+    public string? Url {
+        get => Urls?.FirstOrDefault();
+        set {
+            if (VhUtil.IsNullOrEmpty(Urls)) 
+                Urls = value != null ? [value] : null;
+        }
+    }
+
+    [JsonPropertyName("urls")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public string[]? Urls { get; set; }
 
     [JsonPropertyName("ep")]
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]

@@ -1,5 +1,4 @@
-﻿using System.Net.Http.Headers;
-using System.Text;
+﻿using System.Text;
 using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Utils;
 using VpnHood.AccessServer.Agent.Repos;
@@ -58,7 +57,7 @@ public class FarmTokenRepoUploader(
             var requestMessage = new HttpRequestMessage {
                 RequestUri = farmTokenRepo.UploadUrl,
                 Content = new StringContent(encFarmToken, Encoding.UTF8, "text/plain"),
-                Method = HttpMethod.Parse(farmTokenRepo.HttpMethod),
+                Method = HttpMethod.Parse(farmTokenRepo.UploadMethod),
             };
 
             // add authorization header

@@ -270,7 +270,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task Configure()
     {
-        var farmCreateParams = new ServerFarmCreateParams { TokenUrl = new Uri("http://localhost:8080/farm1-token") };
+        var farmCreateParams = new ServerFarmCreateParams();
         using var farm = await ServerFarmDom.Create(serverCount: 0, createParams: farmCreateParams);
         var dateTime = DateTime.UtcNow.AddSeconds(-1);
         var serverDom = await farm.AddNewServer(configure: false);

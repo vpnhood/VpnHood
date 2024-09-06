@@ -13,7 +13,6 @@ public class ServerFarmModel
     public required bool UseHostName { get; set; }
     public required byte[] Secret { get; set; }
     public required string? TokenJson { get; set; }
-    public required string? TokenUrl { get; set; }
     public required string? TokenError { get; set; }
     public required bool PushTokenToClient { get; set; }
     public required int MaxCertificateCount { get; set; }

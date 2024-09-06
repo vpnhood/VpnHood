@@ -18,7 +18,7 @@ public class FarmTokenRepoService(
 {
     public async Task<FarmTokenRepo> Create(Guid projectId, Guid serverFarmId, FarmTokenRepoCreateParams createParams)
     {
-        ValidateHttpMethod(createParams.HttpMethod);
+        ValidateHttpMethod(createParams.UploadMethod);
 
         // make sure serverFamId belong to project
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
@@ -26,7 +26,7 @@ public class FarmTokenRepoService(
         var model = new FarmTokenRepoModel {
             AuthorizationKey = createParams.AuthorizationKey,
             AuthorizationValue = createParams.AuthorizationValue,
-            HttpMethod = createParams.HttpMethod,
+            UploadMethod = createParams.UploadMethod,
             PublishUrl = createParams.PublishUrl,
             UploadUrl = createParams.UploadUrl,
             FarmTokenRepoName = createParams.RepoName,
@@ -100,12 +100,12 @@ public class FarmTokenRepoService(
     {
         // make sure serverFamId belong to project
         var farmTokenRepo = await vhRepo.FarmTokenRepoGet(projectId, serverFarmId, farmTokenRepoId);
-        if (updateParams.HttpMethod != null)
-            ValidateHttpMethod(updateParams.HttpMethod.Value);
+        if (updateParams.UploadMethod != null)
+            ValidateHttpMethod(updateParams.UploadMethod.Value);
 
         if (updateParams.AuthorizationKey != null) farmTokenRepo.AuthorizationKey = updateParams.AuthorizationKey;
         if (updateParams.AuthorizationValue != null) farmTokenRepo.AuthorizationValue = updateParams.AuthorizationValue;
-        if (updateParams.HttpMethod != null) farmTokenRepo.HttpMethod = updateParams.HttpMethod;
+        if (updateParams.UploadMethod != null) farmTokenRepo.UploadMethod = updateParams.UploadMethod;
         if (updateParams.PublishUrl != null) farmTokenRepo.PublishUrl = updateParams.PublishUrl;
         if (updateParams.UploadUrl != null) farmTokenRepo.UploadUrl = updateParams.UploadUrl;
         if (updateParams.RepoName != null) farmTokenRepo.FarmTokenRepoName = updateParams.RepoName;

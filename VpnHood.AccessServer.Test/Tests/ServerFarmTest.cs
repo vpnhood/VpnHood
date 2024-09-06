@@ -17,10 +17,7 @@ public class ServerFarmTest
     public async Task Crud()
     {
         var testApp = await TestApp.Create();
-        var farm1 = await ServerFarmDom.Create(testApp, serverCount: 0,
-            createParams: new ServerFarmCreateParams {
-                TokenUrl = new Uri("http://localhost:8080/farm1-token")
-            });
+        var farm1 = await ServerFarmDom.Create(testApp, serverCount: 0, createParams: new ServerFarmCreateParams());
         Assert.IsTrue(farm1.ServerFarm.PushTokenToClient);
 
         var serverDom = await farm1.AddNewServer();
@@ -54,7 +51,6 @@ public class ServerFarmTest
         });
 
         var accessFarmData = await farm1.Reload();
-        Assert.AreEqual(farm1.ServerFarm.TokenUrl, accessFarmData.ServerFarm.TokenUrl);
         Assert.AreEqual(farm1.ServerFarm.ServerFarmName, accessFarmData.ServerFarm.ServerFarmName);
         Assert.AreEqual(1, accessFarmData.Summary!.ServerCount);
         Assert.AreEqual(2, accessFarmData.Summary!.TotalTokenCount);
@@ -76,14 +72,12 @@ public class ServerFarmTest
         var updateParam = new ServerFarmUpdateParams {
             ServerProfileId = new PatchOfGuid { Value = serverProfile2.ServerProfileId },
             ServerFarmName = new PatchOfString { Value = $"groupName_{Guid.NewGuid()}" },
-            TokenUrl = new PatchOfUri { Value = new Uri("http://localhost:8080/farm2-token") },
             Secret = new PatchOfByteOf { Value = GmUtil.GenerateKey() },
             PushTokenToClient = new PatchOfBoolean { Value = true }
         };
 
         await testApp.ServerFarmsClient.UpdateAsync(farm1.ProjectId, farm1.ServerFarmId, updateParam);
         await farm1.Reload();
-        Assert.AreEqual(updateParam.TokenUrl.Value, farm1.ServerFarm.TokenUrl);
         Assert.AreEqual(updateParam.ServerFarmName.Value, farm1.ServerFarm.ServerFarmName);
         Assert.AreEqual(updateParam.ServerProfileId.Value, farm1.ServerFarm.ServerProfileId);
         Assert.IsTrue(farm1.ServerFarm.PushTokenToClient);

@@ -53,7 +53,6 @@ public class ProjectService(
             Secret = GmUtil.GenerateKey(),
             CreatedTime = DateTime.UtcNow,
             TokenJson = null,
-            TokenUrl = null,
             TokenError = null,
             PushTokenToClient = true,
             MaxCertificateCount = 1

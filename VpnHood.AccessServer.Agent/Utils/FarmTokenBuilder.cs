@@ -13,13 +13,15 @@ public static class FarmTokenBuilder
 {
     public static bool UpdateIfChanged(ServerFarmModel serverFarm)
     {
+        var orgTokenJson = serverFarm.TokenJson;
+
         try {
             return UpdateIfChangedInternal(serverFarm);
         }
         catch (Exception ex) {
-            var isChanged = serverFarm.TokenJson != null || serverFarm.TokenError != ex.Message; 
-            // serverFarm.TokenJson = null; Don't set to null and let leave the old token intact
+            var isChanged = serverFarm.TokenJson != orgTokenJson || serverFarm.TokenError != ex.Message;
             serverFarm.TokenError = ex.Message;
+            // serverFarm.TokenJson = null; Don't set to null and let leave the old token intact
             return isChanged;
         }
     }
@@ -39,6 +41,10 @@ public static class FarmTokenBuilder
         // update host token
         serverFarm.TokenJson = JsonSerializer.Serialize(farmTokenNew);
         serverFarm.TokenError = null;
+        foreach (var tokenRepo in serverFarm.TokenRepos!) {
+            tokenRepo.IsPendingUpload = true;
+        }
+
         return true;
     }
 
@@ -96,7 +102,7 @@ public static class FarmTokenBuilder
             Secret = serverFarm.Secret,
             HostPort = hostPort,
             IsValidHostName = serverFarm.UseHostName,
-            Url = serverFarm.TokenUrl,
+            Urls = serverFarm.TokenRepos.Select(x=>x.PublishUrl.ToString()).Distinct().ToArray(),
             CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow),
             ServerLocations = locations.Length > 0 ? locations : null
         };

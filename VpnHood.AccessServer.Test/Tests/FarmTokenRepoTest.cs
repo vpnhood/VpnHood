@@ -17,7 +17,7 @@ public class FarmTokenRepoTest
         var createParams = new FarmTokenRepoCreateParams {
             PublishUrl = new Uri("http://127.0.0.1:6090/file"),
             UploadUrl = new Uri("http://127.0.0.1:6090/upload"),
-            HttpMethod = "PUT",
+            UploadMethod = "PUT",
             AuthorizationKey = Guid.NewGuid().ToString(),
             AuthorizationValue = Guid.NewGuid().ToString(),
             RepoName = Guid.NewGuid().ToString()
@@ -30,7 +30,7 @@ public class FarmTokenRepoTest
             tokenRepo.FarmTokenRepoId);
         Assert.AreEqual(createParams.PublishUrl, tokenRepo.PublishUrl);
         Assert.AreEqual(createParams.UploadUrl, tokenRepo.UploadUrl);
-        Assert.AreEqual(createParams.HttpMethod, tokenRepo.HttpMethod);
+        Assert.AreEqual(createParams.UploadMethod, tokenRepo.UploadMethod);
         Assert.AreEqual(createParams.AuthorizationKey, tokenRepo.AuthorizationKey);
         Assert.AreEqual(createParams.AuthorizationValue, tokenRepo.AuthorizationValue);
         Assert.AreEqual(createParams.RepoName, tokenRepo.FarmTokenRepoName);
@@ -41,7 +41,7 @@ public class FarmTokenRepoTest
         var patchParams = new FarmTokenRepoUpdateParams {
             AuthorizationKey = new PatchOfString { Value = Guid.NewGuid().ToString() },
             AuthorizationValue = new PatchOfString { Value = Guid.NewGuid().ToString() },
-            HttpMethod = new PatchOfString { Value = "POST" },
+            UploadMethod = new PatchOfString { Value = "POST" },
             PublishUrl = new PatchOfUri { Value = new Uri("http://127.0.0.1:6091/updated2") },
             UploadUrl = new PatchOfUri { Value = new Uri("http://127.0.0.1:6091/upload/updated2") },
             RepoName = new PatchOfString { Value = Guid.NewGuid().ToString() }
@@ -50,7 +50,7 @@ public class FarmTokenRepoTest
             tokenRepo.FarmTokenRepoId, patchParams);
         Assert.AreEqual(patchParams.PublishUrl.Value, tokenRepo.PublishUrl);
         Assert.AreEqual(patchParams.UploadUrl.Value, tokenRepo.UploadUrl);
-        Assert.AreEqual(patchParams.HttpMethod.Value, tokenRepo.HttpMethod);
+        Assert.AreEqual(patchParams.UploadMethod.Value, tokenRepo.UploadMethod);
         Assert.AreEqual(patchParams.AuthorizationKey.Value, tokenRepo.AuthorizationKey);
         Assert.AreEqual(patchParams.AuthorizationValue.Value, tokenRepo.AuthorizationValue);
         Assert.AreEqual(patchParams.RepoName.Value, tokenRepo.FarmTokenRepoName);
@@ -76,7 +76,7 @@ public class FarmTokenRepoTest
         var createParams = new FarmTokenRepoCreateParams {
             PublishUrl = fileUrl1,
             UploadUrl = fileUrl1,
-            HttpMethod = "PUT",
+            UploadMethod = "PUT",
             AuthorizationKey = fileServer1.AuthorizationKey,
             AuthorizationValue = fileServer1.AuthorizationValue,
             RepoName = Guid.NewGuid().ToString()
@@ -99,7 +99,7 @@ public class FarmTokenRepoTest
         var updateParams = new FarmTokenRepoUpdateParams {
             PublishUrl = new PatchOfUri { Value = fileUrl2 },
             UploadUrl = new PatchOfUri { Value = fileUrl2 },
-            HttpMethod = new PatchOfString { Value = "POST" },
+            UploadMethod = new PatchOfString { Value = "POST" },
             AuthorizationKey = new PatchOfString { Value = fileServer2.AuthorizationKey },
             AuthorizationValue = new PatchOfString { Value = fileServer2.AuthorizationValue },
             RepoName = new PatchOfString { Value = Guid.NewGuid().ToString() },

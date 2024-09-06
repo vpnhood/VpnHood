@@ -42,7 +42,6 @@ public class ServerFarmService(
             Secret = GmUtil.GenerateKey(),
             TokenJson = null,
             TokenError = null,
-            TokenUrl = createParams.TokenUrl?.ToString(),
             PushTokenToClient = true,
             MaxCertificateCount = 1
         };
@@ -79,7 +78,6 @@ public class ServerFarmService(
         if (updateParams.ServerFarmName != null) serverFarm.ServerFarmName = updateParams.ServerFarmName.Value;
         if (updateParams.UseHostName != null) serverFarm.UseHostName = updateParams.UseHostName;
         if (updateParams.PushTokenToClient != null) serverFarm.PushTokenToClient = updateParams.PushTokenToClient;
-        if (updateParams.TokenUrl != null) serverFarm.TokenUrl = updateParams.TokenUrl?.ToString();
 
         // set secret
         if (updateParams.Secret != null && !updateParams.Secret.Value.SequenceEqual(serverFarm.Secret)) {

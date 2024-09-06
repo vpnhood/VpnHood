@@ -56,7 +56,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Push_token_to_client()
     {
-        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z") };
+        var farmOptions = new ServerFarmCreateParams();
         using var farm = await ServerFarmDom.Create(createParams: farmOptions, serverCount: 0);
         await farm.AddNewServer(configure: true, sendStatus: true);
         await farm.AddNewServer(configure: true, sendStatus: true);
@@ -87,7 +87,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_success()
     {
-        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z") };
+        var farmOptions = new ServerFarmCreateParams();
         using var farm = await ServerFarmDom.Create(createParams: farmOptions);
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams {
             MaxTraffic = 100,
@@ -95,6 +95,15 @@ public class AgentClientSessionTest
             Lifetime = 0,
             MaxDevice = 22
         });
+
+        // add a token repo to farm
+        var tokenRepoUrl = new Uri("http://localhost:5000/api/v1/token-repo");
+        await farm.TestApp.FarmTokenReposClient.CreateAsync(farm.ProjectId, farm.ServerFarmId,
+            new FarmTokenRepoCreateParams {
+                RepoName = "TestRepo",
+                UploadMethod = "PUT",
+                PublishUrl = tokenRepoUrl,
+            });
 
         var beforeUpdateTime = DateTime.UtcNow.AddSeconds(-1);
         var sessionDom = await accessTokenDom.CreateSession();
@@ -109,8 +118,8 @@ public class AgentClientSessionTest
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Received);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Sent);
         Assert.IsNotNull(sessionResponseEx.AccessKey);
-        Assert.AreEqual(farmOptions.TokenUrl?.ToString(),
-            Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Url);
+        Assert.AreEqual(tokenRepoUrl.ToString(),
+            Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Urls?.FirstOrDefault());
         Assert.IsNotNull(sessionResponseEx.SessionKey);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);

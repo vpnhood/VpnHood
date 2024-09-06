@@ -225,7 +225,6 @@ public class AccessTokenTest
             UseHostName = new PatchOfBoolean { Value = true }
         });
 
-        Assert.IsNull(serverFarmData.ServerFarm.TokenUrl);
         Assert.IsNotNull(serverFarmData.ServerFarm.TokenError);
     }
 

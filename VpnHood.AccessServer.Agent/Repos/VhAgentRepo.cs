@@ -505,14 +505,6 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         return entry.Entity;
     }
 
-    public Task FarmTokenRepoSetPendingUpload(Guid[] farmIds)
-    {
-        return vhContext.FarmTokenRepos
-            .Where(x => farmIds.Contains(x.ServerFarmId) && x.UploadUrl != null)
-            .ExecuteUpdateAsync(propertyCalls => propertyCalls
-                .SetProperty(x => x.IsPendingUpload, x => true));
-    }
-
     public Task<FarmTokenRepoModel[]> FarmTokenRepoListPendingUpload()
     {
         return vhContext.FarmTokenRepos

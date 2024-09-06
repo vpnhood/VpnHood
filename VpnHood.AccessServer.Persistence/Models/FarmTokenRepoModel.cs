@@ -8,7 +8,7 @@ public class FarmTokenRepoModel
     public required Guid ServerFarmId { get; init; }
     public required Uri PublishUrl { get; set; }
     public required Uri? UploadUrl { get; set; }
-    public required string HttpMethod { get; set; }
+    public required string UploadMethod { get; set; }
     public required string? AuthorizationKey { get; set; }
     public required string? AuthorizationValue { get; set; }
     public required string? Error { get; set; }

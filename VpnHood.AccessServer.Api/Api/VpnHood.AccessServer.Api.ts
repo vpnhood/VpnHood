@@ -2771,60 +2771,6 @@ export class ServerFarmsClient {
         return Promise.resolve<void>(null as any);
     }
 
-    validateTokenUrl(projectId: string, serverFarmId: string, cancelToken?: CancelToken): Promise<ValidateTokenUrlResult> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/server-farms/{serverFarmId}/validate-token-url";
-        if (projectId === undefined || projectId === null)
-            throw new Error("The parameter 'projectId' must be defined.");
-        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (serverFarmId === undefined || serverFarmId === null)
-            throw new Error("The parameter 'serverFarmId' must be defined.");
-        url_ = url_.replace("{serverFarmId}", encodeURIComponent("" + serverFarmId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "GET",
-            url: url_,
-            headers: {
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processValidateTokenUrl(_response);
-        });
-    }
-
-    protected processValidateTokenUrl(response: AxiosResponse): Promise<ValidateTokenUrlResult> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            result200 = ValidateTokenUrlResult.fromJS(resultData200);
-            return Promise.resolve<ValidateTokenUrlResult>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<ValidateTokenUrlResult>(null as any);
-    }
-
     getEncryptedToken(projectId: string, serverFarmId: string, cancelToken?: CancelToken): Promise<string> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/server-farms/{serverFarmId}/encrypted-token";
         if (projectId === undefined || projectId === null)
@@ -6263,7 +6209,7 @@ export class FarmTokenRepo implements IFarmTokenRepo {
     farmTokenRepoName!: string;
     publishUrl!: string;
     uploadUrl?: string | null;
-    httpMethod!: string;
+    uploadMethod!: string;
     isUpToDate?: boolean | null;
     authorizationKey?: string | null;
     authorizationValue?: string | null;
@@ -6284,7 +6230,7 @@ export class FarmTokenRepo implements IFarmTokenRepo {
             this.farmTokenRepoName = _data["farmTokenRepoName"] !== undefined ? _data["farmTokenRepoName"] : <any>null;
             this.publishUrl = _data["publishUrl"] !== undefined ? _data["publishUrl"] : <any>null;
             this.uploadUrl = _data["uploadUrl"] !== undefined ? _data["uploadUrl"] : <any>null;
-            this.httpMethod = _data["httpMethod"] !== undefined ? _data["httpMethod"] : <any>null;
+            this.uploadMethod = _data["uploadMethod"] !== undefined ? _data["uploadMethod"] : <any>null;
             this.isUpToDate = _data["isUpToDate"] !== undefined ? _data["isUpToDate"] : <any>null;
             this.authorizationKey = _data["authorizationKey"] !== undefined ? _data["authorizationKey"] : <any>null;
             this.authorizationValue = _data["authorizationValue"] !== undefined ? _data["authorizationValue"] : <any>null;
@@ -6305,7 +6251,7 @@ export class FarmTokenRepo implements IFarmTokenRepo {
         data["farmTokenRepoName"] = this.farmTokenRepoName !== undefined ? this.farmTokenRepoName : <any>null;
         data["publishUrl"] = this.publishUrl !== undefined ? this.publishUrl : <any>null;
         data["uploadUrl"] = this.uploadUrl !== undefined ? this.uploadUrl : <any>null;
-        data["httpMethod"] = this.httpMethod !== undefined ? this.httpMethod : <any>null;
+        data["uploadMethod"] = this.uploadMethod !== undefined ? this.uploadMethod : <any>null;
         data["isUpToDate"] = this.isUpToDate !== undefined ? this.isUpToDate : <any>null;
         data["authorizationKey"] = this.authorizationKey !== undefined ? this.authorizationKey : <any>null;
         data["authorizationValue"] = this.authorizationValue !== undefined ? this.authorizationValue : <any>null;
@@ -6319,7 +6265,7 @@ export interface IFarmTokenRepo {
     farmTokenRepoName: string;
     publishUrl: string;
     uploadUrl?: string | null;
-    httpMethod: string;
+    uploadMethod: string;
     isUpToDate?: boolean | null;
     authorizationKey?: string | null;
     authorizationValue?: string | null;
@@ -6329,7 +6275,7 @@ export interface IFarmTokenRepo {
 export class FarmTokenRepoCreateParams implements IFarmTokenRepoCreateParams {
     repoName!: string;
     uploadUrl?: string | null;
-    httpMethod!: string;
+    uploadMethod!: string;
     authorizationKey?: string | null;
     authorizationValue?: string | null;
     publishUrl!: string;
@@ -6347,7 +6293,7 @@ export class FarmTokenRepoCreateParams implements IFarmTokenRepoCreateParams {
         if (_data) {
             this.repoName = _data["repoName"] !== undefined ? _data["repoName"] : <any>null;
             this.uploadUrl = _data["uploadUrl"] !== undefined ? _data["uploadUrl"] : <any>null;
-            this.httpMethod = _data["httpMethod"] !== undefined ? _data["httpMethod"] : <any>null;
+            this.uploadMethod = _data["uploadMethod"] !== undefined ? _data["uploadMethod"] : <any>null;
             this.authorizationKey = _data["authorizationKey"] !== undefined ? _data["authorizationKey"] : <any>null;
             this.authorizationValue = _data["authorizationValue"] !== undefined ? _data["authorizationValue"] : <any>null;
             this.publishUrl = _data["publishUrl"] !== undefined ? _data["publishUrl"] : <any>null;
@@ -6365,7 +6311,7 @@ export class FarmTokenRepoCreateParams implements IFarmTokenRepoCreateParams {
         data = typeof data === 'object' ? data : {};
         data["repoName"] = this.repoName !== undefined ? this.repoName : <any>null;
         data["uploadUrl"] = this.uploadUrl !== undefined ? this.uploadUrl : <any>null;
-        data["httpMethod"] = this.httpMethod !== undefined ? this.httpMethod : <any>null;
+        data["uploadMethod"] = this.uploadMethod !== undefined ? this.uploadMethod : <any>null;
         data["authorizationKey"] = this.authorizationKey !== undefined ? this.authorizationKey : <any>null;
         data["authorizationValue"] = this.authorizationValue !== undefined ? this.authorizationValue : <any>null;
         data["publishUrl"] = this.publishUrl !== undefined ? this.publishUrl : <any>null;
@@ -6376,7 +6322,7 @@ export class FarmTokenRepoCreateParams implements IFarmTokenRepoCreateParams {
 export interface IFarmTokenRepoCreateParams {
     repoName: string;
     uploadUrl?: string | null;
-    httpMethod: string;
+    uploadMethod: string;
     authorizationKey?: string | null;
     authorizationValue?: string | null;
     publishUrl: string;
@@ -6456,7 +6402,7 @@ export class FarmTokenRepoUpdateParams implements IFarmTokenRepoUpdateParams {
     repoName?: PatchOfString | null;
     publishUrl?: PatchOfUri | null;
     uploadUrl?: PatchOfUri | null;
-    httpMethod?: PatchOfString | null;
+    uploadMethod?: PatchOfString | null;
     authorizationKey?: PatchOfString | null;
     authorizationValue?: PatchOfString | null;
 
@@ -6474,7 +6420,7 @@ export class FarmTokenRepoUpdateParams implements IFarmTokenRepoUpdateParams {
             this.repoName = _data["repoName"] ? PatchOfString.fromJS(_data["repoName"]) : <any>null;
             this.publishUrl = _data["publishUrl"] ? PatchOfUri.fromJS(_data["publishUrl"]) : <any>null;
             this.uploadUrl = _data["uploadUrl"] ? PatchOfUri.fromJS(_data["uploadUrl"]) : <any>null;
-            this.httpMethod = _data["httpMethod"] ? PatchOfString.fromJS(_data["httpMethod"]) : <any>null;
+            this.uploadMethod = _data["uploadMethod"] ? PatchOfString.fromJS(_data["uploadMethod"]) : <any>null;
             this.authorizationKey = _data["authorizationKey"] ? PatchOfString.fromJS(_data["authorizationKey"]) : <any>null;
             this.authorizationValue = _data["authorizationValue"] ? PatchOfString.fromJS(_data["authorizationValue"]) : <any>null;
         }
@@ -6492,7 +6438,7 @@ export class FarmTokenRepoUpdateParams implements IFarmTokenRepoUpdateParams {
         data["repoName"] = this.repoName ? this.repoName.toJSON() : <any>null;
         data["publishUrl"] = this.publishUrl ? this.publishUrl.toJSON() : <any>null;
         data["uploadUrl"] = this.uploadUrl ? this.uploadUrl.toJSON() : <any>null;
-        data["httpMethod"] = this.httpMethod ? this.httpMethod.toJSON() : <any>null;
+        data["uploadMethod"] = this.uploadMethod ? this.uploadMethod.toJSON() : <any>null;
         data["authorizationKey"] = this.authorizationKey ? this.authorizationKey.toJSON() : <any>null;
         data["authorizationValue"] = this.authorizationValue ? this.authorizationValue.toJSON() : <any>null;
         return data;
@@ -6503,7 +6449,7 @@ export interface IFarmTokenRepoUpdateParams {
     repoName?: PatchOfString | null;
     publishUrl?: PatchOfUri | null;
     uploadUrl?: PatchOfUri | null;
-    httpMethod?: PatchOfString | null;
+    uploadMethod?: PatchOfString | null;
     authorizationKey?: PatchOfString | null;
     authorizationValue?: PatchOfString | null;
 }
@@ -7281,7 +7227,6 @@ export class ServerFarm implements IServerFarm {
     serverFarmName!: string;
     serverProfileName!: string;
     useHostName!: boolean;
-    tokenUrl?: string | null;
     tokenError?: string | null;
     secret!: string;
     createdTime!: Date;
@@ -7305,7 +7250,6 @@ export class ServerFarm implements IServerFarm {
             this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
             this.serverProfileName = _data["serverProfileName"] !== undefined ? _data["serverProfileName"] : <any>null;
             this.useHostName = _data["useHostName"] !== undefined ? _data["useHostName"] : <any>null;
-            this.tokenUrl = _data["tokenUrl"] !== undefined ? _data["tokenUrl"] : <any>null;
             this.tokenError = _data["tokenError"] !== undefined ? _data["tokenError"] : <any>null;
             this.secret = _data["secret"] !== undefined ? _data["secret"] : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
@@ -7329,7 +7273,6 @@ export class ServerFarm implements IServerFarm {
         data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
         data["serverProfileName"] = this.serverProfileName !== undefined ? this.serverProfileName : <any>null;
         data["useHostName"] = this.useHostName !== undefined ? this.useHostName : <any>null;
-        data["tokenUrl"] = this.tokenUrl !== undefined ? this.tokenUrl : <any>null;
         data["tokenError"] = this.tokenError !== undefined ? this.tokenError : <any>null;
         data["secret"] = this.secret !== undefined ? this.secret : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
@@ -7346,7 +7289,6 @@ export interface IServerFarm {
     serverFarmName: string;
     serverProfileName: string;
     useHostName: boolean;
-    tokenUrl?: string | null;
     tokenError?: string | null;
     secret: string;
     createdTime: Date;
@@ -7546,7 +7488,6 @@ export interface IServerFarmSummary {
 export class ServerFarmCreateParams implements IServerFarmCreateParams {
     serverFarmName?: string | null;
     serverProfileId?: string | null;
-    tokenUrl?: string | null;
 
     constructor(data?: IServerFarmCreateParams) {
         if (data) {
@@ -7561,7 +7502,6 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
         if (_data) {
             this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
             this.serverProfileId = _data["serverProfileId"] !== undefined ? _data["serverProfileId"] : <any>null;
-            this.tokenUrl = _data["tokenUrl"] !== undefined ? _data["tokenUrl"] : <any>null;
         }
     }
 
@@ -7576,7 +7516,6 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
         data = typeof data === 'object' ? data : {};
         data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
         data["serverProfileId"] = this.serverProfileId !== undefined ? this.serverProfileId : <any>null;
-        data["tokenUrl"] = this.tokenUrl !== undefined ? this.tokenUrl : <any>null;
         return data;
     }
 }
@@ -7584,14 +7523,12 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
 export interface IServerFarmCreateParams {
     serverFarmName?: string | null;
     serverProfileId?: string | null;
-    tokenUrl?: string | null;
 }
 
 export class ServerFarmUpdateParams implements IServerFarmUpdateParams {
     serverFarmName?: PatchOfString | null;
     serverProfileId?: PatchOfGuid | null;
     useHostName?: PatchOfBoolean | null;
-    tokenUrl?: PatchOfUri | null;
     secret?: PatchOfByteOf | null;
     pushTokenToClient?: PatchOfBoolean | null;
     autoValidateCertificate?: PatchOfBoolean | null;
@@ -7612,7 +7549,6 @@ export class ServerFarmUpdateParams implements IServerFarmUpdateParams {
             this.serverFarmName = _data["serverFarmName"] ? PatchOfString.fromJS(_data["serverFarmName"]) : <any>null;
             this.serverProfileId = _data["serverProfileId"] ? PatchOfGuid.fromJS(_data["serverProfileId"]) : <any>null;
             this.useHostName = _data["useHostName"] ? PatchOfBoolean.fromJS(_data["useHostName"]) : <any>null;
-            this.tokenUrl = _data["tokenUrl"] ? PatchOfUri.fromJS(_data["tokenUrl"]) : <any>null;
             this.secret = _data["secret"] ? PatchOfByteOf.fromJS(_data["secret"]) : <any>null;
             this.pushTokenToClient = _data["pushTokenToClient"] ? PatchOfBoolean.fromJS(_data["pushTokenToClient"]) : <any>null;
             this.autoValidateCertificate = _data["autoValidateCertificate"] ? PatchOfBoolean.fromJS(_data["autoValidateCertificate"]) : <any>null;
@@ -7633,7 +7569,6 @@ export class ServerFarmUpdateParams implements IServerFarmUpdateParams {
         data["serverFarmName"] = this.serverFarmName ? this.serverFarmName.toJSON() : <any>null;
         data["serverProfileId"] = this.serverProfileId ? this.serverProfileId.toJSON() : <any>null;
         data["useHostName"] = this.useHostName ? this.useHostName.toJSON() : <any>null;
-        data["tokenUrl"] = this.tokenUrl ? this.tokenUrl.toJSON() : <any>null;
         data["secret"] = this.secret ? this.secret.toJSON() : <any>null;
         data["pushTokenToClient"] = this.pushTokenToClient ? this.pushTokenToClient.toJSON() : <any>null;
         data["autoValidateCertificate"] = this.autoValidateCertificate ? this.autoValidateCertificate.toJSON() : <any>null;
@@ -7647,7 +7582,6 @@ export interface IServerFarmUpdateParams {
     serverFarmName?: PatchOfString | null;
     serverProfileId?: PatchOfGuid | null;
     useHostName?: PatchOfBoolean | null;
-    tokenUrl?: PatchOfUri | null;
     secret?: PatchOfByteOf | null;
     pushTokenToClient?: PatchOfBoolean | null;
     autoValidateCertificate?: PatchOfBoolean | null;
@@ -7736,50 +7670,6 @@ export class PatchOfFarmTokenRepoOf implements IPatchOfFarmTokenRepoOf {
 
 export interface IPatchOfFarmTokenRepoOf {
     value?: FarmTokenRepo[] | null;
-}
-
-export class ValidateTokenUrlResult implements IValidateTokenUrlResult {
-    remoteTokenTime?: Date | null;
-    isUpToDate!: boolean;
-    errorMessage?: string | null;
-
-    constructor(data?: IValidateTokenUrlResult) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.remoteTokenTime = _data["remoteTokenTime"] ? new Date(_data["remoteTokenTime"].toString()) : <any>null;
-            this.isUpToDate = _data["isUpToDate"] !== undefined ? _data["isUpToDate"] : <any>null;
-            this.errorMessage = _data["errorMessage"] !== undefined ? _data["errorMessage"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): ValidateTokenUrlResult {
-        data = typeof data === 'object' ? data : {};
-        let result = new ValidateTokenUrlResult();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["remoteTokenTime"] = this.remoteTokenTime ? this.remoteTokenTime.toISOString() : <any>null;
-        data["isUpToDate"] = this.isUpToDate !== undefined ? this.isUpToDate : <any>null;
-        data["errorMessage"] = this.errorMessage !== undefined ? this.errorMessage : <any>null;
-        return data;
-    }
-}
-
-export interface IValidateTokenUrlResult {
-    remoteTokenTime?: Date | null;
-    isUpToDate: boolean;
-    errorMessage?: string | null;
 }
 
 export class CertificateImportParams implements ICertificateImportParams {

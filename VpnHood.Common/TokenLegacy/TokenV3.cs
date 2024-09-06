@@ -49,7 +49,7 @@ public class TokenV3
                 HostName = HostName,
                 HostPort = HostPort,
                 CertificateHash = CertificateHash,
-                Url = Url,
+                Urls = Url != null ? [Url] : null,
                 HostEndPoints = HostEndPoints,
                 Secret = null
             }
@@ -76,7 +76,7 @@ public class TokenV3
             HostName = token.ServerToken.HostName,
             HostPort = token.ServerToken.HostPort,
             CertificateHash = token.ServerToken.CertificateHash,
-            Url = token.ServerToken.Url, // deprecated
+            Url = token.ServerToken.Urls?.FirstOrDefault(), // deprecated
             HostEndPoints = token.ServerToken.HostEndPoints,
             Version = 3,
             IsPublic = false

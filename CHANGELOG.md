@@ -1,3 +1,11 @@
+# Upcoming
+### Client
+* Feature: Update server token from multiple URLs
+
+### Server
+* Fix: Server listening to a test IP
+* Fix: IpV6 Subnet in auto IP configuration
+
 # v4.6.557
 ### Client
 * Fix: ADs providers

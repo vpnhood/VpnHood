@@ -607,8 +607,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // try to update token from url after connection or error if ResponseAccessKey is not set
             // check _client is not null to make sure 
-            if (allowUpdateToken && !string.IsNullOrEmpty(token.ServerToken.Url) &&
-                await ClientProfileService.UpdateServerTokenByUrl(token).VhConfigureAwait()) {
+            if (allowUpdateToken && !VhUtil.IsNullOrEmpty(token.ServerToken.Urls) &&
+                await ClientProfileService.UpdateServerTokenByUrls(token).VhConfigureAwait()) {
                 token = ClientProfileService.GetToken(token.TokenId);
                 await ConnectInternal(token, serverLocationInfo, userAgent, false, cancellationToken)
                     .VhConfigureAwait();

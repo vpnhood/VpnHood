@@ -60,7 +60,9 @@ public class IpRange
 
     public override string ToString()
     {
-        return $"{FirstIpAddress}-{LastIpAddress}";
+        return FirstIpAddress.Equals(LastIpAddress) 
+            ? $"{FirstIpAddress}" 
+            : $"{FirstIpAddress}-{LastIpAddress}";
     }
 
     public override bool Equals(object? obj)

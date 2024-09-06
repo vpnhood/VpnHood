@@ -289,11 +289,19 @@ public class FileAccessManager : IAccessManager
 
     private string GetAccessItemFileName(string tokenId)
     {
+        // check is tokenId has any invalid file character
+        if (tokenId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            throw new InvalidOperationException("invalid character int token id.");
+
         return Path.Combine(StoragePath, tokenId + FileExtToken);
     }
 
     private string GetUsageFileName(string tokenId)
     {
+        // check is tokenId has any invalid file character
+        if (tokenId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            throw new InvalidOperationException("invalid character int token id.");
+
         return Path.Combine(StoragePath, tokenId + FileExtUsage);
     }
 

@@ -86,7 +86,7 @@ public class FileAccessManager : IAccessManager
                        throw new Exception("Certificate must have a subject!"),
             IsValidHostName = serverConfig.IsValidHostName,
             Secret = serverConfig.ServerSecretValue,
-            Url = serverConfig.ServerTokenUrl,
+            Urls = serverConfig.ServerTokenUrls,
             CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow),
             ServerLocations = serverLocation != null ? [serverLocation] : null
         };

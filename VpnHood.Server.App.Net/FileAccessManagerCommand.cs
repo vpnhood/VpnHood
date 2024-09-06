@@ -35,14 +35,15 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
 
         Console.WriteLine();
         Console.WriteLine("Access Details:");
-        Console.WriteLine(JsonSerializer.Serialize(accessItem.AccessUsage,
-            new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine(JsonSerializer.Serialize(accessItem.AccessUsage, new JsonSerializerOptions { WriteIndented = true }));
         Console.WriteLine();
         Console.WriteLine($"{nameof(Token.SupportId)}: {accessItem.Token.SupportId}");
         Console.WriteLine($"{nameof(ServerToken.HostEndPoints)}: {string.Join(",", endPoints)}");
         Console.WriteLine($"{nameof(ServerToken.HostName)}: {hostName}");
         Console.WriteLine($"{nameof(ServerToken.HostPort)}: {accessItem.Token.ServerToken.HostPort}");
-        Console.WriteLine($"TokenUpdateUrl: {accessItem.Token.ServerToken.Url}");
+        Console.WriteLine("TokenUpdateUrls: " + (VhUtil.IsNullOrEmpty(accessItem.Token.ServerToken.Urls) ? "NotSet" : ""));
+        foreach (var url in accessItem.Token.ServerToken.Urls ?? [])
+            Console.WriteLine($"\t Url: {url}");
         Console.WriteLine("---");
 
         Console.WriteLine();

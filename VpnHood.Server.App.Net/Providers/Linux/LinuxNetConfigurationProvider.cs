@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Net;
+using VpnHood.Common.Net;
 
 namespace VpnHood.Server.App.Providers.Linux;
 
@@ -21,13 +22,15 @@ public class LinuxNetConfigurationProvider : INetConfigurationProvider
 
     public Task AddIpAddress(IPAddress ipAddress, string interfaceName)
     {
-        var command = $"ip addr add {ipAddress}/32 dev {interfaceName}";
+        var subnet = ipAddress.IsV4() ? 32 : 128;
+        var command = $"ip addr add {ipAddress}/{subnet} dev {interfaceName}";
         return ExecuteCommandAsync(command);
     }
 
     public Task RemoveIpAddress(IPAddress ipAddress, string interfaceName)
     {
-        var command = $"ip addr del {ipAddress}/32 dev {interfaceName}";
+        var subnet = ipAddress.IsV4() ? 32 : 128;
+        var command = $"ip addr del {ipAddress}/{subnet} dev {interfaceName}";
         return ExecuteCommandAsync(command);
     }
 

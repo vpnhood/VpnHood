@@ -634,7 +634,7 @@ public class ClientAppTest : TestBase
 
         // Update ServerTokenUrl after token creation
         const string newTokenUrl = "http://127.0.0.100:6000";
-        accessManager.ServerConfig.ServerTokenUrl = newTokenUrl;
+        accessManager.ServerConfig.ServerTokenUrls = [newTokenUrl];
         accessManager.ServerConfig.ServerSecret = VhUtil.GenerateKey(); // It can not be changed in new version
         accessManager.ClearCache();
 
@@ -647,8 +647,9 @@ public class ClientAppTest : TestBase
         await app.Connect(clientProfile1.ClientProfileId);
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
 
-        Assert.AreEqual(accessManager.ServerConfig.ServerTokenUrl,
-            app.ClientProfileService.GetToken(token.TokenId).ServerToken.Url);
+        Assert.AreEqual(accessManager.ServerConfig.ServerTokenUrls.First(),
+            app.ClientProfileService.GetToken(token.TokenId).ServerToken.Urls?.First());
+
         CollectionAssert.AreEqual(accessManager.ServerConfig.ServerSecret,
             app.ClientProfileService.GetToken(token.TokenId).ServerToken.Secret);
     }
@@ -657,14 +658,16 @@ public class ClientAppTest : TestBase
     public async Task update_server_token_from_server_token_url()
     {
         // create update webserver
-        var endPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
-        using var webServer = new WebServer(endPoint.Port);
+        var endPoint1 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
+        var endPoint2 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
+        using var webServer1 = new WebServer(endPoint1.Port);
+        using var webServer2 = new WebServer(endPoint2.Port);
 
         // create server1
         var tcpEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions1.TcpEndPoints = [tcpEndPoint];
-        fileAccessManagerOptions1.ServerTokenUrl = $"http://{endPoint}/accesskey";
+        fileAccessManagerOptions1.ServerTokenUrls = [$"http://{endPoint1}/accesskey", $"http://{endPoint2}/accesskey"];
         using var accessManager1 = TestHelper.CreateAccessManager(fileAccessManagerOptions1);
         await using var server1 = await TestHelper.CreateServer(accessManager1);
         var token1 = TestHelper.CreateAccessToken(server1);
@@ -680,11 +683,19 @@ public class ClientAppTest : TestBase
 
         //update web server enc_server_token
         var isTokenRetrieved = false;
-        webServer.WithAction("/accesskey", HttpVerbs.Get, context => {
+        webServer1.WithAction("/accesskey", HttpVerbs.Get, context => {
+            isTokenRetrieved = true;
+            return context.SendStringAsync("something_wrong", "text/plain", Encoding.UTF8);
+        });
+
+        webServer2.WithAction("/accesskey", HttpVerbs.Get, context => {
             isTokenRetrieved = true;
             return context.SendStringAsync(token2.ServerToken.Encrypt(), "text/plain", Encoding.UTF8);
         });
-        webServer.Start();
+
+        webServer1.Start();
+        webServer2.Start();
+
 
         // connect
         await using var app = TestHelper.CreateClientApp();

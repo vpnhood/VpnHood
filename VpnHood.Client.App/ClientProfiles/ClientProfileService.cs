@@ -104,36 +104,40 @@ public class ClientProfileService
         return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false, isForAccount: isForAccount);
     }
 
+    private readonly object _importLock = new();
     // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
     private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn,
         bool isForAccount = false, bool isBuiltIn = false)
     {
-        // make sure no one overwrites built-in tokens
-        if (!allowOverwriteBuiltIn && _clientProfiles.Any(x => x.IsBuiltIn && x.Token.TokenId == token.TokenId))
-            throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
+        lock (_importLock) {
 
-        // update tokens
-        foreach (var clientProfile in _clientProfiles.Where(clientProfile =>
-                     clientProfile.Token.TokenId == token.TokenId)) {
-            if (overwriteNewer || token.IssuedAt >= clientProfile.Token.IssuedAt)
-                clientProfile.Token = token;
+            // make sure no one overwrites built-in tokens
+            if (!allowOverwriteBuiltIn && _clientProfiles.Any(x => x.IsBuiltIn && x.Token.TokenId == token.TokenId))
+                throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
+
+            // update tokens
+            foreach (var clientProfile in _clientProfiles.Where(clientProfile =>
+                         clientProfile.Token.TokenId == token.TokenId)) {
+                if (overwriteNewer || token.IssuedAt >= clientProfile.Token.IssuedAt)
+                    clientProfile.Token = token;
+            }
+
+            // add if it is a new token
+            if (_clientProfiles.All(x => x.Token.TokenId != token.TokenId))
+                _clientProfiles.Add(new ClientProfile {
+                    ClientProfileId = Guid.NewGuid(),
+                    ClientProfileName = token.Name,
+                    Token = token,
+                    IsForAccount = isForAccount,
+                    IsBuiltIn = isBuiltIn
+                });
+
+            // save profiles
+            Save();
+
+            var ret = _clientProfiles.First(x => x.Token.TokenId == token.TokenId);
+            return ret;
         }
-
-        // add if it is a new token
-        if (_clientProfiles.All(x => x.Token.TokenId != token.TokenId))
-            _clientProfiles.Add(new ClientProfile {
-                ClientProfileId = Guid.NewGuid(),
-                ClientProfileName = token.Name,
-                Token = token,
-                IsForAccount = isForAccount,
-                IsBuiltIn = isBuiltIn
-            });
-
-        // save profiles
-        Save();
-
-        var ret = _clientProfiles.First(x => x.Token.TokenId == token.TokenId);
-        return ret;
     }
 
     internal ClientProfile[] ImportBuiltInAccessKeys(string[] accessKeys)
@@ -172,35 +176,70 @@ public class ClientProfileService
         }
     }
 
-    public async Task<bool> UpdateServerTokenByUrl(Token token)
+    public async Task<bool> UpdateServerTokenByUrls(Token token)
     {
-        if (string.IsNullOrEmpty(token.ServerToken.Url) || token.ServerToken.Secret == null)
+        // run update for all urls asynchronously and return true if any of them is successful
+        var urls = token.ServerToken.Urls;
+        if (VhUtil.IsNullOrEmpty(urls) || token.ServerToken.Secret == null)
+            return false;
+
+        using var httpClient = new HttpClient();
+        using var cts = new CancellationTokenSource();
+        var tasks = urls
+            .Select(url => UpdateServerTokenByUrl(token, url, httpClient, cts))
+            .ToList();
+
+        // wait for any of the tasks to complete successfully
+        while (tasks.Count > 0) {
+            var finishedTask = await Task.WhenAny(tasks).VhConfigureAwait();
+            if (await finishedTask) 
+                return true;
+
+            tasks.Remove(finishedTask);
+        }
+
+        return false;
+    }
+
+    private readonly object _updateByUrlLock = new();
+    private async Task<bool> UpdateServerTokenByUrl(Token token, string url,
+        HttpClient httpClient, CancellationTokenSource cts)
+    {
+        if (VhUtil.IsNullOrEmpty(token.ServerToken.Urls) || token.ServerToken.Secret == null)
             return false;
 
         // update token
         VhLogger.Instance.LogInformation("Trying to get a new ServerToken from url. Url: {Url}",
-            VhLogger.FormatHostName(token.ServerToken.Url));
+            VhLogger.FormatHostName(url));
+
         try {
-            using var client = new HttpClient();
             var encryptedServerToken = await VhUtil
-                .RunTask(client.GetStringAsync(token.ServerToken.Url), TimeSpan.FromSeconds(20)).VhConfigureAwait();
-            var newServerToken = ServerToken.Decrypt(token.ServerToken.Secret, encryptedServerToken);
+                    .RunTask(httpClient.GetStringAsync(url), TimeSpan.FromSeconds(20), cts.Token)
+                    .VhConfigureAwait();
 
-            // return older only if token body is same and created time is newer
-            if (!token.ServerToken.IsTokenUpdated(newServerToken)) {
-                VhLogger.Instance.LogInformation("The remote ServerToken is not new and has not been updated.");
-                return false;
+            // update token
+            lock (_updateByUrlLock) {
+                cts.Token.ThrowIfCancellationRequested();
+                var newServerToken = ServerToken.Decrypt(token.ServerToken.Secret, encryptedServerToken);
+
+                // return older only if token body is same and created time is newer
+                if (!token.ServerToken.IsTokenUpdated(newServerToken)) {
+                    VhLogger.Instance.LogInformation("The remote ServerToken is not new and has not been updated.");
+                    return false;
+                }
+
+                //update store
+                token = VhUtil.JsonClone(token);
+                token.ServerToken = newServerToken;
+                ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: true);
+                VhLogger.Instance.LogInformation("ServerToken has been updated from url.");
+                cts.Cancel();
+                return true;
             }
-
-            //update store
-            token = VhUtil.JsonClone(token);
-            token.ServerToken = newServerToken;
-            ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: true);
-            VhLogger.Instance.LogInformation("ServerToken has been updated from url.");
-            return true;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not update ServerToken from url.");
+            if (!cts.IsCancellationRequested)
+                VhLogger.Instance.LogError(ex, "Could not update ServerToken from url.");
             return false;
         }
     }

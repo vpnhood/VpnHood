@@ -163,6 +163,9 @@ public class ServerProfileService(
         if (!VhUtil.IsNullOrEmpty(serverConfig.TcpEndPoints))
             throw new ArgumentException($"You can not set {nameof(serverConfig.TcpEndPoints)}.", nameof(serverConfig));
 
+        if (!VhUtil.IsNullOrEmpty(serverConfig.UdpEndPoints))
+            throw new ArgumentException($"You can not set {nameof(serverConfig.UdpEndPoints)}.", nameof(serverConfig));
+
         if (serverConfig.SessionOptions.SyncInterval != null)
             throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.SyncInterval)}.",
                 nameof(serverConfig));

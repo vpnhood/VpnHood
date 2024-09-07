@@ -246,6 +246,7 @@ public class AgentService(
         serverConfig.Merge(new ServerConfig {
             TcpEndPoints = tcpEndPoints,
             UdpEndPoints = udpEndPoints,
+            AddListenerIpsToNetwork = serverModel.AutoConfigure ? null : "*",
             UpdateStatusInterval = _agentOptions.ServerUpdateStatusInterval,
             SessionOptions = new SessionOptions {
                 Timeout = _agentOptions.SessionTemporaryTimeout,

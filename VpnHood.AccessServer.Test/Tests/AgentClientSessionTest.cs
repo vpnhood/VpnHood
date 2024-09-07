@@ -101,7 +101,6 @@ public class AgentClientSessionTest
         await farm.TestApp.FarmTokenReposClient.CreateAsync(farm.ProjectId, farm.ServerFarmId,
             new FarmTokenRepoCreateParams {
                 RepoName = "TestRepo",
-                UploadMethod = "PUT",
                 PublishUrl = tokenRepoUrl,
             });
 

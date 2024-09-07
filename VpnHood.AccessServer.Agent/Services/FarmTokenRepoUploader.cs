@@ -47,22 +47,31 @@ public class FarmTokenRepoUploader(
             logger.LogInformation("Uploading FarmToken to repo. ProjectId :{ProjectId}, FarmTokenRepoId: {FarmTokenRepoId}",
                 farmTokenRepo.ProjectId, farmTokenRepo.FarmTokenRepoId);
 
+            // get repo settings
+            var repoSettings = farmTokenRepo.GetRepoSettings();
+            if (repoSettings == null)
+                throw new Exception("RepoSettings is not set.");
+
             if (farmTokenJson is null)
                 throw new Exception("FarmToken is not ready yet");
 
             var farmToken = GmUtil.JsonDeserialize<ServerToken>(farmTokenJson);
             var encFarmToken = farmToken.Encrypt();
 
+            // body
+            var body = repoSettings.Body ?? encFarmToken;
+            body  = body.Replace("{content}", encFarmToken);
+
             // create request
             var requestMessage = new HttpRequestMessage {
-                RequestUri = farmTokenRepo.UploadUrl,
-                Content = new StringContent(encFarmToken, Encoding.UTF8, "text/plain"),
-                Method = HttpMethod.Parse(farmTokenRepo.UploadMethod),
+                RequestUri = repoSettings.FileUrl,
+                Content = new StringContent(body, Encoding.UTF8),
+                Method = HttpMethod.Parse(repoSettings.UploadMethod),
             };
 
             // add authorization header
-            if (farmTokenRepo is { AuthorizationKey: not null, AuthorizationValue: not null })
-                requestMessage.Headers.Add(farmTokenRepo.AuthorizationKey, farmTokenRepo.AuthorizationValue);
+            foreach (var header in repoSettings.Headers)
+                requestMessage.Headers.Add(header.Key, header.Value);
 
             // send request
             using var httpClient = httpClientFactory.CreateClient(AgentOptions.FarmTokenRepoHttpClientName);

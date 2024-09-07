@@ -429,6 +429,10 @@ public class VhContext : DbContext
                 .HasIndex(e => e.IsPendingUpload)
                 .HasFilter($"{nameof(FarmTokenRepoModel.IsPendingUpload)} = 1")
                 .IsUnique(false);
+
+            entity
+                .Property(e => e.RepoSettings)
+                .HasMaxLength(600);
         });
 
 

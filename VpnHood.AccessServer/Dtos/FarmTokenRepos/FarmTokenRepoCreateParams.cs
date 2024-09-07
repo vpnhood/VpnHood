@@ -1,12 +1,11 @@
-﻿namespace VpnHood.AccessServer.Dtos.FarmTokenRepos;
+﻿using VpnHood.AccessServer.Persistence.Models;
+
+namespace VpnHood.AccessServer.Dtos.FarmTokenRepos;
 
 public class FarmTokenRepoCreateParams
 {
     public required string RepoName { get; set; }
-    public required Uri? UploadUrl { get; set; }
-    public required string UploadMethod { get; set; } = "PUT";
-    public required string? AuthorizationKey { get; set; }
-    public required string? AuthorizationValue { get; set; }
     public required Uri PublishUrl { get; set; }
+    public required FarmTokenRepoSettings? RepoSettings { get; set; }
 
 }

@@ -1,6 +1,7 @@
 ﻿using GrayMint.Common.Utils;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.FarmTokenRepos;
 using VpnHood.AccessServer.Options;
@@ -13,27 +14,25 @@ namespace VpnHood.AccessServer.Services;
 
 public class FarmTokenRepoService(
     ServerConfigureService serverConfigureService,
-    VhRepo vhRepo, 
+    VhRepo vhRepo,
     IHttpClientFactory httpClientFactory)
 {
     public async Task<FarmTokenRepo> Create(Guid projectId, Guid serverFarmId, FarmTokenRepoCreateParams createParams)
     {
-        ValidateHttpMethod(createParams.UploadMethod);
+        if (createParams.RepoSettings != null)
+            ValidateHttpMethod(createParams.RepoSettings.UploadMethod);
 
         // make sure serverFamId belong to project
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
 
         var model = new FarmTokenRepoModel {
-            AuthorizationKey = createParams.AuthorizationKey,
-            AuthorizationValue = createParams.AuthorizationValue,
-            UploadMethod = createParams.UploadMethod,
             PublishUrl = createParams.PublishUrl,
-            UploadUrl = createParams.UploadUrl,
+            RepoSettings = createParams.RepoSettings?.ToJson(),
             FarmTokenRepoName = createParams.RepoName,
             ServerFarmId = serverFarm.ServerFarmId,
             ProjectId = projectId,
             FarmTokenRepoId = Guid.NewGuid(),
-            IsPendingUpload = createParams.UploadUrl != null,
+            IsPendingUpload = createParams.RepoSettings?.FileUrl != null,
             Error = null,
             UploadedTime = null
         };
@@ -100,17 +99,13 @@ public class FarmTokenRepoService(
     {
         // make sure serverFamId belong to project
         var farmTokenRepo = await vhRepo.FarmTokenRepoGet(projectId, serverFarmId, farmTokenRepoId);
-        if (updateParams.UploadMethod != null)
-            ValidateHttpMethod(updateParams.UploadMethod.Value);
+        if (updateParams.RepoSettings?.Value?.FileUrl != null)
+            ValidateHttpMethod(updateParams.RepoSettings.Value.UploadMethod);
 
-        if (updateParams.AuthorizationKey != null) farmTokenRepo.AuthorizationKey = updateParams.AuthorizationKey;
-        if (updateParams.AuthorizationValue != null) farmTokenRepo.AuthorizationValue = updateParams.AuthorizationValue;
-        if (updateParams.UploadMethod != null) farmTokenRepo.UploadMethod = updateParams.UploadMethod;
+        if (updateParams.RepoSettings != null) farmTokenRepo.RepoSettings = updateParams.RepoSettings.Value?.ToJson();
         if (updateParams.PublishUrl != null) farmTokenRepo.PublishUrl = updateParams.PublishUrl;
-        if (updateParams.UploadUrl != null) farmTokenRepo.UploadUrl = updateParams.UploadUrl;
         if (updateParams.RepoName != null) farmTokenRepo.FarmTokenRepoName = updateParams.RepoName;
-        
-        farmTokenRepo.IsPendingUpload = farmTokenRepo.UploadUrl != null;
+        farmTokenRepo.IsPendingUpload = farmTokenRepo.RepoSettings != null;
         await vhRepo.SaveChangesAsync();
 
         // invalidate farm

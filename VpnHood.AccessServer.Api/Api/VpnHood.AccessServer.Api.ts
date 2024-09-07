@@ -6208,11 +6208,8 @@ export class FarmTokenRepo implements IFarmTokenRepo {
     farmTokenRepoId!: string;
     farmTokenRepoName!: string;
     publishUrl!: string;
-    uploadUrl?: string | null;
-    uploadMethod!: string;
+    repoSettings?: FarmTokenRepoSettings | null;
     isUpToDate?: boolean | null;
-    authorizationKey?: string | null;
-    authorizationValue?: string | null;
     error?: string | null;
 
     constructor(data?: IFarmTokenRepo) {
@@ -6229,11 +6226,8 @@ export class FarmTokenRepo implements IFarmTokenRepo {
             this.farmTokenRepoId = _data["farmTokenRepoId"] !== undefined ? _data["farmTokenRepoId"] : <any>null;
             this.farmTokenRepoName = _data["farmTokenRepoName"] !== undefined ? _data["farmTokenRepoName"] : <any>null;
             this.publishUrl = _data["publishUrl"] !== undefined ? _data["publishUrl"] : <any>null;
-            this.uploadUrl = _data["uploadUrl"] !== undefined ? _data["uploadUrl"] : <any>null;
-            this.uploadMethod = _data["uploadMethod"] !== undefined ? _data["uploadMethod"] : <any>null;
+            this.repoSettings = _data["repoSettings"] ? FarmTokenRepoSettings.fromJS(_data["repoSettings"]) : <any>null;
             this.isUpToDate = _data["isUpToDate"] !== undefined ? _data["isUpToDate"] : <any>null;
-            this.authorizationKey = _data["authorizationKey"] !== undefined ? _data["authorizationKey"] : <any>null;
-            this.authorizationValue = _data["authorizationValue"] !== undefined ? _data["authorizationValue"] : <any>null;
             this.error = _data["error"] !== undefined ? _data["error"] : <any>null;
         }
     }
@@ -6250,11 +6244,8 @@ export class FarmTokenRepo implements IFarmTokenRepo {
         data["farmTokenRepoId"] = this.farmTokenRepoId !== undefined ? this.farmTokenRepoId : <any>null;
         data["farmTokenRepoName"] = this.farmTokenRepoName !== undefined ? this.farmTokenRepoName : <any>null;
         data["publishUrl"] = this.publishUrl !== undefined ? this.publishUrl : <any>null;
-        data["uploadUrl"] = this.uploadUrl !== undefined ? this.uploadUrl : <any>null;
-        data["uploadMethod"] = this.uploadMethod !== undefined ? this.uploadMethod : <any>null;
+        data["repoSettings"] = this.repoSettings ? this.repoSettings.toJSON() : <any>null;
         data["isUpToDate"] = this.isUpToDate !== undefined ? this.isUpToDate : <any>null;
-        data["authorizationKey"] = this.authorizationKey !== undefined ? this.authorizationKey : <any>null;
-        data["authorizationValue"] = this.authorizationValue !== undefined ? this.authorizationValue : <any>null;
         data["error"] = this.error !== undefined ? this.error : <any>null;
         return data;
     }
@@ -6264,21 +6255,81 @@ export interface IFarmTokenRepo {
     farmTokenRepoId: string;
     farmTokenRepoName: string;
     publishUrl: string;
-    uploadUrl?: string | null;
-    uploadMethod: string;
+    repoSettings?: FarmTokenRepoSettings | null;
     isUpToDate?: boolean | null;
-    authorizationKey?: string | null;
-    authorizationValue?: string | null;
     error?: string | null;
+}
+
+export class FarmTokenRepoSettings implements IFarmTokenRepoSettings {
+    fileUrl!: string;
+    uploadMethod!: string;
+    headers!: { [key: string]: string; };
+    body?: string | null;
+
+    constructor(data?: IFarmTokenRepoSettings) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.headers = {};
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.fileUrl = _data["fileUrl"] !== undefined ? _data["fileUrl"] : <any>null;
+            this.uploadMethod = _data["uploadMethod"] !== undefined ? _data["uploadMethod"] : <any>null;
+            if (_data["headers"]) {
+                this.headers = {} as any;
+                for (let key in _data["headers"]) {
+                    if (_data["headers"].hasOwnProperty(key))
+                        (<any>this.headers)![key] = _data["headers"][key] !== undefined ? _data["headers"][key] : <any>null;
+                }
+            }
+            else {
+                this.headers = <any>null;
+            }
+            this.body = _data["body"] !== undefined ? _data["body"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): FarmTokenRepoSettings {
+        data = typeof data === 'object' ? data : {};
+        let result = new FarmTokenRepoSettings();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["fileUrl"] = this.fileUrl !== undefined ? this.fileUrl : <any>null;
+        data["uploadMethod"] = this.uploadMethod !== undefined ? this.uploadMethod : <any>null;
+        if (this.headers) {
+            data["headers"] = {};
+            for (let key in this.headers) {
+                if (this.headers.hasOwnProperty(key))
+                    (<any>data["headers"])[key] = this.headers[key] !== undefined ? this.headers[key] : <any>null;
+            }
+        }
+        data["body"] = this.body !== undefined ? this.body : <any>null;
+        return data;
+    }
+}
+
+export interface IFarmTokenRepoSettings {
+    fileUrl: string;
+    uploadMethod: string;
+    headers: { [key: string]: string; };
+    body?: string | null;
 }
 
 export class FarmTokenRepoCreateParams implements IFarmTokenRepoCreateParams {
     repoName!: string;
-    uploadUrl?: string | null;
-    uploadMethod!: string;
-    authorizationKey?: string | null;
-    authorizationValue?: string | null;
     publishUrl!: string;
+    repoSettings?: FarmTokenRepoSettings | null;
 
     constructor(data?: IFarmTokenRepoCreateParams) {
         if (data) {
@@ -6292,11 +6343,8 @@ export class FarmTokenRepoCreateParams implements IFarmTokenRepoCreateParams {
     init(_data?: any) {
         if (_data) {
             this.repoName = _data["repoName"] !== undefined ? _data["repoName"] : <any>null;
-            this.uploadUrl = _data["uploadUrl"] !== undefined ? _data["uploadUrl"] : <any>null;
-            this.uploadMethod = _data["uploadMethod"] !== undefined ? _data["uploadMethod"] : <any>null;
-            this.authorizationKey = _data["authorizationKey"] !== undefined ? _data["authorizationKey"] : <any>null;
-            this.authorizationValue = _data["authorizationValue"] !== undefined ? _data["authorizationValue"] : <any>null;
             this.publishUrl = _data["publishUrl"] !== undefined ? _data["publishUrl"] : <any>null;
+            this.repoSettings = _data["repoSettings"] ? FarmTokenRepoSettings.fromJS(_data["repoSettings"]) : <any>null;
         }
     }
 
@@ -6310,22 +6358,16 @@ export class FarmTokenRepoCreateParams implements IFarmTokenRepoCreateParams {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["repoName"] = this.repoName !== undefined ? this.repoName : <any>null;
-        data["uploadUrl"] = this.uploadUrl !== undefined ? this.uploadUrl : <any>null;
-        data["uploadMethod"] = this.uploadMethod !== undefined ? this.uploadMethod : <any>null;
-        data["authorizationKey"] = this.authorizationKey !== undefined ? this.authorizationKey : <any>null;
-        data["authorizationValue"] = this.authorizationValue !== undefined ? this.authorizationValue : <any>null;
         data["publishUrl"] = this.publishUrl !== undefined ? this.publishUrl : <any>null;
+        data["repoSettings"] = this.repoSettings ? this.repoSettings.toJSON() : <any>null;
         return data;
     }
 }
 
 export interface IFarmTokenRepoCreateParams {
     repoName: string;
-    uploadUrl?: string | null;
-    uploadMethod: string;
-    authorizationKey?: string | null;
-    authorizationValue?: string | null;
     publishUrl: string;
+    repoSettings?: FarmTokenRepoSettings | null;
 }
 
 export class FarmTokenRepoSummary implements IFarmTokenRepoSummary {
@@ -6401,10 +6443,7 @@ export interface IFarmTokenRepoSummary {
 export class FarmTokenRepoUpdateParams implements IFarmTokenRepoUpdateParams {
     repoName?: PatchOfString | null;
     publishUrl?: PatchOfUri | null;
-    uploadUrl?: PatchOfUri | null;
-    uploadMethod?: PatchOfString | null;
-    authorizationKey?: PatchOfString | null;
-    authorizationValue?: PatchOfString | null;
+    repoSettings?: PatchOfFarmTokenRepoSettings | null;
 
     constructor(data?: IFarmTokenRepoUpdateParams) {
         if (data) {
@@ -6419,10 +6458,7 @@ export class FarmTokenRepoUpdateParams implements IFarmTokenRepoUpdateParams {
         if (_data) {
             this.repoName = _data["repoName"] ? PatchOfString.fromJS(_data["repoName"]) : <any>null;
             this.publishUrl = _data["publishUrl"] ? PatchOfUri.fromJS(_data["publishUrl"]) : <any>null;
-            this.uploadUrl = _data["uploadUrl"] ? PatchOfUri.fromJS(_data["uploadUrl"]) : <any>null;
-            this.uploadMethod = _data["uploadMethod"] ? PatchOfString.fromJS(_data["uploadMethod"]) : <any>null;
-            this.authorizationKey = _data["authorizationKey"] ? PatchOfString.fromJS(_data["authorizationKey"]) : <any>null;
-            this.authorizationValue = _data["authorizationValue"] ? PatchOfString.fromJS(_data["authorizationValue"]) : <any>null;
+            this.repoSettings = _data["repoSettings"] ? PatchOfFarmTokenRepoSettings.fromJS(_data["repoSettings"]) : <any>null;
         }
     }
 
@@ -6437,10 +6473,7 @@ export class FarmTokenRepoUpdateParams implements IFarmTokenRepoUpdateParams {
         data = typeof data === 'object' ? data : {};
         data["repoName"] = this.repoName ? this.repoName.toJSON() : <any>null;
         data["publishUrl"] = this.publishUrl ? this.publishUrl.toJSON() : <any>null;
-        data["uploadUrl"] = this.uploadUrl ? this.uploadUrl.toJSON() : <any>null;
-        data["uploadMethod"] = this.uploadMethod ? this.uploadMethod.toJSON() : <any>null;
-        data["authorizationKey"] = this.authorizationKey ? this.authorizationKey.toJSON() : <any>null;
-        data["authorizationValue"] = this.authorizationValue ? this.authorizationValue.toJSON() : <any>null;
+        data["repoSettings"] = this.repoSettings ? this.repoSettings.toJSON() : <any>null;
         return data;
     }
 }
@@ -6448,10 +6481,7 @@ export class FarmTokenRepoUpdateParams implements IFarmTokenRepoUpdateParams {
 export interface IFarmTokenRepoUpdateParams {
     repoName?: PatchOfString | null;
     publishUrl?: PatchOfUri | null;
-    uploadUrl?: PatchOfUri | null;
-    uploadMethod?: PatchOfString | null;
-    authorizationKey?: PatchOfString | null;
-    authorizationValue?: PatchOfString | null;
+    repoSettings?: PatchOfFarmTokenRepoSettings | null;
 }
 
 export class PatchOfUri implements IPatchOfUri {
@@ -6488,6 +6518,42 @@ export class PatchOfUri implements IPatchOfUri {
 
 export interface IPatchOfUri {
     value?: string | null;
+}
+
+export class PatchOfFarmTokenRepoSettings implements IPatchOfFarmTokenRepoSettings {
+    value?: FarmTokenRepoSettings | null;
+
+    constructor(data?: IPatchOfFarmTokenRepoSettings) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.value = _data["value"] ? FarmTokenRepoSettings.fromJS(_data["value"]) : <any>null;
+        }
+    }
+
+    static fromJS(data: any): PatchOfFarmTokenRepoSettings {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfFarmTokenRepoSettings();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["value"] = this.value ? this.value.toJSON() : <any>null;
+        return data;
+    }
+}
+
+export interface IPatchOfFarmTokenRepoSettings {
+    value?: FarmTokenRepoSettings | null;
 }
 
 export class HostIp implements IHostIp {

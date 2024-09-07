@@ -9654,24 +9654,35 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.Uri PublishUrl { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("uploadUrl")]
-        public System.Uri? UploadUrl { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("repoSettings")]
+        public FarmTokenRepoSettings? RepoSettings { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isUpToDate")]
+        public bool? IsUpToDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("error")]
+        public string? Error { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class FarmTokenRepoSettings
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("fileUrl")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Uri FileUrl { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("uploadMethod")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string UploadMethod { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("isUpToDate")]
-        public bool? IsUpToDate { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("headers")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.IDictionary<string, string> Headers { get; set; } = new System.Collections.Generic.Dictionary<string, string>();
 
-        [System.Text.Json.Serialization.JsonPropertyName("authorizationKey")]
-        public string? AuthorizationKey { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("authorizationValue")]
-        public string? AuthorizationValue { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("error")]
-        public string? Error { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("body")]
+        public string? Body { get; set; } = default!;
 
     }
 
@@ -9683,22 +9694,12 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string RepoName { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("uploadUrl")]
-        public System.Uri? UploadUrl { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("uploadMethod")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string UploadMethod { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("authorizationKey")]
-        public string? AuthorizationKey { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("authorizationValue")]
-        public string? AuthorizationValue { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("publishUrl")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.Uri PublishUrl { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("repoSettings")]
+        public FarmTokenRepoSettings? RepoSettings { get; set; } = default!;
 
     }
 
@@ -9729,17 +9730,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("publishUrl")]
         public PatchOfUri? PublishUrl { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("uploadUrl")]
-        public PatchOfUri? UploadUrl { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("uploadMethod")]
-        public PatchOfString? UploadMethod { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("authorizationKey")]
-        public PatchOfString? AuthorizationKey { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("authorizationValue")]
-        public PatchOfString? AuthorizationValue { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("repoSettings")]
+        public PatchOfFarmTokenRepoSettings? RepoSettings { get; set; } = default!;
 
     }
 
@@ -9749,6 +9741,15 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("value")]
         public System.Uri? Value { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PatchOfFarmTokenRepoSettings
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        public FarmTokenRepoSettings? Value { get; set; } = default!;
 
     }
 

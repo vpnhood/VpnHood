@@ -1,4 +1,5 @@
 ﻿using GrayMint.Common.Utils;
+using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.Dtos.FarmTokenRepos;
 
@@ -6,8 +7,5 @@ public class FarmTokenRepoUpdateParams
 {
     public Patch<string>? RepoName { get; set; }
     public Patch<Uri>? PublishUrl { get; set; }
-    public Patch<Uri?>? UploadUrl { get; set; }
-    public Patch<string>? UploadMethod { get; set; } 
-    public Patch<string?>? AuthorizationKey { get; set; }
-    public Patch<string?>? AuthorizationValue { get; set; }
+    public Patch<FarmTokenRepoSettings?>? RepoSettings { get; set; }
 }

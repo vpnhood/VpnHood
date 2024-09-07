@@ -31,10 +31,7 @@ public static class ServerFarmConverter
             FarmTokenRepoId = model.FarmTokenRepoId.ToString(),
             FarmTokenRepoName = model.FarmTokenRepoName,
             PublishUrl = model.PublishUrl,
-            UploadUrl = model.UploadUrl,
-            UploadMethod = model.UploadMethod,
-            AuthorizationKey = model.AuthorizationKey,
-            AuthorizationValue = model.AuthorizationValue,
+            RepoSettings = model.GetRepoSettings(),
             IsUpToDate = null,
             Error = model.Error
         };

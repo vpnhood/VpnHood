@@ -432,7 +432,7 @@ public class VhContext : DbContext
 
             entity
                 .Property(e => e.RepoSettings)
-                .HasMaxLength(600);
+                .HasMaxLength(1500);
         });
 
 

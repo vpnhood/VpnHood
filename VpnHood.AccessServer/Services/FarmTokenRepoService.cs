@@ -13,14 +13,33 @@ namespace VpnHood.AccessServer.Services;
 
 public class FarmTokenRepoService(
     ServerConfigureService serverConfigureService,
+    SubscriptionService subscriptionService,
     VhRepo vhRepo,
     IHttpClientFactory httpClientFactory)
 {
+    private static void FixRepoSettings(FarmTokenRepoSettings repoSettings)
+    {
+        // remove empty headers
+        repoSettings.Headers = repoSettings.Headers
+            .Where(x => !string.IsNullOrWhiteSpace(x.Key)).ToDictionary();
+
+        // remove empty form data
+        repoSettings.FormData = repoSettings.FormData
+            .Where(x => !string.IsNullOrWhiteSpace(x.Key)).ToDictionary();
+    }
+
     public async Task<FarmTokenRepo> Create(Guid projectId, Guid serverFarmId, FarmTokenRepoCreateParams createParams)
     {
+        await subscriptionService.AuthorizeAddFarmTokenRepo(projectId, serverFarmId);
+
         // make sure serverFamId belong to project
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
 
+        // fix RepoSettings
+        if (createParams.RepoSettings != null)
+            FixRepoSettings(createParams.RepoSettings);
+
+        // create farm token repo
         var model = new FarmTokenRepoModel {
             PublishUrl = createParams.PublishUrl,
             RepoSettings = createParams.RepoSettings?.ToJson(),
@@ -58,7 +77,9 @@ public class FarmTokenRepoService(
             ? [await vhRepo.FarmTokenRepoGet(projectId, serverFarmId: serverFarmId, farmTokenRepoId: farmTokenRepoId.Value)]
             : await vhRepo.FarmTokenRepoList(projectId, serverFarmId);
 
-        var farmTokenRepos = models.Select(x => x.ToDto()).ToArray();
+        var farmTokenRepos = models.Select(x => x.ToDto())
+            .OrderBy(x=>x.FarmTokenRepoName)
+            .ToArray();
 
         if (!checkStatus)
             return farmTokenRepos;
@@ -87,6 +108,11 @@ public class FarmTokenRepoService(
     {
         // make sure serverFamId belong to project
         var farmTokenRepo = await vhRepo.FarmTokenRepoGet(projectId, serverFarmId, farmTokenRepoId);
+
+        // fix RepoSettings
+        if (updateParams.RepoSettings?.Value != null)
+            FixRepoSettings(updateParams.RepoSettings.Value);
+
         if (updateParams.RepoSettings != null) farmTokenRepo.RepoSettings = updateParams.RepoSettings.Value?.ToJson();
         if (updateParams.PublishUrl != null) farmTokenRepo.PublishUrl = updateParams.PublishUrl;
         if (updateParams.RepoName != null) farmTokenRepo.FarmTokenRepoName = updateParams.RepoName;
@@ -147,7 +173,7 @@ public class FarmTokenRepoService(
             return new ValidateTokenUrlResult {
                 RemoteTokenTime = null,
                 IsUpToDate = false,
-                ErrorMessage = ex.Message
+                ErrorMessage = "Status Error. " + ex.Message
             };
         }
     }

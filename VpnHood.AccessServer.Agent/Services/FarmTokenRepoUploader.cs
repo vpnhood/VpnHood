@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Utils;
@@ -74,27 +73,38 @@ public class FarmTokenRepoUploader(
             Method = httpMethod,
         };
 
-        // add headers
-        requestMessage.Headers.UserAgent.ParseAdd("VpnHood Access Server");
-        foreach (var header in repoSettings.Headers)
-            requestMessage.Headers.Add(header.Key, ReplaceVars(header.Value));
-
-        // add form data
-        foreach (var formData in repoSettings.FormData) {
-            requestMessage.Content?.Headers.Add(formData.Key, ReplaceVars(formData.Value));
-        }
+        // get contents type
+        var contentType = repoSettings.Headers.GetValueOrDefault("Content-Type", "application/json");
 
         // set body
         if (httpMethod == HttpMethod.Post || httpMethod == HttpMethod.Put) {
-            var isContentInForm = repoSettings.FormData.Any(x =>
-                x.Value.Contains("{farm_token}", StringComparison.OrdinalIgnoreCase) ||
-                x.Value.Contains("{farm_token_base64}", StringComparison.OrdinalIgnoreCase));
-
-            if (!isContentInForm) {
-                var body = ReplaceVars(repoSettings.Body ?? encFarmToken);
-                requestMessage.Content = new StringContent(body, Encoding.UTF8);
+            // add body
+            if (!string.IsNullOrWhiteSpace(repoSettings.Body)) {
+                var body = ReplaceVars(repoSettings.Body);
+                requestMessage.Content = new StringContent(body, Encoding.UTF8, contentType);
+            }
+            // add form data
+            if (repoSettings.FormData.Any()) {
+                var content = new MultipartFormDataContent();
+                requestMessage.Content = content;
+                foreach (var formItem in repoSettings.FormData)
+                    content.Add(new StringContent(formItem.Key), formItem.Value);
             }
         }
+
+        // add headers
+        requestMessage.Headers.UserAgent.ParseAdd("VpnHood Access Server");
+        foreach (var header in repoSettings.Headers) {
+            // check is belong to content headers
+            if (header.Key.StartsWith("Content-", StringComparison.OrdinalIgnoreCase)) {
+                if (requestMessage.Content == null)
+                    throw new InvalidOperationException($"Could not add {header.Key} when there is no content.");
+                requestMessage.Content.Headers.Add(header.Key, ReplaceVars(header.Value));
+            }
+            else
+                requestMessage.Headers.Add(header.Key, ReplaceVars(header.Value));
+        }
+
 
         // send request
         using var httpClient = httpClientFactory.CreateClient(AgentOptions.FarmTokenRepoHttpClientName);
@@ -103,10 +113,8 @@ public class FarmTokenRepoUploader(
         var result = await AgentUtil.ReadStringAtMostAsync(stream, 5000, Encoding.UTF8, cancellationToken);
         if (!responseMessage.IsSuccessStatusCode) {
             throw new HttpRequestException(
-                $"Failed to upload FarmToken to repo. " +
                 $"StatusCode: {responseMessage.StatusCode}, " +
-                $"ReasonPhrase: {responseMessage.ReasonPhrase}, " +
-                $"Reason: {result}", inner: null, statusCode: responseMessage.StatusCode);
+                $"Message: {result}", inner: null, statusCode: responseMessage.StatusCode);
         }
 
         return result;
@@ -148,21 +156,18 @@ public class FarmTokenRepoUploader(
                 }
             }
 
-            // determine http method
-            var httpMethod = repoSettings.UploadMethod switch {
-                UploadMethod.Post => HttpMethod.Post,
-                UploadMethod.Put => HttpMethod.Put,
-                UploadMethod.PutPost => HttpMethod.Put,
-                _ => throw new InvalidOperationException("Invalid UploadMethod")
-            };
-
             try {
+                // determine http method
+                var httpMethod = repoSettings.UploadMethod switch {
+                    UploadMethod.Post => HttpMethod.Post,
+                    UploadMethod.Put => HttpMethod.Put,
+                    UploadMethod.PutPost => HttpMethod.Put,
+                    _ => throw new InvalidOperationException("Invalid UploadMethod")
+                };
+
                 responseBody = await SendRequestToRepo(httpClientFactory, httpMethod, repoSettings, encFarmToken, sha, cancellationToken);
             }
-            catch (HttpRequestException ex) when (
-                repoSettings.UploadMethod == UploadMethod.PutPost &&
-                ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed or HttpStatusCode.NotImplemented) {
-
+            catch (HttpRequestException ex) when (repoSettings.UploadMethod == UploadMethod.PutPost ) {
                 logger.LogInformation(ex,
                     "Try POST instead of PUT to upload FarmToken as. ProjectId :{ProjectId}, FarmTokenRepoId: {FarmTokenRepoId}.",
                     farmTokenRepo.ProjectId, farmTokenRepo.FarmTokenRepoId);
@@ -172,9 +177,9 @@ public class FarmTokenRepoUploader(
             farmTokenRepo.Error = null;
         }
         catch (Exception ex) {
-            farmTokenRepo.Error = ex.Message;
+            farmTokenRepo.Error = $"Upload Failed. {ex.Message}";
             if (!string.IsNullOrEmpty(responseBody))
-                farmTokenRepo.Error += $" {responseBody}";
+                farmTokenRepo.Error += $"Upload Error. {responseBody}";
 
             logger.LogError(ex, "Could not upload FarmToken to repo. ProjectId :{ProjectId}, FarmTokenRepoId: {FarmTokenRepoId}",
                 farmTokenRepo.ProjectId, farmTokenRepo.FarmTokenRepoId);

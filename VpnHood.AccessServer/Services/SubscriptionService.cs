@@ -34,7 +34,7 @@ public class SubscriptionService(
     public async Task AuthorizeCreateServer(Guid projectId)
     {
         if (await IsFreePlan(projectId) &&
-            vhContext.Servers.Count(server => server.ProjectId == projectId && !server.IsDeleted) >=
+            await vhContext.Servers.CountAsync(server => server.ProjectId == projectId && !server.IsDeleted) >=
             QuotaConstants.ServerCount)
             throw new QuotaException(nameof(VhContext.Servers), QuotaConstants.ServerCount);
     }
@@ -42,7 +42,7 @@ public class SubscriptionService(
     public async Task AuthorizeCreateAccessToken(Guid projectId)
     {
         if (await IsFreePlan(projectId) &&
-            vhContext.AccessTokens.Count(accessToken => accessToken.ProjectId == projectId && !accessToken.IsDeleted) >=
+            await vhContext.AccessTokens.CountAsync(accessToken => accessToken.ProjectId == projectId && !accessToken.IsDeleted) >=
             QuotaConstants.AccessTokenCount)
             throw new QuotaException(nameof(VhContext.AccessTokens), QuotaConstants.AccessTokenCount);
     }
@@ -50,9 +50,15 @@ public class SubscriptionService(
     public async Task AuthorizeAddCertificate(Guid projectId)
     {
         if (await IsFreePlan(projectId) &&
-            vhContext.Certificates.Count(x => x.ProjectId == projectId && !x.IsDeleted) >=
+            await vhContext.Certificates.CountAsync(x => x.ProjectId == projectId && !x.IsDeleted) >=
             QuotaConstants.CertificateCount)
             throw new QuotaException(nameof(VhContext.Certificates), QuotaConstants.CertificateCount);
+    }
+    public async Task AuthorizeAddFarmTokenRepo(Guid projectId, Guid serverFarmId)
+    {
+        var repoNames = await vhRepo.FarmTokenRepoListNames(projectId, serverFarmId: serverFarmId);
+        if (repoNames.Length >= QuotaConstants.FarmTokenRepoCount)
+            throw new QuotaException(nameof(VhContext.FarmTokenRepos), QuotaConstants.FarmTokenRepoCount);
     }
 
     private async Task<bool> IsFreePlan(Guid projectId)
@@ -75,4 +81,5 @@ public class SubscriptionService(
             throw new QuotaException("UsageQuery", (long)maxTimeSpan.TotalHours,
                 "The usage query period is not supported by your plan.");
     }
+   
 }

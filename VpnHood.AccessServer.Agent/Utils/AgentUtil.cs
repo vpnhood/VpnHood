@@ -50,6 +50,4 @@ public static class AgentUtil
         // Convert the byte buffer to a string using the provided encoding
         return encoding.GetString(buffer);
     }
-
-
 }

@@ -9675,14 +9675,40 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("uploadMethod")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string UploadMethod { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public UploadMethod UploadMethod { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("accessToken")]
+        public string? AccessToken { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("headers")]
         [System.ComponentModel.DataAnnotations.Required]
         public System.Collections.Generic.IDictionary<string, string> Headers { get; set; } = new System.Collections.Generic.Dictionary<string, string>();
 
+        [System.Text.Json.Serialization.JsonPropertyName("formData")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.IDictionary<string, string> FormData { get; set; } = new System.Collections.Generic.Dictionary<string, string>();
+
         [System.Text.Json.Serialization.JsonPropertyName("body")]
         public string? Body { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum UploadMethod
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"None")]
+        None = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Post")]
+        Post = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Put")]
+        Put = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PutPost")]
+        PutPost = 3,
 
     }
 

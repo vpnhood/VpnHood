@@ -6262,8 +6262,10 @@ export interface IFarmTokenRepo {
 
 export class FarmTokenRepoSettings implements IFarmTokenRepoSettings {
     fileUrl!: string;
-    uploadMethod!: string;
+    uploadMethod!: UploadMethod;
+    accessToken?: string | null;
     headers!: { [key: string]: string; };
+    formData!: { [key: string]: string; };
     body?: string | null;
 
     constructor(data?: IFarmTokenRepoSettings) {
@@ -6275,6 +6277,7 @@ export class FarmTokenRepoSettings implements IFarmTokenRepoSettings {
         }
         if (!data) {
             this.headers = {};
+            this.formData = {};
         }
     }
 
@@ -6282,6 +6285,7 @@ export class FarmTokenRepoSettings implements IFarmTokenRepoSettings {
         if (_data) {
             this.fileUrl = _data["fileUrl"] !== undefined ? _data["fileUrl"] : <any>null;
             this.uploadMethod = _data["uploadMethod"] !== undefined ? _data["uploadMethod"] : <any>null;
+            this.accessToken = _data["accessToken"] !== undefined ? _data["accessToken"] : <any>null;
             if (_data["headers"]) {
                 this.headers = {} as any;
                 for (let key in _data["headers"]) {
@@ -6291,6 +6295,16 @@ export class FarmTokenRepoSettings implements IFarmTokenRepoSettings {
             }
             else {
                 this.headers = <any>null;
+            }
+            if (_data["formData"]) {
+                this.formData = {} as any;
+                for (let key in _data["formData"]) {
+                    if (_data["formData"].hasOwnProperty(key))
+                        (<any>this.formData)![key] = _data["formData"][key] !== undefined ? _data["formData"][key] : <any>null;
+                }
+            }
+            else {
+                this.formData = <any>null;
             }
             this.body = _data["body"] !== undefined ? _data["body"] : <any>null;
         }
@@ -6307,11 +6321,19 @@ export class FarmTokenRepoSettings implements IFarmTokenRepoSettings {
         data = typeof data === 'object' ? data : {};
         data["fileUrl"] = this.fileUrl !== undefined ? this.fileUrl : <any>null;
         data["uploadMethod"] = this.uploadMethod !== undefined ? this.uploadMethod : <any>null;
+        data["accessToken"] = this.accessToken !== undefined ? this.accessToken : <any>null;
         if (this.headers) {
             data["headers"] = {};
             for (let key in this.headers) {
                 if (this.headers.hasOwnProperty(key))
                     (<any>data["headers"])[key] = this.headers[key] !== undefined ? this.headers[key] : <any>null;
+            }
+        }
+        if (this.formData) {
+            data["formData"] = {};
+            for (let key in this.formData) {
+                if (this.formData.hasOwnProperty(key))
+                    (<any>data["formData"])[key] = this.formData[key] !== undefined ? this.formData[key] : <any>null;
             }
         }
         data["body"] = this.body !== undefined ? this.body : <any>null;
@@ -6321,9 +6343,18 @@ export class FarmTokenRepoSettings implements IFarmTokenRepoSettings {
 
 export interface IFarmTokenRepoSettings {
     fileUrl: string;
-    uploadMethod: string;
+    uploadMethod: UploadMethod;
+    accessToken?: string | null;
     headers: { [key: string]: string; };
+    formData: { [key: string]: string; };
     body?: string | null;
+}
+
+export enum UploadMethod {
+    None = "None",
+    Post = "Post",
+    Put = "Put",
+    PutPost = "PutPost",
 }
 
 export class FarmTokenRepoCreateParams implements IFarmTokenRepoCreateParams {

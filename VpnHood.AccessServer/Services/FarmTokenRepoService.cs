@@ -1,7 +1,6 @@
 ﻿using GrayMint.Common.Utils;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.FarmTokenRepos;
 using VpnHood.AccessServer.Options;
@@ -19,9 +18,6 @@ public class FarmTokenRepoService(
 {
     public async Task<FarmTokenRepo> Create(Guid projectId, Guid serverFarmId, FarmTokenRepoCreateParams createParams)
     {
-        if (createParams.RepoSettings != null)
-            ValidateHttpMethod(createParams.RepoSettings.UploadMethod);
-
         // make sure serverFamId belong to project
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
 
@@ -87,21 +83,10 @@ public class FarmTokenRepoService(
         return farmTokenRepos;
     }
 
-    private static void ValidateHttpMethod(string httpMethod)
-    {
-        // check httpMethod is post or put regardless it is case-sensitive
-        if (!httpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
-            !httpMethod.Equals("PUt", StringComparison.OrdinalIgnoreCase))
-            throw new NotSupportedException("Invalid HTTP method. Only POST and PUT are supported.");
-    }
-
     public async Task<FarmTokenRepo> Update(Guid projectId, Guid serverFarmId, Guid farmTokenRepoId, FarmTokenRepoUpdateParams updateParams)
     {
         // make sure serverFamId belong to project
         var farmTokenRepo = await vhRepo.FarmTokenRepoGet(projectId, serverFarmId, farmTokenRepoId);
-        if (updateParams.RepoSettings?.Value?.FileUrl != null)
-            ValidateHttpMethod(updateParams.RepoSettings.Value.UploadMethod);
-
         if (updateParams.RepoSettings != null) farmTokenRepo.RepoSettings = updateParams.RepoSettings.Value?.ToJson();
         if (updateParams.PublishUrl != null) farmTokenRepo.PublishUrl = updateParams.PublishUrl;
         if (updateParams.RepoName != null) farmTokenRepo.FarmTokenRepoName = updateParams.RepoName;

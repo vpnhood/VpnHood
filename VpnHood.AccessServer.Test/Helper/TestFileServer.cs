@@ -13,6 +13,8 @@ public class TestFileServer : IDisposable
     public Uri ApiUrl { get; }
     public string? AuthorizationKey { get; }
     public string? AuthorizationValue { get; }
+    public bool AllowPut { get; set; } = true;
+    public bool AllowPost { get; set; } = true;
 
     public TestFileServer(string? authorizationKey, string? authorizationValue)
     {
@@ -38,11 +40,23 @@ public class TestFileServer : IDisposable
                         break;
 
                     case HttpVerbs.Post:
+                        if (!AllowPost) {
+                            ctx.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed; // Unauthorized
+                            await ctx.Response.OutputStream.WriteAsync("Command not supported"u8.ToArray());
+                            break;
+                        }
+
                         if (!await ValidateAuthorization(ctx)) return;
                         await HandlePost(ctx);
                         break;
 
                     case HttpVerbs.Put:
+                        if (!AllowPut) {
+                            ctx.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed; // Unauthorized
+                            await ctx.Response.OutputStream.WriteAsync("Command not supported"u8.ToArray());
+                            break;
+                        }
+
                         if (!await ValidateAuthorization(ctx)) return;
                         await HandlePut(ctx);
                         break;
@@ -57,6 +71,7 @@ public class TestFileServer : IDisposable
         // Start the server
         _ = _webServer.RunAsync();
     }
+
 
     private async Task<bool> ValidateAuthorization(IHttpContext ctx)
     {

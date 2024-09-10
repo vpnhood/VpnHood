@@ -117,11 +117,16 @@ public class AgentClientSessionTest
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Received);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Sent);
         Assert.IsNotNull(sessionResponseEx.AccessKey);
-        Assert.AreEqual(tokenRepoUrl.ToString(),
-            Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Urls?.FirstOrDefault());
+        Assert.AreEqual(tokenRepoUrl.ToString(), Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Urls?.FirstOrDefault());
         Assert.IsNotNull(sessionResponseEx.SessionKey);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
+
+        //Legacy check
+#pragma warning disable CS0618 // Type or member is obsolete 
+        Assert.AreEqual(tokenRepoUrl.ToString(), Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Url);
+#pragma warning restore CS0618 // Type or member is obsolete
+
 
         // check Device id and its properties are created 
         var clientInfo = sessionDom.SessionRequestEx.ClientInfo;

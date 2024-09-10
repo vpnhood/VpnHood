@@ -54,6 +54,9 @@ public class VhContext : DbContext
 
         configurationBuilder.Properties<string>()
             .HaveMaxLength(450);
+
+        configurationBuilder.Properties<byte>()
+            .HaveMaxLength(450);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -394,6 +397,10 @@ public class VhContext : DbContext
             entity
                 .Property(e => e.TokenJson)
                 .HasMaxLength(4000);
+
+            entity
+                .Property(e => e.TokenIv)
+                .HasMaxLength(32);
 
             entity
                 .Property(e => e.IsDeleted)

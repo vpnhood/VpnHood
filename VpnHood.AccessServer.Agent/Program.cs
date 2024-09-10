@@ -30,8 +30,10 @@ public class Program
             builder.Logging.AddSimpleConsole(c => { c.TimestampFormat = "[HH:mm:ss] "; });
 
             // NLog: Setup NLog for Dependency injection
-            builder.Logging.ClearProviders();
-            builder.Host.UseNLog();
+            if (Environment.OSVersion.Platform == PlatformID.Unix) {
+                builder.Logging.ClearProviders();
+                builder.Host.UseNLog();
+            }
 
             var agentOptions = builder.Configuration.GetSection("App").Get<AgentOptions>() ??
                                throw new Exception("Could not read AgentOptions.");

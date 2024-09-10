@@ -47,19 +47,23 @@ public class ServerToken
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string[]? ServerLocations { get; set; }
 
-    public string Encrypt()
+    public string Encrypt(byte[]? iv = null)
     {
         var json = JsonSerializer.Serialize(this);
+        if (Secret is null)
+            throw new Exception("There is no Secret in ServerToken.");
 
         // generate IV
-        using var rng = RandomNumberGenerator.Create();
-        var iv = new byte[16];
-        rng.GetBytes(iv);
+        if (iv== null) {
+            using var rng = RandomNumberGenerator.Create();
+            iv = new byte[Secret.Length];
+            rng.GetBytes(iv);
+        }
 
         // aes
         using var aesAlg = Aes.Create();
         aesAlg.Mode = CipherMode.CBC;
-        aesAlg.Key = Secret ?? throw new Exception("There is no Secret in ServerToken.");
+        aesAlg.Key = Secret;
         aesAlg.IV = iv;
         aesAlg.Padding = PaddingMode.PKCS7;
 

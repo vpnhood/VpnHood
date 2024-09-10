@@ -166,7 +166,7 @@ public class FarmTokenRepoService(
             return new ValidateTokenUrlResult {
                 RemoteTokenTime = remoteFarmToken.CreatedTime,
                 IsUpToDate = isUpToDate,
-                ErrorMessage = isUpToDate ? null : "The token uploaded to the URL is old and needs to be updated."
+                ErrorMessage = isUpToDate ? null : "Status Error. The token uploaded to the URL is old and needs to be updated."
             };
         }
         catch (Exception ex) {

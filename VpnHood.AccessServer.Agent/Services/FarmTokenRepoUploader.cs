@@ -86,9 +86,10 @@ public class FarmTokenRepoUploader(
             // add form data
             if (repoSettings.FormData.Any()) {
                 var content = new MultipartFormDataContent();
-                requestMessage.Content = content;
                 foreach (var formItem in repoSettings.FormData)
-                    content.Add(new StringContent(formItem.Key), formItem.Value);
+                    content.Add(new StringContent(ReplaceVars(formItem.Value)), formItem.Key);
+                
+                requestMessage.Content = content;
             }
         }
 

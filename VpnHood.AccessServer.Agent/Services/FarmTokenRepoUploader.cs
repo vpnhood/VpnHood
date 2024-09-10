@@ -7,6 +7,7 @@ using VpnHood.AccessServer.Agent.Utils;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common;
+using VpnHood.Common.Utils;
 using AsyncLock = GrayMint.Common.Utils.AsyncLock;
 
 namespace VpnHood.AccessServer.Agent.Services;
@@ -34,7 +35,7 @@ public class FarmTokenRepoUploader(
         var farmTokenRepos = await vhAgentRepo.FarmTokenRepoListPendingUpload();
         var tasks = farmTokenRepos
             .Select(async x => {
-                await Upload(x, x.ServerFarm!.TokenJson, cancellationToken);
+                await Upload(x, x.ServerFarm!.TokenJson, x.ServerFarm!.TokenIv, cancellationToken);
                 return x;
             })
             .ToArray();
@@ -111,7 +112,7 @@ public class FarmTokenRepoUploader(
         using var httpClient = httpClientFactory.CreateClient(AgentOptions.FarmTokenRepoHttpClientName);
         var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken);
         await using var stream = await responseMessage.Content.ReadAsStreamAsync(cancellationToken);
-        var result = await AgentUtil.ReadStringAtMostAsync(stream, 5000, Encoding.UTF8, cancellationToken);
+        var result = await stream.ReadStringAtMostAsync(5000, Encoding.UTF8, cancellationToken);
         if (!responseMessage.IsSuccessStatusCode) {
             throw new HttpRequestException(
                 $"StatusCode: {responseMessage.StatusCode}, " +
@@ -121,7 +122,7 @@ public class FarmTokenRepoUploader(
         return result;
     }
 
-    private async Task Upload(FarmTokenRepoModel farmTokenRepo, string? farmTokenJson, CancellationToken cancellationToken)
+    private async Task Upload(FarmTokenRepoModel farmTokenRepo, string? farmTokenJson, byte[]? farmTokenIv,  CancellationToken cancellationToken)
     {
         var responseBody = "";
         try {
@@ -140,7 +141,7 @@ public class FarmTokenRepoUploader(
                 throw new Exception("FarmToken is not ready yet");
 
             var farmToken = GmUtil.JsonDeserialize<ServerToken>(farmTokenJson);
-            var encFarmToken = farmToken.Encrypt();
+            var encFarmToken = farmToken.Encrypt(farmTokenIv);
 
             string? sha = null;
             if (repoSettings.Body?.Contains("{sha}", StringComparison.OrdinalIgnoreCase) == true ||

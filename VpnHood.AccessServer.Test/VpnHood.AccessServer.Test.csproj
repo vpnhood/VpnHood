@@ -34,7 +34,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="VpnHood.Server" Version="4.6.558" />
+		<PackageReference Include="VpnHood.Server" Version="4.6.559" />
 	</ItemGroup>
 
 	<ItemGroup>

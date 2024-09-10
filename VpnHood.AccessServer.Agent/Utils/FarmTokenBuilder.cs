@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using GrayMint.Common.Utils;
@@ -40,6 +41,7 @@ public static class FarmTokenBuilder
 
         // update host token
         serverFarm.TokenJson = JsonSerializer.Serialize(farmTokenNew);
+        serverFarm.TokenIv = GenerateIv(16);
         serverFarm.TokenError = null;
         foreach (var tokenRepo in serverFarm.TokenRepos!) {
             tokenRepo.IsPendingUpload = true;
@@ -48,6 +50,13 @@ public static class FarmTokenBuilder
         return true;
     }
 
+    private static byte[] GenerateIv(int size)
+    {
+        using var rng = RandomNumberGenerator.Create();
+        var iv = new byte[size];
+        rng.GetBytes(iv);
+        return iv;
+    }
 
     public static ServerToken Build(ServerFarmModel serverFarm)
     {

@@ -217,6 +217,6 @@ public class ServerFarmService(
     {
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
         var farmToken = serverFarm.GetRequiredServerToken();
-        return farmToken.Encrypt();
+        return farmToken.Encrypt(serverFarm.TokenIv);
     }
 }

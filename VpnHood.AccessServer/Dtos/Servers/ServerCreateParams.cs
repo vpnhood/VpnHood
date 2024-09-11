@@ -8,4 +8,5 @@ public class ServerCreateParams
     public required Guid ServerFarmId { get; init; }
     public Uri? HostPanelUrl { get; init; }
     public AccessPoint[]? AccessPoints { get; init; }
+    public int? Power { get; init; }
 }

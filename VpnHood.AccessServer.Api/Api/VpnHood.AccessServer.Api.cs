@@ -10563,6 +10563,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("hostPanelUrl")]
         public System.Uri? HostPanelUrl { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("power")]
+        public int? Power { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -10682,6 +10685,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
         public System.Collections.Generic.ICollection<AccessPoint>? AccessPoints { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("power")]
+        public int? Power { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -10709,6 +10715,12 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("hostPanelUrl")]
         public PatchOfUri? HostPanelUrl { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("power")]
+        public PatchOfNullableInteger? Power { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
+        public PatchOfBoolean? IsEnabled { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -10717,6 +10729,15 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("value")]
         public System.Collections.Generic.ICollection<AccessPoint>? Value { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PatchOfNullableInteger
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        public int? Value { get; set; } = default!;
 
     }
 

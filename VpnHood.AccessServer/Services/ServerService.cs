@@ -32,6 +32,10 @@ public class ServerService(
         using var singleRequest = await AsyncLock.LockAsync($"CreateServer_{projectId}");
         await subscriptionService.AuthorizeCreateServer(projectId);
 
+        // validate power
+        if (createParams.Power < 1)
+            throw new ArgumentException("Power can not be less than 1", nameof(createParams.Power));
+
         // make sure farm belongs to this account
         var serverFarm = await vhRepo.ServerFarmGet(projectId, createParams.ServerFarmId, includeServers: true);
 
@@ -55,6 +59,7 @@ public class ServerService(
             AccessPoints = ValidateAccessPoints(createParams.AccessPoints ?? []),
             ConfigCode = Guid.NewGuid(),
             AutoConfigure = createParams.AccessPoints == null,
+            Power = createParams.Power,
             Description = null,
             LastConfigCode = null,
             LastConfigError = null,
@@ -85,10 +90,15 @@ public class ServerService(
 
     public async Task<ServerData> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
+        // Validate AutoConfigure
         if (updateParams.AutoConfigure?.Value == true && updateParams.AccessPoints != null)
             throw new ArgumentException(
                 $"{nameof(updateParams.AutoConfigure)} can not be true when {nameof(updateParams.AccessPoints)} is set",
                 nameof(updateParams));
+
+        // validate power
+        if (updateParams.Power?.Value < 1)
+            throw new ArgumentException("Power can not be less than 1", nameof(updateParams));
 
         // validate
         var server = await vhRepo.ServerGet(projectId, serverId, includeFarm: true);
@@ -101,6 +111,8 @@ public class ServerService(
         }
 
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
+        if (updateParams.Power != null) server.Power = updateParams.Power;
+        if (updateParams.IsEnabled != null) server.IsEnabled = updateParams.IsEnabled;
         if (updateParams.AllowInAutoLocation != null) server.AllowInAutoLocation = updateParams.AllowInAutoLocation;
         if (updateParams.HostPanelUrl != null) server.HostPanelUrl = updateParams.HostPanelUrl?.ToString();
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
@@ -173,12 +185,12 @@ public class ServerService(
             x.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken &&
             (x.IpAddress.Equals(IPAddress.Any) || x.IpAddress.Equals(IPAddress.IPv6Any)))?.IpAddress;
         if (anyIpAddress4Public != null)
-            throw new InvalidOperationException($"Can not use {anyIpAddress4Public} as public a address.");
+            throw new ArgumentException($"Can not use {anyIpAddress4Public} as public address.", nameof(accessPoints));
 
         // validate TcpEndPoints
         _ = accessPoints.Select(x => new IPEndPoint(x.IpAddress, x.TcpPort));
         if (accessPoints.Any(x => x.TcpPort == 0))
-            throw new InvalidOperationException("Invalid TcpEndPoint. Port can not be zero.");
+            throw new ArgumentException("Invalid TcpEndPoint. Port can not be zero.", nameof(accessPoints));
 
         //find duplicate tcp
         var duplicate = accessPoints

@@ -52,7 +52,8 @@ public class ServerTest
         //-----------
         var server1ACreateParam = new ServerCreateParams {
             ServerName = $"{Guid.NewGuid()}",
-            HostPanelUrl = new Uri("http://localhost/foo")
+            HostPanelUrl = new Uri("http://localhost/foo"),
+            Power = 8,
         };
         var serverDom = await farm.AddNewServer(server1ACreateParam, configure: false);
         var install1A = await farm.TestApp.ServersClient.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
@@ -63,6 +64,7 @@ public class ServerTest
         await serverDom.Reload();
         Assert.AreEqual(server1ACreateParam.HostPanelUrl, serverDom.Server.HostPanelUrl);
         Assert.AreEqual(server1ACreateParam.ServerName, serverDom.Server.ServerName);
+        Assert.AreEqual(server1ACreateParam.Power, serverDom.Server.Power);
         Assert.AreEqual(ServerState.NotInstalled, serverDom.Server.ServerState);
 
         // ServerState.Configuring
@@ -97,7 +99,9 @@ public class ServerTest
             ServerName = new PatchOfString { Value = $"{Guid.NewGuid()}" },
             AutoConfigure = new PatchOfBoolean { Value = !serverDom.Server.AutoConfigure },
             GenerateNewSecret = new PatchOfBoolean { Value = false },
-            HostPanelUrl = new PatchOfUri { Value = new Uri("http://localhost/foo2") }
+            HostPanelUrl = new PatchOfUri { Value = new Uri("http://localhost/foo2") },
+            Power = new PatchOfNullableInteger { Value = 16 },
+            IsEnabled = new PatchOfBoolean { Value = !serverDom.Server.IsEnabled }
         };
         await serverDom.Update(serverUpdateParam);
         await serverDom.Reload();
@@ -106,6 +110,7 @@ public class ServerTest
         Assert.AreEqual(serverUpdateParam.AutoConfigure.Value, serverDom.Server.AutoConfigure);
         Assert.AreEqual(serverUpdateParam.HostPanelUrl.Value, serverDom.Server.HostPanelUrl);
         Assert.AreEqual(serverUpdateParam.ServerName.Value, serverDom.Server.ServerName);
+        Assert.AreEqual(serverUpdateParam.IsEnabled.Value, serverDom.Server.IsEnabled);
 
         //-----------
         // check: Update (change Secret)

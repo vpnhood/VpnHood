@@ -27,4 +27,5 @@ public class VpnServer
     public required AccessPoint[] AccessPoints { get; init; }
     public required bool AllowInAutoLocation { get; init; }
     public required Uri? HostPanelUrl { get; init; }
+    public required int? Power { get; init; }
 }

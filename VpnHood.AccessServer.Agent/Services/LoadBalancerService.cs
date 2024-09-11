@@ -115,12 +115,16 @@ public class LoadBalancerService(
     // let's treat configuring servers as ready in respect of change ip and change certificate
     private static bool IsServerReadyForRedirect(ServerCache serverCache)
     {
-        return serverCache.ServerState is ServerState.Idle or ServerState.Active or ServerState.Configuring;
+        return
+            serverCache.ServerState is ServerState.Idle or ServerState.Active or ServerState.Configuring &&
+            serverCache.IsEnabled;
+
     }
 
     private static float CalcServerLoad(ServerCache server)
     {
-        return (float)server.ServerStatus!.SessionCount / Math.Max(1, server.LogicalCoreCount);
+        var power = Math.Max(0, server.Power ?? server.LogicalCoreCount);
+        return (float)server.ServerStatus!.SessionCount / Math.Max(1, power);
     }
 
     public async Task<bool> IsAllPublicInTokenServersReady(Guid serverFarmId)
@@ -128,10 +132,10 @@ public class LoadBalancerService(
         var servers = await cacheService.GetServers(serverFarmId: serverFarmId);
 
         // find all servers with access in tokens
+        // Disabled servers are not counted as not ready because users turn them off intentionally
         servers = servers
             .Where(server =>
                 server.ServerFarmId == serverFarmId &&
-                server.IsEnabled &&
                 server.AccessPoints.Any(x => x.AccessPointMode == AccessPointMode.PublicInToken))
             .ToArray();
 

@@ -12,4 +12,6 @@ public class ServerUpdateParams
     public Patch<AccessPoint[]>? AccessPoints { get; set; }
     public Patch<bool>? AllowInAutoLocation { get; set; }
     public Patch<Uri?>? HostPanelUrl { get; set; }
+    public Patch<int?>? Power { get; set; }
+    public Patch<bool>? IsEnabled { get; set; }
 }

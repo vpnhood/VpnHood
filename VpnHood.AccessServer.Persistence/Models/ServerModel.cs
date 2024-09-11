@@ -30,6 +30,7 @@ public class ServerModel
     public required string? GatewayIpV6 { get; set; }
     public required string? HostPanelUrl { get; set; }
     public required bool AllowInAutoLocation { get; set; }
+    public required int? Power { get; set; }
     public required List<AccessPointModel> AccessPoints { get; set; } = [];
 
     public virtual ProjectModel? Project { get; set; }

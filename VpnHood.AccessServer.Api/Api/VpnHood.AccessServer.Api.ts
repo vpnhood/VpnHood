@@ -8185,6 +8185,7 @@ export class VpnServer implements IVpnServer {
     accessPoints!: AccessPoint[];
     allowInAutoLocation!: boolean;
     hostPanelUrl?: string | null;
+    power?: number | null;
 
     constructor(data?: IVpnServer) {
         if (data) {
@@ -8229,6 +8230,7 @@ export class VpnServer implements IVpnServer {
             }
             this.allowInAutoLocation = _data["allowInAutoLocation"] !== undefined ? _data["allowInAutoLocation"] : <any>null;
             this.hostPanelUrl = _data["hostPanelUrl"] !== undefined ? _data["hostPanelUrl"] : <any>null;
+            this.power = _data["power"] !== undefined ? _data["power"] : <any>null;
         }
     }
 
@@ -8267,6 +8269,7 @@ export class VpnServer implements IVpnServer {
         }
         data["allowInAutoLocation"] = this.allowInAutoLocation !== undefined ? this.allowInAutoLocation : <any>null;
         data["hostPanelUrl"] = this.hostPanelUrl !== undefined ? this.hostPanelUrl : <any>null;
+        data["power"] = this.power !== undefined ? this.power : <any>null;
         return data;
     }
 }
@@ -8294,6 +8297,7 @@ export interface IVpnServer {
     accessPoints: AccessPoint[];
     allowInAutoLocation: boolean;
     hostPanelUrl?: string | null;
+    power?: number | null;
 }
 
 export enum ServerState {
@@ -8437,6 +8441,7 @@ export class ServerCreateParams implements IServerCreateParams {
     serverFarmId!: string;
     hostPanelUrl?: string | null;
     accessPoints?: AccessPoint[] | null;
+    power?: number | null;
 
     constructor(data?: IServerCreateParams) {
         if (data) {
@@ -8460,6 +8465,7 @@ export class ServerCreateParams implements IServerCreateParams {
             else {
                 this.accessPoints = <any>null;
             }
+            this.power = _data["power"] !== undefined ? _data["power"] : <any>null;
         }
     }
 
@@ -8480,6 +8486,7 @@ export class ServerCreateParams implements IServerCreateParams {
             for (let item of this.accessPoints)
                 data["accessPoints"].push(item.toJSON());
         }
+        data["power"] = this.power !== undefined ? this.power : <any>null;
         return data;
     }
 }
@@ -8489,6 +8496,7 @@ export interface IServerCreateParams {
     serverFarmId: string;
     hostPanelUrl?: string | null;
     accessPoints?: AccessPoint[] | null;
+    power?: number | null;
 }
 
 export class ServerUpdateParams implements IServerUpdateParams {
@@ -8499,6 +8507,8 @@ export class ServerUpdateParams implements IServerUpdateParams {
     accessPoints?: PatchOfAccessPointOf | null;
     allowInAutoLocation?: PatchOfBoolean | null;
     hostPanelUrl?: PatchOfUri | null;
+    power?: PatchOfNullableInteger | null;
+    isEnabled?: PatchOfBoolean | null;
 
     constructor(data?: IServerUpdateParams) {
         if (data) {
@@ -8518,6 +8528,8 @@ export class ServerUpdateParams implements IServerUpdateParams {
             this.accessPoints = _data["accessPoints"] ? PatchOfAccessPointOf.fromJS(_data["accessPoints"]) : <any>null;
             this.allowInAutoLocation = _data["allowInAutoLocation"] ? PatchOfBoolean.fromJS(_data["allowInAutoLocation"]) : <any>null;
             this.hostPanelUrl = _data["hostPanelUrl"] ? PatchOfUri.fromJS(_data["hostPanelUrl"]) : <any>null;
+            this.power = _data["power"] ? PatchOfNullableInteger.fromJS(_data["power"]) : <any>null;
+            this.isEnabled = _data["isEnabled"] ? PatchOfBoolean.fromJS(_data["isEnabled"]) : <any>null;
         }
     }
 
@@ -8537,6 +8549,8 @@ export class ServerUpdateParams implements IServerUpdateParams {
         data["accessPoints"] = this.accessPoints ? this.accessPoints.toJSON() : <any>null;
         data["allowInAutoLocation"] = this.allowInAutoLocation ? this.allowInAutoLocation.toJSON() : <any>null;
         data["hostPanelUrl"] = this.hostPanelUrl ? this.hostPanelUrl.toJSON() : <any>null;
+        data["power"] = this.power ? this.power.toJSON() : <any>null;
+        data["isEnabled"] = this.isEnabled ? this.isEnabled.toJSON() : <any>null;
         return data;
     }
 }
@@ -8549,6 +8563,8 @@ export interface IServerUpdateParams {
     accessPoints?: PatchOfAccessPointOf | null;
     allowInAutoLocation?: PatchOfBoolean | null;
     hostPanelUrl?: PatchOfUri | null;
+    power?: PatchOfNullableInteger | null;
+    isEnabled?: PatchOfBoolean | null;
 }
 
 export class PatchOfAccessPointOf implements IPatchOfAccessPointOf {
@@ -8596,6 +8612,42 @@ export class PatchOfAccessPointOf implements IPatchOfAccessPointOf {
 
 export interface IPatchOfAccessPointOf {
     value?: AccessPoint[] | null;
+}
+
+export class PatchOfNullableInteger implements IPatchOfNullableInteger {
+    value?: number | null;
+
+    constructor(data?: IPatchOfNullableInteger) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): PatchOfNullableInteger {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfNullableInteger();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["value"] = this.value !== undefined ? this.value : <any>null;
+        return data;
+    }
+}
+
+export interface IPatchOfNullableInteger {
+    value?: number | null;
 }
 
 export class ServerInstallBySshUserPasswordParams implements IServerInstallBySshUserPasswordParams {

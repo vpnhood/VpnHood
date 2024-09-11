@@ -21,6 +21,7 @@ public class ServerCache
     public required Guid AuthorizationCode { get; init; }
     public required ServerLocationInfo LocationInfo { get; init; }
     public required int LogicalCoreCount { get; init; }
+    public required int? Power { get; init; }
     public required AccessPointModel[] AccessPoints { get; init; }
     public required ServerStatusBaseModel? ServerStatus { get; set; }
     public required bool AllowInAutoLocation { get; set; }

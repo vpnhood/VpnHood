@@ -234,12 +234,25 @@ public class LoadBalancerTest
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
 
         // Create and init servers
-        var serverDom1 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.1"), logicalCore: 4);
+        var serverDom1 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.1"), logicalCore: 1); // it will be overridden by power 4
         var serverDom2 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.2"), logicalCore: 2);
         var serverDom3 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("20.0.0.3"), logicalCore: 2);
         var serverDom4 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("30.0.0.4"), logicalCore: 1);
         var serverDom5 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("40.0.0.5"), logicalCore: 1);
+        var serverDom6 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("40.0.0.5"), logicalCore: 8); // it will be disabled
         await farm.ReloadServers();
+
+        // update power of serverDom1
+        await serverDom1.Update(new ServerUpdateParams {
+            Power = new PatchOfNullableInteger { Value = 4 }
+        });
+
+        // update power of serverDom1
+        await serverDom6.Update(new ServerUpdateParams {
+            IsEnabled = new PatchOfBoolean { Value = false }
+        });
+
+
 
         // create access token
         var accessTokenDom = await farm.CreateAccessToken();

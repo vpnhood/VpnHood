@@ -86,7 +86,7 @@ public class VhContext : DbContext
                 .HasMaxLength(200);
 
             entity
-                .Property(e => e.HastHostProvider)
+                .Property(e => e.HasHostProvider)
                 .HasDefaultValue(false);
 
             entity

@@ -15,7 +15,7 @@ public class ProjectModel
     public required LetsEncryptAccount? LetsEncryptAccount { get; set; }
     public required bool IsEnabled { get; set; }
     public required DateTime? DeletedTime { get; set; }
-    public required bool HastHostProvider { get; set; }
+    public required bool HasHostProvider { get; set; }
 
     public virtual ICollection<ServerModel>? Servers { get; set; }
     public virtual ICollection<ServerProfileModel>? ServerProfiles { get; set; }

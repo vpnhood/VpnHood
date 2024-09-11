@@ -70,7 +70,7 @@ public class ProjectService(
             LetsEncryptAccount = null,
             DeletedTime = null,
             IsEnabled = true,
-            HastHostProvider = false,
+            HasHostProvider = false,
             ServerProfiles = new HashSet<ServerProfileModel> {
                 serverProfile
             },

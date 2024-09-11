@@ -11,6 +11,7 @@ using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Models.HostOrders;
 using VpnHood.AccessServer.Providers.Hosts;
 using VpnHood.AccessServer.Repos;
+using VpnHood.Common.Collections;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -20,6 +21,7 @@ public class HostOrdersService(
     IHostProviderFactory hostProviderFactory,
     ILogger<HostOrdersService> logger,
     IServiceScopeFactory serviceScopeFactory,
+    IWebHostEnvironment hostEnvironment,
     ServerConfigureService serverConfigureService)
     : IGrayMintJob
 {
@@ -33,8 +35,8 @@ public class HostOrdersService(
         return new Uri(serverModel.HostPanelUrl).Host;
     }
 
-    private static string BuildProjectTag(Guid projectId) => $"#Project:{projectId}";
-    private static string BuildOrderTag(Guid orderId) => $"#OrderId:{orderId}";
+    private static string BuildProjectTag(Guid projectId) => $"#project:{projectId}";
+    private static string BuildOrderTag(Guid orderId) => $"#order:{orderId}";
 
     public async Task<HostOrder> CreateNewIpOrder(Guid projectId, HostOrderNewIp hostOrderNewIp)
     {
@@ -400,8 +402,15 @@ public class HostOrdersService(
     }
 
 
+    private readonly TimeoutDictionary<Guid, TimeoutItem> _syncedProjects = new(TimeSpan.FromSeconds(2));
     public async Task<HostIp[]> ListIps(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = int.MaxValue)
     {
+        // sync
+        if (!_syncedProjects.TryGetValue(projectId, out _ ) || hostEnvironment.IsDevelopment()) {
+            _syncedProjects.GetOrAdd(projectId, _ => new TimeoutItem());
+            await Sync(projectId);
+        }
+
         var hostIpModels = await vhRepo.HostIpList(projectId, search: search, recordIndex: recordIndex, recordCount: recordCount);
 
         // get all servers
@@ -418,7 +427,12 @@ public class HostOrdersService(
 
     public async Task<HostOrder[]> List(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = int.MaxValue)
     {
-        await Sync(projectId);
+        // sync
+        if (!_syncedProjects.TryGetValue(projectId, out _) || hostEnvironment.IsDevelopment()) {
+            _syncedProjects.GetOrAdd(projectId, _ => new TimeoutItem());
+            await Sync(projectId);
+        }
+
         var hostOrders = await vhRepo.HostOrdersList(projectId, includeServer: true, search: search,
             recordIndex: recordIndex, recordCount: recordCount);
 

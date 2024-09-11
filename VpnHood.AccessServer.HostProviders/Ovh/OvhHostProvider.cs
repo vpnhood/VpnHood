@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Web;
 using Microsoft.Extensions.Logging;
 using Ovh.Api;
 using VpnHood.AccessServer.Abstractions.Providers.Hosts;
@@ -11,7 +12,6 @@ public class OvhHostProvider(
     OvhHostProviderSettings settings
     ) : IHostProvider
 {
-    private readonly string _countryCode = settings.OvhSubsidiary;
     internal Client OvhClient { get; } = new(settings.EndPoint, settings.ApplicationKey, settings.ApplicationSecret, settings.ConsumerKey);
 
     private async Task<CartData> CreateNewCart(TimeSpan timeout)
@@ -20,7 +20,7 @@ public class OvhHostProvider(
         {
             description = "Created by API",
             expire = DateTime.UtcNow.AddHours(1),
-            ovhSubsidiary = _countryCode
+            ovhSubsidiary = settings.OvhSubsidiary
         };
 
         var cartData = await OvhClient.PostAsync<CartData>("/order/cart", requestBody, timeout: timeout);
@@ -87,7 +87,7 @@ public class OvhHostProvider(
 
         // Add required country config to the ip
         await AddConfigurationToIp(cartId: cartData.CartId, itemId: cartItemId.ItemId,
-            configLabel: "country", _countryCode, timeout: timeout);
+            configLabel: "country", settings.OvhSubsidiary, timeout: timeout);
 
         // Add optional destination(VPS) config to the ip
         await AddConfigurationToIp(cartId: cartData.CartId, itemId: cartItemId.ItemId,
@@ -125,7 +125,7 @@ public class OvhHostProvider(
     {
         var target = "/ip";
         if (!string.IsNullOrEmpty(search))
-            target += $"?description=%25{search}%25";
+            target += "?description=" + HttpUtility.UrlEncode($"%{search}%");
 
         var ips = await OvhClient.GetAsync<string[]>(target, timeout: timeout);
         return ips.Select(x => IPAddress.Parse(x.Split('/')[0])).ToArray();

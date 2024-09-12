@@ -8186,6 +8186,8 @@ export class VpnServer implements IVpnServer {
     allowInAutoLocation!: boolean;
     hostPanelUrl?: string | null;
     power?: number | null;
+    gatewayIpV4?: string | null;
+    gatewayIpV6?: string | null;
 
     constructor(data?: IVpnServer) {
         if (data) {
@@ -8231,6 +8233,8 @@ export class VpnServer implements IVpnServer {
             this.allowInAutoLocation = _data["allowInAutoLocation"] !== undefined ? _data["allowInAutoLocation"] : <any>null;
             this.hostPanelUrl = _data["hostPanelUrl"] !== undefined ? _data["hostPanelUrl"] : <any>null;
             this.power = _data["power"] !== undefined ? _data["power"] : <any>null;
+            this.gatewayIpV4 = _data["gatewayIpV4"] !== undefined ? _data["gatewayIpV4"] : <any>null;
+            this.gatewayIpV6 = _data["gatewayIpV6"] !== undefined ? _data["gatewayIpV6"] : <any>null;
         }
     }
 
@@ -8270,6 +8274,8 @@ export class VpnServer implements IVpnServer {
         data["allowInAutoLocation"] = this.allowInAutoLocation !== undefined ? this.allowInAutoLocation : <any>null;
         data["hostPanelUrl"] = this.hostPanelUrl !== undefined ? this.hostPanelUrl : <any>null;
         data["power"] = this.power !== undefined ? this.power : <any>null;
+        data["gatewayIpV4"] = this.gatewayIpV4 !== undefined ? this.gatewayIpV4 : <any>null;
+        data["gatewayIpV6"] = this.gatewayIpV6 !== undefined ? this.gatewayIpV6 : <any>null;
         return data;
     }
 }
@@ -8298,6 +8304,8 @@ export interface IVpnServer {
     allowInAutoLocation: boolean;
     hostPanelUrl?: string | null;
     power?: number | null;
+    gatewayIpV4?: string | null;
+    gatewayIpV6?: string | null;
 }
 
 export enum ServerState {

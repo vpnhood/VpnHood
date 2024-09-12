@@ -10566,6 +10566,12 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("power")]
         public int? Power { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("gatewayIpV4")]
+        public string? GatewayIpV4 { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("gatewayIpV6")]
+        public string? GatewayIpV6 { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]

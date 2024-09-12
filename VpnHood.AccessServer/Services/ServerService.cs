@@ -262,32 +262,13 @@ public class ServerService(
         return accessPoints.Select(x => x.ToModel()).ToList();
     }
 
-    public async Task<ServersStatusSummary> GetStatusSummary(Guid projectId, Guid? serverFarmId = null)
+    public async Task<ServersStatusSummary> GetStatusSummary(Guid projectId, 
+        Guid? serverFarmId = null, Guid? serverId = null)
     {
-        // no lock
-
-        /*
-        var query = VhContext.Servers
-            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
-            .Where(server => serverFarmId == null || server.ServerFarmId == serverFarmId)
-            .GroupJoin(VhContext.ServerStatuses,
-                server => new { key1 = server.ServerId, key2 = true },
-                serverStatus => new { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast },
-                (server, serverStatus) => new { server, serverStatus })
-            .SelectMany(
-                joinResult => joinResult.serverStatus.DefaultIfEmpty(),
-                (x, y) => new { Server = x.server, ServerStatus = y })
-            .Select(s => new { s.Server, s.ServerStatus });
-
-        // update model ServerStatusEx
-        var serverModels = await query.ToArrayAsync();
-        var servers = serverModels
-            .Select(x => x.Server.ToDto(x.ServerStatus?.ToDto(), _appOptions.LostServerThreshold))
-            .ToArray();
-        */
-
         await using var trans = await vhRepo.WithNoLockTransaction();
-        var serverModels = await vhRepo.ServerList(projectId: projectId, serverFarmId: serverFarmId, tracking: false);
+        
+        var serverModels = await vhRepo.ServerList(projectId: projectId, serverFarmId: serverFarmId, 
+            serverId: serverId, tracking: false);
 
         // update model ServerStatusEx
         var cachedServers = await agentCacheClient.GetServers(projectId);

@@ -3827,13 +3827,15 @@ export class ServersClient {
         return Promise.resolve<ServerInstallManual>(null as any);
     }
 
-    getStatusSummary(projectId: string, serverFarmId?: string | null | undefined, cancelToken?: CancelToken): Promise<ServersStatusSummary> {
+    getStatusSummary(projectId: string, serverFarmId?: string | null | undefined, serverId?: string | null | undefined, cancelToken?: CancelToken): Promise<ServersStatusSummary> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/servers/status-summary?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
         if (serverFarmId !== undefined && serverFarmId !== null)
             url_ += "serverFarmId=" + encodeURIComponent("" + serverFarmId) + "&";
+        if (serverId !== undefined && serverId !== null)
+            url_ += "serverId=" + encodeURIComponent("" + serverId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {

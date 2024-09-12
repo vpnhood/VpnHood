@@ -26,13 +26,14 @@ public class VhRepo(VhContext vhContext)
         return query.SingleAsync();
     }
 
-    public Task<ServerModel[]> ServerList(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null,
-        bool includeServerFarm = false, bool tracking = true)
+    public Task<ServerModel[]> ServerList(Guid projectId, Guid? serverFarmId = null, Guid? serverId = null, 
+        Guid? serverProfileId = null, bool includeServerFarm = false, bool tracking = true)
     {
         var query = vhContext.Servers
             .Include(x => x.Location)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => x.ServerFarmId == serverFarmId || serverFarmId == null)
+            .Where(x => x.ServerId == serverId || serverId == null)
             .Where(x => x.ServerFarm!.ServerProfileId == serverProfileId || serverProfileId == null);
 
         if (includeServerFarm)

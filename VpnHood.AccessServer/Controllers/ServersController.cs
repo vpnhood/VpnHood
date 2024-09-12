@@ -84,8 +84,8 @@ public class ServersController(
 
     [HttpGet("status-summary")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<ServersStatusSummary> GetStatusSummary(Guid projectId, Guid? serverFarmId = null)
+    public Task<ServersStatusSummary> GetStatusSummary(Guid projectId, Guid? serverFarmId = null, Guid? serverId = null)
     {
-        return serverService.GetStatusSummary(projectId, serverFarmId);
+        return serverService.GetStatusSummary(projectId, serverFarmId: serverFarmId, serverId: serverId);
     }
 }

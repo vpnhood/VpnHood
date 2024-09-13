@@ -2,7 +2,7 @@
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
-namespace VpnHood.UdpTrafficTest;
+namespace VpnHood.NetTester;
 
 public class UdpEchoClient
 {
@@ -34,7 +34,7 @@ public class UdpEchoClient
         var buffer = new byte[bufferSize];
         new Random().NextBytes(buffer);
 
-        for (var i = 0;; i++) {
+        for (var i = 0; ; i++) {
             //send buffer
             Array.Copy(BitConverter.GetBytes(i), 0, buffer, 0, 4);
             Array.Copy(BitConverter.GetBytes(echoCount), 0, buffer, 4, 4);
@@ -44,7 +44,7 @@ public class UdpEchoClient
                 Console.WriteLine("Could not send all data.");
             }
 
-            _sendSpeedometer.AddSucceeded(buffer);
+            _sendSpeedometer.AddSucceeded(buffer.Length);
 
             // wait for buffer
             for (var j = 0; j < echoCount; j++) {
@@ -59,7 +59,7 @@ public class UdpEchoClient
                         continue;
                     }
 
-                    _receivedSpeedometer.AddSucceeded(buffer);
+                    _receivedSpeedometer.AddSucceeded(buffer.Length);
                 }
                 catch (OperationCanceledException) {
                     Console.WriteLine("A packet loss!");

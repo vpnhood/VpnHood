@@ -2,7 +2,7 @@
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
-namespace VpnHood.UdpTrafficTest;
+namespace VpnHood.NetTester;
 
 public class UdpEchoServer
 {
@@ -34,13 +34,13 @@ public class UdpEchoServer
                 continue;
             }
 
-            _receivedSpeedometer.AddSucceeded(buffer);
+            _receivedSpeedometer.AddSucceeded(buffer.Length);
 
             // saving
             var echoCount = BitConverter.ToInt32(buffer, 4);
             for (var i = 0; i < echoCount; i++) {
                 await _udpClient.SendAsync(buffer, buffer.Length, udpResult.RemoteEndPoint);
-                _sendSpeedometer.AddSucceeded(buffer);
+                _sendSpeedometer.AddSucceeded(buffer.Length);
             }
         }
         // ReSharper disable once FunctionNeverReturns
@@ -58,11 +58,11 @@ public class UdpEchoServer
             }
 
             // saving
-            _receivedSpeedometer.AddSucceeded(buffer);
+            _receivedSpeedometer.AddSucceeded(buffer.Length);
             var echoCount = BitConverter.ToInt32(buffer, 4);
             for (var i = 0; i < echoCount; i++) {
                 _udpClient.Send(buffer);
-                _sendSpeedometer.AddSucceeded(buffer);
+                _sendSpeedometer.AddSucceeded(buffer.Length);
             }
         }
         // ReSharper disable once FunctionNeverReturns

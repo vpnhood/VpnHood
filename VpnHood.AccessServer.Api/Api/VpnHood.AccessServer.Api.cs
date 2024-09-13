@@ -10865,6 +10865,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("lostServerCount")]
         public int LostServerCount { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("disabledServerCount")]
+        public int DisabledServerCount { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("notInstalledServerCount")]
         public int NotInstalledServerCount { get; set; } = default!;
 

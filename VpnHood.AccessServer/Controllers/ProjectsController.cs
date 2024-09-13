@@ -2,7 +2,7 @@
 using GrayMint.Authorization.Abstractions.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.Projects;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 

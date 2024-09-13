@@ -6,6 +6,7 @@ public class ServersStatusSummary
     public int ActiveServerCount { get; set; }
     public int IdleServerCount { get; set; }
     public int LostServerCount { get; set; }
+    public int DisabledServerCount { get; set; }
     public int NotInstalledServerCount { get; set; }
     public int SessionCount { get; set; }
     public long TunnelSendSpeed { get; set; }

@@ -8903,6 +8903,7 @@ export class ServersStatusSummary implements IServersStatusSummary {
     activeServerCount!: number;
     idleServerCount!: number;
     lostServerCount!: number;
+    disabledServerCount!: number;
     notInstalledServerCount!: number;
     sessionCount!: number;
     tunnelSendSpeed!: number;
@@ -8924,6 +8925,7 @@ export class ServersStatusSummary implements IServersStatusSummary {
             this.activeServerCount = _data["activeServerCount"] !== undefined ? _data["activeServerCount"] : <any>null;
             this.idleServerCount = _data["idleServerCount"] !== undefined ? _data["idleServerCount"] : <any>null;
             this.lostServerCount = _data["lostServerCount"] !== undefined ? _data["lostServerCount"] : <any>null;
+            this.disabledServerCount = _data["disabledServerCount"] !== undefined ? _data["disabledServerCount"] : <any>null;
             this.notInstalledServerCount = _data["notInstalledServerCount"] !== undefined ? _data["notInstalledServerCount"] : <any>null;
             this.sessionCount = _data["sessionCount"] !== undefined ? _data["sessionCount"] : <any>null;
             this.tunnelSendSpeed = _data["tunnelSendSpeed"] !== undefined ? _data["tunnelSendSpeed"] : <any>null;
@@ -8945,6 +8947,7 @@ export class ServersStatusSummary implements IServersStatusSummary {
         data["activeServerCount"] = this.activeServerCount !== undefined ? this.activeServerCount : <any>null;
         data["idleServerCount"] = this.idleServerCount !== undefined ? this.idleServerCount : <any>null;
         data["lostServerCount"] = this.lostServerCount !== undefined ? this.lostServerCount : <any>null;
+        data["disabledServerCount"] = this.disabledServerCount !== undefined ? this.disabledServerCount : <any>null;
         data["notInstalledServerCount"] = this.notInstalledServerCount !== undefined ? this.notInstalledServerCount : <any>null;
         data["sessionCount"] = this.sessionCount !== undefined ? this.sessionCount : <any>null;
         data["tunnelSendSpeed"] = this.tunnelSendSpeed !== undefined ? this.tunnelSendSpeed : <any>null;
@@ -8959,6 +8962,7 @@ export interface IServersStatusSummary {
     activeServerCount: number;
     idleServerCount: number;
     lostServerCount: number;
+    disabledServerCount: number;
     notInstalledServerCount: number;
     sessionCount: number;
     tunnelSendSpeed: number;

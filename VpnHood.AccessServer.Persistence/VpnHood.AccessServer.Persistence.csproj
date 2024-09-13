@@ -30,4 +30,8 @@
 		<PackageReference Include="VpnHood.Common" Version="4.6.559" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Views\" />
+	</ItemGroup>
+
 </Project>

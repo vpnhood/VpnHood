@@ -283,6 +283,7 @@ public class ServerService(
             ActiveServerCount = servers.Count(x => x.ServerState is ServerState.Active),
             IdleServerCount = servers.Count(x => x.ServerState is ServerState.Idle),
             LostServerCount = servers.Count(x => x.ServerState is ServerState.Lost),
+            DisabledServerCount = servers.Count(x => x.ServerState is ServerState.Disabled),
             SessionCount = servers.Where(x => x.ServerState is ServerState.Active)
                 .Sum(x => x.ServerStatus!.SessionCount),
             TunnelSendSpeed = servers.Where(x => x.ServerState is ServerState.Active)

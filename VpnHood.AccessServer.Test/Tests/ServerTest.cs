@@ -356,6 +356,10 @@ public class ServerTest
         sampleServer = await farm.AddNewServer();
         await sampleServer.SendStatus(new ServerStatus { SessionCount = 2, TunnelSpeed = new Traffic { Received = 300, Sent = 200 } });
 
+        // disabled 1
+        sampleServer = await farm.AddNewServer();
+        await sampleServer.Update(new ServerUpdateParams { IsEnabled = new PatchOfBoolean { Value = false } });
+
         // notInstalled 4
         await farm.AddNewServer(configure: false);
         await farm.AddNewServer(configure: false);
@@ -375,7 +379,8 @@ public class ServerTest
         await sampleServer.SendStatus(new ServerStatus { SessionCount = 0 });
 
         var liveUsageSummary = await farm.TestApp.ServersClient.GetStatusSummaryAsync(farm.TestApp.ProjectId);
-        Assert.AreEqual(10, liveUsageSummary.TotalServerCount);
+        Assert.AreEqual(11, liveUsageSummary.TotalServerCount);
+        Assert.AreEqual(1, liveUsageSummary.DisabledServerCount);
         Assert.AreEqual(2, liveUsageSummary.ActiveServerCount);
         Assert.AreEqual(4, liveUsageSummary.NotInstalledServerCount);
         Assert.AreEqual(1, liveUsageSummary.LostServerCount);

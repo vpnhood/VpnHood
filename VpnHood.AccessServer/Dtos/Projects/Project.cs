@@ -1,6 +1,6 @@
 ﻿using VpnHood.AccessServer.Persistence.Enums;
 
-namespace VpnHood.AccessServer.Dtos;
+namespace VpnHood.AccessServer.Dtos.Projects;
 
 public class Project
 {

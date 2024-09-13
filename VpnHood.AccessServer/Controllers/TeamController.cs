@@ -2,7 +2,7 @@
 using GrayMint.Authorization.RoleManagement.TeamControllers.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.Projects;
 using VpnHood.AccessServer.Services;
 
 namespace VpnHood.AccessServer.Controllers;

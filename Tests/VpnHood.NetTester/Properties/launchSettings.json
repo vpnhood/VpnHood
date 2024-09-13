@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "VpnHood.ZUdpTrafficTest": {
+      "commandName": "Project",
+      "commandLineArgs": "/self_tcp",
+      "commandLineArgs2": "client 65.21.178.152:5050 300 1"
+    }
+  }
+}

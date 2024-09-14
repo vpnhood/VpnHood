@@ -7,48 +7,48 @@ namespace VpnHood.NetTester.HttpTesters;
 
 public class HttpTesterClient
 {
-    public static async Task StartSingle(IPEndPoint serverEp, long uploadLength, long downloadLength,
+    public static async Task StartSingle(IPEndPoint serverEp, long upLength, long downLength,
         ILogger? logger, CancellationToken cancellationToken)
     {
-        if (uploadLength != 0)
-            await SingleUpload(serverEp, uploadLength, logger, cancellationToken);
+        if (upLength != 0)
+            await SingleUpload(serverEp, upLength, logger, cancellationToken);
 
-        if (downloadLength != 0)
-            await SingleDownload(serverEp, downloadLength, logger, cancellationToken);
+        if (downLength != 0)
+            await SingleDownload(serverEp, downLength, logger, cancellationToken);
     }
 
-    public static async Task StartMulti(IPEndPoint serverEp, long uploadLength, long downloadLength, int connectionCount,
+    public static async Task StartMulti(IPEndPoint serverEp, long upLength, long downLength, int connectionCount,
         ILogger? logger, CancellationToken cancellationToken)
     {
-        if (downloadLength != 0)
-            await MultiUpload(serverEp, uploadLength, connectionCount, logger, cancellationToken);
+        if (downLength != 0)
+            await MultiUpload(serverEp, upLength, connectionCount, logger, cancellationToken);
 
-        if (downloadLength != 0)
-            await MultiDownload(serverEp, downloadLength, connectionCount, logger, cancellationToken);
+        if (downLength != 0)
+            await MultiDownload(serverEp, downLength, connectionCount, logger, cancellationToken);
     }
 
 
     public static async Task SingleUpload(IPEndPoint serverEp, long length, ILogger? logger, CancellationToken cancellationToken)
     {
-        using var speedometer = new Speedometer("SingleHttp => Upload");
-        logger?.LogInformation($"{DateTime.Now:T}: SingleTcp => Start uploading {VhUtil.FormatBytes(length)}");
+        using var speedometer = new Speedometer("SingleHttp => Up");
+        logger?.LogInformation($"{DateTime.Now:T}: SingleTcp => Start Uploading {VhUtil.FormatBytes(length)}");
         await StartUpload(serverEp, length, speedometer, cancellationToken);
     }
 
     public static async Task SingleDownload(IPEndPoint serverEp, long length, ILogger? logger, CancellationToken cancellationToken)
     {
-        using var speedometer = new Speedometer("SingleHttp => Download");
-        logger?.LogInformation($"{DateTime.Now:T}: SingleTcp => Start downloading {VhUtil.FormatBytes(length)}");
+        using var speedometer = new Speedometer("SingleHttp => Down");
+        logger?.LogInformation($"{DateTime.Now:T}: SingleTcp => Start Downloading {VhUtil.FormatBytes(length)}");
         await StartDownload(serverEp, length, speedometer, cancellationToken);
     }
 
     public static async Task MultiUpload(IPEndPoint serverEp, long length, int connectionCount,
         ILogger? logger, CancellationToken cancellationToken)
     {
-        logger?.LogInformation($"{DateTime.Now:T}: MultiHttp => Start uploading {VhUtil.FormatBytes(length)}, Multi: {connectionCount}x");
+        logger?.LogInformation($"{DateTime.Now:T}: MultiHttp => Start Uploading {VhUtil.FormatBytes(length)}, Multi: {connectionCount}x");
 
         // start multi uploaders
-        using var speedometer1 = new Speedometer("MultiHttp => Upload");
+        using var speedometer1 = new Speedometer("MultiHttp => Up");
         var uploadTasks = new Task[connectionCount];
         for (var i = 0; i < connectionCount; i++) {
             uploadTasks[i] = StartUpload(serverEp, length / connectionCount, speedometer: speedometer1,
@@ -60,10 +60,10 @@ public class HttpTesterClient
     public static async Task MultiDownload(IPEndPoint serverEp, long length, int connectionCount,
         ILogger? logger, CancellationToken cancellationToken)
     {
-        logger?.LogInformation($"{DateTime.Now:T}: MultiHttp => Start downloading {VhUtil.FormatBytes(length)}, Multi: {connectionCount}x");
+        logger?.LogInformation($"{DateTime.Now:T}: MultiHttp => Start Downloading {VhUtil.FormatBytes(length)}, Multi: {connectionCount}x");
 
         // start multi downloader
-        using var speedometer1 = new Speedometer("MultiHttp => Download");
+        using var speedometer1 = new Speedometer("MultiHttp => Down");
         var uploadTasks = new Task[connectionCount];
         for (var i = 0; i < connectionCount; i++) {
             uploadTasks[i] = StartDownload(serverEp, length / connectionCount, speedometer: speedometer1,

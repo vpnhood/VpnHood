@@ -28,7 +28,6 @@ public class TcpTesterServer : IDisposable
     {
         var remoteEndPoint = client.Client.RemoteEndPoint;
         Console.WriteLine($"Start processing client. ClientEp: {remoteEndPoint}");
-        using var speedometer = new Speedometer($"{client.Client.RemoteEndPoint}");
         try {
             await using var stream = client.GetStream();
 
@@ -38,8 +37,8 @@ public class TcpTesterServer : IDisposable
                 return;
 
             var byteCount = BitConverter.ToInt64(buffer, 0);
-            await TcpTesterUtil.ReadData(stream, byteCount, speedometer: speedometer, cancellationToken: cancellationToken);
-            await TcpTesterUtil.WriteRandomData(stream, long.MaxValue, speedometer: speedometer, cancellationToken: cancellationToken);
+            await TcpTesterUtil.ReadData(stream, byteCount, speedometer: null, cancellationToken: cancellationToken);
+            await TcpTesterUtil.WriteRandomData(stream, long.MaxValue, speedometer: null, cancellationToken: cancellationToken);
 
         }
         finally {

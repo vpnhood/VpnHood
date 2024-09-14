@@ -41,6 +41,7 @@ internal class Program
         var uploadBytes = GetArgument(args, "/up", 20) * 1000000; // 10MB
         var downloadBytes = GetArgument(args, "/down", 60) * 1000000; // 10MB
         var tcpPort = GetArgument(args, "/tcp", 33700); // 10MB
+        var httpPort = GetArgument(args, "/http", 33700); // 10MB
         var connectionCount = GetArgument(args, "/multi", 10); // 10MB
 
         // dump variables by logger
@@ -51,6 +52,13 @@ internal class Program
             using var commandServer = CommandServer.Create(serverEp);
             using var clientApp = await ClientApp.Create(commandServer.EndPoint, new ServerConfig { TcpPort = tcpPort }, logger);
             await clientApp.FullTcpTest(uploadBytes: uploadBytes, downloadBytes: downloadBytes, connectionCount: connectionCount,
+                CancellationToken.None);
+        }
+
+        if (args.Any(x => x == "/self_http")) {
+            using var commandServer = CommandServer.Create(serverEp);
+            using var clientApp = await ClientApp.Create(commandServer.EndPoint, new ServerConfig { HttpPort = httpPort }, logger);
+            await clientApp.FullHttpTest(uploadBytes: uploadBytes, downloadBytes: downloadBytes, connectionCount: connectionCount,
                 CancellationToken.None);
         }
 
@@ -75,7 +83,7 @@ internal class Program
         //}
     }
 
-    private static T? GetArgument<T>(string[] args, string name, T? defaultValue)
+        private static T? GetArgument<T>(string[] args, string name, T? defaultValue)
     {
         // find the index of the argument
         var index = Array.IndexOf(args, name);

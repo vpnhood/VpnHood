@@ -38,13 +38,13 @@ internal class ClientApp : IDisposable
 
             // test single
             await TcpTesterClient.StartSingle(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
-                uploadLength: _clientOptions.UploadLength, downloadBytes: _clientOptions.DownloadLength,
+                upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
                 logger: _logger, cancellationToken: cancellationToken);
 
             // test multi
             if (_clientOptions.ConnectionCount>0)
                 await TcpTesterClient.StartMulti(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
-                    uploadLength: _clientOptions.UploadLength, downloadLength: _clientOptions.DownloadLength, connectionCount: _clientOptions.ConnectionCount,
+                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength, connectionCount: _clientOptions.ConnectionCount,
                     logger: _logger, cancellationToken: cancellationToken);
         }
 
@@ -53,13 +53,13 @@ internal class ClientApp : IDisposable
             
             // test single
             await HttpTesterClient.StartSingle(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
-                uploadLength: _clientOptions.UploadLength, downloadLength: _clientOptions.DownloadLength,
+                upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
                 logger: _logger, cancellationToken: cancellationToken);
 
             // test multi
             if (_clientOptions.ConnectionCount > 0)
                 await HttpTesterClient.StartMulti(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
-                    uploadLength: _clientOptions.UploadLength, downloadLength: _clientOptions.DownloadLength, connectionCount: _clientOptions.ConnectionCount,
+                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength, connectionCount: _clientOptions.ConnectionCount,
                     logger: _logger, cancellationToken: cancellationToken);
         }
     }

@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
+		<AssemblyName>bettester</AssemblyName>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -19,6 +20,7 @@
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+		<AssemblyName>nettester</AssemblyName>
 	</PropertyGroup>
 
 	<ItemGroup>

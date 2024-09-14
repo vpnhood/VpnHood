@@ -1,8 +1,8 @@
 {
   "profiles": {
-    "VpnHood.ZUdpTrafficTest": {
+    "VpnHood.NetTester": {
       "commandName": "Project",
-      "commandLineArgs": "/self_tcp",
+      "commandLineArgs": "/self_tcp /server 127.0.0.2:31500 /down 20 /up 3 /tcp:37700",
       "commandLineArgs2": "client 65.21.178.152:5050 300 1"
     }
   }

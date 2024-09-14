@@ -22,7 +22,18 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\..\VpnHood.Common\VpnHood.Common.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Common\VpnHood.Common.csproj" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="EmbedIO" Version="3.5.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="Assets\VpnHood.UnitTest.pfx">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
 
 </Project>

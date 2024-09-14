@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Jobs;
 using VpnHood.NetTester.CommandServers;
+using VpnHood.NetTester.HttpTesters;
 using VpnHood.NetTester.TcpTesters;
 
 namespace VpnHood.NetTester;
@@ -39,10 +40,20 @@ internal class ClientApp : IDisposable
     }
     public async Task FullTcpTest(long uploadBytes, long downloadBytes, int connectionCount, CancellationToken cancellationToken)
     {
-        await TcpTesterClient.StartFull(new IPEndPoint(_serverEp.Address, _serverConfig.TcpPort), 
+        ArgumentNullException.ThrowIfNull(_serverConfig.TcpPort);
+        await TcpTesterClient.StartFull(new IPEndPoint(_serverEp.Address, _serverConfig.TcpPort.Value), 
             uploadBytes: uploadBytes, downloadBytes: downloadBytes, connectionCount: connectionCount,
             logger: _logger, cancellationToken: cancellationToken);
     }
+
+    public async Task FullHttpTest(int uploadBytes, int downloadBytes, int connectionCount, CancellationToken none)
+    {
+        ArgumentNullException.ThrowIfNull(_serverConfig.HttpPort);
+        await HttpTesterClient.StartFull(new IPEndPoint(_serverEp.Address, _serverConfig.HttpPort.Value),
+            uploadLength: uploadBytes, downloadLength: downloadBytes, connectionCount: connectionCount,
+            logger: _logger, cancellationToken: none);
+    }
+
 
     public void Dispose()
     {

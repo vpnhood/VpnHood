@@ -26,7 +26,7 @@ public class Speedometer : IJob, IDisposable
         _name = name;
         _packetCounter = packetCounter;
         _stopwatch.Start();
-        JobSection = new JobSection(interval ?? TimeSpan.FromSeconds(2));
+        JobSection = new JobSection(interval ?? TimeSpan.FromSeconds(1));
         JobRunner.Default.Add(this);
     }
 
@@ -76,7 +76,7 @@ public class Speedometer : IJob, IDisposable
             else {
                 Console.WriteLine(_name + ": " +
                                   $"Speed: {VhUtil.FormatBits(1000 * curTransferSize / _stopwatch.ElapsedMilliseconds)}, " +
-                                  $"TotalBytes: {VhUtil.FormatBytes(_transferSize)}");
+                                  $"Total: {VhUtil.FormatBytes(_transferSize)}");
             }
 
             _lastTransferSize = _transferSize;
@@ -91,8 +91,14 @@ public class Speedometer : IJob, IDisposable
         return Task.CompletedTask;
     }
 
+    public void Stop()
+    {
+        Report();
+        JobRunner.Default.Remove(this);
+    }
+
     public void Dispose()
     {
-        JobRunner.Default.Remove(this);
+        Stop();
     }
 }

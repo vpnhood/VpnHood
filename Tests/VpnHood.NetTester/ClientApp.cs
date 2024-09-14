@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Jobs;
-using VpnHood.NetTester.CommandServers;
 using VpnHood.NetTester.HttpTesters;
 using VpnHood.NetTester.TcpTesters;
 
@@ -11,49 +10,68 @@ namespace VpnHood.NetTester;
 
 internal class ClientApp : IDisposable
 {
-    private readonly IPEndPoint _serverEp;
-    private readonly ServerConfig _serverConfig;
+    private readonly ClientOptions _clientOptions;
     private readonly ILogger _logger;
+    private IPEndPoint ServerEndPoint => _clientOptions.ServerEndPoint;
 
-    private ClientApp(IPEndPoint serverEp, ServerConfig serverConfig, ILogger logger)
+    private ClientApp(ClientOptions clientOptions, ILogger logger)
     {
-        _serverEp = serverEp;
-        _serverConfig = serverConfig;
+        _clientOptions = clientOptions;
         _logger = logger;
         JobRunner.Default.Interval = TimeSpan.FromMilliseconds(500);
+
+        // dump clientOptions
+        logger.LogInformation($"ClientOptions: {JsonSerializer.Serialize(clientOptions)}");
     }
 
-    public static async Task<ClientApp> Create(IPEndPoint serverEp, ServerConfig serverConfig, ILogger logger)
+    public static async Task<ClientApp> Create(ClientOptions clientOptions, ILogger logger)
     {
-        var clientApp = new ClientApp(serverEp: serverEp, serverConfig: serverConfig, logger: logger);
+        var clientApp = new ClientApp(clientOptions: clientOptions, logger: logger);
         await clientApp.ConfigureServer();
         return clientApp;
+    }
+
+    public async Task StartTest(CancellationToken cancellationToken)
+    {
+        if (_clientOptions.TcpPort != 0) {
+            await ConfigureServer();
+
+            // test single
+            await TcpTesterClient.StartSingle(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
+                uploadLength: _clientOptions.UploadLength, downloadBytes: _clientOptions.DownloadLength,
+                logger: _logger, cancellationToken: cancellationToken);
+
+            // test multi
+            if (_clientOptions.ConnectionCount>0)
+                await TcpTesterClient.StartMulti(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
+                    uploadLength: _clientOptions.UploadLength, downloadLength: _clientOptions.DownloadLength, connectionCount: _clientOptions.ConnectionCount,
+                    logger: _logger, cancellationToken: cancellationToken);
+        }
+
+        if (_clientOptions.HttpPort != 0) {
+            await ConfigureServer();
+            
+            // test single
+            await HttpTesterClient.StartSingle(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
+                uploadLength: _clientOptions.UploadLength, downloadLength: _clientOptions.DownloadLength,
+                logger: _logger, cancellationToken: cancellationToken);
+
+            // test multi
+            if (_clientOptions.ConnectionCount > 0)
+                await HttpTesterClient.StartMulti(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
+                    uploadLength: _clientOptions.UploadLength, downloadLength: _clientOptions.DownloadLength, connectionCount: _clientOptions.ConnectionCount,
+                    logger: _logger, cancellationToken: cancellationToken);
+        }
     }
 
     private async Task ConfigureServer()
     {
         // sent serverConfig to server via HttpClient
         var httpClient = new HttpClient();
-        var content = new StringContent(JsonSerializer.Serialize(_serverConfig), Encoding.UTF8, "application/json");
-        var response =  await httpClient.PostAsync($"http://{_serverEp}/config", content);
+        var content = new StringContent(JsonSerializer.Serialize(_clientOptions), Encoding.UTF8, "application/json");
+        var response =  await httpClient.PostAsync($"http://{ServerEndPoint}/config", content);
         response.EnsureSuccessStatusCode();
     }
-    public async Task FullTcpTest(long uploadBytes, long downloadBytes, int connectionCount, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(_serverConfig.TcpPort);
-        await TcpTesterClient.StartFull(new IPEndPoint(_serverEp.Address, _serverConfig.TcpPort.Value), 
-            uploadBytes: uploadBytes, downloadBytes: downloadBytes, connectionCount: connectionCount,
-            logger: _logger, cancellationToken: cancellationToken);
-    }
-
-    public async Task FullHttpTest(int uploadBytes, int downloadBytes, int connectionCount, CancellationToken none)
-    {
-        ArgumentNullException.ThrowIfNull(_serverConfig.HttpPort);
-        await HttpTesterClient.StartFull(new IPEndPoint(_serverEp.Address, _serverConfig.HttpPort.Value),
-            uploadLength: uploadBytes, downloadLength: downloadBytes, connectionCount: connectionCount,
-            logger: _logger, cancellationToken: none);
-    }
-
 
     public void Dispose()
     {

@@ -2,7 +2,7 @@
   "profiles": {
     "VpnHood.NetTester": {
       "commandName": "Project",
-      "commandLineArgs": "/self_http /server 127.0.0.2:31500 /down 20 /up 3 /tcp:37700",
+      "commandLineArgs": "/ep 127.0.0.2:31500 /server /client  /down 20 /up 3 /tcp:37700",
       "commandLineArgs2": "client 65.21.178.152:5050 300 1"
     }
   }

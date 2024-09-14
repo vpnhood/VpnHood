@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Utils;
 using VpnHood.NetTester.CommandServers;
 
 namespace VpnHood.NetTester;
@@ -19,7 +18,6 @@ internal class Program
 
         // Create a logger
         var logger = VhLogger.CreateConsoleLogger();
-        
 
         // stop the server
         if (args.First() == "stop") {
@@ -29,38 +27,17 @@ internal class Program
             return;
         }
 
-        // start the command server
-        var serverEp = GetArgument<IPEndPoint>(args, "/server", null) ?? throw new ArgumentException("Server endpoint is required. /server 1.1.1.1:31500");
-        if (args.First() == "server") {
-            using var commandServer = CommandServer.Create(serverEp);
-            await WaitForStop();
-            return;
+        // Server
+        using var commandServer = args.Contains("/server") 
+            ? CommandServer.Create(ArgumentUtils.Get<IPEndPoint>(args, "/ep")) 
+            : null;
+
+        // client
+        if (args.Contains("/client")) {
+            using var clientApp = await ClientApp.Create(new ClientOptions(args), logger);
+            await clientApp.StartTest(CancellationToken.None);
         }
 
-        // get parameters from command line /up
-        var uploadBytes = GetArgument(args, "/up", 20) * 1000000; // 10MB
-        var downloadBytes = GetArgument(args, "/down", 60) * 1000000; // 10MB
-        var tcpPort = GetArgument(args, "/tcp", 33700); // 10MB
-        var httpPort = GetArgument(args, "/http", 33700); // 10MB
-        var connectionCount = GetArgument(args, "/multi", 10); // 10MB
-
-        // dump variables by logger
-        logger.LogInformation("Upload: {Upload}, Download: {Download}, TcpPort: {TcpPort}, Multi: {connectionCount}", 
-            VhUtil.FormatBytes(uploadBytes), VhUtil.FormatBytes(downloadBytes), tcpPort, connectionCount);
-
-        if (args.Any(x => x == "/self_tcp")) {
-            using var commandServer = CommandServer.Create(serverEp);
-            using var clientApp = await ClientApp.Create(commandServer.EndPoint, new ServerConfig { TcpPort = tcpPort }, logger);
-            await clientApp.FullTcpTest(uploadBytes: uploadBytes, downloadBytes: downloadBytes, connectionCount: connectionCount,
-                CancellationToken.None);
-        }
-
-        if (args.Any(x => x == "/self_http")) {
-            using var commandServer = CommandServer.Create(serverEp);
-            using var clientApp = await ClientApp.Create(commandServer.EndPoint, new ServerConfig { HttpPort = httpPort }, logger);
-            await clientApp.FullHttpTest(uploadBytes: uploadBytes, downloadBytes: downloadBytes, connectionCount: connectionCount,
-                CancellationToken.None);
-        }
 
         //if (args.Any(x => x == "/self_udp")) {
         //    var udpEchoServer = new UdpEchoServer();
@@ -76,37 +53,11 @@ internal class Program
         //    await udpEchoClient.StartAsync(serverEp, echoCount, dataLen);
         //}
 
-        //if (args[0] == "server") {
-        //    var udpEchoServer = new UdpEchoServer(serverEp);
-        //    _ = udpEchoServer.StartAsync();
-        //    await WaitForStop();
-        //}
+
+        if (commandServer != null)
+            await WaitForStop();
     }
-
-        private static T? GetArgument<T>(string[] args, string name, T? defaultValue)
-    {
-        // find the index of the argument
-        var index = Array.IndexOf(args, name);
-        if (index == -1)
-            return defaultValue;
-
-        var value = args[index + 1];
-
-        if (typeof(T) == typeof(string))
-            return (T)(object)value;
-
-        if (typeof(T) == typeof(int))
-            return (T)(object)int.Parse(value);
-
-        if (typeof(T) == typeof(IPAddress))
-            return (T)(object)IPAddress.Parse(value);
-
-        if (typeof(T) == typeof(IPEndPoint))
-            return (T)(object)IPEndPoint.Parse(value);
-
-        return defaultValue;
-    }
-
+    
     private static async Task WaitForStop()
     {
         while (true) {
@@ -116,5 +67,4 @@ internal class Program
             await Task.Delay(1000);
         }
     }
-
 }

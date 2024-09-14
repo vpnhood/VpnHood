@@ -7,21 +7,26 @@ namespace VpnHood.NetTester.HttpTesters;
 
 public class HttpTesterClient
 {
-    public static async Task StartFull(IPEndPoint serverEp, long uploadLength, long downloadLength, int connectionCount,
+    public static async Task StartSingle(IPEndPoint serverEp, long uploadLength, long downloadLength,
         ILogger? logger, CancellationToken cancellationToken)
     {
-        if (uploadLength!=0)
+        if (uploadLength != 0)
             await SingleUpload(serverEp, uploadLength, logger, cancellationToken);
-        
-        if (downloadLength != 0)
-            await SingleDownload(serverEp, downloadLength, logger, cancellationToken);
 
         if (downloadLength != 0)
+            await SingleDownload(serverEp, downloadLength, logger, cancellationToken);
+    }
+
+    public static async Task StartMulti(IPEndPoint serverEp, long uploadLength, long downloadLength, int connectionCount,
+        ILogger? logger, CancellationToken cancellationToken)
+    {
+        if (downloadLength != 0)
             await MultiUpload(serverEp, uploadLength, connectionCount, logger, cancellationToken);
-        
+
         if (downloadLength != 0)
             await MultiDownload(serverEp, downloadLength, connectionCount, logger, cancellationToken);
     }
+
 
     public static async Task SingleUpload(IPEndPoint serverEp, long length, ILogger? logger, CancellationToken cancellationToken)
     {

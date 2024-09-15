@@ -3,8 +3,9 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 using VpnHood.NetTester.Streams;
+using VpnHood.NetTester.Utils;
 
-namespace VpnHood.NetTester.HttpTesters;
+namespace VpnHood.NetTester.Testers.HttpTesters;
 
 public class HttpTesterClient
 {
@@ -54,10 +55,8 @@ public class HttpTesterClient
         // start multi uploaders
         using var speedometer1 = new Speedometer("MultiHttp => Up");
         var uploadTasks = new Task[connectionCount];
-        for (var i = 0; i < connectionCount; i++) {
-            uploadTasks[i] = StartUpload(serverEp, length / connectionCount, speedometer: speedometer1,
+        for (var i = 0; i < connectionCount; i++)             uploadTasks[i] = StartUpload(serverEp, length / connectionCount, speedometer: speedometer1,
                 cancellationToken: cancellationToken);
-        }
         await Task.WhenAll(uploadTasks);
     }
 
@@ -70,10 +69,8 @@ public class HttpTesterClient
         // start multi downloader
         using var speedometer1 = new Speedometer("MultiHttp => Down");
         var uploadTasks = new Task[connectionCount];
-        for (var i = 0; i < connectionCount; i++) {
-            uploadTasks[i] = StartDownload(serverEp, length / connectionCount, speedometer: speedometer1,
+        for (var i = 0; i < connectionCount; i++)             uploadTasks[i] = StartDownload(serverEp, length / connectionCount, speedometer: speedometer1,
                 cancellationToken: cancellationToken);
-        }
         await Task.WhenAll(uploadTasks);
     }
 

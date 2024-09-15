@@ -4,7 +4,7 @@ using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.NetTester;
+namespace VpnHood.NetTester.Utils;
 
 public class Speedometer : IJob, IDisposable
 {
@@ -70,17 +70,12 @@ public class Speedometer : IJob, IDisposable
 
             var curTransferSize = _transferSize - _lastTransferSize;
             var curSucceededCount = _succeededCount - _lastSucceededCount;
-            if (_packetCounter) {
-                VhLogger.Instance.LogInformation(
+            if (_packetCounter)                 VhLogger.Instance.LogInformation(
                     _name + " {Speed}, Success: {Success}, TotalSucceeded: {TotalSucceeded}, TotalFailed: {TotalFailed}, TotalBytes: {TotalBytes}",
                     VhUtil.FormatBits(1000 * curTransferSize / _stopwatch.ElapsedMilliseconds), curSucceededCount, _succeededCount, _failedCount, VhUtil.FormatBytes(_transferSize));
-
-            }
-            else {
-                VhLogger.Instance.LogInformation(
+            else                 VhLogger.Instance.LogInformation(
                     _name + " {Speed}, Total: {Total} ",
                     VhUtil.FormatBits(1000 * curTransferSize / _stopwatch.ElapsedMilliseconds), VhUtil.FormatBytes(_transferSize));
-            }
 
             _lastTransferSize = _transferSize;
             _lastSucceededCount = _succeededCount;

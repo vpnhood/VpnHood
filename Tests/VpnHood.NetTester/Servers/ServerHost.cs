@@ -1,11 +1,10 @@
 ﻿using System.Net;
-using VpnHood.NetTester.CommandServers;
-using VpnHood.NetTester.HttpTesters;
-using VpnHood.NetTester.TcpTesters;
+using VpnHood.NetTester.Testers.HttpTesters;
+using VpnHood.NetTester.Testers.TcpTesters;
 
-namespace VpnHood.NetTester;
+namespace VpnHood.NetTester.Servers;
 
-internal class ServerApp(IPAddress listenerIp) : IDisposable
+internal class ServerHost(IPAddress listenerIp) : IDisposable
 {
     private TcpTesterServer? _tcpTesterServer;
     private HttpTesterServer? _httpTesterServer;

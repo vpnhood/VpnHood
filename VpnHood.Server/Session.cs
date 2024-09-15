@@ -324,7 +324,7 @@ public class Session : IAsyncDisposable, IJob
             Interlocked.Increment(ref _tcpConnectWaitCount);
             isTcpConnectIncreased = true;
 
-            //set reuseAddress to  true to prevent error "Only one usage of each socket address is normally permitted
+            //set reuseAddress to  true to prevent error only one usage of each socket address is normally permitted
             tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
             _socketFactory.SetKeepAlive(tcpClientHost.Client, true);
             VhUtil.ConfigTcpClient(tcpClientHost, _tcpKernelSendBufferSize, _tcpKernelReceiveBufferSize);

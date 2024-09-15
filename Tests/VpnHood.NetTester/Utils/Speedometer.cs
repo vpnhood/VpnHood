@@ -18,6 +18,7 @@ public class Speedometer : IJob, IDisposable
     private long _transferSize;
     private long _lastTransferSize;
     private long _lastSucceededCount;
+    private readonly DateTime _startTime;
 
     public JobSection JobSection { get; }
 
@@ -25,6 +26,7 @@ public class Speedometer : IJob, IDisposable
         TimeSpan? interval = null,
         bool packetCounter = false)
     {
+        _startTime = DateTime.Now;
         _name = name;
         _packetCounter = packetCounter;
         _stopwatch.Start();
@@ -97,6 +99,7 @@ public class Speedometer : IJob, IDisposable
     public void Dispose()
     {
         Report();
+        VhLogger.Instance.LogInformation("Elapsed: {Elapsed}", (DateTime.Now - _startTime).ToString(@"hh\:mm\:ss"));
         JobRunner.Default.Remove(this);
     }
 }

@@ -46,7 +46,7 @@ internal class ClientApp : IDisposable
             if (_clientOptions.Multi > 0)
                 await TcpTesterClient.StartMulti(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
                     upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
-                    connectionCount: _clientOptions.Multi,
+                    multi: _clientOptions.Multi,
                     cancellationToken: cancellationToken);
         }
 

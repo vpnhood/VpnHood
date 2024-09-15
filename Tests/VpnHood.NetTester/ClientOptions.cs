@@ -6,10 +6,10 @@ namespace VpnHood.NetTester;
 
 public class ClientOptions(string[] args)
 {
-    public int UpLength { get; } =  ArgumentUtils.Get(args, "/up", 20) * 1000000; // 10MB
-    public int DownLength { get; } = ArgumentUtils.Get(args, "/down", 60) * 1000000; // 10MB
+    public int UpLength { get; } =  ArgumentUtils.Get(args, "/up", 60) * 1000000; // 6MB
+    public int DownLength { get; } = ArgumentUtils.Get(args, "/down", 60) * 1000000; // 60MB
     public int TcpPort { get; } = ArgumentUtils.Get(args, "/tcp", 33700);
-    public int HttpPort { get; } = ArgumentUtils.Get(args, "/http", 33700);
+    public int HttpPort { get; } = ArgumentUtils.Get(args, "/http", 8080);
     public int ConnectionCount { get; } = ArgumentUtils.Get(args, "/multi", 10);
 
     [JsonConverter(typeof(IPEndPointConverter))]

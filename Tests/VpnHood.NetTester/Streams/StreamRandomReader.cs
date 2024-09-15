@@ -48,4 +48,10 @@ public class StreamRandomReader(long length, Speedometer? speedometer) : Stream
         return bytesToRead;
     }
 
+    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        //todo
+        await Task.Delay(TimeSpan.FromMilliseconds(1), cancellationToken);
+        return await base.ReadAsync(buffer, offset, count, cancellationToken);
+    }
 }

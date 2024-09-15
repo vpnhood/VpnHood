@@ -21,6 +21,24 @@ public class StreamDiscarder(Speedometer? speedometer) : Stream
         speedometer?.AddWrite(count);
     }
 
+    public async Task ReadFromAsync(Stream source, long length, int bufferSize = 81920,
+        CancellationToken cancellationToken = default)
+    {
+        var buffer = new byte[bufferSize];
+        var totalBytesCopied = 0;
+
+        while (totalBytesCopied < length) {
+            var bytesToRead = (int)Math.Min(bufferSize, length - totalBytesCopied);
+            var bytesRead = await source.ReadAsync(buffer, 0, bytesToRead, cancellationToken);
+            if (bytesRead == 0)
+                break; // End of source stream
+
+            await WriteAsync(buffer, 0, bytesRead, cancellationToken);
+            totalBytesCopied += bytesRead;
+        }
+    }
+
+
     public override void Flush() { }
 
     public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();

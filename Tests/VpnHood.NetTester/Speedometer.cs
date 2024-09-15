@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using VpnHood.Common.Jobs;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.NetTester;
@@ -69,14 +71,15 @@ public class Speedometer : IJob, IDisposable
             var curTransferSize = _transferSize - _lastTransferSize;
             var curSucceededCount = _succeededCount - _lastSucceededCount;
             if (_packetCounter) {
-                Console.WriteLine(_name + ": " +
-                                  $"Speed: {VhUtil.FormatBits(1000 * curTransferSize / _stopwatch.ElapsedMilliseconds)}, " +
-                                  $"Success: {curSucceededCount}, TotalSucceeded: {_succeededCount}, TotalFailed: {_failedCount}, TotalBytes: {VhUtil.FormatBytes(_transferSize)}");
+                VhLogger.Instance.LogInformation(
+                    _name + " {Speed}, Success: {Success}, TotalSucceeded: {TotalSucceeded}, TotalFailed: {TotalFailed}, TotalBytes: {TotalBytes}",
+                    VhUtil.FormatBits(1000 * curTransferSize / _stopwatch.ElapsedMilliseconds), curSucceededCount, _succeededCount, _failedCount, VhUtil.FormatBytes(_transferSize));
+
             }
             else {
-                Console.WriteLine(_name + ": " +
-                                  $"Speed: {VhUtil.FormatBits(1000 * curTransferSize / _stopwatch.ElapsedMilliseconds)}, " +
-                                  $"Total: {VhUtil.FormatBytes(_transferSize)}");
+                VhLogger.Instance.LogInformation(
+                    _name + " {Speed}, Total: {Total} ",
+                    VhUtil.FormatBits(1000 * curTransferSize / _stopwatch.ElapsedMilliseconds), VhUtil.FormatBytes(_transferSize));
             }
 
             _lastTransferSize = _transferSize;
@@ -91,14 +94,9 @@ public class Speedometer : IJob, IDisposable
         return Task.CompletedTask;
     }
 
-    public void Stop()
+    public void Dispose()
     {
         Report();
         JobRunner.Default.Remove(this);
-    }
-
-    public void Dispose()
-    {
-        Stop();
     }
 }

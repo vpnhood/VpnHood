@@ -1,12 +1,15 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
+using VpnHood.Common.Logging;
+using VpnHood.NetTester.Streams;
 
 namespace VpnHood.NetTester.TcpTesters;
 
 public class TcpTesterServer : IDisposable
 {
     private TcpListener? _tcpListener;
-    public IPEndPoint ListenerEndPoint => 
+    public IPEndPoint ListenerEndPoint =>
         (IPEndPoint?)_tcpListener?.LocalEndpoint ?? throw new InvalidOperationException("Server has not been started.");
 
     public async Task Start(IPEndPoint endPoint, CancellationToken cancellationToken)
@@ -27,22 +30,27 @@ public class TcpTesterServer : IDisposable
     private static async Task ProcessClient(TcpClient client, CancellationToken cancellationToken)
     {
         var remoteEndPoint = client.Client.RemoteEndPoint;
-        Console.WriteLine($"Start processing client. ClientEp: {remoteEndPoint}");
+        VhLogger.Instance.LogInformation("Server: Start processing client. ClientEp: {ClientEp}", remoteEndPoint);
         try {
             await using var stream = client.GetStream();
 
-            // read int data from stream
-            var buffer = new byte[8];
-            if (await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken) < 4)
-                return;
+            // find read length
+            var buffer = new byte[16];
+            await stream.ReadAtLeastAsync(buffer, 16, true, cancellationToken);
 
-            var byteCount = BitConverter.ToInt64(buffer, 0);
-            await TcpTesterUtil.ReadData(stream, byteCount, speedometer: null, cancellationToken: cancellationToken);
-            await TcpTesterUtil.WriteRandomData(stream, long.MaxValue, speedometer: null, cancellationToken: cancellationToken);
+            var readLength = BitConverter.ToInt64(buffer, 0);
+            var writeLength = BitConverter.ToInt64(buffer, 8);
 
+            // read data
+            await using var discarder = new StreamDiscarder(null);
+            await discarder.ReadFromAsync(stream, length: readLength, cancellationToken: cancellationToken);
+
+            // write data
+            await using var randomReader = new StreamRandomReader(writeLength, null);
+            await randomReader.CopyToAsync(stream, cancellationToken);
         }
         finally {
-            Console.WriteLine($"Finish processing client. ClientEp: {remoteEndPoint}");
+            VhLogger.Instance.LogInformation("Server: Finish processing client. ClientEp: {ClientEp}", remoteEndPoint);
             client.Dispose();
         }
     }

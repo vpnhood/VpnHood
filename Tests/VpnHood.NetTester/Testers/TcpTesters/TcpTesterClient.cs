@@ -29,18 +29,17 @@ public class TcpTesterClient
     }
 
 
-    public static async Task StartMulti(IPEndPoint serverEp, long upLength, long downLength, int connectionCount,
+    public static async Task StartMulti(IPEndPoint serverEp, long upLength, long downLength, int multi,
         CancellationToken cancellationToken)
     {
-        var uploadTasks = new Task<TcpClient>[connectionCount];
+        var uploadTasks = new Task<TcpClient>[multi];
 
         // start multi uploaders
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation(
-            $"MultiTcp => Start Uploading {VhUtil.FormatBytes(upLength)}, Multi: {connectionCount}x");
+        VhLogger.Instance.LogInformation($"MultiTcp => Start Uploading {VhUtil.FormatBytes(upLength)}, Multi: {multi}x");
         using (var speedometer = new Speedometer("MultiTcp => Up")) {
-            for (var i = 0; i < connectionCount; i++)
-                uploadTasks[i] = StartUpload(serverEp, upLength: upLength, downLength: downLength,
+            for (var i = 0; i < multi; i++)
+                uploadTasks[i] = StartUpload(serverEp, upLength: upLength / multi, downLength: downLength / multi,
                     speedometer: speedometer, cancellationToken: cancellationToken);
 
             await Task.WhenAll(uploadTasks);
@@ -48,12 +47,11 @@ public class TcpTesterClient
 
         // start multi downloaders
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation(
-            $"MultiTcp => Start Downloading {VhUtil.FormatBytes(downLength)}, Multi: {connectionCount}x");
+        VhLogger.Instance.LogInformation($"MultiTcp => Start Downloading {VhUtil.FormatBytes(downLength)}, Multi: {multi}x");
         using (var speedometer = new Speedometer("MultiTcp => Down")) {
-            var downloadTasks = new Task<Stream>[connectionCount];
-            for (var i = 0; i < connectionCount; i++)
-                downloadTasks[i] = StartDownload(uploadTasks[i].Result.GetStream(), downLength, speedometer,
+            var downloadTasks = new Task<Stream>[multi];
+            for (var i = 0; i < multi; i++)
+                downloadTasks[i] = StartDownload(uploadTasks[i].Result.GetStream(), downLength / multi, speedometer,
                     cancellationToken);
 
             await Task.WhenAll(downloadTasks);

@@ -19,8 +19,9 @@ internal class Program
         }
 
         // Create a logger
-        var file = ArgumentUtils.Get<string?>(args, "/out", null);
-        VhLogger.Instance = new SyncLogger(new SimpleLogger(file));
+        var reportFile = ArgumentUtils.Get<string?>(args, "/out", null);
+        if (File.Exists(reportFile)) File.Delete(reportFile);
+        VhLogger.Instance = new SyncLogger(new SimpleLogger(reportFile));
         VhLogger.Instance.LogInformation("VpnHood NetTester. Version: {Version}", typeof(Program).Assembly.GetName().Version);
 
         // stop the server
@@ -67,11 +68,17 @@ internal class Program
 
     private static async Task WaitForStop()
     {
+        var stopFile = "stop_command";
+
         while (true) {
-            if (File.Exists("stop_command"))
+            if (File.Exists(stopFile)) {
+                File.Delete(stopFile);
                 break;
+            }
 
             await Task.Delay(1000);
         }
+
+        VhLogger.Instance.LogInformation("Server has been stopped.");
     }
 }

@@ -49,7 +49,7 @@ internal class AppMultiAdService
     protected async Task LoadAd(IUiContext uiContext, string? countryCode, bool forceReload, CancellationToken cancellationToken)
     {
         if (_adServices.Length == 0)
-            throw new Exception("There is not AdService registered in this app.");
+            throw new Exception("There is no AdService registered in this app.");
 
         using var lockAsync = await _loadAdLock.LockAsync(cancellationToken);
         if (!forceReload && !ShouldLoadAd())

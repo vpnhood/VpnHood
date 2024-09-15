@@ -50,12 +50,14 @@ public class HttpTesterClient
         CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"MultiHttp => Start Uploading {VhUtil.FormatBytes(length)}, Multi: {connectionCount}x");
+        VhLogger.Instance.LogInformation(
+            $"MultiHttp => Start Uploading {VhUtil.FormatBytes(length)}, Multi: {connectionCount}x");
 
         // start multi uploaders
         using var speedometer1 = new Speedometer("MultiHttp => Up");
         var uploadTasks = new Task[connectionCount];
-        for (var i = 0; i < connectionCount; i++)             uploadTasks[i] = StartUpload(serverEp, length / connectionCount, speedometer: speedometer1,
+        for (var i = 0; i < connectionCount; i++)
+            uploadTasks[i] = StartUpload(serverEp, length / connectionCount, speedometer: speedometer1,
                 cancellationToken: cancellationToken);
         await Task.WhenAll(uploadTasks);
     }
@@ -64,12 +66,14 @@ public class HttpTesterClient
         CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"MultiHttp => Start Downloading {VhUtil.FormatBytes(length)}, Multi: {connectionCount}x");
+        VhLogger.Instance.LogInformation(
+            $"MultiHttp => Start Downloading {VhUtil.FormatBytes(length)}, Multi: {connectionCount}x");
 
         // start multi downloader
         using var speedometer1 = new Speedometer("MultiHttp => Down");
         var uploadTasks = new Task[connectionCount];
-        for (var i = 0; i < connectionCount; i++)             uploadTasks[i] = StartDownload(serverEp, length / connectionCount, speedometer: speedometer1,
+        for (var i = 0; i < connectionCount; i++)
+            uploadTasks[i] = StartDownload(serverEp, length / connectionCount, speedometer: speedometer1,
                 cancellationToken: cancellationToken);
         await Task.WhenAll(uploadTasks);
     }
@@ -102,4 +106,3 @@ public class HttpTesterClient
         await stream.CopyToAsync(streamDiscarder, cancellationToken);
     }
 }
-

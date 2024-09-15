@@ -11,6 +11,7 @@ public class StreamDiscarder(Speedometer? speedometer) : Stream
     public override bool CanWrite => true; // We want to allow writing, but discard the data
 
     public override long Length => throw new NotSupportedException();
+
     public override long Position {
         get => throw new NotSupportedException();
         set => throw new NotSupportedException();
@@ -41,7 +42,9 @@ public class StreamDiscarder(Speedometer? speedometer) : Stream
     }
 
 
-    public override void Flush() { }
+    public override void Flush()
+    {
+    }
 
     public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();

@@ -22,7 +22,7 @@ internal class ServerApp : IDisposable
         _webServer = new WebServer(webServerOptions)
             .WithWebApi("/", c => c.WithController(() => new CommandApiController(ServerHost)));
         Logger.UnregisterLogger<ConsoleLogger>();
-        
+
         _webServer.Start();
     }
 

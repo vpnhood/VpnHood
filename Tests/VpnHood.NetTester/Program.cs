@@ -30,8 +30,8 @@ internal class Program
         }
 
         // Server
-        using var serverApp = args.Contains("/server") 
-            ? ServerApp.Create(ArgumentUtils.Get<IPEndPoint>(args, "/ep")) 
+        using var serverApp = args.Contains("/server")
+            ? ServerApp.Create(ArgumentUtils.Get<IPEndPoint>(args, "/ep"))
             : null;
 
         // client
@@ -60,7 +60,7 @@ internal class Program
         if (serverApp != null)
             await WaitForStop();
     }
-    
+
     private static async Task WaitForStop()
     {
         while (true) {

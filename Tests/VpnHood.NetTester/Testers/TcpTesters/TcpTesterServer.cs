@@ -9,6 +9,7 @@ namespace VpnHood.NetTester.Testers.TcpTesters;
 public class TcpTesterServer : IDisposable
 {
     private TcpListener? _tcpListener;
+
     public IPEndPoint ListenerEndPoint =>
         (IPEndPoint?)_tcpListener?.LocalEndpoint ?? throw new InvalidOperationException("Server has not been started.");
 

@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using EmbedIO;
 using EmbedIO.Routing;
@@ -11,15 +12,27 @@ internal class HttpTesterServer : IDisposable
 {
     private readonly WebServer _webServer;
 
-    public HttpTesterServer(IPEndPoint ipEndPoint, CancellationToken cancellationToken)
+    public HttpTesterServer(
+        IPEndPoint? httpEndPoint, 
+        IPEndPoint? httpsEndPoint, 
+        X509Certificate2? certificate2, 
+        CancellationToken cancellationToken)
     {
         // create web server
-        var webServerOptions = new WebServerOptions();
-        webServerOptions.AddUrlPrefix($"http://{ipEndPoint}");
+        var webServerOptions = new WebServerOptions() {
+            Certificate = certificate2,
+            AutoRegisterCertificate = false
+        };
+
+        if (httpEndPoint != null) {
+            webServerOptions.AddUrlPrefix($"http://{httpEndPoint}");
+        }
+        if (httpsEndPoint != null) {
+            webServerOptions.AddUrlPrefix($"https://{httpsEndPoint}");
+        }
 
         _webServer = new WebServer(webServerOptions)
             .WithWebApi("/", c => c.WithController(() => new TestController()));
-
 
         _webServer.Start(cancellationToken);
     }

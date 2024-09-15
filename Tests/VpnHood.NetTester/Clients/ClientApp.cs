@@ -72,7 +72,9 @@ internal class ClientApp : IDisposable
     {
         var serverConfig = new ServerConfig {
             TcpPort = _clientOptions.TcpPort,
-            HttpPort = _clientOptions.HttpPort
+            HttpPort = _clientOptions.HttpPort,
+            HttpsPort = _clientOptions.HttpsPort,
+            HttpsDomain = _clientOptions.HttpsDomain,
         };
 
         // sent serverConfig to server via HttpClient

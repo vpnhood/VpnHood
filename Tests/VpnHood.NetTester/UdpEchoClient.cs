@@ -35,7 +35,7 @@ public class UdpEchoClient
         var buffer = new byte[bufferSize];
         new Random().NextBytes(buffer);
 
-        for (var i = 0; ; i++) {
+        for (var i = 0;; i++) {
             //send buffer
             Array.Copy(BitConverter.GetBytes(i), 0, buffer, 0, 4);
             Array.Copy(BitConverter.GetBytes(echoCount), 0, buffer, 4, 4);

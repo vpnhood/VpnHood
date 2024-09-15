@@ -4,11 +4,11 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
-using VpnHood.NetTester.CommandServers;
-using VpnHood.NetTester.HttpTesters;
-using VpnHood.NetTester.TcpTesters;
+using VpnHood.NetTester.Servers;
+using VpnHood.NetTester.Testers.HttpTesters;
+using VpnHood.NetTester.Testers.TcpTesters;
 
-namespace VpnHood.NetTester;
+namespace VpnHood.NetTester.Clients;
 
 internal class ClientApp : IDisposable
 {

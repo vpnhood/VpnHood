@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.NetTester.Streams;
 
-namespace VpnHood.NetTester.TcpTesters;
+namespace VpnHood.NetTester.Testers.TcpTesters;
 
 public class TcpTesterServer : IDisposable
 {

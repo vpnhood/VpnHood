@@ -1,7 +1,9 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
-using VpnHood.NetTester.CommandServers;
+using VpnHood.NetTester.Clients;
+using VpnHood.NetTester.Servers;
+using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester;
 
@@ -28,8 +30,8 @@ internal class Program
         }
 
         // Server
-        using var commandServer = args.Contains("/server") 
-            ? CommandServer.Create(ArgumentUtils.Get<IPEndPoint>(args, "/ep")) 
+        using var serverApp = args.Contains("/server") 
+            ? ServerApp.Create(ArgumentUtils.Get<IPEndPoint>(args, "/ep")) 
             : null;
 
         // client
@@ -55,7 +57,7 @@ internal class Program
         //}
 
 
-        if (commandServer != null)
+        if (serverApp != null)
             await WaitForStop();
     }
     

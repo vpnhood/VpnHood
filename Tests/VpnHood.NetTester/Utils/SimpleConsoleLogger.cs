@@ -1,10 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace VpnHood.NetTester;
+namespace VpnHood.NetTester.Utils;
 
 public class SimpleConsoleLogger : ILogger
 {
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, 
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
     {
         var message = formatter(state, exception);

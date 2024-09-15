@@ -23,7 +23,7 @@ public class TcpTesterClient
         }
 
         VhLogger.Instance.LogInformation("\n--------");
-        Console.WriteLine($"SingleTcp => Start Downloading {VhUtil.FormatBytes(downLength)}");
+        VhLogger.Instance.LogInformation($"SingleTcp => Start Downloading {VhUtil.FormatBytes(downLength)}");
         using (var speedometer = new Speedometer("SingleTcp => Down")) {
             await StartDownload(tcpClient.GetStream(), downLength, speedometer, cancellationToken);
         }
@@ -50,10 +50,9 @@ public class TcpTesterClient
         }
 
         // start multi downloaders
-        using (var speedometer = new Speedometer("MultiTcp => Down")) {
             VhLogger.Instance.LogInformation("\n--------");
-            VhLogger.Instance.LogInformation(
-                $"MultiTcp => Start Downloading {VhUtil.FormatBytes(downLength)}, Multi: {connectionCount}x");
+            VhLogger.Instance.LogInformation($"MultiTcp => Start Downloading {VhUtil.FormatBytes(downLength)}, Multi: {connectionCount}x");
+        using (var speedometer = new Speedometer("MultiTcp => Down")) {
             var downloadTasks = new Task<Stream>[connectionCount];
             for (var i = 0; i < connectionCount; i++) {
                 downloadTasks[i] = StartDownload(uploadTasks[i].Result.GetStream(), downLength, speedometer, cancellationToken);

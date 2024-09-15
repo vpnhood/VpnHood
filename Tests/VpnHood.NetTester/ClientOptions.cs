@@ -10,7 +10,8 @@ public class ClientOptions(string[] args)
     public int DownLength { get; } = ArgumentUtils.Get(args, "/down", 60) * 1000000; // 60MB
     public int TcpPort { get; } = ArgumentUtils.Get(args, "/tcp", 33700);
     public int HttpPort { get; } = ArgumentUtils.Get(args, "/http", 8080);
-    public int ConnectionCount { get; } = ArgumentUtils.Get(args, "/multi", 10);
+    public int Multi { get; } = ArgumentUtils.Get(args, "/multi", 10);
+    public bool Single { get; } = ArgumentUtils.Get(args, "/single", true);
 
     [JsonConverter(typeof(IPEndPointConverter))]
     public IPEndPoint ServerEndPoint { get; } = ArgumentUtils.Get<IPEndPoint>(args, "/ep");

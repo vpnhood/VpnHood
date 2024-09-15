@@ -2,7 +2,7 @@
 
 namespace VpnHood.NetTester.Utils;
 
-public class SimpleConsoleLogger : ILogger
+public class SimpleLogger(string? file = null) : ILogger
 {
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
@@ -13,6 +13,9 @@ public class SimpleConsoleLogger : ILogger
             message = $"[{DateTime.Now:h:mm:ss}] {message}";
 
         Console.WriteLine(message);
+        if (!string.IsNullOrEmpty(file))
+            File.AppendAllText(file, message + Environment.NewLine);
+
     }
 
     public bool IsEnabled(LogLevel logLevel) => true;

@@ -62,7 +62,8 @@ internal class ClientApp : IDisposable
             // test multi
             if (_clientOptions.Multi > 0)
                 await HttpTesterClient.StartMulti(new IPEndPoint(ServerEndPoint.Address, _clientOptions.HttpPort),
-                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength, connectionCount: _clientOptions.Multi,
+                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
+                    connectionCount: _clientOptions.Multi,
                     cancellationToken: cancellationToken);
         }
     }
@@ -83,6 +84,5 @@ internal class ClientApp : IDisposable
 
     public void Dispose()
     {
-
     }
 }

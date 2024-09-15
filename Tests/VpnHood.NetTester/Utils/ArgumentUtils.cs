@@ -53,5 +53,4 @@ internal static class ArgumentUtils
 
         throw new ArgumentException($"Type {typeof(T)} is not supported.");
     }
-
 }

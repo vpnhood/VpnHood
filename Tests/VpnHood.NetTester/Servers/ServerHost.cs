@@ -41,5 +41,4 @@ internal class ServerHost(IPAddress listenerIp) : IDisposable
     {
         Stop();
     }
-
 }

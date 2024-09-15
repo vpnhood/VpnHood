@@ -14,7 +14,11 @@ public class StreamRandomReader(long length, Speedometer? speedometer) : Stream
     public override bool CanWrite => false;
     public override long Length => _length;
     public override void SetLength(long value) => _length = value;
-    public override void Flush() { }
+
+    public override void Flush()
+    {
+    }
+
     public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
     public override long Seek(long offset, SeekOrigin origin)

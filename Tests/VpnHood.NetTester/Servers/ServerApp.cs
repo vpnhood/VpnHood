@@ -44,7 +44,7 @@ internal class ServerApp : IDisposable
         public async Task Configure()
         {
             var serverConfig = await HttpContext.GetRequestDataAsync<ServerConfig>();
-            serverApp.Configure(serverConfig);
+            await serverApp.Configure(serverConfig);
         }
     }
 }

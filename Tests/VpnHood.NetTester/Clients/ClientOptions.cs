@@ -13,6 +13,8 @@ public class ClientOptions(string[] args)
     public int HttpPort { get; } = ArgumentUtils.Get(args, "/http", 8080);
     public int Multi { get; } = ArgumentUtils.Get(args, "/multi", 10);
     public bool Single { get; } = ArgumentUtils.Get(args, "/single", true);
+    public string? HttpsDomain { get; } = ArgumentUtils.Get<string?>(args, "/domain", null);
+    public int HttpsPort { get; } = ArgumentUtils.Get(args, "/https", 443);
 
     [JsonConverter(typeof(IPEndPointConverter))]
     public IPEndPoint ServerEndPoint { get; } = ArgumentUtils.Get<IPEndPoint>(args, "/ep");

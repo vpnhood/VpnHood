@@ -2,7 +2,8 @@
   "profiles": {
     "VpnHood.NetTester": {
       "commandName": "Project",
-      "commandLineArgs": "/ep 15.204.87.44:1100 /server /client /down 100 /up 100 /tcp 35000 /http 8080 /single true /multi 20 /out report.txt",
+      "commandLineArgs": "/ep 127.0.0.2:1100 /server /client /down 100 /up 100 /tcp 35000 /http 8080 /single true /multi 20 /out report.txt /https 4443 /domain microsoftaasfasfasf.com",
+      "commandLineArgs3": "/ep 15.204.87.44:1100 /server /client /down 100 /up 100 /tcp 35000 /http 8080 /single true /multi 20 /out report.txt /https 4443 /domain microsoft.com",
       "commandLineArgs2": "/ep 127.0.0.2:31500 /server /client /down 200 /up 200 /tcp 35000 /http 8080 /single true /multi 10 /out C:/Users/Developer/Desktop/a.txt"
     }
   }

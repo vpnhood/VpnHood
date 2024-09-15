@@ -35,7 +35,7 @@ public static class CertificateUtil
         return ret;
     }
 
-    public static async Task<X509Certificate2> GetCertificateFromUrl(Uri url)
+    public static async Task<X509Certificate2> GetCertificateFromUrl(Uri url, CancellationToken cancellationToken)
     {
         X509Certificate2? serverCertificate = null;
 
@@ -46,7 +46,7 @@ public static class CertificateUtil
         };
 
         using var client = new HttpClient(handler);
-        await client.GetAsync(url); // Trigger the request to capture the certificate
+        await client.GetAsync(url, cancellationToken); // Trigger the request to capture the certificate
 
         return serverCertificate ?? throw new Exception("Could not extract certificate from url");
     }

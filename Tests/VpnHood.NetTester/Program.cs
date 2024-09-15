@@ -36,6 +36,7 @@ internal class Program
         if (args.Contains("/client")) {
             using var clientApp = await ClientApp.Create(new ClientOptions(args));
             await clientApp.StartTest(CancellationToken.None);
+            return;
         }
 
 

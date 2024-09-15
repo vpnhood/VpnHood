@@ -39,6 +39,9 @@ internal static class ArgumentUtils
         if (typeof(T) == typeof(string))
             return (T)(object)value;
 
+        if (typeof(T) == typeof(bool))
+            return (T)(object)bool.Parse(value);
+
         if (typeof(T) == typeof(int))
             return (T)(object)int.Parse(value);
 

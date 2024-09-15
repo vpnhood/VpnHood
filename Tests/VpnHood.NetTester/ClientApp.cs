@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
+using VpnHood.NetTester.CommandServers;
 using VpnHood.NetTester.HttpTesters;
 using VpnHood.NetTester.TcpTesters;
 
@@ -36,44 +37,52 @@ internal class ClientApp : IDisposable
             await ConfigureServer();
 
             // test single
-            await TcpTesterClient.StartSingle(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
-                upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
-                cancellationToken: cancellationToken);
+            if (_clientOptions.Single)
+                await TcpTesterClient.StartSingle(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
+                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
+                    cancellationToken: cancellationToken);
 
             // test multi
-            if (_clientOptions.ConnectionCount>0)
+            if (_clientOptions.Multi > 0)
                 await TcpTesterClient.StartMulti(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
-                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength, connectionCount: _clientOptions.ConnectionCount,
+                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
+                    connectionCount: _clientOptions.Multi,
                     cancellationToken: cancellationToken);
         }
 
         if (_clientOptions.HttpPort != 0) {
             await ConfigureServer();
-            
+
             // test single
-            await HttpTesterClient.StartSingle(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
-                upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
-                cancellationToken: cancellationToken);
+            if (_clientOptions.Single)
+                await HttpTesterClient.StartSingle(new IPEndPoint(ServerEndPoint.Address, _clientOptions.HttpPort),
+                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
+                    cancellationToken: cancellationToken);
 
             // test multi
-            if (_clientOptions.ConnectionCount > 0)
-                await HttpTesterClient.StartMulti(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
-                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength, connectionCount: _clientOptions.ConnectionCount,
+            if (_clientOptions.Multi > 0)
+                await HttpTesterClient.StartMulti(new IPEndPoint(ServerEndPoint.Address, _clientOptions.HttpPort),
+                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength, connectionCount: _clientOptions.Multi,
                     cancellationToken: cancellationToken);
         }
     }
 
     private async Task ConfigureServer()
     {
+        var serverConfig = new ServerConfig {
+            TcpPort = _clientOptions.TcpPort,
+            HttpPort = _clientOptions.HttpPort
+        };
+
         // sent serverConfig to server via HttpClient
         var httpClient = new HttpClient();
-        var content = new StringContent(JsonSerializer.Serialize(_clientOptions), Encoding.UTF8, "application/json");
-        var response =  await httpClient.PostAsync($"http://{ServerEndPoint}/config", content);
+        var content = new StringContent(JsonSerializer.Serialize(serverConfig), Encoding.UTF8, "application/json");
+        var response = await httpClient.PostAsync($"http://{ServerEndPoint}/config", content);
         response.EnsureSuccessStatusCode();
     }
 
     public void Dispose()
     {
-        
+
     }
 }

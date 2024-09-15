@@ -81,28 +81,39 @@ public class HttpTesterClient
     private static async Task StartUpload(IPEndPoint serverEp, long length,
         Speedometer speedometer, CancellationToken cancellationToken)
     {
-        // Create a custom stream that generates random data on the fly
-        await using var contentStream = new StreamRandomReader(length, speedometer);
-        var content = new StreamContent(contentStream);
-        content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+        try {
+            // Create a custom stream that generates random data on the fly
+            await using var contentStream = new StreamRandomReader(length, speedometer);
+            var content = new StreamContent(contentStream);
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
 
-        // Upload the content to the server
-        var httpClient = new HttpClient();
-        var requestUri = $"http://{serverEp}/upload";
-        var response = await httpClient.PostAsync(requestUri, content, cancellationToken);
-        response.EnsureSuccessStatusCode();
+            // Upload the content to the server
+            var httpClient = new HttpClient();
+            var requestUri = $"http://{serverEp}/upload";
+            var response = await httpClient.PostAsync(requestUri, content, cancellationToken);
+            response.EnsureSuccessStatusCode();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogInformation(ex, "Error in upload via HTTP.");
+        }
     }
 
     private static async Task StartDownload(IPEndPoint serverEp, long length, Speedometer speedometer,
         CancellationToken cancellationToken)
     {
-        // Upload the content to the server
-        var httpClient = new HttpClient();
-        var requestUri = $"http://{serverEp}/download?length={length}";
-        await using var stream = await httpClient.GetStreamAsync(requestUri, cancellationToken);
+        try {
+            // Upload the content to the server
+            var httpClient = new HttpClient();
+            var requestUri = $"http://{serverEp}/download?length={length}";
+            await using var stream = await httpClient.GetStreamAsync(requestUri, cancellationToken);
 
-        // read all data from the stream
-        await using var streamDiscarder = new StreamDiscarder(speedometer);
-        await stream.CopyToAsync(streamDiscarder, cancellationToken);
+            // read all data from the stream
+            await using var streamDiscarder = new StreamDiscarder(speedometer);
+            await stream.CopyToAsync(streamDiscarder, cancellationToken);
+
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogInformation(ex, "Error in download via HTTP.");
+        }
     }
 }

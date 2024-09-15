@@ -7,7 +7,12 @@ public class SimpleConsoleLogger : ILogger
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, 
         Func<TState, Exception?, string> formatter)
     {
-        Console.WriteLine(formatter(state, exception));
+        var message = formatter(state, exception);
+
+        if (!message.StartsWith("\n"))
+            message = $"[{DateTime.Now:h:mm:ss}] {message}";
+
+        Console.WriteLine(message);
     }
 
     public bool IsEnabled(LogLevel logLevel) => true;

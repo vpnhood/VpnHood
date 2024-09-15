@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Jobs;
+using VpnHood.Common.Logging;
 using VpnHood.NetTester.HttpTesters;
 using VpnHood.NetTester.TcpTesters;
 
@@ -11,22 +12,20 @@ namespace VpnHood.NetTester;
 internal class ClientApp : IDisposable
 {
     private readonly ClientOptions _clientOptions;
-    private readonly ILogger _logger;
     private IPEndPoint ServerEndPoint => _clientOptions.ServerEndPoint;
 
-    private ClientApp(ClientOptions clientOptions, ILogger logger)
+    private ClientApp(ClientOptions clientOptions)
     {
         _clientOptions = clientOptions;
-        _logger = logger;
         JobRunner.Default.Interval = TimeSpan.FromMilliseconds(500);
 
         // dump clientOptions
-        logger.LogInformation($"ClientOptions: {JsonSerializer.Serialize(clientOptions)}");
+        VhLogger.Instance.LogInformation($"ClientOptions: {JsonSerializer.Serialize(clientOptions)}");
     }
 
-    public static async Task<ClientApp> Create(ClientOptions clientOptions, ILogger logger)
+    public static async Task<ClientApp> Create(ClientOptions clientOptions)
     {
-        var clientApp = new ClientApp(clientOptions: clientOptions, logger: logger);
+        var clientApp = new ClientApp(clientOptions: clientOptions);
         await clientApp.ConfigureServer();
         return clientApp;
     }
@@ -39,13 +38,13 @@ internal class ClientApp : IDisposable
             // test single
             await TcpTesterClient.StartSingle(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
                 upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
-                logger: _logger, cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken);
 
             // test multi
             if (_clientOptions.ConnectionCount>0)
                 await TcpTesterClient.StartMulti(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
                     upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength, connectionCount: _clientOptions.ConnectionCount,
-                    logger: _logger, cancellationToken: cancellationToken);
+                    cancellationToken: cancellationToken);
         }
 
         if (_clientOptions.HttpPort != 0) {
@@ -54,13 +53,13 @@ internal class ClientApp : IDisposable
             // test single
             await HttpTesterClient.StartSingle(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
                 upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
-                logger: _logger, cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken);
 
             // test multi
             if (_clientOptions.ConnectionCount > 0)
                 await HttpTesterClient.StartMulti(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
                     upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength, connectionCount: _clientOptions.ConnectionCount,
-                    logger: _logger, cancellationToken: cancellationToken);
+                    cancellationToken: cancellationToken);
         }
     }
 

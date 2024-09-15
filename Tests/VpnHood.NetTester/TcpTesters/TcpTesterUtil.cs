@@ -1,5 +1,6 @@
 ﻿namespace VpnHood.NetTester.TcpTesters;
 
+//todo remove
 public static class TcpTesterUtil
 {
     public static async Task ReadData(Stream stream, long byteCount, Speedometer? speedometer,

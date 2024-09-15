@@ -1,81 +1,101 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
+using VpnHood.NetTester.Streams;
 
 namespace VpnHood.NetTester.TcpTesters;
 
 public class TcpTesterClient
 {
-    public static async Task StartFull(IPEndPoint serverEp, long uploadBytes, long downloadBytes, int connectionCount,
-        ILogger? logger, CancellationToken cancellationToken)
-    {
-        await StartSingle(serverEp, uploadBytes, downloadBytes, logger, cancellationToken);
-        await StartMulti(serverEp, uploadBytes, downloadBytes, connectionCount, logger, cancellationToken);
-    }
 
     public static async Task StartSingle(IPEndPoint serverEp, long upLength, long downLength,
-        ILogger? logger, CancellationToken cancellationToken)
+         CancellationToken cancellationToken)
     {
-        
-        using var speedometer1 = new Speedometer("SingleTcp => Up");
-        Console.WriteLine($"{DateTime.Now:T}: SingleTcp => Start Uploading {VhUtil.FormatBytes(upLength)}");
-        await using var stream = await StartUpload(serverEp, bytes: upLength,
-            speedometer: speedometer1, cancellationToken: cancellationToken);
-        speedometer1.Stop();
 
-        using var speedometer2 = new Speedometer("SingleTcp => Down");
-        Console.WriteLine($"{DateTime.Now:T}: SingleTcp => Start Downloading {VhUtil.FormatBytes(downLength)}");
-        await StartDownload(stream, downLength, speedometer2, cancellationToken);
-        speedometer2.Stop();
+        VhLogger.Instance.LogInformation("\n--------");
+        VhLogger.Instance.LogInformation($"SingleTcp => Start Uploading {VhUtil.FormatBytes(upLength)}");
+        TcpClient tcpClient;
+        using (var speedometer = new Speedometer("SingleTcp => Up")) {
+            tcpClient = await StartUpload(serverEp, upLength: upLength, downLength: downLength,
+                speedometer: speedometer, cancellationToken: cancellationToken);
+        }
+
+        VhLogger.Instance.LogInformation("\n--------");
+        Console.WriteLine($"SingleTcp => Start Downloading {VhUtil.FormatBytes(downLength)}");
+        using (var speedometer = new Speedometer("SingleTcp => Down")) {
+            await StartDownload(tcpClient.GetStream(), downLength, speedometer, cancellationToken);
+        }
+
+        tcpClient.Dispose();
     }
 
 
-    public static async Task StartMulti(IPEndPoint serverEp, long upLength, long downLength, int connectionCount, ILogger? logger,
+    public static async Task StartMulti(IPEndPoint serverEp, long upLength, long downLength, int connectionCount,
         CancellationToken cancellationToken)
     {
-        var uploadTasks = new Task<Stream>[connectionCount];
+        var uploadTasks = new Task<TcpClient>[connectionCount];
 
         // start multi uploaders
-        using var speedometer1 = new Speedometer("MultiTcp => Up");
-        Console.WriteLine($"{DateTime.Now:T}: MultiTcp => Start Uploading {VhUtil.FormatBytes(upLength)}, Multi: {connectionCount}x");
-        for (var i = 0; i < connectionCount; i++) {
-            uploadTasks[i] = StartUpload(serverEp, upLength, speedometer: speedometer1, cancellationToken: cancellationToken);
+        VhLogger.Instance.LogInformation("\n--------");
+        VhLogger.Instance.LogInformation($"MultiTcp => Start Uploading {VhUtil.FormatBytes(upLength)}, Multi: {connectionCount}x");
+        using (var speedometer = new Speedometer("MultiTcp => Up")) {
+            for (var i = 0; i < connectionCount; i++) {
+                uploadTasks[i] = StartUpload(serverEp, upLength: upLength, downLength: downLength,
+                    speedometer: speedometer, cancellationToken: cancellationToken);
+            }
+
+            await Task.WhenAll(uploadTasks);
         }
-        await Task.WhenAll(uploadTasks);
-        speedometer1.Stop();
 
         // start multi downloaders
-        using var speedometer2 = new Speedometer("MultiTcp => Down");
-        Console.WriteLine($"{DateTime.Now:T}: MultiTcp => Start Downloading {VhUtil.FormatBytes(downLength)}, Multi: {connectionCount}x");
-        var downloadTasks = new Task<Stream>[connectionCount];
-        for (var i = 0; i < connectionCount; i++) {
-            downloadTasks[i] = StartDownload(uploadTasks[i].Result, downLength, speedometer2, cancellationToken);
+        using (var speedometer = new Speedometer("MultiTcp => Down")) {
+            VhLogger.Instance.LogInformation("\n--------");
+            VhLogger.Instance.LogInformation(
+                $"MultiTcp => Start Downloading {VhUtil.FormatBytes(downLength)}, Multi: {connectionCount}x");
+            var downloadTasks = new Task<Stream>[connectionCount];
+            for (var i = 0; i < connectionCount; i++) {
+                downloadTasks[i] = StartDownload(uploadTasks[i].Result.GetStream(), downLength, speedometer, cancellationToken);
+            }
+
+            await Task.WhenAll(downloadTasks);
         }
-        await Task.WhenAll(uploadTasks);
-        speedometer2.Stop();
+
+        // dispose streams
+        foreach (var uploadTask in uploadTasks.Where(x=>x.IsCompletedSuccessfully)) {
+            uploadTask.Result.Dispose();
+        }
     }
 
-    private static async Task<Stream> StartUpload(IPEndPoint serverEp, long bytes,
+    private static async Task<TcpClient> StartUpload(IPEndPoint serverEp, long upLength, long downLength,
         Speedometer speedometer, CancellationToken cancellationToken)
     {
         // connect to server
-        var client = new TcpClient();
-        await client.ConnectAsync(serverEp.Address, serverEp.Port, cancellationToken);
+        var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(serverEp.Address, serverEp.Port, cancellationToken);
 
-        // write uploadBytes to server
-        var stream = client.GetStream();
-        var buffer = BitConverter.GetBytes(bytes);
-        await stream.WriteAsync(buffer, 0, buffer.Length, cancellationToken);
-        await stream.FlushAsync(cancellationToken);
+        var stream = tcpClient.GetStream();
 
-        await TcpTesterUtil.WriteRandomData(stream, bytes, speedometer: speedometer, cancellationToken: cancellationToken);
-        return stream;
+        // write upLength to server
+        var buffer = BitConverter.GetBytes(upLength);
+        await stream.WriteAsync(buffer, 0, 8, cancellationToken);
+
+        // write downLength to server
+        buffer = BitConverter.GetBytes(downLength);
+        await stream.WriteAsync(buffer, 0, 8, cancellationToken);
+
+        // write random data
+        await using var random = new StreamRandomReader(upLength, speedometer);
+        await random.CopyToAsync(stream, cancellationToken);
+        return tcpClient;
     }
 
-    private static async Task<Stream> StartDownload(Stream stream, long bytes, Speedometer speedometer, CancellationToken cancellationToken)
+    private static async Task<Stream> StartDownload(Stream stream, long length, Speedometer speedometer, CancellationToken cancellationToken)
     {
-        await TcpTesterUtil.ReadData(stream, bytes, speedometer: speedometer, cancellationToken: cancellationToken);
+        // read from server
+        await using var discarder = new StreamDiscarder(speedometer);
+        await discarder.ReadFromAsync(stream, length: length, cancellationToken: cancellationToken);
         return stream;
     }
 

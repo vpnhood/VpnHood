@@ -11,19 +11,19 @@ internal class Program
     {
         if (args.Length == 0 || args.Any(x => x is "/?" or "-?" or "--help")) {
             Console.WriteLine("Usage:");
-            Console.WriteLine("udptester client serverEndPoint dataLength echoCount");
-            Console.WriteLine("udptester server <endpoint>");
+            Console.WriteLine("nettester /ep 1.2.3.4:44  /server /client /tcp 33700 /http 8080 /up 60 /down 60");
+            Console.WriteLine("nettester stop");
             return;
         }
 
         // Create a logger
-        var logger = VhLogger.CreateConsoleLogger();
+        VhLogger.Instance = new SyncLogger(new SimpleConsoleLogger());
 
         // stop the server
         if (args.First() == "stop") {
             // write a file called command
             await File.WriteAllTextAsync("stop_command", "stop");
-            logger.LogInformation("Stop command has been send.");
+            VhLogger.Instance.LogInformation("Stop command has been send.");
             return;
         }
 
@@ -34,7 +34,7 @@ internal class Program
 
         // client
         if (args.Contains("/client")) {
-            using var clientApp = await ClientApp.Create(new ClientOptions(args), logger);
+            using var clientApp = await ClientApp.Create(new ClientOptions(args));
             await clientApp.StartTest(CancellationToken.None);
         }
 

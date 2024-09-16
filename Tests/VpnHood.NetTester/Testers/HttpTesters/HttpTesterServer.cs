@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using EmbedIO;
@@ -54,12 +55,16 @@ internal class HttpTesterServer : IDisposable
             await HttpContext.SendStringAsync("File uploaded successfully", "text/plain", Encoding.UTF8);
         }
 
-        [Route(HttpVerbs.Get, "/download")]
-        public async Task Download([QueryField] int length)
+        [Route(HttpVerbs.Get, "/downloads")]
+        public async Task Downloads([QueryField] int size, [QueryField] string file)
         {
-            // read length from query string parameter
+            // set application binary content type
+            HttpContext.Response.ContentType = "application/octet-stream";
+            HttpContext.Response.Headers.Add("Content-Disposition", $"attachment; filename={file}");
+
+            // read size from query string parameter
             await using var responseStream = HttpContext.OpenResponseStream();
-            await using var randomReader = new StreamRandomReader(length, null);
+            await using var randomReader = new StreamRandomReader(size, null);
             await randomReader.CopyToAsync(responseStream);
         }
     }

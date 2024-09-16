@@ -10,17 +10,17 @@ namespace VpnHood.NetTester.Testers.TcpTesters;
 
 public class TcpTesterClient
 {
-    public static async Task Start(IPEndPoint serverEp, long upLength, long downLength, int connectionCount,
+    public static async Task Start(IPEndPoint serverEp, long upSize, long downSize, int connectionCount,
         CancellationToken cancellationToken)
     {
         var uploadTasks = new Task<TcpClient>[connectionCount];
 
         // start multi uploaders
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"Tcp => Start Uploading {VhUtil.FormatBytes(upLength)}, Connections: {connectionCount}");
+        VhLogger.Instance.LogInformation($"Tcp => Start Uploading {VhUtil.FormatBytes(upSize)}, Connections: {connectionCount}");
         using (var speedometer = new Speedometer("Up")) {
             for (var i = 0; i < connectionCount; i++)
-                uploadTasks[i] = StartUpload(serverEp, upLength: upLength / connectionCount, downLength: downLength / connectionCount,
+                uploadTasks[i] = StartUpload(serverEp, upSize: upSize / connectionCount, downSize: downSize / connectionCount,
                     speedometer: speedometer, cancellationToken: cancellationToken);
 
             await Task.WhenAll(uploadTasks);
@@ -28,12 +28,12 @@ public class TcpTesterClient
 
         // start multi downloaders
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"Tcp => Start Downloading {VhUtil.FormatBytes(downLength)}, Connections: {connectionCount}");
+        VhLogger.Instance.LogInformation($"Tcp => Start Downloading {VhUtil.FormatBytes(downSize)}, Connections: {connectionCount}");
         using (var speedometer = new Speedometer("Down")) {
             var downloadTasks = new Task[connectionCount];
             for (var i = 0; i < connectionCount; i++)
                 if (uploadTasks[i].Result.Connected)
-                    downloadTasks[i] = StartDownload(uploadTasks[i].Result.GetStream(), downLength / connectionCount, speedometer,
+                    downloadTasks[i] = StartDownload(uploadTasks[i].Result.GetStream(), downSize / connectionCount, speedometer,
                     cancellationToken);
 
             await Task.WhenAll(downloadTasks);
@@ -43,7 +43,7 @@ public class TcpTesterClient
         foreach (var uploadTask in uploadTasks.Where(x => x.IsCompletedSuccessfully)) uploadTask.Result.Dispose();
     }
 
-    private static async Task<TcpClient> StartUpload(IPEndPoint serverEp, long upLength, long downLength,
+    private static async Task<TcpClient> StartUpload(IPEndPoint serverEp, long upSize, long downSize,
         Speedometer speedometer, CancellationToken cancellationToken)
     {
         var tcpClient = new TcpClient();
@@ -53,16 +53,16 @@ public class TcpTesterClient
 
             var stream = tcpClient.GetStream();
 
-            // write upLength to server
-            var buffer = BitConverter.GetBytes(upLength);
+            // write upSize to server
+            var buffer = BitConverter.GetBytes(upSize);
             await stream.WriteAsync(buffer, 0, 8, cancellationToken);
 
-            // write downLength to server
-            buffer = BitConverter.GetBytes(downLength);
+            // write downSize to server
+            buffer = BitConverter.GetBytes(downSize);
             await stream.WriteAsync(buffer, 0, 8, cancellationToken);
 
             // write random data
-            await using var random = new StreamRandomReader(upLength, speedometer);
+            await using var random = new StreamRandomReader(upSize, speedometer);
             await random.CopyToAsync(stream, cancellationToken);
             return tcpClient;
 
@@ -73,13 +73,13 @@ public class TcpTesterClient
         }
     }
 
-    private static async Task StartDownload(Stream stream, long length, Speedometer speedometer,
+    private static async Task StartDownload(Stream stream, long size, Speedometer speedometer,
         CancellationToken cancellationToken)
     {
         try {
             // read from server
             await using var discarder = new StreamDiscarder(speedometer);
-            await discarder.ReadFromAsync(stream, length: length, cancellationToken: cancellationToken);
+            await discarder.ReadFromAsync(stream, size: size, cancellationToken: cancellationToken);
 
         }
         catch (Exception ex) {

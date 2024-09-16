@@ -39,51 +39,51 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
         return ipAddresses[0];
     }
 
-    public async Task Start(long upLength, long downLength, int connectionCount,
+    public async Task Start(long upSize, long downSize, int connectionCount,
         CancellationToken cancellationToken)
     {
-        if (downLength != 0)
-            await StartUpload(upLength, connectionCount, cancellationToken);
+        if (downSize != 0)
+            await StartUpload(upSize, connectionCount, cancellationToken);
 
-        if (downLength != 0)
-            await StartDownload(downLength, connectionCount, cancellationToken);
+        if (downSize != 0)
+            await StartDownload(downSize, connectionCount, cancellationToken);
     }
 
 
-    public async Task StartUpload(long length, int connectionCount, CancellationToken cancellationToken)
+    public async Task StartUpload(long size, int connectionCount, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"{Scheme} => Start Uploading {VhUtil.FormatBytes(length)}, Connections: {connectionCount}");
+        VhLogger.Instance.LogInformation($"{Scheme} => Start Uploading {VhUtil.FormatBytes(size)}, Connections: {connectionCount}");
 
         // start multi uploaders
         using var speedometer = new Speedometer("Up");
         var uploadTasks = new Task[connectionCount];
         for (var i = 0; i < connectionCount; i++)
-            uploadTasks[i] = StartUploadInternal(length / connectionCount, speedometer: speedometer,
+            uploadTasks[i] = StartUploadInternal(size / connectionCount, speedometer: speedometer,
                 cancellationToken: cancellationToken);
         await Task.WhenAll(uploadTasks);
     }
 
-    public async Task StartDownload(long length, int connectionCount,
+    public async Task StartDownload(long size, int connectionCount,
         CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"{Scheme} => Start Downloading {VhUtil.FormatBytes(length)}, Connections: {connectionCount}");
+        VhLogger.Instance.LogInformation($"{Scheme} => Start Downloading {VhUtil.FormatBytes(size)}, Connections: {connectionCount}");
 
         // start multi downloader
         using var speedometer = new Speedometer("Down");
         var uploadTasks = new Task[connectionCount];
         for (var i = 0; i < connectionCount; i++)
-            uploadTasks[i] = StartDownloadInternal(length / connectionCount, speedometer: speedometer,
+            uploadTasks[i] = StartDownloadInternal(size / connectionCount, speedometer: speedometer,
                 cancellationToken: cancellationToken);
         await Task.WhenAll(uploadTasks);
     }
 
-    private async Task StartUploadInternal(long length, Speedometer speedometer, CancellationToken cancellationToken)
+    private async Task StartUploadInternal(long size, Speedometer speedometer, CancellationToken cancellationToken)
     {
         try {
             // Create a custom stream that generates random data on the fly
-            await using var contentStream = new StreamRandomReader(length, speedometer);
+            await using var contentStream = new StreamRandomReader(size, speedometer);
             var content = new StreamContent(contentStream);
             content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
 
@@ -98,13 +98,13 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
         }
     }
 
-    private async Task StartDownloadInternal(long length, Speedometer speedometer,
+    private async Task StartDownloadInternal(long size, Speedometer speedometer,
         CancellationToken cancellationToken)
     {
         try {
             // Upload the content to the server
             using var httpClient = CreateHttpClient();
-            var requestUri = new Uri(GetBaseUri(), $"download?length={length}");
+            var requestUri = new Uri(GetBaseUri(), $"downloads?size={size}&file={Guid.NewGuid()}.pak");
             await using var stream = await httpClient.GetStreamAsync(requestUri, cancellationToken);
 
             // read all data from the stream
@@ -153,30 +153,30 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
         return client;
     }
 
-    public static async Task SimpleDownload(Uri url, int length, int connectionCount, CancellationToken cancellationToken)
+    public static async Task SimpleDownload(Uri url, int size, int connectionCount, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"Url => Start Downloading {VhUtil.FormatBytes(length)}, Connections: {connectionCount}, Url: {url}");
+        VhLogger.Instance.LogInformation($"Url => Start Downloading {VhUtil.FormatBytes(size)}, Connections: {connectionCount}, Url: {url}");
 
         // start multi downloader
         using var speedometer = new Speedometer("Down");
         var uploadTasks = new Task[connectionCount];
         for (var i = 0; i < connectionCount; i++)
-            uploadTasks[i] = SimpleDownload(url, length / connectionCount, speedometer: speedometer,
+            uploadTasks[i] = SimpleDownload(url, size / connectionCount, speedometer: speedometer,
                 cancellationToken: cancellationToken);
 
         await Task.WhenAll(uploadTasks);
     }
 
-    private static async Task SimpleDownload(Uri url, int length, Speedometer speedometer, CancellationToken cancellationToken)
+    private static async Task SimpleDownload(Uri url, int size, Speedometer speedometer, CancellationToken cancellationToken)
     {
         try {
             using var client = new HttpClient();
             var stream = await client.GetStreamAsync(url, cancellationToken);
 
-            // read length data to discarder
+            // read size data to discarder
             await using var streamDiscarder = new StreamDiscarder(speedometer);
-            await streamDiscarder.ReadFromAsync(stream, length, cancellationToken: cancellationToken);
+            await streamDiscarder.ReadFromAsync(stream, size, cancellationToken: cancellationToken);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogInformation(ex, "Error downloading a url.");

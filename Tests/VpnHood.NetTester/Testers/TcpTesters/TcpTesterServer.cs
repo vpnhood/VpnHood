@@ -35,19 +35,19 @@ public class TcpTesterServer : IDisposable
         try {
             await using var stream = client.GetStream();
 
-            // find read length
+            // find read size
             var buffer = new byte[16];
             await stream.ReadAtLeastAsync(buffer, 16, true, cancellationToken);
 
-            var readLength = BitConverter.ToInt64(buffer, 0);
-            var writeLength = BitConverter.ToInt64(buffer, 8);
+            var readSize = BitConverter.ToInt64(buffer, 0);
+            var writeSize = BitConverter.ToInt64(buffer, 8);
 
             // read data
             await using var discarder = new StreamDiscarder(null);
-            await discarder.ReadFromAsync(stream, length: readLength, cancellationToken: cancellationToken);
+            await discarder.ReadFromAsync(stream, size: readSize, cancellationToken: cancellationToken);
 
             // write data
-            await using var randomReader = new StreamRandomReader(writeLength, null);
+            await using var randomReader = new StreamRandomReader(writeSize, null);
             await randomReader.CopyToAsync(stream, cancellationToken);
         }
         finally {

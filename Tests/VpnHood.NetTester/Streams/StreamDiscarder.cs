@@ -24,14 +24,14 @@ public class StreamDiscarder(Speedometer? speedometer) : Stream
         speedometer?.AddWrite(count);
     }
 
-    public async Task ReadFromAsync(Stream source, long length, int bufferSize = 81920,
+    public async Task ReadFromAsync(Stream source, long size, int bufferSize = 81920,
         CancellationToken cancellationToken = default)
     {
         var buffer = new byte[bufferSize];
         var totalBytesCopied = 0;
 
-        while (totalBytesCopied < length) {
-            var bytesToRead = (int)Math.Min(bufferSize, length - totalBytesCopied);
+        while (totalBytesCopied < size) {
+            var bytesToRead = (int)Math.Min(bufferSize, size - totalBytesCopied);
             var bytesRead = await source.ReadAsync(buffer, 0, bytesToRead, cancellationToken);
             if (bytesRead == 0)
                 break; // End of source stream

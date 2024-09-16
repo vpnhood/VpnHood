@@ -8,6 +8,7 @@ public class StreamRandomReader(long length, Speedometer? speedometer) : Stream
     private long _position;
     private readonly Random _random = new();
     private long _length = length;
+    public static TimeSpan? ReadDelay { get; set; }
 
     public override bool CanRead => true;
     public override bool CanSeek => true;
@@ -56,8 +57,8 @@ public class StreamRandomReader(long length, Speedometer? speedometer) : Stream
 
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        //todo
-        await Task.Delay(TimeSpan.FromMilliseconds(1), cancellationToken);
+        if (ReadDelay != null)
+            await Task.Delay(ReadDelay.Value, cancellationToken);
         return await base.ReadAsync(buffer, offset, count, cancellationToken);
     }
 }

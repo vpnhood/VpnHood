@@ -1,4 +1,8 @@
 ﻿using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Security;
+using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
@@ -7,89 +11,85 @@ using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Testers.HttpTesters;
 
-public class HttpTesterClient
+public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
 {
-    public static async Task StartSingle(IPEndPoint serverEp, long upLength, long downLength,
+    private string Scheme => isHttps ? "Https" : "Http";
+    private Uri GetBaseUri()
+    {
+        var host = domain ?? serverEp.Address.ToString();
+        var uriBuilder = new UriBuilder(Scheme.ToLower(), host, serverEp.Port);
+        return uriBuilder.Uri;
+    }
+
+    private IPAddress ResolveDns(string value)
+    {
+        // check if it is an IP address
+        if (IPAddress.TryParse(value, out var ipAddress))
+            return ipAddress;
+
+        // check if it is our domain
+        if (value.Equals(domain, StringComparison.OrdinalIgnoreCase))
+            return serverEp.Address;
+
+        // resolve the domain
+        var ipAddresses = Dns.GetHostAddresses(value);
+        if (ipAddresses.Length == 0)
+            throw new InvalidOperationException($"Cannot resolve domain: {value}");
+        
+        return ipAddresses[0];
+    }
+
+    public async Task Start(long upLength, long downLength, int connectionCount,
         CancellationToken cancellationToken)
     {
-        if (upLength != 0)
-            await SingleUpload(serverEp, upLength, cancellationToken);
+        if (downLength != 0)
+            await StartUpload(upLength, connectionCount, cancellationToken);
 
         if (downLength != 0)
-            await SingleDownload(serverEp, downLength, cancellationToken);
-    }
-
-    public static async Task StartMulti(IPEndPoint serverEp, long upLength, long downLength, int connectionCount,
-        CancellationToken cancellationToken)
-    {
-        if (downLength != 0)
-            await MultiUpload(serverEp, upLength, connectionCount, cancellationToken);
-
-        if (downLength != 0)
-            await MultiDownload(serverEp, downLength, connectionCount, cancellationToken);
+            await StartDownload(downLength, connectionCount, cancellationToken);
     }
 
 
-    public static async Task SingleUpload(IPEndPoint serverEp, long length, CancellationToken cancellationToken)
+    public async Task StartUpload(long length, int connectionCount, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"SingleHttp => Start Uploading {VhUtil.FormatBytes(length)}");
-        using var speedometer = new Speedometer("SingleHttp => Up");
-        await StartUpload(serverEp, length, speedometer, cancellationToken);
-    }
-
-    public static async Task SingleDownload(IPEndPoint serverEp, long length, CancellationToken cancellationToken)
-    {
-        VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"SingleHttp => Start Downloading {VhUtil.FormatBytes(length)}");
-        using var speedometer = new Speedometer("SingleHttp => Down");
-        await StartDownload(serverEp, length, speedometer, cancellationToken);
-    }
-
-    public static async Task MultiUpload(IPEndPoint serverEp, long length, int connectionCount,
-        CancellationToken cancellationToken)
-    {
-        VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation(
-            $"MultiHttp => Start Uploading {VhUtil.FormatBytes(length)}, Multi: {connectionCount}x");
+        VhLogger.Instance.LogInformation($"{Scheme} => Start Uploading {VhUtil.FormatBytes(length)}, Connections: {connectionCount}");
 
         // start multi uploaders
-        using var speedometer1 = new Speedometer("MultiHttp => Up");
+        using var speedometer1 = new Speedometer("Up");
         var uploadTasks = new Task[connectionCount];
         for (var i = 0; i < connectionCount; i++)
-            uploadTasks[i] = StartUpload(serverEp, length / connectionCount, speedometer: speedometer1,
+            uploadTasks[i] = StartUploadInternal(length / connectionCount, speedometer: speedometer1,
                 cancellationToken: cancellationToken);
         await Task.WhenAll(uploadTasks);
     }
 
-    public static async Task MultiDownload(IPEndPoint serverEp, long length, int connectionCount,
+    public async Task StartDownload(long length, int connectionCount,
         CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation(
-            $"MultiHttp => Start Downloading {VhUtil.FormatBytes(length)}, Multi: {connectionCount}x");
+        VhLogger.Instance.LogInformation($"{Scheme} => Start Downloading {VhUtil.FormatBytes(length)}, Connections: {connectionCount}");
 
         // start multi downloader
-        using var speedometer1 = new Speedometer("MultiHttp => Down");
+        using var speedometer1 = new Speedometer("Down");
         var uploadTasks = new Task[connectionCount];
         for (var i = 0; i < connectionCount; i++)
-            uploadTasks[i] = StartDownload(serverEp, length / connectionCount, speedometer: speedometer1,
+            uploadTasks[i] = StartDownloadInternal(length / connectionCount, speedometer: speedometer1,
                 cancellationToken: cancellationToken);
         await Task.WhenAll(uploadTasks);
     }
 
-    private static async Task StartUpload(IPEndPoint serverEp, long length,
-        Speedometer speedometer, CancellationToken cancellationToken)
+    private async Task StartUploadInternal(long length, Speedometer speedometer, CancellationToken cancellationToken)
     {
         try {
             // Create a custom stream that generates random data on the fly
             await using var contentStream = new StreamRandomReader(length, speedometer);
             var content = new StreamContent(contentStream);
-            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
 
             // Upload the content to the server
-            var httpClient = new HttpClient();
-            var requestUri = $"http://{serverEp}/upload";
+            using var httpClient = CreateHttpClient();
+            var requestUri = new Uri(GetBaseUri(), "upload");
             var response = await httpClient.PostAsync(requestUri, content, cancellationToken);
             response.EnsureSuccessStatusCode();
         }
@@ -98,13 +98,13 @@ public class HttpTesterClient
         }
     }
 
-    private static async Task StartDownload(IPEndPoint serverEp, long length, Speedometer speedometer,
+    private async Task StartDownloadInternal(long length, Speedometer speedometer,
         CancellationToken cancellationToken)
     {
         try {
             // Upload the content to the server
-            var httpClient = new HttpClient();
-            var requestUri = $"http://{serverEp}/download?length={length}";
+            using var httpClient = CreateHttpClient();
+            var requestUri = new Uri(GetBaseUri(), $"download?length={length}");
             await using var stream = await httpClient.GetStreamAsync(requestUri, cancellationToken);
 
             // read all data from the stream
@@ -116,4 +116,42 @@ public class HttpTesterClient
             VhLogger.Instance.LogInformation(ex, "Error in download via HTTP.");
         }
     }
+
+    // Create a custom HttpClient with custom SocketsHttpHandler
+    // to resolve the domain and accept all certificates
+    // for this example we are not validating the certificate
+    private HttpClient CreateHttpClient()
+    {
+        var socketHttpHandler = new SocketsHttpHandler {
+            ConnectCallback = async (context, cancellationToken) => {
+                var ipAddress = ResolveDns(context.DnsEndPoint.Host);
+                var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) {
+                    NoDelay = true
+                };
+
+                try {
+                    await socket.ConnectAsync(ipAddress, context.DnsEndPoint.Port, cancellationToken);
+                    return new NetworkStream(socket, ownsSocket: true);
+                }
+                catch {
+                    socket.Dispose();
+                    throw;
+                }
+            },
+            SslOptions = new SslClientAuthenticationOptions {
+                CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
+                RemoteCertificateValidationCallback = (_, _, _, _) => 
+                    true
+            }
+        };
+
+        //var handler = new HttpClientHandler();
+        //handler.ClientCertificateOptions = ClientCertificateOption.Manual;
+        //handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
+        //var client = new HttpClient(handler);
+        var client = new HttpClient(socketHttpHandler);
+        return client;
+    }
+
 }
+

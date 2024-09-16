@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.NetTester.Servers;
+using VpnHood.NetTester.Streams;
 using VpnHood.NetTester.Testers.HttpTesters;
 using VpnHood.NetTester.Testers.TcpTesters;
 
@@ -22,6 +23,9 @@ internal class ClientApp : IDisposable
 
         // dump clientOptions
         VhLogger.Instance.LogInformation($"ClientOptions: {JsonSerializer.Serialize(clientOptions)}");
+
+        if (clientOptions.IsDebug)
+            StreamRandomReader.ReadDelay = TimeSpan.FromMicroseconds(1000);
     }
 
     public static async Task<ClientApp> Create(ClientOptions clientOptions)
@@ -34,34 +38,58 @@ internal class ClientApp : IDisposable
     public async Task StartTest(CancellationToken cancellationToken)
     {
         if (_clientOptions.TcpPort != 0) {
-            await ConfigureServer();
-
             // test single
             if (_clientOptions.Single)
-                await TcpTesterClient.StartSingle(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
+                await TcpTesterClient.Start(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
                     upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
+                    connectionCount: 1,
                     cancellationToken: cancellationToken);
 
             // test multi
             if (_clientOptions.Multi > 0)
-                await TcpTesterClient.StartMulti(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
+                await TcpTesterClient.Start(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
                     upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
-                    multi: _clientOptions.Multi,
+                    connectionCount: _clientOptions.Multi,
                     cancellationToken: cancellationToken);
         }
 
         if (_clientOptions.HttpPort != 0) {
-            await ConfigureServer();
+            var httpTesterClient = new HttpTesterClient(
+                new IPEndPoint(ServerEndPoint.Address, _clientOptions.HttpPort),
+                domain: _clientOptions.Domain, isHttps: false);
 
             // test single
             if (_clientOptions.Single)
-                await HttpTesterClient.StartSingle(new IPEndPoint(ServerEndPoint.Address, _clientOptions.HttpPort),
-                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
+                await httpTesterClient.Start(
+                    upLength: _clientOptions.UpLength,
+                    downLength: _clientOptions.DownLength,
+                    connectionCount: 1,
                     cancellationToken: cancellationToken);
 
             // test multi
             if (_clientOptions.Multi > 0)
-                await HttpTesterClient.StartMulti(new IPEndPoint(ServerEndPoint.Address, _clientOptions.HttpPort),
+                await httpTesterClient.Start(
+                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
+                    connectionCount: _clientOptions.Multi,
+                    cancellationToken: cancellationToken);
+        }
+
+        if (_clientOptions.HttpsPort != 0) {
+            var httpsTesterClient = new HttpTesterClient(
+                new IPEndPoint(ServerEndPoint.Address, _clientOptions.HttpsPort),
+                domain: _clientOptions.Domain, isHttps: true);
+
+            // test single
+            if (_clientOptions.Single)
+                await httpsTesterClient.Start(
+                    upLength: _clientOptions.UpLength,
+                    downLength: _clientOptions.DownLength,
+                    connectionCount: 1,
+                    cancellationToken: cancellationToken);
+
+            // test multi
+            if (_clientOptions.Multi > 0)
+                await httpsTesterClient.Start(
                     upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
                     connectionCount: _clientOptions.Multi,
                     cancellationToken: cancellationToken);
@@ -74,7 +102,8 @@ internal class ClientApp : IDisposable
             TcpPort = _clientOptions.TcpPort,
             HttpPort = _clientOptions.HttpPort,
             HttpsPort = _clientOptions.HttpsPort,
-            HttpsDomain = _clientOptions.HttpsDomain,
+            HttpsDomain = _clientOptions.Domain,
+            IsValidDomain = _clientOptions.IsValidDomain
         };
 
         // sent serverConfig to server via HttpClient

@@ -35,7 +35,7 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
         var ipAddresses = Dns.GetHostAddresses(value);
         if (ipAddresses.Length == 0)
             throw new InvalidOperationException($"Cannot resolve domain: {value}");
-        
+
         return ipAddresses[0];
     }
 
@@ -56,10 +56,10 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
         VhLogger.Instance.LogInformation($"{Scheme} => Start Uploading {VhUtil.FormatBytes(length)}, Connections: {connectionCount}");
 
         // start multi uploaders
-        using var speedometer1 = new Speedometer("Up");
+        using var speedometer = new Speedometer("Up");
         var uploadTasks = new Task[connectionCount];
         for (var i = 0; i < connectionCount; i++)
-            uploadTasks[i] = StartUploadInternal(length / connectionCount, speedometer: speedometer1,
+            uploadTasks[i] = StartUploadInternal(length / connectionCount, speedometer: speedometer,
                 cancellationToken: cancellationToken);
         await Task.WhenAll(uploadTasks);
     }
@@ -71,10 +71,10 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
         VhLogger.Instance.LogInformation($"{Scheme} => Start Downloading {VhUtil.FormatBytes(length)}, Connections: {connectionCount}");
 
         // start multi downloader
-        using var speedometer1 = new Speedometer("Down");
+        using var speedometer = new Speedometer("Down");
         var uploadTasks = new Task[connectionCount];
         for (var i = 0; i < connectionCount; i++)
-            uploadTasks[i] = StartDownloadInternal(length / connectionCount, speedometer: speedometer1,
+            uploadTasks[i] = StartDownloadInternal(length / connectionCount, speedometer: speedometer,
                 cancellationToken: cancellationToken);
         await Task.WhenAll(uploadTasks);
     }
@@ -140,7 +140,7 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
             },
             SslOptions = new SslClientAuthenticationOptions {
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
-                RemoteCertificateValidationCallback = (_, _, _, _) => 
+                RemoteCertificateValidationCallback = (_, _, _, _) =>
                     true
             }
         };
@@ -153,5 +153,34 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
         return client;
     }
 
+    public static async Task SimpleDownload(Uri url, int length, int connectionCount, CancellationToken cancellationToken)
+    {
+        VhLogger.Instance.LogInformation("\n--------");
+        VhLogger.Instance.LogInformation($"Url => Start Downloading {VhUtil.FormatBytes(length)}, Connections: {connectionCount}, Url: {url}");
+
+        // start multi downloader
+        using var speedometer = new Speedometer("Down");
+        var uploadTasks = new Task[connectionCount];
+        for (var i = 0; i < connectionCount; i++)
+            uploadTasks[i] = SimpleDownload(url, length / connectionCount, speedometer: speedometer,
+                cancellationToken: cancellationToken);
+
+        await Task.WhenAll(uploadTasks);
+    }
+
+    private static async Task SimpleDownload(Uri url, int length, Speedometer speedometer, CancellationToken cancellationToken)
+    {
+        try {
+            using var client = new HttpClient();
+            var stream = await client.GetStreamAsync(url, cancellationToken);
+
+            // read length data to discarder
+            await using var streamDiscarder = new StreamDiscarder(speedometer);
+            await streamDiscarder.ReadFromAsync(stream, length, cancellationToken: cancellationToken);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogInformation(ex, "Error downloading a url.");
+        }
+    }
 }
 

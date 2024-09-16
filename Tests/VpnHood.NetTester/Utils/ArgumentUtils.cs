@@ -51,6 +51,9 @@ internal static class ArgumentUtils
         if (typeof(T) == typeof(IPEndPoint))
             return (T)(object)IPEndPoint.Parse(value);
 
+        if (typeof(T) == typeof(Uri))
+            return (T)(object)new Uri(value);
+
         throw new ArgumentException($"Type {typeof(T)} is not supported.");
     }
 }

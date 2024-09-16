@@ -58,7 +58,6 @@ public class Speedometer : IJob, IDisposable
         }
     }
 
-
     public void AddFailed()
     {
         lock (_lockObject)

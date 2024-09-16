@@ -34,9 +34,30 @@ internal class ServerHost(IPAddress listenerIp) : IDisposable
             _httpTesterServer = new HttpTesterServer(
                 httpEndPoint: httpEndPoint, 
                 httpsEndPoint: httpsEndPoint,
-                certificate2: serverConfig.HttpsPort != 0 ? await CreateCertificate(serverConfig.HttpsDomain) : null,
+                certificate: await PrepareCertificate(serverConfig),
                 _cancellationTokenSource.Token);
         }
+    }
+
+    private static async Task<X509Certificate2?> PrepareCertificate(ServerConfig serverConfig)
+    {
+        if (serverConfig.HttpsPort == 0)
+            return null;
+
+        if (serverConfig.IsValidDomain) {
+            if (string.IsNullOrWhiteSpace(serverConfig.HttpsDomain))
+                throw new InvalidOperationException("Domain is required for a valid domain.");
+            return LoadCertificate(serverConfig.HttpsDomain);
+        }
+
+        return await CreateCertificate(serverConfig.HttpsDomain);
+    }
+
+    private static X509Certificate2 LoadCertificate(string domain)
+    {
+        var raw = File.ReadAllBytes($"../certs/{domain}.pfx");
+        var cert = new X509Certificate2(raw);
+        return cert;
     }
 
     private static async Task<X509Certificate2> CreateCertificate(string? domain)
@@ -58,7 +79,7 @@ internal class ServerHost(IPAddress listenerIp) : IDisposable
         domain ??= CertificateUtil.CreateRandomDns();
         var ret2 = CertificateUtil.CreateSelfSigned($"CN={domain}");
         VhLogger.Instance.LogInformation("Created self-signed certificate. Domain: {Domain}", domain);
-        return ret2;
+        return CertificateUtil.CreateExportable(ret2, "");
     }
 
     public void Stop()

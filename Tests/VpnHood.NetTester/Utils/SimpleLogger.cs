@@ -9,6 +9,9 @@ public class SimpleLogger(string? file = null) : ILogger
     {
         var message = formatter(state, exception);
 
+        if (exception!= null)
+            message += " " + exception.Message;
+
         if (!message.StartsWith("\n"))
             message = $"[{DateTime.Now:h:mm:ss}] {message}";
 

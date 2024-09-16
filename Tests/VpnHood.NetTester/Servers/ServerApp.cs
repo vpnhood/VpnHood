@@ -2,7 +2,6 @@
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
-using Swan.Logging;
 
 namespace VpnHood.NetTester.Servers;
 
@@ -21,7 +20,7 @@ internal class ServerApp : IDisposable
 
         _webServer = new WebServer(webServerOptions)
             .WithWebApi("/", c => c.WithController(() => new CommandApiController(ServerHost)));
-        Logger.UnregisterLogger<ConsoleLogger>();
+        //Logger.UnregisterLogger<ConsoleLogger>();
 
         _webServer.Start();
     }

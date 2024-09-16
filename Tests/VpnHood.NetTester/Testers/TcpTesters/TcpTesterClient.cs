@@ -10,38 +10,17 @@ namespace VpnHood.NetTester.Testers.TcpTesters;
 
 public class TcpTesterClient
 {
-    public static async Task StartSingle(IPEndPoint serverEp, long upLength, long downLength,
+    public static async Task Start(IPEndPoint serverEp, long upLength, long downLength, int connectionCount,
         CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"SingleTcp => Start Uploading {VhUtil.FormatBytes(upLength)}");
-        TcpClient tcpClient;
-        using (var speedometer = new Speedometer("SingleTcp => Up"))
-            tcpClient = await StartUpload(serverEp, upLength: upLength, downLength: downLength,
-                speedometer: speedometer, cancellationToken: cancellationToken);
-
-        if (tcpClient.Connected) {
-            VhLogger.Instance.LogInformation("\n--------");
-            VhLogger.Instance.LogInformation($"SingleTcp => Start Downloading {VhUtil.FormatBytes(downLength)}");
-            using var speedometer = new Speedometer("SingleTcp => Down");
-            await StartDownload(tcpClient.GetStream(), downLength, speedometer, cancellationToken);
-        }
-
-        tcpClient.Dispose();
-    }
-
-
-    public static async Task StartMulti(IPEndPoint serverEp, long upLength, long downLength, int multi,
-        CancellationToken cancellationToken)
-    {
-        var uploadTasks = new Task<TcpClient>[multi];
+        var uploadTasks = new Task<TcpClient>[connectionCount];
 
         // start multi uploaders
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"MultiTcp => Start Uploading {VhUtil.FormatBytes(upLength)}, Multi: {multi}x");
-        using (var speedometer = new Speedometer("MultiTcp => Up")) {
-            for (var i = 0; i < multi; i++)
-                uploadTasks[i] = StartUpload(serverEp, upLength: upLength / multi, downLength: downLength / multi,
+        VhLogger.Instance.LogInformation($"Tcp => Start Uploading {VhUtil.FormatBytes(upLength)}, Connections: {connectionCount}");
+        using (var speedometer = new Speedometer("Up")) {
+            for (var i = 0; i < connectionCount; i++)
+                uploadTasks[i] = StartUpload(serverEp, upLength: upLength / connectionCount, downLength: downLength / connectionCount,
                     speedometer: speedometer, cancellationToken: cancellationToken);
 
             await Task.WhenAll(uploadTasks);
@@ -49,12 +28,12 @@ public class TcpTesterClient
 
         // start multi downloaders
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"MultiTcp => Start Downloading {VhUtil.FormatBytes(downLength)}, Multi: {multi}x");
-        using (var speedometer = new Speedometer("MultiTcp => Down")) {
-            var downloadTasks = new Task[multi];
-            for (var i = 0; i < multi; i++)
+        VhLogger.Instance.LogInformation($"Tcp => Start Downloading {VhUtil.FormatBytes(downLength)}, Connections: {connectionCount}");
+        using (var speedometer = new Speedometer("Down")) {
+            var downloadTasks = new Task[connectionCount];
+            for (var i = 0; i < connectionCount; i++)
                 if (uploadTasks[i].Result.Connected)
-                    downloadTasks[i] = StartDownload(uploadTasks[i].Result.GetStream(), downLength / multi, speedometer,
+                    downloadTasks[i] = StartDownload(uploadTasks[i].Result.GetStream(), downLength / connectionCount, speedometer,
                     cancellationToken);
 
             await Task.WhenAll(downloadTasks);

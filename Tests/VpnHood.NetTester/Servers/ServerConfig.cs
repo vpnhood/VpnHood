@@ -6,4 +6,5 @@ internal class ServerConfig
     public int HttpPort { get; init; }
     public int HttpsPort { get; init; }
     public string? HttpsDomain { get; init; }
+    public bool IsValidDomain { get; init; }
 }

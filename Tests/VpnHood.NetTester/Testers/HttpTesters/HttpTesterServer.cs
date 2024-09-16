@@ -15,20 +15,21 @@ internal class HttpTesterServer : IDisposable
     public HttpTesterServer(
         IPEndPoint? httpEndPoint, 
         IPEndPoint? httpsEndPoint, 
-        X509Certificate2? certificate2, 
+        X509Certificate2? certificate, 
         CancellationToken cancellationToken)
     {
         // create web server
-        var webServerOptions = new WebServerOptions() {
-            Certificate = certificate2,
+        var webServerOptions = new WebServerOptions {
+            Certificate = certificate,
             AutoRegisterCertificate = false
         };
 
         if (httpEndPoint != null) {
-            webServerOptions.AddUrlPrefix($"http://{httpEndPoint}");
+            webServerOptions.AddUrlPrefix($"http://+:{httpEndPoint.Port}");
+
         }
         if (httpsEndPoint != null) {
-            webServerOptions.AddUrlPrefix($"https://{httpsEndPoint}");
+            webServerOptions.AddUrlPrefix($"https://+:{httpsEndPoint.Port}");
         }
 
         _webServer = new WebServer(webServerOptions)

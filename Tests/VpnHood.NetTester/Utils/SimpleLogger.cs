@@ -13,12 +13,11 @@ public class SimpleLogger(string? file = null) : ILogger
             message += " " + exception.Message;
 
         if (!message.StartsWith("\n"))
-            message = $"[{DateTime.Now:h:mm:ss}] {message}";
+            message = $"[{DateTime.Now:HH:mm:ss}] {message}";
 
         Console.WriteLine(message);
         if (!string.IsNullOrEmpty(file))
             File.AppendAllText(file, message + Environment.NewLine);
-
     }
 
     public bool IsEnabled(LogLevel logLevel) => true;

@@ -94,26 +94,36 @@ internal class ClientApp : IDisposable
                     connectionCount: _clientOptions.Multi,
                     cancellationToken: cancellationToken);
         }
+
+        if (_clientOptions.Url != null) {
+            if (_clientOptions.Single)
+                await HttpTesterClient.SimpleDownload(_clientOptions.Url, length: _clientOptions.DownLength,
+                    connectionCount: 1, cancellationToken: cancellationToken);
+
+            if (_clientOptions.Multi > 0)
+                await HttpTesterClient.SimpleDownload(_clientOptions.Url, length: _clientOptions.DownLength,
+                    connectionCount: _clientOptions.Multi, cancellationToken: cancellationToken);
+        }
     }
 
     private async Task ConfigureServer()
-    {
-        var serverConfig = new ServerConfig {
-            TcpPort = _clientOptions.TcpPort,
-            HttpPort = _clientOptions.HttpPort,
-            HttpsPort = _clientOptions.HttpsPort,
-            HttpsDomain = _clientOptions.Domain,
-            IsValidDomain = _clientOptions.IsValidDomain
-        };
+        {
+            var serverConfig = new ServerConfig {
+                TcpPort = _clientOptions.TcpPort,
+                HttpPort = _clientOptions.HttpPort,
+                HttpsPort = _clientOptions.HttpsPort,
+                HttpsDomain = _clientOptions.Domain,
+                IsValidDomain = _clientOptions.IsValidDomain
+            };
 
-        // sent serverConfig to server via HttpClient
-        var httpClient = new HttpClient();
-        var content = new StringContent(JsonSerializer.Serialize(serverConfig), Encoding.UTF8, "application/json");
-        var response = await httpClient.PostAsync($"http://{ServerEndPoint}/config", content);
-        response.EnsureSuccessStatusCode();
-    }
+            // sent serverConfig to server via HttpClient
+            var httpClient = new HttpClient();
+            var content = new StringContent(JsonSerializer.Serialize(serverConfig), Encoding.UTF8, "application/json");
+            var response = await httpClient.PostAsync($"http://{ServerEndPoint}/config", content);
+            response.EnsureSuccessStatusCode();
+        }
 
-    public void Dispose()
-    {
+        public void Dispose()
+        {
+        }
     }
-}

@@ -41,14 +41,14 @@ internal class ClientApp : IDisposable
             // test single
             if (_clientOptions.Single)
                 await TcpTesterClient.Start(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
-                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
+                    upSize: _clientOptions.UpSize, downSize: _clientOptions.DownSize,
                     connectionCount: 1,
                     cancellationToken: cancellationToken);
 
             // test multi
             if (_clientOptions.Multi > 0)
                 await TcpTesterClient.Start(new IPEndPoint(ServerEndPoint.Address, _clientOptions.TcpPort),
-                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
+                    upSize: _clientOptions.UpSize, downSize: _clientOptions.DownSize,
                     connectionCount: _clientOptions.Multi,
                     cancellationToken: cancellationToken);
         }
@@ -61,15 +61,15 @@ internal class ClientApp : IDisposable
             // test single
             if (_clientOptions.Single)
                 await httpTesterClient.Start(
-                    upLength: _clientOptions.UpLength,
-                    downLength: _clientOptions.DownLength,
+                    upSize: _clientOptions.UpSize,
+                    downSize: _clientOptions.DownSize,
                     connectionCount: 1,
                     cancellationToken: cancellationToken);
 
             // test multi
             if (_clientOptions.Multi > 0)
                 await httpTesterClient.Start(
-                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
+                    upSize: _clientOptions.UpSize, downSize: _clientOptions.DownSize,
                     connectionCount: _clientOptions.Multi,
                     cancellationToken: cancellationToken);
         }
@@ -82,26 +82,26 @@ internal class ClientApp : IDisposable
             // test single
             if (_clientOptions.Single)
                 await httpsTesterClient.Start(
-                    upLength: _clientOptions.UpLength,
-                    downLength: _clientOptions.DownLength,
+                    upSize: _clientOptions.UpSize,
+                    downSize: _clientOptions.DownSize,
                     connectionCount: 1,
                     cancellationToken: cancellationToken);
 
             // test multi
             if (_clientOptions.Multi > 0)
                 await httpsTesterClient.Start(
-                    upLength: _clientOptions.UpLength, downLength: _clientOptions.DownLength,
+                    upSize: _clientOptions.UpSize, downSize: _clientOptions.DownSize,
                     connectionCount: _clientOptions.Multi,
                     cancellationToken: cancellationToken);
         }
 
         if (_clientOptions.Url != null) {
             if (_clientOptions.Single)
-                await HttpTesterClient.SimpleDownload(_clientOptions.Url, length: _clientOptions.DownLength,
+                await HttpTesterClient.SimpleDownload(_clientOptions.Url, size: _clientOptions.DownSize,
                     connectionCount: 1, cancellationToken: cancellationToken);
 
             if (_clientOptions.Multi > 0)
-                await HttpTesterClient.SimpleDownload(_clientOptions.Url, length: _clientOptions.DownLength,
+                await HttpTesterClient.SimpleDownload(_clientOptions.Url, size: _clientOptions.DownSize,
                     connectionCount: _clientOptions.Multi, cancellationToken: cancellationToken);
         }
     }

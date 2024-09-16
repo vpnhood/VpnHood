@@ -21,6 +21,7 @@
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<AssemblyName>nettester</AssemblyName>
+		<AssemblyVersion>1.0.1</AssemblyVersion>
 	</PropertyGroup>
 
 	<ItemGroup>

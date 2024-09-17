@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Net;
 using System.Text.Json.Serialization;
+using System.Threading;
 using VpnHood.Common.Converters;
 using VpnHood.Common.Utils;
 
@@ -45,7 +46,7 @@ public class IpLocationIoProvider(HttpClient httpClient, string userAgent, strin
     private static async Task<IpLocation> GetLocation(HttpClient httpClient, Uri url, string userAgent,
         CancellationToken cancellationToken)
     {
-        // get json from the service provider
+        // get data from the service provider
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
         requestMessage.Headers.Add("User-Agent", userAgent);
         var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken).VhConfigureAwait();

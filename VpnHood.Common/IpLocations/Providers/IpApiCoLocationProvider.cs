@@ -5,7 +5,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.IpLocations.Providers;
 
-public class IpApiCoLocationProvider(string userAgent) : IIpLocationProvider
+public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : IIpLocationProvider
 {
     internal class ApiLocation
     {
@@ -26,13 +26,13 @@ public class IpApiCoLocationProvider(string userAgent) : IIpLocationProvider
         [JsonPropertyName("continent_code")] public string? ContinentCode { get; set; }
     }
 
-    public Task<IpLocation> GetLocation(HttpClient httpClient, IPAddress ipAddress, CancellationToken cancellationToken)
+    public Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
     {
         var uri = new Uri($"https://ipapi.co/{ipAddress}/json/");
         return GetLocation(httpClient, uri, userAgent, cancellationToken);
     }
 
-    public Task<IpLocation> GetLocation(HttpClient httpClient, CancellationToken cancellationToken)
+    public Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         var uri = new Uri("https://ipapi.co/json/");
         return GetLocation(httpClient, uri, userAgent, cancellationToken);

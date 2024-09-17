@@ -706,8 +706,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (_appPersistState.ClientCountryCode == null && _useExternalLocationService) {
             try {
                 using var cancellationTokenSource = new CancellationTokenSource(5000);
-                var ipLocationProvider = new IpLocationProviderFactory().CreateDefault("VpnHood-Client");
-                var ipLocation = await ipLocationProvider.GetLocation(new HttpClient(), cancellationTokenSource.Token)
+                using var httpClient = new HttpClient();
+                var ipLocationProvider = new IpLocationProviderFactory().CreateDefault(httpClient, "VpnHood-Client");
+                var ipLocation = await ipLocationProvider.GetCurrentLocation(cancellationTokenSource.Token)
                     .VhConfigureAwait();
                 _appPersistState.ClientCountryCode = ipLocation.CountryCode;
             }

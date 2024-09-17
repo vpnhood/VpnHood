@@ -4,7 +4,8 @@ namespace VpnHood.Common.IpLocations;
 
 public class IpLocationProviderFactory
 {
-    public IIpLocationProvider CreateDefault(string agent) => new IpApiCoLocationProvider(agent);
+    public IIpLocationProvider CreateDefault(HttpClient httpClient, string userAgent) 
+        => new IpApiCoLocationProvider(httpClient, userAgent);
 
     public static string GetPath(string countryCode, string? regionName, string? cityName)
     {

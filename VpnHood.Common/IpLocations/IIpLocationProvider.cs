@@ -4,6 +4,6 @@ namespace VpnHood.Common.IpLocations;
 
 public interface IIpLocationProvider
 {
-    Task<IpLocation> GetLocation(HttpClient httpClient, IPAddress ipAddress, CancellationToken cancellationToken);
-    Task<IpLocation> GetLocation(HttpClient httpClient, CancellationToken cancellationToken);
+    Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken);
+    Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken);
 }

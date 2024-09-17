@@ -6,7 +6,8 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Agent.Providers;
 
-public class IpLocationIoProvider(string userAgent, string apiKey) : IIpLocationProvider
+public class IpLocationIoProvider(HttpClient httpClient, string userAgent, string apiKey) 
+    : IIpLocationProvider
 {
     internal class ApiLocation
     {
@@ -25,13 +26,13 @@ public class IpLocationIoProvider(string userAgent, string apiKey) : IIpLocation
 
     }
 
-    public Task<IpLocation> GetLocation(HttpClient httpClient, IPAddress ipAddress, CancellationToken cancellationToken)
+    public Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
     {
         var uri = new Uri($"https://api.ip2location.io/?key={apiKey}&ip={ipAddress}");
         return GetLocation(httpClient, uri, userAgent, cancellationToken);
     }
 
-    public Task<IpLocation> GetLocation(HttpClient httpClient, CancellationToken cancellationToken)
+    public Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         throw new NotSupportedException();
     }

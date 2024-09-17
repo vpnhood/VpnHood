@@ -27,7 +27,6 @@ public class AgentService(
     SessionService sessionService,
     [FromKeyedServices(Program.LocationProviderServer)]
     IIpLocationProvider ipLocationProvider,
-    IHttpClientFactory httpClientFactory,
     VhAgentRepo vhAgentRepo)
 {
     private readonly AgentOptions _agentOptions = agentOptions.Value;
@@ -167,8 +166,7 @@ public class AgentService(
             return null;
 
         try {
-            using var httpClient = httpClientFactory.CreateClient();
-            var ipLocation = await ipLocationProvider.GetLocation(httpClient, ipAddress, cancellationToken);
+            var ipLocation = await ipLocationProvider.GetLocation(ipAddress, cancellationToken);
             var location =
                 await vhAgentRepo.LocationFind(ipLocation.CountryCode, ipLocation.RegionCode, ipLocation.CityCode);
             if (location == null) {

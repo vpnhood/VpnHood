@@ -98,9 +98,9 @@ public class Program
                 .AddScoped<FarmTokenUpdater>()
                 .AddScoped<FarmTokenRepoUploader>()
                 .AddKeyedSingleton<IIpLocationProvider>(LocationProviderServer,
-                    (_, _) => new IpApiCoLocationProvider("VpnHood-AccessManager"))
+                    (_, _) => new IpApiCoLocationProvider(new HttpClient(), "VpnHood-AccessManager"))
                 .AddKeyedSingleton<IIpLocationProvider>(LocationProviderDevice,
-                    (_, _) => new IpLocationIoProvider("VpnHood-AccessManager", agentOptions.IpLocationIoApiKey))
+                    (_, _) => new IpLocationIoProvider(new HttpClient(), "VpnHood-AccessManager", agentOptions.IpLocationIoApiKey))
                 .AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
 
             //---------------------

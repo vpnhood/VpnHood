@@ -281,7 +281,7 @@ public class SessionService(
             return null;
 
         try {
-            var location = await deviceLocationProvider.GetLocation(new HttpClient(), clientIp, CancellationToken.None);
+            var location = await deviceLocationProvider.GetLocation(clientIp, CancellationToken.None);
             return location.CountryCode;
         }
         catch (Exception ex) {

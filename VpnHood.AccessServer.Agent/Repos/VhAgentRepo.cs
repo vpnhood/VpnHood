@@ -71,7 +71,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
 
         // Sessions
         logger.LogInformation("Loading the sessions and accesses ...");
-        var sessions = await vhContext.Sessions
+        var sessionsQuery = vhContext.Sessions
             .Where(session => !session.IsArchived)
             .Select(x => new {
                 Session = new SessionCache {
@@ -121,7 +121,9 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     IsAccessTokenEnabled = !x.Access.AccessToken.IsDeleted && x.Access.AccessToken.IsEnabled
                 }
             })
-            .AsNoTracking()
+            .AsNoTracking();
+
+        var sessions = await sessionsQuery
             .ToArrayAsync();
 
         var ret = new InitCache {

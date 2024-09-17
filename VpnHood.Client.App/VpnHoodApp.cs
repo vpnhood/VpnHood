@@ -16,6 +16,7 @@ using VpnHood.Common;
 using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.IpLocations;
+using VpnHood.Common.IpLocations.Providers;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -694,8 +695,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         if (_appPersistState.ClientCountryCode == null && _useExternalLocationService) {
             try {
-                _appPersistState.ClientCountryCode =
-                    await IPAddressUtil.GetCountryCodeByCloudflare(cancellationToken: cancellationToken);
+                using var cancellationTokenSource = new CancellationTokenSource(5000);
+                using var httpClient = new HttpClient();
+                var ipLocationProvider = new CloudflareIpLocationProvider(httpClient, "VpnHood-Client");
+                var ipLocation = await ipLocationProvider.GetCurrentLocation(cancellationTokenSource.Token)
+                    .VhConfigureAwait();
+                _appPersistState.ClientCountryCode = ipLocation.CountryCode;
             }
             catch (Exception ex) {
                 ReportError(ex, "Could not get country code from Cloudflare service.");

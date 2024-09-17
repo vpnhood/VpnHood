@@ -14,17 +14,12 @@ public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : 
         [JsonConverter(typeof(IPAddressConverter))]
         public required IPAddress Ip { get; set; }
 
-        [JsonPropertyName("country_name")] public required string CountryName { get; set; }
-
         [JsonPropertyName("country_code")] public required string CountryCode { get; set; }
 
         [JsonPropertyName("region")] public string? RegionName { get; set; }
 
-        [JsonPropertyName("region_code")] public string? RegionCode { get; set; }
-
         [JsonPropertyName("city")] public string? CityName { get; set; }
 
-        [JsonPropertyName("continent_code")] public string? ContinentCode { get; set; }
     }
 
     public Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
@@ -52,7 +47,7 @@ public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : 
         var apiLocation = VhUtil.JsonDeserialize<ApiLocation>(json);
         var ipLocation = new IpLocation {
             IpAddress = apiLocation.Ip,
-            CountryName = new RegionInfo(apiLocation.CountryName).EnglishName,
+            CountryName = new RegionInfo(apiLocation.CountryCode).EnglishName,
             CountryCode = apiLocation.CountryCode,
             RegionName = apiLocation.RegionName == "NA" || string.IsNullOrEmpty(apiLocation.RegionName) ? null : apiLocation.RegionName,
             CityName = apiLocation.CityName == "NA" || string.IsNullOrEmpty(apiLocation.RegionName) ? null : apiLocation.CityName,

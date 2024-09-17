@@ -7,8 +7,10 @@ using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NLog.Web;
+using VpnHood.AccessServer.Agent.Providers;
 using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Persistence;
@@ -20,6 +22,7 @@ namespace VpnHood.AccessServer.Agent;
 public class Program
 {
     public const string LocationProviderServer = "ServerLocationProvider";
+    public const string LocationProviderDevice = "ServerLocationDevice";
 
     public static async Task Main(string[] args)
     {
@@ -96,6 +99,8 @@ public class Program
                 .AddScoped<FarmTokenRepoUploader>()
                 .AddKeyedSingleton<IIpLocationProvider>(LocationProviderServer,
                     (_, _) => new IpApiCoLocationProvider("VpnHood-AccessManager"))
+                .AddKeyedSingleton<IIpLocationProvider>(LocationProviderDevice,
+                    (_, _) => new IpLocationIoProvider("VpnHood-AccessManager", agentOptions.IpLocationIoApiKey))
                 .AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
 
             //---------------------

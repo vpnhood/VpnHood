@@ -34,6 +34,10 @@ public class AgentTestApp : IDisposable
                     services.AddKeyedSingleton<IIpLocationProvider,
                         TestIpLocationProvider>(Agent.Program.LocationProviderServer,
                         (_, _) => new TestIpLocationProvider());
+
+                    services.AddKeyedSingleton<IIpLocationProvider,
+                        TestIpLocationProvider>(Agent.Program.LocationProviderDevice,
+                        (_, _) => new TestIpLocationProvider());
                 });
             });
 

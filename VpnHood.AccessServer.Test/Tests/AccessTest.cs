@@ -1,7 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.HostProviders.Ovh;
-using VpnHood.AccessServer.HostProviders.Ovh.Dto;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 
@@ -16,6 +14,19 @@ public class AccessTest
     {
         //var testApp = await TestApp.Create();
         await Task.Delay(0);
+
+        var expression = "((true && (not true) or false)) || (false && not true) ||    !3<1";
+        var replacedExpression = expression
+            .Replace("&&", "AND")
+            .Replace("&", "AND")
+            .Replace("||", "OR")
+            .Replace("|", "OR")
+            .Replace("!", "NOT ");
+
+        var dataTable = new DataTable();
+        var result = dataTable.Compute(replacedExpression, string.Empty);
+
+        Console.WriteLine(result);
     }
 
     [TestMethod]

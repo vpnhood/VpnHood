@@ -28,4 +28,6 @@ public class AgentOptions
     public string SystemAuthorizationCode { get; set; } = "";
     public bool AllowRedirect { get; set; } = true;
     public TimeSpan FarmTokenRepoUpdaterInterval { get; set; } = TimeSpan.FromMinutes(60);
+    public string IpLocationIoApiKey { get; set; } = "";
+     
 }

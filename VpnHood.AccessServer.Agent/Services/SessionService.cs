@@ -1,4 +1,5 @@
-﻿using System.Security.Authentication;
+﻿using System.Net;
+using System.Security.Authentication;
 using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Exceptions;
@@ -7,6 +8,7 @@ using VpnHood.AccessServer.Agent.Utils;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common;
+using VpnHood.Common.IpLocations;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Trackers;
@@ -22,6 +24,8 @@ public class SessionService(
     IOptions<AgentOptions> agentOptions,
     CacheService cacheService,
     VhAgentRepo vhAgentRepo,
+    [FromKeyedServices(Program.LocationProviderDevice)]
+    IIpLocationProvider deviceLocationProvider,
     LoadBalancerService loadBalancerService)
 {
     public class NewAccess;
@@ -152,15 +156,19 @@ public class SessionService(
                 ClientVersion = clientInfo.ClientVersion,
                 UserAgent = clientInfo.UserAgent,
                 CreatedTime = DateTime.UtcNow,
-                ModifiedTime = DateTime.UtcNow
+                ModifiedTime = DateTime.UtcNow,
+                Country = await GetCountryCode(clientIp),
             };
             device = await vhAgentRepo.DeviceAdd(device);
         }
         else {
+            if (string.IsNullOrEmpty(device.Country) || device.IpAddress != clientIpToStore)
+                device.Country = await GetCountryCode(clientIp);
+
             device.UserAgent = clientInfo.UserAgent;
             device.ClientVersion = clientInfo.ClientVersion;
             device.ModifiedTime = DateTime.UtcNow;
-            device.IpAddress = clientIpToStore;
+            device.IpAddress = clientIpToStore; //must after set the country
         }
 
         // check has device Locked
@@ -169,12 +177,12 @@ public class SessionService(
                 "Your access has been locked! Please contact the support.");
 
         // multiple requests may be already queued through lock request until first session is created
-        Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
+        Guid? accessDeviceId = accessToken.IsPublic ? device.DeviceId : null;
         using var accessLock =
-            await AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{deviceId}");
-        var access = await cacheService.GetAccessByTokenId(accessToken.AccessTokenId, deviceId);
+            await AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{accessDeviceId}");
+        var access = await cacheService.GetAccessByTokenId(accessToken.AccessTokenId, accessDeviceId);
         if (access == null) {
-            access = await vhAgentRepo.AccessAdd(accessToken.AccessTokenId, deviceId);
+            access = await vhAgentRepo.AccessAdd(accessToken.AccessTokenId, accessDeviceId);
             newAccessLogger.LogInformation(
                 "New Access has been created. AccessId: {access.AccessId}, ProjectName: {ProjectName}, FarmName: {FarmName}",
                 access.AccessId, project.ProjectName, serverFarmCache.ServerFarmName);
@@ -265,6 +273,21 @@ public class SessionService(
 
         ret.SessionId = (ulong)session.SessionId;
         return ret;
+    }
+
+    private async Task<string?> GetCountryCode(IPAddress? clientIp)
+    {
+        if (clientIp == null)
+            return null;
+
+        try {
+            var location = await deviceLocationProvider.GetLocation(new HttpClient(), clientIp, CancellationToken.None);
+            return location.CountryCode;
+        }
+        catch (Exception ex) {
+            logger.LogWarning(ex, "Could not get location for ClientIp: {ClientIp}", clientIp);
+            return null;
+        }
     }
 
     public async Task<SessionResponseEx> GetSession(ServerCache server, uint sessionId, string hostEndPoint,

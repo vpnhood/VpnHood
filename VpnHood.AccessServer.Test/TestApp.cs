@@ -395,4 +395,12 @@ public class TestApp : IHttpClientFactory, IDisposable
         WebApp.Dispose();
     }
 
+    public static string GetParentDirectory(string path, int level = 1)
+    {
+        for (var i = 0; i < level; i++)
+            path = Path.GetDirectoryName(path) ?? throw new Exception("Invalid path");
+
+        return path;
+    }
+
 }

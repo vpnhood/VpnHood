@@ -6,7 +6,8 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.IpLocations.Providers;
 
-public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : IIpLocationProvider
+public class IpLocationIoProvider(HttpClient httpClient, string userAgent, string apiKey) 
+    : IIpLocationProvider
 {
     internal class ApiLocation
     {
@@ -14,29 +15,31 @@ public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : 
         [JsonConverter(typeof(IPAddressConverter))]
         public required IPAddress Ip { get; set; }
 
-        [JsonPropertyName("country_name")] public required string CountryName { get; set; }
-
-        [JsonPropertyName("country_code")] public required string CountryCode { get; set; }
-
-        [JsonPropertyName("region")] public string? RegionName { get; set; }
-
-        [JsonPropertyName("region_code")] public string? RegionCode { get; set; }
-
-        [JsonPropertyName("city")] public string? CityName { get; set; }
-
-        [JsonPropertyName("continent_code")] public string? ContinentCode { get; set; }
+        [JsonPropertyName("country_code")] 
+        public required string CountryCode { get; set; }
+        
+        [JsonPropertyName("region_name")] 
+        public string? RegionName { get; set; }
+        
+        [JsonPropertyName("city_name")] 
+        public string? CityName { get; set; }
+        
+        [JsonPropertyName("latitude")] 
+        public string? Latitude { get; set; }
+        
+        [JsonPropertyName("longitude")] 
+        public string? Longitude { get; set; }
     }
 
     public Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
     {
-        var uri = new Uri($"https://ipapi.co/{ipAddress}/json/");
+        var uri = new Uri($"https://api.ip2location.io/?key={apiKey}&ip={ipAddress}");
         return GetLocation(httpClient, uri, userAgent, cancellationToken);
     }
 
     public Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
-        var uri = new Uri("https://ipapi.co/json/");
-        return GetLocation(httpClient, uri, userAgent, cancellationToken);
+        throw new NotSupportedException();
     }
 
     private static async Task<IpLocation> GetLocation(HttpClient httpClient, Uri url, string userAgent,
@@ -48,14 +51,22 @@ public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : 
         var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken).VhConfigureAwait();
         responseMessage.EnsureSuccessStatusCode();
         var json = await responseMessage.Content.ReadAsStringAsync().VhConfigureAwait();
-
         var apiLocation = VhUtil.JsonDeserialize<ApiLocation>(json);
+
+        var regionName = apiLocation.RegionName?.ToUpper() == "NA" || string.IsNullOrEmpty(apiLocation.CityName)
+            ? null
+            : apiLocation.RegionName;
+
+        var cityCode = apiLocation.CityName?.ToUpper() == "NA" || string.IsNullOrEmpty(apiLocation.CityName)
+            ? null
+            : apiLocation.CityName;
+
         var ipLocation = new IpLocation {
             IpAddress = apiLocation.Ip,
-            CountryName = new RegionInfo(apiLocation.CountryName).EnglishName,
+            CountryName = new RegionInfo(apiLocation.CountryCode).EnglishName,
             CountryCode = apiLocation.CountryCode,
-            RegionName = apiLocation.RegionName == "NA" || string.IsNullOrEmpty(apiLocation.RegionName) ? null : apiLocation.RegionName,
-            CityName = apiLocation.CityName == "NA" || string.IsNullOrEmpty(apiLocation.RegionName) ? null : apiLocation.CityName,
+            RegionName = regionName,
+            CityName = cityCode
         };
 
         return ipLocation;

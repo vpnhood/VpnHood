@@ -11,8 +11,12 @@ public class CompositeIpLocationProvider(ILogger logger, IIpLocationProvider[] p
             try {
                 // create timeout token
                 using var timeoutToken = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(30));
-                using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutToken.Token);
+                using var linkedToken =
+                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutToken.Token);
                 return await provider.GetLocation(ipAddress, linkedToken.Token);
+            }
+            catch (NotSupportedException) {
+                // no log
             }
             catch (Exception ex) {
                 logger.LogError(ex, "Failed to get location. Provider: {Provider}.", provider.GetType().Name);
@@ -31,11 +35,14 @@ public class CompositeIpLocationProvider(ILogger logger, IIpLocationProvider[] p
                 using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutToken.Token);
                 return await provider.GetCurrentLocation(linkedToken.Token);
             }
+            catch (NotSupportedException) {
+                // no log
+            }
             catch (Exception ex) {
                 logger.LogError(ex, "Failed to get current location. Provider: {Provider}.", provider.GetType().Name);
             }
         }
 
-        throw new Exception("No location provider could resolve the IP address.");
+        throw new Exception("No location provider could resolve the current IP address.");
     }
 }

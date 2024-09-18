@@ -1,15 +1,41 @@
 ﻿using System.IO.Compression;
 using System.Net.Sockets;
 using System.Numerics;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Client.App;
+namespace VpnHood.Common.IpLocations.Providers;
 
-public class IpGroupBuilder
+public class CountryIpRangeBuilder
 {
+    public static async Task UpdateIp2LocationFile(string filePath, string apiKey, TimeSpan? interval = null)
+    {
+        interval ??= TimeSpan.FromDays(7);
+        if (File.GetLastWriteTime(filePath) > DateTime.Now - interval)
+            return;
+
+        // copy zip to memory
+        using var httpClient = new HttpClient();
+        // ReSharper disable once StringLiteralTypo
+        var url = $"https://www.ip2location.com/download/?token={apiKey}&file=DB1LITECSVIPV6";
+        await using var ipLocationZipNetStream = await httpClient.GetStreamAsync(url);
+        using var ipLocationZipStream = new MemoryStream();
+        await ipLocationZipNetStream.CopyToAsync(ipLocationZipStream);
+        ipLocationZipStream.Position = 0;
+
+        // build new ipLocation filePath
+        using var ipLocationZipArchive = new ZipArchive(ipLocationZipStream, ZipArchiveMode.Read);
+        const string entryName = "IP2LOCATION-LITE-DB1.IPV6.CSV";
+        var ipLocationEntry = ipLocationZipArchive.GetEntry(entryName) ?? 
+            throw new Exception($"{entryName} not found in the zip file!");
+
+        await using var crvStream = ipLocationEntry.Open();
+        await BuildIpGroupArchiveFromIp2Location(crvStream, filePath);
+    }
+
     public static async Task BuildIpGroupArchiveFromIp2Location(Stream crvStream, string outputZipFile)
     {
         var ipGroups = await LoadIp2Location(crvStream).VhConfigureAwait();

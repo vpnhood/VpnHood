@@ -72,20 +72,87 @@ public static class IPAddressUtil
         return false;
     }
 
-    public static async Task<IPAddress[]> GetPublicIpAddresses()
+    public static async Task<IPAddress[]> GetPublicIpAddresses(CancellationToken cancellationToken)
     {
         var ret = new List<IPAddress>();
 
         //note: api.ipify.org may not work in parallel call
-        var ipV4Task = await GetPublicIpAddress(AddressFamily.InterNetwork, TimeSpan.FromSeconds(10))
+        var ipV4Task = await GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken)
             .VhConfigureAwait();
-        var ipV6Task = await GetPublicIpAddress(AddressFamily.InterNetworkV6, TimeSpan.FromSeconds(4))
+        var ipV6Task = await GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken)
             .VhConfigureAwait();
 
         if (ipV4Task != null) ret.Add(ipV4Task);
         if (ipV6Task != null) ret.Add(ipV6Task);
 
         return ret.ToArray();
+    }
+    
+    public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily, CancellationToken cancellationToken)
+    {
+        try {
+            // create linked cancellation token of max 5 seconds
+            using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            linkedToken.CancelAfter(TimeSpan.FromSeconds(5));
+            return await GetPublicIpAddressByCloudflare(addressFamily, linkedToken.Token);
+        }
+        catch {
+            /* continue next service */
+        }
+
+        try {
+            using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            linkedToken.CancelAfter(TimeSpan.FromSeconds(5));
+            return await GetPublicIpAddressByIpify(addressFamily, linkedToken.Token);
+        }
+        catch {
+            /* ignore */
+        }
+
+        return null;
+    }
+
+    private static async Task<IPAddress?> GetPublicIpAddressByCloudflare(AddressFamily addressFamily, CancellationToken cancellationToken)
+    {
+        var url = addressFamily == AddressFamily.InterNetwork
+            ? "https://1.1.1.1/cdn-cgi/trace"
+            : "https://[2606:4700:4700::1111]/cdn-cgi/trace";
+
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("User-Agent", "VpnHood");
+        var content = await httpClient
+            .GetStringAsync(url)
+            .VhWait(cancellationToken)
+            .VhConfigureAwait();
+
+        // Split the response into lines
+        var lines = content.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
+        var ipLine = lines.SingleOrDefault(x => x.StartsWith("ip=", StringComparison.OrdinalIgnoreCase));
+        return ipLine != null ? IPAddress.Parse(ipLine.Split('=')[1]) : null;
+    }
+
+    private static async Task<IPAddress?> GetPublicIpAddressByIpify(AddressFamily addressFamily, CancellationToken cancellationToken)
+    {
+        //var url = addressFamily == AddressFamily.InterNetwork
+        //    ? "https://api.ipify.org?format=json"
+        //    : "https://api6.ipify.org?format=json";
+
+        var url = addressFamily == AddressFamily.InterNetwork
+            ? "https://api4.my-ip.io/v2/ip.json"
+            : "https://api6.my-ip.io/v2/ip.json";
+
+        var handler = new HttpClientHandler { AllowAutoRedirect = true };
+        using var httpClient = new HttpClient(handler);
+        httpClient.DefaultRequestHeaders.Add("User-Agent", "VpnHood");
+        var json = await httpClient
+            .GetStringAsync(url)
+            .VhWait(cancellationToken)
+            .VhConfigureAwait();
+
+        var document = JsonDocument.Parse(json);
+        var ipString = document.RootElement.GetProperty("ip").GetString();
+        var ipAddress = IPAddress.Parse(ipString ?? throw new InvalidOperationException());
+        return ipAddress.AddressFamily == addressFamily ? ipAddress : null;
     }
 
     public static Task<IPAddress?> GetPrivateIpAddress(AddressFamily addressFamily)
@@ -112,63 +179,6 @@ public static class IPAddressUtil
         catch {
             return Task.FromResult<IPAddress?>(null);
         }
-    }
-
-    public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily, TimeSpan? timeout = null)
-    {
-        try {
-            return await GetPublicIpAddressByCloudflare(addressFamily, timeout);
-        }
-        catch {
-            /* continue next service */
-        }
-
-        try {
-            return await GetPublicIpAddressByIpify(addressFamily, timeout);
-        }
-        catch {
-            /* ignore */
-        }
-
-        return null;
-    }
-
-    private static async Task<IPAddress?> GetPublicIpAddressByCloudflare(AddressFamily addressFamily,
-        TimeSpan? timeout = null)
-    {
-        var url = addressFamily == AddressFamily.InterNetwork
-            ? "https://1.1.1.1/cdn-cgi/trace"
-            : "https://[2606:4700:4700::1111]/cdn-cgi/trace";
-
-        using var httpClient = new HttpClient();
-        httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(5);
-        var content = await httpClient.GetStringAsync(url).VhConfigureAwait();
-
-        // Split the response into lines
-        var lines = content.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
-        var ipLine = lines.SingleOrDefault(x => x.StartsWith("ip=", StringComparison.OrdinalIgnoreCase));
-        return ipLine != null ? IPAddress.Parse(ipLine.Split('=')[1]) : null;
-    }
-
-    private static async Task<IPAddress?> GetPublicIpAddressByIpify(AddressFamily addressFamily,
-        TimeSpan? timeout = null)
-    {
-        //var url = addressFamily == AddressFamily.InterNetwork
-        //    ? "https://api.ipify.org?format=json"
-        //    : "https://api6.ipify.org?format=json";
-
-        var url = addressFamily == AddressFamily.InterNetwork
-            ? "https://api4.my-ip.io/v2/ip.json"
-            : "https://api6.my-ip.io/v2/ip.json";
-
-        var handler = new HttpClientHandler { AllowAutoRedirect = true };
-        using var httpClient = new HttpClient(handler);
-        httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(5);
-        var json = await httpClient.GetStringAsync(url).VhConfigureAwait();
-        var document = JsonDocument.Parse(json);
-        var ipString = document.RootElement.GetProperty("ip").GetString();
-        var ipAddress = IPAddress.Parse(ipString ?? throw new InvalidOperationException());
-        return ipAddress.AddressFamily == addressFamily ? ipAddress : null;
     }
 
     public static IPAddress GetAnyIpAddress(AddressFamily addressFamily)

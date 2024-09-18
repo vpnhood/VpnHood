@@ -1,34 +1,30 @@
-﻿using System.IO.Compression;
+﻿using System.Globalization;
+using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
+using VpnHood.Common.IpLocations;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App;
 
-public class CountryIpRangeProvider
+public class CountryIpRangeProvider(
+    Func<ZipArchive> zipArchiveLazyFactory,
+    Func<string?> currentCountryCodeFunc) 
+    : IIpLocationProvider
 {
-    private readonly ZipArchive _zipArchive;
+    private string? _lasCurrentCountryCode;
     private string[]? _countryCodes;
     private readonly Dictionary<string, IpRangeOrderedList> _countryIpRanges = new();
-
-    private CountryIpRangeProvider(ZipArchive zipArchive)
-    {
-        _zipArchive = zipArchive;
-    }
-
-    public static Task<CountryIpRangeProvider> Create(ZipArchive zipArchive)
-    {
-        var ret = new CountryIpRangeProvider(zipArchive);
-        return Task.FromResult(ret);
-    }
+    private readonly Lazy<ZipArchive> _zipArchive = new(zipArchiveLazyFactory);
+    private string? CurrentCountryCode => currentCountryCodeFunc() ?? _lasCurrentCountryCode;
 
     public Task<string[]> GetCountryCodes()
     {
-        _countryCodes ??= _zipArchive.Entries
+        _countryCodes ??= _zipArchive.Value.Entries
             .Where(x => Path.GetExtension(x.Name) == ".ips")
             .Select(x => Path.GetFileNameWithoutExtension(x.Name))
             .ToArray();
@@ -49,8 +45,8 @@ public class CountryIpRangeProvider
             return countryIpRangeCache;
 
         try {
-            await using var stream = 
-                _zipArchive
+            await using var stream =
+                _zipArchive.Value
                     .GetEntry($"{countryCode.ToLower()}.ips")?
                     .Open() ?? throw new NotExistsException();
 
@@ -62,22 +58,22 @@ public class CountryIpRangeProvider
         }
     }
 
-    public async Task<CountryIpRange> GetCountryIpRange(IPAddress ipAddress, string? lastCountryCode)
+    public async Task<CountryIpRange> GetCountryIpRange(IPAddress ipAddress)
     {
-        return await FindCountryIpRange(ipAddress, lastCountryCode).VhConfigureAwait()
+        return await FindCountryIpRange(ipAddress).VhConfigureAwait()
                ?? throw new NotExistsException(
                    $"Could not find any ip group for the given ip. IP: {VhLogger.Format(ipAddress)}");
     }
 
-    public async Task<CountryIpRange?> FindCountryIpRange(IPAddress ipAddress, string? lastCountryCode)
+    public async Task<CountryIpRange?> FindCountryIpRange(IPAddress ipAddress)
     {
         // CountryIpRange
-        if (lastCountryCode != null) {
-            var ipRanges = await GetIpRanges(lastCountryCode).VhConfigureAwait();
+        if (CurrentCountryCode != null) {
+            var ipRanges = await GetIpRanges(CurrentCountryCode).VhConfigureAwait();
             if (ipRanges.Any(x => x.IsInRange(ipAddress))) {
-                _countryIpRanges.TryAdd(lastCountryCode, ipRanges);
+                _countryIpRanges.TryAdd(CurrentCountryCode, ipRanges);
                 return new CountryIpRange {
-                    CountryCode = lastCountryCode,
+                    CountryCode = CurrentCountryCode,
                     IpRanges = ipRanges
                 };
             }
@@ -99,22 +95,27 @@ public class CountryIpRangeProvider
         return null;
     }
 
-    public async Task<string?> GetCountryCodeByCurrentIp()
+    public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
-        try {
-            var ipAddress =
-                await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork).VhConfigureAwait() ??
-                await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6).VhConfigureAwait();
+        var ipAddress =
+            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken).VhConfigureAwait() ??
+            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken).VhConfigureAwait() ??
+            throw new Exception("Could not find any public ip address.");
 
-            if (ipAddress == null)
-                return null;
+        var ipLocation = await GetLocation(ipAddress, cancellationToken);
+        _lasCurrentCountryCode = ipLocation.CountryCode;
+        return ipLocation;
+    }
 
-            var countryIpRange = await FindCountryIpRange(ipAddress, null).VhConfigureAwait();
-            return countryIpRange?.CountryCode;
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not retrieve client country from public ip services.");
-            return null;
-        }
+    public async Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
+    {
+        var countryIpRange = await GetCountryIpRange(ipAddress).VhConfigureAwait();
+        return new IpLocation {
+            CountryName = new RegionInfo(countryIpRange.CountryCode).EnglishName,
+            CountryCode = countryIpRange.CountryCode,
+            IpAddress = ipAddress,
+            CityName = null,
+            RegionName = null
+        };
     }
 }

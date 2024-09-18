@@ -142,7 +142,7 @@ public class ServerApp : IDisposable
         FileAccessManagerOptions? options)
     {
         options ??= new FileAccessManagerOptions();
-        options.PublicEndPoints ??= GetDefaultPublicEndPoints(options.TcpEndPointsValue);
+        options.PublicEndPoints ??= GetDefaultPublicEndPoints(options.TcpEndPointsValue, CancellationToken.None).Result;
 
         var accessManagerFolder = Path.Combine(storageFolderPath, "access");
         VhLogger.Instance.LogInformation($"Using FileAccessManager. AccessFolder: {accessManagerFolder}");
@@ -150,9 +150,9 @@ public class ServerApp : IDisposable
         return ret;
     }
 
-    private static IPEndPoint[] GetDefaultPublicEndPoints(IEnumerable<IPEndPoint> tcpEndPoints)
+    private static async Task<IPEndPoint[]> GetDefaultPublicEndPoints(IEnumerable<IPEndPoint> tcpEndPoints, CancellationToken cancellationToken)
     {
-        var publicIps = IPAddressUtil.GetPublicIpAddresses().Result;
+        var publicIps = await IPAddressUtil.GetPublicIpAddresses(cancellationToken);
         var defaultPublicEps = new List<IPEndPoint>();
         var allListenerPorts = tcpEndPoints
             .Select(x => x.Port)

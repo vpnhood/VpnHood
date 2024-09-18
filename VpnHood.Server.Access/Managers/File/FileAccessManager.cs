@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.IpLocations;
+using VpnHood.Common.IpLocations.Providers;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
@@ -128,13 +129,17 @@ public class FileAccessManager : IAccessManager
             if (string.IsNullOrEmpty(serverLocation) && ServerConfig.UseExternalLocationService) {
                 using var cancellationTokenSource = new CancellationTokenSource(5000);
                 using var httpClient = new HttpClient();
-                var ipLocationProvider = new IpLocationProviderFactory().CreateDefault(httpClient, "VpnHood-Server");
-                var ipLocation = await ipLocationProvider.GetCurrentLocation(cancellationTokenSource.Token)
-                    .VhConfigureAwait();
-                serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName,
-                    ipLocation.CityName);
-                await System.IO.File.WriteAllTextAsync(serverCountryFile, serverLocation, CancellationToken.None)
-                    .VhConfigureAwait();
+                const string userAgent = "VpnHood-File-AccessManager";
+                var ipLocationProvider = new CompositeIpLocationProvider(VhLogger.Instance,
+                [
+                    new CloudflareIpLocationProvider(httpClient, userAgent),
+                    new IpLocationIoProvider(httpClient, userAgent, apiKey: null),
+                    new IpApiCoLocationProvider(httpClient, userAgent)
+                ]);
+
+                var ipLocation = await ipLocationProvider.GetCurrentLocation(cancellationTokenSource.Token).VhConfigureAwait();
+                serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName, ipLocation.CityName);
+                await System.IO.File.WriteAllTextAsync(serverCountryFile, serverLocation, CancellationToken.None).VhConfigureAwait();
             }
 
             VhLogger.Instance.LogInformation("ServerLocation: {ServerLocation}", serverLocation ?? "Unknown");

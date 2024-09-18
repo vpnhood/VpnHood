@@ -6,7 +6,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.IpLocations.Providers;
 
-public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string apiKey) 
+public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string? apiKey) 
     : IIpLocationProvider
 {
     internal class ApiLocation
@@ -38,7 +38,7 @@ public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string ap
 
     public Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
-        var uri = new Uri($"https://ipinfo.io?token={apiKey}");
+        var uri = new Uri($"https://ipinfo.io");
         return GetLocation(httpClient, uri, userAgent, cancellationToken);
     }
 
@@ -50,7 +50,7 @@ public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string ap
         requestMessage.Headers.Add("User-Agent", userAgent);
         var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken).VhConfigureAwait();
         responseMessage.EnsureSuccessStatusCode();
-        var json = await responseMessage.Content.ReadAsStringAsync().VhConfigureAwait();
+        var json = await responseMessage.Content.ReadAsStringAsync().VhWait(cancellationToken).VhConfigureAwait();
         var apiLocation = VhUtil.JsonDeserialize<ApiLocation>(json);
 
         var regionName = apiLocation.RegionName?.ToUpper() == "NA" || string.IsNullOrEmpty(apiLocation.CityName)

@@ -10,13 +10,17 @@ namespace VpnHood.Client;
 
 public class ServerTokenHelper
 {
-    private static async Task<IPEndPoint[]> ResolveHostEndPointsInternal(ServerToken serverToken)
+    private static async Task<IPEndPoint[]> ResolveHostEndPointsInternal(ServerToken serverToken , CancellationToken cancellationToken)
     {
         if (serverToken.IsValidHostName) {
             try {
                 VhLogger.Instance.LogInformation("Resolving IP from host name: {HostName}...",
                     VhLogger.FormatHostName(serverToken.HostName));
-                var hostEntities = await Dns.GetHostEntryAsync(serverToken.HostName).VhConfigureAwait();
+
+                var hostEntities = await Dns.GetHostEntryAsync(serverToken.HostName)
+                    .VhWait(cancellationToken)
+                    .VhConfigureAwait();
+
                 if (!VhUtil.IsNullOrEmpty(hostEntities.AddressList)) {
                     return hostEntities.AddressList
                         .Select(x => new IPEndPoint(x, serverToken.HostPort))
@@ -34,9 +38,9 @@ public class ServerTokenHelper
         throw new Exception($"Could not resolve {nameof(serverToken.HostEndPoints)} from token!");
     }
 
-    public static async Task<IPEndPoint[]> ResolveHostEndPoints(ServerToken serverToken)
+    public static async Task<IPEndPoint[]> ResolveHostEndPoints(ServerToken serverToken, CancellationToken cancellationToken)
     {
-        var endPoints = await ResolveHostEndPointsInternal(serverToken).VhConfigureAwait();
+        var endPoints = await ResolveHostEndPointsInternal(serverToken, cancellationToken).VhConfigureAwait();
         if (VhUtil.IsNullOrEmpty(endPoints))
             throw new Exception("Could not resolve any host endpoint from AccessToken!");
 
@@ -45,14 +49,16 @@ public class ServerTokenHelper
 
         if (ipV6EndPoints.Length == 0) return ipV4EndPoints;
         if (ipV4EndPoints.Length == 0) return ipV6EndPoints;
-        var publicAddressesIpV6 =
-            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6).VhConfigureAwait();
+        var publicAddressesIpV6 = await IPAddressUtil
+            .GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken)
+            .VhConfigureAwait();
+
         return publicAddressesIpV6 != null ? ipV6EndPoints : ipV4EndPoints; //return IPv6 if user has access to IpV6
     }
 
-    public static async Task<IPEndPoint> ResolveHostEndPoint(ServerToken serverToken)
+    public static async Task<IPEndPoint> ResolveHostEndPoint(ServerToken serverToken, CancellationToken cancellationToken)
     {
-        var endPoints = await ResolveHostEndPoints(serverToken).VhConfigureAwait();
+        var endPoints = await ResolveHostEndPoints(serverToken, cancellationToken).VhConfigureAwait();
         if (VhUtil.IsNullOrEmpty(endPoints))
             throw new Exception("Could not resolve any host endpoint!");
 

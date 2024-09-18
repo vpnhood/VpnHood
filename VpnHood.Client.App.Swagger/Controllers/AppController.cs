@@ -73,12 +73,6 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
-    [HttpGet("ip-groups")]
-    public Task<IpGroupInfo[]> GetIpGroups()
-    {
-        throw new SwaggerOnlyException();
-    }
-
     [HttpPost("version-check")]
     public Task VersionCheck()
     {

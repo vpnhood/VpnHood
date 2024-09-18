@@ -48,6 +48,7 @@ public class IpGroupBuilder
             var addressFamily = items[0].Length > 10 || items[1].Length > 10
                 ? AddressFamily.InterNetworkV6
                 : AddressFamily.InterNetwork;
+
             var ipRange = new IpRange(
                 IPAddressUtil.FromBigInteger(BigInteger.Parse(items[0]), addressFamily),
                 IPAddressUtil.FromBigInteger(BigInteger.Parse(items[1]), addressFamily));

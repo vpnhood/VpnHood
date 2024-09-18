@@ -127,14 +127,6 @@ internal class AppController : WebApiController, IAppController
         return Task.FromResult(App.Device.InstalledApps);
     }
 
-    [Route(HttpVerbs.Get, "/ip-groups")]
-    public async Task<IpGroupInfo[]> GetIpGroups()
-    {
-        var ipGroupManager = await App.GetIpGroupManager().VhConfigureAwait();
-        var ipGroupIds = await ipGroupManager.GetCountryCodes().VhConfigureAwait();
-        return ipGroupIds.Select(x => new IpGroupInfo { IpGroupId = x }).ToArray();
-    }
-
     [Route(HttpVerbs.Patch, "/client-profiles/{clientProfileId}")]
     public async Task<ClientProfileInfo> UpdateClientProfile(Guid clientProfileId,
         ClientProfileUpdateParams updateParams)

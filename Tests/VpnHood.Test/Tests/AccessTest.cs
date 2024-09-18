@@ -2,8 +2,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Exceptions;
-using VpnHood.Common.IpLocations;
-using VpnHood.Common.IpLocations.Providers;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
@@ -19,13 +17,7 @@ public class AccessTest : TestBase
     public async Task Foo()
     {
         await Task.Delay(0);
-
-        CloudflareIpLocationProvider cloudflareIpLocationProvider =
-            new CloudflareIpLocationProvider(new HttpClient(), "sss");
-        CompositeIpLocationProvider compositeIpLocationProvider =
-            new CompositeIpLocationProvider(VhLogger.Instance, new IIpLocationProvider[] { cloudflareIpLocationProvider }, TimeSpan.FromSeconds(2));
-        var location = await compositeIpLocationProvider.GetCurrentLocation(CancellationToken.None);
-    }
+        }
 
     [TestMethod]
     public async Task Server_reject_invalid_requests()

@@ -1,7 +1,6 @@
 ﻿using System.IO.Compression;
 using System.Net.Sockets;
 using System.Numerics;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;

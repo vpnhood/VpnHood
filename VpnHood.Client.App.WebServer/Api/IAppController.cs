@@ -19,7 +19,6 @@ public interface IAppController
     Task SetUserSettings(UserSettings userSettings);
     Task<string> Log();
     Task<DeviceAppInfo[]> GetInstalledApps();
-    Task<IpGroupInfo[]> GetIpGroups();
     Task VersionCheck();
     void VersionCheckPostpone();
     void OpenAlwaysOnPage();

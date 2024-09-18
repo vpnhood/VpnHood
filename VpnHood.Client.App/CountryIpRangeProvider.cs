@@ -9,20 +9,20 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App;
 
-public class CountryRangeIpLocationProvider
+public class CountryIpRangeProvider
 {
     private readonly ZipArchive _zipArchive;
     private string[]? _countryCodes;
     private readonly Dictionary<string, IpRangeOrderedList> _countryIpRanges = new();
 
-    private CountryRangeIpLocationProvider(ZipArchive zipArchive)
+    private CountryIpRangeProvider(ZipArchive zipArchive)
     {
         _zipArchive = zipArchive;
     }
 
-    public static Task<CountryRangeIpLocationProvider> Create(ZipArchive zipArchive)
+    public static Task<CountryIpRangeProvider> Create(ZipArchive zipArchive)
     {
-        var ret = new CountryRangeIpLocationProvider(zipArchive);
+        var ret = new CountryIpRangeProvider(zipArchive);
         return Task.FromResult(ret);
     }
 

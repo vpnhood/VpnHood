@@ -1,5 +1,4 @@
-﻿using System.IO.Compression;
-using System.Net;
+﻿using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Text.Json;
@@ -11,6 +10,7 @@ using VpnHood.Client.App;
 using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
+using VpnHood.Common.IpLocations.Providers;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
@@ -100,27 +100,14 @@ public class ClientAppTest : TestBase
         // update current ipLocation in app project after a week
         var solutionFolder = TestHelper.GetParentDirectory(Directory.GetCurrentDirectory(), 5);
         var ipLocationFile = Path.Combine(solutionFolder, "VpnHood.Client.App", "Resources", "IpLocations.zip");
-        if (File.GetLastWriteTime(ipLocationFile) > DateTime.Now - TimeSpan.FromDays(7))
-            return;
 
         // find token
         var userSecretFile = Path.Combine(Path.GetDirectoryName(solutionFolder)!, ".user", "credentials.json");
         var document = JsonDocument.Parse(await File.ReadAllTextAsync(userSecretFile));
         var ip2LocationToken = document.RootElement.GetProperty("Ip2LocationToken").GetString();
+        ArgumentException.ThrowIfNullOrWhiteSpace(ip2LocationToken);
 
-        // copy zip to memory
-        var httpClient = new HttpClient();
-        // ReSharper disable once StringLiteralTypo
-        var url = $"https://www.ip2location.com/download/?token={ip2LocationToken}&file=DB1LITECSVIPV6";
-        await using var ipLocationZipNetStream = await httpClient.GetStreamAsync(url);
-        using var ipLocationZipStream = new MemoryStream();
-        await ipLocationZipNetStream.CopyToAsync(ipLocationZipStream);
-        ipLocationZipStream.Position = 0;
-
-        // build new ipLocation file
-        using var ipLocationZipArchive = new ZipArchive(ipLocationZipStream, ZipArchiveMode.Read);
-        await using var crvStream = ipLocationZipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV")!.Open();
-        await IpGroupBuilder.BuildIpGroupArchiveFromIp2Location(crvStream, ipLocationFile);
+        await CountryIpRangeBuilder.UpdateIp2LocationFile(ipLocationFile, ip2LocationToken);
     }
 
     [TestMethod]

@@ -38,7 +38,7 @@ public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string? a
 
     public Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
-        var uri = new Uri($"https://ipinfo.io");
+        var uri = new Uri("https://ipinfo.io");
         return GetLocation(httpClient, uri, userAgent, cancellationToken);
     }
 

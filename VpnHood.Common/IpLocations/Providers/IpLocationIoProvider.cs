@@ -39,7 +39,7 @@ public class IpLocationIoProvider(HttpClient httpClient, string userAgent, strin
 
     public Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
-        var uri = new Uri($"https://api.ip2location.io"); // no need for key
+        var uri = new Uri("https://api.ip2location.io"); // no need for key
         return GetLocation(httpClient, uri, userAgent, cancellationToken);
     }
 

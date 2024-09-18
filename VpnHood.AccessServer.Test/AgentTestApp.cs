@@ -16,8 +16,8 @@ namespace VpnHood.AccessServer.Test;
 public class AgentTestApp : IDisposable
 {
     public WebApplicationFactory<Agent.Program> AgentApp { get; }
-    public IServiceScope AgentScope { get; }
-    public CacheService CacheService => AgentScope.ServiceProvider.GetRequiredService<CacheService>();
+    public IServiceScope Scope { get; }
+    public CacheService CacheService => Scope.ServiceProvider.GetRequiredService<CacheService>();
     public AgentOptions AgentOptions => AgentApp.Services.GetRequiredService<IOptions<AgentOptions>>().Value;
     public HttpClient HttpClient { get; }
 
@@ -41,7 +41,7 @@ public class AgentTestApp : IDisposable
                 });
             });
 
-        AgentScope = AgentApp.Services.CreateScope();
+        Scope = AgentApp.Services.CreateScope();
         AgentOptions.AllowRedirect = false;
 
         HttpClient = AgentApp.CreateClient();

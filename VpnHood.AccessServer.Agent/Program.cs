@@ -7,15 +7,12 @@ using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NLog.Web;
-using VpnHood.AccessServer.Agent.Providers;
 using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.Common.IpLocations;
-using VpnHood.Common.IpLocations.Providers;
 
 namespace VpnHood.AccessServer.Agent;
 
@@ -97,10 +94,8 @@ public class Program
                 .AddScoped<LoadBalancerService>()
                 .AddScoped<FarmTokenUpdater>()
                 .AddScoped<FarmTokenRepoUploader>()
-                .AddKeyedSingleton<IIpLocationProvider>(LocationProviderServer,
-                    (_, _) => new IpApiCoLocationProvider(new HttpClient(), "VpnHood-AccessManager"))
-                .AddKeyedSingleton<IIpLocationProvider>(LocationProviderDevice,
-                    (_, _) => new IpLocationIoProvider(new HttpClient(), "VpnHood-AccessManager", agentOptions.IpLocationIoApiKey))
+                .AddKeyedSingleton<IIpLocationProvider, AgentIpLocationProvider>(LocationProviderDevice)
+                .AddKeyedSingleton<IIpLocationProvider, AgentIpLocationProvider>(LocationProviderServer)
                 .AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
 
             //---------------------

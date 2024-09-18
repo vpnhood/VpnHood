@@ -3,7 +3,6 @@ using System.Text.Json;
 using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Utils;
 using VpnHood.AccessServer.Agent.Repos;
-using VpnHood.AccessServer.Agent.Utils;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common;
@@ -109,7 +108,7 @@ public class FarmTokenRepoUploader(
 
 
         // send request
-        using var httpClient = httpClientFactory.CreateClient(AgentOptions.FarmTokenRepoHttpClientName);
+        using var httpClient = httpClientFactory.CreateClient(AgentOptions.HttpClientNameFarmTokenRepo);
         var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken);
         await using var stream = await responseMessage.Content.ReadAsStreamAsync(cancellationToken);
         var result = await stream.ReadStringAtMostAsync(5000, Encoding.UTF8, cancellationToken);

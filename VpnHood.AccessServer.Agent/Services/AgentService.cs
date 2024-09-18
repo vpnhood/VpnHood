@@ -168,17 +168,17 @@ public class AgentService(
         try {
             var ipLocation = await ipLocationProvider.GetLocation(ipAddress, cancellationToken);
             var location =
-                await vhAgentRepo.LocationFind(ipLocation.CountryCode, ipLocation.RegionCode, ipLocation.CityCode);
+                await vhAgentRepo.LocationFind(ipLocation.CountryCode, ipLocation.RegionName, ipLocation.CityName);
             if (location == null) {
                 location = new LocationModel {
                     LocationId = 0,
                     CountryCode = ipLocation.CountryCode,
                     CountryName = ipLocation.CountryName,
-                    RegionCode = ipLocation.RegionCode ?? LocationModel.UnknownCode,
+                    RegionCode = ipLocation.RegionName ?? LocationModel.UnknownCode,
                     RegionName = ipLocation.RegionName,
-                    CityCode = ipLocation.CityCode ?? LocationModel.UnknownCode,
+                    CityCode = ipLocation.CityName ?? LocationModel.UnknownCode,
                     CityName = ipLocation.CityName,
-                    ContinentCode = ipLocation.ContinentCode
+                    ContinentCode = null
                 };
                 location = await vhAgentRepo.LocationAdd(location);
             }

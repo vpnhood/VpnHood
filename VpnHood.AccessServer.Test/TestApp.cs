@@ -342,7 +342,10 @@ public class TestApp : IHttpClientFactory, IDisposable
     // IHttpClientFactory.CreateClient
     public HttpClient CreateClient(string name)
     {
-        if (name is AgentOptions.FarmTokenRepoHttpClientName or AppOptions.FarmTokenRepoHttpClientName)
+        if (name is 
+            AgentOptions.HttpClientNameFarmTokenRepo or 
+            AppOptions.HttpClientNameFarmTokenRepo or 
+            AgentOptions.HttpClientNameIpLocation)
             return new HttpClient();
 
         // this for simulating Agent HTTP

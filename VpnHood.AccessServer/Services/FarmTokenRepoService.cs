@@ -151,7 +151,7 @@ public class FarmTokenRepoService(
                 throw new Exception("You farm needs at-least a public in token endpoint");
 
             // create no cache request
-            using var httpClient = httpClientFactory.CreateClient(AppOptions.FarmTokenRepoHttpClientName);
+            using var httpClient = httpClientFactory.CreateClient(AppOptions.HttpClientNameFarmTokenRepo);
             var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, farmTokenRepo.PublishUrl);
             httpRequestMessage.Headers.CacheControl = new CacheControlHeaderValue { NoStore = true };
             var responseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken);

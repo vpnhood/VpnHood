@@ -1,6 +1,9 @@
 ﻿using System.Data;
+using System.Net;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Test.Dom;
+using VpnHood.Common.IpLocations;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -12,8 +15,14 @@ public class AccessTest
     [TestMethod]
     public async Task Foo()
     {
-        //var testApp = await TestApp.Create();
+        var testApp = await TestApp.Create();
+        var a = testApp.AgentTestApp.Scope.ServiceProvider.GetRequiredKeyedService<IIpLocationProvider>(Agent.Program.LocationProviderServer);
+        var a1 = await a.GetLocation(IPAddress.Parse("8.8.8.8"), CancellationToken.None);
+        var a2 = await a.GetCurrentLocation(CancellationToken.None);
+
+
         await Task.Delay(0);
+        return;
 
         var expression = "((true && (not true) or false)) || (false && not true) ||    !3<1";
         var replacedExpression = expression

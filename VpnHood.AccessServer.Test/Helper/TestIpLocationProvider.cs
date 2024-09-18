@@ -15,10 +15,7 @@ public class TestIpLocationProvider : IIpLocationProvider
             CountryCode = countryCode,
             CountryName = ipAddress.GetAddressBytes()[0].ToString(),
             RegionName = ipAddress.GetAddressBytes()[1].ToString(),
-            RegionCode = ipAddress.GetAddressBytes()[1].ToString(),
             CityName = ipAddress.GetAddressBytes()[2].ToString(),
-            CityCode = ipAddress.GetAddressBytes()[2].ToString(),
-            ContinentCode = null
         });
     }
 

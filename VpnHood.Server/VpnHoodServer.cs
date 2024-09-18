@@ -133,7 +133,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             VhLogger.Instance.LogTrace("Finding public addresses..., PublicIpDiscovery: {PublicIpDiscovery}",
                 _publicIpDiscovery);
             var publicIpAddresses =
-                _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses().VhConfigureAwait() : [];
+                _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses(CancellationToken.None).VhConfigureAwait() : [];
 
             var providerSystemInfo = SystemInfoProvider.GetSystemInfo();
             var serverInfo = new ServerInfo {

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
@@ -435,6 +436,19 @@ public static class VhUtil
         for (var i = n - 1; i > 0; i--) {
             var j = rng.Next(i + 1);
             (array[i], array[j]) = (array[j], array[i]);
+        }
+    }
+
+    public static string? TryGetCountryName(string? countryCode)
+    {
+        if (string.IsNullOrEmpty(countryCode))
+            return null;
+
+        try {
+            return new RegionInfo(countryCode).EnglishName;
+        }
+        catch (Exception) {
+            return null;
         }
     }
 }

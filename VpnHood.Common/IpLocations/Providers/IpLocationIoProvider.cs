@@ -6,7 +6,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.IpLocations.Providers;
 
-public class IpLocationIoProvider(HttpClient httpClient, string userAgent, string apiKey) 
+public class IpLocationIoProvider(HttpClient httpClient, string userAgent, string? apiKey) 
     : IIpLocationProvider
 {
     internal class ApiLocation
@@ -39,7 +39,8 @@ public class IpLocationIoProvider(HttpClient httpClient, string userAgent, strin
 
     public Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
-        throw new NotSupportedException();
+        var uri = new Uri($"https://api.ip2location.io"); // no need for key
+        return GetLocation(httpClient, uri, userAgent, cancellationToken);
     }
 
     private static async Task<IpLocation> GetLocation(HttpClient httpClient, Uri url, string userAgent,
@@ -48,9 +49,16 @@ public class IpLocationIoProvider(HttpClient httpClient, string userAgent, strin
         // get data from the service provider
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
         requestMessage.Headers.Add("User-Agent", userAgent);
-        var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken).VhConfigureAwait();
+        var responseMessage = await httpClient
+            .SendAsync(requestMessage, cancellationToken)
+            .VhConfigureAwait();
+
         responseMessage.EnsureSuccessStatusCode();
-        var json = await responseMessage.Content.ReadAsStringAsync().VhConfigureAwait();
+        var json = await responseMessage.Content
+            .ReadAsStringAsync()
+            .VhWait(cancellationToken)
+            .VhConfigureAwait();
+
         var apiLocation = VhUtil.JsonDeserialize<ApiLocation>(json);
 
         var regionName = apiLocation.RegionName?.ToUpper() == "NA" || string.IsNullOrEmpty(apiLocation.CityName)

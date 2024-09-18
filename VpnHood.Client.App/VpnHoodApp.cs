@@ -46,12 +46,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private Guid? _activeClientProfileId;
     private string? _activeServerLocation;
     private DateTime? _connectRequestTime;
-    private CountryIpRangeProvider? _ipGroupManager;
     private bool _isConnecting;
     private bool _isDisconnecting;
     private SessionStatus? _lastSessionStatus;
     private AppConnectionState _lastConnectionState;
-    private bool _isLoadingIpGroup;
+    private bool _isLoadingCountryIpRange;
     private bool _isFindingCountryCode;
     private readonly TimeSpan _versionCheckInterval;
     private readonly AppPersistState _appPersistState;
@@ -73,6 +72,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
     public event EventHandler? ConnectionStateChanged;
     public event EventHandler? UiHasChanged;
+    public CountryIpRangeProvider CountryIpRangeProvider { get; }
     public bool IsIdle => ConnectionState == AppConnectionState.None;
     public TimeSpan SessionTimeout { get; set; }
     public Diagnoser Diagnoser { get; set; } = new();
@@ -121,6 +121,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _allowEndPointTracker = options.AllowEndPointTracker;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), options.SingleLineConsoleLog);
+        CountryIpRangeProvider = new CountryIpRangeProvider(
+            () => new ZipArchive(new MemoryStream(App.Resource.IpLocations)),
+            () => _appPersistState.ClientCountryCode);
         ActiveUiContext.OnChanged += ActiveUiContext_OnChanged;
 
         // configure update job section
@@ -332,7 +335,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppConnectionState ConnectionState {
         get {
             var client = _client;
-            if (_isLoadingIpGroup || _isFindingCountryCode) return AppConnectionState.Initializing;
+            if (_isLoadingCountryIpRange || _isFindingCountryCode) return AppConnectionState.Initializing;
             if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
             if (_isDisconnecting || client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
             if (_isConnecting || client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
@@ -405,7 +408,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // protect double call
         if (!IsIdle) {
-            if (_activeClientProfileId == clientProfileId && 
+            if (_activeClientProfileId == clientProfileId &&
                 diagnose == _hasDiagnoseStarted && // client may request diagnose the current connection
                 string.Equals(_activeServerLocation, serverLocation, StringComparison.OrdinalIgnoreCase))
                 throw new Exception("Connection is already in progress.");
@@ -463,7 +466,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
             if (diagnose) // log country name
                 VhLogger.Instance.LogInformation("CountryCode: {CountryCode}",
-                    GetCountryName(await GetClientCountryCode(cancellationToken).VhConfigureAwait()));
+                    VhUtil.TryGetCountryName(await GetClientCountryCode(cancellationToken).VhConfigureAwait()));
 
             VhLogger.Instance.LogInformation("VpnHood Client is Connecting ...");
 
@@ -679,55 +682,25 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         ApplySettings();
     }
 
-    public static string GetCountryName(string countryCode)
-    {
-        try {
-            return new RegionInfo(countryCode).Name;
-        }
-        catch {
-            return countryCode;
-        }
-    }
-
     public async Task<string> GetClientCountryCode(CancellationToken cancellationToken)
     {
         _isFindingCountryCode = true;
 
         if (_appPersistState.ClientCountryCode == null && _useExternalLocationService) {
+
             try {
-                using var cancellationTokenSource = new CancellationTokenSource(5000);
                 using var httpClient = new HttpClient();
-                var ipLocationProvider = new CloudflareIpLocationProvider(httpClient, "VpnHood-Client");
-                var ipLocation = await ipLocationProvider.GetCurrentLocation(cancellationTokenSource.Token)
-                    .VhConfigureAwait();
+                const string userAgent = "VpnHood-Client";
+                var providers = new List<IIpLocationProvider> {
+                    new CloudflareIpLocationProvider(httpClient, userAgent),
+                    new IpLocationIoProvider(httpClient, userAgent, apiKey: null)
+                };
+                if (_useInternalLocationService)
+                    providers.Add(CountryIpRangeProvider);
+
+                var compositeProvider = new CompositeIpLocationProvider(VhLogger.Instance, providers);
+                var ipLocation = await compositeProvider.GetCurrentLocation(cancellationToken).VhConfigureAwait();
                 _appPersistState.ClientCountryCode = ipLocation.CountryCode;
-            }
-            catch (Exception ex) {
-                ReportError(ex, "Could not get country code from Cloudflare service.");
-            }
-        }
-
-
-        if (_appPersistState.ClientCountryCode == null && _useExternalLocationService) {
-            try {
-                using var cancellationTokenSource = new CancellationTokenSource(5000);
-                using var httpClient = new HttpClient();
-                var ipLocationProvider = new IpLocationProviderFactory().CreateDefault(httpClient, "VpnHood-Client");
-                var ipLocation = await ipLocationProvider.GetCurrentLocation(cancellationTokenSource.Token)
-                    .VhConfigureAwait();
-                _appPersistState.ClientCountryCode = ipLocation.CountryCode;
-            }
-            catch (Exception ex) {
-                ReportError(ex, "Could not get country code from IpApi service.");
-            }
-        }
-
-        // try to get by ip group (GetCountryCodeByCurrentIp use external service)
-        if (_appPersistState.ClientCountryCode == null && _useInternalLocationService && _useExternalLocationService) {
-            try {
-                var ipGroupManager = await GetIpGroupManager().VhConfigureAwait();
-                _appPersistState.ClientCountryCode ??=
-                    await ipGroupManager.GetCountryCodeByCurrentIp().VhConfigureAwait();
             }
             catch (Exception ex) {
                 ReportError(ex, "Could not find country code.");
@@ -803,21 +776,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ConnectedTime = null;
             FireConnectionStateChanged();
         }
-    }
-
-    public async Task<CountryIpRangeProvider> GetIpGroupManager()
-    {
-        if (_ipGroupManager != null)
-            return _ipGroupManager;
-
-        var zipArchive = new ZipArchive(new MemoryStream(App.Resource.IpLocations), ZipArchiveMode.Read,
-            leaveOpen: false);
-
-        _ipGroupManager = await CountryIpRangeProvider
-            .Create(zipArchive)
-            .VhConfigureAwait();
-
-        return _ipGroupManager;
     }
 
     public void VersionCheckPostpone()
@@ -924,20 +882,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             return ipRanges;
 
         try {
-            var lastCountryCode = await GetClientCountryCode(cancellationToken).VhConfigureAwait();
-            VhLogger.Instance.LogTrace("Finding CountryCode IPs for split tunneling. LastCountry: {CountryCode}",
-                GetCountryName(lastCountryCode));
-            _isLoadingIpGroup = true;
+            _isLoadingCountryIpRange = true;
             FireConnectionStateChanged();
 
             if (!_useInternalLocationService)
                 throw new InvalidOperationException("Could not use internal location service because it is disabled.");
 
-            var ipGroupManager = await GetIpGroupManager().VhConfigureAwait();
-            var ipGroup = await ipGroupManager.GetCountryIpRange(clientIp, lastCountryCode).VhConfigureAwait();
-            _appPersistState.ClientCountryCode = ipGroup.CountryCode;
+            var countryIpRange = await CountryIpRangeProvider.GetCountryIpRange(clientIp).VhConfigureAwait();
+            _appPersistState.ClientCountryCode = countryIpRange.CountryCode;
             VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}", _appPersistState.ClientCountryName);
-            ipRanges = ipRanges.Exclude(ipGroup.IpRanges);
+            ipRanges = ipRanges.Exclude(countryIpRange.IpRanges);
         }
         catch (Exception ex) {
             ReportError(ex, "Could not get ip locations of your country.");
@@ -948,7 +902,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         finally {
-            _isLoadingIpGroup = false;
+            _isLoadingCountryIpRange = false;
         }
 
         return ipRanges;

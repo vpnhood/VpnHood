@@ -131,13 +131,12 @@ public class ClientAppTest : TestBase
         var appOptions = TestHelper.CreateAppOptions();
         appOptions.UseInternalLocationService = true;
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
-        var ipGroupsManager = await app.GetIpGroupManager();
-        var ipGroupIds = await ipGroupsManager.GetCountryCodes();
-        Assert.IsTrue(ipGroupIds.Any(x => x == "us"),
+        var countryCodes = await app.CountryIpRangeProvider.GetCountryCodes();
+        Assert.IsTrue(countryCodes.Any(x => x == "us"),
             "Countries has not been extracted.");
 
         // make sure GetIpRange works
-        Assert.IsTrue((await ipGroupsManager.GetIpRanges("US")).Any());
+        Assert.IsTrue((await app.CountryIpRangeProvider.GetIpRanges("US")).Any());
     }
 
     [TestMethod]

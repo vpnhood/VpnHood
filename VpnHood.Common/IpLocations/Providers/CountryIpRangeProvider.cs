@@ -4,22 +4,21 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
-using VpnHood.Common.IpLocations;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Client.App;
+namespace VpnHood.Common.IpLocations.Providers;
 
 public class CountryIpRangeProvider(
-    Func<ZipArchive> zipArchiveLazyFactory,
+    Func<ZipArchive> zipArchiveFactory,
     Func<string?> currentCountryCodeFunc) 
     : IIpLocationProvider
 {
     private string? _lasCurrentCountryCode;
     private string[]? _countryCodes;
     private readonly Dictionary<string, IpRangeOrderedList> _countryIpRanges = new();
-    private readonly Lazy<ZipArchive> _zipArchive = new(zipArchiveLazyFactory);
+    private readonly Lazy<ZipArchive> _zipArchive = new(zipArchiveFactory);
     private string? CurrentCountryCode => currentCountryCodeFunc() ?? _lasCurrentCountryCode;
 
     public Task<string[]> GetCountryCodes()
@@ -117,5 +116,11 @@ public class CountryIpRangeProvider(
             CityName = null,
             RegionName = null
         };
+    }
+
+    public class CountryIpRange
+    {
+        public required string CountryCode { get; init; }
+        public required IpRangeOrderedList IpRanges { get; init; }
     }
 }

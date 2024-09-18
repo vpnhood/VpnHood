@@ -46,7 +46,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private Guid? _activeClientProfileId;
     private string? _activeServerLocation;
     private DateTime? _connectRequestTime;
-    private CountryRangeIpLocationProvider? _ipGroupManager;
+    private CountryIpRangeProvider? _ipGroupManager;
     private bool _isConnecting;
     private bool _isDisconnecting;
     private SessionStatus? _lastSessionStatus;
@@ -805,7 +805,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public async Task<CountryRangeIpLocationProvider> GetIpGroupManager()
+    public async Task<CountryIpRangeProvider> GetIpGroupManager()
     {
         if (_ipGroupManager != null)
             return _ipGroupManager;
@@ -813,7 +813,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var zipArchive = new ZipArchive(new MemoryStream(App.Resource.IpLocations), ZipArchiveMode.Read,
             leaveOpen: false);
 
-        _ipGroupManager = await CountryRangeIpLocationProvider
+        _ipGroupManager = await CountryIpRangeProvider
             .Create(zipArchive)
             .VhConfigureAwait();
 

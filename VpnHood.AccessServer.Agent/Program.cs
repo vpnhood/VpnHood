@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 using NLog.Web;
 using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Agent.Services;
+using VpnHood.AccessServer.Agent.Services.IpLocationServices;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.Common.IpLocations;
 
@@ -94,8 +95,8 @@ public class Program
                 .AddScoped<LoadBalancerService>()
                 .AddScoped<FarmTokenUpdater>()
                 .AddScoped<FarmTokenRepoUploader>()
-                .AddKeyedSingleton<IIpLocationProvider, AgentIpLocationProvider>(LocationProviderDevice)
-                .AddKeyedSingleton<IIpLocationProvider, AgentIpLocationProvider>(LocationProviderServer)
+                .AddKeyedSingleton<IIpLocationProvider, DeviceIpLocationProvider>(LocationProviderDevice)
+                .AddKeyedSingleton<IIpLocationProvider, ServerIpLocationProvider>(LocationProviderServer)
                 .AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
 
             //---------------------

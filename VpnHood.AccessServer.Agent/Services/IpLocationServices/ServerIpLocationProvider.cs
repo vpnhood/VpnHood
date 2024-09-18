@@ -2,11 +2,11 @@
 using VpnHood.Common.IpLocations;
 using VpnHood.Common.IpLocations.Providers;
 
-namespace VpnHood.AccessServer.Agent.Services;
+namespace VpnHood.AccessServer.Agent.Services.IpLocationServices;
 
-public class AgentIpLocationProvider(
-    IHttpClientFactory clientFactory, 
-    ILogger<AgentIpLocationProvider> logger,
+public class ServerIpLocationProvider(
+    IHttpClientFactory clientFactory,
+    ILogger<DeviceIpLocationProvider> logger,
     IOptions<AgentOptions> options)
     : CompositeIpLocationProvider(logger, CreateLoggers(clientFactory, options))
 {

@@ -83,7 +83,7 @@ internal class AppMultiAdService
             }
         }
 
-        throw new LoadAdException($"Could not load any AD. Country: {GetCountryName(countryCode)}");
+        throw new LoadAdException($"Could not load any AD. CountryCode: {GetCountryName(countryCode)}");
     }
 
     protected async Task<string> ShowLoadedAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)

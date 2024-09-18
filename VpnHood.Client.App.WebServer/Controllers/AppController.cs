@@ -131,7 +131,7 @@ internal class AppController : WebApiController, IAppController
     public async Task<IpGroupInfo[]> GetIpGroups()
     {
         var ipGroupManager = await App.GetIpGroupManager().VhConfigureAwait();
-        var ipGroupIds = await ipGroupManager.GetIpGroupIds().VhConfigureAwait();
+        var ipGroupIds = await ipGroupManager.GetCountryCodes().VhConfigureAwait();
         return ipGroupIds.Select(x => new IpGroupInfo { IpGroupId = x }).ToArray();
     }
 

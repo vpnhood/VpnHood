@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 using System.Net;
 using System.Text.Json.Serialization;
-using System.Threading;
 using VpnHood.Common.Converters;
 using VpnHood.Common.Utils;
 

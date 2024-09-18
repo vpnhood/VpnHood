@@ -46,7 +46,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private Guid? _activeClientProfileId;
     private string? _activeServerLocation;
     private DateTime? _connectRequestTime;
-    private IpGroupManager? _ipGroupManager;
+    private CountryRangeIpLocationProvider? _ipGroupManager;
     private bool _isConnecting;
     private bool _isDisconnecting;
     private SessionStatus? _lastSessionStatus;
@@ -462,7 +462,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogInformation("UserSettings: {UserSettings}",
                 JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
             if (diagnose) // log country name
-                VhLogger.Instance.LogInformation("Country: {Country}",
+                VhLogger.Instance.LogInformation("CountryCode: {CountryCode}",
                     GetCountryName(await GetClientCountryCode(cancellationToken).VhConfigureAwait()));
 
             VhLogger.Instance.LogInformation("VpnHood Client is Connecting ...");
@@ -805,14 +805,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public async Task<IpGroupManager> GetIpGroupManager()
+    public async Task<CountryRangeIpLocationProvider> GetIpGroupManager()
     {
         if (_ipGroupManager != null)
             return _ipGroupManager;
 
         var zipArchive = new ZipArchive(new MemoryStream(App.Resource.IpLocations), ZipArchiveMode.Read,
             leaveOpen: false);
-        _ipGroupManager = await IpGroupManager.Create(zipArchive).VhConfigureAwait();
+
+        _ipGroupManager = await CountryRangeIpLocationProvider
+            .Create(zipArchive)
+            .VhConfigureAwait();
+
         return _ipGroupManager;
     }
 
@@ -921,7 +925,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         try {
             var lastCountryCode = await GetClientCountryCode(cancellationToken).VhConfigureAwait();
-            VhLogger.Instance.LogTrace("Finding Country IPs for split tunneling. LastCountry: {Country}",
+            VhLogger.Instance.LogTrace("Finding CountryCode IPs for split tunneling. LastCountry: {CountryCode}",
                 GetCountryName(lastCountryCode));
             _isLoadingIpGroup = true;
             FireConnectionStateChanged();
@@ -930,9 +934,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 throw new InvalidOperationException("Could not use internal location service because it is disabled.");
 
             var ipGroupManager = await GetIpGroupManager().VhConfigureAwait();
-            var ipGroup = await ipGroupManager.GetIpGroup(clientIp, lastCountryCode).VhConfigureAwait();
-            _appPersistState.ClientCountryCode = ipGroup.IpGroupId;
-            VhLogger.Instance.LogInformation("Client Country is: {Country}", _appPersistState.ClientCountryName);
+            var ipGroup = await ipGroupManager.GetCountryIpRange(clientIp, lastCountryCode).VhConfigureAwait();
+            _appPersistState.ClientCountryCode = ipGroup.CountryCode;
+            VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}", _appPersistState.ClientCountryName);
             ipRanges = ipRanges.Exclude(ipGroup.IpRanges);
         }
         catch (Exception ex) {

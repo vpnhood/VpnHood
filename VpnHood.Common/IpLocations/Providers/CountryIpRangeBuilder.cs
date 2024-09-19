@@ -32,10 +32,10 @@ public class CountryIpRangeBuilder
             throw new Exception($"{entryName} not found in the zip file!");
 
         await using var crvStream = ipLocationEntry.Open();
-        await BuildIpGroupArchiveFromIp2Location(crvStream, filePath);
+        await BuildCountryIpRangeArchiveFromIp2Location(crvStream, filePath);
     }
 
-    public static async Task BuildIpGroupArchiveFromIp2Location(Stream crvStream, string outputZipFile)
+    public static async Task BuildCountryIpRangeArchiveFromIp2Location(Stream crvStream, string outputZipFile)
     {
         var ipGroups = await LoadIp2Location(crvStream).VhConfigureAwait();
 

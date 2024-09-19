@@ -193,6 +193,12 @@ public class VhContext : DbContext
                 .WithMany(d => d.AccessTokens)
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            entity
+                .HasOne(e => e.ServerFarm)
+                .WithMany(d => d.AccessTokens)
+                .HasForeignKey(e => e.ServerFarmId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<DeviceModel>(entity => {
@@ -315,17 +321,6 @@ public class VhContext : DbContext
                 .WithMany(d => d.Servers)
                 .HasForeignKey(e => e.LocationId)
                 .OnDelete(DeleteBehavior.NoAction);
-
-
-            //entity.Property(e => e.AccessPoints)
-            //    .HasColumnType("varchar(200)")
-            //    .HasConversion(
-            //        v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-            //        v => JsonSerializer.Deserialize<AccessPointModel[]>(v, (JsonSerializerOptions?)null) ?? Array.Empty<AccessPointModel>(),
-            //        new ValueComparer<AccessPointModel[]>(
-            //            (c1, c2) => Common.Utils.Util.SequenceNullOrEquals(c1, c2),
-            //            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-            //            c => c));
         });
 
         modelBuilder.Entity<ServerStatusModel>(entity => {
@@ -418,7 +413,7 @@ public class VhContext : DbContext
                 .HasOne(e => e.Project)
                 .WithMany(d => d.ServerFarms)
                 .HasForeignKey(e => e.ProjectId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity
                 .HasOne(e => e.ServerProfile)
@@ -440,8 +435,19 @@ public class VhContext : DbContext
             entity
                 .Property(e => e.RepoSettings)
                 .HasMaxLength(1500);
-        });
 
+            entity
+                .HasOne(e => e.ServerFarm)
+                .WithMany(d => d.TokenRepos)
+                .HasForeignKey(d => d.ServerFarmId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity
+                .HasOne(e => e.Project)
+                .WithMany(d => d.FarmTokenRepoModels)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
 
         modelBuilder.Entity<AccessModel>(entity => {
             entity
@@ -461,7 +467,6 @@ public class VhContext : DbContext
                 .HasComputedColumnSql(
                     $"{nameof(AccessModel.LastCycleSentTraffic)} + {nameof(AccessModel.LastCycleReceivedTraffic)} - {nameof(AccessModel.LastCycleSentTraffic)} - {nameof(AccessModel.LastCycleReceivedTraffic)}");
 
-
             entity
                 .HasIndex(e => new { e.CycleTraffic }); // for resetting cycles
 
@@ -479,6 +484,11 @@ public class VhContext : DbContext
                 .WithMany(d => d.Accesses)
                 .HasForeignKey(e => e.DeviceId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.AccessToken)
+                .WithMany(d => d.Accesses)
+                .HasForeignKey(e => e.AccessTokenId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<SessionModel>(entity => {
@@ -527,7 +537,18 @@ public class VhContext : DbContext
             entity.HasOne(e => e.Server)
                 .WithMany(d => d.Sessions)
                 .HasForeignKey(e => e.ServerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.Device)
+                .WithMany(d => d.Sessions)
+                .HasForeignKey(e => e.DeviceId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.Access)
+                .WithMany(d => d.Sessions)
+                .HasForeignKey(e => e.AccessId)
                 .OnDelete(DeleteBehavior.Cascade);
+
         });
 
 
@@ -568,6 +589,12 @@ public class VhContext : DbContext
             entity
                 .Property(x => x.IsDeleted)
                 .HasDefaultValue(false);
+
+            entity
+                .HasOne(e => e.Project)
+                .WithMany(d => d.ServerProfiles)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<LocationModel>(entity => {

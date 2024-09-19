@@ -26,4 +26,5 @@ public class AccessTokenModel
 
     public virtual ProjectModel? Project { get; set; }
     public virtual ServerFarmModel? ServerFarm { get; set; }
+    public virtual ICollection<AccessModel>? Accesses { get; set; }
 }

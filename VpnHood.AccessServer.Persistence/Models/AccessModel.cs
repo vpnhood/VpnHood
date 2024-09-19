@@ -23,4 +23,5 @@ public class AccessModel : AccessBaseModel
 {
     public virtual AccessTokenModel? AccessToken { get; set; }
     public virtual DeviceModel? Device { get; set; }
+    public virtual ICollection<SessionModel>? Sessions { get; set; }
 }

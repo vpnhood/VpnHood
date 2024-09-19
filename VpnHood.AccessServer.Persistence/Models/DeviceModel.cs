@@ -15,4 +15,5 @@ public class DeviceModel
 
     public virtual ProjectModel? Project { get; set; }
     public virtual ICollection<AccessModel>? Accesses { get; set; }
+    public virtual ICollection<SessionModel>? Sessions { get; set; }
 }

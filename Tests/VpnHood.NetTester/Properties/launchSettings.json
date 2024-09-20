@@ -2,8 +2,8 @@
   "profiles": {
     "VpnHood.NetTester": {
       "commandName": "Project",
-      "commandLineArgs2": "/ep 127.0.0.1:1100 /server /client /down 100 /up 100 /tcp 3500 /https 4443 /http 8080 /single true /multi 10 /out report.txt /domain microsofz12345.com /debug /url https://aka.ms/ssmsfullsetup",
-      "commandLineArgs": "/ep 15.204.87.44:1100 /client /down 100 /up 100 /tcp 0  /http 0 /https 4443 /single true /multi 0 /out report.txt",
+      "commandLineArgs": "/ep 127.0.0.1:1100 /server /client /down 100 /up 0 /tcp 0 /https 0 /http 0 /single true /multi 10 /out report.txt /domain microsofz12345.com /debug /url https://download.microsoft.com/download/9/b/e/9bee9f00-2ee2-429a-9462-c9bc1ce14c28/SSMS-Setup-ENU.exe /url-ip 184.29.22.44",
+      "commandLineArgs2": "/ep 15.204.87.44:1100 /client /down 100 /up 100 /tcp 0  /http 0 /https 4443 /single true /multi 0 /out report.txt",
       "commandLineArgs3": "/ep 127.0.0.2:31500 /server /client /down 200 /up 200 /tcp 35000 /http 8080 /single true /multi 10 /out C:/Users/Developer/Desktop/a.txt"
     }
   }

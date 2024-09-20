@@ -22,7 +22,10 @@ internal class ClientApp : IDisposable
         JobRunner.Default.Interval = TimeSpan.FromMilliseconds(500);
 
         // dump clientOptions
-        VhLogger.Instance.LogInformation($"ClientOptions: {JsonSerializer.Serialize(clientOptions)}");
+        VhLogger.Instance.LogInformation("ClientOptions: {ClientOptions}",
+            JsonSerializer.Serialize(clientOptions, new JsonSerializerOptions {
+                WriteIndented = true
+            }));
 
         if (clientOptions.IsDebug)
             StreamRandomReader.ReadDelay = TimeSpan.FromMicroseconds(1000);
@@ -56,7 +59,9 @@ internal class ClientApp : IDisposable
         if (_clientOptions.HttpPort != 0) {
             var httpTesterClient = new HttpTesterClient(
                 new IPEndPoint(ServerEndPoint.Address, _clientOptions.HttpPort),
-                domain: _clientOptions.Domain, isHttps: false);
+                domain: _clientOptions.Domain,
+                isHttps: false,
+                timeout: TimeSpan.FromSeconds(_clientOptions.Timeout));
 
             // test single
             if (_clientOptions.Single)
@@ -77,7 +82,9 @@ internal class ClientApp : IDisposable
         if (_clientOptions.HttpsPort != 0) {
             var httpsTesterClient = new HttpTesterClient(
                 new IPEndPoint(ServerEndPoint.Address, _clientOptions.HttpsPort),
-                domain: _clientOptions.Domain, isHttps: true);
+                domain: _clientOptions.Domain,
+                isHttps: true,
+                timeout: TimeSpan.FromSeconds(_clientOptions.Timeout));
 
             // test single
             if (_clientOptions.Single)
@@ -97,33 +104,39 @@ internal class ClientApp : IDisposable
 
         if (_clientOptions.Url != null) {
             if (_clientOptions.Single)
-                await HttpTesterClient.SimpleDownload(_clientOptions.Url, size: _clientOptions.DownSize,
-                    connectionCount: 1, cancellationToken: cancellationToken);
+                await HttpTesterClient.SimpleDownload(_clientOptions.Url, ipAddress: _clientOptions.UrlIp,
+                    size: _clientOptions.DownSize, connectionCount: 1,
+                    timeout: TimeSpan.FromSeconds(_clientOptions.Timeout),
+                    cancellationToken: cancellationToken);
 
             if (_clientOptions.Multi > 0)
-                await HttpTesterClient.SimpleDownload(_clientOptions.Url, size: _clientOptions.DownSize,
-                    connectionCount: _clientOptions.Multi, cancellationToken: cancellationToken);
+                await HttpTesterClient.SimpleDownload(_clientOptions.Url, ipAddress: _clientOptions.UrlIp, size: _clientOptions.DownSize,
+                    connectionCount: _clientOptions.Multi,
+                    timeout: TimeSpan.FromSeconds(_clientOptions.Timeout),
+                    cancellationToken: cancellationToken);
         }
     }
 
     private async Task ConfigureServer()
-        {
-            var serverConfig = new ServerConfig {
-                TcpPort = _clientOptions.TcpPort,
-                HttpPort = _clientOptions.HttpPort,
-                HttpsPort = _clientOptions.HttpsPort,
-                HttpsDomain = _clientOptions.Domain,
-                IsValidDomain = _clientOptions.IsValidDomain
-            };
+    {
+        VhLogger.Instance.LogInformation("Configuring server...");
 
-            // sent serverConfig to server via HttpClient
-            var httpClient = new HttpClient();
-            var content = new StringContent(JsonSerializer.Serialize(serverConfig), Encoding.UTF8, "application/json");
-            var response = await httpClient.PostAsync($"http://{ServerEndPoint}/config", content);
-            response.EnsureSuccessStatusCode();
-        }
+        var serverConfig = new ServerConfig {
+            TcpPort = _clientOptions.TcpPort,
+            HttpPort = _clientOptions.HttpPort,
+            HttpsPort = _clientOptions.HttpsPort,
+            HttpsDomain = _clientOptions.Domain,
+            IsValidDomain = _clientOptions.IsValidDomain
+        };
 
-        public void Dispose()
-        {
-        }
+        // sent serverConfig to server via HttpClient
+        var httpClient = new HttpClient();
+        var content = new StringContent(JsonSerializer.Serialize(serverConfig), Encoding.UTF8, "application/json");
+        var response = await httpClient.PostAsync($"http://{ServerEndPoint}/config", content);
+        response.EnsureSuccessStatusCode();
     }
+
+    public void Dispose()
+    {
+    }
+}

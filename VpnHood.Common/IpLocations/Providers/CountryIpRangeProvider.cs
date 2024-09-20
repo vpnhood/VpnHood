@@ -57,43 +57,6 @@ public class CountryIpRangeProvider(
         }
     }
 
-    public async Task<CountryIpRange> GetCountryIpRange(IPAddress ipAddress)
-    {
-        return await FindCountryIpRange(ipAddress).VhConfigureAwait()
-               ?? throw new NotExistsException(
-                   $"Could not find any ip group for the given ip. IP: {VhLogger.Format(ipAddress)}");
-    }
-
-    public async Task<CountryIpRange?> FindCountryIpRange(IPAddress ipAddress)
-    {
-        // CountryIpRange
-        if (CurrentCountryCode != null) {
-            var ipRanges = await GetIpRanges(CurrentCountryCode).VhConfigureAwait();
-            if (ipRanges.Any(x => x.IsInRange(ipAddress))) {
-                _countryIpRanges.TryAdd(CurrentCountryCode, ipRanges);
-                return new CountryIpRange {
-                    CountryCode = CurrentCountryCode,
-                    IpRanges = ipRanges
-                };
-            }
-        }
-
-        // iterate through all groups
-        var countryCodes = await GetCountryCodes();
-        foreach (var countryCode in countryCodes) {
-            var ipRanges = await GetIpRanges(countryCode).VhConfigureAwait();
-            if (ipRanges.Any(x => x.IsInRange(ipAddress))) {
-                _countryIpRanges.TryAdd(countryCode, ipRanges);
-                return new CountryIpRange {
-                    CountryCode = countryCode,
-                    IpRanges = ipRanges
-                };
-            }
-        }
-
-        return null;
-    }
-
     public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         var ipAddress =
@@ -108,19 +71,32 @@ public class CountryIpRangeProvider(
 
     public async Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
     {
-        var countryIpRange = await GetCountryIpRange(ipAddress).VhConfigureAwait();
+        // first try CurrentCountryCode for performance
+        if (CurrentCountryCode != null) {
+            var ipRanges = await GetIpRanges(CurrentCountryCode).VhConfigureAwait();
+            if (ipRanges.Any(x => x.IsInRange(ipAddress)))
+                return BuildIpLocation(CurrentCountryCode, ipAddress);
+        }
+
+        // iterate through all countries
+        var countryCodes = await GetCountryCodes();
+        foreach (var countryCode in countryCodes) {
+            var ipRanges = await GetIpRanges(countryCode).VhConfigureAwait();
+            if (ipRanges.Any(x => x.IsInRange(ipAddress)))
+                return BuildIpLocation(countryCode, ipAddress);
+        }
+
+        throw new KeyNotFoundException($"Could not find location for given ip. IpAddress: {ipAddress}.");
+    }
+
+    private static IpLocation BuildIpLocation(string countryCode, IPAddress ipAddress)
+    {
         return new IpLocation {
-            CountryName = new RegionInfo(countryIpRange.CountryCode).EnglishName,
-            CountryCode = countryIpRange.CountryCode,
+            CountryName = new RegionInfo(countryCode).EnglishName,
+            CountryCode = countryCode,
             IpAddress = ipAddress,
             CityName = null,
             RegionName = null
         };
-    }
-
-    public class CountryIpRange
-    {
-        public required string CountryCode { get; init; }
-        public required IpRangeOrderedList IpRanges { get; init; }
     }
 }

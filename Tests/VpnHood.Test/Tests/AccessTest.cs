@@ -4,8 +4,10 @@ using System.Diagnostics;
 using System.Net;
 using VpnHood.Client;
 using VpnHood.Common.Exceptions;
+using VpnHood.Common.IpLocations.Providers;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Test.Device;
 using VpnHood.Tunneling;
@@ -30,13 +32,14 @@ public class AccessTest : TestBase
         // make sure GetIpRange works
         Assert.IsTrue((await app.CountryIpRangeProvider.GetIpRanges("US")).Any());
 
-        Stopwatch sw = Stopwatch.StartNew();
+        var sw = Stopwatch.StartNew();
+        var ipRangeInfos = new List<IpRangeLocationProvider.IpRangeInfo>();
         foreach (var countryCode in countryCodes) {
-            countryCodes = await app.CountryIpRangeProvider.GetCountryIpRange();
+            await app.CountryIpRangeProvider.GetIpRanges(countryCode);
         }
 
         Console.WriteLine(sw.Elapsed);
-        for (int i = 0; i < 1; i++) {
+        for (var i = 0; i < 1; i++) {
 
             try {
                 var res = await app.CountryIpRangeProvider.GetLocation(IPAddress.Parse("127.0.0.1"), CancellationToken.None);

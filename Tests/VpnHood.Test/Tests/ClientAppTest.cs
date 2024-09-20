@@ -119,7 +119,7 @@ public class ClientAppTest : TestBase
         appOptions.UseInternalLocationService = true;
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         var countryCodes = await app.IpRangeLocationProvider.GetCountryCodes();
-        Assert.IsTrue(countryCodes.Any(x => x == "us"),
+        Assert.IsTrue(countryCodes.Any(x => x == "US"),
             "Countries has not been extracted.");
 
         // make sure GetIpRange works

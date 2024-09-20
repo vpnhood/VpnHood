@@ -25,7 +25,7 @@ public class LocalIpRangeLocationProvider(
     {
         _countryCodes ??= _zipArchive.Value.Entries
             .Where(x => Path.GetExtension(x.Name) == ".ips")
-            .Select(x => Path.GetFileNameWithoutExtension(x.Name))
+            .Select(x => Path.GetFileNameWithoutExtension(x.Name).ToUpper())
             .ToArray();
 
         return Task.FromResult(_countryCodes);
@@ -91,6 +91,7 @@ public class LocalIpRangeLocationProvider(
 
     private static IpLocation BuildIpLocation(string countryCode, IPAddress ipAddress)
     {
+        countryCode = countryCode.ToUpper();
         return new IpLocation {
             CountryName = new RegionInfo(countryCode).EnglishName,
             CountryCode = countryCode,

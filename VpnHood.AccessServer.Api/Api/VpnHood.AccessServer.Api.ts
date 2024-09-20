@@ -148,6 +148,75 @@ export class AccessesClient {
     }
 }
 
+export class ClientFiltersClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "";
+
+    }
+
+    create(projectId: string, createParams: ClientFilterCreate, cancelToken?: CancelToken): Promise<ClientFilter> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/accesses";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(createParams);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processCreate(_response);
+        });
+    }
+
+    protected processCreate(response: AxiosResponse): Promise<ClientFilter> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = ClientFilter.fromJS(resultData200);
+            return Promise.resolve<ClientFilter>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ClientFilter>(null as any);
+    }
+}
+
 export class AccessTokensClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
@@ -6081,6 +6150,90 @@ export class ListResultOfAccessTokenData implements IListResultOfAccessTokenData
 export interface IListResultOfAccessTokenData {
     totalCount?: number | null;
     items: AccessTokenData[];
+}
+
+export class ClientFilter implements IClientFilter {
+    clientFilterId!: string;
+    clientFilterName!: string;
+    filter!: string;
+
+    constructor(data?: IClientFilter) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.clientFilterId = _data["clientFilterId"] !== undefined ? _data["clientFilterId"] : <any>null;
+            this.clientFilterName = _data["clientFilterName"] !== undefined ? _data["clientFilterName"] : <any>null;
+            this.filter = _data["filter"] !== undefined ? _data["filter"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): ClientFilter {
+        data = typeof data === 'object' ? data : {};
+        let result = new ClientFilter();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["clientFilterId"] = this.clientFilterId !== undefined ? this.clientFilterId : <any>null;
+        data["clientFilterName"] = this.clientFilterName !== undefined ? this.clientFilterName : <any>null;
+        data["filter"] = this.filter !== undefined ? this.filter : <any>null;
+        return data;
+    }
+}
+
+export interface IClientFilter {
+    clientFilterId: string;
+    clientFilterName: string;
+    filter: string;
+}
+
+export class ClientFilterCreate implements IClientFilterCreate {
+    clientFilterName!: string;
+    filter!: string;
+
+    constructor(data?: IClientFilterCreate) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.clientFilterName = _data["clientFilterName"] !== undefined ? _data["clientFilterName"] : <any>null;
+            this.filter = _data["filter"] !== undefined ? _data["filter"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): ClientFilterCreate {
+        data = typeof data === 'object' ? data : {};
+        let result = new ClientFilterCreate();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["clientFilterName"] = this.clientFilterName !== undefined ? this.clientFilterName : <any>null;
+        data["filter"] = this.filter !== undefined ? this.filter : <any>null;
+        return data;
+    }
+}
+
+export interface IClientFilterCreate {
+    clientFilterName: string;
+    filter: string;
 }
 
 export class DeviceData implements IDeviceData {

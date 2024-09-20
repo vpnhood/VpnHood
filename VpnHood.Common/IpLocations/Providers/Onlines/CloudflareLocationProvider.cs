@@ -4,7 +4,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.IpLocations.Providers;
 
-public class CloudflareIpLocationProvider(HttpClient httpClient, string userAgent) : IIpLocationProvider
+public class CloudflareLocationProvider(HttpClient httpClient, string userAgent) : IIpLocationProvider
 {
     public Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
     {

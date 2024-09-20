@@ -1,12 +1,13 @@
 ﻿using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.IpLocations.Providers;
 
-public class IpRangeLocationProvider : IIpLocationProvider
+public class LocalIpLocationProvider : IIpLocationProvider
 {
     public class IpRangeInfo
     {
@@ -16,7 +17,7 @@ public class IpRangeLocationProvider : IIpLocationProvider
 
     private readonly List<IpRangeInfo> _ipRangeInfoList;
 
-    public IpRangeLocationProvider(IEnumerable<IpRangeInfo> ipRangeInfos)
+    public LocalIpLocationProvider(IEnumerable<IpRangeInfo> ipRangeInfos)
     {
         _ipRangeInfoList = ipRangeInfos
             .OrderBy(x => x.IpRanges.FirstIpAddress, new IPAddressComparer())
@@ -65,14 +66,57 @@ public class IpRangeLocationProvider : IIpLocationProvider
     {
         public int Compare(IpRangeInfo x, IpRangeInfo y)
         {
-            if (IPAddressUtil.Compare(x.IpRanges.FirstIpAddress, x.IpRanges.FirstIpAddress) <= 0 &&
-                IPAddressUtil.Compare(x.IpRanges.LastIpAddress, x.IpRanges.LastIpAddress) >= 0)
+            if (IPAddressUtil.Compare(x.IpRanges.FirstIpAddress, y.IpRanges.FirstIpAddress) <= 0 &&
+                IPAddressUtil.Compare(x.IpRanges.LastIpAddress, y.IpRanges.LastIpAddress) >= 0)
                 return 0;
 
-            if (IPAddressUtil.Compare(x.IpRanges.FirstIpAddress, x.IpRanges.FirstIpAddress) < 0)
+            if (IPAddressUtil.Compare(x.IpRanges.FirstIpAddress, y.IpRanges.FirstIpAddress) < 0)
                 return -1;
 
             return +1;
         }
     }
+
+    public void Serialize(Stream stream)
+    {
+        // serialize to binary
+        using var writer = new BinaryWriter(stream, Encoding.ASCII, true);
+        writer.Write(_ipRangeInfoList.Count);
+        foreach (var ipRangeInfo in _ipRangeInfoList) {
+            var ipRange = ipRangeInfo.IpRanges;
+            var firstIpBytes = ipRange.FirstIpAddress.GetAddressBytes();
+            var lastIpBytes = ipRange.LastIpAddress.GetAddressBytes();
+            var countryBytes = Encoding.ASCII.GetBytes(ipRangeInfo.CountryCode);
+
+            writer.Write((byte)firstIpBytes.Length);
+            writer.Write(firstIpBytes);
+            writer.Write((byte)lastIpBytes.Length);
+            writer.Write(lastIpBytes);
+            writer.Write((byte)countryBytes.Length);
+            writer.Write(countryBytes);
+        }
+    }
+
+    public static LocalIpLocationProvider Deserialize(Stream stream)
+    {
+        using var reader = new BinaryReader(stream);
+        var length = reader.ReadInt32();
+        var ipRangeInfos = new IpRangeInfo[length];
+        for (var i = 0; i < length; i++) {
+            var firstIpLength = reader.ReadByte();
+            var firstIpBytes = reader.ReadBytes(firstIpLength);
+            var lastIpLength = reader.ReadByte();
+            var lastIpBytes = reader.ReadBytes(lastIpLength);
+            var countryLength = reader.ReadByte();
+            var countryBytes = reader.ReadBytes(countryLength);
+
+            ipRangeInfos[i] = new IpRangeInfo {
+                CountryCode = Encoding.ASCII.GetString(countryBytes),
+                IpRanges = new IpRange(new IPAddress(firstIpBytes), new IPAddress(lastIpBytes))
+            };
+        }
+
+        return new LocalIpLocationProvider(ipRangeInfos);
+    }
+
 }

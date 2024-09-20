@@ -8,9 +8,9 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.IpLocations.Providers;
 
-public class CountryIpRangeBuilder
+public class Ip2LocationDbParser
 {
-    public static async Task UpdateIp2LocationFile(string filePath, string apiKey, TimeSpan? interval = null)
+    public static async Task UpdateLocalDb(string filePath, string apiKey, bool forIpRange, TimeSpan? interval = null)
     {
         interval ??= TimeSpan.FromDays(7);
         if (File.GetLastWriteTime(filePath) > DateTime.Now - interval)
@@ -28,34 +28,56 @@ public class CountryIpRangeBuilder
         // build new ipLocation filePath
         using var ipLocationZipArchive = new ZipArchive(ipLocationZipStream, ZipArchiveMode.Read);
         const string entryName = "IP2LOCATION-LITE-DB1.IPV6.CSV";
-        var ipLocationEntry = ipLocationZipArchive.GetEntry(entryName) ?? 
+        var ipLocationEntry = ipLocationZipArchive.GetEntry(entryName) ??
             throw new Exception($"{entryName} not found in the zip file!");
 
         await using var crvStream = ipLocationEntry.Open();
-        await BuildCountryIpRangeArchiveFromIp2Location(crvStream, filePath);
+        if (forIpRange)
+            await BuildLocalIpRangeLocationDb(crvStream, filePath);
+        else
+            await BuildLocalIpLocationDb(crvStream, filePath);
     }
 
-    public static async Task BuildCountryIpRangeArchiveFromIp2Location(Stream crvStream, string outputZipFile)
+    public static async Task BuildLocalIpRangeLocationDb(Stream crvStream, string outputZipFile)
     {
-        var ipGroups = await LoadIp2Location(crvStream).VhConfigureAwait();
+        var countryIpRanges = await ParseIp2LocationCrv(crvStream).VhConfigureAwait();
 
         // Building the IpGroups directory structure
         VhLogger.Instance.LogTrace("Building the optimized Ip2Location archive...");
         await using var outputStream = File.Create(outputZipFile);
         using var newArchive = new ZipArchive(outputStream, ZipArchiveMode.Create, leaveOpen: true);
-        foreach (var ipGroup in ipGroups) {
-            var ipRanges = new IpRangeOrderedList(ipGroup.Value);
-            var entry = newArchive.CreateEntry($"{ipGroup.Key}.ips");
+        foreach (var countryIpRange in countryIpRanges) {
+            var ipRanges = new IpRangeOrderedList(countryIpRange.Value);
+            var entry = newArchive.CreateEntry($"{countryIpRange.Key}.ips", CompressionLevel.NoCompression);
             await using var entryStream = entry.Open();
             ipRanges.Serialize(entryStream);
         }
     }
 
-    private static async Task<Dictionary<string, List<IpRange>>> LoadIp2Location(Stream ipLocationsStream)
+    public static async Task BuildLocalIpLocationDb(Stream crvStream, string outputFile)
+    {
+        var countries = await ParseIp2LocationCrv(crvStream).VhConfigureAwait();
+
+        // Building the IpGroups directory structure
+        VhLogger.Instance.LogTrace("Building the optimized Ip2Location archive...");
+        var ipRangeInfos = new List<LocalIpLocationProvider.IpRangeInfo>();
+        foreach (var country in countries) ipRangeInfos.AddRange(
+                country.Value.Select(ipRange => new LocalIpLocationProvider.IpRangeInfo {
+                    CountryCode = country.Key,
+                    IpRanges = ipRange
+                }));
+
+        // write to file
+        await using var outputStream = File.Create(outputFile);
+        var ipRangeLocationProvider = new LocalIpLocationProvider(ipRangeInfos);
+        ipRangeLocationProvider.Serialize(outputStream);
+    }
+
+    private static async Task<Dictionary<string, List<IpRange>>> ParseIp2LocationCrv(Stream ipLocationsCrvStream)
     {
         // extract IpGroups
         var ipGroupIpRanges = new Dictionary<string, List<IpRange>>();
-        using var streamReader = new StreamReader(ipLocationsStream);
+        using var streamReader = new StreamReader(ipLocationsCrvStream);
         while (!streamReader.EndOfStream) {
             var line = await streamReader.ReadLineAsync().VhConfigureAwait();
             var items = line.Replace("\"", "").Split(',');

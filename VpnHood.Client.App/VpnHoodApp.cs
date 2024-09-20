@@ -889,10 +889,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 throw new InvalidOperationException("Could not use internal location service because it is disabled.");
 
             VhLogger.Instance.LogInformation("Loading country IP ranges. ClientIp: {ClientIp}", VhLogger.Format(clientIp));
-            var countryIpRange = await CountryIpRangeProvider.GetCountryIpRange(clientIp).VhConfigureAwait();
-            _appPersistState.ClientCountryCode = countryIpRange.CountryCode;
+            var ipLocation = await CountryIpRangeProvider.GetLocation(clientIp, cancellationToken).VhConfigureAwait();
+            var countryIpRanges = await CountryIpRangeProvider.GetIpRanges(ipLocation.CountryCode).VhConfigureAwait();
+            _appPersistState.ClientCountryCode = ipLocation.CountryCode;
             VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}", _appPersistState.ClientCountryName);
-            ipRanges = ipRanges.Exclude(countryIpRange.IpRanges);
+            ipRanges = ipRanges.Exclude(countryIpRanges);
         }
         catch (Exception ex) {
             ReportError(ex, "Could not get ip locations of your country.");

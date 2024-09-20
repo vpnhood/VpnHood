@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
+using Namotion.Reflection;
 using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Test.Helper;
@@ -35,9 +36,10 @@ public class AgentTestApp : IDisposable
                         TestIpLocationProvider>(Agent.Program.LocationProviderServer,
                         (_, _) => new TestIpLocationProvider());
 
-                    services.AddKeyedSingleton<IIpLocationProvider,
-                        TestIpLocationProvider>(Agent.Program.LocationProviderDevice,
-                        (_, _) => new TestIpLocationProvider());
+                    if (!appSettings.TryGetValue("UseTestDeviceLocationProvider", out var result) || bool.Parse(result!))
+                        services.AddKeyedSingleton<IIpLocationProvider,
+                            TestIpLocationProvider>(Agent.Program.LocationProviderDevice,
+                            (_, _) => new TestIpLocationProvider());
                 });
             });
 

@@ -1,11 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Net;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Text.Json;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Services;
 using VpnHood.AccessServer.Test.Dom;
+using VpnHood.Common.IpLocations.Providers;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
@@ -117,7 +120,8 @@ public class AgentClientSessionTest
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Received);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Sent);
         Assert.IsNotNull(sessionResponseEx.AccessKey);
-        Assert.AreEqual(tokenRepoUrl.ToString(), Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Urls?.FirstOrDefault());
+        Assert.AreEqual(tokenRepoUrl.ToString(),
+            Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Urls?.FirstOrDefault());
         Assert.IsNotNull(sessionResponseEx.SessionKey);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
@@ -545,14 +549,14 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_Status_SuppressToYourself()
     {
-        var sampler = await ServerFarmDom.Create();
-        var accessToken = await sampler.TestApp.AccessTokensClient.CreateAsync(sampler.ProjectId,
+        var farmDom = await ServerFarmDom.Create();
+        var accessToken = await farmDom.TestApp.AccessTokensClient.CreateAsync(farmDom.ProjectId,
             new AccessTokenCreateParams {
-                ServerFarmId = sampler.ServerFarmId,
+                ServerFarmId = farmDom.ServerFarmId,
                 MaxDevice = 2
             });
 
-        var sampleAccessToken = new AccessTokenDom(sampler.TestApp, accessToken);
+        var sampleAccessToken = new AccessTokenDom(farmDom.TestApp, accessToken);
         var clientId = Guid.NewGuid();
 
         var sampleSession1 = await sampleAccessToken.CreateSession(clientId);
@@ -564,5 +568,36 @@ public class AgentClientSessionTest
         var res = await sampleSession1.AddUsage(0);
         Assert.AreEqual(SessionSuppressType.YourSelf, res.SuppressedBy);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, res.ErrorCode);
+    }
+
+    private static async Task UpdateIp2LocationFile()
+    {
+        // update current ipLocation in app project after a week
+        var solutionFolder = TestApp.GetParentDirectory(Directory.GetCurrentDirectory(), 4);
+        var ipLocationFile = Path.Combine(solutionFolder, "VpnHood.AccessServer.Agent", "Resources", "IpLocations.bin");
+
+        // find token
+        var userSecretFile = Path.Combine(Path.GetDirectoryName(solutionFolder)!, ".user", "credentials.json");
+        var document = JsonDocument.Parse(await File.ReadAllTextAsync(userSecretFile));
+        var ip2LocationToken = document.RootElement.GetProperty("Ip2LocationToken").GetString();
+        ArgumentException.ThrowIfNullOrWhiteSpace(ip2LocationToken);
+
+        await Ip2LocationDbParser.UpdateLocalDb(ipLocationFile, ip2LocationToken, forIpRange: false);
+    }
+
+    [TestMethod]
+    public async Task Session_create_with_IpLocation()
+    {
+        await UpdateIp2LocationFile();
+
+        var testApp = await TestApp.Create(new Dictionary<string, string?> {
+            {"UseTestDeviceLocationProvider", "false"}
+        });
+        
+        var farmDom = await ServerFarmDom.Create(testApp);
+        var accessTokenDom = await farmDom.CreateAccessToken();
+        var sessionDom = await accessTokenDom.CreateSession(clientIp: IPAddress.Parse("8.8.8.8"));
+        var device = await farmDom.TestApp.DevicesClient.FindByClientIdAsync(farmDom.TestApp.ProjectId, sessionDom.SessionRequestEx.ClientInfo.ClientId);
+        Assert.AreEqual("US", device.Country);
     }
 }

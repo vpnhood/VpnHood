@@ -163,7 +163,7 @@ public class SessionService(
         }
         else {
             if (string.IsNullOrEmpty(device.Country) || device.IpAddress != clientIpToStore)
-                device.Country = await GetCountryCode(clientIp);
+                device.Country = await GetCountryCode(clientIp, device.Country);
 
             device.UserAgent = clientInfo.UserAgent;
             device.ClientVersion = clientInfo.ClientVersion;
@@ -275,10 +275,10 @@ public class SessionService(
         return ret;
     }
 
-    private async Task<string?> GetCountryCode(IPAddress? clientIp)
+    private async Task<string?> GetCountryCode(IPAddress? clientIp, string? defaultValue = null)
     {
         if (clientIp == null)
-            return null;
+            return defaultValue;
 
         try {
             var location = await deviceLocationProvider.GetLocation(clientIp, CancellationToken.None);
@@ -286,7 +286,7 @@ public class SessionService(
         }
         catch (Exception ex) {
             logger.LogWarning(ex, "Could not get location for ClientIp: {ClientIp}", clientIp);
-            return null;
+            return defaultValue;
         }
     }
 

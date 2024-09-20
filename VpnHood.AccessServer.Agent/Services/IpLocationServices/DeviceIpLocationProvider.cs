@@ -1,22 +1,22 @@
-﻿using Microsoft.Extensions.Options;
-using VpnHood.Common.IpLocations;
+﻿using VpnHood.Common.IpLocations;
 using VpnHood.Common.IpLocations.Providers;
 
 namespace VpnHood.AccessServer.Agent.Services.IpLocationServices;
 
 public class DeviceIpLocationProvider(
-    IHttpClientFactory clientFactory,
-    ILogger<DeviceIpLocationProvider> logger,
-    IOptions<AgentOptions> options)
-    : CompositeIpLocationProvider(logger, CreateLoggers(clientFactory, options))
+    ILogger<DeviceIpLocationProvider> logger)
+    : CompositeIpLocationProvider(logger, CreateProviders())
 {
-    private static IIpLocationProvider[] CreateLoggers(IHttpClientFactory clientFactory, IOptions<AgentOptions> options)
+    private static IIpLocationProvider[] CreateProviders()
     {
-        const string userAgent = "VpnHood-AccessManager";
-        var httpClient = clientFactory.CreateClient(AgentOptions.HttpClientNameIpLocation);
+        // get IpLocations.bin file path from executing assembly
+        var binFolder = Path.GetDirectoryName(typeof(Program).Assembly.Location);
+        var localDb = Path.Combine(binFolder!, "Resources", "IpLocations.bin");
+        using var localDbStream = File.OpenRead(localDb);
+        var  localProvider = LocalIpLocationProvider.Deserialize(localDbStream);
+
         var providers = new IIpLocationProvider[] {
-            new IpInfoIoProvider(httpClient, userAgent, options.Value.IpInfoIoApiKey),
-            new IpLocationIoProvider(httpClient, userAgent, options.Value.IpLocationIoApiKey)
+            localProvider
         };
         return providers;
     }

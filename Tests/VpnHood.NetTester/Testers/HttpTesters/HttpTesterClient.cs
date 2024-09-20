@@ -11,7 +11,7 @@ using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Testers.HttpTesters;
 
-public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
+public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps, TimeSpan? timeout = null)
 {
     private string Scheme => isHttps ? "Https" : "Http";
     private Uri GetBaseUri()
@@ -21,28 +21,10 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
         return uriBuilder.Uri;
     }
 
-    private IPAddress ResolveDns(string value)
-    {
-        // check if it is an IP address
-        if (IPAddress.TryParse(value, out var ipAddress))
-            return ipAddress;
-
-        // check if it is our domain
-        if (value.Equals(domain, StringComparison.OrdinalIgnoreCase))
-            return serverEp.Address;
-
-        // resolve the domain
-        var ipAddresses = Dns.GetHostAddresses(value);
-        if (ipAddresses.Length == 0)
-            throw new InvalidOperationException($"Cannot resolve domain: {value}");
-
-        return ipAddresses[0];
-    }
-
     public async Task Start(long upSize, long downSize, int connectionCount,
         CancellationToken cancellationToken)
     {
-        if (downSize != 0)
+        if (upSize != 0)
             await StartUpload(upSize, connectionCount, cancellationToken);
 
         if (downSize != 0)
@@ -88,7 +70,7 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
             content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
 
             // Upload the content to the server
-            using var httpClient = CreateHttpClient();
+            using var httpClient = CreateHttpClient(serverEp.Address, timeout);
             var requestUri = new Uri(GetBaseUri(), "upload");
             var response = await httpClient.PostAsync(requestUri, content, cancellationToken);
             response.EnsureSuccessStatusCode();
@@ -103,7 +85,9 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
     {
         try {
             // Upload the content to the server
-            using var httpClient = CreateHttpClient();
+            using var httpClient = CreateHttpClient(serverEp.Address, timeout);
+            httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(30);
+
             var requestUri = new Uri(GetBaseUri(), $"downloads?size={size}&file={Guid.NewGuid()}.pak");
             await using var stream = await httpClient.GetStreamAsync(requestUri, cancellationToken);
 
@@ -120,11 +104,19 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
     // Create a custom HttpClient with custom SocketsHttpHandler
     // to resolve the domain and accept all certificates
     // for this example we are not validating the certificate
-    private HttpClient CreateHttpClient()
+    private static HttpClient CreateHttpClient(IPAddress? ipAddress, TimeSpan? timeout)
     {
+        if (ipAddress == null) {
+            var httpClientHandler = new HttpClientHandler();
+            httpClientHandler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
+            httpClientHandler.ClientCertificateOptions = ClientCertificateOption.Manual;
+            return new HttpClient(httpClientHandler) {
+                Timeout = timeout ?? TimeSpan.FromSeconds(15)
+            };
+        }
+
         var socketHttpHandler = new SocketsHttpHandler {
             ConnectCallback = async (context, cancellationToken) => {
-                var ipAddress = ResolveDns(context.DnsEndPoint.Host);
                 var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) {
                     NoDelay = true
                 };
@@ -145,33 +137,37 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps)
             }
         };
 
-        //var handler = new HttpClientHandler();
-        //handler.ClientCertificateOptions = ClientCertificateOption.Manual;
-        //handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
-        //var client = new HttpClient(handler);
-        var client = new HttpClient(socketHttpHandler);
+        var client = new HttpClient(socketHttpHandler) {
+            Timeout = timeout ?? TimeSpan.FromSeconds(15)
+        };
         return client;
+
     }
 
-    public static async Task SimpleDownload(Uri url, int size, int connectionCount, CancellationToken cancellationToken)
+
+
+    public static async Task SimpleDownload(Uri url, int size, IPAddress? ipAddress, int connectionCount, 
+        TimeSpan? timeout, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"Url => Start Downloading {VhUtil.FormatBytes(size)}, Connections: {connectionCount}, Url: {url}");
+        VhLogger.Instance.LogInformation("Url => Start Downloading. Size: {Size}, Connections: {Connections}, Url: {Url}, Ip: {Ip}",
+            VhUtil.FormatBytes(size), connectionCount, url, ipAddress);
 
         // start multi downloader
         using var speedometer = new Speedometer("Down");
         var uploadTasks = new Task[connectionCount];
         for (var i = 0; i < connectionCount; i++)
-            uploadTasks[i] = SimpleDownload(url, size / connectionCount, speedometer: speedometer,
-                cancellationToken: cancellationToken);
+            uploadTasks[i] = SimpleDownload(url, size / connectionCount, ipAddress, speedometer: speedometer,
+                timeout, cancellationToken: cancellationToken);
 
         await Task.WhenAll(uploadTasks);
     }
 
-    private static async Task SimpleDownload(Uri url, int size, Speedometer speedometer, CancellationToken cancellationToken)
+    private static async Task SimpleDownload(Uri url, int size, IPAddress? ipAddress, Speedometer speedometer, 
+        TimeSpan? timeout, CancellationToken cancellationToken)
     {
         try {
-            using var client = new HttpClient();
+            using var client = CreateHttpClient(ipAddress, timeout);
             var stream = await client.GetStreamAsync(url, cancellationToken);
 
             // read size data to discarder

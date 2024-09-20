@@ -490,4 +490,20 @@ public class VhRepo(VhContext vhContext)
             .ExecuteDeleteAsync();
     }
 
+    public Task<ClientFilterModel[]> ClientFilterList(Guid projectId)
+    {
+        return vhContext.ClientFilters
+            .Where(x => x.ProjectId == projectId)
+            .ToArrayAsync();
+    }
+
+    public async Task<ClientFilterModel> ClientFilterGet(Guid projectId, int clientFilterId)
+    {
+        var model = await vhContext.ClientFilters
+            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.ClientFilterId == clientFilterId)
+            .SingleAsync();
+
+        return model;
+    }
 }

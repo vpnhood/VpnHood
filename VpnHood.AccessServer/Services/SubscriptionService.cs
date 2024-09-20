@@ -61,9 +61,18 @@ public class SubscriptionService(
             throw new QuotaException(nameof(VhContext.FarmTokenRepos), QuotaConstants.FarmTokenRepoCount);
     }
 
+    public async Task AuthorizeCreateClientFilter(Guid projectId)
+    {
+        if (await IsFreePlan(projectId)) {
+            var list = await vhRepo.ClientFilterList(projectId);
+            if (list.Length >= QuotaConstants.ClientFilterCount)
+                throw new QuotaException(nameof(VhContext.ClientFilters), QuotaConstants.ClientFilterCount);
+        }
+    }
+
     private async Task<bool> IsFreePlan(Guid projectId)
     {
-        var project = await vhContext.Projects.SingleAsync(project => project.ProjectId == projectId);
+        var project = await vhRepo.ProjectGet(projectId);
         return project.SubscriptionType == SubscriptionType.Free;
     }
 
@@ -81,5 +90,5 @@ public class SubscriptionService(
             throw new QuotaException("UsageQuery", (long)maxTimeSpan.TotalHours,
                 "The usage query period is not supported by your plan.");
     }
-   
+
 }

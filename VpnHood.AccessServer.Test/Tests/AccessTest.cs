@@ -1,9 +1,7 @@
 ﻿using System.Data;
-using System.Net;
-using Microsoft.Extensions.DependencyInjection;
+using System.Text.RegularExpressions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.Common.IpLocations;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -12,23 +10,34 @@ namespace VpnHood.AccessServer.Test.Tests;
 [TestClass]
 public class AccessTest
 {
-    [TestMethod]
-    public async Task Foo()
+
+    private void ValidateFilter(string filter, string[] tags)
     {
-       
-        await Task.Delay(0);
-        var expression = "((true && (not true) or false)) || (false && not true) ||    !3<1";
-        var replacedExpression = expression
+
+        // replace shorthand operators with full operators
+        filter = filter
             .Replace("&&", "AND")
             .Replace("&", "AND")
             .Replace("||", "OR")
             .Replace("|", "OR")
             .Replace("!", "NOT ");
 
-        var dataTable = new DataTable();
-        var result = dataTable.Compute(replacedExpression, string.Empty);
+        // Regex to match "tag_xxx" pattern
+        filter = Regex.Replace(filter, @"#[\w:]+", match =>
+            tags.Contains(match.Value, StringComparer.OrdinalIgnoreCase).ToString());
 
-        Console.WriteLine(result);
+        var dataTable = new DataTable();
+        dataTable.Compute(filter, string.Empty);
+    }
+
+
+    [TestMethod]
+    public async Task Foo()
+    {
+        await Task.Delay(0);
+
+        var filter = "#premium & #loc:123 & #premium2";
+        ValidateFilter(filter, ["#premium", "#loc:123"]);
     }
 
     [TestMethod]

@@ -29,6 +29,7 @@ public class VhContext : DbContext
     public virtual DbSet<LocationModel> Locations { get; set; } = default!;
     public virtual DbSet<HostOrderModel> HostOrders { get; set; } = default!;
     public virtual DbSet<HostIpModel> HostIps { get; set; } = default!;
+    public virtual DbSet<ClientFilterModel> ClientFilters { get; set; }
 
     protected VhContext()
     {
@@ -686,6 +687,21 @@ public class VhContext : DbContext
                 .WithMany(d => d.HostOrders)
                 .HasForeignKey(d => d.HostProviderId)
                 .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<ClientFilterModel>(entity => {
+            entity
+                .HasKey(e => e.ClientFilterId);
+
+            entity
+                .Property(e => e.Filter)
+                .HasMaxLength(400);
+
+            entity
+                .HasOne(e => e.Project)
+                .WithMany(d => d.ClientFilterModels)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

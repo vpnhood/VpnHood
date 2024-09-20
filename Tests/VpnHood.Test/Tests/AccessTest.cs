@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Diagnostics;
+using System.Net;
 using VpnHood.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
@@ -17,7 +19,37 @@ public class AccessTest : TestBase
     public async Task Foo()
     {
         await Task.Delay(0);
+
+        var appOptions = TestHelper.CreateAppOptions();
+        appOptions.UseInternalLocationService = true;
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        var countryCodes = await app.CountryIpRangeProvider.GetCountryCodes();
+        Assert.IsTrue(countryCodes.Any(x => x == "us"),
+            "Countries has not been extracted.");
+
+        // make sure GetIpRange works
+        Assert.IsTrue((await app.CountryIpRangeProvider.GetIpRanges("US")).Any());
+
+        Stopwatch sw = Stopwatch.StartNew();
+        foreach (var countryCode in countryCodes) {
+            countryCodes = await app.CountryIpRangeProvider.GetCountryIpRange();
         }
+
+        Console.WriteLine(sw.Elapsed);
+        for (int i = 0; i < 1; i++) {
+
+            try {
+                var res = await app.CountryIpRangeProvider.GetLocation(IPAddress.Parse("127.0.0.1"), CancellationToken.None);
+            }
+            catch (Exception ex) {
+                Console.WriteLine(ex);
+
+            }
+        }
+
+        Console.WriteLine(sw.Elapsed);
+
+    }
 
     [TestMethod]
     public async Task Server_reject_invalid_requests()
@@ -58,9 +90,9 @@ public class AccessTest : TestBase
         var token = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddDays(-1));
 
         // create client and connect
-        await using var client1 = await TestHelper.CreateClient(token, autoConnect: false);
-        await Assert.ThrowsExceptionAsync<SessionException>(() => client1.Connect());
-        Assert.AreEqual(SessionErrorCode.AccessExpired, client1.SessionStatus.ErrorCode);
+        await using var client = await TestHelper.CreateClient(token, autoConnect: false);
+        await Assert.ThrowsExceptionAsync<SessionException>(() => client.Connect());
+        Assert.AreEqual(SessionErrorCode.AccessExpired, client.SessionStatus.ErrorCode);
     }
 
     [TestMethod]

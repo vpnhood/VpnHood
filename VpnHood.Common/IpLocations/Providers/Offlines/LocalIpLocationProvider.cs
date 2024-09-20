@@ -50,7 +50,7 @@ public class LocalIpLocationProvider : IIpLocationProvider
             throw new KeyNotFoundException($"Could not find the location of the ip address. IpAddress: {ipAddress}");
 
         // return country code
-        var countryCode = _ipRangeInfoList[res].CountryCode;
+        var countryCode = _ipRangeInfoList[res].CountryCode.ToUpper();
         var ipLocation = new IpLocation {
             CountryName = new RegionInfo(countryCode).EnglishName,
             CountryCode = countryCode,

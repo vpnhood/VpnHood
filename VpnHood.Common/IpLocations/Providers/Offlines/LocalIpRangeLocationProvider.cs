@@ -10,9 +10,9 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.IpLocations.Providers;
 
-public class CountryIpRangeProvider(
+public class LocalIpRangeLocationProvider(
     Func<ZipArchive> zipArchiveFactory,
-    Func<string?> currentCountryCodeFunc) 
+    Func<string?> currentCountryCodeFunc)
     : IIpLocationProvider
 {
     private string? _lasCurrentCountryCode;

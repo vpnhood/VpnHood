@@ -107,7 +107,7 @@ public class ClientAppTest : TestBase
         var ip2LocationToken = document.RootElement.GetProperty("Ip2LocationToken").GetString();
         ArgumentException.ThrowIfNullOrWhiteSpace(ip2LocationToken);
 
-        await CountryIpRangeBuilder.UpdateIp2LocationFile(ipLocationFile, ip2LocationToken);
+        await Ip2LocationDbParser.UpdateLocalDb(ipLocationFile, ip2LocationToken, forIpRange: true);
     }
 
     [TestMethod]
@@ -118,12 +118,12 @@ public class ClientAppTest : TestBase
         var appOptions = TestHelper.CreateAppOptions();
         appOptions.UseInternalLocationService = true;
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
-        var countryCodes = await app.CountryIpRangeProvider.GetCountryCodes();
+        var countryCodes = await app.IpRangeLocationProvider.GetCountryCodes();
         Assert.IsTrue(countryCodes.Any(x => x == "us"),
             "Countries has not been extracted.");
 
         // make sure GetIpRange works
-        Assert.IsTrue((await app.CountryIpRangeProvider.GetIpRanges("US")).Any());
+        Assert.IsTrue((await app.IpRangeLocationProvider.GetIpRanges("US")).Any());
     }
 
     [TestMethod]

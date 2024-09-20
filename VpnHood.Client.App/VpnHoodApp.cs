@@ -72,7 +72,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
     public event EventHandler? ConnectionStateChanged;
     public event EventHandler? UiHasChanged;
-    public CountryIpRangeProvider CountryIpRangeProvider { get; }
+    public LocalIpRangeLocationProvider IpRangeLocationProvider { get; }
     public bool IsIdle => ConnectionState == AppConnectionState.None;
     public TimeSpan SessionTimeout { get; set; }
     public Diagnoser Diagnoser { get; set; } = new();
@@ -121,7 +121,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _allowEndPointTracker = options.AllowEndPointTracker;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), options.SingleLineConsoleLog);
-        CountryIpRangeProvider = new CountryIpRangeProvider(
+        IpRangeLocationProvider = new LocalIpRangeLocationProvider(
             () => new ZipArchive(new MemoryStream(App.Resource.IpLocations)),
             () => _appPersistState.ClientCountryCode);
         ActiveUiContext.OnChanged += ActiveUiContext_OnChanged;
@@ -692,11 +692,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 using var httpClient = new HttpClient();
                 const string userAgent = "VpnHood-Client";
                 var providers = new List<IIpLocationProvider> {
-                    new CloudflareIpLocationProvider(httpClient, userAgent),
+                    new CloudflareLocationProvider(httpClient, userAgent),
                     new IpLocationIoProvider(httpClient, userAgent, apiKey: null)
                 };
                 if (_useInternalLocationService)
-                    providers.Add(CountryIpRangeProvider);
+                    providers.Add(IpRangeLocationProvider);
 
                 var compositeProvider = new CompositeIpLocationProvider(VhLogger.Instance, providers);
                 var ipLocation = await compositeProvider.GetCurrentLocation(cancellationToken).VhConfigureAwait();
@@ -889,8 +889,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 throw new InvalidOperationException("Could not use internal location service because it is disabled.");
 
             VhLogger.Instance.LogInformation("Loading country IP ranges. ClientIp: {ClientIp}", VhLogger.Format(clientIp));
-            var ipLocation = await CountryIpRangeProvider.GetLocation(clientIp, cancellationToken).VhConfigureAwait();
-            var countryIpRanges = await CountryIpRangeProvider.GetIpRanges(ipLocation.CountryCode).VhConfigureAwait();
+            var ipLocation = await IpRangeLocationProvider.GetLocation(clientIp, cancellationToken).VhConfigureAwait();
+            var countryIpRanges = await IpRangeLocationProvider.GetIpRanges(ipLocation.CountryCode).VhConfigureAwait();
             _appPersistState.ClientCountryCode = ipLocation.CountryCode;
             VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}", _appPersistState.ClientCountryName);
             ipRanges = ipRanges.Exclude(countryIpRanges);

@@ -1,13 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Diagnostics;
-using System.Net;
 using VpnHood.Client;
 using VpnHood.Common.Exceptions;
-using VpnHood.Common.IpLocations.Providers;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
-using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Test.Device;
 using VpnHood.Tunneling;
@@ -21,37 +17,6 @@ public class AccessTest : TestBase
     public async Task Foo()
     {
         await Task.Delay(0);
-
-        var appOptions = TestHelper.CreateAppOptions();
-        appOptions.UseInternalLocationService = true;
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
-        var countryCodes = await app.CountryIpRangeProvider.GetCountryCodes();
-        Assert.IsTrue(countryCodes.Any(x => x == "us"),
-            "Countries has not been extracted.");
-
-        // make sure GetIpRange works
-        Assert.IsTrue((await app.CountryIpRangeProvider.GetIpRanges("US")).Any());
-
-        var sw = Stopwatch.StartNew();
-        var ipRangeInfos = new List<IpRangeLocationProvider.IpRangeInfo>();
-        foreach (var countryCode in countryCodes) {
-            await app.CountryIpRangeProvider.GetIpRanges(countryCode);
-        }
-
-        Console.WriteLine(sw.Elapsed);
-        for (var i = 0; i < 1; i++) {
-
-            try {
-                var res = await app.CountryIpRangeProvider.GetLocation(IPAddress.Parse("127.0.0.1"), CancellationToken.None);
-            }
-            catch (Exception ex) {
-                Console.WriteLine(ex);
-
-            }
-        }
-
-        Console.WriteLine(sw.Elapsed);
-
     }
 
     [TestMethod]

@@ -132,7 +132,7 @@ public class FileAccessManager : IAccessManager
                 const string userAgent = "VpnHood-File-AccessManager";
                 var ipLocationProvider = new CompositeIpLocationProvider(VhLogger.Instance,
                 [
-                    new CloudflareIpLocationProvider(httpClient, userAgent),
+                    new CloudflareLocationProvider(httpClient, userAgent),
                     new IpLocationIoProvider(httpClient, userAgent, apiKey: null),
                     new IpApiCoLocationProvider(httpClient, userAgent)
                 ]);

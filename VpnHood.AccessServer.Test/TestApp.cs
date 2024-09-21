@@ -36,6 +36,7 @@ namespace VpnHood.AccessServer.Test;
 
 public class TestApp : IHttpClientFactory, IDisposable
 {
+    private readonly bool _isFree;
     public WebApplicationFactory<Program> WebApp { get; }
     public AgentTestApp AgentTestApp { get; }
 
@@ -57,6 +58,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     public ServerProfilesClient ServerProfilesClient => new(HttpClient);
     public HostOrdersClient HostOrdersClient => new(HttpClient);
     public FarmTokenReposClient FarmTokenReposClient => new(HttpClient);
+    public ClientFiltersClient ClientFiltersClient => new(HttpClient);
     public TeamClient TeamClient => new(HttpClient);
     public AgentCacheClient AgentCacheClient => Scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
     public ILogger<TestApp> Logger => Scope.ServiceProvider.GetRequiredService<ILogger<TestApp>>();
@@ -73,7 +75,7 @@ public class TestApp : IHttpClientFactory, IDisposable
 
     private static IPAddress _lastIp = IPAddress.Parse("127.0.0.0");
 
-    private TestApp(Dictionary<string, string?> appSettings, string environment)
+    private TestApp(Dictionary<string, string?> appSettings, string environment, bool isFree)
     {
         // AgentTestApp should not any dependency to the main app
         AgentTestApp = new AgentTestApp(appSettings, environment);
@@ -93,6 +95,7 @@ public class TestApp : IHttpClientFactory, IDisposable
                 });
             });
 
+        _isFree = isFree;
         Scope = WebApp.Services.CreateScope();
         HttpClient = WebApp.CreateClient();
     }
@@ -117,6 +120,11 @@ public class TestApp : IHttpClientFactory, IDisposable
             new ProjectUpdateParams {
                 ProjectName = new PatchOfString { Value = $"test_{Project.ProjectId}" }
             });
+
+        // remove free plan
+        if (!_isFree)
+            await VhContext.Projects.ExecuteUpdateAsync(e => e.SetProperty(x => x.SubscriptionType, Persistence.Enums.SubscriptionType.Unlimited));
+
 
         ProjectOwnerApiKey = await AddNewUser(Roles.ProjectOwner);
         await TeamClient.RemoveUserAsync(Project.ProjectId.ToString(), Roles.ProjectOwner.RoleId,
@@ -158,7 +166,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     }
 
     public static async Task<TestApp> Create(Dictionary<string, string?>? appSettings = null,
-        string environment = "Development", bool aggressiveJob = false, bool deleteOthers = false)
+        string environment = "Development", bool aggressiveJob = false, bool deleteOthers = false, bool isFree = true)
     {
         appSettings ??= new Dictionary<string, string?>();
         appSettings[$"App:{nameof(AppOptions.HostOrderMonitorCount)}"] = "1000";
@@ -166,7 +174,7 @@ public class TestApp : IHttpClientFactory, IDisposable
         if (aggressiveJob)
             appSettings[$"App:{nameof(AppOptions.AutoMaintenanceInterval)}"] = "00:00:00.500";
 
-        var ret = new TestApp(appSettings, environment);
+        var ret = new TestApp(appSettings, environment, isFree);
         if (deleteOthers)
             await ret.DeleteAllOtherProject();
         await ret.Init();

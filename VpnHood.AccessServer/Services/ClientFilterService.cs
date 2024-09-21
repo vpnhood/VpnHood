@@ -9,15 +9,15 @@ namespace VpnHood.AccessServer.Services;
 
 public class ClientFilterService(VhRepo vhRepo)
 {
-    public async Task<ClientFilter> Create(Guid projectId, ClientFilterCreate createParams)
+    public async Task<ClientFilter> Create(Guid projectId, ClientFilterCreateParams createParamsParams)
     {
-        ValidateFilter(createParams.Filter);
+        ValidateFilter(createParamsParams.Filter);
 
         var clientFilter = new ClientFilterModel {
             ClientFilterId = 0,
             ProjectId = projectId,
-            ClientFilterName = createParams.ClientFilterName,
-            Filter = createParams.Filter
+            ClientFilterName = createParamsParams.ClientFilterName,
+            Filter = createParamsParams.Filter
         };
 
         await vhRepo.AddAsync(clientFilter);
@@ -40,16 +40,23 @@ public class ClientFilterService(VhRepo vhRepo)
             .ToArray();
     }
 
-    public async Task Update(Guid projectId, int clientFilterId, ClientFilterUpdate updateParams)
+    public async Task<ClientFilter> Update(Guid projectId, int clientFilterId, ClientFilterUpdateParams updateParamsParams)
     {
         var clientFilter = await vhRepo.ClientFilterGet(projectId, clientFilterId);
         
-        if (updateParams.ClientFilterName != null) clientFilter.ClientFilterName = updateParams.ClientFilterName.Value.Trim();
-        if (updateParams.Filter != null) {
-            ValidateFilter(updateParams.Filter.Value);
-            clientFilter.Filter = updateParams.Filter.Value.Trim();
+        if (updateParamsParams.ClientFilterName != null) clientFilter.ClientFilterName = updateParamsParams.ClientFilterName.Value.Trim();
+        if (updateParamsParams.Filter != null) {
+            ValidateFilter(updateParamsParams.Filter.Value);
+            clientFilter.Filter = updateParamsParams.Filter.Value.Trim();
         }
 
+        await vhRepo.SaveChangesAsync();
+        return clientFilter.ToDto();
+    }
+
+    public async Task Delete(Guid projectId, int clientFilterId)
+    {
+        await vhRepo.ClientFilterDelete(projectId, clientFilterId);
         await vhRepo.SaveChangesAsync();
     }
 
@@ -75,4 +82,5 @@ public class ClientFilterService(VhRepo vhRepo)
         var dataTable = new DataTable();
         dataTable.Compute(filter, string.Empty);
     }
+   
 }

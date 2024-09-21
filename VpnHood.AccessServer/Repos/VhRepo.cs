@@ -506,4 +506,12 @@ public class VhRepo(VhContext vhContext)
 
         return model;
     }
+
+    public Task ClientFilterDelete(Guid projectId, int clientFilterId)
+    {
+        return vhContext.ClientFilters
+            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.ClientFilterId == clientFilterId)
+            .ExecuteDeleteAsync();
+    }
 }

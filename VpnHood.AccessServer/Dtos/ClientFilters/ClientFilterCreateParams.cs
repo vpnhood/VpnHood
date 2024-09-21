@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.AccessServer.Dtos.ClientFilters;
 
-public class ClientFilterCreate
+public class ClientFilterCreateParams
 {
     public required string ClientFilterName { get; init; }
     public required string Filter { get; init; }

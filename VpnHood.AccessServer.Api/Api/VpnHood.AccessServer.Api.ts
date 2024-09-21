@@ -148,75 +148,6 @@ export class AccessesClient {
     }
 }
 
-export class ClientFiltersClient {
-    protected instance: AxiosInstance;
-    protected baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, instance?: AxiosInstance) {
-
-        this.instance = instance || axios.create();
-
-        this.baseUrl = baseUrl ?? "";
-
-    }
-
-    create(projectId: string, createParams: ClientFilterCreate, cancelToken?: CancelToken): Promise<ClientFilter> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/accesses";
-        if (projectId === undefined || projectId === null)
-            throw new Error("The parameter 'projectId' must be defined.");
-        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(createParams);
-
-        let options_: AxiosRequestConfig = {
-            data: content_,
-            method: "POST",
-            url: url_,
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processCreate(_response);
-        });
-    }
-
-    protected processCreate(response: AxiosResponse): Promise<ClientFilter> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            result200 = ClientFilter.fromJS(resultData200);
-            return Promise.resolve<ClientFilter>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<ClientFilter>(null as any);
-    }
-}
-
 export class AccessTokensClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
@@ -624,6 +555,237 @@ export class AccessTokensClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<string>(null as any);
+    }
+}
+
+export class ClientFiltersClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "";
+
+    }
+
+    create(projectId: string, createParamsParams: ClientFilterCreateParams, cancelToken?: CancelToken): Promise<ClientFilter> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/client-filters";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(createParamsParams);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processCreate(_response);
+        });
+    }
+
+    protected processCreate(response: AxiosResponse): Promise<ClientFilter> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = ClientFilter.fromJS(resultData200);
+            return Promise.resolve<ClientFilter>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ClientFilter>(null as any);
+    }
+
+    get(projectId: string, clientFilterId: string, cancelToken?: CancelToken): Promise<ClientFilter> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/client-filters/{clientFilterId}";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (clientFilterId === undefined || clientFilterId === null)
+            throw new Error("The parameter 'clientFilterId' must be defined.");
+        url_ = url_.replace("{clientFilterId}", encodeURIComponent("" + clientFilterId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGet(_response);
+        });
+    }
+
+    protected processGet(response: AxiosResponse): Promise<ClientFilter> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = ClientFilter.fromJS(resultData200);
+            return Promise.resolve<ClientFilter>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ClientFilter>(null as any);
+    }
+
+    update(projectId: string, clientFilterId: string, updateParams: ClientFilterUpdateParams, cancelToken?: CancelToken): Promise<ClientFilter> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/client-filters/{clientFilterId}";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (clientFilterId === undefined || clientFilterId === null)
+            throw new Error("The parameter 'clientFilterId' must be defined.");
+        url_ = url_.replace("{clientFilterId}", encodeURIComponent("" + clientFilterId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(updateParams);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PATCH",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdate(_response);
+        });
+    }
+
+    protected processUpdate(response: AxiosResponse): Promise<ClientFilter> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = ClientFilter.fromJS(resultData200);
+            return Promise.resolve<ClientFilter>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ClientFilter>(null as any);
+    }
+
+    delete(projectId: string, clientFilterId: string, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/client-filters/{clientFilterId}";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (clientFilterId === undefined || clientFilterId === null)
+            throw new Error("The parameter 'clientFilterId' must be defined.");
+        url_ = url_.replace("{clientFilterId}", encodeURIComponent("" + clientFilterId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDelete(_response);
+        });
+    }
+
+    protected processDelete(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
     }
 }
 
@@ -6196,11 +6358,11 @@ export interface IClientFilter {
     filter: string;
 }
 
-export class ClientFilterCreate implements IClientFilterCreate {
+export class ClientFilterCreateParams implements IClientFilterCreateParams {
     clientFilterName!: string;
     filter!: string;
 
-    constructor(data?: IClientFilterCreate) {
+    constructor(data?: IClientFilterCreateParams) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -6216,9 +6378,9 @@ export class ClientFilterCreate implements IClientFilterCreate {
         }
     }
 
-    static fromJS(data: any): ClientFilterCreate {
+    static fromJS(data: any): ClientFilterCreateParams {
         data = typeof data === 'object' ? data : {};
-        let result = new ClientFilterCreate();
+        let result = new ClientFilterCreateParams();
         result.init(data);
         return result;
     }
@@ -6231,9 +6393,49 @@ export class ClientFilterCreate implements IClientFilterCreate {
     }
 }
 
-export interface IClientFilterCreate {
+export interface IClientFilterCreateParams {
     clientFilterName: string;
     filter: string;
+}
+
+export class ClientFilterUpdateParams implements IClientFilterUpdateParams {
+    clientFilterName?: PatchOfString | null;
+    filter?: PatchOfString | null;
+
+    constructor(data?: IClientFilterUpdateParams) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.clientFilterName = _data["clientFilterName"] ? PatchOfString.fromJS(_data["clientFilterName"]) : <any>null;
+            this.filter = _data["filter"] ? PatchOfString.fromJS(_data["filter"]) : <any>null;
+        }
+    }
+
+    static fromJS(data: any): ClientFilterUpdateParams {
+        data = typeof data === 'object' ? data : {};
+        let result = new ClientFilterUpdateParams();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["clientFilterName"] = this.clientFilterName ? this.clientFilterName.toJSON() : <any>null;
+        data["filter"] = this.filter ? this.filter.toJSON() : <any>null;
+        return data;
+    }
+}
+
+export interface IClientFilterUpdateParams {
+    clientFilterName?: PatchOfString | null;
+    filter?: PatchOfString | null;
 }
 
 export class DeviceData implements IDeviceData {

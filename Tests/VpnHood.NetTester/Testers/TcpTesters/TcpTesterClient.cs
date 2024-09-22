@@ -3,15 +3,13 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
-using VpnHood.NetTester.Streams;
 using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Testers.TcpTesters;
 
-public class TcpTesterClient
+public class TcpTesterClient(IPEndPoint serverEp) : IStreamTesterClient
 {
-    public static async Task Start(IPEndPoint serverEp, long upSize, long downSize, int connectionCount,
-        CancellationToken cancellationToken)
+    public async Task Start(long upSize, long downSize, int connectionCount, CancellationToken cancellationToken)
     {
         var uploadTasks = new Task<TcpClient>[connectionCount];
 

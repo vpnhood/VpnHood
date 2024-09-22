@@ -6,12 +6,12 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
-using VpnHood.NetTester.Streams;
 using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Testers.QuicTesters;
 
 public class QuicTesterClient(IPEndPoint serverEp, string domain, TimeSpan? timeout)
+    : IStreamTesterClient
 {
     public async Task Start(long upSize, long downSize, int connectionCount,
         CancellationToken cancellationToken)

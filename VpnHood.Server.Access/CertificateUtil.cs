@@ -49,7 +49,7 @@ public static class CertificateUtil
             using var client = new HttpClient(handler);
             await client.GetAsync(url, cancellationToken);
         }
-        catch (Exception ex) {
+        catch (Exception) {
             // ignore
         }
         return serverCertificate ?? throw new Exception("Could not extract certificate from url");

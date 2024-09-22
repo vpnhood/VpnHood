@@ -4,7 +4,7 @@ using System.Text;
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
-using VpnHood.NetTester.Streams;
+using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Testers.HttpTesters;
 

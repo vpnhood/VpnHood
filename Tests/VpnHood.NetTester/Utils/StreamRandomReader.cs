@@ -1,6 +1,4 @@
-﻿using VpnHood.NetTester.Utils;
-
-namespace VpnHood.NetTester.Streams;
+﻿namespace VpnHood.NetTester.Utils;
 
 // Custom stream to generate random data chunk by chunk
 public class StreamRandomReader(long length, Speedometer? speedometer) : Stream

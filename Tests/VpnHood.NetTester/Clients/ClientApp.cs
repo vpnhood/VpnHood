@@ -7,6 +7,7 @@ using VpnHood.Common.Logging;
 using VpnHood.NetTester.Servers;
 using VpnHood.NetTester.Streams;
 using VpnHood.NetTester.Testers.HttpTesters;
+using VpnHood.NetTester.Testers.QuicTesters;
 using VpnHood.NetTester.Testers.TcpTesters;
 
 namespace VpnHood.NetTester.Clients;
@@ -102,6 +103,28 @@ internal class ClientApp : IDisposable
                     cancellationToken: cancellationToken);
         }
 
+        if (_clientOptions.QuicPort != 0) {
+            var quicTesterClient = new QuicTesterClient(
+                new IPEndPoint(ServerEndPoint.Address, _clientOptions.QuicPort),
+                domain: _clientOptions.Domain ?? throw new ArgumentException("Domain required to QUIC", nameof(_clientOptions.Domain)),
+                timeout: TimeSpan.FromSeconds(_clientOptions.Timeout));
+
+            // test single
+            if (_clientOptions.Single)
+                await quicTesterClient.Start(
+                    upSize: _clientOptions.UpSize,
+                    downSize: _clientOptions.DownSize,
+                    connectionCount: 1,
+                    cancellationToken: cancellationToken);
+
+            // test multi
+            if (_clientOptions.Multi > 0)
+                await quicTesterClient.Start(
+                    upSize: _clientOptions.UpSize, downSize: _clientOptions.DownSize,
+                    connectionCount: _clientOptions.Multi,
+                    cancellationToken: cancellationToken);
+        }
+
         if (_clientOptions.Url != null) {
             if (_clientOptions.Single)
                 await HttpTesterClient.SimpleDownload(_clientOptions.Url, ipAddress: _clientOptions.UrlIp,
@@ -125,6 +148,7 @@ internal class ClientApp : IDisposable
             TcpPort = _clientOptions.TcpPort,
             HttpPort = _clientOptions.HttpPort,
             HttpsPort = _clientOptions.HttpsPort,
+            QuicPort = _clientOptions.QuicPort,
             HttpsDomain = _clientOptions.Domain,
             IsValidDomain = _clientOptions.IsValidDomain
         };

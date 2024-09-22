@@ -45,13 +45,17 @@ public static class CertificateUtil
             return true; // Accept all certificates for this example
         };
 
-        using var client = new HttpClient(handler);
-        await client.GetAsync(url, cancellationToken); // Trigger the request to capture the certificate
-
+        try {
+            using var client = new HttpClient(handler);
+            await client.GetAsync(url, cancellationToken);
+        }
+        catch (Exception ex) {
+            // ignore
+        }
         return serverCertificate ?? throw new Exception("Could not extract certificate from url");
     }
 
-    public static X509Certificate2 CreateExportable(X509Certificate2 certificate, string password)
+    public static X509Certificate2 CreateExportable(X509Certificate2 certificate, string password = "")
     {
         // Export with the Exportable flag to ensure the key is usable
         return new X509Certificate2(certificate.Export(X509ContentType.Pfx, password), password,
@@ -79,7 +83,7 @@ public static class CertificateUtil
 
         var selfSignedCert = request.CreateSelfSigned(noBefore.Value, notAfter.Value);
         selfSignedCert.FriendlyName = originalCert.FriendlyName;
-        return selfSignedCert;
+        return CreateExportable(selfSignedCert);
     }
 
     public static X509Certificate2 CreateSelfSigned(RSA rsa, string? subjectName = null, DateTimeOffset? notAfter = null)
@@ -90,7 +94,7 @@ public static class CertificateUtil
         // Create fake authority Root
         var certRequest = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         var rootCertificate = certRequest.CreateSelfSigned(DateTimeOffset.Now, notAfter.Value);
-        return rootCertificate;
+        return CreateExportable(rootCertificate);
     }
 
     // ReSharper disable once UnusedMember.Global
@@ -149,6 +153,6 @@ public static class CertificateUtil
         var certificate = certRequest.Create(authorityCertificate, DateTimeOffset.Now, notAfter.Value, serial);
         certificate = certificate.CopyWithPrivateKey(rsa);
 
-        return certificate;
+        return CreateExportable(certificate);
     }
 }

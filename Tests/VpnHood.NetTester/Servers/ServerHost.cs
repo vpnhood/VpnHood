@@ -3,6 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.NetTester.Testers.HttpTesters;
+using VpnHood.NetTester.Testers.QuicTesters;
 using VpnHood.NetTester.Testers.TcpTesters;
 using VpnHood.Server.Access;
 
@@ -10,6 +11,7 @@ namespace VpnHood.NetTester.Servers;
 
 internal class ServerHost(IPAddress listenerIp) : IDisposable
 {
+    private QuicTesterServer? _quicTesterServer;
     private TcpTesterServer? _tcpTesterServer;
     private HttpTesterServer? _httpTesterServer;
     private CancellationTokenSource? _cancellationTokenSource;
@@ -20,6 +22,7 @@ internal class ServerHost(IPAddress listenerIp) : IDisposable
         Stop();
 
         _cancellationTokenSource = new CancellationTokenSource();
+        var certificate = await PrepareCertificate(serverConfig);
 
         // start with new config
         if (serverConfig.TcpPort != 0) {
@@ -28,22 +31,27 @@ internal class ServerHost(IPAddress listenerIp) : IDisposable
             _tcpTesterServer?.Start(tcpEndPoint, _cancellationTokenSource.Token);
         }
 
-        var httpEndPoint = serverConfig.HttpPort!=0 ? new IPEndPoint(listenerIp, serverConfig.HttpPort) : null;
-        var httpsEndPoint = serverConfig.HttpsPort!=0 ? new IPEndPoint(listenerIp, serverConfig.HttpsPort) : null;
-        if (httpEndPoint !=null || httpsEndPoint!=null) {
+        // start http server
+        var httpEndPoint = serverConfig.HttpPort != 0 ? new IPEndPoint(listenerIp, serverConfig.HttpPort) : null;
+        var httpsEndPoint = serverConfig.HttpsPort != 0 ? new IPEndPoint(listenerIp, serverConfig.HttpsPort) : null;
+        if (httpEndPoint != null || httpsEndPoint != null) {
             _httpTesterServer = new HttpTesterServer(
-                httpEndPoint: httpEndPoint, 
+                httpEndPoint: httpEndPoint,
                 httpsEndPoint: httpsEndPoint,
-                certificate: await PrepareCertificate(serverConfig),
+                certificate: certificate,
                 _cancellationTokenSource.Token);
+        }
+
+        // start quic server
+        var quicEndPoint = serverConfig.QuicPort != 0 ? new IPEndPoint(listenerIp, serverConfig.QuicPort) : null;
+        if (quicEndPoint != null) {
+            _quicTesterServer = new QuicTesterServer(quicEndPoint, certificate, _cancellationTokenSource.Token);
+            _ = _quicTesterServer.Start();
         }
     }
 
-    private static async Task<X509Certificate2?> PrepareCertificate(ServerConfig serverConfig)
+    private static async Task<X509Certificate2> PrepareCertificate(ServerConfig serverConfig)
     {
-        if (serverConfig.HttpsPort == 0)
-            return null;
-
         if (serverConfig.IsValidDomain) {
             if (string.IsNullOrWhiteSpace(serverConfig.HttpsDomain))
                 throw new InvalidOperationException("Domain is required for a valid domain.");
@@ -67,9 +75,9 @@ internal class ServerHost(IPAddress listenerIp) : IDisposable
                 // create 5 second cancellation token
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 var originalCert = await CertificateUtil.GetCertificateFromUrl(new Uri($"https://{domain}"), cts.Token);
-                var ret =  CertificateUtil.CreateSelfSigned(originalCert);
+                var copyCert = CertificateUtil.CreateSelfSigned(originalCert);
                 VhLogger.Instance.LogInformation("Created self-signed certificate from a url. Domain: {Domain}", domain);
-                return ret;
+                return copyCert;
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Failed to create self-signed certificate from the url. Domain: {Domain}", domain);
@@ -77,9 +85,9 @@ internal class ServerHost(IPAddress listenerIp) : IDisposable
         }
 
         domain ??= CertificateUtil.CreateRandomDns();
-        var ret2 = CertificateUtil.CreateSelfSigned($"CN={domain}");
+        var cert = CertificateUtil.CreateSelfSigned($"CN={domain}");
         VhLogger.Instance.LogInformation("Created self-signed certificate. Domain: {Domain}", domain);
-        return CertificateUtil.CreateExportable(ret2, "");
+        return cert;
     }
 
     public void Stop()

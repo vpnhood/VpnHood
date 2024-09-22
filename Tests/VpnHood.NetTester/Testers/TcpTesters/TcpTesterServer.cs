@@ -2,7 +2,7 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
-using VpnHood.NetTester.Streams;
+using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Testers.TcpTesters;
 

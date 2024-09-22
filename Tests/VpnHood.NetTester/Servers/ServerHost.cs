@@ -53,12 +53,12 @@ internal class ServerHost(IPAddress listenerIp) : IDisposable
     private static async Task<X509Certificate2> PrepareCertificate(ServerConfig serverConfig)
     {
         if (serverConfig.IsValidDomain) {
-            if (string.IsNullOrWhiteSpace(serverConfig.HttpsDomain))
+            if (string.IsNullOrWhiteSpace(serverConfig.Domain))
                 throw new InvalidOperationException("Domain is required for a valid domain.");
-            return LoadCertificate(serverConfig.HttpsDomain);
+            return LoadCertificate(serverConfig.Domain);
         }
 
-        return await CreateCertificate(serverConfig.HttpsDomain);
+        return await CreateCertificate(serverConfig.Domain);
     }
 
     private static X509Certificate2 LoadCertificate(string domain)
@@ -68,23 +68,20 @@ internal class ServerHost(IPAddress listenerIp) : IDisposable
         return cert;
     }
 
-    private static async Task<X509Certificate2> CreateCertificate(string? domain)
+    private static async Task<X509Certificate2> CreateCertificate(string domain)
     {
-        if (domain != null) {
-            try {
-                // create 5 second cancellation token
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                var originalCert = await CertificateUtil.GetCertificateFromUrl(new Uri($"https://{domain}"), cts.Token);
-                var copyCert = CertificateUtil.CreateSelfSigned(originalCert);
-                VhLogger.Instance.LogInformation("Created self-signed certificate from a url. Domain: {Domain}", domain);
-                return copyCert;
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogError(ex, "Failed to create self-signed certificate from the url. Domain: {Domain}", domain);
-            }
+        try {
+            // create 5 second cancellation token
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var originalCert = await CertificateUtil.GetCertificateFromUrl(new Uri($"https://{domain}"), cts.Token);
+            var copyCert = CertificateUtil.CreateSelfSigned(originalCert);
+            VhLogger.Instance.LogInformation("Created self-signed certificate from a url. Domain: {Domain}", domain);
+            return copyCert;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Failed to create self-signed certificate from the url. Domain: {Domain}", domain);
         }
 
-        domain ??= CertificateUtil.CreateRandomDns();
         var cert = CertificateUtil.CreateSelfSigned($"CN={domain}");
         VhLogger.Instance.LogInformation("Created self-signed certificate. Domain: {Domain}", domain);
         return cert;

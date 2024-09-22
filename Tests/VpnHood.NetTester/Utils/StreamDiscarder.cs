@@ -1,6 +1,4 @@
-﻿using VpnHood.NetTester.Utils;
-
-namespace VpnHood.NetTester.Streams;
+﻿namespace VpnHood.NetTester.Utils;
 
 public class StreamDiscarder(Speedometer? speedometer) : Stream
 {

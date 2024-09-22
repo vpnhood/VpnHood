@@ -19,7 +19,7 @@ internal static class ArgumentUtils
     }
 
 
-    public static T? Get<T>(string[] args, string name, T? defaultValue)
+    public static T Get<T>(string[] args, string name, T defaultValue)
     {
         // find the index of the argument
         var index = Array.IndexOf(args, name);

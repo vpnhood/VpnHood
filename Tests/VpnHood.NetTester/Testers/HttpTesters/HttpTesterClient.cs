@@ -179,4 +179,3 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps,
         }
     }
 }
-

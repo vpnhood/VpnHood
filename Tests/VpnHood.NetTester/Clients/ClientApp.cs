@@ -30,7 +30,7 @@ internal class ClientApp : IDisposable
             }));
 
         if (clientOptions.IsDebug)
-            StreamRandomReader.ReadDelay = TimeSpan.FromMicroseconds(100); //todo
+            StreamRandomReader.ReadDelay = TimeSpan.FromMilliseconds(1); // Task.Delay ignore any value less than milliseconds
     }
 
     public static async Task<ClientApp> Create(ClientOptions clientOptions)

@@ -21,7 +21,7 @@
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<AssemblyName>nettester</AssemblyName>
-		<AssemblyVersion>1.0.3</AssemblyVersion>
+		<AssemblyVersion>1.0.5</AssemblyVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -31,6 +31,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="EmbedIO" Version="3.5.2" />
+		<PackageReference Include="Microsoft.Native.Quic.MsQuic.OpenSSL" Version="2.4.3" />
 	</ItemGroup>
 
 

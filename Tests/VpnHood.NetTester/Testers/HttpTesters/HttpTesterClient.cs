@@ -85,8 +85,6 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps,
         try {
             // Upload the content to the server
             using var httpClient = HttpClientUtil.CreateHttpClient(serverEp.Address, timeout);
-            httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(30);
-
             var requestUri = new Uri(GetBaseUri(), $"downloads?size={size}&file={Guid.NewGuid()}.pak");
             await using var stream = await httpClient.GetStreamAsync(requestUri, cancellationToken);
 

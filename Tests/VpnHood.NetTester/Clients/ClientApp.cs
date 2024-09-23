@@ -65,7 +65,7 @@ internal class ClientApp : IDisposable
 
         if (_clientOptions.QuicPort != 0)
             streamTesterClient.Add(new QuicTesterClient(
-                new IPEndPoint(ServerEndPoint.Address, _clientOptions.HttpsPort),
+                new IPEndPoint(ServerEndPoint.Address, _clientOptions.QuicPort),
                 domain: _clientOptions.Domain,
                 timeout: TimeSpan.FromSeconds(_clientOptions.Timeout)));
 

@@ -694,10 +694,6 @@ public class VhContext : DbContext
                 .HasKey(e => e.ClientFilterId);
 
             entity
-                .Property(e => e.Filter)
-                .HasMaxLength(400);
-
-            entity
                 .HasOne(e => e.Project)
                 .WithMany(d => d.ClientFilterModels)
                 .HasForeignKey(d => d.ProjectId)

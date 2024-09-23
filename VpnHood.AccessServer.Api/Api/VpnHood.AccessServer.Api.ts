@@ -6318,6 +6318,7 @@ export class ClientFilter implements IClientFilter {
     clientFilterId!: string;
     clientFilterName!: string;
     filter!: string;
+    description?: string | null;
 
     constructor(data?: IClientFilter) {
         if (data) {
@@ -6333,6 +6334,7 @@ export class ClientFilter implements IClientFilter {
             this.clientFilterId = _data["clientFilterId"] !== undefined ? _data["clientFilterId"] : <any>null;
             this.clientFilterName = _data["clientFilterName"] !== undefined ? _data["clientFilterName"] : <any>null;
             this.filter = _data["filter"] !== undefined ? _data["filter"] : <any>null;
+            this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
         }
     }
 
@@ -6348,6 +6350,7 @@ export class ClientFilter implements IClientFilter {
         data["clientFilterId"] = this.clientFilterId !== undefined ? this.clientFilterId : <any>null;
         data["clientFilterName"] = this.clientFilterName !== undefined ? this.clientFilterName : <any>null;
         data["filter"] = this.filter !== undefined ? this.filter : <any>null;
+        data["description"] = this.description !== undefined ? this.description : <any>null;
         return data;
     }
 }
@@ -6356,11 +6359,13 @@ export interface IClientFilter {
     clientFilterId: string;
     clientFilterName: string;
     filter: string;
+    description?: string | null;
 }
 
 export class ClientFilterCreateParams implements IClientFilterCreateParams {
     clientFilterName!: string;
     filter!: string;
+    description?: string | null;
 
     constructor(data?: IClientFilterCreateParams) {
         if (data) {
@@ -6375,6 +6380,7 @@ export class ClientFilterCreateParams implements IClientFilterCreateParams {
         if (_data) {
             this.clientFilterName = _data["clientFilterName"] !== undefined ? _data["clientFilterName"] : <any>null;
             this.filter = _data["filter"] !== undefined ? _data["filter"] : <any>null;
+            this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
         }
     }
 
@@ -6389,6 +6395,7 @@ export class ClientFilterCreateParams implements IClientFilterCreateParams {
         data = typeof data === 'object' ? data : {};
         data["clientFilterName"] = this.clientFilterName !== undefined ? this.clientFilterName : <any>null;
         data["filter"] = this.filter !== undefined ? this.filter : <any>null;
+        data["description"] = this.description !== undefined ? this.description : <any>null;
         return data;
     }
 }
@@ -6396,11 +6403,13 @@ export class ClientFilterCreateParams implements IClientFilterCreateParams {
 export interface IClientFilterCreateParams {
     clientFilterName: string;
     filter: string;
+    description?: string | null;
 }
 
 export class ClientFilterUpdateParams implements IClientFilterUpdateParams {
     clientFilterName?: PatchOfString | null;
     filter?: PatchOfString | null;
+    description?: PatchOfString | null;
 
     constructor(data?: IClientFilterUpdateParams) {
         if (data) {
@@ -6415,6 +6424,7 @@ export class ClientFilterUpdateParams implements IClientFilterUpdateParams {
         if (_data) {
             this.clientFilterName = _data["clientFilterName"] ? PatchOfString.fromJS(_data["clientFilterName"]) : <any>null;
             this.filter = _data["filter"] ? PatchOfString.fromJS(_data["filter"]) : <any>null;
+            this.description = _data["description"] ? PatchOfString.fromJS(_data["description"]) : <any>null;
         }
     }
 
@@ -6429,6 +6439,7 @@ export class ClientFilterUpdateParams implements IClientFilterUpdateParams {
         data = typeof data === 'object' ? data : {};
         data["clientFilterName"] = this.clientFilterName ? this.clientFilterName.toJSON() : <any>null;
         data["filter"] = this.filter ? this.filter.toJSON() : <any>null;
+        data["description"] = this.description ? this.description.toJSON() : <any>null;
         return data;
     }
 }
@@ -6436,6 +6447,7 @@ export class ClientFilterUpdateParams implements IClientFilterUpdateParams {
 export interface IClientFilterUpdateParams {
     clientFilterName?: PatchOfString | null;
     filter?: PatchOfString | null;
+    description?: PatchOfString | null;
 }
 
 export class DeviceData implements IDeviceData {

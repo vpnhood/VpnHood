@@ -10,7 +10,8 @@ public static class ClientFilterConverter
         return new ClientFilter {
             ClientFilterId = clientFilterModel.ClientFilterId.ToString(),
             ClientFilterName = clientFilterModel.ClientFilterName,
-            Filter = clientFilterModel.Filter
+            Filter = clientFilterModel.Filter,
+            Description = clientFilterModel.Description
         };
     }
 }

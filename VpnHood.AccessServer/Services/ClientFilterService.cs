@@ -17,6 +17,7 @@ public class ClientFilterService(VhRepo vhRepo)
             ClientFilterId = 0,
             ProjectId = projectId,
             ClientFilterName = createParamsParams.ClientFilterName,
+            Description = createParamsParams.Description,
             Filter = createParamsParams.Filter
         };
 
@@ -45,6 +46,7 @@ public class ClientFilterService(VhRepo vhRepo)
         var clientFilter = await vhRepo.ClientFilterGet(projectId, clientFilterId);
         
         if (updateParamsParams.ClientFilterName != null) clientFilter.ClientFilterName = updateParamsParams.ClientFilterName.Value.Trim();
+        if (updateParamsParams.Description != null) clientFilter.Description = updateParamsParams.Description.Value;
         if (updateParamsParams.Filter != null) {
             ValidateFilter(updateParamsParams.Filter.Value);
             clientFilter.Filter = updateParamsParams.Filter.Value.Trim();

@@ -6,4 +6,5 @@ public class ClientFilterUpdateParams
 {
     public Patch<string>? ClientFilterName { get; init; }
     public Patch<string>? Filter { get; init; }
+    public Patch<string?>? Description { get; init; }
 }

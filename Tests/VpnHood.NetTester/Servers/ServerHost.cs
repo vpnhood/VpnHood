@@ -92,6 +92,7 @@ internal class ServerHost(IPAddress listenerIp) : IDisposable
         _cancellationTokenSource?.Cancel();
         _tcpTesterServer?.Dispose();
         _httpTesterServer?.Dispose();
+        _quicTesterServer?.Dispose();
     }
 
     public void Dispose()

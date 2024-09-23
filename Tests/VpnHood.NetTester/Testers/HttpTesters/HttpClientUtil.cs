@@ -12,13 +12,13 @@ public static class HttpClientUtil
     // for this example we are not validating the certificate
     public static HttpClient CreateHttpClient(IPAddress? ipAddress, TimeSpan? timeout)
     {
+        _ = timeout;
+
         if (ipAddress == null) {
             var httpClientHandler = new HttpClientHandler();
             httpClientHandler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
             httpClientHandler.ClientCertificateOptions = ClientCertificateOption.Manual;
-            return new HttpClient(httpClientHandler) {
-                Timeout = timeout ?? TimeSpan.FromSeconds(15)
-            };
+            return new HttpClient(httpClientHandler);
         }
 
         var socketHttpHandler = new SocketsHttpHandler {
@@ -43,9 +43,7 @@ public static class HttpClientUtil
             }
         };
 
-        var client = new HttpClient(socketHttpHandler) {
-            Timeout = timeout ?? TimeSpan.FromSeconds(15)
-        };
+        var client = new HttpClient(socketHttpHandler);
         return client;
 
     }

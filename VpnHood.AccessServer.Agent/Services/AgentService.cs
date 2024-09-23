@@ -134,8 +134,8 @@ public class AgentService(
         var serverModel = serverFarmModel.Servers!.Single(x => x.ServerId == serverId);
 
         // update cache
-        var gatewayIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.IsV4());
-        var gatewayIpV6 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.IsV6());
+        var oublicIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.IsV4());
+        var oublicIpV6 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.IsV6());
         serverModel.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
         serverModel.OsInfo = serverInfo.OsInfo;
         serverModel.MachineName = serverInfo.MachineName;
@@ -143,9 +143,9 @@ public class AgentService(
         serverModel.TotalMemory = serverInfo.TotalMemory ?? 0;
         serverModel.LogicalCoreCount = serverInfo.LogicalCoreCount;
         serverModel.Version = serverInfo.Version.ToString();
-        serverModel.GatewayIpV4 = gatewayIpV4?.ToString();
-        serverModel.GatewayIpV6 = gatewayIpV6?.ToString();
-        serverModel.Location ??= await GetIpLocation(gatewayIpV4 ?? gatewayIpV6, CancellationToken.None);
+        serverModel.PublicIpV4 = oublicIpV4?.ToString();
+        serverModel.PublicIpV6 = oublicIpV6?.ToString();
+        serverModel.Location ??= await GetIpLocation(oublicIpV4 ?? oublicIpV6, CancellationToken.None);
 
         // calculate access points
         if (serverModel.AutoConfigure)

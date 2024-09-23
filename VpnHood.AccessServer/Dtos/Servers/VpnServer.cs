@@ -28,6 +28,6 @@ public class VpnServer
     public required bool AllowInAutoLocation { get; init; }
     public required Uri? HostPanelUrl { get; init; }
     public required int? Power { get; init; }
-    public required string? GatewayIpV4 { get; set; }
-    public required string? GatewayIpV6 { get; set; }
+    public required string? PublicIpV4 { get; set; }
+    public required string? PublicIpV6 { get; set; }
 }

@@ -313,7 +313,7 @@ public class LoadBalancerTest
         // create access token
         var accessTokenDom = await farm.CreateAccessToken();
 
-        // create sessions for IpV6 clients
+        // create sessions for PublicIpV6 clients
         for (var i = 0; i < 4; i++) {
             var sessionDom =
                 await accessTokenDom.CreateSession(autoRedirect: true, addressFamily: AddressFamily.InterNetworkV6);
@@ -356,7 +356,7 @@ public class LoadBalancerTest
         await farmDom.ReloadServers();
         Assert.IsTrue(farmDom.Servers.All(x => x.Server.ServerState == ServerState.Configuring));
 
-        // create sessions for IpV6 clients
+        // create sessions for PublicIpV6 clients
         for (var i = 0; i < 4; i++) {
             var sessionDom = await accessTokenDom.CreateSession(autoRedirect: true);
 

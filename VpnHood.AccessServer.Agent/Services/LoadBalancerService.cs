@@ -62,7 +62,7 @@ public class LoadBalancerService(
             .ToArray();
 
         // find the best TcpEndPoint for this request
-        var bestTcpEndPoint = tcpEndPoints.FirstOrDefault(x => // if client is IpV4 the single redirect must be ipv4
+        var bestTcpEndPoint = tcpEndPoints.FirstOrDefault(x => // if client is PublicIpV4 the single redirect must be ipv4
             addressFamily == AddressFamily.InterNetworkV6 ||
             x.AddressFamily == AddressFamily.InterNetwork);
 

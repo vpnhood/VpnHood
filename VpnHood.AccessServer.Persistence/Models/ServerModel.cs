@@ -26,8 +26,8 @@ public class ServerModel
     public required bool AutoConfigure { get; set; }
     public required int? LocationId { get; set; }
     public required bool IsDeleted { get; set; }
-    public required string? GatewayIpV4 { get; set; }
-    public required string? GatewayIpV6 { get; set; }
+    public required string? PublicIpV4 { get; set; }
+    public required string? PublicIpV6 { get; set; }
     public required string? HostPanelUrl { get; set; }
     public required bool AllowInAutoLocation { get; set; }
     public required int? Power { get; set; }

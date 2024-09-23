@@ -279,8 +279,8 @@ public class AgentServerTest
         var publicIp = farm.TestApp.NewIpV6();
         var serverInfo = farm.TestApp.NewServerInfo(randomStatus: true);
         serverDom.ServerInfo = serverInfo;
-        serverInfo.PrivateIpAddresses = [publicIp, (farm.TestApp.NewIpV4()), (farm.TestApp.NewIpV6())];
-        serverInfo.PublicIpAddresses = [publicIp, (farm.TestApp.NewIpV4()), (farm.TestApp.NewIpV6())];
+        serverInfo.PrivateIpAddresses = [publicIp, (farm.TestApp.NewIpV4())];
+        serverInfo.PublicIpAddresses = [publicIp, (farm.TestApp.NewIpV4())];
         await serverDom.Configure(false);
         await serverDom.Reload();
 
@@ -332,6 +332,8 @@ public class AgentServerTest
         Assert.AreEqual(serverStatus.SessionCount, server.ServerStatus?.SessionCount);
         Assert.AreEqual(serverStatus.ThreadCount, server.ServerStatus?.ThreadCount);
         Assert.IsTrue(server.ServerStatus?.CreatedTime > dateTime);
+        Assert.IsTrue(serverInfo.PublicIpAddresses.Contains(IPAddress.Parse(server.PublicIpV4!)));
+        Assert.IsTrue(serverInfo.PublicIpAddresses.Contains(IPAddress.Parse(server.PublicIpV6!)));
     }
 
     [TestMethod]

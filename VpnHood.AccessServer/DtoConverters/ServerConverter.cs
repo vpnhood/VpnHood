@@ -35,8 +35,8 @@ public static class ServerConverter
             AutoConfigure = model.AutoConfigure,
             AccessPoints = model.AccessPoints.Select(x => x.ToDto()).ToArray(),
             HostPanelUrl = string.IsNullOrEmpty(model.HostPanelUrl) ? null : new Uri(model.HostPanelUrl),
-            GatewayIpV4 = model.GatewayIpV4,
-            GatewayIpV6 = model.GatewayIpV6
+            PublicIpV4 = model.PublicIpV4,
+            PublicIpV6 = model.PublicIpV6
         };
     }
 }

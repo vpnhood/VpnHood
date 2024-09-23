@@ -117,7 +117,7 @@ public class HostOrdersService(
             return fakeIp;
         }
 
-        return IPAddress.Parse(server.GatewayIpV4 ?? server.GatewayIpV6 ??
+        return IPAddress.Parse(server.PublicIpV4 ?? server.PublicIpV6 ??
             throw new InvalidOperationException("Server does not have any IP address."));
     }
 

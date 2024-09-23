@@ -47,6 +47,11 @@ public class ClientFilterTest
         Assert.AreEqual(clientFilter.Filter, updateParams.Filter?.Value);
         Assert.AreEqual(clientFilter.Description, updateParams.Description?.Value);
 
+        // list
+        var clientFilters = await testApp.ClientFiltersClient.ListAsync(testApp.ProjectId);
+        Assert.AreEqual(clientFilters.Count, 2);
+        Assert.IsTrue(clientFilters.Any(x => x.ClientFilterName == clientFilter.ClientFilterName));
+
         // delete
         await testApp.ClientFiltersClient.DeleteAsync(testApp.ProjectId, clientFilter.ClientFilterId);
         await VhTestUtil.AssertNotExistsException(testApp.ClientFiltersClient.GetAsync(testApp.ProjectId, clientFilter.ClientFilterId));

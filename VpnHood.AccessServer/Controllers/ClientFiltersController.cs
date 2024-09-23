@@ -27,9 +27,16 @@ public class ClientFiltersController(
 
     [HttpGet("{clientFilterId}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public async Task<ClientFilter> Get(Guid projectId, string clientFilterId)
+    public Task<ClientFilter> Get(Guid projectId, string clientFilterId)
     {
-        return await clientFilterService.Get(projectId, int.Parse(clientFilterId));
+        return clientFilterService.Get(projectId, int.Parse(clientFilterId));
+    }
+
+    [HttpGet]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
+    public Task<ClientFilter[]> List(Guid projectId)
+    {
+        return clientFilterService.List(projectId);
     }
 
     [HttpPatch("{clientFilterId}")]

@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace VpnHood.Server.Access;
@@ -82,7 +83,8 @@ public static class CertificateUtil
         notAfter ??= originalCert.NotAfter;
 
         var selfSignedCert = request.CreateSelfSigned(noBefore.Value, notAfter.Value);
-        selfSignedCert.FriendlyName = originalCert.FriendlyName;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            selfSignedCert.FriendlyName = originalCert.FriendlyName;
         return CreateExportable(selfSignedCert);
     }
 

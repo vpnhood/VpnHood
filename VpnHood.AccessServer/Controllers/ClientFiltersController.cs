@@ -17,12 +17,12 @@ public class ClientFiltersController(
 {
     [HttpPost]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
-    public async Task<ClientFilter> Create(Guid projectId, ClientFilterCreateParams createParamsParams)
+    public async Task<ClientFilter> Create(Guid projectId, ClientFilterCreateParams createParams)
     {
         // check user quota
         using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateClientFilter");
         await subscriptionService.AuthorizeCreateClientFilter(projectId);
-        return await clientFilterService.Create(projectId, createParamsParams);
+        return await clientFilterService.Create(projectId, createParams);
     }
 
     [HttpGet("{clientFilterId}")]

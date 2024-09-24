@@ -62,13 +62,16 @@ public class ClientFilterService(VhRepo vhRepo)
         await vhRepo.SaveChangesAsync();
     }
 
-    private void ValidateFilter(string filter)
+    private static void ValidateFilter(string filter)
     {
         ValidateFilter(filter, []);
     }
 
-    private void ValidateFilter(string filter, string[] tags)
+    private static void ValidateFilter(string filter, string[] tags)
     {
+        if (string.IsNullOrWhiteSpace(filter))
+            throw new ArgumentException("Filter can not be empty.", nameof(filter));
+
         // replace shorthand operators with full operators
         filter = filter
             .Replace("&&", "AND")

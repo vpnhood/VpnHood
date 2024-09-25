@@ -54,6 +54,7 @@ public class ServerTest
             ServerName = $"{Guid.NewGuid()}",
             HostPanelUrl = new Uri("http://localhost/foo"),
             Power = 8,
+            Tags = ["#1", "#2"]
         };
         var serverDom = await farm.AddNewServer(server1ACreateParam, configure: false);
         var install1A = await farm.TestApp.ServersClient.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
@@ -62,6 +63,7 @@ public class ServerTest
         // check: Get
         //-----------
         await serverDom.Reload();
+        CollectionAssert.AreEquivalent(server1ACreateParam.Tags.ToArray(), serverDom.Server.Tags.ToArray());
         Assert.AreEqual(server1ACreateParam.HostPanelUrl, serverDom.Server.HostPanelUrl);
         Assert.AreEqual(server1ACreateParam.ServerName, serverDom.Server.ServerName);
         Assert.AreEqual(server1ACreateParam.Power, serverDom.Server.Power);
@@ -101,7 +103,8 @@ public class ServerTest
             GenerateNewSecret = new PatchOfBoolean { Value = false },
             HostPanelUrl = new PatchOfUri { Value = new Uri("http://localhost/foo2") },
             Power = new PatchOfNullableInteger { Value = 16 },
-            IsEnabled = new PatchOfBoolean { Value = !serverDom.Server.IsEnabled }
+            IsEnabled = new PatchOfBoolean { Value = !serverDom.Server.IsEnabled },
+            Tags = new PatchOfStringOf  { Value = ["#3", "#4"] }
         };
         await serverDom.Update(serverUpdateParam);
         await serverDom.Reload();
@@ -111,6 +114,7 @@ public class ServerTest
         Assert.AreEqual(serverUpdateParam.HostPanelUrl.Value, serverDom.Server.HostPanelUrl);
         Assert.AreEqual(serverUpdateParam.ServerName.Value, serverDom.Server.ServerName);
         Assert.AreEqual(serverUpdateParam.IsEnabled.Value, serverDom.Server.IsEnabled);
+        CollectionAssert.AreEquivalent(serverUpdateParam.Tags.Value.ToArray(), serverDom.Server.Tags.ToArray());
 
         //-----------
         // check: Update (change Secret)

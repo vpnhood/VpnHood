@@ -30,4 +30,6 @@ public class VpnServer
     public required int? Power { get; init; }
     public required string? PublicIpV4 { get; set; }
     public required string? PublicIpV6 { get; set; }
+    public required string[] Tags { get; set; }
+    public required string? ClientFilterId { get; set; }
 }

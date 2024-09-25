@@ -9,4 +9,6 @@ public class ServerCreateParams
     public Uri? HostPanelUrl { get; init; }
     public AccessPoint[]? AccessPoints { get; init; }
     public int? Power { get; init; }
+    public string[] Tags { get; init; } = [];
+    public string? ClientFilterId { get; init; }
 }

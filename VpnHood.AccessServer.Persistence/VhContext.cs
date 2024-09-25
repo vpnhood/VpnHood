@@ -322,6 +322,13 @@ public class VhContext : DbContext
                 .WithMany(d => d.Servers)
                 .HasForeignKey(e => e.LocationId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            entity
+                .HasOne(e => e.ClientFilter)
+                .WithMany(d => d.Servers)
+                .HasPrincipalKey(e => new { e.ProjectId, ClientFilterId = e.ClientFilterId })
+                .HasForeignKey(d => new { d.ProjectId, d.ClientFilterId })
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<ServerStatusModel>(entity => {
@@ -440,7 +447,8 @@ public class VhContext : DbContext
             entity
                 .HasOne(e => e.ServerFarm)
                 .WithMany(d => d.TokenRepos)
-                .HasForeignKey(d => d.ServerFarmId)
+                .HasPrincipalKey(d => new { d.ProjectId, d.ServerFarmId })
+                .HasForeignKey(e => new { e.ProjectId, e.ServerFarmId })
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity
@@ -698,6 +706,7 @@ public class VhContext : DbContext
                 .WithMany(d => d.ClientFilterModels)
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.Cascade);
+
         });
     }
 }

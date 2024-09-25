@@ -36,7 +36,9 @@ public static class ServerConverter
             AccessPoints = model.AccessPoints.Select(x => x.ToDto()).ToArray(),
             HostPanelUrl = string.IsNullOrEmpty(model.HostPanelUrl) ? null : new Uri(model.HostPanelUrl),
             PublicIpV4 = model.PublicIpV4,
-            PublicIpV6 = model.PublicIpV6
+            PublicIpV6 = model.PublicIpV6,
+            Tags = model.Tags?.Split(' ') ?? [],
+            ClientFilterId = model.ClientFilterId?.ToString()
         };
     }
 }

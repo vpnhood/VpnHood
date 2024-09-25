@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using GrayMint.Common.Utils;
 using Microsoft.Extensions.Options;
 using Renci.SshNet;
@@ -26,6 +27,20 @@ public class ServerService(
     SubscriptionService subscriptionService,
     AgentSystemClient agentSystemClient)
 {
+    private static string ValidateTags(string[] tags)
+    {
+        // add # to tags if it is not
+        tags = tags.Select(x => x.StartsWith("#") ? x.Trim() : $"#{x}".Trim()).ToArray();
+
+        // tag should only have letters, numbers, underscore and colon
+        var regex = new Regex(@"^#[a-zA-Z0-9_:]+$");
+        var invalidTag = tags.FirstOrDefault(x => !regex.IsMatch(x));
+        if (invalidTag != null)
+            throw new ArgumentException("Invalid tag format. Tag should only have letters, numbers, and underscore.", invalidTag);
+
+        return string.Join(" ", tags);
+    }
+
     public async Task<ServerData> Create(Guid projectId, ServerCreateParams createParams)
     {
         // check user quota
@@ -45,6 +60,13 @@ public class ServerService(
         if (serverName.Contains("##")) {
             var names = await vhRepo.ServerGetNames(projectId);
             serverName = AccessServerUtil.FindUniqueName(serverName, names);
+        }
+
+        // validate client filter
+        if (createParams.ClientFilterId != null) {
+            var clientFilter = await vhRepo.ClientFilterGet(projectId, int.Parse(createParams.ClientFilterId));
+            if (clientFilter == null)
+                throw new ArgumentException("Client filter not found", nameof(createParams.ClientFilterId));
         }
 
         var server = new ServerModel {
@@ -75,7 +97,9 @@ public class ServerService(
             LocationId = null,
             AllowInAutoLocation = true,
             HostPanelUrl = createParams.HostPanelUrl?.ToString(),
-            IsDeleted = false
+            IsDeleted = false,
+            ClientFilterId = createParams.ClientFilterId != null ? int.Parse(createParams.ClientFilterId) : null,
+            Tags = ValidateTags(createParams.Tags)
         };
 
         // add server and update FarmToken
@@ -100,6 +124,13 @@ public class ServerService(
         if (updateParams.Power?.Value < 1)
             throw new ArgumentException("Power can not be less than 1", nameof(updateParams));
 
+        // validate client filter
+        if (updateParams.ClientFilterId is { Value: not null }) {
+            var clientFilter = await vhRepo.ClientFilterGet(projectId, int.Parse(updateParams.ClientFilterId.Value));
+            if (clientFilter == null)
+                throw new ArgumentException("Client filter not found", nameof(updateParams.ClientFilterId));
+        }
+
         // validate
         var server = await vhRepo.ServerGet(projectId, serverId, includeFarm: true);
         var oldServerFarmId = server.ServerFarmId;
@@ -110,6 +141,7 @@ public class ServerService(
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
 
+        if (updateParams.Tags != null) server.Tags = ValidateTags(updateParams.Tags.Value);
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
         if (updateParams.Power != null) server.Power = updateParams.Power;
         if (updateParams.IsEnabled != null) server.IsEnabled = updateParams.IsEnabled;
@@ -117,6 +149,7 @@ public class ServerService(
         if (updateParams.HostPanelUrl != null) server.HostPanelUrl = updateParams.HostPanelUrl?.ToString();
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
         if (updateParams.AutoConfigure != null) server.AutoConfigure = updateParams.AutoConfigure;
+        if (updateParams.ClientFilterId != null) server.ClientFilterId = updateParams.ClientFilterId.Value != null ? int.Parse(updateParams.ClientFilterId.Value) : null;
         if (updateParams.AccessPoints != null) {
             server.AutoConfigure = false;
             server.AccessPoints = ValidateAccessPoints(updateParams.AccessPoints);
@@ -262,12 +295,12 @@ public class ServerService(
         return accessPoints.Select(x => x.ToModel()).ToList();
     }
 
-    public async Task<ServersStatusSummary> GetStatusSummary(Guid projectId, 
+    public async Task<ServersStatusSummary> GetStatusSummary(Guid projectId,
         Guid? serverFarmId = null, Guid? serverId = null)
     {
         await using var trans = await vhRepo.WithNoLockTransaction();
-        
-        var serverModels = await vhRepo.ServerList(projectId: projectId, serverFarmId: serverFarmId, 
+
+        var serverModels = await vhRepo.ServerList(projectId: projectId, serverFarmId: serverFarmId,
             serverId: serverId, tracking: false);
 
         // update model ServerStatusEx

@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
+using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -55,5 +56,42 @@ public class ClientFilterTest
         // delete
         await testApp.ClientFiltersClient.DeleteAsync(testApp.ProjectId, clientFilter.ClientFilterId);
         await VhTestUtil.AssertNotExistsException(testApp.ClientFiltersClient.GetAsync(testApp.ProjectId, clientFilter.ClientFilterId));
+    }
+
+    [TestMethod]
+    public async Task AssignToServer()
+    {
+        var testApp = await TestApp.Create(isFree: false);
+        var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
+
+        // add a ClientFilter
+        var clientFilter1 = await farm.TestApp.ClientFiltersClient.CreateAsync(farm.ProjectId, new ClientFilterCreateParams {
+            ClientFilterName = Guid.NewGuid().ToString(),
+            Filter = "#premium || (#tag1 && #tag2)",
+            Description = Guid.NewGuid().ToString()
+        });
+
+        var clientFilter2 = await farm.TestApp.ClientFiltersClient.CreateAsync(farm.ProjectId, new ClientFilterCreateParams {
+            ClientFilterName = Guid.NewGuid().ToString(),
+            Filter = "#premium || (#tag1 && #tag2)",
+            Description = Guid.NewGuid().ToString()
+        });
+
+
+        // add a server
+        var server = await farm.AddNewServer(new ServerCreateParams {
+            ClientFilterId = clientFilter1.ClientFilterId
+        });
+
+        await server.Reload();
+        Assert.AreEqual(server.Server.ClientFilterId, clientFilter1.ClientFilterId);
+
+        // reassign ClientFilter
+        await server.Update(new ServerUpdateParams {
+            ClientFilterId = new PatchOfString { Value = clientFilter2.ClientFilterId }
+        });
+
+        await server.Reload();
+        Assert.AreEqual(server.Server.ClientFilterId, clientFilter2.ClientFilterId);
     }
 }

@@ -571,14 +571,14 @@ export class ClientFiltersClient {
 
     }
 
-    create(projectId: string, createParamsParams: ClientFilterCreateParams, cancelToken?: CancelToken): Promise<ClientFilter> {
+    create(projectId: string, createParams: ClientFilterCreateParams, cancelToken?: CancelToken): Promise<ClientFilter> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/client-filters";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
         url_ = url_.replace(/[?&]$/, "");
 
-        const content_ = JSON.stringify(createParamsParams);
+        const content_ = JSON.stringify(createParams);
 
         let options_: AxiosRequestConfig = {
             data: content_,
@@ -8615,6 +8615,8 @@ export class VpnServer implements IVpnServer {
     power?: number | null;
     publicIpV4?: string | null;
     publicIpV6?: string | null;
+    tags!: string[];
+    clientFilterId?: string | null;
 
     constructor(data?: IVpnServer) {
         if (data) {
@@ -8625,6 +8627,7 @@ export class VpnServer implements IVpnServer {
         }
         if (!data) {
             this.accessPoints = [];
+            this.tags = [];
         }
     }
 
@@ -8662,6 +8665,15 @@ export class VpnServer implements IVpnServer {
             this.power = _data["power"] !== undefined ? _data["power"] : <any>null;
             this.publicIpV4 = _data["publicIpV4"] !== undefined ? _data["publicIpV4"] : <any>null;
             this.publicIpV6 = _data["publicIpV6"] !== undefined ? _data["publicIpV6"] : <any>null;
+            if (Array.isArray(_data["tags"])) {
+                this.tags = [] as any;
+                for (let item of _data["tags"])
+                    this.tags!.push(item);
+            }
+            else {
+                this.tags = <any>null;
+            }
+            this.clientFilterId = _data["clientFilterId"] !== undefined ? _data["clientFilterId"] : <any>null;
         }
     }
 
@@ -8703,6 +8715,12 @@ export class VpnServer implements IVpnServer {
         data["power"] = this.power !== undefined ? this.power : <any>null;
         data["publicIpV4"] = this.publicIpV4 !== undefined ? this.publicIpV4 : <any>null;
         data["publicIpV6"] = this.publicIpV6 !== undefined ? this.publicIpV6 : <any>null;
+        if (Array.isArray(this.tags)) {
+            data["tags"] = [];
+            for (let item of this.tags)
+                data["tags"].push(item);
+        }
+        data["clientFilterId"] = this.clientFilterId !== undefined ? this.clientFilterId : <any>null;
         return data;
     }
 }
@@ -8733,6 +8751,8 @@ export interface IVpnServer {
     power?: number | null;
     publicIpV4?: string | null;
     publicIpV6?: string | null;
+    tags: string[];
+    clientFilterId?: string | null;
 }
 
 export enum ServerState {
@@ -8877,6 +8897,8 @@ export class ServerCreateParams implements IServerCreateParams {
     hostPanelUrl?: string | null;
     accessPoints?: AccessPoint[] | null;
     power?: number | null;
+    tags!: string[];
+    clientFilterId?: string | null;
 
     constructor(data?: IServerCreateParams) {
         if (data) {
@@ -8884,6 +8906,9 @@ export class ServerCreateParams implements IServerCreateParams {
                 if (data.hasOwnProperty(property))
                     (<any>this)[property] = (<any>data)[property];
             }
+        }
+        if (!data) {
+            this.tags = [];
         }
     }
 
@@ -8901,6 +8926,15 @@ export class ServerCreateParams implements IServerCreateParams {
                 this.accessPoints = <any>null;
             }
             this.power = _data["power"] !== undefined ? _data["power"] : <any>null;
+            if (Array.isArray(_data["tags"])) {
+                this.tags = [] as any;
+                for (let item of _data["tags"])
+                    this.tags!.push(item);
+            }
+            else {
+                this.tags = <any>null;
+            }
+            this.clientFilterId = _data["clientFilterId"] !== undefined ? _data["clientFilterId"] : <any>null;
         }
     }
 
@@ -8922,6 +8956,12 @@ export class ServerCreateParams implements IServerCreateParams {
                 data["accessPoints"].push(item.toJSON());
         }
         data["power"] = this.power !== undefined ? this.power : <any>null;
+        if (Array.isArray(this.tags)) {
+            data["tags"] = [];
+            for (let item of this.tags)
+                data["tags"].push(item);
+        }
+        data["clientFilterId"] = this.clientFilterId !== undefined ? this.clientFilterId : <any>null;
         return data;
     }
 }
@@ -8932,6 +8972,8 @@ export interface IServerCreateParams {
     hostPanelUrl?: string | null;
     accessPoints?: AccessPoint[] | null;
     power?: number | null;
+    tags: string[];
+    clientFilterId?: string | null;
 }
 
 export class ServerUpdateParams implements IServerUpdateParams {
@@ -8944,6 +8986,8 @@ export class ServerUpdateParams implements IServerUpdateParams {
     hostPanelUrl?: PatchOfUri | null;
     power?: PatchOfNullableInteger | null;
     isEnabled?: PatchOfBoolean | null;
+    tags?: PatchOfStringOf | null;
+    clientFilterId?: PatchOfString | null;
 
     constructor(data?: IServerUpdateParams) {
         if (data) {
@@ -8965,6 +9009,8 @@ export class ServerUpdateParams implements IServerUpdateParams {
             this.hostPanelUrl = _data["hostPanelUrl"] ? PatchOfUri.fromJS(_data["hostPanelUrl"]) : <any>null;
             this.power = _data["power"] ? PatchOfNullableInteger.fromJS(_data["power"]) : <any>null;
             this.isEnabled = _data["isEnabled"] ? PatchOfBoolean.fromJS(_data["isEnabled"]) : <any>null;
+            this.tags = _data["tags"] ? PatchOfStringOf.fromJS(_data["tags"]) : <any>null;
+            this.clientFilterId = _data["clientFilterId"] ? PatchOfString.fromJS(_data["clientFilterId"]) : <any>null;
         }
     }
 
@@ -8986,6 +9032,8 @@ export class ServerUpdateParams implements IServerUpdateParams {
         data["hostPanelUrl"] = this.hostPanelUrl ? this.hostPanelUrl.toJSON() : <any>null;
         data["power"] = this.power ? this.power.toJSON() : <any>null;
         data["isEnabled"] = this.isEnabled ? this.isEnabled.toJSON() : <any>null;
+        data["tags"] = this.tags ? this.tags.toJSON() : <any>null;
+        data["clientFilterId"] = this.clientFilterId ? this.clientFilterId.toJSON() : <any>null;
         return data;
     }
 }
@@ -9000,6 +9048,8 @@ export interface IServerUpdateParams {
     hostPanelUrl?: PatchOfUri | null;
     power?: PatchOfNullableInteger | null;
     isEnabled?: PatchOfBoolean | null;
+    tags?: PatchOfStringOf | null;
+    clientFilterId?: PatchOfString | null;
 }
 
 export class PatchOfAccessPointOf implements IPatchOfAccessPointOf {
@@ -9083,6 +9133,53 @@ export class PatchOfNullableInteger implements IPatchOfNullableInteger {
 
 export interface IPatchOfNullableInteger {
     value?: number | null;
+}
+
+export class PatchOfStringOf implements IPatchOfStringOf {
+    value?: string[] | null;
+
+    constructor(data?: IPatchOfStringOf) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["value"])) {
+                this.value = [] as any;
+                for (let item of _data["value"])
+                    this.value!.push(item);
+            }
+            else {
+                this.value = <any>null;
+            }
+        }
+    }
+
+    static fromJS(data: any): PatchOfStringOf {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfStringOf();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.value)) {
+            data["value"] = [];
+            for (let item of this.value)
+                data["value"].push(item);
+        }
+        return data;
+    }
+}
+
+export interface IPatchOfStringOf {
+    value?: string[] | null;
 }
 
 export class ServerInstallBySshUserPasswordParams implements IServerInstallBySshUserPasswordParams {

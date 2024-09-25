@@ -11,6 +11,8 @@ public class ServerModel
     public required string? EnvironmentVersion { get; set; }
     public required string? OsInfo { get; set; }
     public required string? MachineName { get; set; }
+    public required string? Tags { get; set; }
+    public required int? ClientFilterId { get; set; }
     public required long? TotalMemory { get; set; }
     public required int? LogicalCoreCount { get; set; }
     public required DateTime? ConfigureTime { get; set; }
@@ -33,6 +35,7 @@ public class ServerModel
     public required int? Power { get; set; }
     public required List<AccessPointModel> AccessPoints { get; set; } = [];
 
+    public virtual ClientFilterModel? ClientFilter { get; set; }
     public virtual ProjectModel? Project { get; set; }
     public virtual ServerFarmModel? ServerFarm { get; set; }
     public virtual LocationModel? Location { get; set; }

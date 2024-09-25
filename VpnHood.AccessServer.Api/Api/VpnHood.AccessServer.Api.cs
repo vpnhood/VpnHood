@@ -1103,13 +1103,13 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ClientFilter> CreateAsync(System.Guid projectId, ClientFilterCreateParams createParamsParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ClientFilter> CreateAsync(System.Guid projectId, ClientFilterCreateParams createParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
 
-            if (createParamsParams == null)
-                throw new System.ArgumentNullException("createParamsParams");
+            if (createParams == null)
+                throw new System.ArgumentNullException("createParams");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -1117,7 +1117,7 @@ namespace VpnHood.AccessServer.Api
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(createParamsParams, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(createParams, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -11161,6 +11161,13 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("publicIpV6")]
         public string? PublicIpV6 { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("tags")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> Tags { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("clientFilterId")]
+        public string? ClientFilterId { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -11283,6 +11290,13 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("power")]
         public int? Power { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("tags")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> Tags { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("clientFilterId")]
+        public string? ClientFilterId { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -11316,6 +11330,12 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public PatchOfBoolean? IsEnabled { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("tags")]
+        public PatchOfStringOf? Tags { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("clientFilterId")]
+        public PatchOfString? ClientFilterId { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -11333,6 +11353,15 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("value")]
         public int? Value { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PatchOfStringOf
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        public System.Collections.Generic.ICollection<string>? Value { get; set; } = default!;
 
     }
 

@@ -9,4 +9,5 @@ public class ClientFilterModel
     public required string? Description { get; set; }
 
     public virtual ProjectModel? Project { get; set; }
+    public virtual ICollection<ServerModel>? Servers { get; set; }
 }

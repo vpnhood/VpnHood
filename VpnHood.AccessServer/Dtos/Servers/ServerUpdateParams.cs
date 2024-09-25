@@ -14,4 +14,6 @@ public class ServerUpdateParams
     public Patch<Uri?>? HostPanelUrl { get; set; }
     public Patch<int?>? Power { get; set; }
     public Patch<bool>? IsEnabled { get; set; }
+    public Patch<string[]>? Tags { get; set; }
+    public Patch<string?>? ClientFilterId { get; set; }
 }

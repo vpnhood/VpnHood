@@ -88,12 +88,12 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 ExcludeCountryCodes = ["IR", "CN"],
                 ServiceName = "AdMob",
             },
-            
+
             new AppAdService {
                 AdProvider = InMobiAdProvider.Create(appSettings.InmobiAccountId, appSettings.InmobiPlacementId, appSettings.InmobiIsDebugMode),
                 ServiceName = "InMobi",
             },
-            
+
             new AppAdService {
                 AdProvider = ChartboostAdProvider.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),
                 ExcludeCountryCodes = ["IR", "CN"],

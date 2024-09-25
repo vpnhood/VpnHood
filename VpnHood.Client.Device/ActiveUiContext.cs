@@ -2,7 +2,7 @@
 
 namespace VpnHood.Client.Device;
 
-public class ActiveUiContext : IUiContext
+public class ActiveUiContext
 {
     private static IUiContext? _context;
     public static event EventHandler? OnChanged;

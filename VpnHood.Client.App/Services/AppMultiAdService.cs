@@ -20,7 +20,7 @@ internal class AppMultiAdService
     {
         _adServices = adServices;
         _adOptions = adOptions;
-        
+
         // throw exception if an add has both include and exclude country codes
         var invalidAdServices = _adServices.Where(x => x.IncludeCountryCodes.Length > 0 && x.ExcludeCountryCodes.Length > 0).ToArray();
         if (invalidAdServices.Any())
@@ -86,23 +86,42 @@ internal class AppMultiAdService
         throw new LoadAdException($"Could not load any AD. CountryCode: {GetCountryName(countryCode)}");
     }
 
+    private static async Task VerifyActiveUi(bool immediately = true)
+    {
+        if (ActiveUiContext.Context?.IsActive == true)
+            return;
+
+        // throw exception if the UI is not available
+        if (immediately)
+            throw new ShowAdNoUiException();
+
+        // wait for the UI to be active
+        for (var i = 0; i < 4; i++) {
+            await Task.Delay(500);
+            if (ActiveUiContext.Context?.IsActive == true)
+                return;
+        }
+
+        throw new ShowAdNoUiException();
+    }
+
     protected async Task<string> ShowLoadedAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
     {
+        await VerifyActiveUi();
+
         if (_loadedAdService == null)
             throw new LoadAdException("There is no loaded ad.");
-        
+
         // show the ad
         try {
             await _loadedAdService.AdProvider.ShowAd(uiContext, customData, cancellationToken).VhConfigureAwait();
             await Task.Delay(_adOptions.ShowAdPostDelay, cancellationToken); //wait for finishing trackers
-            if (ActiveUiContext.Context != uiContext) // some ad provider may not raise exception on minimize
-                throw new ShowAdNoUiException();
+            await VerifyActiveUi(false); // some ad provider may not raise exception on minimize
 
             return _loadedAdService.Name;
         }
         catch (Exception ex) {
-            if (ActiveUiContext.Context != uiContext)
-                throw new ShowAdNoUiException();
+            await VerifyActiveUi();
 
             // let's treat unknown error same as LoadException in this version
             throw new LoadAdException("Could not show any ad.", ex);

@@ -2,6 +2,7 @@
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestPlatform.Common.DataCollection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
@@ -28,7 +29,10 @@ namespace VpnHood.Test;
 
 internal static class TestHelper
 {
-    public class TestAppUiContext : IUiContext;
+    public class TestAppUiContext : IUiContext
+    {
+        public bool IsActive => true;
+    }
 
     public static TestWebServer WebServer { get; private set; } = default!;
     public static TestNetFilter NetFilter { get; private set; } = default!;
@@ -266,7 +270,7 @@ internal static class TestHelper
 
     public static Task<VpnHoodServer> CreateServer(
         IAccessManager? accessManager = null,
-        bool autoStart = true, TimeSpan? configureInterval = null, bool useHttpAccessManager = true, 
+        bool autoStart = true, TimeSpan? configureInterval = null, bool useHttpAccessManager = true,
         INetConfigurationProvider? netConfigurationProvider = null)
     {
         return CreateServer(accessManager, null,
@@ -287,7 +291,7 @@ internal static class TestHelper
 
     private static async Task<VpnHoodServer> CreateServer(IAccessManager? accessManager,
         FileAccessManagerOptions? fileAccessManagerOptions,
-        bool autoStart, TimeSpan? configureInterval = null, bool useHttpAccessManager = true, 
+        bool autoStart, TimeSpan? configureInterval = null, bool useHttpAccessManager = true,
         INetConfigurationProvider? netConfigurationProvider = null)
     {
         if (accessManager != null && fileAccessManagerOptions != null)

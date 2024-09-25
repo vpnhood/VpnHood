@@ -1,3 +1,6 @@
 ﻿namespace VpnHood.Client.Device;
 
-public interface IUiContext;
+public interface IUiContext
+{
+    bool IsActive { get; }
+};

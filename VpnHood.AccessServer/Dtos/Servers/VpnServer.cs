@@ -8,7 +8,7 @@ public class VpnServer
     public required Guid ServerId { get; init; }
     public required string ServerName { get; init; }
     public required Guid ServerFarmId { get; init; }
-    public required string? ServerFarmName { get; init; }
+    public required string? ServerFarmName { get; set; }
     public required Location? Location { get; init; }
     public required string? Version { get; init; }
     public required string? EnvironmentVersion { get; init; }
@@ -32,4 +32,5 @@ public class VpnServer
     public required string? PublicIpV6 { get; set; }
     public required string[] Tags { get; set; }
     public required string? ClientFilterId { get; set; }
+    public required string? ClientFilterName { get; set; }
 }

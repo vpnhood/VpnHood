@@ -326,7 +326,7 @@ public class VhContext : DbContext
             entity
                 .HasOne(e => e.ClientFilter)
                 .WithMany(d => d.Servers)
-                .HasPrincipalKey(e => new { e.ProjectId, ClientFilterId = e.ClientFilterId })
+                .HasPrincipalKey(e => new { e.ProjectId, e.ClientFilterId })
                 .HasForeignKey(d => new { d.ProjectId, d.ClientFilterId })
                 .OnDelete(DeleteBehavior.NoAction);
         });
@@ -700,6 +700,10 @@ public class VhContext : DbContext
         modelBuilder.Entity<ClientFilterModel>(entity => {
             entity
                 .HasKey(e => e.ClientFilterId);
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.ClientFilterName })
+                .IsUnique();
 
             entity
                 .HasOne(e => e.Project)

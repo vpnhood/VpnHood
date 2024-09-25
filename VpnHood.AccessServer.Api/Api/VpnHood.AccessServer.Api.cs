@@ -11168,6 +11168,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("clientFilterId")]
         public string? ClientFilterId { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("clientFilterName")]
+        public string? ClientFilterName { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]

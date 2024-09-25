@@ -73,7 +73,7 @@ public class ClientFilterTest
 
         var clientFilter2 = await farm.TestApp.ClientFiltersClient.CreateAsync(farm.ProjectId, new ClientFilterCreateParams {
             ClientFilterName = Guid.NewGuid().ToString(),
-            Filter = "#premium || (#tag1 && #tag2)",
+            Filter = "#premium || (#tag3 && #tag4)",
             Description = Guid.NewGuid().ToString()
         });
 

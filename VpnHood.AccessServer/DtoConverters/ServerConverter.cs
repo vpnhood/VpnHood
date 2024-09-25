@@ -2,6 +2,7 @@
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Repos.Views;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
@@ -38,7 +39,16 @@ public static class ServerConverter
             PublicIpV4 = model.PublicIpV4,
             PublicIpV6 = model.PublicIpV6,
             Tags = model.Tags?.Split(' ') ?? [],
-            ClientFilterId = model.ClientFilterId?.ToString()
+            ClientFilterId = model.ClientFilterId?.ToString(),
+            ClientFilterName = model.ClientFilter?.ClientFilterName
         };
+    }
+
+    public static VpnServer ToDto(this ServerView view, ServerCache? serverCache)
+    {
+        var server = view.Server.ToDto(serverCache);
+        server.ServerFarmName = view.ServerFarmName;
+        server.ClientFilterName = view.ClientFilterName;
+        return server;
     }
 }

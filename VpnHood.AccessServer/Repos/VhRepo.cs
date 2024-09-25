@@ -26,7 +26,7 @@ public class VhRepo(VhContext vhContext)
         return query.SingleAsync();
     }
 
-    public Task<ServerModel[]> ServerList(Guid projectId, Guid? serverFarmId = null, Guid? serverId = null, 
+    public Task<ServerModel[]> ServerList(Guid projectId, Guid? serverFarmId = null, Guid? serverId = null,
         Guid? serverProfileId = null, bool includeServerFarm = false, bool tracking = true)
     {
         var query = vhContext.Servers
@@ -45,7 +45,34 @@ public class VhRepo(VhContext vhContext)
         return query.ToArrayAsync();
     }
 
-    public async Task<ServerModel[]> ServerSearch(Guid projectId,
+
+    public Task<ServerView[]> ServerListView(Guid projectId, Guid? serverFarmId = null, Guid? serverId = null,
+        Guid? serverProfileId = null, bool includeServerFarm = false)
+    {
+        var query = vhContext.Servers
+            .Include(x => x.Location)
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x => x.ServerFarmId == serverFarmId || serverFarmId == null)
+            .Where(x => x.ServerId == serverId || serverId == null)
+            .Where(x => x.ServerFarm!.ServerProfileId == serverProfileId || serverProfileId == null);
+
+        if (includeServerFarm)
+            query = query.Include(x => x.ServerFarm);
+
+        var view = query
+            .Select(x => new ServerView {
+                Server = x,
+                ServerFarmName = x.ServerFarm!.ServerFarmName,
+                ClientFilterName = x.ClientFilter!.ClientFilterName,
+            });
+
+
+        return view
+            .AsNoTracking()
+            .ToArrayAsync();
+    }
+
+    public async Task<ServerView[]> ServerSearch(Guid projectId,
         string? search,
         Guid? serverId = null,
         Guid? serverFarmId = null,
@@ -54,8 +81,7 @@ public class VhRepo(VhContext vhContext)
         int recordCount = int.MaxValue)
     {
         await using var trans = await vhContext.WithNoLockTransaction();
-        var servers = await vhContext.Servers
-            .Include(server => server.ServerFarm)
+        var query = vhContext.Servers
             .Include(server => server.Location)
             .Where(server => server.ProjectId == projectId && !server.IsDeleted)
             .Where(server => serverId == null || server.ServerId == serverId)
@@ -65,14 +91,21 @@ public class VhRepo(VhContext vhContext)
                 string.IsNullOrEmpty(search) ||
                 x.ServerName.Contains(search) ||
                 x.ServerId.ToString() == search ||
-                x.ServerFarmId.ToString() == search)
-            .OrderBy(x => x.ServerName)
+                x.ServerFarmId.ToString() == search);
+
+
+        var view = query
+            .Select(x => new ServerView {
+                Server = x,
+                ServerFarmName = x.ServerFarm!.ServerFarmName,
+                ClientFilterName = x.ClientFilter!.ClientFilterName,
+            })
+            .OrderBy(x => x.Server.ServerName)
             .Skip(recordIndex)
             .Take(recordCount)
-            .AsNoTracking()
-            .ToArrayAsync();
+            .AsNoTracking();
 
-        return servers;
+        return await view.ToArrayAsync();
     }
 
 
@@ -467,7 +500,7 @@ public class VhRepo(VhContext vhContext)
         return vhContext.FarmTokenRepos
             .Where(x => x.ProjectId == projectId && x.Project!.DeletedTime == null)
             .Where(x => x.ServerFarmId == serverFarmId)
-            .Select(x=>x.FarmTokenRepoName)
+            .Select(x => x.FarmTokenRepoName)
             .ToArrayAsync();
     }
 

@@ -195,8 +195,8 @@ public class ServerService(
         // create Dto
         var cachedServers = await agentCacheClient.GetServers(projectId);
         var serverDatas = servers
-            .Select(serverModel => new ServerData {
-                Server = serverModel.ToDto(cachedServers.FirstOrDefault(x => x.ServerId == serverModel.ServerId))
+            .Select(serverView => new ServerData {
+                Server = serverView.Server.ToDto(cachedServers.FirstOrDefault(x => x.ServerId == serverView.Server.ServerId))
             })
             .ToArray();
 

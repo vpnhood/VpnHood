@@ -8617,6 +8617,7 @@ export class VpnServer implements IVpnServer {
     publicIpV6?: string | null;
     tags!: string[];
     clientFilterId?: string | null;
+    clientFilterName?: string | null;
 
     constructor(data?: IVpnServer) {
         if (data) {
@@ -8674,6 +8675,7 @@ export class VpnServer implements IVpnServer {
                 this.tags = <any>null;
             }
             this.clientFilterId = _data["clientFilterId"] !== undefined ? _data["clientFilterId"] : <any>null;
+            this.clientFilterName = _data["clientFilterName"] !== undefined ? _data["clientFilterName"] : <any>null;
         }
     }
 
@@ -8721,6 +8723,7 @@ export class VpnServer implements IVpnServer {
                 data["tags"].push(item);
         }
         data["clientFilterId"] = this.clientFilterId !== undefined ? this.clientFilterId : <any>null;
+        data["clientFilterName"] = this.clientFilterName !== undefined ? this.clientFilterName : <any>null;
         return data;
     }
 }
@@ -8753,6 +8756,7 @@ export interface IVpnServer {
     publicIpV6?: string | null;
     tags: string[];
     clientFilterId?: string | null;
+    clientFilterName?: string | null;
 }
 
 export enum ServerState {

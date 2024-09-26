@@ -96,8 +96,8 @@ internal class AppMultiAdService
             throw new ShowAdNoUiException();
 
         // wait for the UI to be active
-        for (var i = 0; i < 4; i++) {
-            await Task.Delay(500);
+        for (var i = 0; i < 3; i++) {
+            await Task.Delay(250);
             if (ActiveUiContext.Context?.IsActive == true)
                 return;
         }
@@ -115,10 +115,13 @@ internal class AppMultiAdService
         // show the ad
         try {
             await _loadedAdService.AdProvider.ShowAd(uiContext, customData, cancellationToken).VhConfigureAwait();
-            await Task.Delay(_adOptions.ShowAdPostDelay, cancellationToken); //wait for finishing trackers
             await VerifyActiveUi(false); // some ad provider may not raise exception on minimize
+            await Task.Delay(_adOptions.ShowAdPostDelay, cancellationToken); //wait for finishing trackers
 
             return _loadedAdService.Name;
+        }
+        catch (ShowAdNoUiException) {
+            throw;
         }
         catch (Exception ex) {
             await VerifyActiveUi();

@@ -38,7 +38,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         }
 
         try {
-            FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true);
+            FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(Java.Lang.Boolean.True);
         }
         catch {
             /* ignored */
@@ -106,7 +106,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 ServiceName = "AdMob-NoVideo",
             },
         ];
-
     }
 
     private static StoreAccountService? CreateAppAccountService(AppSettings appSettings, string storageFolderPath)

@@ -30,7 +30,8 @@ public class GooglePlayAppUpdaterService : IAppUpdaterService
             // Show Google Play update dialog
             using var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
                 AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
-            await updateFlowPlayTask.AsTask().VhConfigureAwait();
+            if (updateFlowPlayTask!=null)
+                await updateFlowPlayTask.AsTask().VhConfigureAwait();
 
             return true;
         }

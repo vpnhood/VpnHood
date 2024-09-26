@@ -4,7 +4,6 @@ using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Utils;
 using Xamarin.Google.Android.Play.Core.Review;
 using Xamarin.Google.Android.Play.Core.Review.Testing;
-using Exception = System.Exception;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
@@ -27,7 +26,7 @@ public class GooglePlayInAppReviewService
             //var reviewManager = ReviewManagerFactory.Create(appUiContext.Activity);
             using var reviewManager = new FakeReviewManager(appUiContext.Activity);
             using var reviewInfo = await reviewManager.RequestReviewFlow().AsTask<ReviewInfo>().VhConfigureAwait();
-            await reviewManager.LaunchReviewFlow(appUiContext.Activity, reviewInfo).AsTask().VhConfigureAwait();
+            await reviewManager.LaunchReviewFlow(appUiContext.Activity, reviewInfo!).AsTask().VhConfigureAwait();
         }
         catch (Exception e) {
             Console.WriteLine(e);

@@ -112,7 +112,7 @@ public class AdMobInterstitialAdProvider(string adUnitId) : IAppAdProvider
             _dismissedCompletionSource.TrySetResult();
         }
 
-        public override void OnAdFailedToShowFullScreenContent(AdError adError)
+       public override void OnAdFailedToShowFullScreenContent(AdError adError)
         {
             _dismissedCompletionSource.TrySetException(new ShowAdException(adError.Message));
         }

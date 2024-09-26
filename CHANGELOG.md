@@ -1,7 +1,7 @@
 # Upcoming
 ### Client
 * Feature: Update server token from multiple URLs
-* Improve: Improve initialization speed for exclude my country
+* Improve: Improve initialization speed to exclude my country
 
 ### Server
 * Fix: Server listening to a test IP

@@ -39,9 +39,9 @@ public class GooglePlayTaskCompleteListener<T> : Java.Lang.Object,
         }
     }
 
-    public void OnFailure(Java.Lang.Exception ex)
+    public void OnFailure(Java.Lang.Exception? ex)
     {
-        _taskCompletionSource.TrySetException(ex);
+        _taskCompletionSource.TrySetException(ex!);
     }
 
     public void OnComplete(Xamarin.Google.Android.Play.Core.Tasks.Task p0)

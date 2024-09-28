@@ -5582,9 +5582,6 @@ export class AccessToken implements IAccessToken {
     supportCode!: number;
     serverFarmId!: string;
     serverFarmName?: string | null;
-    maxTraffic!: number;
-    lifetime!: number;
-    maxDevice!: number;
     firstUsedTime?: Date | null;
     lastUsedTime?: Date | null;
     isPublic!: boolean;
@@ -5594,6 +5591,10 @@ export class AccessToken implements IAccessToken {
     createdTime!: Date;
     modifiedTime!: Date;
     description?: string | null;
+    maxTraffic!: number;
+    lifetime!: number;
+    maxDevice!: number;
+    tags!: string[];
 
     constructor(data?: IAccessToken) {
         if (data) {
@@ -5601,6 +5602,9 @@ export class AccessToken implements IAccessToken {
                 if (data.hasOwnProperty(property))
                     (<any>this)[property] = (<any>data)[property];
             }
+        }
+        if (!data) {
+            this.tags = [];
         }
     }
 
@@ -5612,9 +5616,6 @@ export class AccessToken implements IAccessToken {
             this.supportCode = _data["supportCode"] !== undefined ? _data["supportCode"] : <any>null;
             this.serverFarmId = _data["serverFarmId"] !== undefined ? _data["serverFarmId"] : <any>null;
             this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
-            this.maxTraffic = _data["maxTraffic"] !== undefined ? _data["maxTraffic"] : <any>null;
-            this.lifetime = _data["lifetime"] !== undefined ? _data["lifetime"] : <any>null;
-            this.maxDevice = _data["maxDevice"] !== undefined ? _data["maxDevice"] : <any>null;
             this.firstUsedTime = _data["firstUsedTime"] ? new Date(_data["firstUsedTime"].toString()) : <any>null;
             this.lastUsedTime = _data["lastUsedTime"] ? new Date(_data["lastUsedTime"].toString()) : <any>null;
             this.isPublic = _data["isPublic"] !== undefined ? _data["isPublic"] : <any>null;
@@ -5624,6 +5625,17 @@ export class AccessToken implements IAccessToken {
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
             this.modifiedTime = _data["modifiedTime"] ? new Date(_data["modifiedTime"].toString()) : <any>null;
             this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
+            this.maxTraffic = _data["maxTraffic"] !== undefined ? _data["maxTraffic"] : <any>null;
+            this.lifetime = _data["lifetime"] !== undefined ? _data["lifetime"] : <any>null;
+            this.maxDevice = _data["maxDevice"] !== undefined ? _data["maxDevice"] : <any>null;
+            if (Array.isArray(_data["tags"])) {
+                this.tags = [] as any;
+                for (let item of _data["tags"])
+                    this.tags!.push(item);
+            }
+            else {
+                this.tags = <any>null;
+            }
         }
     }
 
@@ -5642,9 +5654,6 @@ export class AccessToken implements IAccessToken {
         data["supportCode"] = this.supportCode !== undefined ? this.supportCode : <any>null;
         data["serverFarmId"] = this.serverFarmId !== undefined ? this.serverFarmId : <any>null;
         data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
-        data["maxTraffic"] = this.maxTraffic !== undefined ? this.maxTraffic : <any>null;
-        data["lifetime"] = this.lifetime !== undefined ? this.lifetime : <any>null;
-        data["maxDevice"] = this.maxDevice !== undefined ? this.maxDevice : <any>null;
         data["firstUsedTime"] = this.firstUsedTime ? this.firstUsedTime.toISOString() : <any>null;
         data["lastUsedTime"] = this.lastUsedTime ? this.lastUsedTime.toISOString() : <any>null;
         data["isPublic"] = this.isPublic !== undefined ? this.isPublic : <any>null;
@@ -5654,6 +5663,14 @@ export class AccessToken implements IAccessToken {
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
         data["modifiedTime"] = this.modifiedTime ? this.modifiedTime.toISOString() : <any>null;
         data["description"] = this.description !== undefined ? this.description : <any>null;
+        data["maxTraffic"] = this.maxTraffic !== undefined ? this.maxTraffic : <any>null;
+        data["lifetime"] = this.lifetime !== undefined ? this.lifetime : <any>null;
+        data["maxDevice"] = this.maxDevice !== undefined ? this.maxDevice : <any>null;
+        if (Array.isArray(this.tags)) {
+            data["tags"] = [];
+            for (let item of this.tags)
+                data["tags"].push(item);
+        }
         return data;
     }
 }
@@ -5665,9 +5682,6 @@ export interface IAccessToken {
     supportCode: number;
     serverFarmId: string;
     serverFarmName?: string | null;
-    maxTraffic: number;
-    lifetime: number;
-    maxDevice: number;
     firstUsedTime?: Date | null;
     lastUsedTime?: Date | null;
     isPublic: boolean;
@@ -5677,6 +5691,10 @@ export interface IAccessToken {
     createdTime: Date;
     modifiedTime: Date;
     description?: string | null;
+    maxTraffic: number;
+    lifetime: number;
+    maxDevice: number;
+    tags: string[];
 }
 
 export enum AdRequirement {
@@ -5816,14 +5834,15 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
     serverFarmId!: string;
     accessTokenName?: string | null;
     secret?: string | null;
-    maxTraffic!: number;
-    lifetime!: number;
-    maxDevice!: number;
     expirationTime?: Date | null;
     isEnabled?: boolean | null;
     isPublic!: boolean;
     adRequirement!: AdRequirement;
     description?: string | null;
+    maxTraffic!: number;
+    lifetime!: number;
+    maxDevice!: number;
+    tags!: string[];
 
     constructor(data?: IAccessTokenCreateParams) {
         if (data) {
@@ -5831,6 +5850,9 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
                 if (data.hasOwnProperty(property))
                     (<any>this)[property] = (<any>data)[property];
             }
+        }
+        if (!data) {
+            this.tags = [];
         }
     }
 
@@ -5840,14 +5862,22 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
             this.serverFarmId = _data["serverFarmId"] !== undefined ? _data["serverFarmId"] : <any>null;
             this.accessTokenName = _data["accessTokenName"] !== undefined ? _data["accessTokenName"] : <any>null;
             this.secret = _data["secret"] !== undefined ? _data["secret"] : <any>null;
-            this.maxTraffic = _data["maxTraffic"] !== undefined ? _data["maxTraffic"] : <any>null;
-            this.lifetime = _data["lifetime"] !== undefined ? _data["lifetime"] : <any>null;
-            this.maxDevice = _data["maxDevice"] !== undefined ? _data["maxDevice"] : <any>null;
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>null;
             this.isEnabled = _data["isEnabled"] !== undefined ? _data["isEnabled"] : <any>null;
             this.isPublic = _data["isPublic"] !== undefined ? _data["isPublic"] : <any>null;
             this.adRequirement = _data["adRequirement"] !== undefined ? _data["adRequirement"] : <any>null;
             this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
+            this.maxTraffic = _data["maxTraffic"] !== undefined ? _data["maxTraffic"] : <any>null;
+            this.lifetime = _data["lifetime"] !== undefined ? _data["lifetime"] : <any>null;
+            this.maxDevice = _data["maxDevice"] !== undefined ? _data["maxDevice"] : <any>null;
+            if (Array.isArray(_data["tags"])) {
+                this.tags = [] as any;
+                for (let item of _data["tags"])
+                    this.tags!.push(item);
+            }
+            else {
+                this.tags = <any>null;
+            }
         }
     }
 
@@ -5864,14 +5894,19 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
         data["serverFarmId"] = this.serverFarmId !== undefined ? this.serverFarmId : <any>null;
         data["accessTokenName"] = this.accessTokenName !== undefined ? this.accessTokenName : <any>null;
         data["secret"] = this.secret !== undefined ? this.secret : <any>null;
-        data["maxTraffic"] = this.maxTraffic !== undefined ? this.maxTraffic : <any>null;
-        data["lifetime"] = this.lifetime !== undefined ? this.lifetime : <any>null;
-        data["maxDevice"] = this.maxDevice !== undefined ? this.maxDevice : <any>null;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>null;
         data["isEnabled"] = this.isEnabled !== undefined ? this.isEnabled : <any>null;
         data["isPublic"] = this.isPublic !== undefined ? this.isPublic : <any>null;
         data["adRequirement"] = this.adRequirement !== undefined ? this.adRequirement : <any>null;
         data["description"] = this.description !== undefined ? this.description : <any>null;
+        data["maxTraffic"] = this.maxTraffic !== undefined ? this.maxTraffic : <any>null;
+        data["lifetime"] = this.lifetime !== undefined ? this.lifetime : <any>null;
+        data["maxDevice"] = this.maxDevice !== undefined ? this.maxDevice : <any>null;
+        if (Array.isArray(this.tags)) {
+            data["tags"] = [];
+            for (let item of this.tags)
+                data["tags"].push(item);
+        }
         return data;
     }
 }
@@ -5881,26 +5916,28 @@ export interface IAccessTokenCreateParams {
     serverFarmId: string;
     accessTokenName?: string | null;
     secret?: string | null;
-    maxTraffic: number;
-    lifetime: number;
-    maxDevice: number;
     expirationTime?: Date | null;
     isEnabled?: boolean | null;
     isPublic: boolean;
     adRequirement: AdRequirement;
     description?: string | null;
+    maxTraffic: number;
+    lifetime: number;
+    maxDevice: number;
+    tags: string[];
 }
 
 export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
     accessTokenName?: PatchOfString | null;
     serverFarmId?: PatchOfGuid | null;
     expirationTime?: PatchOfNullableDateTime | null;
-    lifetime?: PatchOfInteger | null;
-    maxDevice?: PatchOfInteger | null;
-    maxTraffic?: PatchOfLong | null;
     isEnabled?: PatchOfBoolean | null;
     adRequirement?: PatchOfAdRequirement | null;
     description?: PatchOfString | null;
+    tags?: PatchOfStringOf | null;
+    lifetime?: PatchOfInteger | null;
+    maxDevice?: PatchOfInteger | null;
+    maxTraffic?: PatchOfLong | null;
 
     constructor(data?: IAccessTokenUpdateParams) {
         if (data) {
@@ -5916,12 +5953,13 @@ export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
             this.accessTokenName = _data["accessTokenName"] ? PatchOfString.fromJS(_data["accessTokenName"]) : <any>null;
             this.serverFarmId = _data["serverFarmId"] ? PatchOfGuid.fromJS(_data["serverFarmId"]) : <any>null;
             this.expirationTime = _data["expirationTime"] ? PatchOfNullableDateTime.fromJS(_data["expirationTime"]) : <any>null;
-            this.lifetime = _data["lifetime"] ? PatchOfInteger.fromJS(_data["lifetime"]) : <any>null;
-            this.maxDevice = _data["maxDevice"] ? PatchOfInteger.fromJS(_data["maxDevice"]) : <any>null;
-            this.maxTraffic = _data["maxTraffic"] ? PatchOfLong.fromJS(_data["maxTraffic"]) : <any>null;
             this.isEnabled = _data["isEnabled"] ? PatchOfBoolean.fromJS(_data["isEnabled"]) : <any>null;
             this.adRequirement = _data["adRequirement"] ? PatchOfAdRequirement.fromJS(_data["adRequirement"]) : <any>null;
             this.description = _data["description"] ? PatchOfString.fromJS(_data["description"]) : <any>null;
+            this.tags = _data["tags"] ? PatchOfStringOf.fromJS(_data["tags"]) : <any>null;
+            this.lifetime = _data["lifetime"] ? PatchOfInteger.fromJS(_data["lifetime"]) : <any>null;
+            this.maxDevice = _data["maxDevice"] ? PatchOfInteger.fromJS(_data["maxDevice"]) : <any>null;
+            this.maxTraffic = _data["maxTraffic"] ? PatchOfLong.fromJS(_data["maxTraffic"]) : <any>null;
         }
     }
 
@@ -5937,12 +5975,13 @@ export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
         data["accessTokenName"] = this.accessTokenName ? this.accessTokenName.toJSON() : <any>null;
         data["serverFarmId"] = this.serverFarmId ? this.serverFarmId.toJSON() : <any>null;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toJSON() : <any>null;
-        data["lifetime"] = this.lifetime ? this.lifetime.toJSON() : <any>null;
-        data["maxDevice"] = this.maxDevice ? this.maxDevice.toJSON() : <any>null;
-        data["maxTraffic"] = this.maxTraffic ? this.maxTraffic.toJSON() : <any>null;
         data["isEnabled"] = this.isEnabled ? this.isEnabled.toJSON() : <any>null;
         data["adRequirement"] = this.adRequirement ? this.adRequirement.toJSON() : <any>null;
         data["description"] = this.description ? this.description.toJSON() : <any>null;
+        data["tags"] = this.tags ? this.tags.toJSON() : <any>null;
+        data["lifetime"] = this.lifetime ? this.lifetime.toJSON() : <any>null;
+        data["maxDevice"] = this.maxDevice ? this.maxDevice.toJSON() : <any>null;
+        data["maxTraffic"] = this.maxTraffic ? this.maxTraffic.toJSON() : <any>null;
         return data;
     }
 }
@@ -5951,12 +5990,13 @@ export interface IAccessTokenUpdateParams {
     accessTokenName?: PatchOfString | null;
     serverFarmId?: PatchOfGuid | null;
     expirationTime?: PatchOfNullableDateTime | null;
-    lifetime?: PatchOfInteger | null;
-    maxDevice?: PatchOfInteger | null;
-    maxTraffic?: PatchOfLong | null;
     isEnabled?: PatchOfBoolean | null;
     adRequirement?: PatchOfAdRequirement | null;
     description?: PatchOfString | null;
+    tags?: PatchOfStringOf | null;
+    lifetime?: PatchOfInteger | null;
+    maxDevice?: PatchOfInteger | null;
+    maxTraffic?: PatchOfLong | null;
 }
 
 export class PatchOfString implements IPatchOfString {
@@ -6067,78 +6107,6 @@ export interface IPatchOfNullableDateTime {
     value?: Date | null;
 }
 
-export class PatchOfInteger implements IPatchOfInteger {
-    value!: number;
-
-    constructor(data?: IPatchOfInteger) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): PatchOfInteger {
-        data = typeof data === 'object' ? data : {};
-        let result = new PatchOfInteger();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["value"] = this.value !== undefined ? this.value : <any>null;
-        return data;
-    }
-}
-
-export interface IPatchOfInteger {
-    value: number;
-}
-
-export class PatchOfLong implements IPatchOfLong {
-    value!: number;
-
-    constructor(data?: IPatchOfLong) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): PatchOfLong {
-        data = typeof data === 'object' ? data : {};
-        let result = new PatchOfLong();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["value"] = this.value !== undefined ? this.value : <any>null;
-        return data;
-    }
-}
-
-export interface IPatchOfLong {
-    value: number;
-}
-
 export class PatchOfBoolean implements IPatchOfBoolean {
     value!: boolean;
 
@@ -6209,6 +6177,125 @@ export class PatchOfAdRequirement implements IPatchOfAdRequirement {
 
 export interface IPatchOfAdRequirement {
     value: AdRequirement;
+}
+
+export class PatchOfStringOf implements IPatchOfStringOf {
+    value?: string[] | null;
+
+    constructor(data?: IPatchOfStringOf) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["value"])) {
+                this.value = [] as any;
+                for (let item of _data["value"])
+                    this.value!.push(item);
+            }
+            else {
+                this.value = <any>null;
+            }
+        }
+    }
+
+    static fromJS(data: any): PatchOfStringOf {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfStringOf();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.value)) {
+            data["value"] = [];
+            for (let item of this.value)
+                data["value"].push(item);
+        }
+        return data;
+    }
+}
+
+export interface IPatchOfStringOf {
+    value?: string[] | null;
+}
+
+export class PatchOfInteger implements IPatchOfInteger {
+    value!: number;
+
+    constructor(data?: IPatchOfInteger) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): PatchOfInteger {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfInteger();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["value"] = this.value !== undefined ? this.value : <any>null;
+        return data;
+    }
+}
+
+export interface IPatchOfInteger {
+    value: number;
+}
+
+export class PatchOfLong implements IPatchOfLong {
+    value!: number;
+
+    constructor(data?: IPatchOfLong) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): PatchOfLong {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfLong();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["value"] = this.value !== undefined ? this.value : <any>null;
+        return data;
+    }
+}
+
+export interface IPatchOfLong {
+    value: number;
 }
 
 export class AccessTokenData implements IAccessTokenData {
@@ -9137,53 +9224,6 @@ export class PatchOfNullableInteger implements IPatchOfNullableInteger {
 
 export interface IPatchOfNullableInteger {
     value?: number | null;
-}
-
-export class PatchOfStringOf implements IPatchOfStringOf {
-    value?: string[] | null;
-
-    constructor(data?: IPatchOfStringOf) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            if (Array.isArray(_data["value"])) {
-                this.value = [] as any;
-                for (let item of _data["value"])
-                    this.value!.push(item);
-            }
-            else {
-                this.value = <any>null;
-            }
-        }
-    }
-
-    static fromJS(data: any): PatchOfStringOf {
-        data = typeof data === 'object' ? data : {};
-        let result = new PatchOfStringOf();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        if (Array.isArray(this.value)) {
-            data["value"] = [];
-            for (let item of this.value)
-                data["value"].push(item);
-        }
-        return data;
-    }
-}
-
-export interface IPatchOfStringOf {
-    value?: string[] | null;
 }
 
 export class ServerInstallBySshUserPasswordParams implements IServerInstallBySshUserPasswordParams {

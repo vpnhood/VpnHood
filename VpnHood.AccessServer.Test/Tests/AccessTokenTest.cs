@@ -48,8 +48,9 @@ public class AccessTokenTest
             MaxTraffic = 11,
             MaxDevice = 12,
             Lifetime = 13,
+            Tags = ["#tag1", "#tag2", "#tag3"],
             ExpirationTime = expirationTime1,
-            IsEnabled = true
+            IsEnabled = true,
         };
         var accessTokenDom1 = await farm1.CreateAccessToken(createParam1);
         Assert.AreNotEqual(0, accessTokenDom1.AccessToken.SupportCode);
@@ -61,6 +62,7 @@ public class AccessTokenTest
         Assert.AreEqual(createParam1.MaxDevice, accessTokenDom1.AccessToken.MaxDevice);
         Assert.AreEqual(createParam1.Lifetime, accessTokenDom1.AccessToken.Lifetime);
         Assert.AreEqual(createParam1.Description, accessTokenDom1.AccessToken.Description);
+        CollectionAssert.AreEqual(createParam1.Tags.ToArray(), accessTokenDom1.AccessToken.Tags.ToArray());
 
         var farm2 = await ServerFarmDom.Create(testApp);
         var expirationTime2 = DateTime.UtcNow.AddDays(2);
@@ -71,6 +73,7 @@ public class AccessTokenTest
             MaxTraffic = 21,
             MaxDevice = 22,
             Lifetime = 23,
+            Tags = ["#tag5", "#tag1"],
             ExpirationTime = expirationTime2,
             IsPublic = true,
             IsEnabled = true
@@ -87,6 +90,7 @@ public class AccessTokenTest
         Assert.AreEqual(createParam2.Lifetime, accessTokenDom2.AccessToken.Lifetime);
         Assert.AreEqual(createParam2.Description, accessTokenDom2.AccessToken.Description);
         Assert.IsTrue(accessTokenDom2.AccessToken.IsEnabled);
+        CollectionAssert.AreEqual(createParam2.Tags.ToArray(), accessTokenDom2.AccessToken.Tags.ToArray());
 
         //-----------
         // check: get
@@ -106,6 +110,7 @@ public class AccessTokenTest
         Assert.AreEqual(accessTokenDom2.AccessToken.SupportCode, accessToken2B.SupportCode);
         Assert.AreEqual(accessTokenDom2.AccessToken.Description, accessToken2B.Description);
         Assert.IsTrue(accessTokenDom2.AccessToken.IsEnabled);
+        CollectionAssert.AreEqual(createParam2.Tags.ToArray(), accessToken2B.Tags.ToArray());
 
         //-----------
         // check: update
@@ -117,6 +122,7 @@ public class AccessTokenTest
             Lifetime = new PatchOfInteger { Value = 61 },
             MaxDevice = new PatchOfInteger { Value = 7 },
             MaxTraffic = new PatchOfLong { Value = 805004 },
+            Tags = new PatchOfStringOf {Value = ["#tag50", "#tag51"] },
             Description = new PatchOfString { Value = "http:" + $"//www.sss.com/new{Guid.NewGuid()}.com" },
             IsEnabled = new PatchOfBoolean { Value = false }
         };
@@ -137,6 +143,7 @@ public class AccessTokenTest
         Assert.AreEqual(accessTokenDom2.AccessToken.SupportCode, accessToken2B.SupportCode);
         Assert.AreEqual(updateParams.Description.Value, accessToken2B.Description);
         Assert.AreEqual(updateParams.IsEnabled.Value, accessToken2B.IsEnabled);
+        CollectionAssert.AreEqual(updateParams.Tags.Value?.ToArray(), accessToken2B.Tags.ToArray());
 
         //-----------
         // check: getAccessKey
@@ -161,6 +168,7 @@ public class AccessTokenTest
             x.Equals(farm1.DefaultServer.ServerConfig.TcpEndPointsValue.First())));
         Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x =>
             x.Address.Equals(farm2.DefaultServer.ServerInfo.PublicIpAddresses.First())));
+
         Assert.AreEqual(accessToken2B.SupportCode.ToString(), token.SupportId);
 
         //-----------

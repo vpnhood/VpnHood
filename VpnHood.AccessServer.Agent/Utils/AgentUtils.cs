@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.AccessServer.Agent.Utils;
 
-public static class AgentUtil
+public static class AgentUtils
 {
     public static int GetBestTcpBufferSize(long? totalMemory)
     {

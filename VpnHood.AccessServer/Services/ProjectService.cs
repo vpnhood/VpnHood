@@ -10,6 +10,7 @@ using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Services;
@@ -96,6 +97,7 @@ public class ProjectService(
                     MaxDevice = 0,
                     MaxTraffic = 0,
                     Lifetime = 0,
+                    Tags = null,
                     FirstUsedTime = null,
                     ServerFarmId = serverFarm.ServerFarmId,
                     Description = null
@@ -121,6 +123,7 @@ public class ProjectService(
                     LastUsedTime = null,
                     MaxTraffic = 0,
                     Lifetime = 0,
+                    Tags = BuiltInTags.Premium,
                     Description = null
                 }
             }

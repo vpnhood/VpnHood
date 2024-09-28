@@ -14,6 +14,7 @@ using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Server.Access.Managers.Http;
 using ConnectionInfo = Renci.SshNet.ConnectionInfo;
 
@@ -27,20 +28,6 @@ public class ServerService(
     SubscriptionService subscriptionService,
     AgentSystemClient agentSystemClient)
 {
-    private static string ValidateTags(string[] tags)
-    {
-        // add # to tags if it is not
-        tags = tags.Select(x => x.StartsWith("#") ? x.Trim() : $"#{x}".Trim()).ToArray();
-
-        // tag should only have letters, numbers, underscore and colon
-        var regex = new Regex(@"^#[a-zA-Z0-9_:]+$");
-        var invalidTag = tags.FirstOrDefault(x => !regex.IsMatch(x));
-        if (invalidTag != null)
-            throw new ArgumentException("Invalid tag format. Tag should only have letters, numbers, and underscore.", invalidTag);
-
-        return string.Join(" ", tags);
-    }
-
     public async Task<ServerData> Create(Guid projectId, ServerCreateParams createParams)
     {
         // check user quota
@@ -99,7 +86,7 @@ public class ServerService(
             HostPanelUrl = createParams.HostPanelUrl?.ToString(),
             IsDeleted = false,
             ClientFilterId = createParams.ClientFilterId != null ? int.Parse(createParams.ClientFilterId) : null,
-            Tags = ValidateTags(createParams.Tags)
+            Tags = ManagerUtils.TagsToString(createParams.Tags)
         };
 
         // add server and update FarmToken
@@ -141,7 +128,7 @@ public class ServerService(
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
 
-        if (updateParams.Tags != null) server.Tags = ValidateTags(updateParams.Tags.Value);
+        if (updateParams.Tags != null) server.Tags = ManagerUtils.TagsToString(updateParams.Tags.Value);
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
         if (updateParams.Power != null) server.Power = updateParams.Power;
         if (updateParams.IsEnabled != null) server.IsEnabled = updateParams.IsEnabled;
@@ -196,7 +183,7 @@ public class ServerService(
         var cachedServers = await agentCacheClient.GetServers(projectId);
         var serverDatas = servers
             .Select(serverView => new ServerData {
-                Server = serverView.Server.ToDto(cachedServers.FirstOrDefault(x => x.ServerId == serverView.Server.ServerId))
+                Server = serverView.ToDto(cachedServers.FirstOrDefault(x => x.ServerId == serverView.Server.ServerId))
             })
             .ToArray();
 

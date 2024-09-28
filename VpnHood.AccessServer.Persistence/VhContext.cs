@@ -186,6 +186,10 @@ public class VhContext : DbContext
                 .HasMaxLength(50);
 
             entity
+                .Property(e => e.Tags)
+                .HasMaxLength(40);
+
+            entity
                 .Property(e => e.IsDeleted)
                 .HasDefaultValue(false);
 

@@ -10,9 +10,6 @@ public class AccessToken
     public required int SupportCode { get; init; }
     public required Guid ServerFarmId { get; init; }
     public required string? ServerFarmName { get; init; }
-    public required long MaxTraffic { get; init; }
-    public required int Lifetime { get; init; }
-    public required int MaxDevice { get; init; }
     public required DateTime? FirstUsedTime { get; init; }
     public required DateTime? LastUsedTime { get; init; }
     public required bool IsPublic { get; init; }
@@ -22,4 +19,10 @@ public class AccessToken
     public required DateTime CreatedTime { get; init; }
     public required DateTime ModifiedTime { get; init; }
     public required string? Description { get; init; }
+
+    public required long MaxTraffic { get; init; }
+    public required int Lifetime { get; init; }
+    public required int MaxDevice { get; init; }
+    public required string[] Tags { get; init; }
+
 }

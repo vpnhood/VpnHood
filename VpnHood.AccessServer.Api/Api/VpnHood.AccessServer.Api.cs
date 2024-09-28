@@ -9825,15 +9825,6 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
         public string? ServerFarmName { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
-        public long MaxTraffic { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("lifetime")]
-        public int Lifetime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("maxDevice")]
-        public int MaxDevice { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("firstUsedTime")]
         public System.DateTime? FirstUsedTime { get; set; } = default!;
 
@@ -9864,6 +9855,19 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
         public string? Description { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
+        public long MaxTraffic { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lifetime")]
+        public int Lifetime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("maxDevice")]
+        public int MaxDevice { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tags")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> Tags { get; set; } = new System.Collections.ObjectModel.Collection<string>();
 
     }
 
@@ -9953,15 +9957,6 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("secret")]
         public byte[]? Secret { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
-        public long MaxTraffic { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("lifetime")]
-        public int Lifetime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("maxDevice")]
-        public int MaxDevice { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
         public System.DateTime? ExpirationTime { get; set; } = default!;
 
@@ -9979,6 +9974,19 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("description")]
         public string? Description { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
+        public long MaxTraffic { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lifetime")]
+        public int Lifetime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("maxDevice")]
+        public int MaxDevice { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tags")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> Tags { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -9994,15 +10002,6 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
         public PatchOfNullableDateTime? ExpirationTime { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("lifetime")]
-        public PatchOfInteger? Lifetime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("maxDevice")]
-        public PatchOfInteger? MaxDevice { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
-        public PatchOfLong? MaxTraffic { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public PatchOfBoolean? IsEnabled { get; set; } = default!;
 
@@ -10011,6 +10010,18 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
         public PatchOfString? Description { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tags")]
+        public PatchOfStringOf? Tags { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lifetime")]
+        public PatchOfInteger? Lifetime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("maxDevice")]
+        public PatchOfInteger? MaxDevice { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
+        public PatchOfLong? MaxTraffic { get; set; } = default!;
 
     }
 
@@ -10043,24 +10054,6 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PatchOfInteger
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("value")]
-        public int Value { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PatchOfLong
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("value")]
-        public long Value { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class PatchOfBoolean
     {
 
@@ -10077,6 +10070,33 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
         public AdRequirement Value { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PatchOfStringOf
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        public System.Collections.Generic.ICollection<string>? Value { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PatchOfInteger
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        public int Value { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PatchOfLong
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        public long Value { get; set; } = default!;
 
     }
 
@@ -11356,15 +11376,6 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("value")]
         public int? Value { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PatchOfStringOf
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("value")]
-        public System.Collections.Generic.ICollection<string>? Value { get; set; } = default!;
 
     }
 

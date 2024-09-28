@@ -94,4 +94,11 @@ public class ClientFilterTest
         await server.Reload();
         Assert.AreEqual(server.Server.ClientFilterId, clientFilter2.ClientFilterId);
     }
+
+    [TestMethod]
+    public async Task Server_should_selected_by_client_filter()
+    {
+
+    }
+
 }

@@ -3,6 +3,7 @@ using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos.Views;
+using VpnHood.AccessServer.Utils;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
@@ -38,7 +39,7 @@ public static class ServerConverter
             HostPanelUrl = string.IsNullOrEmpty(model.HostPanelUrl) ? null : new Uri(model.HostPanelUrl),
             PublicIpV4 = model.PublicIpV4,
             PublicIpV6 = model.PublicIpV6,
-            Tags = model.Tags?.Split(' ') ?? [],
+            Tags = ManagerUtils.TagsFromString(model.Tags),
             ClientFilterId = model.ClientFilterId?.ToString(),
             ClientFilterName = model.ClientFilter?.ClientFilterName
         };

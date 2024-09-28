@@ -6,6 +6,7 @@ using VpnHood.AccessServer.Dtos.AccessTokens;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Repos;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Services;
@@ -31,6 +32,7 @@ public class AccessTokensService(
             MaxDevice = createParams.MaxDevice,
             ExpirationTime = createParams.ExpirationTime,
             Lifetime = createParams.Lifetime,
+            Tags = ManagerUtils.TagsToString(createParams.Tags),
             IsPublic = createParams.IsPublic,
             Secret = createParams.Secret ?? GmUtil.GenerateKey(),
             SupportCode = supportCode,
@@ -64,6 +66,7 @@ public class AccessTokensService(
         if (updateParams.Lifetime != null) accessToken.Lifetime = updateParams.Lifetime;
         if (updateParams.MaxDevice != null) accessToken.MaxDevice = updateParams.MaxDevice;
         if (updateParams.MaxTraffic != null) accessToken.MaxTraffic = updateParams.MaxTraffic;
+        if (updateParams.Tags != null) accessToken.Tags = ManagerUtils.TagsToString(updateParams.Tags.Value);
         if (updateParams.Description != null) accessToken.Description = updateParams.Description;
         if (updateParams.IsEnabled != null) accessToken.IsEnabled = updateParams.IsEnabled;
         if (updateParams.AdRequirement != null) accessToken.AdRequirement = updateParams.AdRequirement;

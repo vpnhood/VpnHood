@@ -219,7 +219,7 @@ public class AgentService(
                 TrackDestinationIp = true
             },
             SessionOptions = new SessionOptions {
-                TcpBufferSize = AgentUtil.GetBestTcpBufferSize(serverModel.TotalMemory)
+                TcpBufferSize = AgentUtils.GetBestTcpBufferSize(serverModel.TotalMemory)
             },
             ServerSecret = serverFarmModel.Secret,
             Certificates = serverFarmModel.Certificates.Select(x => new CertificateData {

@@ -10,34 +10,11 @@ namespace VpnHood.AccessServer.Test.Tests;
 [TestClass]
 public class AccessTest
 {
-
-    private void ValidateFilter(string filter, string[] tags)
-    {
-
-        // replace shorthand operators with full operators
-        filter = filter
-            .Replace("&&", "AND")
-            .Replace("&", "AND")
-            .Replace("||", "OR")
-            .Replace("|", "OR")
-            .Replace("!", "NOT ");
-
-        // Regex to match "tag_xxx" pattern
-        filter = Regex.Replace(filter, @"#[\w:]+", match =>
-            tags.Contains(match.Value, StringComparer.OrdinalIgnoreCase).ToString());
-
-        var dataTable = new DataTable();
-        dataTable.Compute(filter, string.Empty);
-    }
-
-
     [TestMethod]
     public async Task Foo()
     {
         await Task.Delay(0);
-
-        var filter = "#premium & #loc:123 & #premium2";
-        ValidateFilter(filter, ["#premium", "#loc:123"]);
+        Console.WriteLine("".Split(",").Length);
     }
 
     [TestMethod]

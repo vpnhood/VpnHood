@@ -179,8 +179,8 @@ public class VhRepo(VhContext vhContext)
                 (accessToken.ProjectId == projectId && !accessToken.IsDeleted) &&
                 (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
                 (serverFarmId == null || accessToken.ServerFarmId == serverFarmId) &&
-                (usageBeginTime == null || accessToken.UsedTime >= usageBeginTime) &&
-                (usageEndTime == null || accessToken.UsedTime >= usageEndTime) &&
+                (usageBeginTime == null || accessToken.LastUsedTime >= usageBeginTime) &&
+                (usageEndTime == null || accessToken.LastUsedTime >= usageEndTime) &&
                 (string.IsNullOrEmpty(search) ||
                  (accessToken.AccessTokenId == searchGuid && searchGuid != Guid.Empty) ||
                  (accessToken.SupportCode == searchInt && searchInt != -1) ||
@@ -342,7 +342,7 @@ public class VhRepo(VhContext vhContext)
                         .Where(y => !y.IsDeleted)
                         .Select(y => new ServerFarmView.AccessTokenView {
                             FirstUsedTime = y.FirstUsedTime,
-                            LastUsedTime = y.UsedTime
+                            LastUsedTime = y.LastUsedTime
                         }).ToArray()
                     : null
             });

@@ -169,7 +169,7 @@ public class VhContext : DbContext
                 .IsUnique();
 
             entity
-                .HasIndex(e => new { e.ProjectId, e.UsedTime });
+                .HasIndex(e => new { e.ProjectId, e.LastUsedTime });
 
             entity.Property(e => e.AccessTokenName)
                 .HasMaxLength(50);
@@ -221,7 +221,7 @@ public class VhContext : DbContext
                 .HasIndex(e => new { e.ProjectId, e.CreatedTime });
 
             entity
-                .HasIndex(e => new { e.ProjectId, e.UsedTime });
+                .HasIndex(e => new { e.ProjectId, e.LastUsedTime });
 
             entity
                 .Property(e => e.IpAddress)

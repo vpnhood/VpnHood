@@ -104,7 +104,7 @@ public class AgentAccessTest
         Assert.IsTrue(accessTokenDom.AccessToken.LastUsedTime > dateTime);
 
         //-----------
-        // Check: AddUsage should not update Access token UsedTime due performance consideration
+        // Check: AddUsage should not update Access token LastUsedTime due performance consideration
         //-----------
         oldAccessToken = accessTokenDom.AccessToken;
         await Task.Delay(1000);

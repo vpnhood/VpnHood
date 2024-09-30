@@ -156,7 +156,7 @@ public class SessionService(
                 ClientVersion = clientInfo.ClientVersion,
                 UserAgent = clientInfo.UserAgent,
                 CreatedTime = DateTime.UtcNow,
-                UsedTime = DateTime.UtcNow,
+                LastUsedTime = DateTime.UtcNow,
                 Country = await GetCountryCode(clientIp),
             };
             device = await vhAgentRepo.DeviceAdd(device);
@@ -167,7 +167,7 @@ public class SessionService(
 
             device.UserAgent = clientInfo.UserAgent;
             device.ClientVersion = clientInfo.ClientVersion;
-            device.UsedTime = DateTime.UtcNow;
+            device.LastUsedTime = DateTime.UtcNow;
             device.IpAddress = clientIpToStore; //must after set the country
         }
 
@@ -246,7 +246,7 @@ public class SessionService(
         // update AccessToken
         if (serverFarmCache.TokenJson == null) throw new Exception("TokenJson is not initialized for this farm.");
         accessToken.FirstUsedTime ??= session.CreatedTime;
-        accessToken.UsedTime = session.CreatedTime;
+        accessToken.LastUsedTime = session.CreatedTime;
 
         // push token to client if add server with PublicInToken are ready
         var pushTokenToClient = serverFarmCache.PushTokenToClient &&

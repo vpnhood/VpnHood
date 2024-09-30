@@ -79,7 +79,7 @@ public class DevicesController(
             .Where(device =>
                 (device.ProjectId == projectId) &&
                 (deviceId == null || device.DeviceId == deviceId))
-            .OrderByDescending(device => device.UsedTime)
+            .OrderByDescending(device => device.LastUsedTime)
             .Select(device => new DeviceData {
                 Device = device.ToDto()
             });
@@ -130,7 +130,7 @@ public class DevicesController(
         await using var trans = await vhContext.WithNoLockTransaction();
         var devices = await vhContext.Devices
             .Where(model=>model.ProjectId == projectId)
-            .Where(device => device.UsedTime >= usageBeginTime && device.UsedTime <= usageEndTime)
+            .Where(device => device.LastUsedTime >= usageBeginTime && device.LastUsedTime <= usageEndTime)
             .ToDictionaryAsync(device => device.DeviceId, device => device);
 
         // create DeviceData

@@ -10,7 +10,7 @@ public class DeviceModel
     public string? Country { get; set; }
     public string? UserAgent { get; set; }
     public DateTime CreatedTime { get; set; }
-    public DateTime UsedTime { get; set; }
+    public DateTime LastUsedTime { get; set; }
     public DateTime? LockedTime { get; set; }
 
     public virtual ProjectModel? Project { get; set; }

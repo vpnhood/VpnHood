@@ -42,7 +42,7 @@ public class AccessTokensService(
             ModifiedTime = DateTime.UtcNow,
             IsDeleted = false,
             FirstUsedTime = null,
-            UsedTime = null,
+            LastUsedTime = null,
             Description = createParams.Description
         };
 

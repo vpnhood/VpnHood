@@ -18,7 +18,7 @@ public class AccessTokenModel
     public required string? Tags { get; set; }
     public required DateTime? ExpirationTime { get; set; }
     public required DateTime? FirstUsedTime { get; set; }
-    public required DateTime? UsedTime { get; set; }
+    public required DateTime? LastUsedTime { get; set; }
     public required DateTime CreatedTime { get; init; }
     public required DateTime ModifiedTime { get; set; }
     public required AdRequirement AdRequirement { get; set; }

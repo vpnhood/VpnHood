@@ -16,7 +16,7 @@ public static class AccessTokenConverter
             CreatedTime = model.CreatedTime,
             ModifiedTime = model.ModifiedTime,
             FirstUsedTime = model.FirstUsedTime,
-            LastUsedTime = model.LastUsedTime,
+            LastUsedTime = model.UsedTime,
             ExpirationTime = model.ExpirationTime,
             IsPublic = model.IsPublic,
             IsEnabled = model.IsEnabled,

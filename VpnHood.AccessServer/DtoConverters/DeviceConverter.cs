@@ -15,7 +15,7 @@ public static class DeviceConverter
             IpAddress = model.IpAddress,
             LockedTime = model.LockedTime,
             Country = model.Country,
-            ModifiedTime = model.ModifiedTime,
+            ModifiedTime = model.UsedTime,
             UserAgent = model.UserAgent
         };
         return device;

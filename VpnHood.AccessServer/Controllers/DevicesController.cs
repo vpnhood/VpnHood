@@ -62,7 +62,6 @@ public class DevicesController(
 
         deviceModel = vhContext.Devices.Update(deviceModel).Entity;
         await vhContext.SaveChangesAsync();
-
         return deviceModel.ToDto();
     }
 
@@ -80,7 +79,7 @@ public class DevicesController(
             .Where(device =>
                 (device.ProjectId == projectId) &&
                 (deviceId == null || device.DeviceId == deviceId))
-            .OrderByDescending(device => device.ModifiedTime)
+            .OrderByDescending(device => device.UsedTime)
             .Select(device => new DeviceData {
                 Device = device.ToDto()
             });
@@ -115,7 +114,7 @@ public class DevicesController(
         await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
         var usagesDictionary = await reportUsageService.GetDevicesUsage(projectId,
-            accessTokenId: accessTokenId, serverFarmId: serverFarmId);
+            accessTokenId: accessTokenId, serverFarmId: serverFarmId, usageBeginTime: usageBeginTime, usageEndTime: usageEndTime);
 
         var usages = usagesDictionary
             .OrderByDescending(x => x.Value.SentTraffic + x.Value.ReceivedTraffic)
@@ -130,7 +129,8 @@ public class DevicesController(
         // get all devices accessed during usage time
         await using var trans = await vhContext.WithNoLockTransaction();
         var devices = await vhContext.Devices
-            .Where(device => device.ModifiedTime >= usageBeginTime && device.ModifiedTime <= usageEndTime)
+            .Where(model=>model.ProjectId == projectId)
+            .Where(device => device.UsedTime >= usageBeginTime && device.UsedTime <= usageEndTime)
             .ToDictionaryAsync(device => device.DeviceId, device => device);
 
         // create DeviceData

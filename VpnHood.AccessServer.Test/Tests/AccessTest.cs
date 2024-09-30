@@ -1,6 +1,4 @@
-﻿using System.Data;
-using System.Text.RegularExpressions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 
@@ -10,11 +8,17 @@ namespace VpnHood.AccessServer.Test.Tests;
 [TestClass]
 public class AccessTest
 {
+    public T Foo2<T>(T p, T? nullValue = default!) 
+    {
+        Console.WriteLine(nullValue == null);
+        return p;
+    }
+
     [TestMethod]
     public async Task Foo()
     {
         await Task.Delay(0);
-        Console.WriteLine("".Split(",").Length);
+        Console.WriteLine(Nullable.GetUnderlyingType(typeof(string))==null);
     }
 
     [TestMethod]

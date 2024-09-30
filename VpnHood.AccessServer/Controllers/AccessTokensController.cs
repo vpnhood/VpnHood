@@ -61,7 +61,8 @@ public class AccessTokensController(
 
         return await accessTokensService.List(projectId: projectId, search: search, accessTokenId: accessTokenId,
             serverFarmId: serverFarmId,
-            usageBeginTime: usageBeginTime, usageEndTime: usageEndTime, recordIndex: recordIndex,
+            usageBeginTime: usageBeginTime, usageEndTime: usageEndTime, 
+            recordIndex: recordIndex,
             recordCount: recordCount);
     }
 

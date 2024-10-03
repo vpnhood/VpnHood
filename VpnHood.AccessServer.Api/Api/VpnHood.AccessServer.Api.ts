@@ -7190,13 +7190,9 @@ export interface IHostIp {
 }
 
 export class Location implements ILocation {
-    countryName!: string;
     countryCode!: string;
     regionName?: string | null;
-    regionCode?: string | null;
     cityName?: string | null;
-    cityCode?: string | null;
-    displayName!: string;
 
     constructor(data?: ILocation) {
         if (data) {
@@ -7209,13 +7205,9 @@ export class Location implements ILocation {
 
     init(_data?: any) {
         if (_data) {
-            this.countryName = _data["countryName"] !== undefined ? _data["countryName"] : <any>null;
             this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
             this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
-            this.regionCode = _data["regionCode"] !== undefined ? _data["regionCode"] : <any>null;
             this.cityName = _data["cityName"] !== undefined ? _data["cityName"] : <any>null;
-            this.cityCode = _data["cityCode"] !== undefined ? _data["cityCode"] : <any>null;
-            this.displayName = _data["displayName"] !== undefined ? _data["displayName"] : <any>null;
         }
     }
 
@@ -7228,25 +7220,17 @@ export class Location implements ILocation {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["countryName"] = this.countryName !== undefined ? this.countryName : <any>null;
         data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
         data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
-        data["regionCode"] = this.regionCode !== undefined ? this.regionCode : <any>null;
         data["cityName"] = this.cityName !== undefined ? this.cityName : <any>null;
-        data["cityCode"] = this.cityCode !== undefined ? this.cityCode : <any>null;
-        data["displayName"] = this.displayName !== undefined ? this.displayName : <any>null;
         return data;
     }
 }
 
 export interface ILocation {
-    countryName: string;
     countryCode: string;
     regionName?: string | null;
-    regionCode?: string | null;
     cityName?: string | null;
-    cityCode?: string | null;
-    displayName: string;
 }
 
 export enum HostIpStatus {

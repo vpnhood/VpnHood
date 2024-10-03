@@ -618,7 +618,7 @@ public class VhContext : DbContext
                 .HasKey(x => x.LocationId);
 
             entity
-                .HasIndex(x => new { x.CountryCode, x.RegionCode, x.CityCode })
+                .HasIndex(x => new { x.CountryCode, x.RegionName, x.CityName })
                 .IsUnique();
 
             entity
@@ -717,7 +717,6 @@ public class VhContext : DbContext
                 .WithMany(d => d.ClientFilterModels)
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.Cascade);
-
         });
     }
 }

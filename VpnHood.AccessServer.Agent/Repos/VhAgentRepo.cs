@@ -476,12 +476,12 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .SingleOrDefaultAsync();
     }
 
-    public Task<LocationModel?> LocationFind(string countryCode, string? regionCode, string? cityCode)
+    public Task<LocationModel?> LocationFind(string countryCode, string? regionName, string? cityName)
     {
         return vhContext.Locations
             .Where(x => x.CountryCode == countryCode)
-            .Where(x => x.RegionCode == (regionCode ?? "-"))
-            .Where(x => x.CityCode == (cityCode ?? "-"))
+            .Where(x => x.RegionName == (regionName ?? "-"))
+            .Where(x => x.CityName == (cityName ?? "-"))
             .SingleOrDefaultAsync();
     }
 

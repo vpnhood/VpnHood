@@ -174,9 +174,7 @@ public class AgentService(
                     LocationId = 0,
                     CountryCode = ipLocation.CountryCode,
                     CountryName = ipLocation.CountryName,
-                    RegionCode = ipLocation.RegionName ?? LocationModel.UnknownCode,
                     RegionName = ipLocation.RegionName,
-                    CityCode = ipLocation.CityName ?? LocationModel.UnknownCode,
                     CityName = ipLocation.CityName,
                     ContinentCode = null
                 };

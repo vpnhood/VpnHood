@@ -9,10 +9,7 @@ public static class LocationConverter
     {
         return new Location {
             CountryCode = location.CountryCode,
-            CountryName = location.CountryName,
-            RegionCode = location.RegionCode,
             RegionName = location.RegionName,
-            CityCode = location.CityCode,
             CityName = location.CityName
         };
     }

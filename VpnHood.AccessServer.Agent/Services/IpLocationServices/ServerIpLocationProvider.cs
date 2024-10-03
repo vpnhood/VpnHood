@@ -15,8 +15,8 @@ public class ServerIpLocationProvider(
         const string userAgent = "VpnHood-AccessManager";
         var httpClient = clientFactory.CreateClient(AgentOptions.HttpClientNameIpLocation);
         var providers = new IIpLocationProvider[] {
-            new IpInfoIoProvider(httpClient, userAgent, options.Value.IpInfoIoApiKey),
             new IpLocationIoProvider(httpClient, userAgent, options.Value.IpLocationIoApiKey),
+            new IpInfoIoProvider(httpClient, userAgent, options.Value.IpInfoIoApiKey), // has diacritics in region
             new IpApiCoLocationProvider(httpClient, userAgent)
         };
         return providers;

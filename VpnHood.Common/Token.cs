@@ -17,13 +17,12 @@ public class Token
     [JsonPropertyName("sid")] public required string? SupportId { get; set; }
 
     [JsonPropertyName("tid")] public required string TokenId { get; set; }
-
-    [JsonPropertyName("iat")]
-    public DateTime IssuedAt { get; set; } = DateTime.MinValue; // for backward compatibility it is not required
+    [JsonPropertyName("iat")] public DateTime IssuedAt { get; set; } = DateTime.MinValue; // for backward compatibility it is not required
 
     [JsonPropertyName("sec")] public required byte[] Secret { get; set; }
 
     [JsonPropertyName("ser")] public required ServerToken ServerToken { get; set; }
+    [JsonPropertyName("tags")] public string[] Tags { get; set; } = [];
 
     public string ToAccessKey()
     {

@@ -7190,6 +7190,7 @@ export interface IHostIp {
 }
 
 export class Location implements ILocation {
+    countryName!: string;
     countryCode!: string;
     regionName?: string | null;
     cityName?: string | null;
@@ -7205,6 +7206,7 @@ export class Location implements ILocation {
 
     init(_data?: any) {
         if (_data) {
+            this.countryName = _data["countryName"] !== undefined ? _data["countryName"] : <any>null;
             this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
             this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
             this.cityName = _data["cityName"] !== undefined ? _data["cityName"] : <any>null;
@@ -7220,6 +7222,7 @@ export class Location implements ILocation {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
+        data["countryName"] = this.countryName !== undefined ? this.countryName : <any>null;
         data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
         data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
         data["cityName"] = this.cityName !== undefined ? this.cityName : <any>null;
@@ -7228,6 +7231,7 @@ export class Location implements ILocation {
 }
 
 export interface ILocation {
+    countryName: string;
     countryCode: string;
     regionName?: string | null;
     cityName?: string | null;

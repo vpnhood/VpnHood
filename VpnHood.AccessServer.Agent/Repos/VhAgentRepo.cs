@@ -3,6 +3,7 @@ using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Agent.Repos;
 
@@ -18,7 +19,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         vhContext.Database.SetCommandTimeout(fromMinutes);
     }
 
-    public async Task<InitCache> GetInitView(DateTime minServerUsedTime)
+    public async Task<InitCache> GetInitView(DateTime minServerUsedTime, DateTime minSessionUsedTime)
     {
         vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
         var autoServerLocation = ServerLocationInfo.Auto;
@@ -72,7 +73,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         // Sessions
         logger.LogInformation("Loading the sessions and accesses ...");
         var sessionsQuery = vhContext.Sessions
-            .Where(session => !session.IsArchived)
+            .Where(session => session.EndTime == null && session.LastUsedTime > minSessionUsedTime)
             .Select(x => new {
                 Session = new SessionCache {
                     ProjectId = x.ProjectId,
@@ -320,6 +321,52 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         entry.Property(x => x.IsAdReward).IsModified = true;
     }
 
+    public SessionCache SessionGet(long sessionId)
+    {
+        return vhContext.Sessions
+            .Where(x => x.SessionId == sessionId)
+            .Select(x => new SessionCache {
+                ProjectId = x.ProjectId,
+                SessionId = x.SessionId,
+                AccessId = x.AccessId,
+                ServerId = x.ServerId,
+                DeviceId = x.DeviceId,
+                ExtraData = x.ExtraData,
+                CreatedTime = x.CreatedTime,
+                LastUsedTime = x.LastUsedTime,
+                AdExpirationTime = x.AdExpirationTime,
+                ClientVersion = x.ClientVersion,
+                EndTime = x.EndTime,
+                ErrorCode = x.ErrorCode,
+                ErrorMessage = x.ErrorMessage,
+                SessionKey = x.SessionKey,
+                SuppressedBy = x.SuppressedBy,
+                SuppressedTo = x.SuppressedTo,
+                IsArchived = x.IsArchived,
+                ClientId = x.Device!.ClientId,
+                UserAgent = x.Device.UserAgent,
+                Country = x.Device.Country,
+                DeviceIp = x.DeviceIp,
+                IsAdReward = x.IsAdReward
+            })
+            .AsNoTracking()
+            .Single();
+    }
+
+    public Task<int> SessionCloseTimeouts(DateTime minSessionTime)
+    {
+        return vhContext.Sessions
+            .Where(x => x.EndTime == null && x.LastUsedTime < minSessionTime)
+            .ExecuteUpdateAsync(setPropertyCalls =>
+                setPropertyCalls
+                    .SetProperty(x => x.EndTime, x => DateTime.UtcNow)
+                    .SetProperty(x => x.ErrorCode, x => SessionErrorCode.SessionClosed)
+                    .SetProperty(x => x.ErrorMessage, x => "timeout")
+                    .SetProperty(x => x.IsArchived, x => true)
+            );
+    }
+
+
     public void AccessUpdate(AccessCache access)
     {
         var model = new AccessModel {
@@ -388,7 +435,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .SingleAsync();
     }
 
-    public async Task<ServerFarmModel> ServerFarmGet(Guid serverFarmId, bool includeServersAndAccessPoints, 
+    public async Task<ServerFarmModel> ServerFarmGet(Guid serverFarmId, bool includeServersAndAccessPoints,
         bool includeCertificates, bool includeServerProfile = true, bool includeTokenRepos = true)
     {
         var query = vhContext.ServerFarms
@@ -512,8 +559,9 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
     public Task<FarmTokenRepoModel[]> FarmTokenRepoListPendingUpload()
     {
         return vhContext.FarmTokenRepos
-            .Include(x=>x.ServerFarm)
+            .Include(x => x.ServerFarm)
             .Where(x => x.IsPendingUpload)
             .ToArrayAsync();
     }
+
 }

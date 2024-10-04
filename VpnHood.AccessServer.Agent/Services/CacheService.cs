@@ -26,7 +26,8 @@ public class CacheService(
 
         // this will just affect current scope
         var minServerUsedTime = DateTime.UtcNow - TimeSpan.FromHours(1);
-        var agentInit = await vhAgentRepo.GetInitView(minServerUsedTime);
+        var minSessionUsedTime = DateTime.UtcNow - TimeSpan.FromHours(2);
+        var agentInit = await vhAgentRepo.GetInitView(minServerUsedTime, minSessionUsedTime);
         cacheRepo.Projects =
             new ConcurrentDictionary<Guid, ProjectCache>(agentInit.Projects.ToDictionary(x => x.ProjectId));
         cacheRepo.ServerFarms =
@@ -116,8 +117,10 @@ public class CacheService(
 
     public Task<SessionCache> GetSession(Guid? serverId, long sessionId)
     {
-        if (!cacheRepo.Sessions.TryGetValue(sessionId, out var session))
-            throw new KeyNotFoundException();
+        if (!cacheRepo.Sessions.TryGetValue(sessionId, out var session)) {
+            session = vhAgentRepo.SessionGet(sessionId);
+            cacheRepo.Sessions.TryAdd(session.SessionId, session);
+        }
 
         // server validation
         if (serverId != null && session.ServerId != serverId)
@@ -182,10 +185,12 @@ public class CacheService(
     {
         var now = FastDateTime.Now;
 
+        // remove old ads
         var oldAdItems = cacheRepo.Ads.Where(x => x.Value < now - agentOptions.Value.AdRewardTimeout).ToArray();
         foreach (var item in oldAdItems)
             cacheRepo.Ads.TryRemove(item);
 
+        // remove old devices
         var oldDeviceItems = cacheRepo.AdRewardedAccesses
             .Where(x => x.Value < now - agentOptions.Value.AdRewardDeviceTimeout).ToArray();
         foreach (var item in oldDeviceItems)
@@ -223,8 +228,8 @@ public class CacheService(
             .ToArray();
 
         // maybe there is no server in the cache so we need make sure the farm is updated
-        return serverIds.Any() 
-            ? InvalidateServers(serverIds) 
+        return serverIds.Any()
+            ? InvalidateServers(serverIds)
             : farmTokenUpdater.UpdateAndSaveChanges([serverFarmId]);
     }
 
@@ -431,6 +436,19 @@ public class CacheService(
         logger.LogInformation("The cache has been saved.");
     }
 
+    private async Task CloseOldSessions()
+    {
+        try {
+            var minSessionTime = DateTime.UtcNow - agentOptions.Value.SessionPermanentlyTimeout;
+            logger.LogInformation("Closing old sessions... MinSessionTime: {MinSessionTime}", minSessionTime);
+            var oldSessionCount = await vhAgentRepo.SessionCloseTimeouts(minSessionTime: minSessionTime);
+            logger.LogInformation("Old sessions has been closed. OldSessionCount: {OldSessionCount}", oldSessionCount);
+        }
+        catch (Exception ex) {
+            logger.LogError(ex, "Could not close old sessions");
+        }
+    }
+
     public Task<SessionCache[]> GetActiveSessions(Guid accessId)
     {
         var activeSessions = cacheRepo.Sessions.Values
@@ -441,10 +459,11 @@ public class CacheService(
         return Task.FromResult(activeSessions);
     }
 
-    public Task RunJob(CancellationToken cancellationToken)
+    public async Task RunJob(CancellationToken cancellationToken)
     {
         CleanupAds();
-        return SaveChanges();
+        await SaveChanges();
+        await CloseOldSessions();
     }
 
     public Task ApplicationStarted()

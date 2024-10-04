@@ -517,7 +517,7 @@ public class VhContext : DbContext
                 .HasFilter($"{nameof(SessionModel.EndTime)} IS NULL");
 
             entity
-                .HasIndex(e => new { e.EndTime }); //for sync 
+                .HasIndex(e => new { e.EndTime, e.LastUsedTime }); //for sync and timeout
 
             entity
                 .Property(e => e.IsArchived);

@@ -152,21 +152,4 @@ public class Program
             NLog.LogManager.Shutdown();
         }
     }
-
-    private async Task Migrate(ILogger logger, WebApplication webApp)
-    {
-        logger.LogInformation("Upgrading..");
-        var scope = webApp.Services.CreateAsyncScope();
-        await using var context = scope.ServiceProvider.GetRequiredService<VhContext>();
-        context.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
-        var projects = await context.Projects.Where(x => string.IsNullOrEmpty(x.AdRewardSecret)).ToArrayAsync();
-        logger.LogInformation($"ProjectCount: {projects.Length}..");
-        foreach (var project in projects)
-            project.AdRewardSecret = Convert.ToBase64String(GmUtil.GenerateKey())
-                .Replace("/", "")
-                .Replace("+", "")
-                .Replace("=", "");
-        await context.SaveChangesAsync();
-        logger.LogInformation($"Finish migrate: {projects.Length}..");
-    }
 }

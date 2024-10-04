@@ -169,6 +169,7 @@ public class AgentService(
             var ipLocation = await ipLocationProvider.GetLocation(ipAddress, cancellationToken);
             var location =
                 await vhAgentRepo.LocationFind(ipLocation.CountryCode, ipLocation.RegionName, ipLocation.CityName);
+
             if (location == null) {
                 location = new LocationModel {
                     LocationId = 0,

@@ -1,4 +1,6 @@
-﻿namespace VpnHood.AccessServer.Dtos.Certificates;
+﻿using VpnHood.AccessServer.Providers.Acme;
+
+namespace VpnHood.AccessServer.Dtos.Certificates;
 
 public class CertificateCreateParams
 {

@@ -2,7 +2,7 @@
 using GrayMint.Authorization.Abstractions.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.Projects;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 
@@ -38,6 +38,14 @@ public class ProjectsController(
     {
         return projectService.Update(projectId, updateParams);
     }
+
+    [HttpDelete("{projectId:guid}")]
+    [AuthorizeProjectPermission(Permissions.ProjectDelete)]
+    public Task Delete(Guid projectId)
+    {
+        return projectService.Delete(projectId);
+    }
+
 
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectList)]

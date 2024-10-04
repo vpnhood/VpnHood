@@ -2,12 +2,12 @@
 using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.DtoConverters;
+
 public static class SessionConverter
 {
     public static Session ToDto(this SessionModel model)
     {
-        return new Session
-        {
+        return new Session {
             AccessId = model.AccessId,
             ClientVersion = model.ClientVersion,
             Country = model.Country,
@@ -26,5 +26,4 @@ public static class SessionConverter
             ExtraData = model.ExtraData
         };
     }
-
 }

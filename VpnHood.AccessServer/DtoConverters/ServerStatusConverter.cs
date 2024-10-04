@@ -7,8 +7,7 @@ public static class ServerStatusConverter
 {
     public static ServerStatusEx ToDto(this ServerStatusBaseModel model)
     {
-        return new ServerStatusEx
-        {
+        return new ServerStatusEx {
             SessionCount = model.SessionCount,
             AvailableMemory = model.AvailableMemory,
             CpuUsage = model.CpuUsage,

@@ -13,7 +13,7 @@ namespace VpnHood.AccessServer.Controllers;
 [Authorize]
 [Route("/api/v{version:apiVersion}/projects/{projectId}/access-tokens")]
 public class AccessTokensController(
-    AccessTokensService accessTokensService, 
+    AccessTokensService accessTokensService,
     SubscriptionService subscriptionService) : ControllerBase
 {
     [HttpPost]
@@ -44,7 +44,8 @@ public class AccessTokensController(
 
     [HttpGet("{accessTokenId}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId, DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
+    public Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId, DateTime? usageBeginTime = null,
+        DateTime? usageEndTime = null)
     {
         return accessTokensService.Get(projectId, accessTokenId, usageBeginTime, usageEndTime);
     }
@@ -58,9 +59,11 @@ public class AccessTokensController(
     {
         await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
-        return await accessTokensService.List(projectId: projectId, search: search, accessTokenId: accessTokenId, serverFarmId: serverFarmId, 
-            usageBeginTime: usageBeginTime, usageEndTime: usageEndTime, recordIndex: recordIndex, recordCount: recordCount);
-
+        return await accessTokensService.List(projectId: projectId, search: search, accessTokenId: accessTokenId,
+            serverFarmId: serverFarmId,
+            usageBeginTime: usageBeginTime, usageEndTime: usageEndTime, 
+            recordIndex: recordIndex,
+            recordCount: recordCount);
     }
 
     [HttpDelete]

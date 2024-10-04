@@ -24,7 +24,8 @@ public class ServerProfilesController(ServerProfileService serverProfileService)
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<ServerProfileData> Get(Guid projectId, Guid serverProfileId, bool includeSummary = false)
     {
-        var dtos = await serverProfileService.ListWithSummary(projectId, serverProfileId: serverProfileId, includeSummary: includeSummary);
+        var dtos = await serverProfileService.ListWithSummary(projectId, serverProfileId: serverProfileId,
+            includeSummary: includeSummary);
         return dtos.Single();
     }
 
@@ -47,7 +48,7 @@ public class ServerProfilesController(ServerProfileService serverProfileService)
     public Task<ServerProfileData[]> List(Guid projectId, string? search = null, bool includeSummary = false,
         int recordIndex = 0, int recordCount = 101)
     {
-        return serverProfileService.ListWithSummary(projectId, search, includeSummary: includeSummary, 
+        return serverProfileService.ListWithSummary(projectId, search, includeSummary: includeSummary,
             recordIndex: recordIndex, recordCount: recordCount);
     }
 }

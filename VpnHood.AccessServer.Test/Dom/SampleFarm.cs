@@ -12,7 +12,7 @@ public class SampleFarm : ServerFarmDom
         AccessToken publicToken1,
         AccessToken publicToken2,
         AccessToken privateToken1,
-        AccessToken privateToken2) 
+        AccessToken privateToken2)
         : base(testApp, serverFarm, false)
     {
         Server1 = server1;
@@ -32,27 +32,26 @@ public class SampleFarm : ServerFarmDom
 
     public static async Task<SampleFarm> Create(TestApp testApp)
     {
-        var serverFarmData = await testApp.ServerFarmsClient.CreateAsync(testApp.ProjectId, new ServerFarmCreateParams());
+        var serverFarmData =
+            await testApp.ServerFarmsClient.CreateAsync(testApp.ProjectId, new ServerFarmCreateParams());
         var serverFarm = serverFarmData.ServerFarm;
 
         // create servers
-        var sampleServers = new[]
-        {
+        var sampleServers = new[] {
             await ServerDom.Create(testApp, serverFarm.ServerFarmId),
             await ServerDom.Create(testApp, serverFarm.ServerFarmId)
         };
 
         // create accessTokens
-        var accessTokens = new[]
-        {
+        var accessTokens = new[] {
             await testApp.AccessTokensClient.CreateAsync(testApp.ProjectId,
-                new AccessTokenCreateParams {ServerFarmId = serverFarm.ServerFarmId, IsPublic = true}),
+                new AccessTokenCreateParams { ServerFarmId = serverFarm.ServerFarmId, IsPublic = true }),
             await testApp.AccessTokensClient.CreateAsync(testApp.ProjectId,
-                new AccessTokenCreateParams {ServerFarmId = serverFarm.ServerFarmId, IsPublic = true}),
+                new AccessTokenCreateParams { ServerFarmId = serverFarm.ServerFarmId, IsPublic = true }),
             await testApp.AccessTokensClient.CreateAsync(testApp.ProjectId,
-                new AccessTokenCreateParams {ServerFarmId = serverFarm.ServerFarmId, IsPublic = false}),
+                new AccessTokenCreateParams { ServerFarmId = serverFarm.ServerFarmId, IsPublic = false }),
             await testApp.AccessTokensClient.CreateAsync(testApp.ProjectId,
-                new AccessTokenCreateParams {ServerFarmId = serverFarm.ServerFarmId, IsPublic = false})
+                new AccessTokenCreateParams { ServerFarmId = serverFarm.ServerFarmId, IsPublic = false })
         };
 
         var sampleFarm = new SampleFarm(
@@ -64,7 +63,7 @@ public class SampleFarm : ServerFarmDom
             publicToken2: accessTokens[1],
             privateToken1: accessTokens[2],
             privateToken2: accessTokens[3]
-            );
+        );
 
         // create 2 sessions per each token
         var sessionTasks1 = accessTokens.Select(x => sampleFarm.Server1.CreateSession(x));

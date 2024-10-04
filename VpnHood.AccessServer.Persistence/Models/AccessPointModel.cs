@@ -10,13 +10,13 @@ public class AccessPointModel : IStructuralEquatable, IEquatable<AccessPointMode
 {
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress IpAddress { get; init; }
+
     public required AccessPointMode AccessPointMode { get; init; }
     public required bool IsListen { get; init; }
     public required int TcpPort { get; init; }
     public required int UdpPort { get; init; }
 
-    [JsonIgnore]
-    public bool IsPublic => AccessPointMode is AccessPointMode.PublicInToken or AccessPointMode.Public;
+    [JsonIgnore] public bool IsPublic => AccessPointMode is AccessPointMode.PublicInToken or AccessPointMode.Public;
 
     public bool Equals(object? other, IEqualityComparer comparer)
     {
@@ -32,7 +32,7 @@ public class AccessPointModel : IStructuralEquatable, IEquatable<AccessPointMode
     {
         return Equals((object?)other);
     }
-    
+
     public override int GetHashCode()
     {
         return HashCode.Combine(IpAddress, AccessPointMode, IsListen, TcpPort, UdpPort);
@@ -51,5 +51,4 @@ public class AccessPointModel : IStructuralEquatable, IEquatable<AccessPointMode
             TcpPort == otherAccessPoint.TcpPort &&
             UdpPort == otherAccessPoint.UdpPort;
     }
-
 }

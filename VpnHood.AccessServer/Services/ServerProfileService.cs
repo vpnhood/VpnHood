@@ -20,9 +20,9 @@ public class ServerProfileService(
         createParams ??= new ServerProfileCreateParams();
         var serverConfig = ServerConfig_FromJson(createParams.ServerConfig);
         createParams.ServerProfileName = createParams.ServerProfileName?.Trim();
-        if (string.IsNullOrWhiteSpace(createParams.ServerProfileName)) createParams.ServerProfileName = Resource.NewServerProfileTemplate;
-        if (createParams.ServerProfileName.Contains("##"))
-        {
+        if (string.IsNullOrWhiteSpace(createParams.ServerProfileName))
+            createParams.ServerProfileName = Resource.NewServerProfileTemplate;
+        if (createParams.ServerProfileName.Contains("##")) {
             var names = await vhContext.ServerProfiles
                 .Where(x => x.ProjectId == projectId && !x.IsDeleted)
                 .Select(x => x.ServerProfileName)
@@ -31,8 +31,7 @@ public class ServerProfileService(
             createParams.ServerProfileName = AccessServerUtil.FindUniqueName(createParams.ServerProfileName, names);
         }
 
-        var serverProfile = new ServerProfileModel
-        {
+        var serverProfile = new ServerProfileModel {
             ServerProfileId = Guid.NewGuid(),
             ServerProfileName = createParams.ServerProfileName,
             ProjectId = projectId,
@@ -46,22 +45,21 @@ public class ServerProfileService(
         return serverProfile.ToDto();
     }
 
-    public async Task<ServerProfile> Update(Guid projectId, Guid serverProfileId, ServerProfileUpdateParams updateParams)
+    public async Task<ServerProfile> Update(Guid projectId, Guid serverProfileId,
+        ServerProfileUpdateParams updateParams)
     {
         var model = await vhContext.ServerProfiles
             .Include(x => x.ServerFarms)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.ServerProfileId == serverProfileId);
 
-        if (updateParams.ServerProfileName != null)
-        {
+        if (updateParams.ServerProfileName != null) {
             if (model.IsDefault)
                 throw new InvalidOperationException("The default Server Profile cannot be renamed.");
             model.ServerProfileName = updateParams.ServerProfileName;
         }
 
-        if (updateParams.ServerConfig != null)
-        {
+        if (updateParams.ServerConfig != null) {
             var serveConfig = ServerConfig_FromJson(updateParams.ServerConfig.Value);
             model.ServerConfig = ServerConfig_ToJson(serveConfig);
         }
@@ -107,8 +105,7 @@ public class ServerProfileService(
                 x.ServerProfileId.ToString() == search)
             .OrderByDescending(x => x.IsDefault)
             .ThenBy(x => x.ServerProfileName)
-            .Select(x => new ServerProfileData
-            {
+            .Select(x => new ServerProfileData {
                 ServerProfile = x.ToDto()
             });
 
@@ -119,8 +116,7 @@ public class ServerProfileService(
             .AsNoTracking()
             .ToArrayAsync();
 
-        if (includeSummary )
-        {
+        if (includeSummary) {
             var summariesQuery =
                 from serverFarm in vhContext.ServerFarms
                     .Where(x => x.ProjectId == projectId && !x.IsDeleted)
@@ -128,14 +124,12 @@ public class ServerProfileService(
                 join server in vhContext.Servers on serverFarm.ServerFarmId equals server.ServerFarmId into grouping
                 from server in grouping.DefaultIfEmpty()
                 select new { serverFarm.ServerProfileId, serverFarm.ServerFarmId, ServerId = (Guid?)server.ServerId };
-                
+
 
             // update summaries
             var summaries = await summariesQuery.ToArrayAsync();
-            foreach (var serverProfileData in serverProfileDatas)
-            {
-                serverProfileData.Summary = new ServerProfileSummary
-                {
+            foreach (var serverProfileData in serverProfileDatas) {
+                serverProfileData.Summary = new ServerProfileSummary {
                     ServerCount = summaries.Count(x => x.ServerId != null),
                     ServerFarmCount = summaries.DistinctBy(x => x.ServerFarmId).Count()
                 };
@@ -169,26 +163,35 @@ public class ServerProfileService(
         if (!VhUtil.IsNullOrEmpty(serverConfig.TcpEndPoints))
             throw new ArgumentException($"You can not set {nameof(serverConfig.TcpEndPoints)}.", nameof(serverConfig));
 
+        if (!VhUtil.IsNullOrEmpty(serverConfig.UdpEndPoints))
+            throw new ArgumentException($"You can not set {nameof(serverConfig.UdpEndPoints)}.", nameof(serverConfig));
+
         if (serverConfig.SessionOptions.SyncInterval != null)
-            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.SyncInterval)}.", nameof(serverConfig));
+            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.SyncInterval)}.",
+                nameof(serverConfig));
 
         if (serverConfig.SessionOptions.SyncCacheSize != null)
-            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.SyncCacheSize)}.", nameof(serverConfig));
+            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.SyncCacheSize)}.",
+                nameof(serverConfig));
 
         if (serverConfig.SessionOptions.Timeout != null)
-            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.Timeout)}.", nameof(serverConfig));
+            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.Timeout)}.",
+                nameof(serverConfig));
 
         if (serverConfig.UpdateStatusInterval != null)
-            throw new ArgumentException($"You can not set {nameof(serverConfig.UpdateStatusInterval)}.", nameof(serverConfig));
+            throw new ArgumentException($"You can not set {nameof(serverConfig.UpdateStatusInterval)}.",
+                nameof(serverConfig));
 
         if (!string.IsNullOrEmpty(serverConfig.ConfigCode))
             throw new ArgumentException($"You can not set {nameof(serverConfig.ConfigCode)}.", nameof(serverConfig));
 
         if (serverConfig.SessionOptions.TcpBufferSize < 0x1000)
-            throw new ArgumentException($"You can not set {nameof(serverConfig.ConfigCode)} smaller than {0x1000}.", nameof(serverConfig));
+            throw new ArgumentException($"You can not set {nameof(serverConfig.ConfigCode)} smaller than {0x1000}.",
+                nameof(serverConfig));
 
         if (serverConfig.ServerSecret != null)
-            throw new ArgumentException($"You can not set {nameof(serverConfig.ServerSecret)} here.", nameof(serverConfig));
+            throw new ArgumentException($"You can not set {nameof(serverConfig.ServerSecret)} here.",
+                nameof(serverConfig));
 
 
         return serverConfig;

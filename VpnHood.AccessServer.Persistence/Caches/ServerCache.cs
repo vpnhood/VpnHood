@@ -21,11 +21,12 @@ public class ServerCache
     public required Guid AuthorizationCode { get; init; }
     public required ServerLocationInfo LocationInfo { get; init; }
     public required int LogicalCoreCount { get; init; }
+    public required int? Power { get; init; }
     public required AccessPointModel[] AccessPoints { get; init; }
     public required ServerStatusBaseModel? ServerStatus { get; set; }
     public required bool AllowInAutoLocation { get; set; }
-    public bool IsReady => ServerState is ServerState.Idle or ServerState.Active;
     public ServerState ServerState { get; set; }
+
     public ServerCache UpdateState(TimeSpan lostServerThreshold)
     {
         ServerState = CalculateState(lostServerThreshold);
@@ -35,6 +36,7 @@ public class ServerCache
     private ServerState CalculateState(TimeSpan lostServerThreshold)
     {
         if (ConfigureTime == null) return ServerState.NotInstalled;
+        if (!string.IsNullOrEmpty(LastConfigError)) return ServerState.Error;
         if (ServerStatus == null || ServerStatus.CreatedTime < DateTime.UtcNow - lostServerThreshold)
             return ServerState.Lost;
         if (ConfigCode != LastConfigCode) return ServerState.Configuring;

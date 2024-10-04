@@ -12,12 +12,13 @@ using NLog.Web;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Providers.Acme;
+using VpnHood.AccessServer.Providers.Hosts;
 using VpnHood.AccessServer.Report;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
-using VpnHood.AccessServer.Services.Acme;
 
 namespace VpnHood.AccessServer;
 
@@ -26,24 +27,26 @@ public class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        try
-        {
-
+        try {
             // logger
-            builder.Logging.AddSimpleConsole(c =>
-            {
-                c.TimestampFormat = "[HH:mm:ss] ";
-            });
+            builder.Logging.AddSimpleConsole(c => { c.TimestampFormat = "[HH:mm:ss.fff] "; });
 
             // NLog: Setup NLog for Dependency injection
-            builder.Logging.ClearProviders();
-            builder.Host.UseNLog();
+            if (Environment.OSVersion.Platform == PlatformID.Unix) {
+                builder.Logging.ClearProviders();
+                builder.Host.UseNLog();
+            }
 
             // app options
-            var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ?? throw new Exception("Could not load AppOptions.");
-            var certificateValidatorOptions = builder.Configuration.GetSection("CertificateValidator").Get<CertificateValidatorOptions>() ?? new CertificateValidatorOptions();
+            var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ??
+                             throw new Exception("Could not load AppOptions.");
+            var certificateValidatorOptions =
+                builder.Configuration.GetSection("CertificateValidator").Get<CertificateValidatorOptions>() ??
+                new CertificateValidatorOptions();
+            
             builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
-            builder.Services.Configure<CertificateValidatorOptions>(builder.Configuration.GetSection("CertificateValidator"));
+            builder.Services.Configure<CertificateValidatorOptions>(
+                builder.Configuration.GetSection("CertificateValidator"));
 
             // Graymint
             builder.Services
@@ -60,13 +63,14 @@ public class Program
                 options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);
 
             // HttpClient
-            builder.Services.AddHttpClient(AppOptions.AgentHttpClientName, httpClient =>
-            {
+            builder.Services.AddHttpClient(AppOptions.AgentHttpClientName, httpClient => {
                 if (string.IsNullOrEmpty(appOptions.AgentSystemAuthorization))
-                    GrayMintApp.ThrowOptionsValidationException(nameof(AppOptions.AgentSystemAuthorization), typeof(string));
+                    GrayMintApp.ThrowOptionsValidationException(nameof(AppOptions.AgentSystemAuthorization),
+                        typeof(string));
 
                 httpClient.BaseAddress = appOptions.AgentUrlPrivate ?? appOptions.AgentUrl;
-                httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(appOptions.AgentSystemAuthorization);
+                httpClient.DefaultRequestHeaders.Authorization =
+                    AuthenticationHeaderValue.Parse(appOptions.AgentSystemAuthorization);
             });
 
             // Update Cycle every 1 hour
@@ -78,14 +82,17 @@ public class Program
                         Interval = certificateValidatorOptions.Interval
                     })
                 .AddGrayMintJob<UsageCycleService>(
-                    new GrayMintJobOptions
-                    {
+                    new GrayMintJobOptions {
                         DueTime = appOptions.AutoMaintenanceInterval,
                         Interval = appOptions.AutoMaintenanceInterval
                     })
                 .AddGrayMintJob<SyncService>(
-                    new GrayMintJobOptions
-                    {
+                    new GrayMintJobOptions {
+                        DueTime = appOptions.AutoMaintenanceInterval,
+                        Interval = appOptions.AutoMaintenanceInterval
+                    })
+                .AddGrayMintJob<HostOrdersService>(
+                    new GrayMintJobOptions {
                         DueTime = appOptions.AutoMaintenanceInterval,
                         Interval = appOptions.AutoMaintenanceInterval
                     });
@@ -107,12 +114,16 @@ public class Program
                 .AddScoped<AgentSystemClient>()
                 .AddScoped<AccessTokensService>()
                 .AddScoped<ReportService>()
+                .AddScoped<HostOrdersService>()
+                .AddScoped<FarmTokenRepoService>()
+                .AddScoped<ClientFilterService>()
+                .AddScoped<IHostProviderFactory, HostProviderFactory>()
                 .AddSingleton<IAcmeOrderFactory, AcmeOrderFactory>();
 
             // Report Service
-            builder.Services.AddVhReportServices(new ReportServiceOptions
-            {
-                ConnectionString = builder.Configuration.GetConnectionString("VhReportDatabase") ?? throw new Exception("Could not find VhReportDatabase."),
+            builder.Services.AddVhReportServices(new ReportServiceOptions {
+                ConnectionString = builder.Configuration.GetConnectionString("VhReportDatabase") ??
+                                   throw new Exception("Could not find VhReportDatabase."),
                 ServerUpdateStatusInterval = appOptions.ServerUpdateStatusInterval
             });
 
@@ -130,32 +141,15 @@ public class Program
 
             // Log Configs
             var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
-            var configJson = JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value, new JsonSerializerOptions { WriteIndented = true });
-            logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, [nameof(AppOptions.AgentSystemAuthorization)]));
+            var configJson = JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value,
+                new JsonSerializerOptions { WriteIndented = true });
+            logger.LogInformation("App: {Config}",
+                GmUtil.RedactJsonValue(configJson, [nameof(AppOptions.AgentSystemAuthorization)]));
 
             await GrayMintApp.RunAsync(webApp, args);
-
         }
-        finally
-        {
+        finally {
             NLog.LogManager.Shutdown();
         }
     }
-
-    //private async Task Migrate(ILogger logger, WebApplication webApp)
-    //{
-    //    logger.LogInformation("Upgrading..");
-    //    var scope = webApp.Services.CreateAsyncScope();
-    //    await using var context = scope.ServiceProvider.GetRequiredService<VhContext>();
-    //    context.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
-    //    var projects = await context.Projects.Where(x => string.IsNullOrEmpty(x.AdRewardSecret)).ToArrayAsync();
-    //    logger.LogInformation($"ProjectCount: {projects.Length}..");
-    //    foreach (var project in projects)
-    //        project.AdRewardSecret = Convert.ToBase64String(GmUtil.GenerateKey())
-    //            .Replace("/", "")
-    //            .Replace("+", "")
-    //            .Replace("=", "");
-    //    await context.SaveChangesAsync();
-    //    logger.LogInformation($"Finish migrate: {projects.Length}..");
-    //}
 }

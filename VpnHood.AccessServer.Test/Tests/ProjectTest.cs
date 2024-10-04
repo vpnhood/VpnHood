@@ -28,8 +28,7 @@ public class ProjectTest
         //-----------
         // Check: Update
         //-----------
-        var updateParams = new ProjectUpdateParams
-        {
+        var updateParams = new ProjectUpdateParams {
             GaMeasurementId = new PatchOfString { Value = Guid.NewGuid().ToString() },
             GaApiSecret = new PatchOfString { Value = Guid.NewGuid().ToString() },
             ProjectName = new PatchOfString { Value = Guid.NewGuid().ToString() }
@@ -44,8 +43,7 @@ public class ProjectTest
         //-----------
         // Check: Update
         //-----------
-        updateParams = new ProjectUpdateParams
-        {
+        updateParams = new ProjectUpdateParams {
             GaMeasurementId = new PatchOfString { Value = Guid.NewGuid().ToString() },
             GaApiSecret = new PatchOfString { Value = Guid.NewGuid().ToString() }
         };
@@ -83,8 +81,7 @@ public class ProjectTest
         await accessTokenDom.CreateSession();
 
         var gaApiSecret = Guid.NewGuid().ToString();
-        await farmDom.TestApp.ProjectsClient.UpdateAsync(farmDom.ProjectId, new ProjectUpdateParams
-        {
+        await farmDom.TestApp.ProjectsClient.UpdateAsync(farmDom.ProjectId, new ProjectUpdateParams {
             GaApiSecret = new PatchOfString { Value = gaApiSecret }
         });
 
@@ -100,14 +97,12 @@ public class ProjectTest
 
         // create next project the using same user
         await testApp.ProjectsClient.CreateAsync();
-        try
-        {
+        try {
             QuotaConstants.ProjectCount = 2;
             await testApp.ProjectsClient.CreateAsync();
             Assert.Fail($"{nameof(QuotaException)} is expected!");
         }
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             Assert.AreEqual(nameof(QuotaException), ex.ExceptionTypeName);
         }
     }

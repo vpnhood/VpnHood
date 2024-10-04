@@ -7,8 +7,7 @@ public static class ServerProfileConverter
 {
     public static ServerProfile ToDto(this ServerProfileModel model)
     {
-        return new ServerProfile
-        {
+        return new ServerProfile {
             ServerProfileId = model.ServerProfileId,
             ServerProfileName = model.ServerProfileName,
             IsDefault = model.IsDefault,

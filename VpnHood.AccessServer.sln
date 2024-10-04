@@ -26,10 +26,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{4CE00B3B-7097-490C-B63E-ED6564E4DB39}"
 	ProjectSection(SolutionItems) = preProject
-		Pub\PubVersion.json = Pub\PubVersion.json
 		Pub\PublishService.ps1 = Pub\PublishService.ps1
+		Pub\PubVersion.json = Pub\PubVersion.json
 		Pub\VersionBump.ps1 = Pub\VersionBump.ps1
 	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Abstractions", "VpnHood.AccessServer.Abstractions\VpnHood.AccessServer.Abstractions.csproj", "{8B2A5165-E5D8-4A6E-A445-7C5503ACB9CC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Providers", "Providers", "{DC583F91-CAAB-489B-BE5E-7BA5C9981C60}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.HostProviders", "VpnHood.AccessServer.HostProviders\VpnHood.AccessServer.HostProviders.csproj", "{F3B95513-5877-487E-B67C-630DF73BDE0D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -61,12 +67,21 @@ Global
 		{7B59925C-4740-4FE9-A8FC-8CD40E0AA4F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7B59925C-4740-4FE9-A8FC-8CD40E0AA4F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7B59925C-4740-4FE9-A8FC-8CD40E0AA4F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B2A5165-E5D8-4A6E-A445-7C5503ACB9CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B2A5165-E5D8-4A6E-A445-7C5503ACB9CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B2A5165-E5D8-4A6E-A445-7C5503ACB9CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B2A5165-E5D8-4A6E-A445-7C5503ACB9CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3B95513-5877-487E-B67C-630DF73BDE0D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3B95513-5877-487E-B67C-630DF73BDE0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3B95513-5877-487E-B67C-630DF73BDE0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3B95513-5877-487E-B67C-630DF73BDE0D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{81B08731-02D3-47C1-B3F0-B60B98EBA580} = {DA70AC51-F97F-47CF-B732-3C76D1A27C32}
+		{F3B95513-5877-487E-B67C-630DF73BDE0D} = {DC583F91-CAAB-489B-BE5E-7BA5C9981C60}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {99282B07-6E52-4418-9326-3F0E566C74EE}

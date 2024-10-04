@@ -4,14 +4,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.Projects;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.AccessServer.Report.Services;
-using VpnHood.AccessServer.Report.Views;
 using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Services;
@@ -36,8 +35,7 @@ public class ProjectService(
             .Replace("=", "");
 
         // ServerProfile
-        var serverProfile = new ServerProfileModel
-        {
+        var serverProfile = new ServerProfileModel {
             ServerProfileId = Guid.NewGuid(),
             ServerProfileName = Resource.DefaultServerProfile,
             IsDefault = true,
@@ -46,8 +44,7 @@ public class ProjectService(
         };
 
         // Farm
-        var serverFarm = new ServerFarmModel
-        {
+        var serverFarm = new ServerFarmModel {
             ProjectId = projectId,
             ServerFarmId = Guid.NewGuid(),
             ServerFarmName = "Server Farm 1",
@@ -57,15 +54,13 @@ public class ProjectService(
             Secret = GmUtil.GenerateKey(),
             CreatedTime = DateTime.UtcNow,
             TokenJson = null,
-            TokenUrl = null,
             TokenError = null,
             PushTokenToClient = true,
-            Servers = []
+            MaxCertificateCount = 1
         };
 
         // create project
-        var project = new ProjectModel
-        {
+        var project = new ProjectModel {
             ProjectId = projectId,
             ProjectName = null,
             SubscriptionType = SubscriptionType.Free,
@@ -74,20 +69,17 @@ public class ProjectService(
             GaMeasurementId = null,
             AdRewardSecret = adRewardSecret,
             LetsEncryptAccount = null,
-            IsDeleted = false,
+            DeletedTime = null,
             IsEnabled = true,
-            ServerProfiles = new HashSet<ServerProfileModel>
-            {
+            HasHostProvider = false,
+            ServerProfiles = new HashSet<ServerProfileModel> {
                 serverProfile
             },
-            ServerFarms = new HashSet<ServerFarmModel>
-            {
+            ServerFarms = new HashSet<ServerFarmModel> {
                 serverFarm
             },
-            AccessTokens = new HashSet<AccessTokenModel>
-            {
-                new()
-                {
+            AccessTokens = new HashSet<AccessTokenModel> {
+                new() {
                     ProjectId = projectId,
                     AccessTokenId = Guid.NewGuid(),
                     ServerFarm = serverFarm,
@@ -96,25 +88,25 @@ public class ProjectService(
                     Secret = GmUtil.GenerateKey(),
                     IsPublic = true,
                     AdRequirement = AdRequirement.None,
-                    IsEnabled= true,
+                    IsEnabled = true,
                     IsDeleted = false,
-                    CreatedTime= DateTime.UtcNow,
+                    CreatedTime = DateTime.UtcNow,
                     ModifiedTime = DateTime.UtcNow,
                     ExpirationTime = null,
                     LastUsedTime = null,
                     MaxDevice = 0,
                     MaxTraffic = 0,
                     Lifetime = 0,
+                    Tags = null,
                     FirstUsedTime = null,
                     ServerFarmId = serverFarm.ServerFarmId,
                     Description = null
                 },
 
-                new()
-                {
+                new() {
                     ProjectId = projectId,
                     AccessTokenId = Guid.NewGuid(),
-                    ServerFarmId = serverFarm.ServerFarmId ,
+                    ServerFarmId = serverFarm.ServerFarmId,
                     ServerFarm = serverFarm,
                     AccessTokenName = "Private 1",
                     IsPublic = false,
@@ -122,15 +114,16 @@ public class ProjectService(
                     SupportCode = 1001,
                     MaxDevice = 5,
                     Secret = GmUtil.GenerateKey(),
-                    IsEnabled= true,
+                    IsEnabled = true,
                     IsDeleted = false,
-                    CreatedTime= DateTime.UtcNow,
+                    CreatedTime = DateTime.UtcNow,
                     ModifiedTime = DateTime.UtcNow,
                     FirstUsedTime = null,
                     ExpirationTime = null,
                     LastUsedTime = null,
                     MaxTraffic = 0,
                     Lifetime = 0,
+                    Tags = BuiltInTags.Premium,
                     Description = null
                 }
             }
@@ -193,5 +186,13 @@ public class ProjectService(
             .ToArrayAsync();
 
         return projects.Select(project => project.ToDto(appOptions.Value.AgentUrl));
+    }
+
+    public async Task Delete(Guid projectId)
+    {
+        var project = await vhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
+        project.DeletedTime = DateTime.UtcNow;
+        await vhContext.SaveChangesAsync();
+        await agentCacheClient.InvalidateProject(projectId);
     }
 }

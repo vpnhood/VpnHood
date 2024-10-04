@@ -14,46 +14,42 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 [Authorize(AgentPolicy.VpnServerPolicy)]
 public class AgentController(AgentService agentService) : ControllerBase
 {
-    private Guid ServerId
-    {
-        get
-        {
+    private Guid ServerId {
+        get {
             // find serverId from identity claims
             var subject = User.Claims.First(claim => claim.Type == ClaimTypes.NameIdentifier).Value;
             var serverId = Guid.Parse(subject);
             return serverId;
-
         }
     }
 
     [HttpPost("sessions")]
-    public  Task<SessionResponseEx> CreateSession(SessionRequestEx sessionRequestEx)
+    public Task<SessionResponseEx> CreateSession(SessionRequestEx sessionRequestEx)
     {
-        return  agentService.CreateSession(ServerId, sessionRequestEx);
+        return agentService.CreateSession(ServerId, sessionRequestEx);
     }
 
     [HttpGet("sessions/{sessionId}")]
-    public  Task<SessionResponseEx> GetSession(uint sessionId, string hostEndPoint, string? clientIp)
+    public Task<SessionResponseEx> GetSession(uint sessionId, string hostEndPoint, string? clientIp)
     {
-        return  agentService.GetSession(ServerId, sessionId, hostEndPoint, clientIp);
+        return agentService.GetSession(ServerId, sessionId, hostEndPoint, clientIp);
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
     public Task<SessionResponse> AddSessionUsage(uint sessionId, bool closeSession, Traffic traffic, string? adData)
     {
-        return  agentService.AddSessionUsage(ServerId, sessionId, closeSession, traffic, adData);
+        return agentService.AddSessionUsage(ServerId, sessionId, closeSession, traffic, adData);
     }
 
     [HttpPost("status")]
-    public  Task<ServerCommand> UpdateServerStatus(ServerStatus serverStatus)
+    public Task<ServerCommand> UpdateServerStatus(ServerStatus serverStatus)
     {
         return agentService.UpdateServerStatus(ServerId, serverStatus);
     }
 
     [HttpPost("configure")]
-    public  Task<ServerConfig> ConfigureServer(ServerInfo serverInfo)
+    public Task<ServerConfig> ConfigureServer(ServerInfo serverInfo)
     {
         return agentService.ConfigureServer(ServerId, serverInfo);
     }
 }
-

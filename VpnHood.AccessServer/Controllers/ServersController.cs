@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 using VpnHood.AccessServer.Dtos.Servers;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
@@ -43,10 +44,13 @@ public class ServersController(
 
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<ServerData[]> List(Guid projectId, string? search = null, Guid? serverId = null, Guid? serverFarmId = null,
+    public Task<ServerData[]> List(Guid projectId, string? search = null, Guid? serverId = null,
+        Guid? serverFarmId = null, IPAddress? ipAddress = null,
         int recordIndex = 0, int recordCount = 1000)
     {
-        return serverService.List(projectId, search: search, serverId: serverId, serverFarmId: serverFarmId, recordIndex, recordCount);
+        return serverService.List(projectId, search: search, 
+            serverId: serverId, serverFarmId: serverFarmId, ipAddress: ipAddress,
+            recordIndex, recordCount);
     }
 
     [HttpPost("{serverId:guid}/reconfigure")]
@@ -55,10 +59,11 @@ public class ServersController(
     {
         return serverService.Reconfigure(projectId, serverId);
     }
-    
+
     [HttpPost("{serverId}/install-by-ssh-user-password")]
     [AuthorizeProjectPermission(Permissions.ServerInstall)]
-    public Task InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
+    public Task InstallBySshUserPassword(Guid projectId, Guid serverId,
+        ServerInstallBySshUserPasswordParams installParams)
     {
         return serverService.InstallBySshUserPassword(projectId, serverId, installParams);
     }
@@ -69,7 +74,7 @@ public class ServersController(
     {
         return serverService.InstallBySshUserKey(projectId, serverId, installParams);
     }
-    
+
     [HttpGet("{serverId}/install/manual")]
     [AuthorizeProjectPermission(Permissions.ServerInstall)]
     public Task<ServerInstallManual> GetInstallManual(Guid projectId, Guid serverId)
@@ -79,8 +84,8 @@ public class ServersController(
 
     [HttpGet("status-summary")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<ServersStatusSummary> GetStatusSummary(Guid projectId, Guid? serverFarmId = null)
+    public Task<ServersStatusSummary> GetStatusSummary(Guid projectId, Guid? serverFarmId = null, Guid? serverId = null)
     {
-        return serverService.GetStatusSummary(projectId, serverFarmId);
+        return serverService.GetStatusSummary(projectId, serverFarmId: serverFarmId, serverId: serverId);
     }
 }

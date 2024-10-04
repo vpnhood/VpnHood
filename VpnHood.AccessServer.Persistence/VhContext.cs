@@ -1,7 +1,9 @@
 ﻿using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Persistence.Models.HostOrders;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Persistence;
@@ -17,25 +19,32 @@ public class VhContext : DbContext
     public virtual DbSet<ServerModel> Servers { get; set; } = default!;
     public virtual DbSet<ServerStatusModel> ServerStatuses { get; set; } = default!;
     public virtual DbSet<ServerFarmModel> ServerFarms { get; set; } = default!;
+    public virtual DbSet<FarmTokenRepoModel> FarmTokenRepos { get; set; } = default!;
     public virtual DbSet<SessionModel> Sessions { get; set; } = default!;
     public virtual DbSet<AccessUsageModel> AccessUsages { get; set; } = default!;
     public virtual DbSet<CertificateModel> Certificates { get; set; } = default!;
     public virtual DbSet<IpLockModel> IpLocks { get; set; } = default!;
     public virtual DbSet<ServerProfileModel> ServerProfiles { get; set; } = default!;
+    public virtual DbSet<HostProviderModel> HostProviders { get; set; } = default!;
     public virtual DbSet<LocationModel> Locations { get; set; } = default!;
+    public virtual DbSet<HostOrderModel> HostOrders { get; set; } = default!;
+    public virtual DbSet<HostIpModel> HostIps { get; set; } = default!;
+    public virtual DbSet<ClientFilterModel> ClientFilters { get; set; }
 
     protected VhContext()
     {
     }
 
     public VhContext(DbContextOptions options)
-            : base(options)
+        : base(options)
     {
     }
 
     public async Task<IDbContextTransaction?> WithNoLockTransaction()
     {
-        return Database.CurrentTransaction == null ? await Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted) : null;
+        return Database.CurrentTransaction == null
+            ? await Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted)
+            : null;
     }
 
     protected override void ConfigureConventions(
@@ -46,6 +55,9 @@ public class VhContext : DbContext
 
         configurationBuilder.Properties<string>()
             .HaveMaxLength(450);
+
+        configurationBuilder.Properties<byte>()
+            .HaveMaxLength(450);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -54,8 +66,7 @@ public class VhContext : DbContext
 
         modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_100_CI_AS_SC_UTF8");
 
-        modelBuilder.Entity<ProjectModel>(entity =>
-        {
+        modelBuilder.Entity<ProjectModel>(entity => {
             entity
                 .HasKey(e => e.ProjectId);
 
@@ -76,12 +87,8 @@ public class VhContext : DbContext
                 .HasMaxLength(200);
 
             entity
-                .Property(e => e.IsDeleted)
+                .Property(e => e.HasHostProvider)
                 .HasDefaultValue(false);
-
-            entity
-                .Property(e => e.IsEnabled)
-                .HasDefaultValue(true);
 
             entity
                 .HasOne(e => e.LetsEncryptAccount)
@@ -90,8 +97,7 @@ public class VhContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<IpLockModel>(entity =>
-        {
+        modelBuilder.Entity<IpLockModel>(entity => {
             entity
                 .HasKey(e => new { e.ProjectId, e.IpAddress });
 
@@ -104,8 +110,7 @@ public class VhContext : DbContext
                 .HasMaxLength(MaxDescriptionLength);
         });
 
-        modelBuilder.Entity<CertificateModel>(entity =>
-        {
+        modelBuilder.Entity<CertificateModel>(entity => {
             entity
                 .HasKey(e => e.CertificateId);
 
@@ -121,9 +126,14 @@ public class VhContext : DbContext
                 .Property(e => e.Thumbprint)
                 .HasMaxLength(200);
 
+            // Add milliseconds to the datetime (Required for sorting)
             entity
-                .HasIndex(e => new { e.ServerFarmId, e.IsDefault })
-                .HasFilter($"{nameof(CertificateModel.IsDeleted)} = 0 and {nameof(CertificateModel.IsDefault)} = 1")
+                .Property(e => e.CreatedTime)
+                .HasPrecision(3);
+
+            entity
+                .HasIndex(e => new { e.ServerFarmId, IsDefault = e.IsInToken })
+                .HasFilter($"{nameof(CertificateModel.IsDeleted)} = 0 and {nameof(CertificateModel.IsInToken)} = 1")
                 .IsUnique();
 
             entity
@@ -146,16 +156,20 @@ public class VhContext : DbContext
                 .WithMany(d => d.Certificates)
                 .HasForeignKey(e => e.ServerFarmId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // make sure the certificate farm belong to the same project
         });
 
-        modelBuilder.Entity<AccessTokenModel>(entity =>
-        {
+        modelBuilder.Entity<AccessTokenModel>(entity => {
             entity
                 .HasKey(e => e.AccessTokenId);
 
             entity
                 .HasIndex(e => new { e.ProjectId, e.SupportCode })
                 .IsUnique();
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.LastUsedTime });
 
             entity.Property(e => e.AccessTokenName)
                 .HasMaxLength(50);
@@ -175,6 +189,10 @@ public class VhContext : DbContext
                 .HasMaxLength(50);
 
             entity
+                .Property(e => e.Tags)
+                .HasMaxLength(40);
+
+            entity
                 .Property(e => e.IsDeleted)
                 .HasDefaultValue(false);
 
@@ -183,10 +201,15 @@ public class VhContext : DbContext
                 .WithMany(d => d.AccessTokens)
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            entity
+                .HasOne(e => e.ServerFarm)
+                .WithMany(d => d.AccessTokens)
+                .HasForeignKey(e => e.ServerFarmId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<DeviceModel>(entity =>
-        {
+        modelBuilder.Entity<DeviceModel>(entity => {
             entity
                 .HasKey(e => e.DeviceId);
 
@@ -198,7 +221,7 @@ public class VhContext : DbContext
                 .HasIndex(e => new { e.ProjectId, e.CreatedTime });
 
             entity
-                .HasIndex(e => new { e.ProjectId, e.ModifiedTime });
+                .HasIndex(e => new { e.ProjectId, e.LastUsedTime });
 
             entity
                 .Property(e => e.IpAddress)
@@ -223,8 +246,7 @@ public class VhContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<PublicCycleModel>(entity =>
-        {
+        modelBuilder.Entity<PublicCycleModel>(entity => {
             entity
                 .HasKey(e => e.PublicCycleId);
 
@@ -234,8 +256,7 @@ public class VhContext : DbContext
                 .IsFixedLength();
         });
 
-        modelBuilder.Entity<ServerModel>(entity =>
-        {
+        modelBuilder.Entity<ServerModel>(entity => {
             entity.HasKey(e => e.ServerId);
 
             entity
@@ -298,8 +319,7 @@ public class VhContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
 
             entity
-                .OwnsMany(e => e.AccessPoints, ap =>
-                {
+                .OwnsMany(e => e.AccessPoints, ap => {
                     ap.ToTable(nameof(ServerModel.AccessPoints));
                     ap.WithOwner().HasForeignKey(nameof(ServerModel.ServerId));
                 });
@@ -310,21 +330,15 @@ public class VhContext : DbContext
                 .HasForeignKey(e => e.LocationId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-
-            //entity.Property(e => e.AccessPoints)
-            //    .HasColumnType("varchar(200)")
-            //    .HasConversion(
-            //        v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-            //        v => JsonSerializer.Deserialize<AccessPointModel[]>(v, (JsonSerializerOptions?)null) ?? Array.Empty<AccessPointModel>(),
-            //        new ValueComparer<AccessPointModel[]>(
-            //            (c1, c2) => Common.Utils.Util.SequenceNullOrEquals(c1, c2),
-            //            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-            //            c => c));
-
+            entity
+                .HasOne(e => e.ClientFilter)
+                .WithMany(d => d.Servers)
+                .HasPrincipalKey(e => new { e.ProjectId, e.ClientFilterId })
+                .HasForeignKey(d => new { d.ProjectId, d.ClientFilterId })
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<ServerStatusModel>(entity =>
-        {
+        modelBuilder.Entity<ServerStatusModel>(entity => {
             entity
                 .HasKey(e => e.ServerStatusId);
 
@@ -343,8 +357,7 @@ public class VhContext : DbContext
 
             entity
                 .HasIndex(e => new { e.ProjectId, e.ServerId, e.IsLast })
-                .IncludeProperties(e => new
-                {
+                .IncludeProperties(e => new {
                     e.SessionCount,
                     e.TcpConnectionCount,
                     e.UdpConnectionCount,
@@ -370,13 +383,9 @@ public class VhContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<ServerFarmModel>(entity =>
-        {
+        modelBuilder.Entity<ServerFarmModel>(entity => {
             entity
                 .HasKey(e => e.ServerFarmId);
-
-            entity
-                .Ignore(e => e.Certificate);
 
             entity
                 .HasIndex(e => new { e.ProjectId, e.ServerFarmName })
@@ -400,6 +409,10 @@ public class VhContext : DbContext
                 .HasMaxLength(4000);
 
             entity
+                .Property(e => e.TokenIv)
+                .HasMaxLength(32);
+
+            entity
                 .Property(e => e.IsDeleted)
                 .HasDefaultValue(false);
 
@@ -408,11 +421,14 @@ public class VhContext : DbContext
                 .HasMaxLength(16)
                 .IsFixedLength();
 
+            entity.Property(e => e.MaxCertificateCount)
+                .HasDefaultValue(1);
+
             entity
                 .HasOne(e => e.Project)
                 .WithMany(d => d.ServerFarms)
                 .HasForeignKey(e => e.ProjectId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity
                 .HasOne(e => e.ServerProfile)
@@ -422,8 +438,34 @@ public class VhContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<AccessModel>(entity =>
-        {
+        modelBuilder.Entity<FarmTokenRepoModel>(entity => {
+            entity
+                .HasKey(e => e.FarmTokenRepoId);
+
+            entity
+                .HasIndex(e => e.IsPendingUpload)
+                .HasFilter($"{nameof(FarmTokenRepoModel.IsPendingUpload)} = 1")
+                .IsUnique(false);
+
+            entity
+                .Property(e => e.RepoSettings)
+                .HasMaxLength(1500);
+
+            entity
+                .HasOne(e => e.ServerFarm)
+                .WithMany(d => d.TokenRepos)
+                .HasPrincipalKey(d => new { d.ProjectId, d.ServerFarmId })
+                .HasForeignKey(e => new { e.ProjectId, e.ServerFarmId })
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity
+                .HasOne(e => e.Project)
+                .WithMany(d => d.FarmTokenRepoModels)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<AccessModel>(entity => {
             entity
                 .HasKey(e => e.AccessId);
 
@@ -438,28 +480,34 @@ public class VhContext : DbContext
 
             entity
                 .Property(e => e.LastCycleTraffic)
-                .HasComputedColumnSql($"{nameof(AccessModel.LastCycleSentTraffic)} + {nameof(AccessModel.LastCycleReceivedTraffic)} - {nameof(AccessModel.LastCycleSentTraffic)} - {nameof(AccessModel.LastCycleReceivedTraffic)}");
-
+                .HasComputedColumnSql(
+                    $"{nameof(AccessModel.LastCycleSentTraffic)} + {nameof(AccessModel.LastCycleReceivedTraffic)} - {nameof(AccessModel.LastCycleSentTraffic)} - {nameof(AccessModel.LastCycleReceivedTraffic)}");
 
             entity
                 .HasIndex(e => new { e.CycleTraffic }); // for resetting cycles
 
             entity
                 .Property(e => e.CycleTraffic)
-                .HasComputedColumnSql($"{nameof(AccessModel.TotalSentTraffic)} + {nameof(AccessModel.TotalReceivedTraffic)} - {nameof(AccessModel.LastCycleSentTraffic)} - {nameof(AccessModel.LastCycleReceivedTraffic)}");
+                .HasComputedColumnSql(
+                    $"{nameof(AccessModel.TotalSentTraffic)} + {nameof(AccessModel.TotalReceivedTraffic)} - {nameof(AccessModel.LastCycleSentTraffic)} - {nameof(AccessModel.LastCycleReceivedTraffic)}");
 
             entity
                 .Property(e => e.TotalTraffic)
-                .HasComputedColumnSql($"{nameof(AccessModel.TotalSentTraffic)} + {nameof(AccessModel.TotalReceivedTraffic)}");
+                .HasComputedColumnSql(
+                    $"{nameof(AccessModel.TotalSentTraffic)} + {nameof(AccessModel.TotalReceivedTraffic)}");
 
             entity.HasOne(e => e.Device)
                 .WithMany(d => d.Accesses)
                 .HasForeignKey(e => e.DeviceId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.AccessToken)
+                .WithMany(d => d.Accesses)
+                .HasForeignKey(e => e.AccessTokenId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<SessionModel>(entity =>
-        {
+        modelBuilder.Entity<SessionModel>(entity => {
             entity
                 .HasKey(e => e.SessionId);
 
@@ -469,7 +517,7 @@ public class VhContext : DbContext
                 .HasFilter($"{nameof(SessionModel.EndTime)} IS NULL");
 
             entity
-                .HasIndex(e => new { e.EndTime }); //for sync 
+                .HasIndex(e => new { e.EndTime, e.LastUsedTime }); //for sync and timeout
 
             entity
                 .Property(e => e.IsArchived);
@@ -505,12 +553,22 @@ public class VhContext : DbContext
             entity.HasOne(e => e.Server)
                 .WithMany(d => d.Sessions)
                 .HasForeignKey(e => e.ServerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.Device)
+                .WithMany(d => d.Sessions)
+                .HasForeignKey(e => e.DeviceId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.Access)
+                .WithMany(d => d.Sessions)
+                .HasForeignKey(e => e.AccessId)
                 .OnDelete(DeleteBehavior.Cascade);
+
         });
 
 
-        modelBuilder.Entity<AccessUsageModel>(entity =>
-        {
+        modelBuilder.Entity<AccessUsageModel>(entity => {
             entity
                 .HasKey(x => x.AccessUsageId);
 
@@ -519,8 +577,7 @@ public class VhContext : DbContext
                 .ValueGeneratedOnAdd();
         });
 
-        modelBuilder.Entity<ServerProfileModel>(entity =>
-        {
+        modelBuilder.Entity<ServerProfileModel>(entity => {
             entity
                 .HasKey(x => x.ServerProfileId);
 
@@ -548,15 +605,20 @@ public class VhContext : DbContext
             entity
                 .Property(x => x.IsDeleted)
                 .HasDefaultValue(false);
+
+            entity
+                .HasOne(e => e.Project)
+                .WithMany(d => d.ServerProfiles)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<LocationModel>(entity =>
-        {
+        modelBuilder.Entity<LocationModel>(entity => {
             entity
                 .HasKey(x => x.LocationId);
 
             entity
-                .HasIndex(x => new { x.CountryCode, x.RegionCode, x.CityCode })
+                .HasIndex(x => new { x.CountryCode, x.RegionName, x.CityName })
                 .IsUnique();
 
             entity
@@ -564,5 +626,97 @@ public class VhContext : DbContext
                 .HasMaxLength(50);
         });
 
+        modelBuilder.Entity<HostProviderModel>(entity => {
+            entity
+                .HasKey(e => e.HostProviderId);
+
+            entity
+                .Property(e => e.CustomData)
+                .HasMaxLength(int.MaxValue);
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.HostProviderName })
+                .IsUnique();
+        });
+
+        modelBuilder.Entity<HostIpModel>(entity => {
+            entity
+                .HasKey(e => e.HostIpId);
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.CreatedTime })
+                .HasFilter($"{nameof(HostIpModel.DeletedTime)} is null");
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.IpAddress })
+                .HasFilter($"{nameof(HostIpModel.DeletedTime)} is null")
+                .IsUnique();
+
+            entity
+                .HasOne(e => e.Project)
+                .WithMany(d => d.HostIps)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity
+                .HasOne(e => e.HostProvider)
+                .WithMany(d => d.HostIps)
+                .HasForeignKey(d => d.HostProviderId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+        });
+
+        modelBuilder.Entity<HostOrderModel>(entity => {
+            entity
+                .HasKey(e => e.HostOrderId);
+
+            entity
+                .Property(e => e.NewIpOrderIpAddress)
+                .HasMaxLength(50);
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.Status });
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.Status })
+                .HasFilter($"{nameof(HostOrderModel.Status)} = {(int)HostOrderStatus.Pending}");
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.CreatedTime })
+                .IsDescending();
+
+            entity
+                .HasOne(e => e.Project)
+                .WithMany(d => d.HostOrders)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity
+                .HasOne(e => e.NewIpOrderServer)
+                .WithMany(d => d.HostOrders)
+                .HasForeignKey(d => d.NewIpOrderServerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity
+                .HasOne(e => e.HostProvider)
+                .WithMany(d => d.HostOrders)
+                .HasForeignKey(d => d.HostProviderId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<ClientFilterModel>(entity => {
+            entity
+                .HasKey(e => e.ClientFilterId);
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.ClientFilterName })
+                .IsUnique();
+
+            entity
+                .HasOne(e => e.Project)
+                .WithMany(d => d.ClientFilterModels)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }

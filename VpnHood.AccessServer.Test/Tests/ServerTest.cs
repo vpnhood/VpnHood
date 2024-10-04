@@ -8,6 +8,7 @@ using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -27,32 +28,49 @@ public class ServerTest
     }
 
     [TestMethod]
+    public async Task List()
+    {
+        var testApp = await TestApp.Create();
+        var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
+        var server1 = await farm.AddNewServer();
+        await farm.AddNewServer();
+
+        // list by ip address
+        var servers = await server1.Client.ListAsync(farm.ProjectId, ipAddress: server1.ServerConfig.TcpEndPoints!.First().Address.ToString());
+        Assert.AreEqual(1, servers.Count);
+        Assert.AreEqual(server1.ServerId, servers.Single().Server.ServerId);
+    }
+
+    [TestMethod]
     public async Task Crud()
     {
         var testApp = await TestApp.Create();
-        var farm1 = await ServerFarmDom.Create(testApp, serverCount: 0);
+        var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
 
         //-----------
         // check: Create
         //-----------
-        var server1ACreateParam = new ServerCreateParams
-        {
+        var server1ACreateParam = new ServerCreateParams {
             ServerName = $"{Guid.NewGuid()}",
-            HostUrl = new Uri("http://localhost/foo")
+            HostPanelUrl = new Uri("http://localhost/foo"),
+            Power = 8,
+            Tags = ["#1", "#2"]
         };
-        var serverDom = await farm1.AddNewServer(server1ACreateParam, configure: false);
-        var install1A = await farm1.TestApp.ServersClient.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
+        var serverDom = await farm.AddNewServer(server1ACreateParam, configure: false);
+        var install1A = await farm.TestApp.ServersClient.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
 
         //-----------
         // check: Get
         //-----------
         await serverDom.Reload();
-        Assert.AreEqual(server1ACreateParam.HostUrl, serverDom.Server.HostUrl);
+        CollectionAssert.AreEquivalent(server1ACreateParam.Tags.ToArray(), serverDom.Server.Tags.ToArray());
+        Assert.AreEqual(server1ACreateParam.HostPanelUrl, serverDom.Server.HostPanelUrl);
         Assert.AreEqual(server1ACreateParam.ServerName, serverDom.Server.ServerName);
+        Assert.AreEqual(server1ACreateParam.Power, serverDom.Server.Power);
         Assert.AreEqual(ServerState.NotInstalled, serverDom.Server.ServerState);
 
         // ServerState.Configuring
-        serverDom.ServerInfo = await testApp.NewServerInfo(randomStatus: true, gatewayIpV4: IPAddress.Parse("5.0.0.1"));
+        serverDom.ServerInfo = testApp.NewServerInfo(randomStatus: true, publicIpV4: IPAddress.Parse("5.0.0.1"));
         serverDom.ServerInfo.Status.SessionCount = 0;
         await serverDom.Configure(false);
         await serverDom.Reload();
@@ -79,20 +97,24 @@ public class ServerTest
         //-----------
         // check: Update (Don't change Secret)
         //-----------
-        var serverUpdateParam = new ServerUpdateParams
-        {
+        var serverUpdateParam = new ServerUpdateParams {
             ServerName = new PatchOfString { Value = $"{Guid.NewGuid()}" },
             AutoConfigure = new PatchOfBoolean { Value = !serverDom.Server.AutoConfigure },
             GenerateNewSecret = new PatchOfBoolean { Value = false },
-            HostUrl = new PatchOfUri{Value = new Uri("http://localhost/foo2")}
+            HostPanelUrl = new PatchOfUri { Value = new Uri("http://localhost/foo2") },
+            Power = new PatchOfNullableInteger { Value = 16 },
+            IsEnabled = new PatchOfBoolean { Value = !serverDom.Server.IsEnabled },
+            Tags = new PatchOfStringOf  { Value = ["#3", "#4"] }
         };
         await serverDom.Update(serverUpdateParam);
         await serverDom.Reload();
         var install1C = await serverDom.Client.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
         CollectionAssert.AreEqual(install1A.AppSettings.ManagementSecret, install1C.AppSettings.ManagementSecret);
         Assert.AreEqual(serverUpdateParam.AutoConfigure.Value, serverDom.Server.AutoConfigure);
-        Assert.AreEqual(serverUpdateParam.HostUrl.Value, serverDom.Server.HostUrl);
+        Assert.AreEqual(serverUpdateParam.HostPanelUrl.Value, serverDom.Server.HostPanelUrl);
         Assert.AreEqual(serverUpdateParam.ServerName.Value, serverDom.Server.ServerName);
+        Assert.AreEqual(serverUpdateParam.IsEnabled.Value, serverDom.Server.IsEnabled);
+        CollectionAssert.AreEquivalent(serverUpdateParam.Tags.Value.ToArray(), serverDom.Server.Tags.ToArray());
 
         //-----------
         // check: Update (change Secret)
@@ -105,7 +127,7 @@ public class ServerTest
         //-----------
         // check: Update (serverFarmId)
         //-----------
-        var farm2 = await ServerFarmDom.Create(farm1.TestApp);
+        var farm2 = await ServerFarmDom.Create(farm.TestApp);
         serverUpdateParam = new ServerUpdateParams { ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId } };
         await serverDom.Client.UpdateAsync(testApp.ProjectId, serverDom.ServerId, serverUpdateParam);
         await serverDom.Reload();
@@ -115,19 +137,18 @@ public class ServerTest
         // check: CertificateList
         //-----------
         var servers = await serverDom.Client.ListAsync(testApp.ProjectId);
-        Assert.IsTrue(servers.Any(x => x.Server.ServerName == serverDom.Server.ServerName && x.Server.ServerId == serverDom.ServerId));
+        Assert.IsTrue(servers.Any(x =>
+            x.Server.ServerName == serverDom.Server.ServerName && x.Server.ServerId == serverDom.ServerId));
 
         //-----------
         // check: Delete
         //-----------
         await serverDom.Client.DeleteAsync(testApp.ProjectId, serverDom.ServerId);
-        try
-        {
+        try {
             await serverDom.Reload();
             Assert.Fail($"{nameof(NotExistsException)} was expected");
         }
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
     }
@@ -138,13 +159,11 @@ public class ServerTest
         using var farm = await ServerFarmDom.Create();
         QuotaConstants.ServerCount = farm.Servers.Count; //update quota
 
-        try
-        {
+        try {
             await farm.AddNewServer();
             Assert.Fail($"{nameof(QuotaException)} is expected");
         }
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             Assert.AreEqual(nameof(QuotaException), ex.ExceptionTypeName);
         }
     }
@@ -153,11 +172,13 @@ public class ServerTest
     public async Task GetInstallManual()
     {
         using var farm = await ServerFarmDom.Create();
-        var install = await farm.DefaultServer.Client.GetInstallManualAsync(farm.ProjectId, farm.DefaultServer.ServerId);
+        var install =
+            await farm.DefaultServer.Client.GetInstallManualAsync(farm.ProjectId, farm.DefaultServer.ServerId);
 
         var actualAppSettings = JsonSerializer.Deserialize<ServerInstallAppSettings>(install.AppSettingsJson,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-        Assert.AreEqual(Convert.ToBase64String(install.AppSettings.ManagementSecret), Convert.ToBase64String(actualAppSettings.ManagementSecret));
+        Assert.AreEqual(Convert.ToBase64String(install.AppSettings.ManagementSecret),
+            Convert.ToBase64String(actualAppSettings.ManagementSecret));
         Assert.AreEqual(install.AppSettings.HttpAccessManager.BaseUrl, actualAppSettings.HttpAccessManager.BaseUrl);
         Assert.IsTrue(install.LinuxCommand.Contains("x64.sh"));
         Assert.IsTrue(install.WindowsCommand.Contains("x64.ps1"));
@@ -167,24 +188,19 @@ public class ServerTest
     public async Task ServerInstallByUserName()
     {
         using var farm = await ServerFarmDom.Create();
-        try
-        {
+        try {
             await farm.DefaultServer.Client.InstallBySshUserPasswordAsync(farm.ProjectId, farm.DefaultServer.ServerId,
                 new ServerInstallBySshUserPasswordParams { HostName = "127.0.0.1", LoginUserName = "user", LoginPassword = "pass" });
         }
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             Assert.AreEqual(nameof(SocketException), ex.ExceptionTypeName);
-
         }
 
-        try
-        {
+        try {
             await farm.DefaultServer.Client.InstallBySshUserKeyAsync(farm.ProjectId, farm.DefaultServer.ServerId,
                 new ServerInstallBySshUserKeyParams { HostName = "127.0.0.1", LoginUserName = "user", UserPrivateKey = TestResource.test_ssh_key });
         }
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             Assert.AreEqual(nameof(SocketException), ex.ExceptionTypeName);
         }
     }
@@ -195,18 +211,15 @@ public class ServerTest
         var p1Farm = await ServerFarmDom.Create();
         var p2Farm = await ServerFarmDom.Create();
 
-        try
-        {
+        try {
             await p1Farm.TestApp.ServersClient.CreateAsync(p1Farm.ProjectId,
-                new ServerCreateParams
-                {
+                new ServerCreateParams {
                     ServerName = $"{Guid.NewGuid()}",
                     ServerFarmId = p2Farm.ServerFarmId
                 });
             Assert.Fail("KeyNotFoundException is expected!");
         }
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
     }
@@ -217,17 +230,14 @@ public class ServerTest
         var p1Farm = await ServerFarmDom.Create();
         var p2Farm = await ServerFarmDom.Create();
 
-        try
-        {
-            await p1Farm.DefaultServer.Update(new ServerUpdateParams
-            {
+        try {
+            await p1Farm.DefaultServer.Update(new ServerUpdateParams {
                 ServerFarmId = new PatchOfGuid { Value = p2Farm.ServerFarmId }
             });
 
             Assert.Fail($"{nameof(NotExistsException)} was expected.");
         }
-        catch (ApiException ex)
-        {
+        catch (ApiException ex) {
             Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
     }
@@ -239,7 +249,8 @@ public class ServerTest
 
         // get first server token
         var server1Dom = await farm.AddNewServer();
-        var server1TokenIp = server1Dom.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.PublicInToken);
+        var server1TokenIp =
+            server1Dom.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.PublicInToken);
 
         // check server access point in token
         var accessToken = await farm.CreateAccessToken();
@@ -247,11 +258,11 @@ public class ServerTest
         Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.ToString() == server1TokenIp.IpAddress));
 
         // add another server
-        var server2Dom = await farm.AddNewServer(new ServerCreateParams
-        {
-            AccessPoints = new[] { await farm.TestApp.NewAccessPoint() }
+        var server2Dom = await farm.AddNewServer(new ServerCreateParams {
+            AccessPoints = [farm.TestApp.NewAccessPoint()]
         });
-        var server2TokenIp = server2Dom.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.PublicInToken);
+        var server2TokenIp =
+            server2Dom.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.PublicInToken);
         accessToken = await farm.CreateAccessToken();
         token = await accessToken.GetToken();
 
@@ -270,13 +281,12 @@ public class ServerTest
         var testApp = await TestApp.Create();
         using var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
 
-        var accessPoint1 = await testApp.NewAccessPoint();
-        var accessPoint2 = await testApp.NewAccessPoint();
+        var accessPoint1 = testApp.NewAccessPoint();
+        var accessPoint2 = testApp.NewAccessPoint();
 
         // create server
-        var serverDom = await farm.AddNewServer(new ServerCreateParams
-        {
-            AccessPoints = new[] { accessPoint1, accessPoint2 }
+        var serverDom = await farm.AddNewServer(new ServerCreateParams {
+            AccessPoints = [accessPoint1, accessPoint2]
         });
 
         //-----------
@@ -307,10 +317,9 @@ public class ServerTest
         // check: update 
         //-----------
         var oldConfig = (await serverDom.SendStatus(serverDom.ServerInfo.Status)).ConfigCode;
-        var accessPoint3 = await testApp.NewAccessPoint();
-        await serverDom.Update(new ServerUpdateParams
-        {
-            AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint3 } }
+        var accessPoint3 = testApp.NewAccessPoint();
+        await serverDom.Update(new ServerUpdateParams {
+            AccessPoints = new PatchOfAccessPointOf { Value = [accessPoint3] }
         });
         var newConfig = (await serverDom.SendStatus(serverDom.ServerInfo.Status)).ConfigCode;
         Assert.AreNotEqual(oldConfig, newConfig);
@@ -326,7 +335,9 @@ public class ServerTest
 
         var accessToken = await farm.CreateAccessToken();
         var token = await accessToken.GetToken();
-        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.ToString() == accessPoint3.IpAddress && x.Port == accessPoint3.TcpPort),
+        Assert.IsTrue(
+            token.ServerToken.HostEndPoints!.Any(x =>
+                x.Address.ToString() == accessPoint3.IpAddress && x.Port == accessPoint3.TcpPort),
             "AccessPoints have not been updated in FarmToken.");
     }
 
@@ -349,6 +360,10 @@ public class ServerTest
         sampleServer = await farm.AddNewServer();
         await sampleServer.SendStatus(new ServerStatus { SessionCount = 2, TunnelSpeed = new Traffic { Received = 300, Sent = 200 } });
 
+        // disabled 1
+        sampleServer = await farm.AddNewServer();
+        await sampleServer.Update(new ServerUpdateParams { IsEnabled = new PatchOfBoolean { Value = false } });
+
         // notInstalled 4
         await farm.AddNewServer(configure: false);
         await farm.AddNewServer(configure: false);
@@ -368,12 +383,40 @@ public class ServerTest
         await sampleServer.SendStatus(new ServerStatus { SessionCount = 0 });
 
         var liveUsageSummary = await farm.TestApp.ServersClient.GetStatusSummaryAsync(farm.TestApp.ProjectId);
-        Assert.AreEqual(10, liveUsageSummary.TotalServerCount);
+        Assert.AreEqual(11, liveUsageSummary.TotalServerCount);
+        Assert.AreEqual(1, liveUsageSummary.DisabledServerCount);
         Assert.AreEqual(2, liveUsageSummary.ActiveServerCount);
         Assert.AreEqual(4, liveUsageSummary.NotInstalledServerCount);
         Assert.AreEqual(1, liveUsageSummary.LostServerCount);
         Assert.AreEqual(3, liveUsageSummary.IdleServerCount);
         Assert.AreEqual(250, liveUsageSummary.TunnelSendSpeed);
         Assert.AreEqual(400, liveUsageSummary.TunnelReceiveSpeed);
+    }
+
+    [TestMethod]
+    public async Task Delete_should_change_farm_token()
+    {
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        var accessToken = await farm.CreateAccessToken();
+
+        // error expected when there is no public in token access point
+        await VhTestUtil.AssertApiException("InvalidOperationException", accessToken.GetToken(), contains: "token has not been initialized");
+
+        var serverDom1 = await farm.AddNewServer(new ServerCreateParams {
+            AccessPoints = [farm.TestApp.NewAccessPoint(accessPointMode: AccessPointMode.PublicInToken)]
+        });
+
+        await farm.AddNewServer(new ServerCreateParams {
+            AccessPoints = [farm.TestApp.NewAccessPoint(accessPointMode: AccessPointMode.Public)]
+        });
+
+        // work without error
+        await farm.Reload();
+        Assert.IsNull(farm.ServerFarm.TokenError);
+
+        // first server should generate new farm token
+        await serverDom1.Delete();
+        await farm.Reload();
+        Assert.IsNotNull(farm.ServerFarm.TokenError);
     }
 }

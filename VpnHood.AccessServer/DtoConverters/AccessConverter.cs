@@ -7,8 +7,7 @@ public static class AccessConverter
 {
     public static Access ToDto(this AccessModel model)
     {
-        var access = new Access
-        {
+        var access = new Access {
             AccessId = model.AccessId,
             AccessTokenId = model.AccessTokenId,
             LastUsedTime = model.LastUsedTime,

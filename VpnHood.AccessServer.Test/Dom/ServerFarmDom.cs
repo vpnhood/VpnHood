@@ -8,6 +8,7 @@ public class ServerFarmDom : IDisposable
     private readonly bool _autoDisposeApp;
     public TestApp TestApp { get; }
     public ServerFarm ServerFarm { get; private set; }
+    public Certificate CertificateInToken { get; private set; } = default!;
     public List<ServerDom> Servers { get; private set; } = [];
     public Guid ServerFarmId => ServerFarm.ServerFarmId;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
@@ -22,17 +23,19 @@ public class ServerFarmDom : IDisposable
         ServerFarm = serverFarm;
     }
 
-    public static async Task<ServerFarmDom> Create(TestApp? testApp = default, ServerFarmCreateParams? createParams = default, int serverCount = 1)
+    public static async Task<ServerFarmDom> Create(TestApp? testApp = default,
+        ServerFarmCreateParams? createParams = default, int serverCount = 1)
     {
         var autoDisposeApp = testApp == null;
         testApp ??= await TestApp.Create();
-        createParams ??= new ServerFarmCreateParams
-        {
+        createParams ??= new ServerFarmCreateParams {
             ServerFarmName = Guid.NewGuid().ToString()
         };
 
         var serverFarmData = await testApp.ServerFarmsClient.CreateAsync(testApp.ProjectId, createParams);
         var ret = new ServerFarmDom(testApp, serverFarmData.ServerFarm, autoDisposeApp);
+        ret.CertificateInToken = await ret.GetCertificateInToken();
+
         for (var i = 0; i < serverCount; i++)
             await ret.AddNewServer();
 
@@ -58,6 +61,7 @@ public class ServerFarmDom : IDisposable
     {
         var serverFarmData = await TestApp.ServerFarmsClient.GetAsync(ProjectId, ServerFarmId, includeSummary: true);
         ServerFarm = serverFarmData.ServerFarm;
+        CertificateInToken = await GetCertificateInToken();
         return serverFarmData;
     }
 
@@ -77,8 +81,7 @@ public class ServerFarmDom : IDisposable
     public async Task<AccessTokenDom> CreateAccessToken(bool isPublic = false)
     {
         var ret = await TestApp.AccessTokensClient.CreateAsync(TestApp.ProjectId,
-            new AccessTokenCreateParams
-            {
+            new AccessTokenCreateParams {
                 ServerFarmId = ServerFarm.ServerFarmId,
                 IsPublic = isPublic,
                 IsEnabled = true
@@ -98,26 +101,27 @@ public class ServerFarmDom : IDisposable
         return new AccessTokenDom(TestApp, ret);
     }
 
-    public async Task<ServerDom> AddNewServer(bool configure = true, bool sendStatus = true, 
-        IPAddress? gatewayIpV4 = null, int? logicalCore = null)
+    public async Task<ServerDom> AddNewServer(bool configure = true, bool sendStatus = true,
+        IPAddress? publicIpV4 = null, int? logicalCore = null)
     {
-        var sampleServer = await ServerDom.Create(TestApp, ServerFarmId, configure, 
-            sendStatus, gatewayIpV4, logicalCore: logicalCore);
+        var sampleServer = await ServerDom.Create(TestApp, ServerFarmId, configure,
+            sendStatus, publicIpV4, logicalCore: logicalCore);
 
         Servers.Add(sampleServer);
         return sampleServer;
     }
 
-    public async Task<ServerDom> AddNewServer(ServerCreateParams createParams, bool configure = true, 
-        bool sendStatus = true, IPAddress? gatewayIpV4 = null)
+    public async Task<ServerDom> AddNewServer(ServerCreateParams createParams, bool configure = true,
+        bool sendStatus = true, IPAddress? publicIpV4 = null)
     {
         // ReSharper disable once LocalizableElement
         if (createParams.ServerFarmId != ServerFarmId && createParams.ServerFarmId != Guid.Empty)
-            throw new ArgumentException($"{nameof(createParams.ServerFarmId)} must be the same as this farm", nameof(createParams));
+            throw new ArgumentException($"{nameof(createParams.ServerFarmId)} must be the same as this farm",
+                nameof(createParams));
 
         createParams.ServerFarmId = ServerFarmId;
-        var sampleServer = await ServerDom.Create(TestApp, createParams, configure, sendStatus, 
-            gatewayIpV4: gatewayIpV4);
+        var sampleServer = await ServerDom.Create(TestApp, createParams, configure, sendStatus,
+            publicIpV4: publicIpV4);
 
         Servers.Add(sampleServer);
         return sampleServer;
@@ -126,7 +130,7 @@ public class ServerFarmDom : IDisposable
     public ServerDom FindServerByEndPoint(IPEndPoint ipEndPoint)
     {
         var serverDom = Servers.First(x =>
-            x.Server.AccessPoints.Any(accessPoint => 
+            x.Server.AccessPoints.Any(accessPoint =>
                 new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort).Equals(ipEndPoint)));
         return serverDom;
     }
@@ -135,6 +139,19 @@ public class ServerFarmDom : IDisposable
     {
         return TestApp.ServerFarmsClient.CertificateReplaceAsync(ProjectId, ServerFarmId, createParams);
     }
+
+    public async Task<Certificate[]> CertificateList()
+    {
+        var ret = await TestApp.ServerFarmsClient.CertificateListAsync(ProjectId, ServerFarmId);
+        return ret.ToArray();
+    }
+
+    private async Task<Certificate> GetCertificateInToken()
+    {
+        var ret = await TestApp.ServerFarmsClient.CertificateListAsync(ProjectId, ServerFarmId);
+        return ret.Single(x => x.IsInToken);
+    }
+
 
     public Task<Certificate> CertificateImport(CertificateImportParams importParams)
     {

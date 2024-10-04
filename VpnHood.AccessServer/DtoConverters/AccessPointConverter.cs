@@ -1,4 +1,4 @@
-﻿using VpnHood.AccessServer.Dtos;
+﻿using VpnHood.AccessServer.Dtos.AccessPoints;
 using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.DtoConverters;
@@ -7,8 +7,7 @@ public static class AccessPointConverter
 {
     public static AccessPoint ToDto(this AccessPointModel model)
     {
-        var dto = new AccessPoint
-        {
+        var dto = new AccessPoint {
             UdpPort = model.UdpPort,
             AccessPointMode = model.AccessPointMode,
             TcpPort = model.TcpPort,
@@ -20,8 +19,7 @@ public static class AccessPointConverter
 
     public static AccessPointModel ToModel(this AccessPoint dto)
     {
-        var model = new AccessPointModel
-        {
+        var model = new AccessPointModel {
             UdpPort = dto.UdpPort,
             AccessPointMode = dto.AccessPointMode,
             TcpPort = dto.TcpPort,

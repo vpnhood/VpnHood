@@ -1,12 +1,14 @@
-﻿using VpnHood.AccessServer.Persistence.Enums;
+﻿using VpnHood.AccessServer.Dtos.AccessPoints;
+using VpnHood.AccessServer.Persistence.Enums;
 
 namespace VpnHood.AccessServer.Dtos.Servers;
+
 public class VpnServer
 {
     public required Guid ServerId { get; init; }
     public required string ServerName { get; init; }
     public required Guid ServerFarmId { get; init; }
-    public required string? ServerFarmName { get; init; }
+    public required string? ServerFarmName { get; set; }
     public required Location? Location { get; init; }
     public required string? Version { get; init; }
     public required string? EnvironmentVersion { get; init; }
@@ -24,5 +26,11 @@ public class VpnServer
     public required ServerStatusEx? ServerStatus { get; set; }
     public required AccessPoint[] AccessPoints { get; init; }
     public required bool AllowInAutoLocation { get; init; }
-    public required Uri? HostUrl { get; init; }
+    public required Uri? HostPanelUrl { get; init; }
+    public required int? Power { get; init; }
+    public required string? PublicIpV4 { get; set; }
+    public required string? PublicIpV6 { get; set; }
+    public required string[] Tags { get; set; }
+    public required string? ClientFilterId { get; set; }
+    public required string? ClientFilterName { get; set; }
 }

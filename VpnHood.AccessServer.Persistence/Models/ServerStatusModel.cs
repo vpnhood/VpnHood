@@ -15,7 +15,6 @@ public class ServerStatusBaseModel
     public required long TunnelReceiveSpeed { get; set; }
     public required bool IsConfigure { get; set; }
     public required DateTime CreatedTime { get; set; }
-
 }
 
 public class ServerStatusModel : ServerStatusBaseModel
@@ -23,5 +22,4 @@ public class ServerStatusModel : ServerStatusBaseModel
     public required bool IsLast { get; set; }
     public virtual ProjectModel? Project { get; set; }
     public virtual ServerModel? Server { get; set; }
-
 }

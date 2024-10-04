@@ -2,6 +2,8 @@
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Repos.Views;
+using VpnHood.AccessServer.Utils;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
@@ -11,8 +13,7 @@ public static class ServerConverter
     {
         var serverState = model.ConfigureTime == null ? ServerState.NotInstalled : ServerState.Lost;
 
-        return new VpnServer
-        {
+        return new VpnServer {
             ServerFarmId = model.ServerFarmId,
             ServerFarmName = model.ServerFarm?.ServerFarmName,
             Location = model.Location?.ToDto(),
@@ -25,6 +26,7 @@ public static class ServerConverter
             LastConfigError = model.LastConfigError,
             MachineName = model.MachineName,
             OsInfo = model.OsInfo,
+            Power = model.Power,
             ServerId = model.ServerId,
             ServerStatus = serverCache?.ServerStatus?.ToDto(),
             ServerState = serverCache?.ServerState ?? serverState,
@@ -34,8 +36,20 @@ public static class ServerConverter
             Version = model.Version,
             AutoConfigure = model.AutoConfigure,
             AccessPoints = model.AccessPoints.Select(x => x.ToDto()).ToArray(),
-            HostUrl = model.HostUrl!=null ? new Uri(model.HostUrl) : null,
+            HostPanelUrl = string.IsNullOrEmpty(model.HostPanelUrl) ? null : new Uri(model.HostPanelUrl),
+            PublicIpV4 = model.PublicIpV4,
+            PublicIpV6 = model.PublicIpV6,
+            Tags = ManagerUtils.TagsFromString(model.Tags),
+            ClientFilterId = model.ClientFilterId?.ToString(),
+            ClientFilterName = model.ClientFilter?.ClientFilterName
         };
     }
 
+    public static VpnServer ToDto(this ServerView view, ServerCache? serverCache)
+    {
+        var server = view.Server.ToDto(serverCache);
+        server.ServerFarmName = view.ServerFarmName;
+        server.ClientFilterName = view.ClientFilterName;
+        return server;
+    }
 }

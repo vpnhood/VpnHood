@@ -7,8 +7,7 @@ public static class ArchiveConverter
 {
     public static SessionArchive ToArchive(this SessionModel model)
     {
-        return new SessionArchive
-        {
+        return new SessionArchive {
             SessionId = model.SessionId,
             ProjectId = model.ProjectId,
             AccessId = model.AccessId,
@@ -29,8 +28,7 @@ public static class ArchiveConverter
 
     public static AccessUsageArchive ToArchive(this AccessUsageModel model)
     {
-        return new AccessUsageArchive
-        {
+        return new AccessUsageArchive {
             AccessUsageId = model.AccessUsageId,
             AccessId = model.AccessId,
             SessionId = model.SessionId,
@@ -51,8 +49,7 @@ public static class ArchiveConverter
 
     public static ServerStatusArchive ToArchive(this ServerStatusModel model, Guid serverFarmId)
     {
-        return new ServerStatusArchive
-        {
+        return new ServerStatusArchive {
             ServerStatusId = model.ServerStatusId,
             ServerFarmId = serverFarmId,
             ServerId = model.ServerId,

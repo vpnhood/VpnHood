@@ -14,9 +14,9 @@ public class AgentAccessTest
     {
         var serverFarmDom = await ServerFarmDom.Create();
         var accessTokenDom = await serverFarmDom.CreateAccessToken();
-        await accessTokenDom.TestApp.AccessTokensClient.UpdateAsync(serverFarmDom.TestApp.ProjectId, accessTokenDom.AccessTokenId,
-            new AccessTokenUpdateParams
-            {
+        await accessTokenDom.TestApp.AccessTokensClient.UpdateAsync(serverFarmDom.TestApp.ProjectId,
+            accessTokenDom.AccessTokenId,
+            new AccessTokenUpdateParams {
                 IsEnabled = new PatchOfBoolean { Value = false }
             });
 
@@ -32,8 +32,7 @@ public class AgentAccessTest
 
         // create accessTokenModel
         var accessTokenDom = await farm.CreateAccessToken(
-            new AccessTokenCreateParams
-            {
+            new AccessTokenCreateParams {
                 ExpirationTime = new DateTime(1900, 1, 1)
             });
 
@@ -45,8 +44,7 @@ public class AgentAccessTest
     public async Task Access_token_expired_by_lifetime()
     {
         var serverFarmDom = await ServerFarmDom.Create();
-        var accessTokenDom = await serverFarmDom.CreateAccessToken(new AccessTokenCreateParams
-        {
+        var accessTokenDom = await serverFarmDom.CreateAccessToken(new AccessTokenCreateParams {
             Lifetime = 1
         });
 
@@ -89,8 +87,10 @@ public class AgentAccessTest
         dateTime = DateTime.UtcNow; // for precious
         await session.AddUsage();
         await accessTokenDom.Reload();
-        Assert.IsTrue(accessTokenDom.AccessToken.FirstUsedTime < dateTime, $"FirstUsedTime: {accessTokenDom.AccessToken.FirstUsedTime}, dateTime: {dateTime}");
-        Assert.IsTrue(accessTokenDom.AccessToken.LastUsedTime < dateTime, $"FirstUsedTime: {accessTokenDom.AccessToken.FirstUsedTime}, dateTime: {dateTime}");
+        Assert.IsTrue(accessTokenDom.AccessToken.FirstUsedTime < dateTime,
+            $"FirstUsedTime: {accessTokenDom.AccessToken.FirstUsedTime}, dateTime: {dateTime}");
+        Assert.IsTrue(accessTokenDom.AccessToken.LastUsedTime < dateTime,
+            $"FirstUsedTime: {accessTokenDom.AccessToken.FirstUsedTime}, dateTime: {dateTime}");
 
         //-----------
         // Check: Second usage should update Access LastUsedTime but not FirstUsedTime
@@ -104,7 +104,7 @@ public class AgentAccessTest
         Assert.IsTrue(accessTokenDom.AccessToken.LastUsedTime > dateTime);
 
         //-----------
-        // Check: AddUsage should not update Access token UsedTime due performance consideration
+        // Check: AddUsage should not update Access token LastUsedTime due performance consideration
         //-----------
         oldAccessToken = accessTokenDom.AccessToken;
         await Task.Delay(1000);

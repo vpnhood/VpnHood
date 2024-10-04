@@ -13,6 +13,7 @@ public class SyncService(
     : IGrayMintJob
 {
     public int BatchCount { get; set; } = 1000;
+
     public async Task Sync()
     {
         logger.LogInformation("Start syncing the report database...");
@@ -31,8 +32,7 @@ public class SyncService(
 
     private async Task SyncAccessUsages()
     {
-        while (true)
-        {
+        while (true) {
             // fetch new items
             logger.LogTrace("Loading old AccessUsages from agent database...");
             var items = await vhContext
@@ -46,7 +46,7 @@ public class SyncService(
                 return;
 
             // add to report
-            await reportWriterService.Write(items.Select(x=>x.ToArchive()));
+            await reportWriterService.Write(items.Select(x => x.ToArchive()));
 
             // remove synced items
             logger.LogInformation("Removing old synced AccessUsages from agent database. Count: {Count}", items.Length);
@@ -68,15 +68,13 @@ public class SyncService(
 
     private async Task SyncServerStatuses()
     {
-        while (true)
-        {
+        while (true) {
             // fetch new items
             logger.LogTrace("Loading old ServerStatuses from agent database...");
             var items = await vhContext
                 .ServerStatuses
                 .Where(x => !x.IsLast)
-                .Select(x=>new
-                {
+                .Select(x => new {
                     x.Server!.ServerFarmId,
                     ServerStatus = x
                 })
@@ -88,10 +86,11 @@ public class SyncService(
                 return;
 
             // add to report
-            await reportWriterService.Write(items.Select(x=>x.ServerStatus.ToArchive(x.ServerFarmId)));
+            await reportWriterService.Write(items.Select(x => x.ServerStatus.ToArchive(x.ServerFarmId)));
 
             // remove synced items
-            logger.LogInformation("Removing old synced ServerStatuses from agent database. Count: {Count}", items.Length);
+            logger.LogInformation("Removing old synced ServerStatuses from agent database. Count: {Count}",
+                items.Length);
             var ids = items.Select(x => x.ServerStatus.ServerStatusId);
             await vhContext.ServerStatuses
                 .Where(x => ids.Contains(x.ServerStatusId))
@@ -106,8 +105,7 @@ public class SyncService(
 
     private async Task SyncSessions()
     {
-        while (true)
-        {
+        while (true) {
             // fetch new items
             logger.LogTrace("Loading old Sessions from agent database...");
             var items = await vhContext
@@ -120,19 +118,18 @@ public class SyncService(
                 return;
 
             // add to report
-            await reportWriterService.Write(items.Select(x=>x.ToArchive()));
+            await reportWriterService.Write(items.Select(x => x.ToArchive()));
 
             logger.LogInformation($"Removing old synced Sessions from agent database. Count: {items.Length}");
             var ids = items.Select(x => x.SessionId);
             await vhContext.Sessions
                 .Where(x => ids.Contains(x.SessionId))
                 .ExecuteDeleteAsync();
-            
+
             vhContext.ChangeTracker.Clear();
             if (items.Length < BatchCount)
                 break;
             await Task.Delay(TimeSpan.FromSeconds(5));
         }
     }
-
 }

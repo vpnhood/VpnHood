@@ -4,15 +4,15 @@ using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.AccessTokens;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Repos;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Services;
 
 public class AccessTokensService(
-    ReportUsageService reportUsageService, 
+    ReportUsageService reportUsageService,
     AgentCacheClient agentCacheClient,
     VhRepo vhRepo)
 {
@@ -22,8 +22,7 @@ public class AccessTokensService(
 
         // create support id
         var supportCode = await vhRepo.AccessTokenGetMaxSupportCode(projectId) + 1;
-        var accessToken = new AccessTokenModel
-        {
+        var accessToken = new AccessTokenModel {
             AccessTokenId = createParams.AccessTokenId ?? Guid.NewGuid(),
             ProjectId = projectId,
             ServerFarmId = serverFarm.ServerFarmId,
@@ -33,6 +32,7 @@ public class AccessTokensService(
             MaxDevice = createParams.MaxDevice,
             ExpirationTime = createParams.ExpirationTime,
             Lifetime = createParams.Lifetime,
+            Tags = ManagerUtils.TagsToString(createParams.Tags),
             IsPublic = createParams.IsPublic,
             Secret = createParams.Secret ?? GmUtil.GenerateKey(),
             SupportCode = supportCode,
@@ -56,7 +56,8 @@ public class AccessTokensService(
     {
         // validate accessTokenModel.ServerFarmId
         var serverFarm = updateParams.ServerFarmId != null
-            ? await vhRepo.ServerFarmGet(projectId, updateParams.ServerFarmId) : null;
+            ? await vhRepo.ServerFarmGet(projectId, updateParams.ServerFarmId)
+            : null;
 
         // update
         var accessToken = await vhRepo.AccessTokenGet(projectId, accessTokenId, includeFarm: true);
@@ -65,11 +66,11 @@ public class AccessTokensService(
         if (updateParams.Lifetime != null) accessToken.Lifetime = updateParams.Lifetime;
         if (updateParams.MaxDevice != null) accessToken.MaxDevice = updateParams.MaxDevice;
         if (updateParams.MaxTraffic != null) accessToken.MaxTraffic = updateParams.MaxTraffic;
+        if (updateParams.Tags != null) accessToken.Tags = ManagerUtils.TagsToString(updateParams.Tags.Value);
         if (updateParams.Description != null) accessToken.Description = updateParams.Description;
         if (updateParams.IsEnabled != null) accessToken.IsEnabled = updateParams.IsEnabled;
         if (updateParams.AdRequirement != null) accessToken.AdRequirement = updateParams.AdRequirement;
-        if (updateParams.ServerFarmId != null)
-        {
+        if (updateParams.ServerFarmId != null) {
             accessToken.ServerFarmId = updateParams.ServerFarmId;
             accessToken.ServerFarm = serverFarm;
         }
@@ -88,11 +89,11 @@ public class AccessTokensService(
     public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
     {
         var accessToken = await vhRepo.AccessTokenGet(projectId, accessTokenId, includeFarm: true);
+        ArgumentNullException.ThrowIfNull(accessToken.ServerFarm);
 
         // create token
-        var token = new Token
-        {
-            ServerToken = FarmTokenBuilder.GetRequiredServerToken(accessToken.ServerFarm?.TokenJson),
+        var token = new Token {
+            ServerToken = accessToken.ServerFarm.GetRequiredServerToken(),
             Secret = accessToken.Secret,
             TokenId = accessToken.AccessTokenId.ToString(),
             Name = accessToken.AccessTokenName,
@@ -103,7 +104,8 @@ public class AccessTokensService(
         return token.ToAccessKey();
     }
 
-    public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId, DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
+    public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId, DateTime? usageBeginTime = null,
+        DateTime? usageEndTime = null)
     {
         var items = await List(projectId, accessTokenId: accessTokenId,
             usageBeginTime: usageBeginTime, usageEndTime: usageEndTime);
@@ -115,32 +117,29 @@ public class AccessTokensService(
         DateTime? usageBeginTime = null, DateTime? usageEndTime = null,
         int recordIndex = 0, int recordCount = 51)
     {
-
         var accessTokenViews = await vhRepo.AccessTokenList(projectId,
             accessTokenId: accessTokenId, serverFarmId: serverFarmId,
             search: search, recordIndex: recordIndex, recordCount: recordCount);
 
         var results = accessTokenViews
             .Items
-            .Select(x => new AccessTokenData(x.AccessToken.ToDto(x.ServerFarmName))
-            {
+            .Select(x => new AccessTokenData(x.AccessToken.ToDto(x.ServerFarmName)) {
                 Access = x.Access?.ToDto()
             })
             .ToArray();
 
         // fill usage if requested
-        if (usageBeginTime != null)
-        {
+        if (usageBeginTime != null) {
             var accessTokenIds = results.Select(x => x.AccessToken.AccessTokenId).ToArray();
-            var usages = await reportUsageService.GetAccessTokensUsage(projectId, accessTokenIds, serverFarmId, usageBeginTime, usageEndTime);
+            var usages = await reportUsageService.GetAccessTokensUsage(projectId, accessTokenIds, serverFarmId,
+                usageBeginTime, usageEndTime);
 
             foreach (var result in results)
                 if (usages.TryGetValue(result.AccessToken.AccessTokenId, out var usage))
                     result.Usage = usage;
         }
 
-        var listResult = new ListResult<AccessTokenData>
-        {
+        var listResult = new ListResult<AccessTokenData> {
             Items = results,
             TotalCount = accessTokenViews.TotalCount
         };

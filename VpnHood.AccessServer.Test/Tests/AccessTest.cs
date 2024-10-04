@@ -1,19 +1,21 @@
-﻿using System.Globalization;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Globalization;
+using System.Text;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
+
 [TestClass]
 public class AccessTest
 {
-   
+    
+
     [TestMethod]
     public async Task Foo()
     {
         await Task.Delay(0);
-        Console.WriteLine(new RegionInfo("us").Name);
     }
 
     [TestMethod]
@@ -26,7 +28,8 @@ public class AccessTest
         await sessionDom.AddUsage(20, 10);
         await farm.TestApp.FlushCache();
 
-        var accessDatas = await farm.TestApp.AccessesClient.ListAsync(farm.TestApp.ProjectId, accessTokenDom.AccessTokenId);
+        var accessDatas =
+            await farm.TestApp.AccessesClient.ListAsync(farm.TestApp.ProjectId, accessTokenDom.AccessTokenId);
         var accessData = accessDatas.Items.Single(x => x.Access.AccessTokenId == accessTokenDom.AccessTokenId);
         Assert.AreEqual(30, accessData.Access.TotalTraffic);
         Assert.AreEqual(30, accessData.Access.CycleTraffic);
@@ -52,8 +55,8 @@ public class AccessTest
         // Create accessToken1 public in ServerFarm1
         // ----------------
         var sampleAccessToken1 = await sample1.CreateAccessToken(true);
-        var traffic = new Traffic { Received = 1000, Sent = 500};
-        
+        var traffic = new Traffic { Received = 1000, Sent = 500 };
+
         // accessToken1 - sessions1
         actualAccessCount++;
         usageCount += 2;
@@ -97,7 +100,7 @@ public class AccessTest
         sessionDom = await accessToken2.CreateSession();
         await sessionDom.AddUsage(traffic);
         await sessionDom.AddUsage(traffic);
-        
+
         // ----------------
         // Create accessToken3 private in ServerFarm2
         // ----------------
@@ -125,10 +128,10 @@ public class AccessTest
 
         Assert.IsTrue(res.Items.All(x => x.Access.LastUsedTime >= sample1.CreatedTime.AddSeconds(-1)));
         Assert.AreEqual(actualAccessCount, res.Items.Count);
-        Assert.AreEqual(deviceCount, res.Items.Count(x => x.Device!=null));
-        Assert.AreEqual(1, res.Items.Count(x => x.Device==null));
-        Assert.AreEqual(traffic.Sent * usageCount,  res.Items.Sum(x => x.Access.CycleSentTraffic));
-        Assert.AreEqual(traffic.Received * usageCount,  res.Items.Sum(x => x.Access.CycleReceivedTraffic));
+        Assert.AreEqual(deviceCount, res.Items.Count(x => x.Device != null));
+        Assert.AreEqual(1, res.Items.Count(x => x.Device == null));
+        Assert.AreEqual(traffic.Sent * usageCount, res.Items.Sum(x => x.Access.CycleSentTraffic));
+        Assert.AreEqual(traffic.Received * usageCount, res.Items.Sum(x => x.Access.CycleReceivedTraffic));
 
         // Check: Filter by Group
         res = await testApp2.AccessesClient.ListAsync(testApp2.ProjectId, serverFarmId: sample2.ServerFarmId);

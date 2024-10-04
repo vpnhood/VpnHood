@@ -9,7 +9,8 @@ namespace VpnHood.AccessServer.Report;
 
 public static class VhReportExtension
 {
-    public static IServiceCollection AddVhReportServices(this IServiceCollection services, ReportServiceOptions reportServiceOptions)
+    public static IServiceCollection AddVhReportServices(this IServiceCollection services,
+        ReportServiceOptions reportServiceOptions)
     {
         services.AddDbContext<VhReportContext>(options => options.UseNpgsql(reportServiceOptions.ConnectionString));
         services.AddScoped<ReportUsageService>();

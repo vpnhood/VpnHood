@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
+using Namotion.Reflection;
 using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Test.Helper;
@@ -16,29 +17,33 @@ namespace VpnHood.AccessServer.Test;
 public class AgentTestApp : IDisposable
 {
     public WebApplicationFactory<Agent.Program> AgentApp { get; }
-    public IServiceScope AgentScope { get; }
-    public CacheService CacheService => AgentScope.ServiceProvider.GetRequiredService<CacheService>();
+    public IServiceScope Scope { get; }
+    public CacheService CacheService => Scope.ServiceProvider.GetRequiredService<CacheService>();
     public AgentOptions AgentOptions => AgentApp.Services.GetRequiredService<IOptions<AgentOptions>>().Value;
     public HttpClient HttpClient { get; }
 
     public AgentTestApp(Dictionary<string, string?> appSettings, string environment)
     {
         AgentApp = new WebApplicationFactory<Agent.Program>()
-            .WithWebHostBuilder(builder =>
-            {
+            .WithWebHostBuilder(builder => {
                 foreach (var appSetting in appSettings)
                     builder.UseSetting(appSetting.Key, appSetting.Value);
                 builder.UseSetting(nameof(AgentOptions.AllowRedirect), "false");
 
                 builder.UseEnvironment(environment);
-                builder.ConfigureServices(services =>
-                {
+                builder.ConfigureServices(services => {
                     services.AddKeyedSingleton<IIpLocationProvider,
-                        TestIpLocationProvider>(Agent.Program.LocationProviderServer, (_, _) => new TestIpLocationProvider());
+                        TestIpLocationProvider>(Agent.Program.LocationProviderServer,
+                        (_, _) => new TestIpLocationProvider());
+
+                    if (!appSettings.TryGetValue("UseTestDeviceLocationProvider", out var result) || bool.Parse(result!))
+                        services.AddKeyedSingleton<IIpLocationProvider,
+                            TestIpLocationProvider>(Agent.Program.LocationProviderDevice,
+                            (_, _) => new TestIpLocationProvider());
                 });
             });
 
-        AgentScope = AgentApp.Services.CreateScope();
+        Scope = AgentApp.Services.CreateScope();
         AgentOptions.AllowRedirect = false;
 
         HttpClient = AgentApp.CreateClient();

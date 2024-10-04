@@ -7,7 +7,7 @@ public class CertificateModel
     public required Guid ServerFarmId { get; init; }
     public required string CommonName { get; set; }
     public required byte[] RawData { get; set; }
-    public required DateTime IssueTime { get; set; } 
+    public required DateTime IssueTime { get; set; }
     public required DateTime ExpirationTime { get; set; }
     public required string Thumbprint { get; set; }
     public required DateTime CreatedTime { get; set; }
@@ -20,7 +20,7 @@ public class CertificateModel
     public required int ValidateErrorCount { get; set; }
     public required string? ValidateError { get; set; }
     public required DateTime? ValidateErrorTime { get; set; }
-    public required bool IsDefault { get; set; }
+    public required bool IsInToken { get; set; }
     public required bool IsDeleted { get; set; }
 
     public virtual ServerFarmModel? ServerFarm { get; set; }

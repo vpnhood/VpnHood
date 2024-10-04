@@ -11,8 +11,7 @@ public class CacheTest
     [TestMethod]
     public async Task Auto_Flush()
     {
-        using var testApp = await TestApp.Create(appSettings: new Dictionary<string, string?>
-        {
+        using var testApp = await TestApp.Create(appSettings: new Dictionary<string, string?> {
             ["App:SaveCacheInterval"] = "00:00:00.100"
         });
 
@@ -21,8 +20,9 @@ public class CacheTest
         var sessionDom = await accessTokenDom.CreateSession();
         await sessionDom.CloseSession();
 
-        await TestUtil.AssertEqualsWait(true, 
-            async () => await testApp.VhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom.SessionId && x.EndTime != null), 
+        await TestUtil.AssertEqualsWait(true,
+            async () => await testApp.VhContext.Sessions.AnyAsync(x =>
+                x.SessionId == sessionDom.SessionId && x.EndTime != null),
             "Session has not been synced yet.");
     }
 
@@ -45,6 +45,7 @@ public class CacheTest
         // session 1 & 2 must exists
         await farmDom.TestApp.FlushCache();
 
-        Assert.IsTrue(await farmDom.TestApp.VhContext.Accesses.AnyAsync(x=>x.AccessTokenId== accessTokenDom1.AccessTokenId));
+        Assert.IsTrue(
+            await farmDom.TestApp.VhContext.Accesses.AnyAsync(x => x.AccessTokenId == accessTokenDom1.AccessTokenId));
     }
 }

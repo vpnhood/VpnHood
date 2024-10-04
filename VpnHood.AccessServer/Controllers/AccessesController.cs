@@ -14,7 +14,6 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/v{version:apiVersion}/projects/{projectId}/accesses")]
 public class AccessesController(VhContext vhContext) : ControllerBase
 {
-
     [HttpGet("{accessId:guid}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<AccessData> Get(Guid projectId, Guid accessId)
@@ -25,7 +24,8 @@ public class AccessesController(VhContext vhContext) : ControllerBase
 
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public async Task<ListResult<AccessData>> List(Guid projectId, Guid? accessTokenId = null, Guid? serverFarmId = null, Guid? accessId = null,
+    public async Task<ListResult<AccessData>> List(Guid projectId, Guid? accessTokenId = null,
+        Guid? serverFarmId = null, Guid? accessId = null,
         DateTime? beginTime = null, DateTime? endTime = null,
         int recordIndex = 0, int recordCount = 300)
     {
@@ -54,13 +54,11 @@ public class AccessesController(VhContext vhContext) : ControllerBase
                 accessModel.Device?.ToDto()))
             .ToArray();
 
-        var listResult = new ListResult<AccessData>
-        {
+        var listResult = new ListResult<AccessData> {
             Items = results,
             TotalCount = results.Length < recordCount ? recordIndex + results.Length : await baseQuery.LongCountAsync()
         };
 
         return listResult;
     }
-
 }

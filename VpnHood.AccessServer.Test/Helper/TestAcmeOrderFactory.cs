@@ -1,5 +1,4 @@
-﻿using VpnHood.AccessServer.Dtos.Certificates;
-using VpnHood.AccessServer.Services.Acme;
+﻿using VpnHood.AccessServer.Providers.Acme;
 
 namespace VpnHood.AccessServer.Test.Helper;
 
@@ -10,9 +9,9 @@ public class TestAcmeOrderFactory : IAcmeOrderFactory
         return Task.FromResult(Guid.NewGuid().ToString());
     }
 
-    public Task<IAcmeOrderService> CreateOrder(string accountPem, CertificateSigningRequest csr)
+    public Task<IAcmeOrderProvider> CreateOrder(string accountPem, CertificateSigningRequest csr)
     {
-        var orderService = new TestAcmeOrderService(csr);
-        return Task.FromResult((IAcmeOrderService)orderService);
+        var orderService = new TestAcmeOrderProvider(csr);
+        return Task.FromResult((IAcmeOrderProvider)orderService);
     }
 }

@@ -8,7 +8,6 @@ using Microsoft.Extensions.Options;
 
 namespace VpnHood.AccessServer.Agent.Controllers;
 
-
 [ApiController]
 [Route("/api/system")]
 [Authorize(AgentPolicy.SystemPolicy)]
@@ -42,8 +41,7 @@ public class SystemController(
         claimsIdentity.AddClaim(new Claim("usage_type", "system"));
         claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, "system"));
         claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, "System"));
-        var apiKey = await grayMintAuthentication.CreateApiKey(claimsIdentity, new ApiKeyOptions
-        {
+        var apiKey = await grayMintAuthentication.CreateApiKey(claimsIdentity, new ApiKeyOptions {
             AccessTokenExpirationTime = DateTime.UtcNow.AddYears(13)
         });
         return apiKey;

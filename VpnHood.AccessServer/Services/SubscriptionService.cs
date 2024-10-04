@@ -26,34 +26,53 @@ public class SubscriptionService(
 
     public async Task AuthorizeCreateServerFarm(Guid projectId)
     {
-        if (await IsFreePlan(projectId) && (await vhRepo.ServerFarmNames(projectId)).Length >= QuotaConstants.ServerFarmCount)
+        if (await IsFreePlan(projectId) &&
+            (await vhRepo.ServerFarmNames(projectId)).Length >= QuotaConstants.ServerFarmCount)
             throw new QuotaException(nameof(VhContext.ServerFarms), QuotaConstants.ServerFarmCount);
     }
 
     public async Task AuthorizeCreateServer(Guid projectId)
     {
         if (await IsFreePlan(projectId) &&
-            vhContext.Servers.Count(server => server.ProjectId == projectId && !server.IsDeleted) >= QuotaConstants.ServerCount)
+            await vhContext.Servers.CountAsync(server => server.ProjectId == projectId && !server.IsDeleted) >=
+            QuotaConstants.ServerCount)
             throw new QuotaException(nameof(VhContext.Servers), QuotaConstants.ServerCount);
     }
 
     public async Task AuthorizeCreateAccessToken(Guid projectId)
     {
         if (await IsFreePlan(projectId) &&
-            vhContext.AccessTokens.Count(accessToken => accessToken.ProjectId == projectId && !accessToken.IsDeleted) >= QuotaConstants.AccessTokenCount)
+            await vhContext.AccessTokens.CountAsync(accessToken => accessToken.ProjectId == projectId && !accessToken.IsDeleted) >=
+            QuotaConstants.AccessTokenCount)
             throw new QuotaException(nameof(VhContext.AccessTokens), QuotaConstants.AccessTokenCount);
     }
 
     public async Task AuthorizeAddCertificate(Guid projectId)
     {
         if (await IsFreePlan(projectId) &&
-            vhContext.Certificates.Count(x => x.ProjectId == projectId && !x.IsDeleted) >= QuotaConstants.CertificateCount)
+            await vhContext.Certificates.CountAsync(x => x.ProjectId == projectId && !x.IsDeleted) >=
+            QuotaConstants.CertificateCount)
             throw new QuotaException(nameof(VhContext.Certificates), QuotaConstants.CertificateCount);
+    }
+    public async Task AuthorizeAddFarmTokenRepo(Guid projectId, Guid serverFarmId)
+    {
+        var repoNames = await vhRepo.FarmTokenRepoListNames(projectId, serverFarmId: serverFarmId);
+        if (repoNames.Length >= QuotaConstants.FarmTokenRepoCount)
+            throw new QuotaException(nameof(VhContext.FarmTokenRepos), QuotaConstants.FarmTokenRepoCount);
+    }
+
+    public async Task AuthorizeCreateClientFilter(Guid projectId)
+    {
+        if (await IsFreePlan(projectId)) {
+            var list = await vhRepo.ClientFilterList(projectId);
+            if (list.Length >= QuotaConstants.ClientFilterCount)
+                throw new QuotaException(nameof(VhContext.ClientFilters), QuotaConstants.ClientFilterCount);
+        }
     }
 
     private async Task<bool> IsFreePlan(Guid projectId)
     {
-        var project = await vhContext.Projects.SingleAsync(project => project.ProjectId == projectId);
+        var project = await vhRepo.ProjectGet(projectId);
         return project.SubscriptionType == SubscriptionType.Free;
     }
 
@@ -68,6 +87,8 @@ public class SubscriptionService(
             : QuotaConstants.UsageQueryTimeSpanPremium;
 
         if (requestTimeSpan > maxTimeSpan)
-            throw new QuotaException("UsageQuery", (long)maxTimeSpan.TotalHours, "The usage query period is not supported by your plan.");
+            throw new QuotaException("UsageQuery", (long)maxTimeSpan.TotalHours,
+                "The usage query period is not supported by your plan.");
     }
+
 }

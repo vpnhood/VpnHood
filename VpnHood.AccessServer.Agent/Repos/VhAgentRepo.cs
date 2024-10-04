@@ -3,6 +3,7 @@ using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Agent.Repos;
 
@@ -18,19 +19,17 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         vhContext.Database.SetCommandTimeout(fromMinutes);
     }
 
-    public async Task<InitCache> GetInitView(DateTime minServerUsedTime)
+    public async Task<InitCache> GetInitView(DateTime minServerUsedTime, DateTime minSessionUsedTime)
     {
         vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
         var autoServerLocation = ServerLocationInfo.Auto;
 
         // Statuses. Load Deleted Servers and Projects too but filter by minServerUsedTime
-        logger.LogTrace("Loading the recent server status, farms and projects ...");
+        logger.LogInformation("Loading the recent server status, farms and projects ...");
         var statuses = await vhContext.ServerStatuses
             .Where(x => x.IsLast && x.CreatedTime > minServerUsedTime)
-            .Select(x => new
-            {
-                Server = new ServerCache
-                {
+            .Select(x => new {
+                Server = new ServerCache {
                     ProjectId = x.ProjectId,
                     ServerId = x.ServerId,
                     ServerName = x.Server!.ServerName,
@@ -46,20 +45,21 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ServerFarmName = x.Server.ServerFarm!.ServerFarmName,
                     ServerProfileId = x.Server.ServerFarm!.ServerProfileId,
                     ServerStatus = x,
-                    LocationInfo = x.Server.Location != null ? ServerLocationInfo.Parse(x.Server.Location.ToPath()) : autoServerLocation,
+                    LocationInfo = x.Server.Location != null
+                        ? ServerLocationInfo.Parse(x.Server.Location.ToPath())
+                        : autoServerLocation,
                     AllowInAutoLocation = x.Server!.AllowInAutoLocation,
-                    LogicalCoreCount = x.Server.LogicalCoreCount ?? 1
+                    LogicalCoreCount = x.Server.LogicalCoreCount ?? 1,
+                    Power = x.Server.Power
                 },
-                Farm = new ServerFarmCache
-                {
+                Farm = new ServerFarmCache {
                     ProjectId = x.Server.ServerFarm.ProjectId,
                     ServerFarmId = x.Server.ServerFarm.ServerFarmId,
                     ServerFarmName = x.Server.ServerFarm.ServerFarmName,
                     TokenJson = x.Server.ServerFarm.TokenJson,
                     PushTokenToClient = x.Server.ServerFarm.PushTokenToClient
                 },
-                Project = new ProjectCache
-                {
+                Project = new ProjectCache {
                     GaMeasurementId = x.Server.Project!.GaMeasurementId,
                     ProjectId = x.Server.ProjectId,
                     GaApiSecret = x.Server.Project.GaApiSecret,
@@ -71,13 +71,11 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .ToArrayAsync();
 
         // Sessions
-        logger.LogTrace("Loading the sessions and accesses ...");
-        var sessions = await vhContext.Sessions
-            .Where(session => !session.IsArchived)
-            .Select(x => new
-            {
-                Session = new SessionCache
-                {
+        logger.LogInformation("Loading the sessions and accesses ...");
+        var sessionsQuery = vhContext.Sessions
+            .Where(session => session.EndTime == null && session.LastUsedTime > minSessionUsedTime)
+            .Select(x => new {
+                Session = new SessionCache {
                     ProjectId = x.ProjectId,
                     SessionId = x.SessionId,
                     AccessId = x.AccessId,
@@ -101,8 +99,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     DeviceIp = x.DeviceIp,
                     IsAdReward = x.IsAdReward
                 },
-                Access = new AccessCache
-                {
+                Access = new AccessCache {
                     AccessId = x.AccessId,
                     ExpirationTime = x.Access!.AccessToken!.ExpirationTime,
                     DeviceId = x.Access.DeviceId,
@@ -125,11 +122,12 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     IsAccessTokenEnabled = !x.Access.AccessToken.IsDeleted && x.Access.AccessToken.IsEnabled
                 }
             })
-            .AsNoTracking()
+            .AsNoTracking();
+
+        var sessions = await sessionsQuery
             .ToArrayAsync();
 
-        var ret = new InitCache
-        {
+        var ret = new InitCache {
             Servers = statuses.Select(x => x.Server).ToArray(),
             Farms = statuses.Select(x => x.Farm).DistinctBy(x => x.ServerFarmId).ToArray(),
             Projects = statuses.Select(x => x.Project).DistinctBy(x => x.ProjectId).ToArray(),
@@ -146,8 +144,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         return vhContext.Servers
             .Where(x => serverIds == null || serverIds.Contains(x.ServerId))
             .Include(x => x.ServerStatuses!.Where(y => y.IsLast == true))
-            .Select(x => new ServerCache
-            {
+            .Select(x => new ServerCache {
                 ProjectId = x.ProjectId,
                 ServerId = x.ServerId,
                 ServerFarmId = x.ServerFarmId,
@@ -165,7 +162,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 ServerStatus = x.ServerStatuses!.FirstOrDefault(),
                 LocationInfo = x.Location != null ? ServerLocationInfo.Parse(x.Location.ToPath()) : autoServerLocation,
                 AllowInAutoLocation = x.AllowInAutoLocation,
-                LogicalCoreCount = x.LogicalCoreCount ?? 1
+                LogicalCoreCount = x.LogicalCoreCount ?? 1,
+                Power = x.Power
             })
             .AsNoTracking()
             .ToArrayAsync();
@@ -182,8 +180,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
     {
         return vhContext.Projects
             .Where(project => project.ProjectId == projectId)
-            .Select(project => new ProjectCache
-            {
+            .Select(project => new ProjectCache {
                 ProjectId = project.ProjectId,
                 ProjectName = project.ProjectName,
                 GaMeasurementId = project.GaMeasurementId,
@@ -198,8 +195,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
     {
         return await vhContext.Accesses
             .Where(x => x.AccessId == accessId)
-            .Select(x => new AccessCache
-            {
+            .Select(x => new AccessCache {
                 AccessId = x.AccessId,
                 DeviceId = x.DeviceId,
                 LastUsedTime = x.LastUsedTime,
@@ -229,8 +225,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
     {
         return await vhContext.Accesses
             .Where(x => x.AccessTokenId == accessTokenId && x.DeviceId == deviceId)
-            .Select(x => new AccessCache
-            {
+            .Select(x => new AccessCache {
                 AccessId = x.AccessId,
                 DeviceId = x.DeviceId,
                 LastUsedTime = x.LastUsedTime,
@@ -262,8 +257,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .Where(x => x.AccessTokenId == accessTokenId)
             .SingleAsync();
 
-        var access = new AccessCache
-        {
+        var access = new AccessCache {
             AccessId = Guid.NewGuid(),
             AccessTokenId = accessTokenId,
             DeviceId = deviceId,
@@ -292,8 +286,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
 
     public void SessionUpdate(SessionCache session)
     {
-        var model = new SessionModel
-        {
+        var model = new SessionModel {
             SessionId = session.SessionId,
             ProjectId = session.ProjectId,
             AccessId = session.AccessId,
@@ -328,10 +321,55 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         entry.Property(x => x.IsAdReward).IsModified = true;
     }
 
+    public SessionCache SessionGet(long sessionId)
+    {
+        return vhContext.Sessions
+            .Where(x => x.SessionId == sessionId)
+            .Select(x => new SessionCache {
+                ProjectId = x.ProjectId,
+                SessionId = x.SessionId,
+                AccessId = x.AccessId,
+                ServerId = x.ServerId,
+                DeviceId = x.DeviceId,
+                ExtraData = x.ExtraData,
+                CreatedTime = x.CreatedTime,
+                LastUsedTime = x.LastUsedTime,
+                AdExpirationTime = x.AdExpirationTime,
+                ClientVersion = x.ClientVersion,
+                EndTime = x.EndTime,
+                ErrorCode = x.ErrorCode,
+                ErrorMessage = x.ErrorMessage,
+                SessionKey = x.SessionKey,
+                SuppressedBy = x.SuppressedBy,
+                SuppressedTo = x.SuppressedTo,
+                IsArchived = x.IsArchived,
+                ClientId = x.Device!.ClientId,
+                UserAgent = x.Device.UserAgent,
+                Country = x.Device.Country,
+                DeviceIp = x.DeviceIp,
+                IsAdReward = x.IsAdReward
+            })
+            .AsNoTracking()
+            .Single();
+    }
+
+    public Task<int> SessionCloseTimeouts(DateTime minSessionTime)
+    {
+        return vhContext.Sessions
+            .Where(x => x.EndTime == null && x.LastUsedTime < minSessionTime)
+            .ExecuteUpdateAsync(setPropertyCalls =>
+                setPropertyCalls
+                    .SetProperty(x => x.EndTime, x => DateTime.UtcNow)
+                    .SetProperty(x => x.ErrorCode, x => SessionErrorCode.SessionClosed)
+                    .SetProperty(x => x.ErrorMessage, x => "timeout")
+                    .SetProperty(x => x.IsArchived, x => true)
+            );
+    }
+
+
     public void AccessUpdate(AccessCache access)
     {
-        var model = new AccessModel
-        {
+        var model = new AccessModel {
             AccessId = access.AccessId,
             AccessTokenId = access.AccessTokenId,
             DeviceId = access.DeviceId,
@@ -386,8 +424,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
     {
         return vhContext.ServerFarms
             .Where(farm => farm.ServerFarmId == farmId)
-            .Select(farm => new ServerFarmCache
-            {
+            .Select(farm => new ServerFarmCache {
                 ProjectId = farm.ProjectId,
                 ServerFarmId = farm.ServerFarmId,
                 ServerFarmName = farm.ServerFarmName,
@@ -398,22 +435,21 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .SingleAsync();
     }
 
-    public async Task<ServerFarmModel> ServerFarmGet(Guid projectId, Guid serverFarmId,
-        bool includeServersAndAccessPoints = false, bool includeServerProfile = true,
-        bool includeCertificate = false, bool includeCertificates = false
-        )
+    public async Task<ServerFarmModel> ServerFarmGet(Guid serverFarmId, bool includeServersAndAccessPoints,
+        bool includeCertificates, bool includeServerProfile = true, bool includeTokenRepos = true)
     {
         var query = vhContext.ServerFarms
-            .Where(farm => farm.ProjectId == projectId && !farm.IsDeleted)
+            .Where(farm => farm.Project!.DeletedTime == null)
             .Where(farm => farm.ServerFarmId == serverFarmId);
+
+        if (includeTokenRepos)
+            query = query.Include(x => x.TokenRepos);
 
         if (includeServerProfile)
             query = query.Include(x => x.ServerProfile);
 
         if (includeCertificates)
             query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted));
-        else if (includeCertificate)
-            query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted && y.IsDefault));
 
         if (includeServersAndAccessPoints)
             query = query
@@ -424,15 +460,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 .AsSingleQuery();
 
         var farmModel = await query.SingleAsync();
-        FillCertificate(farmModel);
         return farmModel;
     }
-
-    private static void FillCertificate(ServerFarmModel serverFarmModel)
-    {
-        serverFarmModel.Certificate = serverFarmModel.Certificates?.SingleOrDefault(x => x.IsDefault);
-    }
-
 
     public ValueTask<ServerModel?> FindServerAsync(Guid serverServerId)
     {
@@ -442,7 +471,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
     public async Task AddAndSaveServerStatuses(ServerStatusBaseModel[] serverStatuses)
     {
         await using var transaction = vhContext.Database.CurrentTransaction == null
-            ? await vhContext.Database.BeginTransactionAsync() : null;
+            ? await vhContext.Database.BeginTransactionAsync()
+            : null;
 
         // remove old IsLast
         var serverIds = serverStatuses.Select(x => x.ServerId).Distinct();
@@ -453,8 +483,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 setPropertyCalls.SetProperty(serverStatus => serverStatus.IsLast, serverStatus => false));
 
         var models = serverStatuses.Select(x =>
-            new ServerStatusModel
-            {
+            new ServerStatusModel {
                 ServerStatusId = 0,
                 IsLast = true,
                 CreatedTime = x.CreatedTime,
@@ -476,7 +505,6 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
 
         if (transaction != null)
             await vhContext.Database.CommitTransactionAsync();
-
     }
 
     public Task<IpLockModel?> IpLockFind(Guid projectId, string clientIp)
@@ -495,12 +523,12 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .SingleOrDefaultAsync();
     }
 
-    public Task<LocationModel?> LocationFind(string countryCode, string? regionCode, string? cityCode)
+    public Task<LocationModel?> LocationFind(string countryCode, string? regionName, string? cityName)
     {
         return vhContext.Locations
             .Where(x => x.CountryCode == countryCode)
-            .Where(x => x.RegionCode == (regionCode ?? "-"))
-            .Where(x => x.CityCode == (cityCode ?? "-"))
+            .Where(x => x.RegionName == (regionName ?? "-"))
+            .Where(x => x.CityName == (cityName ?? "-"))
             .SingleOrDefaultAsync();
     }
 
@@ -527,4 +555,13 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         var entry = await vhContext.Devices.AddAsync(device);
         return entry.Entity;
     }
+
+    public Task<FarmTokenRepoModel[]> FarmTokenRepoListPendingUpload()
+    {
+        return vhContext.FarmTokenRepos
+            .Include(x => x.ServerFarm)
+            .Where(x => x.IsPendingUpload)
+            .ToArrayAsync();
+    }
+
 }

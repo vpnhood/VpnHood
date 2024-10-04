@@ -3,6 +3,7 @@
 public class Certificate
 {
     public required Guid CertificateId { get; init; }
+    public required bool IsInToken { get; init; }
     public required string CommonName { get; init; }
     public required DateTime IssueTime { get; init; }
     public required DateTime ExpirationTime { get; init; }

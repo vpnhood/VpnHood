@@ -6,5 +6,5 @@ public class ServerFarmCache
     public required Guid ServerFarmId { get; init; }
     public required string ServerFarmName { get; init; }
     public required bool PushTokenToClient { get; init; }
-    public required string? TokenJson { get; init; }
+    public required string? TokenJson { get; set; }
 }

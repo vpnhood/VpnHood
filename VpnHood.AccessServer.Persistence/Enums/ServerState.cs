@@ -8,6 +8,7 @@ public enum ServerState
     NotInstalled,
     Disabled,
     Lost,
+    Error,
     Configuring,
     Idle,
     Active

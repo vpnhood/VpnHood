@@ -39,15 +39,14 @@ public partial class VhReportContext(DbContextOptions<VhReportContext> options) 
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<ServerStatusArchive>(entity =>
-        {
+        modelBuilder.Entity<ServerStatusArchive>(entity => {
             entity.HasKey(e => e.ServerStatusId);
 
             modelBuilder.HasDbFunction(() => DateDiffMinute(default, default))
                 .IsBuiltIn()
                 .HasTranslation(parameters =>
                     new SqlFunctionExpression("EXTRACT", parameters.Prepend(new SqlFragmentExpression("MINUTE FROM")),
-                        true, new[] { false, true, true }, typeof(int), null));
+                        true, [false, true, true], typeof(int), null));
 
             entity
                 .ToTable(nameof(ServerStatuses))
@@ -57,13 +56,11 @@ public partial class VhReportContext(DbContextOptions<VhReportContext> options) 
                 .ValueGeneratedNever();
 
             entity
-                .Property(e => e.ServerFarmId)
-                .HasDefaultValue(Guid.Empty); //todo: for migration
+                .Property(e => e.ServerFarmId);
 
             entity
                 .HasIndex(e => new { e.ProjectId, e.CreatedTime })
-                .IncludeProperties(e => new
-                {
+                .IncludeProperties(e => new {
                     e.ServerFarmId,
                     e.ServerId,
                     e.SessionCount,
@@ -73,8 +70,7 @@ public partial class VhReportContext(DbContextOptions<VhReportContext> options) 
 
             entity
                 .HasIndex(e => new { e.ServerFarmId, e.CreatedTime })
-                .IncludeProperties(e => new
-                {
+                .IncludeProperties(e => new {
                     e.ServerId,
                     e.SessionCount,
                     e.TunnelSendSpeed,
@@ -83,16 +79,14 @@ public partial class VhReportContext(DbContextOptions<VhReportContext> options) 
 
             entity
                 .HasIndex(e => new { e.ServerId, e.CreatedTime })
-                .IncludeProperties(e => new
-                {
+                .IncludeProperties(e => new {
                     e.SessionCount,
                     e.TunnelSendSpeed,
                     e.TunnelReceiveSpeed
                 });
         });
 
-        modelBuilder.Entity<AccessUsageArchive>(entity =>
-        {
+        modelBuilder.Entity<AccessUsageArchive>(entity => {
             entity.HasKey(e => e.AccessUsageId);
 
             entity
@@ -103,7 +97,8 @@ public partial class VhReportContext(DbContextOptions<VhReportContext> options) 
                 .ValueGeneratedNever();
 
             entity.HasIndex(e => new { e.ProjectId, e.CreatedTime })
-                .IncludeProperties(e => new { e.ServerFarmId, e.ServerId, e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
+                .IncludeProperties(e => new
+                    { e.ServerFarmId, e.ServerId, e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
 
             entity.HasIndex(e => new { e.ServerFarmId, e.CreatedTime })
                 .IncludeProperties(e => new { e.SessionId, e.ServerId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
@@ -119,8 +114,7 @@ public partial class VhReportContext(DbContextOptions<VhReportContext> options) 
         });
 
 
-        modelBuilder.Entity<SessionArchive>(entity =>
-        {
+        modelBuilder.Entity<SessionArchive>(entity => {
             entity.HasKey(e => e.SessionId);
 
             entity.HasIndex(e => new { e.ServerId, e.CreatedTime });

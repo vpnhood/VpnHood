@@ -10,11 +10,12 @@ public class AccessTokenModel
     public required int SupportCode { get; set; }
     public required byte[] Secret { get; set; }
     public required Guid ServerFarmId { get; set; }
+    public required bool IsPublic { get; set; }
     public required long MaxTraffic { get; set; }
     public required int MaxDevice { get; set; }
-    public required bool IsPublic { get; set; }
     public required bool IsEnabled { get; set; }
     public required int Lifetime { get; set; }
+    public required string? Tags { get; set; }
     public required DateTime? ExpirationTime { get; set; }
     public required DateTime? FirstUsedTime { get; set; }
     public required DateTime? LastUsedTime { get; set; }
@@ -26,4 +27,5 @@ public class AccessTokenModel
 
     public virtual ProjectModel? Project { get; set; }
     public virtual ServerFarmModel? ServerFarm { get; set; }
+    public virtual ICollection<AccessModel>? Accesses { get; set; }
 }

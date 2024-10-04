@@ -9,13 +9,14 @@ public class ServerProfileDom(TestApp testApp, ServerProfile serverProfile)
     public Guid ServerProfileId => ServerProfile.ServerProfileId;
     public ServerProfilesClient Client => TestApp.ServerProfilesClient;
 
-    public static async Task<ServerProfileDom> Create(TestApp? testApp = null, ServerProfileCreateParams? createParams = null)
+    public static async Task<ServerProfileDom> Create(TestApp? testApp = null,
+        ServerProfileCreateParams? createParams = null)
     {
         testApp ??= await TestApp.Create();
         var serverProfile = await testApp.ServerProfilesClient.CreateAsync(testApp.ProjectId, createParams);
         return new ServerProfileDom(testApp, serverProfile);
     }
-    
+
     public async Task<ServerProfile> Update(ServerProfileUpdateParams updateParams)
     {
         var serverProfile = await Client.UpdateAsync(TestApp.ProjectId, ServerProfileId, updateParams);

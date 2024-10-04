@@ -1,4 +1,4 @@
-﻿using VpnHood.AccessServer.Dtos;
+﻿using VpnHood.AccessServer.Dtos.Devices;
 using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.DtoConverters;
@@ -7,18 +7,17 @@ public static class DeviceConverter
 {
     public static Device ToDto(this DeviceModel model)
     {
-        var device = new Device
-        {
+        var device = new Device {
             DeviceId = model.DeviceId,
             ClientId = model.ClientId,
             ClientVersion = model.ClientVersion,
             CreatedTime = model.CreatedTime,
             IpAddress = model.IpAddress,
             LockedTime = model.LockedTime,
-            ModifiedTime = model.ModifiedTime,
+            Country = model.Country,
+            ModifiedTime = model.LastUsedTime,
             UserAgent = model.UserAgent
         };
         return device;
     }
 }
-

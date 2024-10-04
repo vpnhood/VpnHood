@@ -38,18 +38,17 @@ public class LoadBalancerService(
         var servers = await GetServersForRequest(accessToken.ServerFarmId, locationPath);
 
         // accept current server (no redirect) if it is in acceptable list
-        if (!allowRedirect)
-        {
+        if (!allowRedirect) {
             if (servers.All(x => x.ServerId != currentServer.ServerId))
-                throw new SessionExceptionEx(SessionErrorCode.AccessError, "This server can not serve you at the moment.");
+                throw new SessionExceptionEx(SessionErrorCode.AccessError,
+                    "This server can not serve you at this moment.");
 
             return;
         }
 
         // get access points suitable for requests
         var accessPoints = new List<AccessPointModel>();
-        foreach (var server in servers)
-        {
+        foreach (var server in servers) {
             var serverAccessPoints = server.AccessPoints
                 .Where(x => x.IsPublic)
                 .OrderByDescending(x => x.IpAddress.AddressFamily); // prefer IPv6
@@ -63,21 +62,20 @@ public class LoadBalancerService(
             .ToArray();
 
         // find the best TcpEndPoint for this request
-        var bestTcpEndPoint = tcpEndPoints.FirstOrDefault(x => // if client is IpV4 the single redirect must be ipv4
+        var bestTcpEndPoint = tcpEndPoints.FirstOrDefault(x => // if client is PublicIpV4 the single redirect must be ipv4
             addressFamily == AddressFamily.InterNetworkV6 ||
             x.AddressFamily == AddressFamily.InterNetwork);
 
         // no server found
         if (bestTcpEndPoint == null)
-            throw new SessionExceptionEx(SessionErrorCode.AccessError, "Could not find any free server.");
+            throw new SessionExceptionEx(SessionErrorCode.AccessError,
+                "Could not find any available server in the given location.");
 
-        // todo
         // deprecated: 505 client and later
         // client should send no redirect flag. for older version we keep last state in memory to prevent re-redirect
         var cacheKey = $"LastDeviceServer/{currentServer.ServerFarmId}/{device.DeviceId}/{locationPath}";
         if (memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) &&
-            lastDeviceServerId == currentServer.ServerId)
-        {
+            lastDeviceServerId == currentServer.ServerId) {
             if (servers.Any(x => x.ServerId == currentServer.ServerId))
                 return;
         }
@@ -85,11 +83,9 @@ public class LoadBalancerService(
         // redirect if current server does not serve the best TcpEndPoint
         var bestServer = servers.First(x => x.AccessPoints.Any(accessPoint =>
             bestTcpEndPoint.Equals(new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))));
-        if (currentServer.ServerId != bestServer.ServerId)
-        {
+        if (currentServer.ServerId != bestServer.ServerId) {
             memoryCache.Set(cacheKey, bestServer.ServerId, TimeSpan.FromMinutes(5));
-            throw new SessionExceptionEx(new SessionResponseEx
-            {
+            throw new SessionExceptionEx(new SessionResponseEx {
                 ErrorCode = SessionErrorCode.RedirectHost,
                 RedirectHostEndPoint = bestTcpEndPoint,
                 RedirectHostEndPoints = tcpEndPoints.Take(100).ToArray()
@@ -106,7 +102,7 @@ public class LoadBalancerService(
         // filter acceptable servers and sort them by load
         var farmServers = servers
             .Where(server =>
-                server.IsReady &&
+                IsServerReadyForRedirect(server) &&
                 server.ServerFarmId == serverFarmId &&
                 (server.AllowInAutoLocation || requestLocation.CountryCode != "*") &&
                 server.LocationInfo.IsMatch(requestLocation))
@@ -116,9 +112,19 @@ public class LoadBalancerService(
         return farmServers;
     }
 
+    // let's treat configuring servers as ready in respect of change ip and change certificate
+    private static bool IsServerReadyForRedirect(ServerCache serverCache)
+    {
+        return
+            serverCache.ServerState is ServerState.Idle or ServerState.Active or ServerState.Configuring &&
+            serverCache.IsEnabled;
+
+    }
+
     private static float CalcServerLoad(ServerCache server)
     {
-        return (float)server.ServerStatus!.SessionCount / Math.Max(1, server.LogicalCoreCount);
+        var power = Math.Max(0, server.Power ?? server.LogicalCoreCount);
+        return (float)server.ServerStatus!.SessionCount / Math.Max(1, power);
     }
 
     public async Task<bool> IsAllPublicInTokenServersReady(Guid serverFarmId)
@@ -126,16 +132,14 @@ public class LoadBalancerService(
         var servers = await cacheService.GetServers(serverFarmId: serverFarmId);
 
         // find all servers with access in tokens
+        // Disabled servers are not counted as not ready because users turn them off intentionally
         servers = servers
             .Where(server =>
                 server.ServerFarmId == serverFarmId &&
-                server.IsEnabled &&
                 server.AccessPoints.Any(x => x.AccessPointMode == AccessPointMode.PublicInToken))
             .ToArray();
 
         // at-least one server must be ready
-        return servers.Length > 0 && servers.All(x => x.IsReady);
+        return servers.Length > 0 && servers.All(x => x.ServerState is ServerState.Idle or ServerState.Active);
     }
-
-
 }

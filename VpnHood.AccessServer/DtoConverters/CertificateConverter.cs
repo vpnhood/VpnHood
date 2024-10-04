@@ -7,8 +7,7 @@ public static class CertificateConverter
 {
     public static Certificate ToDto(this CertificateModel model)
     {
-        var certificate = new Certificate
-        {
+        var certificate = new Certificate {
             CreatedTime = model.CreatedTime,
             CertificateId = model.CertificateId,
             CommonName = model.CommonName,
@@ -21,7 +20,8 @@ public static class CertificateConverter
             ValidateCount = model.ValidateCount,
             ValidateError = model.ValidateError,
             ValidateErrorTime = model.ValidateErrorTime,
-            ValidateErrorCount = model.ValidateErrorCount
+            ValidateErrorCount = model.ValidateErrorCount,
+            IsInToken = model.IsInToken
         };
         return certificate;
     }

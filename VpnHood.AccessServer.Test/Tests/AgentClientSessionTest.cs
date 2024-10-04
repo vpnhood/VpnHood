@@ -1,11 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Net;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Text.Json;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Services;
 using VpnHood.AccessServer.Test.Dom;
+using VpnHood.Common.IpLocations.Providers;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
@@ -20,8 +23,7 @@ public class AgentClientSessionTest
     public async Task Session_Create_Status_TrafficOverflow()
     {
         using var farm = await ServerFarmDom.Create();
-        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
-        {
+        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams {
             MaxTraffic = 14
         });
 
@@ -40,8 +42,7 @@ public class AgentClientSessionTest
     public async Task Session_Create_Status_No_TrafficOverflow_when_maxTraffic_is_zero()
     {
         using var farm = await ServerFarmDom.Create();
-        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
-        {
+        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams {
             MaxTraffic = 0
         });
 
@@ -58,7 +59,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Push_token_to_client()
     {
-        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z")};
+        var farmOptions = new ServerFarmCreateParams();
         using var farm = await ServerFarmDom.Create(createParams: farmOptions, serverCount: 0);
         await farm.AddNewServer(configure: true, sendStatus: true);
         await farm.AddNewServer(configure: true, sendStatus: true);
@@ -74,30 +75,37 @@ public class AgentClientSessionTest
         // Check: a when server is not ready
         // ------------
         var badServer = await farm.AddNewServer();
+
         badServer.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.Public).AccessPointMode =
             AccessPointMode.PublicInToken;
-        await badServer.Update(new ServerUpdateParams()
-        {
+        await badServer.Update(new ServerUpdateParams {
             AccessPoints = new PatchOfAccessPointOf { Value = badServer.Server.AccessPoints }
         });
 
         sessionDom = await accessTokenDom.CreateSession();
-        Assert.IsNull(sessionDom.SessionResponseEx.AccessKey, 
+        Assert.IsNull(sessionDom.SessionResponseEx.AccessKey,
             "Must be null when a server with PublicInToken is not ready.");
     }
 
     [TestMethod]
     public async Task Session_Create_success()
     {
-        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z")};
+        var farmOptions = new ServerFarmCreateParams();
         using var farm = await ServerFarmDom.Create(createParams: farmOptions);
-        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
-        {
+        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams {
             MaxTraffic = 100,
             ExpirationTime = new DateTime(2040, 1, 1),
             Lifetime = 0,
             MaxDevice = 22
         });
+
+        // add a token repo to farm
+        var tokenRepoUrl = new Uri("http://localhost:5000/api/v1/token-repo");
+        await farm.TestApp.FarmTokenReposClient.CreateAsync(farm.ProjectId, farm.ServerFarmId,
+            new FarmTokenRepoCreateParams {
+                RepoName = "TestRepo",
+                PublishUrl = tokenRepoUrl,
+            });
 
         var beforeUpdateTime = DateTime.UtcNow.AddSeconds(-1);
         var sessionDom = await accessTokenDom.CreateSession();
@@ -112,10 +120,17 @@ public class AgentClientSessionTest
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Received);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Sent);
         Assert.IsNotNull(sessionResponseEx.AccessKey);
-        Assert.AreEqual(farmOptions.TokenUrl?.ToString(), Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Url);
+        Assert.AreEqual(tokenRepoUrl.ToString(),
+            Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Urls?.FirstOrDefault());
         Assert.IsNotNull(sessionResponseEx.SessionKey);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
+
+        //Legacy check
+#pragma warning disable CS0618 // Type or member is obsolete 
+        Assert.AreEqual(tokenRepoUrl.ToString(), Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Url);
+#pragma warning restore CS0618 // Type or member is obsolete
+
 
         // check Device id and its properties are created 
         var clientInfo = sessionDom.SessionRequestEx.ClientInfo;
@@ -125,8 +140,7 @@ public class AgentClientSessionTest
         Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
 
         // check updating same client
-        clientInfo = new ClientInfo
-        {
+        clientInfo = new ClientInfo {
             ClientId = clientInfo.ClientId,
             UserAgent = "userAgent2",
             ClientVersion = "200.0.0",
@@ -134,7 +148,7 @@ public class AgentClientSessionTest
         };
         sessionDom = await accessTokenDom.CreateSession(clientInfo: clientInfo);
         var sessionRequestEx = sessionDom.SessionRequestEx;
-        sessionRequestEx.ClientIp = await farm.TestApp.NewIpV4();
+        sessionRequestEx.ClientIp = farm.TestApp.NewIpV4();
         device = await farm.TestApp.DevicesClient.FindByClientIdAsync(farm.TestApp.ProjectId, clientInfo.ClientId);
         Assert.AreEqual(sessionRequestEx.ClientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
@@ -243,7 +257,8 @@ public class AgentClientSessionTest
     {
         var testApp = await TestApp.Create();
         testApp.AgentTestApp.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(2);
-        testApp.AgentTestApp.AgentOptions.SessionTemporaryTimeout = TimeSpan.FromSeconds(2); //should not be less than PermanentlyTimeout
+        testApp.AgentTestApp.AgentOptions.SessionTemporaryTimeout =
+            TimeSpan.FromSeconds(2); //should not be less than PermanentlyTimeout
         using var sampleFarm1 = await SampleFarm.Create(testApp);
         var session = sampleFarm1.Server1.Sessions.First();
         var responseBase = await session.CloseSession();
@@ -268,7 +283,8 @@ public class AgentClientSessionTest
         //-----------
         // check: The Session should not exist after sync
         //-----------
-        await Task.Delay(testApp.AgentTestApp.AgentOptions.SessionPermanentlyTimeout.Add(TimeSpan.FromMilliseconds(50)));
+        await Task.Delay(
+            testApp.AgentTestApp.AgentOptions.SessionPermanentlyTimeout.Add(TimeSpan.FromMilliseconds(50)));
         await testApp.Sync();
         await VhTestUtil.AssertNotExistsException(session.AddUsage(0));
     }
@@ -281,8 +297,7 @@ public class AgentClientSessionTest
         using var sampleFarm2 = await SampleFarm.Create(testApp);
 
         var createSessionTasks = new List<Task<SessionDom>>();
-        for (var i = 0; i < 50; i++)
-        {
+        for (var i = 0; i < 50; i++) {
             createSessionTasks.Add(sampleFarm1.Server1.CreateSession(sampleFarm1.PublicToken1));
             createSessionTasks.Add(sampleFarm1.Server1.CreateSession(sampleFarm1.PublicToken1));
             createSessionTasks.Add(sampleFarm1.Server2.CreateSession(sampleFarm1.PublicToken2));
@@ -401,7 +416,8 @@ public class AgentClientSessionTest
         //-------------
         // check: another Session_Create for same client should return same result
         //-------------
-        var sessionDom3 = await accessTokenDom.CreateSession(clientId: sessionDom2.SessionRequestEx.ClientInfo.ClientId);
+        var sessionDom3 =
+            await accessTokenDom.CreateSession(clientId: sessionDom2.SessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual(5, sessionDom3.SessionResponseEx.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(10, sessionDom3.SessionResponseEx.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, sessionDom3.SessionResponseEx.ErrorCode);
@@ -507,8 +523,7 @@ public class AgentClientSessionTest
     {
         var sampler = await ServerFarmDom.Create();
         var accessToken = await sampler.TestApp.AccessTokensClient.CreateAsync(sampler.ProjectId,
-            new AccessTokenCreateParams
-            {
+            new AccessTokenCreateParams {
                 ServerFarmId = sampler.ServerFarmId,
                 MaxDevice = 2
             });
@@ -534,15 +549,14 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_Status_SuppressToYourself()
     {
-        var sampler = await ServerFarmDom.Create();
-        var accessToken = await sampler.TestApp.AccessTokensClient.CreateAsync(sampler.ProjectId,
-            new AccessTokenCreateParams
-            {
-                ServerFarmId = sampler.ServerFarmId,
+        var farmDom = await ServerFarmDom.Create();
+        var accessToken = await farmDom.TestApp.AccessTokensClient.CreateAsync(farmDom.ProjectId,
+            new AccessTokenCreateParams {
+                ServerFarmId = farmDom.ServerFarmId,
                 MaxDevice = 2
             });
 
-        var sampleAccessToken = new AccessTokenDom(sampler.TestApp, accessToken);
+        var sampleAccessToken = new AccessTokenDom(farmDom.TestApp, accessToken);
         var clientId = Guid.NewGuid();
 
         var sampleSession1 = await sampleAccessToken.CreateSession(clientId);
@@ -554,5 +568,36 @@ public class AgentClientSessionTest
         var res = await sampleSession1.AddUsage(0);
         Assert.AreEqual(SessionSuppressType.YourSelf, res.SuppressedBy);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, res.ErrorCode);
+    }
+
+    private static async Task UpdateIp2LocationFile()
+    {
+        // update current ipLocation in app project after a week
+        var solutionFolder = TestApp.GetParentDirectory(Directory.GetCurrentDirectory(), 4);
+        var ipLocationFile = Path.Combine(solutionFolder, "VpnHood.AccessServer.Agent", "Resources", "IpLocations.bin");
+
+        // find token
+        var userSecretFile = Path.Combine(Path.GetDirectoryName(solutionFolder)!, ".user", "credentials.json");
+        var document = JsonDocument.Parse(await File.ReadAllTextAsync(userSecretFile));
+        var ip2LocationToken = document.RootElement.GetProperty("Ip2LocationToken").GetString();
+        ArgumentException.ThrowIfNullOrWhiteSpace(ip2LocationToken);
+
+        await Ip2LocationDbParser.UpdateLocalDb(ipLocationFile, ip2LocationToken, forIpRange: false);
+    }
+
+    [TestMethod]
+    public async Task Session_create_with_IpLocation()
+    {
+        await UpdateIp2LocationFile();
+
+        var testApp = await TestApp.Create(new Dictionary<string, string?> {
+            {"UseTestDeviceLocationProvider", "false"}
+        });
+        
+        var farmDom = await ServerFarmDom.Create(testApp);
+        var accessTokenDom = await farmDom.CreateAccessToken();
+        var sessionDom = await accessTokenDom.CreateSession(clientIp: IPAddress.Parse("8.8.8.8"));
+        var device = await farmDom.TestApp.DevicesClient.FindByClientIdAsync(farmDom.TestApp.ProjectId, sessionDom.SessionRequestEx.ClientInfo.ClientId);
+        Assert.AreEqual("US", device.Country);
     }
 }

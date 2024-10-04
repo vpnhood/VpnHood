@@ -14,7 +14,7 @@ public class Session
     public required string? ExtraData { get; init; }
     public Guid ServerId { get; init; }
     public DateTime CreatedTime { get; init; }
-    public DateTime LastUsedTime { get; init; } 
+    public DateTime LastUsedTime { get; init; }
     public DateTime? EndTime { get; init; }
     public SessionSuppressType SuppressedBy { get; init; }
     public SessionSuppressType SuppressedTo { get; init; }

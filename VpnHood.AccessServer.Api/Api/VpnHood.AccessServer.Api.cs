@@ -1810,7 +1810,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<Device> FindByClientIdAsync(System.Guid projectId, System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<Device> GetByClientIdAsync(System.Guid projectId, System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -10441,7 +10441,6 @@ namespace VpnHood.AccessServer.Api
         public HostIpStatus Status { get; set; } = default!;
 
     }
-
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class Location

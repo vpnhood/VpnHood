@@ -134,7 +134,7 @@ public class AgentClientSessionTest
 
         // check Device id and its properties are created 
         var clientInfo = sessionDom.SessionRequestEx.ClientInfo;
-        var device = await farm.TestApp.DevicesClient.FindByClientIdAsync(farm.TestApp.ProjectId, clientInfo.ClientId);
+        var device = await farm.TestApp.DevicesClient.GetByClientIdAsync(farm.TestApp.ProjectId, clientInfo.ClientId);
         Assert.AreEqual(clientInfo.ClientId, device.ClientId);
         Assert.AreEqual(clientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
@@ -149,7 +149,7 @@ public class AgentClientSessionTest
         sessionDom = await accessTokenDom.CreateSession(clientInfo: clientInfo);
         var sessionRequestEx = sessionDom.SessionRequestEx;
         sessionRequestEx.ClientIp = farm.TestApp.NewIpV4();
-        device = await farm.TestApp.DevicesClient.FindByClientIdAsync(farm.TestApp.ProjectId, clientInfo.ClientId);
+        device = await farm.TestApp.DevicesClient.GetByClientIdAsync(farm.TestApp.ProjectId, clientInfo.ClientId);
         Assert.AreEqual(sessionRequestEx.ClientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
     }
@@ -597,7 +597,7 @@ public class AgentClientSessionTest
         var farmDom = await ServerFarmDom.Create(testApp);
         var accessTokenDom = await farmDom.CreateAccessToken();
         var sessionDom = await accessTokenDom.CreateSession(clientIp: IPAddress.Parse("8.8.8.8"));
-        var device = await farmDom.TestApp.DevicesClient.FindByClientIdAsync(farmDom.TestApp.ProjectId, sessionDom.SessionRequestEx.ClientInfo.ClientId);
+        var device = await farmDom.TestApp.DevicesClient.GetByClientIdAsync(farmDom.TestApp.ProjectId, sessionDom.SessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual("US", device.Country);
     }
 }

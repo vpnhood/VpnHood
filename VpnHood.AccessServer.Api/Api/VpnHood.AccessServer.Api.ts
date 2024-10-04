@@ -976,7 +976,7 @@ export class DevicesClient {
         return Promise.resolve<Device>(null as any);
     }
 
-    findByClientId(projectId: string, clientId: string, cancelToken?: CancelToken): Promise<Device> {
+    getByClientId(projectId: string, clientId: string, cancelToken?: CancelToken): Promise<Device> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/devices/clientId:{clientId}";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -1002,11 +1002,11 @@ export class DevicesClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processFindByClientId(_response);
+            return this.processGetByClientId(_response);
         });
     }
 
-    protected processFindByClientId(response: AxiosResponse): Promise<Device> {
+    protected processGetByClientId(response: AxiosResponse): Promise<Device> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {

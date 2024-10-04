@@ -295,6 +295,7 @@ public class ReportUsageService(
             from accessUsage in vhReportContext.AccessUsages
             where
                 (accessUsage.ProjectId == projectId) &&
+                (accessTokenId == null || accessUsage.AccessTokenId == accessTokenId) &&
                 (serverFarmId == null || accessUsage.ServerFarmId == serverFarmId) &&
                 (queryDeviceIds == null || queryDeviceIds.Contains(accessUsage.DeviceId)) &&
                 (accessUsage.CreatedTime >= usageBeginTime) &&

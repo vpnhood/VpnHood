@@ -1,6 +1,7 @@
 ﻿using GrayMint.Common.Generics;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
+using VpnHood.AccessServer.Dtos.Devices;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
@@ -546,5 +547,32 @@ public class VhRepo(VhContext vhContext)
             .Where(x => x.ProjectId == projectId)
             .Where(x => x.ClientFilterId == clientFilterId)
             .ExecuteDeleteAsync();
+    }
+
+    public Task<DeviceModel> DeviceGetByClientId(Guid projectId, Guid clientId)
+    {
+        return vhContext.Devices
+            .Where(model => model.ProjectId == projectId)
+            .SingleAsync(x => x.ClientId == clientId);
+    }
+
+    public Task<DeviceModel> DeviceGet(Guid projectId, Guid deviceId)
+    {
+        return vhContext.Devices
+            .Where(model => model.ProjectId == projectId)
+            .SingleAsync(x => x.DeviceId == deviceId);
+    }
+
+    public async Task<Dictionary<Guid, DeviceModel>> DeviceUsage(Guid? projectId, Guid[]? deviceIds = null,
+        DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
+    {
+        await using var trans = await vhContext.WithNoLockTransaction();
+        return await vhContext.Devices
+            .Where(model => model.ProjectId == projectId)
+            .Where(device => usageBeginTime == null || device.LastUsedTime >= usageBeginTime)
+            .Where(device => usageEndTime == null || device.LastUsedTime <= usageEndTime)
+            .Where(device => deviceIds == null || deviceIds.Contains(device.DeviceId))
+            .AsNoTracking()
+            .ToDictionaryAsync(device => device.DeviceId, device => device);
     }
 }

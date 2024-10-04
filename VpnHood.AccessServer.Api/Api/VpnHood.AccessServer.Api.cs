@@ -10446,10 +10446,6 @@ namespace VpnHood.AccessServer.Api
     public partial class Location
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("countryName")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string CountryName { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("countryCode")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string CountryCode { get; set; } = default!;
@@ -10459,6 +10455,14 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("cityName")]
         public string? CityName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("countryName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string CountryName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("displayName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string DisplayName { get; set; } = default!;
 
     }
 

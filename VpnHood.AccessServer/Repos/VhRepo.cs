@@ -1,7 +1,6 @@
 ﻿using GrayMint.Common.Generics;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
-using VpnHood.AccessServer.Dtos.Devices;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
@@ -195,7 +194,7 @@ public class VhRepo(VhContext vhContext)
             };
 
         var query = baseQuery
-            .OrderByDescending(x => x.AccessToken.AccessTokenId)
+            .OrderByDescending(x => x.AccessToken.SupportCode)
             .Skip(recordIndex)
             .Take(recordCount)
             .AsNoTracking();

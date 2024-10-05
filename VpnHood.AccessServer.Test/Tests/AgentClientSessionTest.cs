@@ -212,6 +212,7 @@ public class AgentClientSessionTest
         var time = DateTime.UtcNow;
         await Task.Delay(1000);
         await sessionDom.AddUsage(1);
+        await sessionDom.Reload();
         Assert.IsTrue(sessionDom.SessionCache.LastUsedTime >= time);
     }
 

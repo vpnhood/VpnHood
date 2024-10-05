@@ -15,6 +15,7 @@ using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Utils;
+using VpnHood.Manager.Common.Utils;
 using VpnHood.Server.Access.Managers.Http;
 using ConnectionInfo = Renci.SshNet.ConnectionInfo;
 
@@ -86,7 +87,7 @@ public class ServerService(
             HostPanelUrl = createParams.HostPanelUrl?.ToString(),
             IsDeleted = false,
             ClientFilterId = createParams.ClientFilterId != null ? int.Parse(createParams.ClientFilterId) : null,
-            Tags = ManagerUtils.TagsToString(createParams.Tags)
+            Tags = TagUtils.TagsToString(createParams.Tags)
         };
 
         // add server and update FarmToken
@@ -128,7 +129,7 @@ public class ServerService(
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
 
-        if (updateParams.Tags != null) server.Tags = ManagerUtils.TagsToString(updateParams.Tags.Value);
+        if (updateParams.Tags != null) server.Tags = TagUtils.TagsToString(updateParams.Tags.Value);
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
         if (updateParams.Power != null) server.Power = updateParams.Power;
         if (updateParams.IsEnabled != null) server.IsEnabled = updateParams.IsEnabled;

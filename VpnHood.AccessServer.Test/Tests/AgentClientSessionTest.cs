@@ -190,15 +190,13 @@ public class AgentClientSessionTest
         var accessTokenDom = await serverFarmDom.CreateAccessToken();
 
         var sessionDom = await accessTokenDom.CreateSession();
-        var session = await sessionDom.GetSessionFromCache();
-        Assert.IsTrue(session.LastUsedTime >= serverFarmDom.CreatedTime);
+        Assert.IsTrue(sessionDom.SessionCache.LastUsedTime >= serverFarmDom.CreatedTime);
 
         // get the token again
         var time = DateTime.UtcNow;
         await Task.Delay(1000);
         await sessionDom.Reload(); //session get
-        session = await sessionDom.GetSessionFromCache();
-        Assert.IsTrue(session.LastUsedTime > time);
+        Assert.IsTrue(sessionDom.SessionCache.LastUsedTime > time);
     }
 
     [TestMethod]
@@ -208,15 +206,13 @@ public class AgentClientSessionTest
         var accessTokenDom = await serverFarmDom.CreateAccessToken();
 
         var sessionDom = await accessTokenDom.CreateSession();
-        var session = await sessionDom.GetSessionFromCache();
-        Assert.IsTrue(session.LastUsedTime >= serverFarmDom.CreatedTime);
+        Assert.IsTrue(sessionDom.SessionCache.LastUsedTime >= serverFarmDom.CreatedTime);
 
         // get the token again
         var time = DateTime.UtcNow;
         await Task.Delay(1000);
         await sessionDom.AddUsage(1);
-        session = await sessionDom.GetSessionFromCache();
-        Assert.IsTrue(session.LastUsedTime >= time);
+        Assert.IsTrue(sessionDom.SessionCache.LastUsedTime >= time);
     }
 
     [TestMethod]

@@ -102,10 +102,10 @@ public class ServerFarmDom : IDisposable
     }
 
     public async Task<ServerDom> AddNewServer(bool configure = true, bool sendStatus = true,
-        IPAddress? publicIpV4 = null, int? logicalCore = null)
+        IPAddress? publicIpV4 = null, int? logicalCore = null, string[]? tags = null)
     {
         var sampleServer = await ServerDom.Create(TestApp, ServerFarmId, configure,
-            sendStatus, publicIpV4, logicalCore: logicalCore);
+            sendStatus, publicIpV4, logicalCore: logicalCore, tags: tags);
 
         Servers.Add(sampleServer);
         return sampleServer;

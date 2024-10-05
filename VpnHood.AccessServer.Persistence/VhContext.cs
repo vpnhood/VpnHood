@@ -714,7 +714,7 @@ public class VhContext : DbContext
 
             entity
                 .HasOne(e => e.Project)
-                .WithMany(d => d.ClientFilterModels)
+                .WithMany(d => d.ClientFilters)
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.Cascade);
         });

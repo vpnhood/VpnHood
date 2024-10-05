@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Persistence.Caches;
@@ -8,26 +7,28 @@ using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
+using VpnHood.Manager.Common.Utils;
 using VpnHood.Server.Access.Messaging;
 
 namespace VpnHood.AccessServer.Agent.Services;
 
 public class LoadBalancerService(
     CacheService cacheService,
-    IOptions<AgentOptions> agentOptions,
-    IMemoryCache memoryCache)
+    IOptions<AgentOptions> agentOptions)
 {
-    public Task CheckRedirect(AccessTokenModel accessToken, ServerCache currentServer, DeviceModel device,
+    public Task CheckRedirect(AccessTokenModel accessToken, ServerCache currentServer, IList<string> clientTags,
         SessionRequestEx sessionRequestEx)
     {
         return CheckRedirect(
-            accessToken, currentServer, device,
-            sessionRequestEx.HostEndPoint.AddressFamily,
-            sessionRequestEx.ServerLocation,
-            sessionRequestEx.AllowRedirect);
+            accessToken: accessToken,
+            currentServer: currentServer,
+            clientTags: clientTags,
+            addressFamily: sessionRequestEx.HostEndPoint.AddressFamily,
+            locationPath: sessionRequestEx.ServerLocation,
+            allowRedirect: sessionRequestEx.AllowRedirect);
     }
 
-    private async Task CheckRedirect(AccessTokenModel accessToken, ServerCache currentServer, DeviceModel device,
+    private async Task CheckRedirect(AccessTokenModel accessToken, ServerCache currentServer, IEnumerable<string> clientTags,
         AddressFamily addressFamily, string? locationPath, bool allowRedirect)
     {
         // server redirect is disabled by admin
@@ -35,7 +36,7 @@ public class LoadBalancerService(
             return;
 
         // get acceptable servers for this request
-        var servers = await GetServersForRequest(accessToken.ServerFarmId, locationPath);
+        var servers = await GetServersForRequest(accessToken.ServerFarmId, locationPath, clientTags);
 
         // accept current server (no redirect) if it is in acceptable list
         if (!allowRedirect) {
@@ -71,20 +72,10 @@ public class LoadBalancerService(
             throw new SessionExceptionEx(SessionErrorCode.AccessError,
                 "Could not find any available server in the given location.");
 
-        // deprecated: 505 client and later
-        // client should send no redirect flag. for older version we keep last state in memory to prevent re-redirect
-        var cacheKey = $"LastDeviceServer/{currentServer.ServerFarmId}/{device.DeviceId}/{locationPath}";
-        if (memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) &&
-            lastDeviceServerId == currentServer.ServerId) {
-            if (servers.Any(x => x.ServerId == currentServer.ServerId))
-                return;
-        }
-
         // redirect if current server does not serve the best TcpEndPoint
         var bestServer = servers.First(x => x.AccessPoints.Any(accessPoint =>
             bestTcpEndPoint.Equals(new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))));
         if (currentServer.ServerId != bestServer.ServerId) {
-            memoryCache.Set(cacheKey, bestServer.ServerId, TimeSpan.FromMinutes(5));
             throw new SessionExceptionEx(new SessionResponseEx {
                 ErrorCode = SessionErrorCode.RedirectHost,
                 RedirectHostEndPoint = bestTcpEndPoint,
@@ -93,10 +84,13 @@ public class LoadBalancerService(
         }
     }
 
-    private async Task<ServerCache[]> GetServersForRequest(Guid serverFarmId, string? locationPath)
+    private async Task<ServerCache[]> GetServersForRequest(Guid serverFarmId, string? locationPath, IEnumerable<string> clientTags)
     {
         // get all servers of this farm
-        var servers = await cacheService.GetServers();
+        var servers = await cacheService.GetServers(serverFarmId: serverFarmId);
+        if (servers.Length == 0) return [];
+
+        var project = await cacheService.GetProject(servers.First().ProjectId);
         var requestLocation = ServerLocationInfo.Parse(locationPath ?? "*");
 
         // filter acceptable servers and sort them by load
@@ -105,11 +99,26 @@ public class LoadBalancerService(
                 IsServerReadyForRedirect(server) &&
                 server.ServerFarmId == serverFarmId &&
                 (server.AllowInAutoLocation || requestLocation.CountryCode != "*") &&
-                server.LocationInfo.IsMatch(requestLocation))
+                server.LocationInfo.IsMatch(requestLocation) &&
+                IsMatchClientFilter(project, server, clientTags))
             .OrderBy(CalcServerLoad)
             .ToArray();
 
+        // filter servers by client filter policy
+
         return farmServers;
+    }
+
+    private static bool IsMatchClientFilter(ProjectCache project, ServerCache server, IEnumerable<string> clientTags)
+    {
+        if (server.ClientFilterId == null)
+            return true;
+
+        var clientFilter = project.ClientFilters.FirstOrDefault(x => x.ClientFilterId == server.ClientFilterId);
+        if (clientFilter == null)
+            return false;
+
+        return ClientFilterUtils.Verify(clientFilter.Filter, clientTags);
     }
 
     // let's treat configuring servers as ready in respect of change ip and change certificate
@@ -118,7 +127,6 @@ public class LoadBalancerService(
         return
             serverCache.ServerState is ServerState.Idle or ServerState.Active or ServerState.Configuring &&
             serverCache.IsEnabled;
-
     }
 
     private static float CalcServerLoad(ServerCache server)

@@ -95,7 +95,7 @@ public class IpLockTest
         // check lock
         await farm.TestApp.IpLocksClient.CreateAsync(farm.ProjectId,
             new IpLockCreateParams { IpAddress = clientIp.ToString(), IsLocked = true });
-        var sessionDom = await accessTokenDom.CreateSession(clientIp: clientIp, assertError: false);
+        var sessionDom = await accessTokenDom.CreateSession(clientIp: clientIp, throwError: false);
         Assert.AreEqual(SessionErrorCode.AccessLocked, sessionDom.SessionResponseEx.ErrorCode);
 
         // check unlock

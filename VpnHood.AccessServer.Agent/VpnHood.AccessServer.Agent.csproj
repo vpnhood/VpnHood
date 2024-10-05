@@ -37,6 +37,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj" />
+		<ProjectReference Include="..\VpnHood.Manager.Common\VpnHood.Manager.Common.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

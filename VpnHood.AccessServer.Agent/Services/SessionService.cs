@@ -13,6 +13,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
+using VpnHood.Manager.Common.Utils;
 using VpnHood.Server.Access.Messaging;
 using AsyncLock = GrayMint.Common.Utils.AsyncLock;
 
@@ -200,8 +201,12 @@ public class SessionService(
             throw new SessionExceptionEx(SessionErrorCode.UnsupportedClient,
                 "This version is not supported! You need to update your app.");
 
+        // assign client tag
+        var clientTags = TagUtils.TagsFromString(accessToken.Tags).ToList();
+        clientTags.Add(TagUtils.BuildLocation(device.Country));
+
         // Check Redirect to another server if everything was ok
-        await loadBalancerService.CheckRedirect(accessToken, server, device, sessionRequestEx);
+        await loadBalancerService.CheckRedirect(accessToken, server, clientTags, sessionRequestEx);
 
         // check is device already rewarded
         var isAdRewardedDevice = cacheService.Ad_IsRewardedAccess(access.AccessId) &&

@@ -1,8 +1,8 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace VpnHood.AccessServer.Utils;
+namespace VpnHood.Manager.Common.Utils;
 
-public static class ManagerUtils
+public static class TagUtils
 {
     public static string? TagsToString(string[] tags)
     {
@@ -22,8 +22,13 @@ public static class ManagerUtils
 
     public static string[] TagsFromString(string? tags)
     {
-        return string.IsNullOrWhiteSpace(tags) 
-            ? [] 
+        return string.IsNullOrWhiteSpace(tags)
+            ? []
             : tags.Split(" ");
+    }
+
+    public static string BuildLocation(string? location)
+    {
+        return $"#loc:{location}";
     }
 }

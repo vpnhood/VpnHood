@@ -34,6 +34,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ServerId = x.ServerId,
                     ServerName = x.Server!.ServerName,
                     ServerFarmId = x.Server!.ServerFarmId,
+                    ClientFilterId = x.Server.ClientFilterId,
                     Version = x.Server!.Version,
                     LastConfigError = x.Server!.LastConfigError,
                     LastConfigCode = x.Server!.LastConfigCode,
@@ -64,10 +65,15 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ProjectId = x.Server.ProjectId,
                     GaApiSecret = x.Server.Project.GaApiSecret,
                     ProjectName = x.Server.Project.ProjectName,
-                    AdRewardSecret = x.Server.Project.AdRewardSecret
+                    AdRewardSecret = x.Server.Project.AdRewardSecret,
+                    ClientFilters = x.Server.Project.ClientFilters!.Select(cf => new ClientFilterCache {
+                        ClientFilterId = cf.ClientFilterId,
+                        Filter = cf.Filter
+                    }).ToArray()
                 }
             })
             .AsNoTracking()
+            .AsSplitQuery()
             .ToArrayAsync();
 
         // Sessions
@@ -163,7 +169,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 LocationInfo = x.Location != null ? ServerLocationInfo.Parse(x.Location.ToPath()) : autoServerLocation,
                 AllowInAutoLocation = x.AllowInAutoLocation,
                 LogicalCoreCount = x.LogicalCoreCount ?? 1,
-                Power = x.Power
+                Power = x.Power,
+                ClientFilterId = x.ClientFilterId
             })
             .AsNoTracking()
             .ToArrayAsync();
@@ -185,7 +192,11 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 ProjectName = project.ProjectName,
                 GaMeasurementId = project.GaMeasurementId,
                 GaApiSecret = project.GaApiSecret,
-                AdRewardSecret = project.AdRewardSecret
+                AdRewardSecret = project.AdRewardSecret,
+                ClientFilters = project.ClientFilters!.Select(cf => new ClientFilterCache {
+                    ClientFilterId = cf.ClientFilterId,
+                    Filter = cf.Filter
+                }).ToArray()
             })
             .AsNoTracking()
             .SingleAsync();

@@ -1,13 +1,15 @@
-﻿using System.Data;
-using System.Text.RegularExpressions;
+﻿using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.ClientFilters;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos;
+using VpnHood.Manager.Common.Utils;
 
 namespace VpnHood.AccessServer.Services;
 
-public class ClientFilterService(VhRepo vhRepo)
+public class ClientFilterService(
+    VhRepo vhRepo,
+    AgentCacheClient agentCacheClient)
 {
     public async Task<ClientFilter> Create(Guid projectId, ClientFilterCreateParams createParamsParams)
     {
@@ -23,6 +25,7 @@ public class ClientFilterService(VhRepo vhRepo)
 
         await vhRepo.AddAsync(clientFilter);
         await vhRepo.SaveChangesAsync();
+        await agentCacheClient.InvalidateProject(projectId);
 
         return clientFilter.ToDto();
     }
@@ -47,9 +50,10 @@ public class ClientFilterService(VhRepo vhRepo)
         
         if (updateParamsParams.ClientFilterName != null) clientFilter.ClientFilterName = updateParamsParams.ClientFilterName.Value.Trim();
         if (updateParamsParams.Description != null) clientFilter.Description = updateParamsParams.Description.Value;
-        if (updateParamsParams.Filter != null) {
+        if (updateParamsParams.Filter != null && !updateParamsParams.Filter.Value.Equals(clientFilter.Filter)) {
             ValidateFilter(updateParamsParams.Filter.Value);
             clientFilter.Filter = updateParamsParams.Filter.Value.Trim();
+            await agentCacheClient.InvalidateProject(projectId);
         }
 
         await vhRepo.SaveChangesAsync();
@@ -64,28 +68,6 @@ public class ClientFilterService(VhRepo vhRepo)
 
     private static void ValidateFilter(string filter)
     {
-        ValidateFilter(filter, []);
+        ClientFilterUtils.Validate(filter, []);
     }
-
-    private static void ValidateFilter(string filter, string[] tags)
-    {
-        if (string.IsNullOrWhiteSpace(filter))
-            throw new ArgumentException("Filter can not be empty.", nameof(filter));
-
-        // replace shorthand operators with full operators
-        filter = filter
-            .Replace("&&", "AND")
-            .Replace("&", "AND")
-            .Replace("||", "OR")
-            .Replace("|", "OR")
-            .Replace("!", "NOT ");
-
-        // Regex to match "tag_xxx" pattern
-        filter = Regex.Replace(filter, @"#[\w:]+", match =>
-            tags.Contains(match.Value, StringComparer.OrdinalIgnoreCase).ToString());
-
-        var dataTable = new DataTable();
-        dataTable.Compute(filter, string.Empty);
-    }
-   
 }

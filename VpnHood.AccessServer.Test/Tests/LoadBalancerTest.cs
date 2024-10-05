@@ -24,12 +24,12 @@ public class LoadBalancerTest
 
         // fail if the location in auto
         var accessTokenDom = await farm.CreateAccessToken();
-        var sessionDom = await accessTokenDom.CreateSession(autoRedirect: false, assertError: false);
+        var sessionDom = await accessTokenDom.CreateSession(autoRedirect: false, throwError: false);
         Assert.AreEqual(SessionErrorCode.AccessError, sessionDom.SessionResponseEx.ErrorCode);
 
         // fail if the location in set
         sessionDom =
-            await accessTokenDom.CreateSession(autoRedirect: false, assertError: false, serverLocation: "10/*");
+            await accessTokenDom.CreateSession(autoRedirect: false, throwError: false, serverLocation: "10/*");
         Assert.AreEqual(SessionErrorCode.Ok, sessionDom.SessionResponseEx.ErrorCode);
     }
 
@@ -198,7 +198,7 @@ public class LoadBalancerTest
 
         // check redirect list for location 10
         var sessionDom2 =
-            await accessTokenDom.CreateSession(autoRedirect: false, serverLocation: "10", assertError: false);
+            await accessTokenDom.CreateSession(autoRedirect: false, serverLocation: "10", throwError: false);
         var redirectHostEndPoints =
             sessionDom2.SessionResponseEx.RedirectHostEndPoints!.Where(x => x.Address.IsV4()).ToArray();
         Assert.AreEqual(sessionDom2.SessionResponseEx.ErrorCode, SessionErrorCode.RedirectHost);
@@ -209,7 +209,7 @@ public class LoadBalancerTest
             redirectHostEndPoints[1].Address);
 
         // check redirect list for location auto
-        sessionDom2 = await accessTokenDom.CreateSession(autoRedirect: false, serverLocation: null, assertError: false);
+        sessionDom2 = await accessTokenDom.CreateSession(autoRedirect: false, serverLocation: null, throwError: false);
         redirectHostEndPoints =
             sessionDom2.SessionResponseEx.RedirectHostEndPoints!.Where(x => x.Address.IsV4()).ToArray();
         Assert.AreEqual(sessionDom2.SessionResponseEx.ErrorCode, SessionErrorCode.RedirectHost);

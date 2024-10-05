@@ -90,16 +90,17 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
     }
 
     public static async Task<ServerDom> Create(TestApp testApp, Guid serverFarmId, bool configure = true,
-        bool sendStatus = true, IPAddress? gatewayIpV4 = null, int? logicalCore = null)
+        bool sendStatus = true, IPAddress? publicIpV4 = null, int? logicalCore = null, string[]? tags = null)
     {
         var serverDom = await Create(testApp,
             new ServerCreateParams {
-                ServerFarmId = serverFarmId
+                ServerFarmId = serverFarmId,
+                Tags= tags ?? []
             },
             configure: configure,
             sendStatus: sendStatus,
             logicalCore: logicalCore,
-            publicIpV4: gatewayIpV4);
+            publicIpV4: publicIpV4);
 
         return serverDom;
     }

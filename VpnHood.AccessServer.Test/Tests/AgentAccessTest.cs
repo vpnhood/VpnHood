@@ -21,7 +21,7 @@ public class AgentAccessTest
             });
 
 
-        var sessionDom = await accessTokenDom.CreateSession(assertError: false);
+        var sessionDom = await accessTokenDom.CreateSession(throwError: false);
         Assert.AreEqual(SessionErrorCode.AccessLocked, sessionDom.SessionResponseEx.ErrorCode);
     }
 
@@ -36,7 +36,7 @@ public class AgentAccessTest
                 ExpirationTime = new DateTime(1900, 1, 1)
             });
 
-        var sessionDom = await accessTokenDom.CreateSession(assertError: false);
+        var sessionDom = await accessTokenDom.CreateSession(throwError: false);
         Assert.AreEqual(SessionErrorCode.AccessExpired, sessionDom.SessionResponseEx.ErrorCode);
     }
 
@@ -57,7 +57,7 @@ public class AgentAccessTest
         await accessTokenDom.TestApp.VhContext.SaveChangesAsync();
 
         // Create new Session
-        var session = await accessTokenDom.CreateSession(assertError: false);
+        var session = await accessTokenDom.CreateSession(throwError: false);
         Assert.AreEqual(SessionErrorCode.AccessExpired, session.SessionResponseEx.ErrorCode);
     }
 

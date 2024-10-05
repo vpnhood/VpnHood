@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Access.Messaging;
@@ -8,32 +8,38 @@ namespace VpnHood.AccessServer.Test.Dom;
 
 public class SessionDom
 {
+    private SessionCache? _sessionCache;
     public TestApp TestApp { get; }
     public AgentClient AgentClient { get; }
     public AccessToken AccessToken { get; }
     public SessionRequestEx SessionRequestEx { get; }
     public SessionResponseEx SessionResponseEx { get; private set; }
+    public SessionCache SessionCache => _sessionCache ?? throw new SessionExceptionEx(SessionResponseEx);
     public long SessionId => (long)SessionResponseEx.SessionId;
+    public Guid ServerId => SessionCache.ServerId;
 
     private SessionDom(TestApp testApp, AgentClient agentClient, AccessToken accessToken,
-        SessionRequestEx sessionRequestEx, SessionResponseEx sessionResponseEx)
+        SessionRequestEx sessionRequestEx, SessionResponseEx sessionResponseEx, SessionCache? sessionCache)
     {
         TestApp = testApp;
         AgentClient = agentClient;
         AccessToken = accessToken;
         SessionRequestEx = sessionRequestEx;
         SessionResponseEx = sessionResponseEx;
+        _sessionCache = sessionCache;
     }
 
     public static async Task<SessionDom> Create(TestApp testApp, Guid serverId, AccessToken accessToken,
-        SessionRequestEx sessionRequestEx, AgentClient? agentClient = null, bool assertError = true)
+        SessionRequestEx sessionRequestEx, AgentClient? agentClient = null, bool throwError = true)
     {
         agentClient ??= testApp.CreateAgentClient(serverId);
         var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
-        if (assertError)
-            Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode, sessionResponseEx.ErrorMessage);
+        if (throwError && sessionResponseEx.ErrorCode != SessionErrorCode.Ok)
+            throw new SessionExceptionEx(sessionResponseEx);
 
-        var ret = new SessionDom(testApp, agentClient, accessToken, sessionRequestEx, sessionResponseEx);
+        var sessionCache = sessionResponseEx.SessionId != 0 ? await testApp.AgentCacheClient.GetSession((long)sessionResponseEx.SessionId) : null;
+        var ret = new SessionDom(testApp, agentClient, accessToken, sessionRequestEx, sessionResponseEx,
+            sessionCache: sessionCache);
         return ret;
     }
 
@@ -60,11 +66,8 @@ public class SessionDom
     public async Task Reload()
     {
         SessionResponseEx =
-            await AgentClient.Session_Get((uint)SessionId, SessionRequestEx.HostEndPoint, SessionRequestEx.ClientIp);
-    }
+            await AgentClient.Session_Get((ulong)SessionId, SessionRequestEx.HostEndPoint, SessionRequestEx.ClientIp);
 
-    public Task<SessionCache> GetSessionFromCache()
-    {
-        return TestApp.AgentCacheClient.GetSession(SessionId);
+        _sessionCache = SessionId != 0 ? await TestApp.AgentCacheClient.GetSession(SessionId) : null;
     }
 }

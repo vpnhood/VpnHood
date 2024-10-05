@@ -1,6 +1,7 @@
 ﻿using VpnHood.AccessServer.Dtos.AccessTokens;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Utils;
+using VpnHood.Manager.Common.Utils;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
@@ -23,7 +24,7 @@ public static class AccessTokenConverter
             Lifetime = model.Lifetime,
             MaxDevice = model.MaxDevice,
             MaxTraffic = model.MaxTraffic,
-            Tags = ManagerUtils.TagsFromString(model.Tags),
+            Tags = TagUtils.TagsFromString(model.Tags),
             ProjectId = model.ProjectId,
             SupportCode = model.SupportCode,
             AdRequirement = model.AdRequirement,

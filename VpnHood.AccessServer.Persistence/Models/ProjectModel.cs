@@ -28,6 +28,6 @@ public class ProjectModel
     public virtual ICollection<HostProviderModel>? ProviderConfigs { get; set; }
     public virtual ICollection<HostOrderModel>? HostOrders { get; set; }
     public virtual ICollection<HostIpModel>? HostIps { get; set; }
-    public virtual ICollection<ClientFilterModel>? ClientFilterModels { get; set; }
+    public virtual ICollection<ClientFilterModel>? ClientFilters { get; set; }
 
 }

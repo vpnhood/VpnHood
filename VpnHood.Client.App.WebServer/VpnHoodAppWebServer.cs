@@ -78,8 +78,9 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         _spaHash = BitConverter.ToString(hash).Replace("-", "");
 
         var spaFolderPath = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp", "SPA");
-        var path = Path.Combine(spaFolderPath, _spaHash);
-        if (!Directory.Exists(path)) {
+        var spaPath = Path.Combine(spaFolderPath, _spaHash);
+        var htmlPath = Path.Combine(spaPath, "index.html");
+        if (!File.Exists(htmlPath)) {
             try {
                 Directory.Delete(spaFolderPath, true);
             }
@@ -89,11 +90,11 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
             memZipStream.Seek(0, SeekOrigin.Begin);
             using var zipArchive = new ZipArchive(memZipStream);
-            zipArchive.ExtractToDirectory(path, true);
+            zipArchive.ExtractToDirectory(spaPath, true);
         }
 
         _spaZipStream.Dispose();
-        return path;
+        return spaPath;
     }
 
     private EmbedIO.WebServer CreateWebServer()

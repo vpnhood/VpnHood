@@ -2,6 +2,7 @@
 ### Client
 * Feature: Update server token from multiple URLs
 * Improve: Improve initialization speed to exclude my country
+* Fix: Startup crash on some android devices.
 
 ### Server
 * Fix: Server listening to a test IP

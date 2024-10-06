@@ -91,8 +91,9 @@ public class StoreAuthenticationService : IAppAuthenticationService
                 throw new Exception("UI context is not available.");
 
             var idToken = _externalAuthenticationService != null
-                ? await _externalAuthenticationService.SilentSignIn(uiContext).VhConfigureAwait()
+                ? await _externalAuthenticationService.SignIn(uiContext, true).VhConfigureAwait()
                 : null;
+            
             if (!string.IsNullOrWhiteSpace(idToken)) {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
                 ApiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken })
@@ -112,7 +113,7 @@ public class StoreAuthenticationService : IAppAuthenticationService
         if (_externalAuthenticationService == null)
             throw new InvalidOperationException("Google sign in is not supported.");
 
-        var idToken = await _externalAuthenticationService.SignIn(uiContext).VhConfigureAwait();
+        var idToken = await _externalAuthenticationService.SignIn(uiContext, false).VhConfigureAwait();
         await SignInToVpnHoodStore(idToken, true).VhConfigureAwait();
     }
 

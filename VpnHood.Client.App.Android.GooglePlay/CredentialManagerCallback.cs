@@ -6,8 +6,10 @@ public class CredentialManagerCallback : Java.Lang.Object, ICredentialManagerCal
     private readonly TaskCompletionSource<GetCredentialResponse> _taskCompletionSource = new();
     public void OnError(Java.Lang.Object e)
     {
-        // ReSharper disable once SuspiciousTypeConversion.Global
-        _taskCompletionSource.TrySetException((Exception)(object)e);
+        if (e.Class.TypeName.Contains("CancellationException"))
+            _taskCompletionSource.TrySetCanceled();
+        else
+            _taskCompletionSource.TrySetException(new Exception(e.ToString()));
     }
 
     public void OnResult(Java.Lang.Object? result)

@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Globalization;
 using VpnHood.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
@@ -18,17 +17,7 @@ public class AccessTest : TestBase
     public async Task Foo()
     {
         await Task.Delay(0);
-
-        var cityName = "São paulo";
-
-        // Create a TextInfo object for the Portuguese culture
-        var textInfo = CultureInfo.GetCultureInfo("en-US").TextInfo;
-
-        // Apply the ToTitleCase method to capitalize the first letter and handle diacritics
-        var formattedCityName = textInfo.ToTitleCase(cityName);
-
-        Console.WriteLine(formattedCityName); // Output: São Paulo
-
+        
     }
 
     [TestMethod]

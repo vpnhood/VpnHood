@@ -89,7 +89,7 @@ public class FileAccessManager : IAccessManager
             Secret = serverConfig.ServerSecretValue,
             Urls = serverConfig.ServerTokenUrls,
             CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow),
-            ServerLocations = serverLocation != null ? [serverLocation] : null
+            ServerLocations = string.IsNullOrEmpty(serverLocation) ? null : [serverLocation]
         };
 
         // write encrypted server token
@@ -196,7 +196,7 @@ public class FileAccessManager : IAccessManager
             };
 
         var ret = SessionController.CreateSession(sessionRequestEx, accessItem);
-        ret.ServerLocation = _serverToken.ServerLocations?.FirstOrDefault();
+        ret.ServerLocation = _serverToken.ServerLocationsLegacy?.FirstOrDefault();
 
         // update accesskey
         if (ServerConfig.ReplyAccessKey)
@@ -433,8 +433,7 @@ public class FileAccessManager : IAccessManager
             if (System.IO.File.Exists(fileName)) {
                 var json = await System.IO.File.ReadAllTextAsync(fileName).VhConfigureAwait();
                 var accessItemUsage = JsonSerializer.Deserialize<AccessItemUsage>(json) ?? new AccessItemUsage();
-                accessItem.AccessUsage.Traffic = new Traffic
-                    { Sent = accessItemUsage.SentTraffic, Received = accessItemUsage.ReceivedTraffic };
+                accessItem.AccessUsage.Traffic = new Traffic { Sent = accessItemUsage.SentTraffic, Received = accessItemUsage.ReceivedTraffic };
             }
         }
         catch (Exception ex) {

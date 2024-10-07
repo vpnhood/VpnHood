@@ -1,88 +1,46 @@
 using System.Security.Authentication;
-using Android.Content;
-using Android.Gms.Auth.Api.SignIn;
-using Android.Gms.Common.Apis;
+using AndroidX.Credentials;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
-using VpnHood.Client.Device.Droid.ActivityEvents;
-using VpnHood.Common.Utils;
+using Xamarin.GoogleAndroid.Libraries.Identity.GoogleId;
+using GetCredentialRequest = AndroidX.Credentials.GetCredentialRequest;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
-public class GooglePlayAuthenticationService(string googleSignInClientId)
-    : IAppAuthenticationExternalService
+public class GooglePlayAuthenticationService(string googleSignInClientId) : IAppAuthenticationExternalService
 {
-    private const int SignInIntentId = 20200;
-    private TaskCompletionSource<GoogleSignInAccount>? _taskCompletionSource;
-
-    private readonly GoogleSignInOptions _googleSignInOptions =
-        new GoogleSignInOptions.Builder(GoogleSignInOptions.DefaultSignIn)
-            .RequestIdToken(googleSignInClientId)
-            .RequestEmail()
-            .Build();
-
-    public async Task<string> SilentSignIn(IUiContext uiContext)
+    public async Task<string> SignIn(IUiContext uiContext, bool isSilentLogin)
     {
         var appUiContext = (AndroidUiContext)uiContext;
-
-        using var googleSignInClient = GoogleSignIn.GetClient(appUiContext.Activity, _googleSignInOptions);
-        var account = await googleSignInClient.SilentSignInAsync().VhConfigureAwait();
-        return account?.IdToken ?? throw new AuthenticationException("Could not perform SilentSignIn by Google.");
+        using var googleSignInOptions = new GetGoogleIdOption.Builder()
+                .SetFilterByAuthorizedAccounts(false)
+                .SetServerClientId(googleSignInClientId)
+                .SetAutoSelectEnabled(isSilentLogin)
+                .Build();
+        
+        using var credentialRequest = new GetCredentialRequest.Builder().AddCredentialOption(googleSignInOptions).Build();
+        using var credentialManager = GoogleCredentialManager.Create(appUiContext.Activity);
+        using var credentialResponse = await credentialManager.GetCredentialAsync(appUiContext.Activity, credentialRequest);
+        return GetIdTokenFromCredentialResponse(credentialResponse);
     }
-
-    public async Task<string> SignIn(IUiContext uiContext)
-    {
-        var appUiContext = (AndroidUiContext)uiContext;
-
-        try {
-            using var googleSignInClient = GoogleSignIn.GetClient(appUiContext.Activity, _googleSignInOptions);
-
-            _taskCompletionSource = new TaskCompletionSource<GoogleSignInAccount>();
-            appUiContext.ActivityEvent.ActivityResultEvent += Activity_OnActivityResult;
-            appUiContext.ActivityEvent.Activity.StartActivityForResult(googleSignInClient.SignInIntent, SignInIntentId);
-            var account = await _taskCompletionSource.Task.VhConfigureAwait();
-
-            if (account.IdToken == null)
-                throw new ArgumentNullException(account.IdToken);
-
-            return account.IdToken;
-        }
-        catch (ApiException ex) {
-            if (ex.StatusCode == 12501)
-                throw new OperationCanceledException();
-            throw;
-        }
-        finally {
-            appUiContext.ActivityEvent.ActivityResultEvent -= Activity_OnActivityResult;
-        }
-    }
-
+    
     public async Task SignOut(IUiContext uiContext)
     {
         var appUiContext = (AndroidUiContext)uiContext;
-        using var googleSignInClient = GoogleSignIn.GetClient(appUiContext.Activity, _googleSignInOptions);
-        await googleSignInClient.SignOutAsync().VhConfigureAwait();
+        using var credentialManager = GoogleCredentialManager.Create(appUiContext.Activity);
+        await credentialManager.ClearCredentialStateAsync(appUiContext.Activity);
     }
 
-    private void Activity_OnActivityResult(object? sender, ActivityResultEventArgs e)
+    private static string GetIdTokenFromCredentialResponse(GetCredentialResponse credentialResponse)
     {
-        // If the request code is not related to the Google sign-in method
-        if (e.RequestCode == SignInIntentId)
-            _ = ProcessSignedInAccountFromIntent(e.Data);
+        var credential = credentialResponse.Credential;
+        if (credential is not CustomCredential || credential.Type is not GoogleIdTokenCredential.TypeGoogleIdTokenCredential) 
+            throw new AuthenticationException("Unexpected type of credential");
+        
+        using var googleIdTokenCredential = GoogleIdTokenCredential.CreateFrom(credential.Data);
+        return googleIdTokenCredential.IdToken;
     }
-
-    private async Task ProcessSignedInAccountFromIntent(Intent? intent)
-    {
-        try {
-            var googleSignInAccount = await GoogleSignIn.GetSignedInAccountFromIntentAsync(intent).VhConfigureAwait();
-            _taskCompletionSource?.SetResult(googleSignInAccount);
-        }
-        catch (Exception e) {
-            _taskCompletionSource?.TrySetException(e);
-        }
-    }
-
     public void Dispose()
     {
     }

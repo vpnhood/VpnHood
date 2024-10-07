@@ -29,14 +29,16 @@ public class ClientServerLocationInfo : ServerLocationInfo
             // Add wildcard selector for country if it has multiple occurrences
             var isMultipleCountry = countryCount[countryCode] > 1;
             if (!seenCountries.Contains(countryCode)) {
-                if (isMultipleCountry)
+                if (isMultipleCountry) {
                     results.Add(new ClientServerLocationInfo {
                         CountryCode = countryCode,
                         RegionName = "*",
                         IsNestedCountry = false,
                         IsDefault = countryCount.Count == 1,
-                        Tags = items.Where(x => x.CountryCode == countryCode).SelectMany(x => x.Tags).Distinct().ToArray()
+                        Tags = CalcCategoryTags(items.Where(x => x.CountryCode == countryCode)).ToArray()
                     });
+                }
+
                 seenCountries.Add(countryCode);
             }
 
@@ -56,11 +58,24 @@ public class ClientServerLocationInfo : ServerLocationInfo
                 RegionName = AutoRegionName,
                 IsNestedCountry = false,
                 IsDefault = true,
-                Tags = items.SelectMany(x => x.Tags).Distinct().ToArray()
+                Tags = CalcCategoryTags(items).ToArray()
             });
 
         results.Sort();
         var distinctResults = results.Distinct().ToArray();
         return distinctResults;
+    }
+
+    private static IEnumerable<string> CalcCategoryTags(IEnumerable<ServerLocationInfo> items)
+    {
+        // get distinct of all tags in items and include the not tag (!#tag) if the tag is not present is all items
+        var itemArray = items.ToArray();
+        var tags = itemArray.SelectMany(x => x.Tags).Distinct().ToList();
+        foreach (var tag in tags.ToArray()) {
+            if (itemArray.Any(x=>!x.Tags.Contains(tag)))
+                tags.Add($"!{tag}");
+        }
+
+        return tags.Distinct();
     }
 }

@@ -21,7 +21,8 @@ public class ClientProfile
         }
     }
 
-    [JsonIgnore] public ClientServerLocationInfo[] ServerLocationInfos { get; private set; } = [];
+    [JsonIgnore] 
+    public ClientServerLocationInfo[] ServerLocationInfos { get; private set; } = [];
 
 
     public ClientProfileInfo ToInfo()

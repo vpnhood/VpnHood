@@ -5,11 +5,11 @@ namespace VpnHood.Common;
 
 public class ServerLocationInfo : IComparable<ServerLocationInfo>
 {
-    [JsonIgnore] // required to prevent NSwag generate incorrect code
-    public static ServerLocationInfo Auto { get; } = new() { CountryCode = "*", RegionName = "*" };
-
+    public const string AutoCountryCode = "*";
+    public const string AutoRegionName = "*";
     public required string CountryCode { get; init; }
     public required string RegionName { get; init; }
+    public required string[] Tags { get; init; }
     public string ServerLocation => $"{CountryCode}/{RegionName}";
     public string CountryName => GetCountryName(CountryCode);
 
@@ -26,7 +26,6 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
         return ServerLocation == (obj as ServerLocationInfo)?.ServerLocation;
     }
 
-
     public override string ToString()
     {
         return ServerLocation;
@@ -39,13 +38,37 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
 
     public static ServerLocationInfo Parse(string value)
     {
-        var parts = value.Split('/');
+        // format is "CountryCode/RegionName [#tag1 #tag2 ...]"
+
+        // Parse location and tags
+        var openBracketIndex = value.IndexOf('[');
+        var closeBracketIndex = value.LastIndexOf(']');
+
+        // If no brackets found, set indices appropriately
+        if (openBracketIndex == -1 || closeBracketIndex == -1 || closeBracketIndex < openBracketIndex) {
+            openBracketIndex = value.Length;
+            closeBracketIndex = value.Length; // No tags present
+        }
+
+        var locationPart = value[..openBracketIndex].Trim();
+
+        // Extract tags only if both brackets are found and in the correct order
+        var tagsPart = (openBracketIndex < closeBracketIndex)
+            ? value[(openBracketIndex + 1)..closeBracketIndex].Trim()
+            : string.Empty;
+
+        var tags = tagsPart.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        // Parse location parts
+        var parts = locationPart.Split('/');
         var ret = new ServerLocationInfo {
             CountryCode = ParseLocationPart(parts, 0),
-            RegionName = ParseLocationPart(parts, 1)
+            RegionName = ParseLocationPart(parts, 1),
+            Tags = tags
         };
         return ret;
     }
+
 
     public static ServerLocationInfo? TryParse(string value)
     {
@@ -86,10 +109,14 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
         }
     }
 
+    public bool IsAuto() => IsAuto(ServerLocation);
+
     public static bool IsAuto(string? serverLocation)
     {
-        return
-            string.IsNullOrEmpty(serverLocation) ||
-            TryParse(serverLocation)?.Equals(Auto) == true;
+        if (string.IsNullOrEmpty(serverLocation))
+            return true;
+
+        var info = TryParse(serverLocation);
+        return info is { CountryCode: AutoCountryCode, RegionName: AutoRegionName };
     }
 }

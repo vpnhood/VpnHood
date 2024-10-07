@@ -396,7 +396,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private readonly AsyncLock _connectLock = new();
-
     public async Task Connect(Guid? clientProfileId = null, string? serverLocation = null, bool diagnose = false,
         string? userAgent = default, bool throwException = true, CancellationToken cancellationToken = default)
     {
@@ -534,7 +533,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return packetCapture;
     }
 
-    private async Task ConnectInternal(Token token, string? serverLocationInfo, string? userAgent,
+    private async Task ConnectInternal(Token token, string? serverLocation, string? userAgent,
         bool allowUpdateToken, CancellationToken cancellationToken)
     {
         // show token info
@@ -562,7 +561,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ConnectTimeout = TcpTimeout,
             ServerQueryTimeout = _serverQueryTimeout,
             DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets,
-            ServerLocation = serverLocationInfo == ServerLocationInfo.Auto.ServerLocation ? null : serverLocationInfo,
+            ServerLocation = ServerLocationInfo.IsAuto(serverLocation) ? null : serverLocation,
             UseUdpChannel = UserSettings.UseUdpChannel,
             DomainFilter = UserSettings.DomainFilter,
             ForceLogSni = LogService.LogEvents.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase),
@@ -614,7 +613,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (allowUpdateToken && !VhUtil.IsNullOrEmpty(token.ServerToken.Urls) &&
                 await ClientProfileService.UpdateServerTokenByUrls(token).VhConfigureAwait()) {
                 token = ClientProfileService.GetToken(token.TokenId);
-                await ConnectInternal(token, serverLocationInfo, userAgent, false, cancellationToken)
+                await ConnectInternal(token, serverLocation, userAgent, false, cancellationToken)
                     .VhConfigureAwait();
                 return;
             }
@@ -791,7 +790,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private readonly AsyncLock _versionCheckLock = new();
-
     public async Task VersionCheck(bool force = false)
     {
         using var lockAsync = await _versionCheckLock.LockAsync().VhConfigureAwait();

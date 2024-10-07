@@ -133,23 +133,33 @@ public class ClientAppTest : TestBase
 
         // test two region in a same country
         var token = CreateToken();
-        token.ServerToken.ServerLocations = ["us/regin2", "us/california"];
+        token.ServerToken.ServerLocations = ["us/texas [#tag0]", "us/california [#tag1 #tag2]"];
+
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
         app.UserSettings.ServerLocation = "us/*";
         app.Settings.Save();
         Assert.AreEqual("us/*", app.State.ClientServerLocationInfo?.ServerLocation);
-        Assert.AreEqual(null, app.UserSettings.ServerLocation);
+        CollectionAssert.AreEquivalent(new[] { "#tag0", "#tag1", "#tag2" }, app.State.ClientServerLocationInfo?.Tags);
+        Assert.IsNull(app.UserSettings.ServerLocation);
+
+        app.UserSettings.ServerLocation = "us/california";
+        app.Settings.Save();
+        CollectionAssert.AreEquivalent(new[] { "#tag1", "#tag2" }, app.State.ClientServerLocationInfo?.Tags);
+
+        app.UserSettings.ServerLocation = "us/texas";
+        app.Settings.Save();
+        CollectionAssert.AreEquivalent(new[] { "#tag0", }, app.State.ClientServerLocationInfo?.Tags);
 
         // test three regin
-        token.ServerToken.ServerLocations = ["us/regin2", "us/california", "fr/paris"];
+        token = CreateToken();
+        token.ServerToken.ServerLocations = ["us/texas", "us/california [#z1 #z2]", "fr/paris [#p1 #p2]"];
         clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
+        app.UserSettings.ServerLocation = "fr/paris";
         app.Settings.Save();
-        Assert.AreEqual("*/*", app.State.ClientServerLocationInfo?.ServerLocation);
-        Assert.AreEqual(null, app.UserSettings.ServerLocation);
+        CollectionAssert.AreEquivalent(new[] { "#p1", "#p2" }, app.State.ClientServerLocationInfo?.Tags);
     }
-
 
     [TestMethod]
     public async Task ClientProfiles_ServerLocations()
@@ -188,7 +198,7 @@ public class ClientAppTest : TestBase
 
         // test multiple countries
         token = CreateToken();
-        token.ServerToken.ServerLocations = ["us/virgina", "us/california", "uk/england", "uk/region2", "uk/england"];
+        token.ServerToken.ServerLocations = ["us/virgina", "us/california", "uk/england [#pr]", "uk/region2"];
         clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         clientProfileInfo = clientProfile.ToInfo();
         serverLocations = clientProfileInfo.ServerLocationInfos.Select(x => x.ServerLocation).ToArray();

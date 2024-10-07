@@ -29,7 +29,7 @@ public class ServerToken
     public string? Url {
         get => Urls?.FirstOrDefault();
         set {
-            if (VhUtil.IsNullOrEmpty(Urls)) 
+            if (VhUtil.IsNullOrEmpty(Urls))
                 Urls = value != null ? [value] : null;
         }
     }
@@ -45,6 +45,17 @@ public class ServerToken
 
     [JsonPropertyName("loc")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [Obsolete]
+    public string[]? ServerLocationsLegacy {
+        get => ServerLocations?.Select(x => x.Split("[").First()).ToArray();
+        set {
+            if (ServerLocations?.Length is null or 0)
+                ServerLocations = value;
+        }
+    }
+
+    [JsonPropertyName("loc2")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string[]? ServerLocations { get; set; }
 
     public string Encrypt(byte[]? iv = null)
@@ -54,7 +65,7 @@ public class ServerToken
             throw new Exception("There is no Secret in ServerToken.");
 
         // generate IV
-        if (iv== null) {
+        if (iv == null) {
             using var rng = RandomNumberGenerator.Create();
             iv = new byte[Secret.Length];
             rng.GetBytes(iv);

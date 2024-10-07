@@ -10,50 +10,53 @@ public class ClientServerLocationInfo : ServerLocationInfo
     public static ClientServerLocationInfo[] AddCategoryGaps(string[]? serverLocations)
     {
         serverLocations ??= [];
-        var locationInfos = serverLocations.Select(Parse).ToArray();
+        var items = serverLocations.Select(Parse).ToArray();
 
         var results = new List<ClientServerLocationInfo>();
         var countryCount = new Dictionary<string, int>();
 
         // Count occurrences of each country and region
-        foreach (var locationInfo in locationInfos) {
-            if (!countryCount.TryAdd(locationInfo.CountryCode, 1))
-                countryCount[locationInfo.CountryCode]++;
+        foreach (var item in items) {
+            if (!countryCount.TryAdd(item.CountryCode, 1))
+                countryCount[item.CountryCode]++;
         }
 
         // Add wildcard serverLocations for countries multiple occurrences
         var seenCountries = new HashSet<string>();
-        foreach (var locationInfo in locationInfos) {
-            var countryCode = locationInfo.CountryCode;
+        foreach (var item in items) {
+            var countryCode = item.CountryCode;
 
             // Add wildcard selector for country if it has multiple occurrences
             var isMultipleCountry = countryCount[countryCode] > 1;
             if (!seenCountries.Contains(countryCode)) {
                 if (isMultipleCountry)
                     results.Add(new ClientServerLocationInfo {
-                        CountryCode = locationInfo.CountryCode,
+                        CountryCode = countryCode,
                         RegionName = "*",
                         IsNestedCountry = false,
-                        IsDefault = countryCount.Count == 1
+                        IsDefault = countryCount.Count == 1,
+                        Tags = items.Where(x => x.CountryCode == countryCode).SelectMany(x => x.Tags).Distinct().ToArray()
                     });
                 seenCountries.Add(countryCode);
             }
 
             results.Add(new ClientServerLocationInfo {
-                CountryCode = locationInfo.CountryCode,
-                RegionName = locationInfo.RegionName,
+                CountryCode = item.CountryCode,
+                RegionName = item.RegionName,
                 IsNestedCountry = isMultipleCountry,
-                IsDefault = countryCount.Count == 1 && !isMultipleCountry
+                IsDefault = countryCount.Count == 1 && !isMultipleCountry,
+                Tags = item.Tags
             });
         }
 
         // Add auto if there is no item or if there are multiple countries
         if (countryCount.Count > 1)
             results.Insert(0, new ClientServerLocationInfo {
-                CountryCode = Auto.CountryCode,
-                RegionName = Auto.RegionName,
+                CountryCode = AutoCountryCode,
+                RegionName = AutoRegionName,
                 IsNestedCountry = false,
-                IsDefault = true
+                IsDefault = true,
+                Tags = items.SelectMany(x => x.Tags).Distinct().ToArray()
             });
 
         results.Sort();

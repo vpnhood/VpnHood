@@ -133,14 +133,14 @@ public class ClientAppTest : TestBase
 
         // test two region in a same country
         var token = CreateToken();
-        token.ServerToken.ServerLocations = ["us/texas [#tag0]", "us/california [#tag1 #tag2]"];
+        token.ServerToken.ServerLocations = ["us/texas [#tag1]", "us/california [#tag1 #tag2]"];
 
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
         app.UserSettings.ServerLocation = "us/*";
         app.Settings.Save();
         Assert.AreEqual("us/*", app.State.ClientServerLocationInfo?.ServerLocation);
-        CollectionAssert.AreEquivalent(new[] { "#tag0", "#tag1", "#tag2" }, app.State.ClientServerLocationInfo?.Tags);
+        CollectionAssert.AreEquivalent(new[] { "#tag1", "#tag2", "!#tag2" }, app.State.ClientServerLocationInfo?.Tags);
         Assert.IsNull(app.UserSettings.ServerLocation);
 
         app.UserSettings.ServerLocation = "us/california";
@@ -149,7 +149,7 @@ public class ClientAppTest : TestBase
 
         app.UserSettings.ServerLocation = "us/texas";
         app.Settings.Save();
-        CollectionAssert.AreEquivalent(new[] { "#tag0", }, app.State.ClientServerLocationInfo?.Tags);
+        CollectionAssert.AreEquivalent(new[] { "#tag1", }, app.State.ClientServerLocationInfo?.Tags);
 
         // test three regin
         token = CreateToken();
@@ -159,6 +159,10 @@ public class ClientAppTest : TestBase
         app.UserSettings.ServerLocation = "fr/paris";
         app.Settings.Save();
         CollectionAssert.AreEquivalent(new[] { "#p1", "#p2" }, app.State.ClientServerLocationInfo?.Tags);
+
+        app.UserSettings.ServerLocation = "*/*";
+        app.Settings.Save();
+        CollectionAssert.AreEquivalent(new[] { "#p1", "#p2", "#z1", "#z2", "!#p1", "!#p2", "!#z1", "!#z2" }, app.State.ClientServerLocationInfo?.Tags);
     }
 
     [TestMethod]
@@ -216,8 +220,8 @@ public class ClientAppTest : TestBase
         Assert.IsTrue(clientProfileInfo.ServerLocationInfos[3].IsNestedCountry);
         _ = i;
     }
-
-    [TestMethod]
+    
+       [TestMethod]
     public async Task ClientProfiles_CRUD()
     {
         await using var app = TestHelper.CreateClientApp();

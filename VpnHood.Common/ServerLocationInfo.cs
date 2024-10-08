@@ -8,7 +8,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
     public const string AutoRegionName = "*";
     public required string CountryCode { get; init; }
     public required string RegionName { get; init; }
-    public required string[] Tags { get; init; }
+    public string[] Tags { get; init; } = []; //for compatibility with older versions
     public string ServerLocation => $"{CountryCode}/{RegionName}";
     public string CountryName => GetCountryName(CountryCode);
 

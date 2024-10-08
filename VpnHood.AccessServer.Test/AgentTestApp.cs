@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
-using Namotion.Reflection;
 using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Test.Helper;

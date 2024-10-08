@@ -2,7 +2,6 @@
 using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Test.Tests;

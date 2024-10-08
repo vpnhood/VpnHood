@@ -6,7 +6,6 @@ using VpnHood.AccessServer.Dtos.AccessTokens;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Repos;
-using VpnHood.AccessServer.Utils;
 using VpnHood.Common;
 using VpnHood.Manager.Common.Utils;
 
@@ -98,6 +97,7 @@ public class AccessTokensService(
             Secret = accessToken.Secret,
             TokenId = accessToken.AccessTokenId.ToString(),
             Name = accessToken.AccessTokenName,
+            Tags = TagUtils.TagsFromString(accessToken.Tags),
             SupportId = accessToken.SupportCode.ToString(),
             IssuedAt = DateTime.UtcNow
         };

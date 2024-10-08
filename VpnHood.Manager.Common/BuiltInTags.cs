@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AccessServer.Utils;
+﻿namespace VpnHood.Manager.Common;
 
 public class BuiltInTags
 {

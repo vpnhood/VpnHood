@@ -4,7 +4,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common.Messaging;
-using VpnHood.Server.Access.Messaging;
 using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test.Dom;

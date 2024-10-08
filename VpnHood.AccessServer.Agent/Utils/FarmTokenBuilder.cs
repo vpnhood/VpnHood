@@ -7,6 +7,7 @@ using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common;
 using VpnHood.Common.Utils;
+using VpnHood.Manager.Common.Utils;
 
 namespace VpnHood.AccessServer.Agent.Utils;
 
@@ -66,12 +67,11 @@ public static class FarmTokenBuilder
         var x509Certificate = new X509Certificate2(certificate.RawData);
 
         var servers = serverFarm.Servers!
-            .Where(server => server.IsEnabled)
+            .Where(server => !server.IsDeleted)
             .ToArray();
 
         // find all public accessPoints 
         var accessPoints = servers
-            .Where(server => server is { IsEnabled: true, IsDeleted: false })
             .SelectMany(server => server.AccessPoints)
             .Where(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken)
             .ToArray();
@@ -99,8 +99,13 @@ public static class FarmTokenBuilder
             .Select(x => ServerLocationInfo.Parse(x.Location!.ToPath()))
             .Distinct()
             .Order()
-            .Select(x => x.ServerLocation)
+            .Select(x=>x.ServerLocation)
             .ToArray();
+
+        // add tags to server locations
+        locations = locations.Select(location => BuildServerLocationWithTags(location, servers))
+            .ToArray();
+
 
         // create token
         var serverToken = new ServerToken {
@@ -119,6 +124,30 @@ public static class FarmTokenBuilder
         // validate token
 
         return serverToken;
+    }
+
+    private static string BuildServerLocationWithTags(string location, IEnumerable<ServerModel> servers)
+    {
+        // find all servers in the location
+        var serverList = servers
+            .Where(server => server.Location?.ToPath() == location)
+            .Select(server => new { Server = server, Tags = TagUtils.TagsFromString(server.Tags) })
+            .ToArray();
+
+        // add all tags from servers in the location
+        var tags = serverList
+            .SelectMany(x => (x.Tags))
+            .Distinct();
+
+        // add partial sign (~) to the location if the tags does not exist on all servers in this location
+        var newTags = tags
+            .Select(tag => serverList.All(x => x.Tags.Contains(tag)) ? tag : $"~{tag}")
+            .Order()
+            .ToArray();
+
+        return newTags.Length > 0
+            ? $"{location} [{TagUtils.TagsToString(newTags, false)}]"
+            : location;
     }
 
     public static ServerToken? GetServerToken(string? serverFarmTokenJson)

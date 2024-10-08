@@ -10,8 +10,8 @@ using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Security;
-using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Messaging;
+using VpnHood.Manager.Common;
 
 namespace VpnHood.AccessServer.Services;
 

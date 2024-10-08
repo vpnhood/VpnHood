@@ -300,8 +300,8 @@ public class AccessTokenTest
         
         var accessTokenDom1 = await farm.CreateAccessToken(createParam1);
         var token = await accessTokenDom1.GetToken();
-        CollectionAssert.AreEquivalent(new [] {"10/0 [#a1 #a2 #b1 !#b1 !#b2]", "10/1 [#c1 #c2]" }, token.ServerToken.ServerLocations);
-        CollectionAssert.AreEquivalent(new [] {"$tag1", "$tag2", "$tag3" }, token.Tags);
+        CollectionAssert.AreEquivalent(new [] {"10/0 [#a1 ~#a2 ~#b1 ~#b2]", "10/1 [#c1 #c2]" }, token.ServerToken.ServerLocations);
+        CollectionAssert.AreEquivalent(new [] {"#tag1", "#tag2", "#tag3" }, token.Tags);
     }
 
 

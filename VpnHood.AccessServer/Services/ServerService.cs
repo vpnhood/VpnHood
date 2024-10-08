@@ -129,6 +129,12 @@ public class ServerService(
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
 
+        // reconfig current server if required
+        var reconfigure =
+            (updateParams.AutoConfigure != null && updateParams.AutoConfigure.Value != server.AutoConfigure) ||
+            (updateParams.ServerFarmId != null && updateParams.ServerFarmId.Value != server.ServerFarmId) ||
+            (updateParams.AccessPoints != null);
+
         if (updateParams.Tags != null) server.Tags = TagUtils.TagsToString(updateParams.Tags.Value);
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
         if (updateParams.Power != null) server.Power = updateParams.Power;
@@ -148,9 +154,7 @@ public class ServerService(
         if (oldServerFarmId != server.ServerFarmId)
             await serverConfigureService.SaveChangesAndInvalidateServerFarm(projectId, oldServerFarmId, false);
 
-        // reconfig current server if required
-        var reconfigure = updateParams.AccessPoints != null || updateParams.AutoConfigure != null ||
-                          updateParams.ServerFarmId != null;
+        // reconfigure server
         var serverCache = await serverConfigureService.SaveChangesAndInvalidateServer(projectId, server, reconfigure);
 
         // get server again to resolve region and farm

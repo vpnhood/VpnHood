@@ -34,7 +34,7 @@
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
 		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.14" />
 		<PackageReference Include="SSH.NET" Version="2024.1.0" />
-		<PackageReference Include="VpnHood.Server.Access" Version="4.6.565-prerelease" />
+		<PackageReference Include="VpnHood.Server.Access" Version="4.6.566" />
 	</ItemGroup>
 
 	<ItemGroup>

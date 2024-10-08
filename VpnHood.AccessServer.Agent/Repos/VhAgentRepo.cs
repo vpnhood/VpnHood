@@ -19,10 +19,16 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         vhContext.Database.SetCommandTimeout(fromMinutes);
     }
 
+    private readonly ServerLocationInfo _autoServerLocation =
+        new() {
+            CountryCode = ServerLocationInfo.AutoCountryCode,
+            RegionName = ServerLocationInfo.AutoRegionName,
+            Tags = []
+        };
+
     public async Task<InitCache> GetInitView(DateTime minServerUsedTime, DateTime minSessionUsedTime)
     {
         vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
-        var autoServerLocation = ServerLocationInfo.Auto;
 
         // Statuses. Load Deleted Servers and Projects too but filter by minServerUsedTime
         logger.LogInformation("Loading the recent server status, farms and projects ...");
@@ -48,7 +54,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ServerStatus = x,
                     LocationInfo = x.Server.Location != null
                         ? ServerLocationInfo.Parse(x.Server.Location.ToPath())
-                        : autoServerLocation,
+                        : _autoServerLocation,
                     AllowInAutoLocation = x.Server!.AllowInAutoLocation,
                     LogicalCoreCount = x.Server.LogicalCoreCount ?? 1,
                     Power = x.Server.Power
@@ -146,7 +152,6 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
 
     public Task<ServerCache[]> ServersGet(Guid[]? serverIds = null)
     {
-        var autoServerLocation = ServerLocationInfo.Auto;
         return vhContext.Servers
             .Where(x => serverIds == null || serverIds.Contains(x.ServerId))
             .Include(x => x.ServerStatuses!.Where(y => y.IsLast == true))
@@ -166,7 +171,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 ServerFarmName = x.ServerFarm!.ServerFarmName,
                 ServerProfileId = x.ServerFarm!.ServerProfileId,
                 ServerStatus = x.ServerStatuses!.FirstOrDefault(),
-                LocationInfo = x.Location != null ? ServerLocationInfo.Parse(x.Location.ToPath()) : autoServerLocation,
+                LocationInfo = x.Location != null ? ServerLocationInfo.Parse(x.Location.ToPath()) : _autoServerLocation,
                 AllowInAutoLocation = x.AllowInAutoLocation,
                 LogicalCoreCount = x.LogicalCoreCount ?? 1,
                 Power = x.Power,

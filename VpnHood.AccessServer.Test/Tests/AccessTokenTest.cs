@@ -281,6 +281,31 @@ public class AccessTokenTest
     }
 
     [TestMethod]
+    public async Task GetAccessKey_With_Tags()
+    {
+        var farm = await ServerFarmDom.Create(serverCount:0);
+        await farm.AddNewServer(tags: ["#a1", "#a2"], publicIpV4: IPAddress.Parse("10.0.0.1"));
+        await farm.AddNewServer(tags: ["#a1", "#b1", "#b2"], publicIpV4: IPAddress.Parse("10.0.0.1"));
+        await farm.AddNewServer(tags: ["#c1", "#c2"], publicIpV4: IPAddress.Parse("10.1.0.1"));
+
+        //-----------
+        // check: create
+        //-----------
+        var createParam1 = new AccessTokenCreateParams {
+            ServerFarmId = farm.ServerFarmId,
+            AccessTokenName = Guid.NewGuid().ToString(),
+            Tags = ["#tag1", "#tag2", "#tag3"],
+            IsEnabled = true,
+        };
+        
+        var accessTokenDom1 = await farm.CreateAccessToken(createParam1);
+        var token = await accessTokenDom1.GetToken();
+        CollectionAssert.AreEquivalent(new [] {"10/0 [#a1 #a2 #b1 !#b1 !#b2]", "10/1 [#c1 #c2]" }, token.ServerToken.ServerLocations);
+        CollectionAssert.AreEquivalent(new [] {"$tag1", "$tag2", "$tag3" }, token.Tags);
+    }
+
+
+    [TestMethod]
     public async Task GetAccessKey_ForDomain()
     {
         var testApp = await TestApp.Create();

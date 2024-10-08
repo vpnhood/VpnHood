@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using System.Text.RegularExpressions;
 using GrayMint.Common.Utils;
 using Microsoft.Extensions.Options;
 using Renci.SshNet;
@@ -14,7 +13,6 @@ using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos;
-using VpnHood.AccessServer.Utils;
 using VpnHood.Manager.Common.Utils;
 using VpnHood.Server.Access.Managers.Http;
 using ConnectionInfo = Renci.SshNet.ConnectionInfo;
@@ -122,19 +120,13 @@ public class ServerService(
         // validate
         var server = await vhRepo.ServerGet(projectId, serverId, includeFarm: true);
         var oldServerFarmId = server.ServerFarmId;
+        var oldAutoConfigure = server.AutoConfigure;
 
         if (updateParams.ServerFarmId != null) {
             // make sure new farm belong to this account and ready for update farm token
             var serverFarm = await vhRepo.ServerFarmGet(projectId, updateParams.ServerFarmId);
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
-
-        // reconfig current server if required
-        var reconfigure =
-            (updateParams.AutoConfigure != null && updateParams.AutoConfigure.Value != server.AutoConfigure) ||
-            (updateParams.ServerFarmId != null && updateParams.ServerFarmId.Value != server.ServerFarmId) ||
-            (updateParams.AccessPoints != null);
-
         if (updateParams.Tags != null) server.Tags = TagUtils.TagsToString(updateParams.Tags.Value);
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
         if (updateParams.Power != null) server.Power = updateParams.Power;
@@ -154,7 +146,10 @@ public class ServerService(
         if (oldServerFarmId != server.ServerFarmId)
             await serverConfigureService.SaveChangesAndInvalidateServerFarm(projectId, oldServerFarmId, false);
 
-        // reconfigure server
+        // reconfigure current server if required
+        var reconfigure = server.AutoConfigure != oldAutoConfigure ||
+                          server.ServerFarmId != oldServerFarmId ||
+                          updateParams.AccessPoints != null;
         var serverCache = await serverConfigureService.SaveChangesAndInvalidateServer(projectId, server, reconfigure);
 
         // get server again to resolve region and farm

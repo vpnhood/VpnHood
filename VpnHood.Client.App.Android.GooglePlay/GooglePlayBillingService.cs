@@ -30,8 +30,9 @@ public class GooglePlayBillingService : IAppBillingService
     {
         switch (billingResult.ResponseCode) {
             case BillingResponseCode.Ok:
-                if (purchases.Any())
-                    _taskCompletionSource?.TrySetResult(purchases.First().OrderId);
+                var orderId = purchases.FirstOrDefault()?.OrderId;
+                if (orderId != null)
+                    _taskCompletionSource?.TrySetResult(orderId);
                 else
                     _taskCompletionSource?.TrySetException(new Exception("There is no any order."));
                 break;
@@ -84,7 +85,8 @@ public class GooglePlayBillingService : IAppBillingService
             var productDetails = response.ProductDetails.First();
             _productDetails = productDetails;
 
-            var plans = productDetails.GetSubscriptionOfferDetails();
+            var plans = productDetails.GetSubscriptionOfferDetails() 
+                        ?? throw new Exception("Could not load get subscription offer details.");
             _subscriptionOfferDetails = plans;
 
             var subscriptionPlans = plans

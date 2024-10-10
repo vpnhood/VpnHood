@@ -30,18 +30,20 @@ public class GooglePlayBillingService : IAppBillingService
     {
         switch (billingResult.ResponseCode) {
             case BillingResponseCode.Ok:
-                if (purchases.Any()) {
-                    var purchasedItem = purchases.First();
-                    if (purchasedItem.OrderId != null)
-                        _taskCompletionSource?.TrySetResult(purchasedItem.OrderId);
-                    else
-                        // Based on Google document, orderId is null on pending state.
-                        // The pending state must be handled in the UI to let the user know their subscription will be
-                        // available when Google accepts payment and changes the purchase state to PURCHASES.
-                        _taskCompletionSource?.TrySetException(new Exception("The order state is pending"));
-                }
-                else
+                var purchasedItem = purchases.FirstOrDefault();
+                if (purchasedItem == null) {
                     _taskCompletionSource?.TrySetException(new Exception("There is no any order."));
+                    break;
+                }
+
+                if (purchasedItem.OrderId != null)
+                    _taskCompletionSource?.TrySetResult(purchasedItem.OrderId);
+                else
+                    // Based on Google document, orderId is null on pending state.
+                    // The pending state must be handled in the UI to let the user know their subscription will be
+                    // available when Google accepts payment and changes the purchase state to PURCHASES.
+                    _taskCompletionSource?.TrySetException(new Exception("The order state is pending"));
+
                 break;
 
             case BillingResponseCode.UserCancelled:
@@ -49,7 +51,7 @@ public class GooglePlayBillingService : IAppBillingService
                 break;
 
             default:
-                _taskCompletionSource?.TrySetException(CreateBillingResultException(billingResult));
+                _taskCompletionSource?.TrySetException(BillingException.Create(billingResult));
                 break;
         }
     }
@@ -92,7 +94,7 @@ public class GooglePlayBillingService : IAppBillingService
             var productDetails = response.ProductDetails.First();
             _productDetails = productDetails;
 
-            var plans = productDetails.GetSubscriptionOfferDetails() 
+            var plans = productDetails.GetSubscriptionOfferDetails()
                         ?? throw new Exception("Could not get subscription offer details.");
             _subscriptionOfferDetails = plans;
 
@@ -142,7 +144,7 @@ public class GooglePlayBillingService : IAppBillingService
             var billingResult = _billingClient.LaunchBillingFlow(appUiContext.Activity, billingFlowParams);
 
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
-                throw CreateBillingResultException(billingResult);
+                throw BillingException.Create(billingResult);
 
             _taskCompletionSource = new TaskCompletionSource<string>();
             var orderId = await _taskCompletionSource.Task.VhConfigureAwait();
@@ -182,15 +184,5 @@ public class GooglePlayBillingService : IAppBillingService
     public void Dispose()
     {
         _billingClient.Dispose();
-    }
-
-    private static Exception CreateBillingResultException(BillingResult billingResult)
-    {
-        if (billingResult.ResponseCode == BillingResponseCode.Ok)
-            throw new InvalidOperationException("Response code should be not OK.");
-
-        return new Exception(billingResult.DebugMessage) {
-            Data = { { "ResponseCode", billingResult.ResponseCode } }
-        };
     }
 }

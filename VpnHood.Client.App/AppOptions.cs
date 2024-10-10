@@ -6,6 +6,7 @@ namespace VpnHood.Client.App;
 
 public class AppOptions
 {
+    public required string AppId { get; init; }
     public static string DefaultStorageFolderPath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
 
@@ -38,4 +39,5 @@ public class AppOptions
     public bool AutoDiagnose { get; set; } = true;
     public AppAdOptions AdOptions { get; set; } = new();
     public bool AllowEndPointTracker { get; set; }
+    public string? DeviceId { get; init; }
 }

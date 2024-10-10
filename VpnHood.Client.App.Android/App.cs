@@ -2,6 +2,7 @@
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.Properties;
 using VpnHood.Client.App.Resources;
+using VpnHood.Client.Device.Droid.Utils;
 
 namespace VpnHood.Client.App.Droid;
 
@@ -15,6 +16,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
     protected override AppOptions CreateAppOptions() => new() {
+        AppId = PackageName!,
+        DeviceId = AndroidUtil.GetDeviceId(this), //this will be hashed using AppId
         Resource = DefaultAppResource.Resource,
         AccessKeys = AssemblyInfo.IsDebugMode ? [ClientOptions.SampleAccessKey] : [],
         UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,

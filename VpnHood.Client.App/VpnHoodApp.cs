@@ -2,6 +2,8 @@
 using System.IO.Compression;
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
@@ -89,9 +91,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppServices Services { get; }
     public DateTime? ConnectedTime { get; private set; }
 
-    private VpnHoodApp(IDevice device, AppOptions? options = default)
+    private VpnHoodApp(IDevice device, AppOptions options)
     {
-        options ??= new AppOptions();
         device.StartedAsService += DeviceOnStartedAsService;
         Directory.CreateDirectory(options.StorageFolderPath); //make sure directory exists
         Resource = options.Resource;
@@ -173,7 +174,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsNotificationSupported = uiService.IsNotificationSupported,
             IsAlwaysOnSupported = device.IsAlwaysOnSupported,
             GaMeasurementId = options.AppGa4MeasurementId,
-            ClientId = Settings.ClientId.ToString()
+            ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId)
         };
 
         // initialize services
@@ -256,7 +257,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var tracker = new Ga4TagTracker {
             MeasurementId = _appGa4MeasurementId,
             SessionCount = 1,
-            ClientId = Settings.ClientId.ToString(),
+            ClientId = Settings.ClientId,
             SessionId = Guid.NewGuid().ToString(),
             UserProperties = new Dictionary<string, object> { { "client_version", Features.Version.ToString(3) } }
         };
@@ -369,7 +370,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         ActiveUiContext.OnChanged -= ActiveUiContext_OnChanged;
     }
 
-    public static VpnHoodApp Init(IDevice device, AppOptions? options = default)
+    public static VpnHoodApp Init(IDevice device, AppOptions options)
     {
         return new VpnHoodApp(device, options);
     }
@@ -396,7 +397,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private readonly AsyncLock _connectLock = new();
-
     public async Task Connect(Guid? clientProfileId = null, string? serverLocation = null, bool diagnose = false,
         string? userAgent = default, bool throwException = true, CancellationToken cancellationToken = default)
     {
@@ -534,7 +534,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return packetCapture;
     }
 
-    private async Task ConnectInternal(Token token, string? serverLocationInfo, string? userAgent,
+    private async Task ConnectInternal(Token token, string? serverLocation, string? userAgent,
         bool allowUpdateToken, CancellationToken cancellationToken)
     {
         // show token info
@@ -562,7 +562,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ConnectTimeout = TcpTimeout,
             ServerQueryTimeout = _serverQueryTimeout,
             DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets,
-            ServerLocation = serverLocationInfo == ServerLocationInfo.Auto.ServerLocation ? null : serverLocationInfo,
+            ServerLocation = ServerLocationInfo.IsAuto(serverLocation) ? null : serverLocation,
             UseUdpChannel = UserSettings.UseUdpChannel,
             DomainFilter = UserSettings.DomainFilter,
             ForceLogSni = LogService.LogEvents.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase),
@@ -583,7 +583,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         VpnHoodClient? client = null;
 
         try {
-            client = new VpnHoodClient(packetCapture, Settings.ClientId, token, clientOptions);
+            client = new VpnHoodClient(packetCapture, Features.ClientId, token, clientOptions);
             client.StateChanged += Client_StateChanged;
             _client = client;
 
@@ -614,7 +614,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (allowUpdateToken && !VhUtil.IsNullOrEmpty(token.ServerToken.Urls) &&
                 await ClientProfileService.UpdateServerTokenByUrls(token).VhConfigureAwait()) {
                 token = ClientProfileService.GetToken(token.TokenId);
-                await ConnectInternal(token, serverLocationInfo, userAgent, false, cancellationToken)
+                await ConnectInternal(token, serverLocation, userAgent, false, cancellationToken)
                     .VhConfigureAwait();
                 return;
             }
@@ -791,7 +791,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private readonly AsyncLock _versionCheckLock = new();
-
     public async Task VersionCheck(bool force = false)
     {
         using var lockAsync = await _versionCheckLock.LockAsync().VhConfigureAwait();
@@ -962,6 +961,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public Task RunJob()
     {
         return VersionCheck();
+    }
+
+    private static string CreateClientId(string appId, string deviceId)
+    {
+        // Convert the combined string to bytes
+        var uid = $"{appId}:{deviceId}";
+        var uiBytes = Encoding.UTF8.GetBytes(uid);
+
+        // Create an MD5 instance and compute the hash
+        using var md5 = MD5.Create();
+        var hashBytes = md5.ComputeHash(uiBytes);
+
+        // convert to Guid for compatibility
+        var guid = new Guid(hashBytes);
+        return guid.ToString();
     }
 
     public void UpdateUi()

@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Exceptions;
@@ -14,10 +13,9 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class AccessTest : TestBase
 {
-    [TestMethod]
-    public async Task Foo()
+    public static string[] TagsFromString(string? tags)
     {
-        await Task.Delay(0);
+        return tags?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
     }
 
     [TestMethod]
@@ -142,8 +140,7 @@ public class AccessTest : TestBase
 
         // create default token with 2 client count
         await using var client1 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
-            token: token,
-            clientId: Guid.NewGuid());
+            token: token);
 
         // suppress by yourself
         await using var client2 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
@@ -162,17 +159,14 @@ public class AccessTest : TestBase
         // suppress by other (MaxTokenClient is 2)
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Creating client3.");
         await using var client3 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
-            token: token,
-            clientId: Guid.NewGuid());
+            token: token);
 
         await using var client4 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
-            token: token,
-            clientId: Guid.NewGuid());
+            token: token);
 
         // create a client with another token
         var accessTokenX = TestHelper.CreateAccessToken(server);
         await using var clientX = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
-            clientId: Guid.NewGuid(),
             token: accessTokenX);
 
         // wait for finishing client2
@@ -198,17 +192,14 @@ public class AccessTest : TestBase
 
         // client1
         await using var client1 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
-            token: token,
-            clientId: Guid.NewGuid());
+            token: token);
 
         await using var client2 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
-            token: token,
-            clientId: Guid.NewGuid());
+            token: token);
 
         // suppress by yourself
         await using var client3 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
-            token: token,
-            clientId: Guid.NewGuid());
+            token: token);
 
         Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedBy);

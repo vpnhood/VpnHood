@@ -21,7 +21,7 @@ public class ServerNetFilterConfigTest : TestBase
 
         // create client
         await using var client =
-            new VpnHoodClient(new TestNullPacketCapture(), Guid.NewGuid(), token, new ClientOptions {
+            new VpnHoodClient(new TestNullPacketCapture(), Guid.NewGuid().ToString(), token, new ClientOptions {
                 PacketCaptureIncludeIpRanges = new IpRangeOrderedList([IpRange.Parse("230.0.0.0-230.0.0.200")])
             });
 
@@ -49,7 +49,7 @@ public class ServerNetFilterConfigTest : TestBase
 
         // create client
         await using var client =
-            new VpnHoodClient(new TestNullPacketCapture(), Guid.NewGuid(), token, new ClientOptions {
+            new VpnHoodClient(new TestNullPacketCapture(), Guid.NewGuid().ToString(), token, new ClientOptions {
                 PacketCaptureIncludeIpRanges = new IpRangeOrderedList([IpRange.Parse("230.0.0.0-230.0.0.200")])
             });
 
@@ -80,7 +80,7 @@ public class ServerNetFilterConfigTest : TestBase
 
         // create client
         await using var client =
-            new VpnHoodClient(new TestNullPacketCapture(), Guid.NewGuid(), token, new ClientOptions());
+            new VpnHoodClient(new TestNullPacketCapture(), Guid.NewGuid().ToString(), token, new ClientOptions());
         await client.Connect();
 
         Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("192.168.0.100")),
@@ -112,7 +112,7 @@ public class ServerNetFilterConfigTest : TestBase
 
         // create client
         await using var client =
-            new VpnHoodClient(new TestNullPacketCapture(), Guid.NewGuid(), token, new ClientOptions());
+            new VpnHoodClient(new TestNullPacketCapture(), clientId: Guid.NewGuid().ToString(), token: token, options: new ClientOptions());
         await client.Connect();
 
         Assert.IsFalse(client.IncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.110")), "Excludes failed");

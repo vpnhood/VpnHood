@@ -10,7 +10,7 @@ public class ServerUnauthorizedAccessException : UnauthorizedAccessException
     public IPEndPointPair IpEndPointPair { get; }
     public string? TokenId { get; }
     public ulong? SessionId { get; }
-    public Guid? ClientId { get; }
+    public string? ClientId { get; }
 
     public ServerUnauthorizedAccessException(string message, IPEndPointPair ipEndPointPair, HelloRequest helloRequest)
         : base(message)

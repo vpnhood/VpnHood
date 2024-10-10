@@ -15,7 +15,7 @@ public class ServerSessionException : SessionException, ISelfLog
     public ulong? SessionId { get; set; }
     public Session? Session { get; }
     public string RequestId { get; }
-    public Guid? ClientId { get; }
+    public string? ClientId { get; }
 
     public ServerSessionException(
         IPEndPoint remoteEndPoint,

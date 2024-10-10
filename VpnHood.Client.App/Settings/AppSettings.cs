@@ -11,12 +11,12 @@ public class AppSettings
     public event EventHandler? BeforeSave;
 
     [JsonIgnore] public string SettingsFilePath { get; private set; } = null!;
-    public int Version { get; set; } = 1;
+    public int Version { get; set; } = 2;
     public bool? IsQuickLaunchEnabled { get; set; }
     public bool? IsNotificationEnabled { get; set; }
     public DateTime ConfigTime { get; set; } = DateTime.Now;
     public UserSettings UserSettings { get; set; } = new();
-    public Guid ClientId { get; set; } = Guid.NewGuid();
+    public string ClientId { get; set; } = Guid.NewGuid().ToString();
 
     public void Save()
     {
@@ -31,10 +31,26 @@ public class AppSettings
 
     internal static AppSettings Load(string settingsFilePath)
     {
-        var res = VhUtil.JsonDeserializeFile<AppSettings>(settingsFilePath) ?? new AppSettings();
-        if (res.Version < 2) res.UserSettings.CultureCode = null;
-        res.Version = 2;
+        var isChanged = false;
+        var res = VhUtil.JsonDeserializeFile<AppSettings>(settingsFilePath);
+        if (res == null) {
+            res = new AppSettings();
+            isChanged = true;
+        }
+        
+        // Update version and settings file path
         res.SettingsFilePath = settingsFilePath;
+
+        // Save settings if changed
+        if (isChanged) {
+            try {
+                res.Save();
+            }
+            catch (Exception ex) {
+                Console.WriteLine($"Could not save new settings. Error: {ex.Message}");
+            }
+        }
+
         return res;
     }
 }

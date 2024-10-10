@@ -6,7 +6,7 @@ namespace VpnHood.Client.App.Droid.Common;
 public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership transfer)
     : Application(javaReference, transfer)
 {
-    protected virtual AppOptions CreateAppOptions() => new();
+    protected abstract AppOptions CreateAppOptions();
 
     public override void OnCreate()
     {

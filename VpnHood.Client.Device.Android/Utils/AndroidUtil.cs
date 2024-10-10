@@ -46,4 +46,17 @@ public static class AndroidUtil
 
         return taskCompletionSource.Task;
     }
+
+    public static string? GetDeviceId(Context context)
+    {
+        try {
+            return Android.Provider.Settings.Secure.GetString(
+                context.ContentResolver,
+                Android.Provider.Settings.Secure.AndroidId);
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"Could not retrieve android id. Message: {ex}");
+            return null;
+        }
+    }
 }

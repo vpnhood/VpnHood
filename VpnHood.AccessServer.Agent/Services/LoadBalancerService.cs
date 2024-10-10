@@ -109,7 +109,7 @@ public class LoadBalancerService(
         return farmServers;
     }
 
-    private static bool IsMatchClientFilter(ProjectCache project, ServerCache server, IEnumerable<string> clientTags)
+    public static bool IsMatchClientFilter(ProjectCache project, ServerCache server, IEnumerable<string> clientTags)
     {
         if (server.ClientFilterId == null)
             return true;

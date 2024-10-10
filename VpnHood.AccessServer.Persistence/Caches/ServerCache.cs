@@ -26,6 +26,8 @@ public class ServerCache
     public required bool AllowInAutoLocation { get; init; }
     public required int? ClientFilterId { get; init; }
     public required ServerStatusBaseModel? ServerStatus { get; set; }
+    public required string[] Tags { get; init; }
+
     public ServerState ServerState { get; set; }
 
     public ServerCache UpdateState(TimeSpan lostServerThreshold)

@@ -5708,7 +5708,7 @@ export class Device implements IDevice {
     clientId!: string;
     clientVersion?: string | null;
     ipAddress?: string | null;
-    country?: string | null;
+    location?: Location | null;
     userAgent?: string | null;
     createdTime!: Date;
     modifiedTime!: Date;
@@ -5730,7 +5730,7 @@ export class Device implements IDevice {
             this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
             this.clientVersion = _data["clientVersion"] !== undefined ? _data["clientVersion"] : <any>null;
             this.ipAddress = _data["ipAddress"] !== undefined ? _data["ipAddress"] : <any>null;
-            this.country = _data["country"] !== undefined ? _data["country"] : <any>null;
+            this.location = _data["location"] ? Location.fromJS(_data["location"]) : <any>null;
             this.userAgent = _data["userAgent"] !== undefined ? _data["userAgent"] : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
             this.modifiedTime = _data["modifiedTime"] ? new Date(_data["modifiedTime"].toString()) : <any>null;
@@ -5752,7 +5752,7 @@ export class Device implements IDevice {
         data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
         data["clientVersion"] = this.clientVersion !== undefined ? this.clientVersion : <any>null;
         data["ipAddress"] = this.ipAddress !== undefined ? this.ipAddress : <any>null;
-        data["country"] = this.country !== undefined ? this.country : <any>null;
+        data["location"] = this.location ? this.location.toJSON() : <any>null;
         data["userAgent"] = this.userAgent !== undefined ? this.userAgent : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
         data["modifiedTime"] = this.modifiedTime ? this.modifiedTime.toISOString() : <any>null;
@@ -5767,12 +5767,64 @@ export interface IDevice {
     clientId: string;
     clientVersion?: string | null;
     ipAddress?: string | null;
-    country?: string | null;
+    location?: Location | null;
     userAgent?: string | null;
     createdTime: Date;
     modifiedTime: Date;
     lockedTime?: Date | null;
     osName: string;
+}
+
+export class Location implements ILocation {
+    countryCode!: string;
+    regionName?: string | null;
+    cityName?: string | null;
+    countryName!: string;
+    displayName!: string;
+
+    constructor(data?: ILocation) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
+            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
+            this.cityName = _data["cityName"] !== undefined ? _data["cityName"] : <any>null;
+            this.countryName = _data["countryName"] !== undefined ? _data["countryName"] : <any>null;
+            this.displayName = _data["displayName"] !== undefined ? _data["displayName"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): Location {
+        data = typeof data === 'object' ? data : {};
+        let result = new Location();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
+        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
+        data["cityName"] = this.cityName !== undefined ? this.cityName : <any>null;
+        data["countryName"] = this.countryName !== undefined ? this.countryName : <any>null;
+        data["displayName"] = this.displayName !== undefined ? this.displayName : <any>null;
+        return data;
+    }
+}
+
+export interface ILocation {
+    countryCode: string;
+    regionName?: string | null;
+    cityName?: string | null;
+    countryName: string;
+    displayName: string;
 }
 
 export class ListResultOfAccessData implements IListResultOfAccessData {
@@ -7187,58 +7239,6 @@ export interface IHostIp {
     serverFarmId?: string | null;
     serverFarmName?: string | null;
     status: HostIpStatus;
-}
-
-export class Location implements ILocation {
-    countryCode!: string;
-    regionName?: string | null;
-    cityName?: string | null;
-    countryName!: string;
-    displayName!: string;
-
-    constructor(data?: ILocation) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
-            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
-            this.cityName = _data["cityName"] !== undefined ? _data["cityName"] : <any>null;
-            this.countryName = _data["countryName"] !== undefined ? _data["countryName"] : <any>null;
-            this.displayName = _data["displayName"] !== undefined ? _data["displayName"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): Location {
-        data = typeof data === 'object' ? data : {};
-        let result = new Location();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
-        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
-        data["cityName"] = this.cityName !== undefined ? this.cityName : <any>null;
-        data["countryName"] = this.countryName !== undefined ? this.countryName : <any>null;
-        data["displayName"] = this.displayName !== undefined ? this.displayName : <any>null;
-        return data;
-    }
-}
-
-export interface ILocation {
-    countryCode: string;
-    regionName?: string | null;
-    cityName?: string | null;
-    countryName: string;
-    displayName: string;
 }
 
 export enum HostIpStatus {

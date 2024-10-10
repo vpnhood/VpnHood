@@ -8,7 +8,7 @@ public class Device
     public Guid ClientId { get; set; }
     public string? ClientVersion { get; set; }
     public string? IpAddress { get; set; }
-    public string? Country { get; set; }
+    public Location? Location { get; set; }
     public string? UserAgent { get; set; }
     public DateTime CreatedTime { get; set; }
     public DateTime ModifiedTime { get; set; }

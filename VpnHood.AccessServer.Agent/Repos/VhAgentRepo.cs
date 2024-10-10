@@ -4,6 +4,7 @@ using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
+using VpnHood.Manager.Common.Utils;
 
 namespace VpnHood.AccessServer.Agent.Repos;
 
@@ -39,23 +40,24 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ProjectId = x.ProjectId,
                     ServerId = x.ServerId,
                     ServerName = x.Server!.ServerName,
-                    ServerFarmId = x.Server!.ServerFarmId,
+                    ServerFarmId = x.Server.ServerFarmId,
                     ClientFilterId = x.Server.ClientFilterId,
-                    Version = x.Server!.Version,
-                    LastConfigError = x.Server!.LastConfigError,
-                    LastConfigCode = x.Server!.LastConfigCode,
-                    ConfigCode = x.Server!.ConfigCode,
-                    ConfigureTime = x.Server!.ConfigureTime,
-                    IsEnabled = x.Server!.IsEnabled,
-                    AuthorizationCode = x.Server!.AuthorizationCode,
+                    Version = x.Server.Version,
+                    LastConfigError = x.Server.LastConfigError,
+                    LastConfigCode = x.Server.LastConfigCode,
+                    ConfigCode = x.Server.ConfigCode,
+                    ConfigureTime = x.Server.ConfigureTime,
+                    IsEnabled = x.Server.IsEnabled,
+                    AuthorizationCode = x.Server.AuthorizationCode,
                     AccessPoints = x.Server.AccessPoints.ToArray(),
                     ServerFarmName = x.Server.ServerFarm!.ServerFarmName,
-                    ServerProfileId = x.Server.ServerFarm!.ServerProfileId,
+                    ServerProfileId = x.Server.ServerFarm.ServerProfileId,
                     ServerStatus = x,
                     LocationInfo = x.Server.Location != null
                         ? ServerLocationInfo.Parse(x.Server.Location.ToPath())
                         : _autoServerLocation,
-                    AllowInAutoLocation = x.Server!.AllowInAutoLocation,
+                    Tags = TagUtils.TagsFromString(x.Server.Tags),
+                    AllowInAutoLocation = x.Server.AllowInAutoLocation,
                     LogicalCoreCount = x.Server.LogicalCoreCount ?? 1,
                     Power = x.Server.Power
                 },
@@ -172,6 +174,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 ServerProfileId = x.ServerFarm!.ServerProfileId,
                 ServerStatus = x.ServerStatuses!.FirstOrDefault(),
                 LocationInfo = x.Location != null ? ServerLocationInfo.Parse(x.Location.ToPath()) : _autoServerLocation,
+                Tags = TagUtils.TagsFromString(x.Tags),
                 AllowInAutoLocation = x.AllowInAutoLocation,
                 LogicalCoreCount = x.LogicalCoreCount ?? 1,
                 Power = x.Power,

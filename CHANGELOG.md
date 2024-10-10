@@ -4,6 +4,7 @@
 * Improve: Improve initialization speed to exclude my country
 * Update: Add token tags
 * Update: Add server tags
+* Update: Generate anonymous client id from device id
 * Fix: Startup crash on some Android devices
 
 ### Server

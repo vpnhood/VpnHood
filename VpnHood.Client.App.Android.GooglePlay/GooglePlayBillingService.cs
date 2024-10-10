@@ -22,7 +22,7 @@ public class GooglePlayBillingService : IAppBillingService
     {
         var builder = BillingClient.NewBuilder(Application.Context);
         builder.SetListener(PurchasesUpdatedListener);
-        _billingClient = builder.EnablePendingPurchases().Build();
+        _billingClient = builder.Build();
         _authenticationService = authenticationService;
     }
 
@@ -30,8 +30,16 @@ public class GooglePlayBillingService : IAppBillingService
     {
         switch (billingResult.ResponseCode) {
             case BillingResponseCode.Ok:
-                if (purchases.Any())
-                    _taskCompletionSource?.TrySetResult(purchases.First().OrderId);
+                if (purchases.Any()) {
+                    var purchasedItem = purchases.First();
+                    if (purchasedItem.OrderId != null)
+                        _taskCompletionSource?.TrySetResult(purchasedItem.OrderId);
+                    else
+                        // Based on Google document, orderId is null on pending state.
+                        // The pending state must be handled in the UI to let the user know their subscription will be
+                        // available when Google accepts payment and changes the purchase state to PURCHASES.
+                        _taskCompletionSource?.TrySetException(new Exception("The order state is pending"));
+                }
                 else
                     _taskCompletionSource?.TrySetException(new Exception("There is no any order."));
                 break;
@@ -84,7 +92,8 @@ public class GooglePlayBillingService : IAppBillingService
             var productDetails = response.ProductDetails.First();
             _productDetails = productDetails;
 
-            var plans = productDetails.GetSubscriptionOfferDetails();
+            var plans = productDetails.GetSubscriptionOfferDetails() 
+                        ?? throw new Exception("Could not get subscription offer details.");
             _subscriptionOfferDetails = plans;
 
             var subscriptionPlans = plans

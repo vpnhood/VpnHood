@@ -9,6 +9,7 @@ using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.Store;
+using VpnHood.Client.Device.Droid.Utils;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -53,6 +54,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
 
         return new AppOptions {
+            AppId = PackageName!,
+            DeviceId = AndroidUtil.GetDeviceId(this), //this will be hashed using AppId
             StorageFolderPath = storageFolderPath,
             AccessKeys = [appSettings.DefaultAccessKey],
             Resource = DefaultAppResource.Resource,
@@ -77,7 +80,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     public override void OnCreate()
     {
         base.OnCreate();
-        _analytics?.SetUserId(VpnHoodApp.Instance.Settings.ClientId.ToString());
+        _analytics?.SetUserId(VpnHoodApp.Instance.Features.ClientId);
     }
 
     private static AppAdService[] CreateAppAdServices(AppSettings appSettings)

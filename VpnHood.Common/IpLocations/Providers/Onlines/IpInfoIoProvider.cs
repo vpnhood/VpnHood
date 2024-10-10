@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Net;
+using System.Text;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 using VpnHood.Common.Utils;
@@ -29,6 +30,22 @@ public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string? a
         public string? GeoLoc { get; set; }
 
 
+    }
+
+    private static string RemoveDiacritics(string text)
+    {
+        var normalizedString = text.Normalize(NormalizationForm.FormD);
+        var stringBuilder = new StringBuilder(capacity: normalizedString.Length);
+
+        foreach (var chr in normalizedString) {
+            var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(chr);
+            if (unicodeCategory != UnicodeCategory.NonSpacingMark)
+                stringBuilder.Append(chr);
+        }
+
+        return stringBuilder
+            .ToString()
+            .Normalize(NormalizationForm.FormC);
     }
 
     public Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
@@ -66,7 +83,7 @@ public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string? a
             IpAddress = apiLocation.Ip,
             CountryName = new RegionInfo(apiLocation.CountryCode).EnglishName,
             CountryCode = apiLocation.CountryCode,
-            RegionName = regionName,
+            RegionName = regionName != null ? RemoveDiacritics(regionName) : null,
             CityName = cityCode
         };
 

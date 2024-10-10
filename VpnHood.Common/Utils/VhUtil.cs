@@ -221,7 +221,7 @@ public static class VhUtil
         return JsonDeserialize<T>(json, options);
     }
 
-    public static byte[] EncryptClientId(Guid clientId, byte[] key)
+    public static byte[] EncryptClientId(string clientId, byte[] key)
     {
         // Validate request by shared secret
         using var aes = Aes.Create();
@@ -230,8 +230,13 @@ public static class VhUtil
         aes.IV = new byte[key.Length];
         aes.Padding = PaddingMode.None;
 
+        // compatibility with old clients
+        var buffer = Guid.TryParse(clientId, out var clientGuid)
+            ? clientGuid.ToByteArray()
+            : Encoding.UTF8.GetBytes(clientId);
+
         using var cryptor = aes.CreateEncryptor();
-        return cryptor.TransformFinalBlock(clientId.ToByteArray(), 0, clientId.ToByteArray().Length);
+        return cryptor.TransformFinalBlock(buffer, 0, buffer.Length);
     }
 
     public static string GetStringMd5(string value)

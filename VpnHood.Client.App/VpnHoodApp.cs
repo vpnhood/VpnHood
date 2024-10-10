@@ -2,6 +2,8 @@
 using System.IO.Compression;
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
@@ -89,9 +91,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppServices Services { get; }
     public DateTime? ConnectedTime { get; private set; }
 
-    private VpnHoodApp(IDevice device, AppOptions? options = default)
+    private VpnHoodApp(IDevice device, AppOptions options)
     {
-        options ??= new AppOptions();
         device.StartedAsService += DeviceOnStartedAsService;
         Directory.CreateDirectory(options.StorageFolderPath); //make sure directory exists
         Resource = options.Resource;
@@ -173,7 +174,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsNotificationSupported = uiService.IsNotificationSupported,
             IsAlwaysOnSupported = device.IsAlwaysOnSupported,
             GaMeasurementId = options.AppGa4MeasurementId,
-            ClientId = Settings.ClientId.ToString()
+            ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId)
         };
 
         // initialize services
@@ -256,7 +257,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var tracker = new Ga4TagTracker {
             MeasurementId = _appGa4MeasurementId,
             SessionCount = 1,
-            ClientId = Settings.ClientId.ToString(),
+            ClientId = Settings.ClientId,
             SessionId = Guid.NewGuid().ToString(),
             UserProperties = new Dictionary<string, object> { { "client_version", Features.Version.ToString(3) } }
         };
@@ -369,7 +370,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         ActiveUiContext.OnChanged -= ActiveUiContext_OnChanged;
     }
 
-    public static VpnHoodApp Init(IDevice device, AppOptions? options = default)
+    public static VpnHoodApp Init(IDevice device, AppOptions options)
     {
         return new VpnHoodApp(device, options);
     }
@@ -582,7 +583,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         VpnHoodClient? client = null;
 
         try {
-            client = new VpnHoodClient(packetCapture, Settings.ClientId, token, clientOptions);
+            client = new VpnHoodClient(packetCapture, Features.ClientId, token, clientOptions);
             client.StateChanged += Client_StateChanged;
             _client = client;
 
@@ -960,6 +961,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public Task RunJob()
     {
         return VersionCheck();
+    }
+
+    private static string CreateClientId(string appId, string deviceId)
+    {
+        // Convert the combined string to bytes
+        var uid = $"{appId}:{deviceId}";
+        var uiBytes = Encoding.UTF8.GetBytes(uid);
+
+        // Create an MD5 instance and compute the hash
+        using var md5 = MD5.Create();
+        var hashBytes = md5.ComputeHash(uiBytes);
+
+        // convert to Guid for compatibility
+        var guid = new Guid(hashBytes);
+        return guid.ToString();
     }
 
     public void UpdateUi()

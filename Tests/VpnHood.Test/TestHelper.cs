@@ -2,7 +2,6 @@
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestPlatform.Common.DataCollection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
@@ -368,13 +367,13 @@ internal static class TestHelper
     public static async Task<VpnHoodClient> CreateClient(Token token,
         IPacketCapture? packetCapture = default,
         TestDeviceOptions? deviceOptions = default,
-        Guid? clientId = default,
+        string? clientId = default,
         bool autoConnect = true,
         ClientOptions? clientOptions = default,
         bool throwConnectException = true)
     {
         packetCapture ??= CreatePacketCapture(deviceOptions);
-        clientId ??= Guid.NewGuid();
+        clientId ??= Guid.NewGuid().ToString();
         clientOptions ??= CreateClientOptions();
         if (clientOptions.ConnectTimeout == new ClientOptions().ConnectTimeout)
             clientOptions.ConnectTimeout = TimeSpan.FromSeconds(3);
@@ -383,7 +382,7 @@ internal static class TestHelper
 
         var client = new VpnHoodClient(
             packetCapture,
-            clientId.Value,
+            clientId,
             token,
             clientOptions);
 
@@ -404,6 +403,7 @@ internal static class TestHelper
     {
         var tracker = new TestTracker();
         var appOptions = new AppOptions {
+            AppId = "com.vpnhood.client.test",
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             SessionTimeout = TimeSpan.FromSeconds(2),
             AppGa4MeasurementId = null,
@@ -441,19 +441,19 @@ internal static class TestHelper
         return clientApp;
     }
 
-    public static SessionRequestEx CreateSessionRequestEx(Token token, Guid? clientId = null)
+    public static SessionRequestEx CreateSessionRequestEx(Token token, string? clientId = null)
     {
-        clientId ??= Guid.NewGuid();
+        clientId ??= Guid.NewGuid().ToString();
         return new SessionRequestEx {
             TokenId = token.TokenId,
             ClientInfo = new ClientInfo {
-                ClientId = clientId.Value,
+                ClientId = clientId,
                 UserAgent = "Test",
                 ClientVersion = "1.0.0",
                 ProtocolVersion = 4
             },
             HostEndPoint = token.ServerToken.HostEndPoints!.First(),
-            EncryptedClientId = VhUtil.EncryptClientId(clientId.Value, token.Secret),
+            EncryptedClientId = VhUtil.EncryptClientId(clientId, token.Secret),
             ClientIp = null,
             ExtraData = null
         };

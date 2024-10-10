@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Net;
+using System.Security.Principal;
 using System.Windows;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Resources;
@@ -22,13 +23,14 @@ public partial class App : Application
 
             // initialize VpnHoodApp
             VpnHoodApp.Init(new WinDivertDevice(), new AppOptions {
+                AppId = "com.vpnhood.client.windows",
+                DeviceId = WindowsIdentity.GetCurrent().User?.Value,
                 Resource = DefaultAppResource.Resource,
-                UpdateInfoUrl =
-                    new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json"),
+                UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json"),
                 IsAddAccessKeySupported = true,
                 UpdaterService = new WinAppUpdaterService(),
                 SingleLineConsoleLog = false,
-                LogAnonymous = !IsDebugMode
+                LogAnonymous = !IsDebugMode,
             });
 
             // initialize SPA

@@ -1,7 +1,11 @@
 # Upcoming
 ### Client
 * Feature: Update server token from multiple URLs
-* Improve: Improve initialization speed for exclude my country
+* Improve: Improve initialization speed to exclude my country
+* Update: Add token tags
+* Update: Add server tags
+* Update: Generate anonymous client id from device id
+* Fix: Startup crash on some Android devices
 
 ### Server
 * Fix: Server listening to a test IP
@@ -23,7 +27,7 @@
 * Fix: Android: IPv6 over IPv4
 
 ### Server
-* Feature: Linux: Add or remove listener IPs on the server at runtime via "AddListenerIpsToNetwork".
+* Feature: Linux: Add or remove listener IPs on the server at runtime via "AddListenerIpsToNetwork"
 * Fix: DNS list
 
 # v4.6.546
@@ -418,7 +422,7 @@
 
 # v2.6.326
 ### Client
-* Feature: Windows: Compile as Win-x64. NET runtime is not required anymore.
+* Feature: Windows: Compile as Win-x64. NET runtime is not required anymore
 * Feature: Windows: WebView2 is optional. Run UI in the default web browser if WebView2 was not installed
 * Fix: Unable to connect to IpV6 supported site on chrome when server IpV6 is not configured
 * Fix: Hold some TCP connections

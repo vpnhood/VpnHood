@@ -9,7 +9,6 @@ using Microsoft.Web.WebView2.Wpf;
 using VpnHood.Client.App.WebServer;
 using VpnHood.Client.App.Win.Common;
 using VpnHood.Client.Device;
-using VpnHood.Client.Device.WinDivert;
 
 namespace VpnHood.Client.App.Win;
 

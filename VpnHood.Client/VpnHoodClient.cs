@@ -76,7 +76,7 @@ public class VpnHoodClient : IAsyncDisposable
     public TimeSpan AutoWaitTimeout { get; set; }
     public TimeSpan ReconnectTimeout { get; set; }
     public Token Token { get; }
-    public Guid ClientId { get; }
+    public string ClientId { get; }
     public ulong SessionId { get; private set; }
     public SessionStatus SessionStatus { get; private set; } = new();
     public Version Version { get; }
@@ -96,7 +96,7 @@ public class VpnHoodClient : IAsyncDisposable
     public string? ResponseAccessKey { get; private set; }
     public DomainFilterService DomainFilterService { get; }
 
-    public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
+    public VpnHoodClient(IPacketCapture packetCapture, string clientId, Token token, ClientOptions options)
     {
         if (options.TcpProxyCatcherAddressIpV4 == null)
             throw new ArgumentNullException(nameof(options.TcpProxyCatcherAddressIpV4));
@@ -754,7 +754,7 @@ public class VpnHoodClient : IAsyncDisposable
                     var ga4Tracking = new Ga4TagTracker() {
                         SessionCount = 1,
                         MeasurementId = sessionResponse.GaMeasurementId,
-                        ClientId = ClientId.ToString(),
+                        ClientId = ClientId,
                         SessionId = SessionId.ToString(),
                         UserAgent = UserAgent,
                         UserProperties = new Dictionary<string, object> { { "client_version", Version.ToString(3) } }

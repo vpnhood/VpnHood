@@ -2,13 +2,13 @@
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
-public class BillingException : Exception
+public class GoogleBillingException : Exception
 {
-    public BillingException(string message) : base(message)
+    private GoogleBillingException(string message) : base(message)
     {
     }
 
-    public BillingException(string message, Exception innerException) : base(message, innerException)
+    public GoogleBillingException(string message, Exception innerException) : base(message, innerException)
     {
     }
     
@@ -17,9 +17,10 @@ public class BillingException : Exception
         if (billingResult.ResponseCode == BillingResponseCode.Ok)
             throw new InvalidOperationException("Response code should not be OK.");
 
-        return new BillingException(billingResult.DebugMessage) {
+        return new GoogleBillingException(billingResult.DebugMessage) {
             Data = {
-                { "ResponseCode", billingResult.ResponseCode.ToString() },
+                { "BillingResponseCode", billingResult.ResponseCode.ToString() },
+                { "BillingMessage", billingResult.DebugMessage },
                 { "PurchaseState", purchaseState.ToString() }
             }
         };

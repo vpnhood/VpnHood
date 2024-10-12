@@ -158,7 +158,6 @@ public class GooglePlayBillingService : IAppBillingService
         }
     }
 
-
     private async Task EnsureConnected()
     {
         if (_billingClient.IsReady)

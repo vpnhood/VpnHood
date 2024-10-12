@@ -2,6 +2,7 @@
 using Android.Runtime;
 using Firebase.Analytics;
 using Firebase.Crashlytics;
+using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Droid.Ads.VhAdMob;
 using VpnHood.Client.App.Droid.Ads.VhInMobi;
 using VpnHood.Client.App.Droid.Ads.VhChartboost;
@@ -10,6 +11,7 @@ using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.Store;
 using VpnHood.Client.Device.Droid.Utils;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -122,7 +124,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 new StoreAccountService(authenticationService, googlePlayBillingService, appSettings.StoreAppId);
             return accountService;
         }
-        catch (Exception) {
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Unexpected exception occurred during CreateAppAccountService");
             // ignored
             return null;
         }

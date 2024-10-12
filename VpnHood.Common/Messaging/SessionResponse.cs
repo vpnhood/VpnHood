@@ -17,7 +17,6 @@ public class SessionResponse
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public SessionSuppressType SuppressedBy { get; set; }
 
-    //todo: move to HelloResponse
     [JsonConverter(typeof(IPEndPointConverter))]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IPEndPoint? RedirectHostEndPoint { get; set; }

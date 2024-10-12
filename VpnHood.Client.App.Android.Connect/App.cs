@@ -125,8 +125,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             return accountService;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Unexpected exception occurred during CreateAppAccountService");
-            // ignored
+            VhLogger.Instance.LogError(ex, "Could not create AppAccountService.");
             return null;
         }
     }

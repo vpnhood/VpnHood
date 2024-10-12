@@ -124,10 +124,9 @@ public class ClientProfileService
 
             // add if it is a new token
             if (_clientProfiles.All(x => x.Token.TokenId != token.TokenId))
-                _clientProfiles.Add(new ClientProfile {
+                _clientProfiles.Add(new ClientProfile(token) {
                     ClientProfileId = Guid.NewGuid(),
                     ClientProfileName = token.Name,
-                    Token = token,
                     IsForAccount = isForAccount,
                     IsBuiltIn = isBuiltIn
                 });

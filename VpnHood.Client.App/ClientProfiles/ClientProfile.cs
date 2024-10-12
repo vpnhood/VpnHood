@@ -3,27 +3,26 @@ using VpnHood.Common;
 
 namespace VpnHood.Client.App.ClientProfiles;
 
-public class ClientProfile
+public class ClientProfile(Token token)
 {
+    private Token _token = token;
+
     public required Guid ClientProfileId { get; init; }
     public required string? ClientProfileName { get; set; }
     public bool IsFavorite { get; set; }
     public bool IsForAccount { get; set; }
     public bool IsBuiltIn { get; set; }
 
-    private Token _token = default!;
-
-    public required Token Token {
+    public Token Token {
         get => _token;
         set {
             _token = value;
-            ServerLocationInfos = ClientServerLocationInfo.AddCategoryGaps(value.ServerToken.ServerLocations);
+            ServerLocations = ClientServerLocationInfo.AddCategoryGaps(value.ServerToken.ServerLocations);
         }
     }
 
     [JsonIgnore] 
-    public ClientServerLocationInfo[] ServerLocationInfos { get; private set; } = [];
-
+    public ClientServerLocationInfo[] ServerLocations { get; private set; } = ClientServerLocationInfo.AddCategoryGaps(token.ServerToken.ServerLocations);
 
     public ClientProfileInfo ToInfo()
     {

@@ -22,7 +22,13 @@ public class GooglePlayBillingService : IAppBillingService
     {
         var builder = BillingClient.NewBuilder(Application.Context);
         builder.SetListener(PurchasesUpdatedListener);
-        _billingClient = builder.EnablePendingPurchases().Build();
+        
+        // We don't have the On-Time Purchase in this app, but if EnablePendingPurchases is not implemented,
+        // we get the error "Pending purchases for one-time products must be supported."
+        _billingClient = builder.EnablePendingPurchases(
+            PendingPurchasesParams.NewBuilder().EnableOneTimeProducts().Build()
+            ).Build();
+        
         _authenticationService = authenticationService;
     }
 
@@ -30,19 +36,23 @@ public class GooglePlayBillingService : IAppBillingService
     {
         switch (billingResult.ResponseCode) {
             case BillingResponseCode.Ok:
-                var orderId = purchases.FirstOrDefault()?.OrderId;
-                if (orderId != null)
-                    _taskCompletionSource?.TrySetResult(orderId);
+                var purchasedItem = purchases.FirstOrDefault();
+                if (purchasedItem == null) {
+                    _taskCompletionSource?.TrySetException(GoogleBillingException.Create(billingResult));
+                    break;
+                }
+
+                if (purchasedItem.OrderId != null)
+                    _taskCompletionSource?.TrySetResult(purchasedItem.OrderId);
                 else
-                    _taskCompletionSource?.TrySetException(new Exception("There is no any order."));
+                    // Based on Google document, orderId is null on pending state.
+                    // The pending state must be handled in the UI to let the user know their subscription will be
+                    // available when Google accepts payment and changes the purchase state to PURCHASES.
+                    _taskCompletionSource?.TrySetException(GoogleBillingException.Create(billingResult, purchasedItem.PurchaseState));
                 break;
-
-            case BillingResponseCode.UserCancelled:
-                _taskCompletionSource?.TrySetCanceled();
-                break;
-
+            
             default:
-                _taskCompletionSource?.TrySetException(CreateBillingResultException(billingResult));
+                _taskCompletionSource?.TrySetException(GoogleBillingException.Create(billingResult));
                 break;
         }
     }
@@ -56,7 +66,7 @@ public class GooglePlayBillingService : IAppBillingService
             var isDeviceSupportSubscription =
                 _billingClient.IsFeatureSupported(BillingClient.FeatureType.Subscriptions);
             if (isDeviceSupportSubscription.ResponseCode == BillingResponseCode.FeatureNotSupported)
-                throw new Exception("Subscription feature is not supported on this device.");
+                throw GoogleBillingException.Create(isDeviceSupportSubscription);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not check supported feature with google play.");
@@ -77,19 +87,13 @@ public class GooglePlayBillingService : IAppBillingService
         try {
             var response = await _billingClient.QueryProductDetailsAsync(productDetailsParams).VhConfigureAwait();
             if (response.Result.ResponseCode != BillingResponseCode.Ok)
-                throw new Exception(
-                    $"Could not get products from google play. BillingResponseCode: {response.Result.ResponseCode}");
-            if (!response.ProductDetails.Any())
-                throw new Exception($"Product list is empty. ProductList: {response.ProductDetails}");
+                throw GoogleBillingException.Create(response.Result);
 
-            var productDetails = response.ProductDetails.First();
-            _productDetails = productDetails;
+            _productDetails = response.ProductDetails.First();
+            _subscriptionOfferDetails = _productDetails.GetSubscriptionOfferDetails()
+                                        ?? throw new Exception("Could not get subscription offer details.");
 
-            var plans = productDetails.GetSubscriptionOfferDetails() 
-                        ?? throw new Exception("Could not load get subscription offer details.");
-            _subscriptionOfferDetails = plans;
-
-            var subscriptionPlans = plans
+            var subscriptionPlans = _subscriptionOfferDetails
                 .Where(plan => plan.PricingPhases.PricingPhaseList.Any())
                 .Select(plan => new SubscriptionPlan {
                     SubscriptionPlanId = plan.BasePlanId,
@@ -135,7 +139,7 @@ public class GooglePlayBillingService : IAppBillingService
             var billingResult = _billingClient.LaunchBillingFlow(appUiContext.Activity, billingFlowParams);
 
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
-                throw CreateBillingResultException(billingResult);
+                throw GoogleBillingException.Create(billingResult);
 
             _taskCompletionSource = new TaskCompletionSource<string>();
             var orderId = await _taskCompletionSource.Task.VhConfigureAwait();
@@ -154,7 +158,6 @@ public class GooglePlayBillingService : IAppBillingService
         }
     }
 
-
     private async Task EnsureConnected()
     {
         if (_billingClient.IsReady)
@@ -162,9 +165,8 @@ public class GooglePlayBillingService : IAppBillingService
 
         try {
             var billingResult = await _billingClient.StartConnectionAsync().VhConfigureAwait();
-
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
-                throw new Exception(billingResult.DebugMessage);
+                throw GoogleBillingException.Create(billingResult);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not start connection to google play.");
@@ -175,15 +177,5 @@ public class GooglePlayBillingService : IAppBillingService
     public void Dispose()
     {
         _billingClient.Dispose();
-    }
-
-    private static Exception CreateBillingResultException(BillingResult billingResult)
-    {
-        if (billingResult.ResponseCode == BillingResponseCode.Ok)
-            throw new InvalidOperationException("Response code should be not OK.");
-
-        return new Exception(billingResult.DebugMessage) {
-            Data = { { "ResponseCode", billingResult.ResponseCode } }
-        };
     }
 }

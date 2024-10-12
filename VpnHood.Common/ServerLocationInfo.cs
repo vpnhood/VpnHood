@@ -8,7 +8,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
     public const string AutoRegionName = "*";
     public required string CountryCode { get; init; }
     public required string RegionName { get; init; }
-    public string[] Tags { get; init; } = []; //for compatibility with older versions
+    public string[]? Tags { get; init; }
     public string ServerLocation => $"{CountryCode}/{RegionName}";
     public string CountryName => GetCountryName(CountryCode);
 
@@ -25,14 +25,16 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
         return ServerLocation == (obj as ServerLocationInfo)?.ServerLocation;
     }
 
-    public override string ToString()
-    {
-        return ServerLocation;
-    }
-
     public override int GetHashCode()
     {
         return ServerLocation.GetHashCode();
+    }
+
+    public override string ToString()
+    {
+        return Tags?.Length > 0
+            ? $"{ServerLocation} [{string.Join(" ", Tags)}]"
+            : ServerLocation;
     }
 
     public static ServerLocationInfo Parse(string value)

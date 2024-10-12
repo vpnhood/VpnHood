@@ -11,7 +11,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public bool IsValidHostName { get; private set; } = clientProfile.Token.ServerToken.IsValidHostName;
     public bool IsBuiltIn { get; private set; } = clientProfile.IsBuiltIn;
     public bool IsForAccount { get; private set; } = clientProfile.IsForAccount;
-    public ClientServerLocationInfo[] ServerLocationInfos { get; private set; } = clientProfile.ServerLocationInfos;
+    public ClientServerLocationInfo[] ServerLocationInfos { get; private set; } = clientProfile.ServerLocations;
 
     private static string[] GetEndPoints(ServerToken serverToken)
     {

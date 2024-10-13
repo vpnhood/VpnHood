@@ -72,8 +72,10 @@ public class ClientServerLocationInfo : ServerLocationInfo
         var itemArray = items.ToArray();
         var tags = itemArray.SelectMany(x => x.Tags).Distinct().ToList();
         foreach (var tag in tags.ToArray()) {
-            if (itemArray.Any(x=>!x.Tags.Contains(tag)))
-                tags.Add($"!{tag}");
+            if (itemArray.Any(x => x.Tags?.Contains(tag) != true)) {
+                tags.Remove(tag);
+                tags.Add($"~{tag}");
+            }
         }
 
         return tags.Distinct();

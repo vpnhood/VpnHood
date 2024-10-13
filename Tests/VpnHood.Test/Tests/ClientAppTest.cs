@@ -140,7 +140,7 @@ public class ClientAppTest : TestBase
         app.UserSettings.ServerLocation = "us/*";
         app.Settings.Save();
         Assert.AreEqual("us/*", app.State.ClientServerLocationInfo?.ServerLocation);
-        CollectionAssert.AreEquivalent(new[] { "#tag1", "#tag2", "!#tag2" }, app.State.ClientServerLocationInfo?.Tags);
+        CollectionAssert.AreEquivalent(new[] { "#tag1", "~#tag2" }, app.State.ClientServerLocationInfo?.Tags);
         Assert.IsNull(app.UserSettings.ServerLocation);
 
         app.UserSettings.ServerLocation = "us/california";
@@ -162,7 +162,7 @@ public class ClientAppTest : TestBase
 
         app.UserSettings.ServerLocation = "*/*";
         app.Settings.Save();
-        CollectionAssert.AreEquivalent(new[] { "#p1", "#p2", "#z1", "#z2", "!#p1", "!#p2", "!#z1", "!#z2" }, app.State.ClientServerLocationInfo?.Tags);
+        CollectionAssert.AreEquivalent(new[] { "~#p1", "~#p2", "~#z1", "~#z2" }, app.State.ClientServerLocationInfo?.Tags);
     }
 
     [TestMethod]

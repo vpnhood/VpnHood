@@ -10,19 +10,29 @@ namespace VpnHood.Common;
 
 public class Token
 {
-    [JsonPropertyName("v")] public int Version => 4;
+    [JsonPropertyName("v")] 
+    public int Version => 4;
 
-    [JsonPropertyName("name")] public required string? Name { get; set; }
+    [JsonPropertyName("name")]
+    public required string? Name { get; set; }
 
-    [JsonPropertyName("sid")] public required string? SupportId { get; set; }
+    [JsonPropertyName("sid")]
+    public required string? SupportId { get; set; }
 
-    [JsonPropertyName("tid")] public required string TokenId { get; set; }
-    [JsonPropertyName("iat")] public DateTime IssuedAt { get; set; } = DateTime.MinValue; // for backward compatibility it is not required
+    [JsonPropertyName("tid")]
+    public required string TokenId { get; set; }
+    
+    [JsonPropertyName("iat")]
+    public DateTime IssuedAt { get; set; } = DateTime.MinValue; // for backward compatibility it is not required
 
-    [JsonPropertyName("sec")] public required byte[] Secret { get; set; }
+    [JsonPropertyName("sec")]
+    public required byte[] Secret { get; set; }
 
-    [JsonPropertyName("ser")] public required ServerToken ServerToken { get; set; }
-    [JsonPropertyName("tags")] public string[] Tags { get; set; } = [];
+    [JsonPropertyName("ser")]
+    public required ServerToken ServerToken { get; set; }
+    
+    [JsonPropertyName("tags")]
+    public string[] Tags { get; set; } = [];
 
     public string ToAccessKey()
     {

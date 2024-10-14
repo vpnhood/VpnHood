@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using VpnHood.AccessServer.Agent.Services;
+﻿using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.Manager.Common;
 using VpnHood.Manager.Common.Utils;
@@ -8,27 +7,29 @@ namespace VpnHood.AccessServer.Agent.Utils;
 
 public static class LocationTagBuilder
 {
-    private static IEnumerable<string> GetPlanTags(ServerCache server, ProjectCache project, string[] clientTags)
+    private static IEnumerable<string> GetPlanTags(ServerCache server, ProjectCache project)
     {
-        clientTags = clientTags.Except(BuiltInTags.PlanTags).ToArray();
         foreach (var planTag in BuiltInTags.PlanTags) {
 
             // check is tag not required for the client
-            if (LoadBalancerService.IsMatchClientFilter(project, server, clientTags))
+            if (LoadBalancerService.IsMatchClientFilter(project, server, []))
                 continue;
 
             // check is tag required for the client
-            if (LoadBalancerService.IsMatchClientFilter(project, server, clientTags.Concat([planTag])))
+            if (LoadBalancerService.IsMatchClientFilter(project, server, [planTag]))
                 yield return planTag;
         }
     }
 
-    public static string BuildServerLocationWithTags(string location, IEnumerable<ServerCache> servers, ProjectCache project, string[] clientTags)
+    public static string BuildServerLocationWithTags(string location, IEnumerable<ServerCache> servers, ProjectCache project)
     {
         // find all servers in the location
         var items = servers
             .Where(server => server.LocationInfo.ServerLocation == location)
-            .Select(server => new { Server = server, Tags = server.Tags.Concat(GetPlanTags(server, project, clientTags)) })
+            .Select(server => new {
+                Server = server,
+                Tags = server.Tags.Concat(GetPlanTags(server, project))
+            })
             .ToArray();
 
         // add all tags from servers in the location

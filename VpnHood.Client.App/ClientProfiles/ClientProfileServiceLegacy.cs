@@ -39,7 +39,8 @@ internal static class ClientProfileServiceLegacy
             foreach (var legacyClientProfile in legacyClientProfiles)
                 try {
                     var token = tokens.First(x => x.TokenId == legacyClientProfile.TokenId);
-                    var clientProfile = new ClientProfile(token) {
+                    var clientProfile = new ClientProfile {
+                        Token = token,
                         ClientProfileId = legacyClientProfile.ClientProfileId,
                         ClientProfileName = legacyClientProfile.Name
                     };

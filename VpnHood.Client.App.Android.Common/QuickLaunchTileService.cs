@@ -96,7 +96,7 @@ public class QuickLaunchTileService : TileService
         if (OperatingSystem.IsAndroidVersionAtLeast(30))
             QsTile.StateDescription = VpnHoodApp.Instance.ConnectionState.ToString();
 
-        var currentProfileInfo = VpnHoodApp.Instance.CurrentClientProfile?.ToInfo();
+        var currentProfileInfo = VpnHoodApp.Instance.CurrentClientProfileItem?.BaseInfo;
         if (currentProfileInfo != null && !VpnHoodApp.Instance.IsIdle) {
             QsTile.Label = currentProfileInfo.ClientProfileName;
             QsTile.State = VpnHoodApp.Instance.ConnectionState ==

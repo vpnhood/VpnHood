@@ -48,20 +48,12 @@ internal class AppPersistState
 
             // set country code and its name
             _clientCountryCode = value?.ToUpper();
-            try {
-                ClientCountryName = value != null ? new RegionInfo(value).EnglishName : null;
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogError(ex, "Could not get country name for code: {Code}", value);
-                ClientCountryName = value;
-            }
-
             Save();
         }
     }
 
-    // prop
-    [JsonIgnore] public string? ClientCountryName { get; private set; }
+    [JsonIgnore] 
+    public string? ClientCountryName => VhUtil.TryGetCountryName(ClientCountryCode);
 
 
     internal static AppPersistState Load(string filePath)

@@ -40,7 +40,7 @@ internal class AppController : WebApiController, IAppController
         var ret = new AppConfig {
             Features = App.Features,
             Settings = App.Settings,
-            ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),
+            ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ClientProfileInfo).ToArray(),
             State = App.State,
             AvailableCultureInfos = App.Services.AppCultureService.AvailableCultures
                 .Select(x => new UiCultureInfo(x))
@@ -92,7 +92,7 @@ internal class AppController : WebApiController, IAppController
     public Task<ClientProfileInfo> AddAccessKey([QueryField] string accessKey)
     {
         var clientProfile = App.ClientProfileService.ImportAccessKey(accessKey);
-        return Task.FromResult(clientProfile.ToInfo());
+        return Task.FromResult(clientProfile.ClientProfileInfo);
     }
 
     [Route(HttpVerbs.Post, "/clear-last-error")]
@@ -132,14 +132,14 @@ internal class AppController : WebApiController, IAppController
         ClientProfileUpdateParams updateParams)
     {
         updateParams = await GetRequestDataAsync<ClientProfileUpdateParams>().VhConfigureAwait();
-        var clientProfile = App.ClientProfileService.Update(clientProfileId, updateParams);
-        return clientProfile.ToInfo();
+        var clientProfileItem = App.ClientProfileService.Update(clientProfileId, updateParams);
+        return clientProfileItem.ClientProfileInfo;
     }
 
     [Route(HttpVerbs.Delete, "/client-profiles/{clientProfileId}")]
     public async Task DeleteClientProfile(Guid clientProfileId)
     {
-        if (clientProfileId == App.CurrentClientProfile?.ClientProfileId)
+        if (clientProfileId == App.CurrentClientProfileItem?.ClientProfileId)
             await App.Disconnect(true).VhConfigureAwait();
 
         App.ClientProfileService.Remove(clientProfileId);

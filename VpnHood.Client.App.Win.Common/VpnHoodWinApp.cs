@@ -113,8 +113,8 @@ public class VpnHoodWinApp : IDisposable
     public bool Start()
     {
         // auto connect
-        if (ConnectAfterStart && VpnHoodApp.Instance.CurrentClientProfile != null)
-            _ = VpnHoodApp.Instance.Connect(VpnHoodApp.Instance.CurrentClientProfile.ClientProfileId);
+        if (ConnectAfterStart && VpnHoodApp.Instance.CurrentClientProfileItem != null)
+            _ = VpnHoodApp.Instance.Connect(VpnHoodApp.Instance.CurrentClientProfileItem.ClientProfileId);
 
         // create notification icon
         InitNotifyIcon();

@@ -3,7 +3,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.ClientProfiles;
 
-public class ClientProfileInfo(ClientProfile clientProfile)
+public class ClientProfileInfo(ClientProfile clientProfile, string clientCountryCode)
     : ClientProfileBaseInfo(clientProfile)
 {
     public string TokenId { get; private set; } = clientProfile.Token.TokenId;
@@ -11,7 +11,9 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public bool IsValidHostName { get; private set; } = clientProfile.Token.ServerToken.IsValidHostName;
     public bool IsBuiltIn { get; private set; } = clientProfile.IsBuiltIn;
     public bool IsForAccount { get; private set; } = clientProfile.IsForAccount;
-    public ClientServerLocationInfo[] ServerLocationInfos { get; private set; } = clientProfile.ServerLocations;
+
+    public ClientServerLocationInfo[] ServerLocationInfos { get; private set; } =
+        ClientServerLocationInfo.CreateFromToken(clientProfile.Token, clientCountryCode);
 
     private static string[] GetEndPoints(ServerToken serverToken)
     {

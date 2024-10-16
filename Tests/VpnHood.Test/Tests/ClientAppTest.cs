@@ -92,7 +92,7 @@ public class ClientAppTest : TestBase
         Assert.AreEqual(tokens2[0].TokenId, clientProfiles[0].Token.TokenId);
         Assert.AreEqual(tokens2[1].TokenId, clientProfiles[1].Token.TokenId);
         foreach (var clientProfile in clientProfiles)
-            Assert.IsTrue(clientProfile.IsBuiltIn);
+            Assert.IsTrue(clientProfile.ClientProfile.IsBuiltIn);
     }
 
     private static async Task UpdateIp2LocationFile()
@@ -173,8 +173,8 @@ public class ClientAppTest : TestBase
         // test two region in a same country
         var token = CreateToken();
         token.ServerToken.ServerLocations = ["us", "us/california"];
-        var clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        var clientProfileInfo = clientProfile.ToInfo();
+        var clientProfileItem = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var clientProfileInfo = clientProfileItem.ClientProfileInfo;
         var serverLocations = clientProfileInfo.ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
         var i = 0;
         Assert.AreEqual("us/*", serverLocations[i++]);
@@ -188,8 +188,8 @@ public class ClientAppTest : TestBase
         // test multiple countries
         token = CreateToken();
         token.ServerToken.ServerLocations = ["us", "us/california", "uk"];
-        clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        clientProfileInfo = clientProfile.ToInfo();
+        clientProfileItem = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        clientProfileInfo = clientProfileItem.ClientProfileInfo;
         serverLocations = clientProfileInfo.ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
         i = 0;
         Assert.AreEqual("*/*", serverLocations[i++]);
@@ -203,8 +203,8 @@ public class ClientAppTest : TestBase
         // test multiple countries
         token = CreateToken();
         token.ServerToken.ServerLocations = ["us/virgina", "us/california", "uk/england [#pr]", "uk/region2"];
-        clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        clientProfileInfo = clientProfile.ToInfo();
+        clientProfileItem = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        clientProfileInfo = clientProfileItem.ClientProfileInfo;
         serverLocations = clientProfileInfo.ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
         i = 0;
         Assert.AreEqual("*/*", serverLocations[i++]);
@@ -264,8 +264,8 @@ public class ClientAppTest : TestBase
             ClientProfileName = "Hi2",
             IsFavorite = true
         });
-        Assert.AreEqual("Hi2", app.ClientProfileService.Get(clientProfile1.ClientProfileId).ClientProfileName);
-        Assert.IsTrue(app.ClientProfileService.Get(clientProfile1.ClientProfileId).IsFavorite);
+        Assert.AreEqual("Hi2", app.ClientProfileService.Get(clientProfile1.ClientProfileId).BaseInfo.ClientProfileName);
+        Assert.IsTrue(app.ClientProfileService.Get(clientProfile1.ClientProfileId).ClientProfile.IsFavorite);
 
         // ************
         // *** TEST ***: RemoveClientProfile

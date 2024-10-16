@@ -6,12 +6,58 @@ public class ClientServerLocationInfo : ServerLocationInfo
 {
     public required bool IsNestedCountry { get; init; }
     public required bool IsDefault { get; init; }
+    public ServerLocationOptions Options { get; set; } = new();
 
-    public static ClientServerLocationInfo[] AddCategoryGaps(string[]? serverLocations)
+    private void RecalculateOptions(Token token, string clientCountryCode)
     {
-        serverLocations ??= [];
-        var items = serverLocations.Select(Parse).ToArray();
+        Options = new ServerLocationOptions();
 
+        // premium user has not options for ads or trial
+        var isClientPremium = token.Tags.Contains("#public") != true;
+        if (isClientPremium) {
+            Options.Normal = 0;
+            return;
+        }
+
+        // normal user
+        var tags = Tags ?? [];
+        var hasFreeLocation = !tags.Contains("#premium") || tags.Contains("~#premium");
+        var hasPremiumLocation = tags.Contains("#premium") || tags.Contains("~#premium");
+
+        // get country policy
+        var policy = token.CountryPolicies?.FirstOrDefault(x => x.CountryCode == clientCountryCode) ??
+                     token.CountryPolicies?.FirstOrDefault(x => x.CountryCode == "*");
+
+        // if no policy found, set normal to 0 if there is a free location. Free location is determined by the tag #premium
+        if (policy == null) {
+            Options.Normal = hasFreeLocation ? 0 : null;
+            return;
+        }
+
+        // update free locations based by policy
+        if (policy.FreeLocations != null) {
+            hasFreeLocation = policy.FreeLocations.Contains(CountryCode) || policy.FreeLocations.Contains("*");
+            hasPremiumLocation |= !hasFreeLocation;
+        }
+
+        Options.Normal = hasFreeLocation ? policy.Normal : 0;
+        Options.PremiumByTrial = hasPremiumLocation ? policy.PremiumByTrial : null;
+        Options.PremiumByRewardAd = hasPremiumLocation ? policy.PremiumByRewardAd : null;
+        Options.PremiumByPurchase = policy.PremiumByPurchase;
+    }
+
+    public static ClientServerLocationInfo[] CreateFromToken(Token token, string clientCountryCode)
+    {
+        var items = AddCategoryGaps(token.ServerToken.ServerLocations ?? []);
+        foreach (var item in items)
+            item.RecalculateOptions(token, clientCountryCode);
+
+        return items;
+    }
+
+    private static ClientServerLocationInfo[] AddCategoryGaps(string[] serverLocations)
+    {
+        var items = serverLocations.Select(Parse).ToArray();
         var results = new List<ClientServerLocationInfo>();
         var countryCount = new Dictionary<string, int>();
 
@@ -30,7 +76,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
             var isMultipleCountry = countryCount[countryCode] > 1;
             if (!seenCountries.Contains(countryCode)) {
                 if (isMultipleCountry) {
-                    results.Add(new ClientServerLocationInfo {
+                    results.Add(new ClientServerLocationInfo{
                         CountryCode = countryCode,
                         RegionName = "*",
                         IsNestedCountry = false,

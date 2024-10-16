@@ -2,6 +2,7 @@
 using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
+using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Device.Droid.ActivityEvents;
@@ -93,7 +94,7 @@ public class AndroidAppMainActivityHandler
     protected void ImportAccessKey(string accessKey)
     {
         var profiles = VpnHoodApp.Instance.ClientProfileService.List();
-        var profile = VpnHoodApp.Instance.ClientProfileService.ImportAccessKey(accessKey).ToInfo();
+        var profile = VpnHoodApp.Instance.ClientProfileService.ImportAccessKey(accessKey).BaseInfo;
 
         VpnHoodApp.Instance.UserSettings.ClientProfileId = profile.ClientProfileId;
 

@@ -13,9 +13,10 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class AccessTest : TestBase
 {
-    public static string[] TagsFromString(string? tags)
+    [TestMethod]
+    public async Task Foo()
     {
-        return tags?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
+        await Task.Delay(0);
     }
 
     [TestMethod]

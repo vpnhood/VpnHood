@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 
-namespace VpnHood.Common;
+namespace VpnHood.Common.Tokens;
 
 public class ServerLocationInfo : IComparable<ServerLocationInfo>
 {
@@ -8,7 +8,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
     public const string AutoRegionName = "*";
     public required string CountryCode { get; init; }
     public required string RegionName { get; init; }
-    public string[]? Tags { get; init; }
+    public string[]? Tags { get; set; }
     public string ServerLocation => $"{CountryCode}/{RegionName}";
     public string CountryName => GetCountryName(CountryCode);
 
@@ -54,7 +54,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
         var locationPart = value[..openBracketIndex].Trim();
 
         // Extract tags only if both brackets are found and in the correct order
-        var tagsPart = (openBracketIndex < closeBracketIndex)
+        var tagsPart = openBracketIndex < closeBracketIndex
             ? value[(openBracketIndex + 1)..closeBracketIndex].Trim()
             : string.Empty;
 

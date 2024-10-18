@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
-using VpnHood.Common.TokenLegacy;
+using VpnHood.Common.Tokens.TokenLegacy;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.ClientProfiles;

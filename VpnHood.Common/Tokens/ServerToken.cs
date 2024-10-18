@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Common;
+namespace VpnHood.Common.Tokens;
 
 public class ServerToken
 {

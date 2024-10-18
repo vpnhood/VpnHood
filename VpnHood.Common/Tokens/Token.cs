@@ -1,12 +1,12 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using VpnHood.Common.TokenLegacy;
+using VpnHood.Common.Tokens.TokenLegacy;
 using VpnHood.Common.Utils;
 
 // ReSharper disable StringLiteralTypo
 
-namespace VpnHood.Common;
+namespace VpnHood.Common.Tokens;
 
 public class Token
 {
@@ -36,7 +36,7 @@ public class Token
 
     [JsonPropertyName("cpols")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public ClientCountryPolicy[]? CountryPolicies { get; set; }
+    public ClientPolicy[]? ClientPolicies { get; set; }
 
     public string ToAccessKey()
     {

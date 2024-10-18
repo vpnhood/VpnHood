@@ -16,7 +16,7 @@ public class StreamProxyChannel : IChannel, IJob
     private readonly IClientStream _tunnelTcpClientStream;
     private const int BufferSizeDefault = TunnelDefaults.StreamProxyBufferSize;
     private const int BufferSizeMax = 0x14000;
-    private const int BufferSizeMin = 0x1000;
+    private const int BufferSizeMin = 2048;
     public JobSection JobSection { get; } = new(TunnelDefaults.TcpCheckInterval);
     public bool Connected { get; private set; }
     public Traffic Traffic { get; } = new();

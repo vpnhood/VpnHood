@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client;

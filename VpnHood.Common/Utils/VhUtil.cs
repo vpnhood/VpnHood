@@ -276,24 +276,29 @@ public static class VhUtil
         return ipAddress.ToString();
     }
 
-    public static string FormatBytes(long size, bool use1024 = true)
+    private static double Round(double value, bool round)
     {
-        var kb = use1024 ? (long)1024 : 1000;
+        return round ? Math.Round(value) : value;
+    }
+
+    public static string FormatBytes(long size, bool use1024 = true, bool round = false)
+    {
+        var kb = use1024 ? (double)1024 : 1000;
         var mb = kb * kb;
         var gb = mb * kb;
         var tb = gb * kb;
 
         if (size >= tb) // Terabyte
-            return (size / tb).ToString("0.## ") + "TB";
+            return Round(size / tb, round).ToString("0.## ") + "TB";
 
         if (size >= gb) // Gigabyte
-            return (size / gb).ToString("0.# ") + "GB";
+            return Round(size / gb, round).ToString("0.# ") + "GB";
 
         if (size >= mb) // Megabyte
-            return (size / mb).ToString("0 ") + "MB";
+            return Round(size / mb, round).ToString("0 ") + "MB";
 
         if (size >= kb) // Kilobyte
-            return (size / kb).ToString("0 ") + "KB";
+            return Round(size / kb, round).ToString("0 ") + "KB";
 
         if (size > 0) // Kilobyte
             return size.ToString("0 ") + "B";

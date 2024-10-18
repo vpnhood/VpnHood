@@ -1,8 +1,6 @@
-﻿using System.Globalization;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.Logging;
 using VpnHood.Common.ApiClients;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;

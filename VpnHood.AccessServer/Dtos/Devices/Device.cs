@@ -4,14 +4,14 @@ namespace VpnHood.AccessServer.Dtos.Devices;
 
 public class Device
 {
-    public Guid DeviceId { get; set; }
-    public Guid ClientId { get; set; }
-    public string? ClientVersion { get; set; }
-    public string? IpAddress { get; set; }
-    public Location? Location { get; set; }
-    public string? UserAgent { get; set; }
-    public DateTime CreatedTime { get; set; }
-    public DateTime ModifiedTime { get; set; }
-    public DateTime? LockedTime { get; set; }
+    public required Guid DeviceId { get; init; }
+    public required Guid ClientId { get; init; }
+    public required string? ClientVersion { get; init; }
+    public required string? IpAddress { get; init; }
+    public required Location? Location { get; init; }
+    public required string? UserAgent { get; init; }
+    public required DateTime CreatedTime { get; init; }
+    public required DateTime ModifiedTime { get; init; }
+    public required DateTime? LockedTime { get; init; }
     public string OsName => UserAgentParser.GetOperatingSystem(UserAgent);
 }

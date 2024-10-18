@@ -24,9 +24,9 @@ public class ServerCache
     public required int? Power { get; init; }
     public required AccessPointModel[] AccessPoints { get; init; }
     public required bool AllowInAutoLocation { get; init; }
-    public required int? ClientFilterId { get; init; }
+    public int? ClientFilterId { get; init; } //todo make required after publish agent
     public required ServerStatusBaseModel? ServerStatus { get; set; }
-    public required string[] Tags { get; init; }
+    public string[] Tags { get; init; } //todo make required after publish agent
 
     public ServerState ServerState { get; set; }
 

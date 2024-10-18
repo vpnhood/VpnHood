@@ -8,7 +8,6 @@ namespace VpnHood.AccessServer.Test.Tests;
 [TestClass]
 public class AccessTest
 {
-    
 
     [TestMethod]
     public async Task Foo()

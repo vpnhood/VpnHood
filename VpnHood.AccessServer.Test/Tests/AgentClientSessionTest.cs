@@ -595,6 +595,6 @@ public class AgentClientSessionTest
         var accessTokenDom = await farmDom.CreateAccessToken();
         var sessionDom = await accessTokenDom.CreateSession(clientIp: IPAddress.Parse("8.8.8.8"));
         var device = await farmDom.TestApp.DevicesClient.GetByClientIdAsync(farmDom.TestApp.ProjectId, sessionDom.SessionRequestEx.ClientInfo.ClientId);
-        Assert.AreEqual("US", device.Country);
+        Assert.AreEqual("US", device.Location?.CountryCode);
     }
 }

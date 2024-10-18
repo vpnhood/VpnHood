@@ -221,10 +221,13 @@ public class AgentService(
                 TcpBufferSize = AgentUtils.GetBestTcpBufferSize(serverModel.TotalMemory)
             },
             ServerSecret = serverFarmModel.Secret,
-            Certificates = serverFarmModel.Certificates.Select(x => new CertificateData {
-                CommonName = x.CommonName,
-                RawData = x.RawData
-            }).ToArray()
+            Certificates = serverFarmModel.Certificates
+                .OrderByDescending(x => x.IsInToken)
+                .Select(x => new CertificateData {
+                    CommonName = x.CommonName,
+                    RawData = x.RawData
+                })
+                .ToArray()
         };
 
         // merge with profile
@@ -365,7 +368,7 @@ public class AgentService(
         AddressFamily addressFamily)
     {
         // return if already selected
-        if (accessPoints.Any(x =>x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress.AddressFamily == addressFamily))
+        if (accessPoints.Any(x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress.AddressFamily == addressFamily))
             return;
 
         // select first public as PublicInToken

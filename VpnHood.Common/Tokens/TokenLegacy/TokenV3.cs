@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
-using VpnHood.Common.Tokens;
 
 namespace VpnHood.Common.Tokens.TokenLegacy;
 

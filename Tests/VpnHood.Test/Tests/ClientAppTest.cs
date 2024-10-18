@@ -8,11 +8,11 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
 using VpnHood.Client.App.ClientProfiles;
-using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.IpLocations.Providers;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
 using VpnHood.Test.Device;
 
@@ -220,8 +220,99 @@ public class ClientAppTest : TestBase
         Assert.IsTrue(clientProfileInfo.ServerLocationInfos[3].IsNestedCountry);
         _ = i;
     }
-    
-       [TestMethod]
+
+    [TestMethod]
+    public async Task ClientProfiles_ClientPolicy()
+    {
+        await using var app = TestHelper.CreateClientApp();
+
+        // test two region in a same country
+        var token = CreateToken();
+        token.Tags = ["#public"];
+        var defaultPolicy = new ClientPolicy {
+            CountryCode = "*",
+            FreeLocations = ["US", "CA"],
+            Normal = 10,
+            PremiumByPurchase = true,
+            PremiumByRewardAd = 20,
+            PremiumByTrial = 30
+        };
+        var caPolicy = new ClientPolicy {
+            CountryCode = "CA",
+            FreeLocations = ["CA"],
+            PremiumByPurchase = true,
+            Normal = 200,
+            PremiumByTrial = 300
+        };
+
+        token.ClientPolicies = [defaultPolicy, caPolicy];
+        
+        token.ServerToken.ServerLocations = [
+            "US", "US/California",
+            "CA/Region1 [#premium]", "CA/Region2",
+            "FR/Region1 [#premium]", "FR/Region2 [#premium]"
+        ];
+
+        // test free US client
+        app.ClientProfileService.Reload("US");
+        var clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var clientProfileInfo = clientProfileItem.ClientProfileInfo;
+        
+        // default (*/*)
+        var location = clientProfileInfo.ServerLocationInfos.Single(x => x.ServerLocation == "*/*");
+        Assert.IsTrue(location.Options.HasFree);
+        Assert.IsTrue(location.Options.HasPremium);
+        Assert.IsTrue(location.Options.Prompt);
+        Assert.AreEqual(defaultPolicy.Normal, location.Options.Normal);
+        Assert.AreEqual(defaultPolicy.PremiumByRewardAd, location.Options.PremiumByRewardAd);
+        Assert.AreEqual(defaultPolicy.PremiumByTrial, location.Options.PremiumByTrial);
+
+        // (US/*) there is no premium server here
+        location = clientProfileInfo.ServerLocationInfos.Single(x => x.ServerLocation == "US/*");
+        Assert.IsTrue(location.Options.HasFree);
+        Assert.IsFalse(location.Options.HasPremium);
+        Assert.IsFalse(location.Options.Prompt);
+        Assert.AreEqual(defaultPolicy.Normal, location.Options.Normal);
+        Assert.IsNull(location.Options.PremiumByRewardAd);
+        Assert.IsNull(location.Options.PremiumByTrial);
+
+        // (FR/*) just premium
+        location = clientProfileInfo.ServerLocationInfos.Single(x => x.ServerLocation == "FR/*");
+        Assert.IsFalse(location.Options.HasFree);
+        Assert.IsTrue(location.Options.HasPremium);
+        Assert.IsTrue(location.Options.Prompt);
+        Assert.IsNull(location.Options.Normal);
+        Assert.AreEqual(defaultPolicy.PremiumByRewardAd, location.Options.PremiumByRewardAd);
+        Assert.AreEqual(defaultPolicy.PremiumByTrial, location.Options.PremiumByTrial);
+
+        // (US/*) no free for CA clients
+        app.ClientProfileService.Reload("CA");
+        clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ClientProfileInfo;
+        location = clientProfileInfo.ServerLocationInfos.Single(x => x.ServerLocation == "US/*");
+        Assert.IsFalse(location.Options.HasFree);
+        Assert.IsTrue(location.Options.HasPremium);
+        Assert.IsTrue(location.Options.Prompt);
+        Assert.IsNull(location.Options.Normal);
+        Assert.AreEqual(caPolicy.PremiumByRewardAd, location.Options.PremiumByRewardAd);
+        Assert.AreEqual(caPolicy.PremiumByTrial, location.Options.PremiumByTrial);
+
+        // create premium token
+        token.Tags = [];
+        clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        clientProfileInfo = clientProfileItem.ClientProfileInfo;
+        location = clientProfileInfo.ServerLocationInfos.Single(x => x.ServerLocation == "FR/*");
+        Assert.IsFalse(location.Options.HasFree);
+        Assert.IsTrue(location.Options.HasPremium);
+        Assert.IsFalse(location.Options.Prompt);
+        Assert.AreEqual(0, location.Options.Normal);
+        Assert.IsNull(location.Options.PremiumByRewardAd);
+        Assert.IsNull(location.Options.PremiumByTrial);
+        Assert.IsFalse(location.Options.PremiumByPurchase);
+
+    }
+
+
+    [TestMethod]
     public async Task ClientProfiles_CRUD()
     {
         await using var app = TestHelper.CreateClientApp();

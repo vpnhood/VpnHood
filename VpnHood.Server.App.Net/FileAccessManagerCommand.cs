@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using McMaster.Extensions.CommandLineUtils;
-using VpnHood.Common;
+using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Managers.File;
 

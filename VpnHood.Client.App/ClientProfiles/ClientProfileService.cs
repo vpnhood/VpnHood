@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.ClientProfiles;

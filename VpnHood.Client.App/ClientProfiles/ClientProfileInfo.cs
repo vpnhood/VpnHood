@@ -1,4 +1,4 @@
-﻿using VpnHood.Common;
+﻿using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.ClientProfiles;

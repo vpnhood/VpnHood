@@ -1,4 +1,4 @@
-﻿using VpnHood.Common;
+﻿using VpnHood.Common.Tokens;
 
 namespace VpnHood.Client.Exceptions;
 

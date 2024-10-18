@@ -3,8 +3,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
+using VpnHood.Common.Tokens;
 
-namespace VpnHood.Common.TokenLegacy;
+namespace VpnHood.Common.Tokens.TokenLegacy;
 
 [Obsolete("deprecated in version 3.3.451 or upper")]
 public class TokenV3

@@ -60,3 +60,37 @@ Function UpdateProjectVersion([string] $projectFile)
 		$xml.Save($projectFile);
 	}
 }
+
+Function Copy-ZipAndUnzipRemote {
+    param (
+        [string]$localDir,
+        [string]$remoteDir,
+        [string]$remote,
+        [string]$userPrivateKeyFile,
+        [string]$remoteUser
+    )
+
+    # Compress the output directory
+    $tarFile =  Join-Path (Split-Path $localDir -Parent) "_output.tar";
+    Write-Host "Compressing the output directory..."
+    tar -czf $tarFile -C $localDir *;
+
+    # Create directory and set permissions on the remote server
+	$remoteDir = "$remoteDir/" + (Split-Path $localDir -Leaf);
+    ssh -i $userPrivateKeyFile $remote "sudo mkdir -p $remoteDir; sudo chown $remoteUser $remoteDir";
+
+    # Upload the compressed file
+    $remoteTar = "$remoteDir/output.tar";
+    Write-Host "Uploading the compressed file...";
+    scp -i $userPrivateKeyFile $tarFile ($remote + ":$remoteTar");
+
+    # Extract the file on the remote server
+    Write-Host "Extracting the files on the remote server...";
+	$remoteFolder = Split-Path $localDir -Leaf
+    ssh -i $userPrivateKeyFile $remote "tar -xzf $remoteTar -C $remoteDir";
+
+    # Delete the compressed file on the remote server
+    Write-Host "Deleting compressed files";
+    ssh -i $userPrivateKeyFile $remote "rm $remoteTar";
+    Remove-Item $tarFile;
+}

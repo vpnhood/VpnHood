@@ -95,13 +95,13 @@ public class OvhHostProvider(
 
         // Add optional description config to the ip
         await AddConfigurationToIp(cartId: cartData.CartId, itemId: cartItemId.ItemId,
-            configLabel: "description", configValue: "Created by API", timeout: timeout);
+            configLabel: "description", configValue: description ?? "Created by API", timeout: timeout);
 
         // Assign cart to current credential (User)
-        var res = await OvhClient.PostAsync($"/order/cart/{cartData.CartId}/assign", timeout: timeout);
+        _ = await OvhClient.PostAsync($"/order/cart/{cartData.CartId}/assign", timeout: timeout);
 
         // Finalize cart and checkout order
-        var orderId = "";//await Checkout(cartData.CartId, timeout);
+        var orderId = await Checkout(cartData.CartId, timeout);
         return orderId;
     }
 

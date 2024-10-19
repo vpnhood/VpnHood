@@ -648,6 +648,14 @@ public class VhContext : DbContext
                 .HasMaxLength(50);
 
             entity
+                .Property(x => x.Description)
+                .HasMaxLength(450);
+
+            entity
+                .Property(x => x.ProviderDescription)
+                .HasMaxLength(450);
+
+            entity
                 .HasIndex(e => new { e.ProjectId, e.CreatedTime })
                 .HasFilter($"{nameof(HostIpModel.DeletedTime)} is null");
 

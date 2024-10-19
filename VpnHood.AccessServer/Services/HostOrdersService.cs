@@ -366,14 +366,17 @@ public class HostOrdersService(
 
             var hostProviderIp = await providerIpInfo.Provider.GetIp(providerIpInfo.IpAddress, timeout);
             var hostIpModel = new HostIpModel {
+
                 IpAddress = providerIpInfo.IpAddress.ToString(),
                 LocationCountry = location.CountryCode,
                 LocationRegion = location.RegionName,
                 HostProviderId = providerIpInfo.ProviderId,
                 ProviderServerId = hostProviderIp.ServerId,
-                Description = hostProviderIp.Description,
-                CreatedTime = DateTime.UtcNow,
+                ProviderDescription = hostProviderIp.Description,
                 IsAdditional = hostProviderIp.IsAdditional,
+                CreatedTime = DateTime.UtcNow,
+                Description = null,
+                IsOtherService = false,
                 ExistsInProvider = true,
                 ProjectId = projectId
             };
@@ -410,7 +413,7 @@ public class HostOrdersService(
             var provider = hostProviderFactory.Create(providerModel.HostProviderId, providerModel.HostProviderName, providerModel.Settings);
             var providerHostIp = await provider.GetIp(hostIpModel.GetIpAddress(), appOptions.Value.ServiceHttpTimeout);
 
-            hostIpModel.Description = providerHostIp.Description;
+            hostIpModel.ProviderDescription = providerHostIp.Description;
             hostIpModel.IsAdditional = providerHostIp.IsAdditional;
             hostIpModel.ExistsInProvider = true;
             if (hostIpModel.LocationCountry == null) {
@@ -442,7 +445,7 @@ public class HostOrdersService(
 
 
     private readonly TimeoutDictionary<Guid, TimeoutItem> _syncedProjects = new(TimeSpan.FromSeconds(2));
-    public async Task<HostIp[]> ListIps(Guid projectId, string? search = null, bool? isAdditional = null,
+    public async Task<HostIp[]> ListIps(Guid projectId, string? search = null, bool? isAdditional = null, bool? isOtherService = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
         // sync
@@ -452,7 +455,7 @@ public class HostOrdersService(
         }
 
         var hostIpModels = await vhRepo.HostIpList(projectId, search: search,
-            isAdditional: isAdditional,
+            isAdditional: isAdditional, isOtherService: isOtherService,
             recordIndex: recordIndex, recordCount: recordCount);
 
         // get all servers

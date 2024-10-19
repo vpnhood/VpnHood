@@ -18,8 +18,8 @@ public static class HostIpConverter
             ProviderId = model.HostProviderId.ToString(),
             ProviderName = model.HostProvider.HostProviderName,
             IsAdditional = model.IsAdditional,
+            IsOtherService = model.IsOtherService,
             ExistsInProvider = model.ExistsInProvider,
-            ProviderDescription = model.Description,
             AutoReleaseTime = model.AutoReleaseTime,
             ReleaseRequestTime = model.ReleaseRequestTime,
             ServerLocation = GetLocation(model),
@@ -28,6 +28,7 @@ public static class HostIpConverter
             ServerFarmId = serverModel?.ServerFarmId,
             ServerFarmName = serverModel?.ServerFarm?.ServerFarmName,
             Status = GetHostIpStatus(model, serverModel),
+            ProviderDescription = model.ProviderDescription,
             Description = model.Description
         };
 

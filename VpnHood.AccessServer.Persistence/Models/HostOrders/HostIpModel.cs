@@ -14,6 +14,8 @@ public class HostIpModel
     public required string? ProviderServerId { get; set; }
     public required bool ExistsInProvider { get; set; }
     public required bool IsAdditional { get; set; }
+    public required bool IsOtherService { get; set; }
+    public required string? ProviderDescription { get; set; }
     public required string? Description { get; set; }
     public Guid? RenewOrderId { get; set; }
     public DateTime? AutoReleaseTime { get; set; }

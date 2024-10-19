@@ -1,4 +1,8 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System.Net;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.HostProviders.Ovh;
+using VpnHood.AccessServer.HostProviders.Ovh.Dto;
+using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 

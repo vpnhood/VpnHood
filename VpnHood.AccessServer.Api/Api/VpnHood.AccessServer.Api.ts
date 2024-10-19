@@ -1784,13 +1784,15 @@ export class HostOrdersClient {
         return Promise.resolve<void>(null as any);
     }
 
-    listIps(projectId: string, search?: string | null | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
+    listIps(projectId: string, search?: string | null | undefined, isAdditional?: boolean | null | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/ips?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
         if (search !== undefined && search !== null)
             url_ += "search=" + encodeURIComponent("" + search) + "&";
+        if (isAdditional !== undefined && isAdditional !== null)
+            url_ += "isAdditional=" + encodeURIComponent("" + isAdditional) + "&";
         if (recordIndex === null)
             throw new Error("The parameter 'recordIndex' cannot be null.");
         else if (recordIndex !== undefined)
@@ -7161,6 +7163,7 @@ export class HostIp implements IHostIp {
     autoReleaseTime?: Date | null;
     releaseRequestTime?: Date | null;
     serverId?: string | null;
+    isAdditional!: boolean;
     existsInProvider!: boolean;
     providerDescription?: string | null;
     serverName?: string | null;
@@ -7168,6 +7171,7 @@ export class HostIp implements IHostIp {
     serverFarmId?: string | null;
     serverFarmName?: string | null;
     status!: HostIpStatus;
+    description?: string | null;
 
     constructor(data?: IHostIp) {
         if (data) {
@@ -7187,6 +7191,7 @@ export class HostIp implements IHostIp {
             this.autoReleaseTime = _data["autoReleaseTime"] ? new Date(_data["autoReleaseTime"].toString()) : <any>null;
             this.releaseRequestTime = _data["releaseRequestTime"] ? new Date(_data["releaseRequestTime"].toString()) : <any>null;
             this.serverId = _data["serverId"] !== undefined ? _data["serverId"] : <any>null;
+            this.isAdditional = _data["isAdditional"] !== undefined ? _data["isAdditional"] : <any>null;
             this.existsInProvider = _data["existsInProvider"] !== undefined ? _data["existsInProvider"] : <any>null;
             this.providerDescription = _data["providerDescription"] !== undefined ? _data["providerDescription"] : <any>null;
             this.serverName = _data["serverName"] !== undefined ? _data["serverName"] : <any>null;
@@ -7194,6 +7199,7 @@ export class HostIp implements IHostIp {
             this.serverFarmId = _data["serverFarmId"] !== undefined ? _data["serverFarmId"] : <any>null;
             this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
             this.status = _data["status"] !== undefined ? _data["status"] : <any>null;
+            this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
         }
     }
 
@@ -7213,6 +7219,7 @@ export class HostIp implements IHostIp {
         data["autoReleaseTime"] = this.autoReleaseTime ? this.autoReleaseTime.toISOString() : <any>null;
         data["releaseRequestTime"] = this.releaseRequestTime ? this.releaseRequestTime.toISOString() : <any>null;
         data["serverId"] = this.serverId !== undefined ? this.serverId : <any>null;
+        data["isAdditional"] = this.isAdditional !== undefined ? this.isAdditional : <any>null;
         data["existsInProvider"] = this.existsInProvider !== undefined ? this.existsInProvider : <any>null;
         data["providerDescription"] = this.providerDescription !== undefined ? this.providerDescription : <any>null;
         data["serverName"] = this.serverName !== undefined ? this.serverName : <any>null;
@@ -7220,6 +7227,7 @@ export class HostIp implements IHostIp {
         data["serverFarmId"] = this.serverFarmId !== undefined ? this.serverFarmId : <any>null;
         data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
         data["status"] = this.status !== undefined ? this.status : <any>null;
+        data["description"] = this.description !== undefined ? this.description : <any>null;
         return data;
     }
 }
@@ -7232,6 +7240,7 @@ export interface IHostIp {
     autoReleaseTime?: Date | null;
     releaseRequestTime?: Date | null;
     serverId?: string | null;
+    isAdditional: boolean;
     existsInProvider: boolean;
     providerDescription?: string | null;
     serverName?: string | null;
@@ -7239,6 +7248,7 @@ export interface IHostIp {
     serverFarmId?: string | null;
     serverFarmName?: string | null;
     status: HostIpStatus;
+    description?: string | null;
 }
 
 export enum HostIpStatus {

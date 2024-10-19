@@ -126,7 +126,8 @@ public class FakeHostProvider : IHostProvider
             if (fakeDb.HostIps.TryAdd(ipAddress.ToString(), new HostProviderIp {
                 IpAddress = ipAddress,
                 Description = order.Description,
-                ServerId = order.ServerId
+                ServerId = order.ServerId,
+                IsAdditional = true
             })) {
                 _logger.LogInformation("FakeProvider allocate an Ip. Ip: {Ip}", ipAddress);
             }

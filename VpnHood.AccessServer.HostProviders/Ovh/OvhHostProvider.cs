@@ -129,7 +129,8 @@ public class OvhHostProvider(
         var hostProviderIp = new HostProviderIp {
             IpAddress = IPAddress.Parse(ipData.Ip.Split('/')[0]),
             ServerId = ipData.RoutedTo.ServiceName,
-            Description = ipData.Description
+            Description = ipData.Description,
+            IsAdditional = ipData.IsAdditionalIp
         };
         return hostProviderIp;
     }

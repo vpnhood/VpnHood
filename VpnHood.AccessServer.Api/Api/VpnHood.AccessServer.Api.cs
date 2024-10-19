@@ -3322,7 +3322,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<HostIp>> ListIpsAsync(System.Guid projectId, string? search = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<HostIp>> ListIpsAsync(System.Guid projectId, string? search = null, bool? isAdditional = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -3346,6 +3346,10 @@ namespace VpnHood.AccessServer.Api
                     if (search != null)
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("search")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(search, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (isAdditional != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("isAdditional")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(isAdditional, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     }
                     if (recordIndex != null)
                     {
@@ -10441,6 +10445,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverId")]
         public System.Guid? ServerId { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("isAdditional")]
+        public bool IsAdditional { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("existsInProvider")]
         public bool ExistsInProvider { get; set; } = default!;
 
@@ -10463,6 +10470,9 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
         public HostIpStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string? Description { get; set; } = default!;
 
     }
 

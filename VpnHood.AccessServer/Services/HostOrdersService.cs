@@ -373,6 +373,7 @@ public class HostOrdersService(
                 ProviderServerId = hostProviderIp.ServerId,
                 Description = hostProviderIp.Description,
                 CreatedTime = DateTime.UtcNow,
+                IsAdditional = hostProviderIp.IsAdditional,
                 ExistsInProvider = true,
                 ProjectId = projectId
             };
@@ -392,8 +393,8 @@ public class HostOrdersService(
 
     public async Task<HostOrder> Get(Guid projectId, string orderId)
     {
-        var result = await vhRepo.HostOrderGet(projectId, Guid.Parse(orderId));
-        return result.ToDto();
+        var hostOrder = await vhRepo.HostOrderGet(projectId, Guid.Parse(orderId));
+        return hostOrder.ToDto();
     }
 
     private static ServerModel? FindServerFromIp(ServerModel[] servers, IPAddress ip)
@@ -401,9 +402,35 @@ public class HostOrdersService(
         return servers.FirstOrDefault(y => y.AccessPoints.Any(z => z.IpAddress.Equals(ip)));
     }
 
+    private async Task TryUpdateHostIp(HostIpModel hostIpModel)
+    {
+        try {
+            // update from provider
+            var providerModel = await vhRepo.HostProviderGet(hostIpModel.ProjectId, hostProviderId: hostIpModel.HostProviderId);
+            var provider = hostProviderFactory.Create(providerModel.HostProviderId, providerModel.HostProviderName, providerModel.Settings);
+            var providerHostIp = await provider.GetIp(hostIpModel.GetIpAddress(), appOptions.Value.ServiceHttpTimeout);
+
+            hostIpModel.Description = providerHostIp.Description;
+            hostIpModel.IsAdditional = providerHostIp.IsAdditional;
+            hostIpModel.ExistsInProvider = true;
+            if (hostIpModel.LocationCountry == null) {
+                var location = await ipLocationProvider.GetLocation(hostIpModel.GetIpAddress(), CancellationToken.None);
+                hostIpModel.LocationCountry = location.CountryCode;
+                hostIpModel.LocationRegion = location.RegionName;
+            }
+
+            await vhRepo.SaveChangesAsync();
+        }
+        catch (Exception ex) {
+            logger.LogError(ex, "Error while updating hostIp. ProjectId: {ProjectId}, Ip: {Ip}",
+                hostIpModel.ProjectId, hostIpModel.IpAddress);
+        }
+    }
+
     public async Task<HostIp> GetIp(Guid projectId, string ipAddress)
     {
         var hostIpModel = await vhRepo.HostIpGet(projectId, ipAddress: ipAddress);
+        await TryUpdateHostIp(hostIpModel);
 
         // get all servers
         var servers = await vhRepo.ServerList(projectId, includeServerFarm: true, tracking: false);
@@ -415,7 +442,8 @@ public class HostOrdersService(
 
 
     private readonly TimeoutDictionary<Guid, TimeoutItem> _syncedProjects = new(TimeSpan.FromSeconds(2));
-    public async Task<HostIp[]> ListIps(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = int.MaxValue)
+    public async Task<HostIp[]> ListIps(Guid projectId, string? search = null, bool? isAdditional = null,
+        int recordIndex = 0, int recordCount = int.MaxValue)
     {
         // sync
         if (!_syncedProjects.TryGetValue(projectId, out _) || hostEnvironment.IsDevelopment()) {
@@ -423,7 +451,9 @@ public class HostOrdersService(
             await Sync(projectId);
         }
 
-        var hostIpModels = await vhRepo.HostIpList(projectId, search: search, recordIndex: recordIndex, recordCount: recordCount);
+        var hostIpModels = await vhRepo.HostIpList(projectId, search: search,
+            isAdditional: isAdditional,
+            recordIndex: recordIndex, recordCount: recordCount);
 
         // get all servers
         var servers = await vhRepo.ServerList(projectId, includeServerFarm: true, tracking: false);

@@ -457,12 +457,13 @@ public class VhRepo(VhContext vhContext)
 
 
     public Task<HostIpModel[]> HostIpList(Guid projectId, string? search = null,
-        int recordIndex = 0, int recordCount = int.MaxValue)
+        bool? isAdditional = null, int recordIndex = 0, int recordCount = int.MaxValue)
     {
         return vhContext.HostIps
             .Include(x => x.HostProvider)
             .Where(x => x.ProjectId == projectId && x.DeletedTime == null)
             .Where(x => x.IpAddress == search || search == null)
+            .Where(x => x.IsAdditional == isAdditional || isAdditional == null)
             .OrderByDescending(x => x.HostIpId)
             .Skip(recordIndex)
             .Take(recordCount)

@@ -20,6 +20,7 @@ public class HostIp
     public required string? ServerName { get; set; }
     public required Location? ServerLocation { get; set; }
     public required Guid? ServerFarmId { get; set; }
+    public required string? ProviderServerFarmId { get; set; }
     public required string? ServerFarmName { get; set; }
     public required HostIpStatus Status { get; set; }
     public required string? Description { get; set; }

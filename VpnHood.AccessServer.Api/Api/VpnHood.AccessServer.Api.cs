@@ -10467,6 +10467,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
         public System.Guid? ServerFarmId { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("providerServerFarmId")]
+        public string? ProviderServerFarmId { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
         public string? ServerFarmName { get; set; } = default!;
 

@@ -6,7 +6,7 @@ namespace VpnHood.AccessServer.Agent.Services.IpLocationServices;
 
 public class ServerIpLocationProvider(
     IHttpClientFactory clientFactory,
-    ILogger<DeviceIpLocationProvider> logger,
+    ILogger<ServerIpLocationProvider> logger,
     IOptions<AgentOptions> options)
     : CompositeIpLocationProvider(logger, CreateLoggers(clientFactory, options))
 {

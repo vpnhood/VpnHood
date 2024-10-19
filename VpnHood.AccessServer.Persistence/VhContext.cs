@@ -644,8 +644,20 @@ public class VhContext : DbContext
                 .HasKey(e => e.HostIpId);
 
             entity
+                .Property(x => x.ProviderServerId)
+                .HasMaxLength(50);
+
+            entity
                 .HasIndex(e => new { e.ProjectId, e.CreatedTime })
                 .HasFilter($"{nameof(HostIpModel.DeletedTime)} is null");
+
+            entity
+                .Property(x => x.LocationCountry)
+                .HasMaxLength(5);
+
+            entity
+                .Property(x => x.LocationRegion)
+                .HasMaxLength(20);
 
             entity
                 .HasIndex(e => new { e.ProjectId, e.IpAddress })
@@ -672,6 +684,10 @@ public class VhContext : DbContext
 
             entity
                 .Property(e => e.NewIpOrderIpAddress)
+                .HasMaxLength(50);
+
+            entity
+                .Property(e => e.NewIpOrderProviderServerId)
                 .HasMaxLength(50);
 
             entity

@@ -12,6 +12,7 @@ using VpnHood.AccessServer.Persistence.Models.HostOrders;
 using VpnHood.AccessServer.Providers.Hosts;
 using VpnHood.AccessServer.Repos;
 using VpnHood.Common.Collections;
+using VpnHood.Common.IpLocations;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -22,6 +23,7 @@ public class HostOrdersService(
     ILogger<HostOrdersService> logger,
     IServiceScopeFactory serviceScopeFactory,
     IWebHostEnvironment hostEnvironment,
+    IIpLocationProvider ipLocationProvider,
     ServerConfigureService serverConfigureService)
     : IGrayMintJob
 {
@@ -34,9 +36,6 @@ public class HostOrdersService(
 
         return new Uri(serverModel.HostPanelUrl).Host;
     }
-
-    private static string BuildProjectTag(Guid projectId) => $"#project:{projectId}";
-    private static string BuildOrderTag(Guid orderId) => $"#order:{orderId}";
 
     public async Task<HostOrder> CreateNewIpOrder(Guid projectId, HostOrderNewIp hostOrderNewIp)
     {
@@ -72,9 +71,7 @@ public class HostOrdersService(
         var providerServerId = await provider.GetServerIdFromIp(serverIp, appOptions.Value.ServiceHttpTimeout)
             ?? throw new InvalidOperationException("Could not find the Server default gateway IP address in the provider.");
 
-        var providerOrderId = await provider.OrderNewIp(providerServerId,
-            $"{BuildProjectTag(projectId)} {BuildOrderTag(orderId)}",
-            appOptions.Value.ServiceHttpTimeout);
+        var providerOrderId = await provider.OrderNewIp(providerServerId, appOptions.Value.ServiceHttpTimeout);
 
         // save order
         var hostOrderModel = new HostOrderModel {
@@ -88,6 +85,7 @@ public class HostOrdersService(
             OrderType = HostOrderType.NewIp,
             ErrorMessage = null,
             CompletedTime = null,
+            NewIpOrderProviderServerId = providerServerId,
             NewIpOrderServerId = hostOrderNewIp.ServerId,
             NewIpOrderOldIpAddressReleaseTime = oldIpAddressReleaseTime
         };
@@ -212,10 +210,20 @@ public class HostOrdersService(
         // list all pending orders
         var pendingOrders = await vhRepo.HostOrdersList(projectId, status: HostOrderStatus.Pending);
 
+        // get all servers
+        var servers = await vhRepo.ServerList(projectId, includeServerFarm: true, tracking: false);
+
         // update pending NewIp orders
         foreach (var pendingOrder in pendingOrders.Where(x => x.OrderType == HostOrderType.NewIp)) {
             try {
-                var hostIp = hostIps.FirstOrDefault(x => x.Description?.Contains(BuildOrderTag(pendingOrder.HostOrderId)) == true);
+                // find hostIp that created after the order and not used in any server
+                var hostIp = hostIps
+                    .FirstOrDefault(x =>
+                        x.HostProviderId == pendingOrder.HostProviderId &&
+                        x.CreatedTime >= pendingOrder.CreatedTime &&
+                        x.ProviderServerId == pendingOrder.NewIpOrderProviderServerId &&
+                        FindServerFromIp(servers, x.GetIpAddress()) == null);
+
                 if (hostIp == null)
                     continue;
 
@@ -223,8 +231,7 @@ public class HostOrdersService(
                     pendingOrder.ProjectId, pendingOrder.HostOrderId, hostIp.IpAddress);
 
                 // update server endpoints
-                if (pendingOrder.NewIpOrderServerId != null)
-                    await AddIpToServer(projectId, pendingOrder.NewIpOrderServerId.Value, hostIp.GetIpAddress());
+                await AddIpToServer(projectId, pendingOrder.NewIpOrderServerId, hostIp.GetIpAddress());
 
                 // delete old ips
                 foreach (var oldHostIp in hostIps.Where(x => x.RenewOrderId == pendingOrder.HostOrderId)) {
@@ -329,7 +336,7 @@ public class HostOrdersService(
                 x.ProviderId,
                 x.ProviderName,
                 x.Provider,
-                ListTask = x.Provider.ListIps(BuildProjectTag(projectId), timeout)
+                ListTask = x.Provider.ListIps(null, timeout)
             }).ToArray();
 
         await Task.WhenAll(providerIpInfosTasks.Select(providerTask => providerTask.ListTask));
@@ -355,10 +362,15 @@ public class HostOrdersService(
             Logger.LogInformation("Adding a new ip from provider to db. ProjectId: {ProjectId}, HostProviderName: {HostProviderName}, Ip: {Ip}",
                 projectId, providerIpInfo.ProviderName, providerIpInfo.IpAddress);
 
+            var location = await ipLocationProvider.GetLocation(providerIpInfo.IpAddress, CancellationToken.None);
+
             var hostProviderIp = await providerIpInfo.Provider.GetIp(providerIpInfo.IpAddress, timeout);
             var hostIpModel = new HostIpModel {
                 IpAddress = providerIpInfo.IpAddress.ToString(),
+                LocationCountry = location.CountryCode,
+                LocationRegion = location.RegionName,
                 HostProviderId = providerIpInfo.ProviderId,
+                ProviderServerId = hostProviderIp.ServerId,
                 Description = hostProviderIp.Description,
                 CreatedTime = DateTime.UtcNow,
                 ExistsInProvider = true,
@@ -406,7 +418,7 @@ public class HostOrdersService(
     public async Task<HostIp[]> ListIps(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = int.MaxValue)
     {
         // sync
-        if (!_syncedProjects.TryGetValue(projectId, out _ ) || hostEnvironment.IsDevelopment()) {
+        if (!_syncedProjects.TryGetValue(projectId, out _) || hostEnvironment.IsDevelopment()) {
             _syncedProjects.GetOrAdd(projectId, _ => new TimeoutItem());
             await Sync(projectId);
         }
@@ -427,7 +439,7 @@ public class HostOrdersService(
 
     public async Task<HostOrder[]> List(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = int.MaxValue)
     {
-        // sync
+        // sync project
         if (!_syncedProjects.TryGetValue(projectId, out _) || hostEnvironment.IsDevelopment()) {
             _syncedProjects.GetOrAdd(projectId, _ => new TimeoutItem());
             await Sync(projectId);

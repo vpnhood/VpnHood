@@ -1,4 +1,3 @@
-using System.Net;
 using System.Text.Json;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Authentications;
@@ -14,7 +13,6 @@ using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Agent.Services.IpLocationServices;
 using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common.IpLocations;
 
 namespace VpnHood.AccessServer.Agent;

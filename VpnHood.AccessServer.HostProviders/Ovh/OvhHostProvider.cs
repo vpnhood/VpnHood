@@ -16,9 +16,8 @@ public class OvhHostProvider(
 
     private async Task<CartData> CreateNewCart(TimeSpan timeout)
     {
-        var requestBody = new RequestBodyForCreateCart
-        {
-            description = "Created by API",
+        var requestBody = new RequestBodyForCreateCart {
+            description = "Created by CreateNewCart API.",
             expire = DateTime.UtcNow.AddHours(1),
             ovhSubsidiary = settings.OvhSubsidiary
         };
@@ -31,8 +30,7 @@ public class OvhHostProvider(
     private async Task<CartItemId> AddNewIpOrderToCart(string cartId, TimeSpan timeout)
     {
         // ReSharper disable once StringLiteralTypo
-        var requestBody = new IpOrderRequest
-        {
+        var requestBody = new IpOrderRequest {
             duration = "P1M",
             planCode = "ip-failover-arin",
             pricingMode = "default",
@@ -47,8 +45,7 @@ public class OvhHostProvider(
     private async Task<IpConfiguration> AddConfigurationToIp(string cartId, int itemId, string configLabel,
         string configValue, TimeSpan timeout)
     {
-        var requestBody = new IpConfigRequest
-        {
+        var requestBody = new IpConfigRequest {
             label = configLabel,
             value = configValue
         };
@@ -64,8 +61,7 @@ public class OvhHostProvider(
 
     private async Task<string> Checkout(string cartId, TimeSpan timeout)
     {
-        var requestBody = new CheckoutRequest
-        {
+        var requestBody = new CheckoutRequest {
             autoPayWithPreferredPaymentMethod = true,
             waiveRetractationPeriod = true
         };
@@ -77,7 +73,7 @@ public class OvhHostProvider(
         return checkoutData.OrderId.Value.ToString();
     }
 
-    public async Task<string> OrderNewIp(string serverId, string? description, TimeSpan timeout)
+    public async Task<string> OrderNewIp(string serverId, TimeSpan timeout)
     {
         // Create a new cart
         var cartData = await CreateNewCart(timeout);
@@ -92,10 +88,6 @@ public class OvhHostProvider(
         // Add optional destination(VPS) config to the ip
         await AddConfigurationToIp(cartId: cartData.CartId, itemId: cartItemId.ItemId,
             configLabel: "destination", configValue: serverId, timeout: timeout);
-
-        // Add optional description config to the ip
-        await AddConfigurationToIp(cartId: cartData.CartId, itemId: cartItemId.ItemId,
-            configLabel: "description", configValue: description ?? "Created by API", timeout: timeout);
 
         // Assign cart to current credential (User)
         _ = await OvhClient.PostAsync($"/order/cart/{cartData.CartId}/assign", timeout: timeout);
@@ -134,8 +126,7 @@ public class OvhHostProvider(
     public async Task<HostProviderIp> GetIp(IPAddress ip, TimeSpan timeout)
     {
         var ipData = await OvhClient.GetAsync<IpData>($"/ip/{ip}", timeout: timeout);
-        var hostProviderIp = new HostProviderIp
-        {
+        var hostProviderIp = new HostProviderIp {
             IpAddress = IPAddress.Parse(ipData.Ip.Split('/')[0]),
             ServerId = ipData.RoutedTo.ServiceName,
             Description = ipData.Description

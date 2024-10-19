@@ -9,7 +9,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
@@ -21,6 +20,7 @@ using VpnHood.AccessServer.Report.Persistence;
 using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Test.Helper;
+using VpnHood.Common.IpLocations;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
@@ -92,6 +92,7 @@ public class TestApp : IHttpClientFactory, IDisposable
                     services.AddScoped<IAuthorizationProvider, TestAuthorizationProvider>();
                     services.AddSingleton<IHttpClientFactory>(this);
                     services.AddSingleton<IAcmeOrderFactory, TestAcmeOrderFactory>();
+                    services.AddSingleton<IIpLocationProvider, TestIpLocationProvider>();
                 });
             });
 
@@ -350,16 +351,9 @@ public class TestApp : IHttpClientFactory, IDisposable
     // IHttpClientFactory.CreateClient
     public HttpClient CreateClient(string name)
     {
-        if (name is 
-            AgentOptions.HttpClientNameFarmTokenRepo or 
-            AppOptions.HttpClientNameFarmTokenRepo or 
-            AgentOptions.HttpClientNameIpLocation)
-            return new HttpClient();
-
-        // this for simulating Agent HTTP
         return name == AppOptions.AgentHttpClientName
             ? AgentTestApp.HttpClient
-            : WebApp.CreateClient();
+            : new HttpClient();
     }
 
     public Task<FakeHostProvider> AddTestHostProvider(TimeSpan? autoCompleteDelay = null)

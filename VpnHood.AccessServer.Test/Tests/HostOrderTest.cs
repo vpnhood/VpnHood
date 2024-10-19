@@ -270,23 +270,23 @@ public class HostOrderTest
     {
         using var testApp = await TestApp.Create(deleteOthers: true, aggressiveJob: true);
         using var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
-        var serverDom1 = await farm.AddNewServer();
+        var serverDom = await farm.AddNewServer();
 
         // prepare host provider for a server
         var testHostProvider = await testApp.AddTestHostProvider(autoCompleteDelay: TimeSpan.FromMilliseconds(300));
-        await serverDom1.SetHostPanelDomain(testHostProvider.ProviderName);
+        await serverDom.SetHostPanelDomain(testHostProvider.ProviderName);
 
         // Order a new IP for the server
-        var hostOrders1 = new List<HostOrder>();
+        var hostOrders = new List<HostOrder>();
         for (var i = 0; i < 5; i++) {
-            hostOrders1.Add(await testApp.HostOrdersClient.CreateNewIpOrderAsync(farm.ProjectId,
-                new HostOrderNewIp { ServerId = serverDom1.ServerId }));
+            hostOrders.Add(await testApp.HostOrdersClient.CreateNewIpOrderAsync(farm.ProjectId,
+                new HostOrderNewIp { ServerId = serverDom.ServerId }));
         }
 
         // wait for the orders to complete
         await VhTestUtil.AssertEqualsWait(true, async () => {
-            hostOrders1 = (await testApp.HostOrdersClient.ListAsync(testApp.ProjectId)).ToList();
-            return hostOrders1.All(x=>x.Status == HostOrderStatus.Completed);
+            hostOrders = (await testApp.HostOrdersClient.ListAsync(testApp.ProjectId)).ToList();
+            return hostOrders.All(x => x.Status == HostOrderStatus.Completed);
         });
 
         // get all ips
@@ -294,7 +294,7 @@ public class HostOrderTest
         Assert.AreEqual(5, hostIps.Length);
 
         // place replace order
-        var oldIps = hostOrders1.Take(2).Select(x => x.NewIpOrderIpAddress).ToArray();
+        var oldIps = hostOrders.Take(2).Select(x => x.NewIpOrderIpAddress).ToArray();
         Assert.IsTrue(oldIps.Any(x => x != null));
         testApp.Logger.LogInformation("Replacing old ips: {ips}", string.Join(", ", oldIps));
 
@@ -302,7 +302,7 @@ public class HostOrderTest
         foreach (var oldIp in oldIps) {
             hostOrders2.Add(await testApp.HostOrdersClient.CreateNewIpOrderAsync(farm.ProjectId,
                 new HostOrderNewIp {
-                    ServerId = serverDom1.ServerId,
+                    ServerId = serverDom.ServerId,
                     OldIpAddressReleaseTime = DateTime.UtcNow,
                     OldIpAddress = oldIp
                 }));
@@ -310,6 +310,7 @@ public class HostOrderTest
 
         // wait for the orders to complete
         foreach (var hostOrder in hostOrders2) {
+            testApp.Logger.LogInformation($"TEST: Waiting for order to complete. OrderId: {hostOrder.OrderId}, ServerId: {hostOrder.ServerId}");
             await VhTestUtil.AssertEqualsWait(HostOrderStatus.Completed, async () => {
                 var hostOrderTemp = await testApp.HostOrdersClient.GetAsync(farm.ProjectId, hostOrder.OrderId);
                 return hostOrderTemp.Status;
@@ -317,12 +318,14 @@ public class HostOrderTest
         }
 
         // check servers has the ips
-        await serverDom1.Reload();
-        await serverDom1.Configure();
+        await serverDom.Reload();
+        await serverDom.Configure();
         foreach (var hostOrder in hostOrders2) {
             var order = await testApp.HostOrdersClient.GetAsync(farm.ProjectId, hostOrder.OrderId);
-            Assert.IsTrue(serverDom1.Server.AccessPoints.Any(x => x.IpAddress == order.NewIpOrderIpAddress));
-            Assert.IsTrue(serverDom1.ServerConfig.TcpEndPointsValue.Any(x => x.Address.ToString() == order.NewIpOrderIpAddress));
+            Assert.IsTrue(serverDom.Server.AccessPoints.Any(x => x.IpAddress == order.NewIpOrderIpAddress),
+                $"{order.NewIpOrderIpAddress} has not been added to AccessPoints.");
+            Assert.IsTrue(serverDom.ServerConfig.TcpEndPointsValue.Any(x => x.Address.ToString() == order.NewIpOrderIpAddress),
+                $"{order.NewIpOrderIpAddress} has not been added to ServerConfig TcpEndPoints.");
         }
 
         // old ips should be released
@@ -334,11 +337,11 @@ public class HostOrderTest
         }
 
         // the ips should not exist in server access points
-        await serverDom1.Reload();
-        Assert.IsFalse(serverDom1.Server.AccessPoints.Any(x => oldIps.Contains(x.IpAddress)));
+        await serverDom.Reload();
+        Assert.IsFalse(serverDom.Server.AccessPoints.Any(x => oldIps.Contains(x.IpAddress)));
 
         // the ips should not exist in server config
-        await serverDom1.Configure();
-        Assert.IsFalse(serverDom1.ServerConfig.TcpEndPointsValue.Any(x => oldIps.Contains(x.Address.ToString())));
+        await serverDom.Configure();
+        Assert.IsFalse(serverDom.ServerConfig.TcpEndPointsValue.Any(x => oldIps.Contains(x.Address.ToString())));
     }
 }

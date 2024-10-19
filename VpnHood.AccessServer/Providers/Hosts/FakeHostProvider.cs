@@ -98,10 +98,10 @@ public class FakeHostProvider : IHostProvider
     private static IPAddress BuildRandomIpAddress()
     {
         return new IPAddress([
-            (byte)new Random().Next(128, 255),
-            (byte)new Random().Next(0, 255),
-            (byte)new Random().Next(0, 255),
-            (byte)new Random().Next(1, 255)
+            (byte)Random.Shared.Next(128, 255),
+            (byte)Random.Shared.Next(0, 255),
+            (byte)Random.Shared.Next(0, 255),
+            (byte)Random.Shared.Next(1, 255)
         ]);
     }
 
@@ -157,7 +157,7 @@ public class FakeHostProvider : IHostProvider
             : fakeDb.HostIps.FirstOrDefault(x => x.Value.IpAddress.Equals(serverIp)).Value.ServerId;
     }
 
-    public async Task<string> OrderNewIp(string serverId, string? description, TimeSpan timeout)
+    public async Task<string> OrderNewIp(string serverId, TimeSpan timeout)
     {
         await using var scope = _serviceScopeFactory.CreateAsyncScope();
         var vhRepo = scope.ServiceProvider.GetRequiredService<VhRepo>();
@@ -165,7 +165,6 @@ public class FakeHostProvider : IHostProvider
 
         var order = new Order {
             Type = Order.OrderType.NewIp,
-            Description = description,
             ServerId = serverId,
             IsCompleted = false
         };
@@ -175,7 +174,6 @@ public class FakeHostProvider : IHostProvider
 
         if (_providerSettings.AutoCompleteDelay != null)
             _ = CompleteOrders(_providerSettings.AutoCompleteDelay.Value);
-
 
         return order.OrderId;
     }

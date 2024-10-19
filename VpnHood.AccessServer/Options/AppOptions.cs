@@ -13,4 +13,6 @@ public class AppOptions
     public TimeSpan ServiceHttpTimeout => TimeSpan.FromSeconds(30);
     public int HostOrderMonitorCount { get; set; } = 2 * 10;
     public TimeSpan HostOrderMonitorInterval { get; set; } = TimeSpan.FromSeconds(30);
+    public string IpLocationIoApiKey { get; set; } = "";
+    public string IpInfoIoApiKey { get; set; } = "";
 }

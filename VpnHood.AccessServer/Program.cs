@@ -19,6 +19,7 @@ using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
+using VpnHood.Common.IpLocations;
 
 namespace VpnHood.AccessServer;
 
@@ -119,6 +120,7 @@ public class Program
                 .AddScoped<ClientFilterService>()
                 .AddScoped<DevicesService>()
                 .AddScoped<IHostProviderFactory, HostProviderFactory>()
+                .AddSingleton<IIpLocationProvider, ServerIpLocationProvider>()
                 .AddSingleton<IAcmeOrderFactory, AcmeOrderFactory>();
 
             // Report Service

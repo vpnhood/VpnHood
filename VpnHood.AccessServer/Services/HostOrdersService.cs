@@ -444,14 +444,14 @@ public class HostOrdersService(
     }
 
 
-    private readonly TimeoutDictionary<Guid, TimeoutItem> _syncedProjects = new(TimeSpan.FromSeconds(2));
+    private readonly TimeoutDictionary<Guid, TimeoutItem> _syncedProjects = new(TimeSpan.FromMinutes(10));
     public async Task<HostIp[]> ListIps(Guid projectId, string? search = null,
         bool? isAdditional = null, bool? isHidden = null, bool includeIpV4 = true, bool includeIpV6 = true,
-        int recordIndex = 0, int recordCount = int.MaxValue)
+        bool forceSync = false, int recordIndex = 0, int recordCount = int.MaxValue)
     {
         // sync
-        if (!_syncedProjects.TryGetValue(projectId, out _) || hostEnvironment.IsDevelopment()) {
-            _syncedProjects.GetOrAdd(projectId, _ => new TimeoutItem());
+        if (!_syncedProjects.TryGetValue(projectId, out _) || hostEnvironment.IsDevelopment() || forceSync) {
+            _syncedProjects.TryAdd(projectId, new TimeoutItem());
             await Sync(projectId);
         }
 
@@ -538,7 +538,7 @@ public class HostOrdersService(
         if (updateParams.IsHidden != null)
             hostIp.IsHidden = updateParams.IsHidden;
 
-        if (updateParams.ProviderDescription != null && updateParams.ProviderDescription!= hostIp.ProviderDescription) {
+        if (updateParams.ProviderDescription != null && updateParams.ProviderDescription != hostIp.ProviderDescription) {
             var providerModel = await vhRepo.HostProviderGet(projectId, hostProviderId: hostIp.HostProviderId);
             var provider = hostProviderFactory.Create(providerModel.HostProviderId, providerModel.HostProviderName, providerModel.Settings);
             await provider.UpdateIpDesc(IPAddress.Parse(hostIp.IpAddress), updateParams.ProviderDescription, appOptions.Value.ServiceHttpTimeout);

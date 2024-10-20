@@ -23,12 +23,12 @@ public class HostOrdersController(HostOrdersService hostOrdersService)
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<HostIp[]> ListIps(Guid projectId, string? search = null, 
         bool? isAdditional = null, bool? isHidden = null, bool includeIpV4 = true, bool includeIpV6 = true,
-        int recordIndex = 0, int recordCount = 200)
+        bool forceSync = false, int recordIndex = 0, int recordCount = 200)
     {
         return hostOrdersService.ListIps(projectId, search: search, 
             isAdditional: isAdditional, isHidden: isHidden,
             includeIpV4: includeIpV4, includeIpV6: includeIpV6,
-            recordIndex: recordIndex, recordCount: recordCount);
+            forceSync: forceSync, recordIndex: recordIndex, recordCount: recordCount);
     }
 
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]

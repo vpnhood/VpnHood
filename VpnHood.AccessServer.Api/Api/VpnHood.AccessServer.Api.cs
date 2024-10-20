@@ -3392,7 +3392,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<HostIp>> ListIpsAsync(System.Guid projectId, string? search = null, bool? isAdditional = null, bool? isHidden = null, bool? inUse = null, bool? includeIpV4 = null, bool? includeIpV6 = null, bool? includeInUse = null, bool? includeNotInUse = null, bool? forceSync = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<HostIp>> ListIpsAsync(System.Guid projectId, string? search = null, bool? isAdditional = null, bool? isHidden = null, HostIpStatus? hostIpStatus = null, bool? includeIpV4 = null, bool? includeIpV6 = null, bool? includeInUse = null, bool? includeNotInUse = null, bool? forceSync = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -3425,9 +3425,9 @@ namespace VpnHood.AccessServer.Api
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("isHidden")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(isHidden, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     }
-                    if (inUse != null)
+                    if (hostIpStatus != null)
                     {
-                        urlBuilder_.Append(System.Uri.EscapeDataString("inUse")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(inUse, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                        urlBuilder_.Append(System.Uri.EscapeDataString("hostIpStatus")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(hostIpStatus, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     }
                     if (includeIpV4 != null)
                     {
@@ -10584,14 +10584,14 @@ namespace VpnHood.AccessServer.Api
     public enum HostIpStatus
     {
 
-        [System.Runtime.Serialization.EnumMember(Value = @"InUse")]
-        InUse = 0,
+        [System.Runtime.Serialization.EnumMember(Value = @"NotInProvider")]
+        NotInProvider = 0,
 
         [System.Runtime.Serialization.EnumMember(Value = @"NotInUse")]
         NotInUse = 1,
 
-        [System.Runtime.Serialization.EnumMember(Value = @"NotInProvider")]
-        NotInProvider = 2,
+        [System.Runtime.Serialization.EnumMember(Value = @"InUse")]
+        InUse = 2,
 
         [System.Runtime.Serialization.EnumMember(Value = @"Releasing")]
         Releasing = 3,

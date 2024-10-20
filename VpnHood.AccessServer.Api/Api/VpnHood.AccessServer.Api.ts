@@ -1831,7 +1831,7 @@ export class HostOrdersClient {
         return Promise.resolve<void>(null as any);
     }
 
-    listIps(projectId: string, search?: string | null | undefined, isAdditional?: boolean | null | undefined, isHidden?: boolean | null | undefined, inUse?: boolean | null | undefined, includeIpV4?: boolean | undefined, includeIpV6?: boolean | undefined, includeInUse?: boolean | undefined, includeNotInUse?: boolean | undefined, forceSync?: boolean | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
+    listIps(projectId: string, search?: string | null | undefined, isAdditional?: boolean | null | undefined, isHidden?: boolean | null | undefined, hostIpStatus?: HostIpStatus | null | undefined, includeIpV4?: boolean | undefined, includeIpV6?: boolean | undefined, includeInUse?: boolean | undefined, includeNotInUse?: boolean | undefined, forceSync?: boolean | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/ips?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -1842,8 +1842,8 @@ export class HostOrdersClient {
             url_ += "isAdditional=" + encodeURIComponent("" + isAdditional) + "&";
         if (isHidden !== undefined && isHidden !== null)
             url_ += "isHidden=" + encodeURIComponent("" + isHidden) + "&";
-        if (inUse !== undefined && inUse !== null)
-            url_ += "inUse=" + encodeURIComponent("" + inUse) + "&";
+        if (hostIpStatus !== undefined && hostIpStatus !== null)
+            url_ += "hostIpStatus=" + encodeURIComponent("" + hostIpStatus) + "&";
         if (includeIpV4 === null)
             throw new Error("The parameter 'includeIpV4' cannot be null.");
         else if (includeIpV4 !== undefined)
@@ -7331,9 +7331,9 @@ export interface IHostIp {
 }
 
 export enum HostIpStatus {
-    InUse = "InUse",
-    NotInUse = "NotInUse",
     NotInProvider = "NotInProvider",
+    NotInUse = "NotInUse",
+    InUse = "InUse",
     Releasing = "Releasing",
 }
 

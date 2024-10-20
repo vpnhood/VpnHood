@@ -29,13 +29,13 @@ public class HostOrdersController(HostOrdersService hostOrdersService)
     [HttpGet("ips")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<HostIp[]> ListIps(Guid projectId, string? search = null,
-        bool? isAdditional = null, bool? isHidden = null, bool? inUse = null,
+        bool? isAdditional = null, bool? isHidden = null, HostIpStatus? hostIpStatus = null,
         bool includeIpV4 = true, bool includeIpV6 = true,
         bool includeInUse = true, bool includeNotInUse = true,
         bool forceSync = false, int recordIndex = 0, int recordCount = 200)
     {
         return hostOrdersService.ListIps(projectId, search: search,
-            isAdditional: isAdditional, isHidden: isHidden, inUse: inUse,
+            isAdditional: isAdditional, isHidden: isHidden, hostIpStatus: hostIpStatus,
             includeIpV4: includeIpV4, includeIpV6: includeIpV6,
             recordIndex: recordIndex, recordCount: recordCount);
     }

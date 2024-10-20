@@ -125,11 +125,11 @@ public class HostOrderTest
         Assert.AreEqual(3, hostIps.Count);
 
         // check inUse
-        hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, inUse: true);
+        hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, hostIpStatus: HostIpStatus.InUse);
         Assert.AreEqual(1, hostIps.Count);
 
         // check inUse
-        hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, inUse: false);
+        hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, hostIpStatus: HostIpStatus.NotInUse);
         Assert.AreEqual(9, hostIps.Count);
     }
 

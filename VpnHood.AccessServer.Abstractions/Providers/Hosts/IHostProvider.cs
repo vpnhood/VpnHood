@@ -8,6 +8,6 @@ public interface IHostProvider
     Task<string> OrderNewIp(string serverId, TimeSpan timeout);
     Task ReleaseIp(IPAddress ipAddress, TimeSpan timeout);
     Task<IPAddress[]> ListIps(string? search, TimeSpan timeout);
-    Task<HostProviderIp> GetIp(IPAddress ipAddress, TimeSpan timeout);
+    Task<ProviderHostIp> GetIp(IPAddress ipAddress, TimeSpan timeout);
     Task UpdateIpDesc(IPAddress ipAddress, string? description, TimeSpan timeout);
 }

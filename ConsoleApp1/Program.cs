@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Diagnostics;
+using System.Net;
 using VpnHood.AccessServer.HostProviders.Ovh;
 using VpnHood.AccessServer.HostProviders.Ovh.Dto;
 using VpnHood.Common.Logging;
@@ -10,7 +11,7 @@ internal class Program
 {
     private static string BuildProjectTag(Guid projectId) => $"#project:{projectId}";
 
-    static async Task Main(string[] args)
+  static async Task Main(string[] args)
     {
         await Task.CompletedTask;
         //var logger = VhLogger.CreateConsoleLogger();

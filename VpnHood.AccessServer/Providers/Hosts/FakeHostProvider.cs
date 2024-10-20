@@ -74,7 +74,7 @@ public class FakeHostProvider : IHostProvider
         public ConcurrentDictionary<string, Order> Orders { get; init; } = [];
 
         // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
-        public ConcurrentDictionary<string, HostProviderIp> HostIps { get; init; } = [];
+        public ConcurrentDictionary<string, ProviderHostIp> HostIps { get; init; } = [];
     }
 
     public class Order
@@ -123,7 +123,7 @@ public class FakeHostProvider : IHostProvider
         foreach (var order in fakeDb.Orders.Values.Where(x => x is { IsCompleted: false, Type: Order.OrderType.NewIp })) {
             order.IsCompleted = true;
             var ipAddress = BuildRandomIpAddress();
-            if (fakeDb.HostIps.TryAdd(ipAddress.ToString(), new HostProviderIp {
+            if (fakeDb.HostIps.TryAdd(ipAddress.ToString(), new ProviderHostIp {
                 IpAddress = ipAddress,
                 Description = order.Description,
                 ServerId = order.ServerId,
@@ -157,6 +157,18 @@ public class FakeHostProvider : IHostProvider
             ? serverIp.ToString()
             : fakeDb.HostIps.FirstOrDefault(x => x.Value.IpAddress.Equals(serverIp)).Value.ServerId;
     }
+
+    //add HostIp directly to the fakeDb for test
+    public async Task AddHostIp(ProviderHostIp providerHostIp)
+    {
+        await using var scope = _serviceScopeFactory.CreateAsyncScope();
+        var vhRepo = scope.ServiceProvider.GetRequiredService<VhRepo>();
+        var fakeDb = await GetFakeDb(vhRepo);
+
+        fakeDb.HostIps.TryAdd(providerHostIp.IpAddress.ToString(), providerHostIp);
+        await Save(vhRepo, fakeDb);
+    }
+
 
     public async Task<string> OrderNewIp(string serverId, TimeSpan timeout)
     {
@@ -202,7 +214,7 @@ public class FakeHostProvider : IHostProvider
             _ = CompleteOrders(_providerSettings.AutoCompleteDelay.Value);
     }
 
-    public async Task<HostProviderIp> GetIp(IPAddress ipAddress, TimeSpan timeout)
+    public async Task<ProviderHostIp> GetIp(IPAddress ipAddress, TimeSpan timeout)
     {
         await using var scope = _serviceScopeFactory.CreateAsyncScope();
         var vhRepo = scope.ServiceProvider.GetRequiredService<VhRepo>();

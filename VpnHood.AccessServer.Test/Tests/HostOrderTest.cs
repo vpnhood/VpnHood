@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Abstractions.Providers.Hosts;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Utils;
@@ -43,6 +44,85 @@ public class HostOrderTest
         // Assert auto release time is updated
         hostIp = await farm.TestApp.HostOrdersClient.GetIpAsync(farm.ProjectId, hostOrder.NewIpOrderIpAddress);
         Assert.AreEqual(autoReleaseTime, hostIp.AutoReleaseTime);
+    }
+
+    [TestMethod]
+    public async Task HostIp_Filters()
+    {
+        using var farm = await ServerFarmDom.Create();
+        var serverId = farm.DefaultServer.ServerId.ToString();
+
+        var testHostProvider = await farm.TestApp.AddTestHostProvider();
+
+        // add ipV4 to fake provider
+        for (var i = 0; i < 4; i++) {
+            await testHostProvider.AddHostIp(new ProviderHostIp {
+                IpAddress = IPAddress.Parse($"1.1.1.{i}"),
+                Description = $"Ip{i}",
+                IsAdditional = i % 2 == 0,
+                ServerId = serverId,
+            });
+        }
+
+        // add ipV6 to fake provider
+        for (var i = 0; i < 6; i++) {
+            await testHostProvider.AddHostIp(new ProviderHostIp {
+                IpAddress = IPAddress.Parse($"1100::{i}"),
+                Description = $"Ip{i}",
+                IsAdditional = i % 2 == 0,
+                ServerId = serverId,
+            });
+        }
+
+        await farm.TestApp.HostOrdersClient.SyncAsync(farm.ProjectId);
+
+        await farm.TestApp.HostOrdersClient.UpdateIpAsync(farm.ProjectId, "1.1.1.1", new HostIpUpdateParams {
+            IsHidden = new PatchOfBoolean { Value = true }
+        });
+
+        await farm.TestApp.HostOrdersClient.UpdateIpAsync(farm.ProjectId, "1100::1", new HostIpUpdateParams {
+            IsHidden = new PatchOfBoolean { Value = true }
+        });
+
+        await farm.TestApp.HostOrdersClient.UpdateIpAsync(farm.ProjectId, "1100::2", new HostIpUpdateParams {
+            IsHidden = new PatchOfBoolean { Value = true }
+        });
+
+        // list ips
+        var hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId);
+        Assert.AreEqual(10, hostIps.Count);
+
+        // check ipV4
+        hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, includeIpV4: true, includeIpV6: false);
+        Assert.AreEqual(4, hostIps.Count);
+
+        //check ipV6
+        hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, includeIpV4: false, includeIpV6: true);
+        Assert.AreEqual(6, hostIps.Count);
+
+        //check isHidden
+        hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, isHidden: true);
+        Assert.AreEqual(3, hostIps.Count);
+
+        //check ipV4 isHidden
+        hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, isHidden: true, includeIpV4: true, includeIpV6: false);
+        Assert.AreEqual(1, hostIps.Count);
+
+        //check ipV6 isHidden
+        hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, isHidden: true, includeIpV4: false, includeIpV6: true);
+        Assert.AreEqual(2, hostIps.Count);
+
+        //check isAdditional
+        hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, isAdditional: true);
+        Assert.AreEqual(5, hostIps.Count);
+
+        //check ipV4 isAdditional
+        hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, isAdditional: true, includeIpV4: true, includeIpV6: false);
+        Assert.AreEqual(2, hostIps.Count);
+
+        //check ipV6 isAdditional
+        hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, isAdditional: true, includeIpV4: false, includeIpV6: true);
+        Assert.AreEqual(3, hostIps.Count);
     }
 
     [TestMethod]

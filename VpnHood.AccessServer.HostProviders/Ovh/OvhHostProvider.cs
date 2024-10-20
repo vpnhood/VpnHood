@@ -124,16 +124,16 @@ public class OvhHostProvider(
         return ips.Select(x => IPAddress.Parse(x.Split('/')[0])).ToArray();
     }
 
-    public async Task<HostProviderIp> GetIp(IPAddress ip, TimeSpan timeout)
+    public async Task<ProviderHostIp> GetIp(IPAddress ip, TimeSpan timeout)
     {
         var ipData = await OvhClient.GetAsync<IpData>($"/ip/{ip}", timeout: timeout);
-        var hostProviderIp = new HostProviderIp {
+        var providerHostIp = new ProviderHostIp {
             IpAddress = IPAddress.Parse(ipData.Ip.Split('/')[0]),
             ServerId = ipData.RoutedTo.ServiceName,
             Description = ipData.Description,
             IsAdditional = ipData.IsAdditionalIp
         };
-        return hostProviderIp;
+        return providerHostIp;
     }
 
     public async Task UpdateIpDesc(IPAddress ipAddress, string? description, TimeSpan timeout)

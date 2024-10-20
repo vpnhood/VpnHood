@@ -4,7 +4,7 @@ using VpnHood.Common.Converters;
 
 namespace VpnHood.AccessServer.Abstractions.Providers.Hosts;
 
-public class HostProviderIp
+public class ProviderHostIp
 {
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress IpAddress { get; init; }

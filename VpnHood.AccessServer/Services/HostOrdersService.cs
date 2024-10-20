@@ -363,7 +363,7 @@ public class HostOrdersService(
 
             var location = await ipLocationProvider.GetLocation(providerIpInfo.IpAddress, CancellationToken.None);
 
-            var hostProviderIp = await providerIpInfo.Provider.GetIp(providerIpInfo.IpAddress, timeout);
+            var providerHostIp = await providerIpInfo.Provider.GetIp(providerIpInfo.IpAddress, timeout);
             var hostIpModel = new HostIpModel {
 
                 ProjectId = projectId,
@@ -371,9 +371,9 @@ public class HostOrdersService(
                 LocationCountry = location.CountryCode,
                 LocationRegion = location.RegionName,
                 HostProviderId = providerIpInfo.ProviderId,
-                ProviderServerId = hostProviderIp.ServerId,
-                ProviderDescription = hostProviderIp.Description,
-                IsAdditional = hostProviderIp.IsAdditional,
+                ProviderServerId = providerHostIp.ServerId,
+                ProviderDescription = providerHostIp.Description,
+                IsAdditional = providerHostIp.IsAdditional,
                 CreatedTime = DateTime.UtcNow,
                 Description = null,
                 IsHidden = false,

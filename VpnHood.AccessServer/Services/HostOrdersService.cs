@@ -197,8 +197,7 @@ public class HostOrdersService(
         return !releasingHostIps.Any();
     }
 
-    // return true if there is not pending order left
-    private async Task Sync(Guid projectId)
+    public async Task Sync(Guid projectId)
     {
         using var asyncLock = await AsyncLock.LockAsync($"HostOrderSync_{projectId}", TimeSpan.Zero);
         if (!asyncLock.Succeeded)
@@ -444,13 +443,12 @@ public class HostOrdersService(
     }
 
 
-    private readonly TimeoutDictionary<Guid, TimeoutItem> _syncedProjects = new(TimeSpan.FromMinutes(10));
+    private readonly TimeoutDictionary<Guid, TimeoutItem> _syncedProjects = new(TimeSpan.FromSeconds(60));
     public async Task<HostIp[]> ListIps(Guid projectId, string? search = null,
-        bool? isAdditional = null, bool? isHidden = null, bool includeIpV4 = true, bool includeIpV6 = true,
-        bool forceSync = false, int recordIndex = 0, int recordCount = int.MaxValue)
+        bool? isAdditional = null, bool? isHidden = null, bool includeIpV4 = true, bool includeIpV6 = true, int recordIndex = 0, int recordCount = int.MaxValue)
     {
         // sync
-        if (!_syncedProjects.TryGetValue(projectId, out _) || hostEnvironment.IsDevelopment() || forceSync) {
+        if (!_syncedProjects.TryGetValue(projectId, out _) || hostEnvironment.IsDevelopment()) {
             _syncedProjects.TryAdd(projectId, new TimeoutItem());
             await Sync(projectId);
         }
@@ -471,7 +469,8 @@ public class HostOrdersService(
     }
 
 
-    public async Task<HostOrder[]> List(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = int.MaxValue)
+    public async Task<HostOrder[]> List(Guid projectId, string? search = null, 
+        int recordIndex = 0, int recordCount = int.MaxValue)
     {
         // sync project
         if (!_syncedProjects.TryGetValue(projectId, out _) || hostEnvironment.IsDevelopment()) {

@@ -12,6 +12,13 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/v{version:apiVersion}/projects/{projectId}/host-orders")]
 public class HostOrdersController(HostOrdersService hostOrdersService)
 {
+    [HttpPost("sync")]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
+    public Task Sync(Guid projectId)
+    {
+        return hostOrdersService.Sync(projectId);
+    }
+
     [HttpGet("ips/{ipAddress}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<HostIp> GetIp(Guid projectId, string ipAddress)
@@ -28,7 +35,7 @@ public class HostOrdersController(HostOrdersService hostOrdersService)
         return hostOrdersService.ListIps(projectId, search: search, 
             isAdditional: isAdditional, isHidden: isHidden,
             includeIpV4: includeIpV4, includeIpV6: includeIpV6,
-            forceSync: forceSync, recordIndex: recordIndex, recordCount: recordCount);
+            recordIndex: recordIndex, recordCount: recordCount);
     }
 
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]

@@ -7230,7 +7230,7 @@ export class HostIp implements IHostIp {
     serverName?: string | null;
     serverLocation?: Location | null;
     serverFarmId?: string | null;
-    providerServerFarmId?: string | null;
+    providerServerId?: string | null;
     serverFarmName?: string | null;
     status!: HostIpStatus;
     description?: string | null;
@@ -7260,7 +7260,7 @@ export class HostIp implements IHostIp {
             this.serverName = _data["serverName"] !== undefined ? _data["serverName"] : <any>null;
             this.serverLocation = _data["serverLocation"] ? Location.fromJS(_data["serverLocation"]) : <any>null;
             this.serverFarmId = _data["serverFarmId"] !== undefined ? _data["serverFarmId"] : <any>null;
-            this.providerServerFarmId = _data["providerServerFarmId"] !== undefined ? _data["providerServerFarmId"] : <any>null;
+            this.providerServerId = _data["providerServerId"] !== undefined ? _data["providerServerId"] : <any>null;
             this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
             this.status = _data["status"] !== undefined ? _data["status"] : <any>null;
             this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
@@ -7290,7 +7290,7 @@ export class HostIp implements IHostIp {
         data["serverName"] = this.serverName !== undefined ? this.serverName : <any>null;
         data["serverLocation"] = this.serverLocation ? this.serverLocation.toJSON() : <any>null;
         data["serverFarmId"] = this.serverFarmId !== undefined ? this.serverFarmId : <any>null;
-        data["providerServerFarmId"] = this.providerServerFarmId !== undefined ? this.providerServerFarmId : <any>null;
+        data["providerServerId"] = this.providerServerId !== undefined ? this.providerServerId : <any>null;
         data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
         data["status"] = this.status !== undefined ? this.status : <any>null;
         data["description"] = this.description !== undefined ? this.description : <any>null;
@@ -7313,7 +7313,7 @@ export interface IHostIp {
     serverName?: string | null;
     serverLocation?: Location | null;
     serverFarmId?: string | null;
-    providerServerFarmId?: string | null;
+    providerServerId?: string | null;
     serverFarmName?: string | null;
     status: HostIpStatus;
     description?: string | null;

@@ -22,7 +22,7 @@ public static class HostIpConverter
             ExistsInProvider = model.ExistsInProvider,
             AutoReleaseTime = model.AutoReleaseTime,
             ReleaseRequestTime = model.ReleaseRequestTime,
-            ProviderServerFarmId = model.ProviderServerId,
+            ProviderServerId = model.ProviderServerId,
             ServerLocation = GetLocation(model),
             ServerId = serverModel?.ServerId,
             ServerName = serverModel?.ServerName,

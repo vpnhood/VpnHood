@@ -367,6 +367,7 @@ public class HostOrdersService(
             var hostProviderIp = await providerIpInfo.Provider.GetIp(providerIpInfo.IpAddress, timeout);
             var hostIpModel = new HostIpModel {
 
+                ProjectId = projectId,
                 IpAddress = providerIpInfo.IpAddress.ToString(),
                 LocationCountry = location.CountryCode,
                 LocationRegion = location.RegionName,
@@ -376,9 +377,8 @@ public class HostOrdersService(
                 IsAdditional = hostProviderIp.IsAdditional,
                 CreatedTime = DateTime.UtcNow,
                 Description = null,
-                IsOtherService = false,
-                ExistsInProvider = true,
-                ProjectId = projectId
+                IsHidden = false,
+                ExistsInProvider = true
             };
             await vhRepo.AddAsync(hostIpModel);
 
@@ -445,7 +445,8 @@ public class HostOrdersService(
 
 
     private readonly TimeoutDictionary<Guid, TimeoutItem> _syncedProjects = new(TimeSpan.FromSeconds(2));
-    public async Task<HostIp[]> ListIps(Guid projectId, string? search = null, bool? isAdditional = null, bool? isOtherService = null,
+    public async Task<HostIp[]> ListIps(Guid projectId, string? search = null,
+        bool? isAdditional = null, bool? isHidden = null, bool includeIpV4 = true, bool includeIpV6 = true,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
         // sync
@@ -455,7 +456,7 @@ public class HostOrdersService(
         }
 
         var hostIpModels = await vhRepo.HostIpList(projectId, search: search,
-            isAdditional: isAdditional, isOtherService: isOtherService,
+            isAdditional: isAdditional, isHidden: isHidden,
             recordIndex: recordIndex, recordCount: recordCount);
 
         // get all servers

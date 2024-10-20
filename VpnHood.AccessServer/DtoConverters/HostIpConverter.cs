@@ -18,7 +18,7 @@ public static class HostIpConverter
             ProviderId = model.HostProviderId.ToString(),
             ProviderName = model.HostProvider.HostProviderName,
             IsAdditional = model.IsAdditional,
-            IsOtherService = model.IsOtherService,
+            IsHidden = model.IsHidden,
             ExistsInProvider = model.ExistsInProvider,
             AutoReleaseTime = model.AutoReleaseTime,
             ReleaseRequestTime = model.ReleaseRequestTime,

@@ -4,7 +4,7 @@ internal class IpData
 {
     public required string Ip { get; set; }
     public bool IsAdditionalIp { get; set; }
-    public List<string>? Regions { get; set; }
+    public string[]? Regions { get; set; }
     public required string Description { get; set; }
     public bool CanBeTerminated { get; set; }
     public string? Campus { get; set; }

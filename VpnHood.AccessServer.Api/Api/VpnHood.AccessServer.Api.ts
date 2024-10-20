@@ -1784,7 +1784,7 @@ export class HostOrdersClient {
         return Promise.resolve<void>(null as any);
     }
 
-    listIps(projectId: string, search?: string | null | undefined, isAdditional?: boolean | null | undefined, isOtherService?: boolean | null | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
+    listIps(projectId: string, search?: string | null | undefined, isAdditional?: boolean | null | undefined, isHidden?: boolean | null | undefined, includeIpV4?: boolean | undefined, includeIpV6?: boolean | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/ips?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -1793,8 +1793,16 @@ export class HostOrdersClient {
             url_ += "search=" + encodeURIComponent("" + search) + "&";
         if (isAdditional !== undefined && isAdditional !== null)
             url_ += "isAdditional=" + encodeURIComponent("" + isAdditional) + "&";
-        if (isOtherService !== undefined && isOtherService !== null)
-            url_ += "isOtherService=" + encodeURIComponent("" + isOtherService) + "&";
+        if (isHidden !== undefined && isHidden !== null)
+            url_ += "isHidden=" + encodeURIComponent("" + isHidden) + "&";
+        if (includeIpV4 === null)
+            throw new Error("The parameter 'includeIpV4' cannot be null.");
+        else if (includeIpV4 !== undefined)
+            url_ += "includeIpV4=" + encodeURIComponent("" + includeIpV4) + "&";
+        if (includeIpV6 === null)
+            throw new Error("The parameter 'includeIpV6' cannot be null.");
+        else if (includeIpV6 !== undefined)
+            url_ += "includeIpV6=" + encodeURIComponent("" + includeIpV6) + "&";
         if (recordIndex === null)
             throw new Error("The parameter 'recordIndex' cannot be null.");
         else if (recordIndex !== undefined)
@@ -7166,7 +7174,7 @@ export class HostIp implements IHostIp {
     releaseRequestTime?: Date | null;
     serverId?: string | null;
     isAdditional!: boolean;
-    isOtherService!: boolean;
+    isHidden!: boolean;
     existsInProvider!: boolean;
     serverName?: string | null;
     serverLocation?: Location | null;
@@ -7196,7 +7204,7 @@ export class HostIp implements IHostIp {
             this.releaseRequestTime = _data["releaseRequestTime"] ? new Date(_data["releaseRequestTime"].toString()) : <any>null;
             this.serverId = _data["serverId"] !== undefined ? _data["serverId"] : <any>null;
             this.isAdditional = _data["isAdditional"] !== undefined ? _data["isAdditional"] : <any>null;
-            this.isOtherService = _data["isOtherService"] !== undefined ? _data["isOtherService"] : <any>null;
+            this.isHidden = _data["isHidden"] !== undefined ? _data["isHidden"] : <any>null;
             this.existsInProvider = _data["existsInProvider"] !== undefined ? _data["existsInProvider"] : <any>null;
             this.serverName = _data["serverName"] !== undefined ? _data["serverName"] : <any>null;
             this.serverLocation = _data["serverLocation"] ? Location.fromJS(_data["serverLocation"]) : <any>null;
@@ -7226,7 +7234,7 @@ export class HostIp implements IHostIp {
         data["releaseRequestTime"] = this.releaseRequestTime ? this.releaseRequestTime.toISOString() : <any>null;
         data["serverId"] = this.serverId !== undefined ? this.serverId : <any>null;
         data["isAdditional"] = this.isAdditional !== undefined ? this.isAdditional : <any>null;
-        data["isOtherService"] = this.isOtherService !== undefined ? this.isOtherService : <any>null;
+        data["isHidden"] = this.isHidden !== undefined ? this.isHidden : <any>null;
         data["existsInProvider"] = this.existsInProvider !== undefined ? this.existsInProvider : <any>null;
         data["serverName"] = this.serverName !== undefined ? this.serverName : <any>null;
         data["serverLocation"] = this.serverLocation ? this.serverLocation.toJSON() : <any>null;
@@ -7249,7 +7257,7 @@ export interface IHostIp {
     releaseRequestTime?: Date | null;
     serverId?: string | null;
     isAdditional: boolean;
-    isOtherService: boolean;
+    isHidden: boolean;
     existsInProvider: boolean;
     serverName?: string | null;
     serverLocation?: Location | null;

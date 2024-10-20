@@ -15,7 +15,7 @@ public class HostIp
     public required DateTime? ReleaseRequestTime { get; init; }
     public required Guid? ServerId { get; init; }
     public required bool IsAdditional { get; init; }
-    public required bool IsOtherService { get; set; }
+    public required bool IsHidden { get; set; }
     public required bool ExistsInProvider { get; init; }
     public required string? ServerName { get; set; }
     public required Location? ServerLocation { get; set; }

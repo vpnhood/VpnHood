@@ -3322,7 +3322,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<HostIp>> ListIpsAsync(System.Guid projectId, string? search = null, bool? isAdditional = null, bool? isOtherService = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<HostIp>> ListIpsAsync(System.Guid projectId, string? search = null, bool? isAdditional = null, bool? isHidden = null, bool? includeIpV4 = null, bool? includeIpV6 = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -3351,9 +3351,17 @@ namespace VpnHood.AccessServer.Api
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("isAdditional")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(isAdditional, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     }
-                    if (isOtherService != null)
+                    if (isHidden != null)
                     {
-                        urlBuilder_.Append(System.Uri.EscapeDataString("isOtherService")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(isOtherService, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                        urlBuilder_.Append(System.Uri.EscapeDataString("isHidden")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(isHidden, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (includeIpV4 != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("includeIpV4")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(includeIpV4, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (includeIpV6 != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("includeIpV6")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(includeIpV6, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     }
                     if (recordIndex != null)
                     {
@@ -10452,8 +10460,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("isAdditional")]
         public bool IsAdditional { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("isOtherService")]
-        public bool IsOtherService { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("isHidden")]
+        public bool IsHidden { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("existsInProvider")]
         public bool ExistsInProvider { get; set; } = default!;

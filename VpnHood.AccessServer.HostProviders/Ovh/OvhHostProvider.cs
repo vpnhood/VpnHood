@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text.Json;
 using System.Web;
 using Microsoft.Extensions.Logging;
 using Ovh.Api;
@@ -135,4 +136,9 @@ public class OvhHostProvider(
         return hostProviderIp;
     }
 
+    public async Task UpdateIpDesc(IPAddress ipAddress, string? description, TimeSpan timeout)
+    {
+        var json = JsonSerializer.Serialize(new { description });
+        await OvhClient.PutStringAsync($"/ip/{ipAddress}", timeout: timeout, json: json);
+    }
 }

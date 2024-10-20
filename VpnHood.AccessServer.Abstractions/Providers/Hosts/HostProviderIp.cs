@@ -9,6 +9,6 @@ public class HostProviderIp
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress IpAddress { get; init; }
     public required string? ServerId { get; init; }
-    public required string? Description { get; init; }
+    public required string? Description { get; set; }
     public required bool IsAdditional { get; init; }
 }

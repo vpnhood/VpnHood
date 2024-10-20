@@ -9,4 +9,5 @@ public interface IHostProvider
     Task ReleaseIp(IPAddress ipAddress, TimeSpan timeout);
     Task<IPAddress[]> ListIps(string? search, TimeSpan timeout);
     Task<HostProviderIp> GetIp(IPAddress ipAddress, TimeSpan timeout);
+    Task UpdateIpDesc(IPAddress ipAddress, string? description, TimeSpan timeout);
 }

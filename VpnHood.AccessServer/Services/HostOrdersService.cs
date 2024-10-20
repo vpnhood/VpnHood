@@ -532,6 +532,19 @@ public class HostOrdersService(
         if (updateParams.AutoReleaseTime != null)
             hostIp.AutoReleaseTime = updateParams.AutoReleaseTime;
 
+        if (updateParams.Description != null)
+            hostIp.Description = updateParams.Description;
+
+        if (updateParams.IsHidden != null)
+            hostIp.IsHidden = updateParams.IsHidden;
+
+        if (updateParams.ProviderDescription != null && updateParams.ProviderDescription!= hostIp.ProviderDescription) {
+            var providerModel = await vhRepo.HostProviderGet(projectId, hostProviderId: hostIp.HostProviderId);
+            var provider = hostProviderFactory.Create(providerModel.HostProviderId, providerModel.HostProviderName, providerModel.Settings);
+            await provider.UpdateIpDesc(IPAddress.Parse(hostIp.IpAddress), updateParams.ProviderDescription, appOptions.Value.ServiceHttpTimeout);
+            hostIp.ProviderDescription = updateParams.ProviderDescription;
+        }
+
         await vhRepo.SaveChangesAsync();
     }
 

@@ -211,6 +211,15 @@ public class FakeHostProvider : IHostProvider
         return fakeDb.HostIps[ipAddress.ToString()];
     }
 
+    public async Task UpdateIpDesc(IPAddress ipAddress, string? description, TimeSpan timeout)
+    {
+        await using var scope = _serviceScopeFactory.CreateAsyncScope();
+        var vhRepo = scope.ServiceProvider.GetRequiredService<VhRepo>();
+        var fakeDb = await GetFakeDb(vhRepo);
+        fakeDb.HostIps[ipAddress.ToString()].Description = description;
+        await Save(vhRepo, fakeDb);
+    }
+
     public async Task<IPAddress[]> ListIps(string? search, TimeSpan timeout)
     {
         await using var scope = _serviceScopeFactory.CreateAsyncScope();

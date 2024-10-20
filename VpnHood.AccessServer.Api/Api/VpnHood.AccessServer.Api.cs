@@ -10519,6 +10519,15 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("autoReleaseTime")]
         public PatchOfNullableDateTime? AutoReleaseTime { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("isHidden")]
+        public PatchOfBoolean? IsHidden { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("providerDescription")]
+        public PatchOfString? ProviderDescription { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public PatchOfString? Description { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]

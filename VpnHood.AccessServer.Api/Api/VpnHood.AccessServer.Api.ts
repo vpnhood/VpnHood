@@ -7278,6 +7278,9 @@ export enum HostIpStatus {
 
 export class HostIpUpdateParams implements IHostIpUpdateParams {
     autoReleaseTime?: PatchOfNullableDateTime | null;
+    isHidden?: PatchOfBoolean | null;
+    providerDescription?: PatchOfString | null;
+    description?: PatchOfString | null;
 
     constructor(data?: IHostIpUpdateParams) {
         if (data) {
@@ -7291,6 +7294,9 @@ export class HostIpUpdateParams implements IHostIpUpdateParams {
     init(_data?: any) {
         if (_data) {
             this.autoReleaseTime = _data["autoReleaseTime"] ? PatchOfNullableDateTime.fromJS(_data["autoReleaseTime"]) : <any>null;
+            this.isHidden = _data["isHidden"] ? PatchOfBoolean.fromJS(_data["isHidden"]) : <any>null;
+            this.providerDescription = _data["providerDescription"] ? PatchOfString.fromJS(_data["providerDescription"]) : <any>null;
+            this.description = _data["description"] ? PatchOfString.fromJS(_data["description"]) : <any>null;
         }
     }
 
@@ -7304,12 +7310,18 @@ export class HostIpUpdateParams implements IHostIpUpdateParams {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["autoReleaseTime"] = this.autoReleaseTime ? this.autoReleaseTime.toJSON() : <any>null;
+        data["isHidden"] = this.isHidden ? this.isHidden.toJSON() : <any>null;
+        data["providerDescription"] = this.providerDescription ? this.providerDescription.toJSON() : <any>null;
+        data["description"] = this.description ? this.description.toJSON() : <any>null;
         return data;
     }
 }
 
 export interface IHostIpUpdateParams {
     autoReleaseTime?: PatchOfNullableDateTime | null;
+    isHidden?: PatchOfBoolean | null;
+    providerDescription?: PatchOfString | null;
+    description?: PatchOfString | null;
 }
 
 export class HostOrder implements IHostOrder {

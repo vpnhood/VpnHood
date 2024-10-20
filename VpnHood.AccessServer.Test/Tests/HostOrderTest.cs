@@ -51,9 +51,9 @@ public class HostOrderTest
     {
         using var farm = await ServerFarmDom.Create();
         var serverId = farm.DefaultServer.ServerId.ToString();
-
+        await farm.AddNewServer(publicIpV4: IPAddress.Parse("1.1.1.2"));
+        
         var testHostProvider = await farm.TestApp.AddTestHostProvider();
-
         // add ipV4 to fake provider
         for (var i = 0; i < 4; i++) {
             await testHostProvider.AddHostIp(new ProviderHostIp {
@@ -123,6 +123,14 @@ public class HostOrderTest
         //check ipV6 isAdditional
         hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, isAdditional: true, includeIpV4: false, includeIpV6: true);
         Assert.AreEqual(3, hostIps.Count);
+
+        // check inUse
+        hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, inUse: true);
+        Assert.AreEqual(1, hostIps.Count);
+
+        // check inUse
+        hostIps = await farm.TestApp.HostOrdersClient.ListIpsAsync(farm.ProjectId, inUse: false);
+        Assert.AreEqual(9, hostIps.Count);
     }
 
     [TestMethod]

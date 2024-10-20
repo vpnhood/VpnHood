@@ -445,7 +445,9 @@ public class HostOrdersService(
 
     private readonly TimeoutDictionary<Guid, TimeoutItem> _syncedProjects = new(TimeSpan.FromSeconds(60));
     public async Task<HostIp[]> ListIps(Guid projectId, string? search = null,
-        bool? isAdditional = null, bool? isHidden = null, bool includeIpV4 = true, bool includeIpV6 = true, int recordIndex = 0, int recordCount = int.MaxValue)
+        bool? isAdditional = null, bool? isHidden = null, bool? inUse = null,
+        bool includeIpV4 = true, bool includeIpV6 = true,
+        int recordIndex = 0, int recordCount = int.MaxValue)
     {
         // sync
         if (!_syncedProjects.TryGetValue(projectId, out _) || hostEnvironment.IsDevelopment()) {
@@ -453,10 +455,11 @@ public class HostOrdersService(
             await Sync(projectId);
         }
 
+        // get all host ips from db if inUseFilter exists then filter the result
         var hostIpModels = await vhRepo.HostIpList(projectId, search: search,
             includeIpV4: includeIpV4, includeIpV6: includeIpV6,
             isAdditional: isAdditional, isHidden: isHidden,
-            recordIndex: recordIndex, recordCount: recordCount);
+            recordIndex: inUse is null ? recordIndex : 0, recordCount: inUse is null ? recordCount : int.MaxValue);
 
         // get all servers
         var servers = await vhRepo.ServerList(projectId, includeServerFarm: true, tracking: false);
@@ -465,12 +468,22 @@ public class HostOrdersService(
         var hostIps = hostIpModels.Select(x =>
             x.ToDto(FindServerFromIp(servers, x.GetIpAddress()))).ToArray();
 
+        // filter result if inUseFilter exists
+        if (inUse is not null) {
+            hostIps = hostIps
+                .Where(x =>
+                    inUse == true && x.Status == HostIpStatus.InUse ||
+                    inUse == false && x.Status == HostIpStatus.NotInUse)
+                .Skip(recordIndex)
+                .Take(recordCount)
+                .ToArray();
+        }
 
         return hostIps;
     }
 
 
-    public async Task<HostOrder[]> List(Guid projectId, string? search = null, 
+    public async Task<HostOrder[]> List(Guid projectId, string? search = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
         // sync project

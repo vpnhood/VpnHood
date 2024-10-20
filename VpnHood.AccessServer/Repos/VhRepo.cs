@@ -456,7 +456,8 @@ public class VhRepo(VhContext vhContext)
     }
 
     public Task<HostIpModel[]> HostIpList(Guid projectId, string? search = null,
-        bool? isAdditional = null, bool? isHidden = null, bool includeIpV4 = true, bool includeIpV6 = true,
+        bool? isAdditional = null, bool? isHidden = null, 
+        bool includeIpV4 = true, bool includeIpV6 = true,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
         return vhContext.HostIps

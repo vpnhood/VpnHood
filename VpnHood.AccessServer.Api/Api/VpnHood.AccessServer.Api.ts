@@ -1831,7 +1831,7 @@ export class HostOrdersClient {
         return Promise.resolve<void>(null as any);
     }
 
-    listIps(projectId: string, search?: string | null | undefined, isAdditional?: boolean | null | undefined, isHidden?: boolean | null | undefined, includeIpV4?: boolean | undefined, includeIpV6?: boolean | undefined, forceSync?: boolean | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
+    listIps(projectId: string, search?: string | null | undefined, isAdditional?: boolean | null | undefined, isHidden?: boolean | null | undefined, inUse?: boolean | null | undefined, includeIpV4?: boolean | undefined, includeIpV6?: boolean | undefined, includeInUse?: boolean | undefined, includeNotInUse?: boolean | undefined, forceSync?: boolean | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/ips?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -1842,6 +1842,8 @@ export class HostOrdersClient {
             url_ += "isAdditional=" + encodeURIComponent("" + isAdditional) + "&";
         if (isHidden !== undefined && isHidden !== null)
             url_ += "isHidden=" + encodeURIComponent("" + isHidden) + "&";
+        if (inUse !== undefined && inUse !== null)
+            url_ += "inUse=" + encodeURIComponent("" + inUse) + "&";
         if (includeIpV4 === null)
             throw new Error("The parameter 'includeIpV4' cannot be null.");
         else if (includeIpV4 !== undefined)
@@ -1850,6 +1852,14 @@ export class HostOrdersClient {
             throw new Error("The parameter 'includeIpV6' cannot be null.");
         else if (includeIpV6 !== undefined)
             url_ += "includeIpV6=" + encodeURIComponent("" + includeIpV6) + "&";
+        if (includeInUse === null)
+            throw new Error("The parameter 'includeInUse' cannot be null.");
+        else if (includeInUse !== undefined)
+            url_ += "includeInUse=" + encodeURIComponent("" + includeInUse) + "&";
+        if (includeNotInUse === null)
+            throw new Error("The parameter 'includeNotInUse' cannot be null.");
+        else if (includeNotInUse !== undefined)
+            url_ += "includeNotInUse=" + encodeURIComponent("" + includeNotInUse) + "&";
         if (forceSync === null)
             throw new Error("The parameter 'forceSync' cannot be null.");
         else if (forceSync !== undefined)

@@ -454,6 +454,7 @@ public class HostOrdersService(
         }
 
         var hostIpModels = await vhRepo.HostIpList(projectId, search: search,
+            includeIpV4: includeIpV4, includeIpV6: includeIpV6,
             isAdditional: isAdditional, isHidden: isHidden,
             recordIndex: recordIndex, recordCount: recordCount);
 

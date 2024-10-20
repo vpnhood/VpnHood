@@ -3322,7 +3322,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<HostIp>> ListIpsAsync(System.Guid projectId, string? search = null, bool? isAdditional = null, bool? isHidden = null, bool? includeIpV4 = null, bool? includeIpV6 = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<HostIp>> ListIpsAsync(System.Guid projectId, string? search = null, bool? isAdditional = null, bool? isHidden = null, bool? includeIpV4 = null, bool? includeIpV6 = null, bool? forceSync = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -3362,6 +3362,10 @@ namespace VpnHood.AccessServer.Api
                     if (includeIpV6 != null)
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("includeIpV6")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(includeIpV6, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (forceSync != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("forceSync")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(forceSync, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     }
                     if (recordIndex != null)
                     {

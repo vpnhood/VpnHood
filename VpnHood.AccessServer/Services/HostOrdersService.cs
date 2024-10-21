@@ -217,18 +217,23 @@ public class HostOrdersService(
         foreach (var pendingOrder in pendingOrders.Where(x => x.OrderType == HostOrderType.NewIp)) {
             try {
                 // find hostIp that created after the order and not used in any server
-                var hostIp = hostIps
-                    .FirstOrDefault(x =>
+                var newHostIps = hostIps
+                    .Where(x =>
                         x.HostProviderId == pendingOrder.HostProviderId &&
                         x.CreatedTime >= pendingOrder.CreatedTime &&
-                        x.ProviderServerId == pendingOrder.NewIpOrderProviderServerId &&
-                        FindServerFromIp(servers, x.GetIpAddress()) == null);
+                        FindServerFromIp(servers, x.GetIpAddress()) == null)
+                    .ToArray();
 
-                if (hostIp == null)
+                // find the ip that routed to the server
+                var hostIp = await FindHostIpByProviderServerId(newHostIps, pendingOrder.NewIpOrderProviderServerId);
+                if (hostIp == null) {
+                    logger.LogWarning("Could not find any ip from the provider. ProjectId: {ProjectId}, OrderId: {OrderId}",
+                        projectId, pendingOrder.HostOrderId);
                     continue;
+                }
 
                 Logger.LogInformation("Adding the ordered IP from the provider. ProjectId: {ProjectId}, OrderId: {OrderId}, NewIp: {NewIp}",
-                    pendingOrder.ProjectId, pendingOrder.HostOrderId, hostIp.IpAddress);
+                        pendingOrder.ProjectId, pendingOrder.HostOrderId, hostIp.IpAddress);
 
                 // update server endpoints
                 await AddIpToServer(projectId, pendingOrder.NewIpOrderServerId, hostIp.GetIpAddress());
@@ -267,6 +272,22 @@ public class HostOrdersService(
                     projectId, hostIp.IpAddress);
             }
         }
+    }
+
+    private async Task<HostIpModel?> FindHostIpByProviderServerId(HostIpModel[] newHostIps, string providerServerId)
+    {
+        var hostIp = newHostIps.FirstOrDefault(x => x.ProviderServerId == providerServerId);
+        if (hostIp != null)
+            return hostIp;
+
+        // provider may delay assigning the server
+        foreach (var newHostIp in newHostIps.Where(x => string.IsNullOrEmpty(x.ProviderServerId))) {
+            await TryUpdateHostIp(newHostIp);
+            if (newHostIp.ProviderServerId == providerServerId)
+                return newHostIp;
+        }
+
+        return null;
     }
 
     private async Task RemoveIpFromServer(Guid projectId, IPAddress ipAddress)
@@ -356,10 +377,12 @@ public class HostOrdersService(
 
         // Add new IPs to database
         foreach (var providerIpInfo in providerIpInfos) {
-            if (hostIps.Any(x => x.GetIpAddress().Equals(providerIpInfo.IpAddress)))
+            var hostIp = hostIps.FirstOrDefault(x => x.GetIpAddress().Equals(providerIpInfo.IpAddress));
+            if (hostIp != null)
                 continue;
 
-            Logger.LogInformation("Adding a new ip from provider to db. ProjectId: {ProjectId}, HostProviderName: {HostProviderName}, Ip: {Ip}",
+            Logger.LogInformation(
+                "Adding a new ip from provider to db. ProjectId: {ProjectId}, HostProviderName: {HostProviderName}, Ip: {Ip}",
                 projectId, providerIpInfo.ProviderName, providerIpInfo.IpAddress);
 
             var location = await ipLocationProvider.GetLocation(providerIpInfo.IpAddress, CancellationToken.None);
@@ -379,7 +402,7 @@ public class HostOrdersService(
                 IsHidden = false,
                 ExistsInProvider = true
 
-                };
+            };
             await vhRepo.AddAsync(hostIpModel);
 
             // let save changes immediately as exception may occur in next items
@@ -409,7 +432,7 @@ public class HostOrdersService(
     {
         try {
             logger.LogTrace("Updating hostIp. ProjectId: {ProjectId}, IpAddress: {IpAddress}",
-                hostIpModel.ProjectId, hostIpModel.IpAddress); 
+                hostIpModel.ProjectId, hostIpModel.IpAddress);
 
             // update from provider
             var providerModel = await vhRepo.HostProviderGet(hostIpModel.ProjectId, hostProviderId: hostIpModel.HostProviderId);

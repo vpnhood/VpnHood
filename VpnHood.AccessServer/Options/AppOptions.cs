@@ -11,7 +11,7 @@ public class AppOptions
     public TimeSpan ServerUpdateStatusInterval { get; set; } = TimeSpan.FromSeconds(60);
     public TimeSpan LostServerThreshold => ServerUpdateStatusInterval * 3;
     public TimeSpan ServiceHttpTimeout => TimeSpan.FromSeconds(30);
-    public int HostOrderMonitorCount { get; set; } = 2 * 10;
+    public int HostOrderMonitorRetryCount { get; set; } = 3 * 10;
     public TimeSpan HostOrderMonitorInterval { get; set; } = TimeSpan.FromSeconds(30);
     public string IpLocationIoApiKey { get; set; } = "";
     public string IpInfoIoApiKey { get; set; } = "";

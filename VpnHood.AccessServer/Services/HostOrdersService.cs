@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text.Json;
 using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Exceptions;
 using GrayMint.Common.Utils;
@@ -97,7 +98,7 @@ public class HostOrdersService(
 
         await vhRepo.SaveChangesAsync();
 
-        _ = MonitorRequests(serviceScopeFactory, appOptions.Value.HostOrderMonitorCount, appOptions.Value.HostOrderMonitorInterval);
+        _ = MonitorRequests(serviceScopeFactory, appOptions.Value.HostOrderMonitorRetryCount, appOptions.Value.HostOrderMonitorInterval);
 
         // return the order
         return hostOrderModel.ToDto();
@@ -407,14 +408,20 @@ public class HostOrdersService(
     private async Task TryUpdateHostIp(HostIpModel hostIpModel)
     {
         try {
+            logger.LogTrace("Updating hostIp. ProjectId: {ProjectId}, IpAddress: {IpAddress}",
+                hostIpModel.ProjectId, hostIpModel.IpAddress); 
+
             // update from provider
             var providerModel = await vhRepo.HostProviderGet(hostIpModel.ProjectId, hostProviderId: hostIpModel.HostProviderId);
             var provider = hostProviderFactory.Create(providerModel.HostProviderId, providerModel.HostProviderName, providerModel.Settings);
             var providerHostIp = await provider.GetIp(hostIpModel.GetIpAddress(), appOptions.Value.ServiceHttpTimeout);
+            logger.LogTrace("HostIp Result. IpAddress: {IpAddress}, Result: {Result}",
+                hostIpModel.IpAddress, JsonSerializer.Serialize(providerHostIp));
 
             hostIpModel.ProviderDescription = providerHostIp.Description;
             hostIpModel.IsAdditional = providerHostIp.IsAdditional;
             hostIpModel.ExistsInProvider = true;
+            hostIpModel.ProviderServerId = providerHostIp.ServerId;
             if (hostIpModel.LocationCountry == null) {
                 var location = await ipLocationProvider.GetLocation(hostIpModel.GetIpAddress(), CancellationToken.None);
                 hostIpModel.LocationCountry = location.CountryCode;
@@ -470,8 +477,9 @@ public class HostOrdersService(
         // filter result if inUseFilter exists
         hostIps = hostIps
             .Where(x => x.Status == hostIpStatus || hostIpStatus == null)
-            .OrderBy(x => x.Status)
-            .ThenBy(x => x.ServerName)
+            .OrderBy(x => x.IsHidden)
+            .ThenBy(x => x.Status)
+            .ThenByDescending(x => x.IsAdditional)
             .Skip(recordIndex)
             .Take(recordCount)
             .ToArray();
@@ -498,7 +506,7 @@ public class HostOrdersService(
     public async Task ReleaseIp(Guid projectId, IPAddress ipAddress, bool ignoreProviderError)
     {
         await ReleaseIpInternal(projectId, ipAddress, ignoreProviderError);
-        _ = MonitorRequests(serviceScopeFactory, appOptions.Value.HostOrderMonitorCount, appOptions.Value.HostOrderMonitorInterval);
+        _ = MonitorRequests(serviceScopeFactory, appOptions.Value.HostOrderMonitorRetryCount, appOptions.Value.HostOrderMonitorInterval);
     }
 
     private async Task ReleaseIpInternal(Guid projectId, IPAddress ipAddress, bool ignoreProviderError)

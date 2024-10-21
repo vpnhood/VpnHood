@@ -9,7 +9,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
@@ -171,7 +170,7 @@ public class TestApp : IHttpClientFactory, IDisposable
         string environment = "Development", bool aggressiveJob = false, bool deleteOthers = false, bool isFree = true)
     {
         appSettings ??= new Dictionary<string, string?>();
-        appSettings[$"App:{nameof(AppOptions.HostOrderMonitorCount)}"] = "1000";
+        appSettings[$"App:{nameof(AppOptions.HostOrderMonitorRetryCount)}"] = "1000";
         appSettings[$"App:{nameof(AppOptions.HostOrderMonitorInterval)}"] = "00:00:00.500";
         if (aggressiveJob)
             appSettings[$"App:{nameof(AppOptions.AutoMaintenanceInterval)}"] = "00:00:00.500";

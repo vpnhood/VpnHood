@@ -116,6 +116,7 @@ public class SessionManager : IAsyncDisposable, IJob
             EncryptedClientId = helloRequest.EncryptedClientId,
             TokenId = helloRequest.TokenId,
             ServerLocation = helloRequest.ServerLocation,
+            Plan = helloRequest.Plan,
             AllowRedirect = helloRequest.AllowRedirect,
             IsIpV6Supported = helloRequest.IsIpV6Supported
         }).VhConfigureAwait();

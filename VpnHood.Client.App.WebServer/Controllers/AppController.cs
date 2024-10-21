@@ -57,17 +57,26 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/connect")]
-    public Task Connect([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null)
+    public Task Connect([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null, string? plan = null)
     {
-        return App.Connect(clientProfileId, serverLocation: serverLocation, diagnose: false,
-            userAgent: HttpContext.Request.UserAgent, throwException: false);
+        return App.Connect(
+            clientProfileId, 
+            serverLocation: serverLocation, 
+            diagnose: false,
+            userAgent: HttpContext.Request.UserAgent, 
+            plan: plan,
+            throwException: false);
     }
 
     [Route(HttpVerbs.Post, "/diagnose")]
-    public Task Diagnose([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null)
+    public Task Diagnose([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null, string? plan = null)
     {
-        return App.Connect(clientProfileId, serverLocation: serverLocation, diagnose: true,
-            userAgent: HttpContext.Request.UserAgent, throwException: false);
+        return App.Connect(clientProfileId, 
+            serverLocation: serverLocation, 
+            diagnose: true,
+            plan: plan,
+            userAgent: HttpContext.Request.UserAgent, 
+            throwException: false);
     }
 
     [Route(HttpVerbs.Post, "/disconnect")]

@@ -14,7 +14,7 @@ public class FarmTokenRepoTest
     public async Task Crud()
     {
         // create farm
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var createParams = new FarmTokenRepoCreateParams {
             RepoName = Guid.NewGuid().ToString(),
             PublishUrl = new Uri("http://127.0.0.1:6090/file"),
@@ -76,7 +76,7 @@ public class FarmTokenRepoTest
     [DataRow(UploadMethod.PutPost, false, true)]
     public async Task AutoPublish_create_And_update(UploadMethod uploadMethod, bool allowPut, bool allowPost)
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
 
         using var fileServer1 = new TestFileServer("CustomAuthorization", $"bearer key_{Guid.NewGuid()}");
         fileServer1.AllowPost = allowPost;

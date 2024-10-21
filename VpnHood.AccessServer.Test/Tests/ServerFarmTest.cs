@@ -16,7 +16,7 @@ public class ServerFarmTest
     [TestMethod]
     public async Task Crud()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         var farm1 = await ServerFarmDom.Create(testApp, serverCount: 0, createParams: new ServerFarmCreateParams());
         Assert.IsTrue(farm1.ServerFarm.PushTokenToClient);
 

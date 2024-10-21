@@ -308,7 +308,7 @@ public class AccessTokenTest
     [TestMethod]
     public async Task GetAccessKey_ForDomain()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         using var farm = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams {
             ServerFarmName = Guid.NewGuid().ToString()
         });

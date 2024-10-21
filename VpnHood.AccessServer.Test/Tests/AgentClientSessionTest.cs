@@ -252,7 +252,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Close()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         testApp.AgentTestApp.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(2);
         testApp.AgentTestApp.AgentOptions.SessionTemporaryTimeout =
             TimeSpan.FromSeconds(2); //should not be less than PermanentlyTimeout
@@ -289,7 +289,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Bombard()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         using var sampleFarm1 = await SampleFarm.Create(testApp);
         using var sampleFarm2 = await SampleFarm.Create(testApp);
 

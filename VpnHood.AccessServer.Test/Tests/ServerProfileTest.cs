@@ -15,7 +15,7 @@ public class ServerProfileTest
     [TestMethod]
     public async Task Default_ServerProfile()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
 
         // -----------
         // Make sure default is created
@@ -54,7 +54,7 @@ public class ServerProfileTest
     [TestMethod]
     public async Task Crud()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
 
         // -----------
         // Create
@@ -102,7 +102,7 @@ public class ServerProfileTest
     [TestMethod]
     public async Task Reconfigure_all_servers_on_update()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         var serverProfileDom = await ServerProfileDom.Create(testApp);
 
         // farm1
@@ -142,7 +142,7 @@ public class ServerProfileTest
     [TestMethod]
     public async Task Get_with_summaries()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         var serverProfileDom1 = await ServerProfileDom.Create(testApp);
 
         // farm1

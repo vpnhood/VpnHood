@@ -11,8 +11,8 @@ public class IpLockTest
     [TestMethod]
     public async Task Crud()
     {
-        var testApp1 = await TestApp.Create();
-        var testApp2 = await TestApp.Create();
+        using var testApp1 = await TestApp.Create();
+        using var testApp2 = await TestApp.Create();
 
         var ipLockClient = testApp2.IpLocksClient;
 

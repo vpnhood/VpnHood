@@ -30,7 +30,7 @@ public class ServerTest
     [TestMethod]
     public async Task List()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
         var server1 = await farm.AddNewServer();
         await farm.AddNewServer();
@@ -44,7 +44,7 @@ public class ServerTest
     [TestMethod]
     public async Task Crud()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
 
         //-----------
@@ -278,7 +278,7 @@ public class ServerTest
     [TestMethod]
     public async Task Crud_AccessPoints()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         using var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
 
         var accessPoint1 = testApp.NewAccessPoint();

@@ -47,7 +47,7 @@ public class AccessTest
     [TestMethod]
     public async Task List()
     {
-        var testApp2 = await TestApp.Create();
+        using var testApp2 = await TestApp.Create();
         var sample1 = await ServerFarmDom.Create(testApp2);
         var actualAccessCount = 0;
         var usageCount = 0;

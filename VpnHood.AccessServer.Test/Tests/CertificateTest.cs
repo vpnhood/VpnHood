@@ -228,9 +228,10 @@ public class CertificateTest
     [TestMethod]
     public async Task Certificate_history_should_not_have_duplicate_common_name()
     {
-        var dnsName1 = $"{Guid.NewGuid()}.com";
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         await farm.Update(new ServerFarmUpdateParams { MaxCertificateCount = new PatchOfInteger { Value = 3 } });
+        
+        var dnsName1 = $"{Guid.NewGuid()}.com";
         await farm.CertificateReplace(new CertificateCreateParams {
             CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
         });
@@ -246,9 +247,10 @@ public class CertificateTest
     [TestMethod]
     public async Task Changing_CertificateHistoryCount_should_delete_additions()
     {
-        var dnsName1 = $"{Guid.NewGuid()}.com";
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         await farm.Update(new ServerFarmUpdateParams { MaxCertificateCount = new PatchOfInteger { Value = 3 } });
+        
+        var dnsName1 = $"{Guid.NewGuid()}.com";
         await farm.CertificateReplace(new CertificateCreateParams {
             CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
         });
@@ -277,9 +279,10 @@ public class CertificateTest
     [TestMethod]
     public async Task Previous_IsInToken_must_reset_by_create()
     {
-        var dnsName1 = $"{Guid.NewGuid()}.com";
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         await farm.Update(new ServerFarmUpdateParams { MaxCertificateCount = new PatchOfInteger { Value = 2 } });
+        
+        var dnsName1 = $"{Guid.NewGuid()}.com";
         await farm.CertificateReplace(new CertificateCreateParams {
             CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
         });
@@ -300,7 +303,7 @@ public class CertificateTest
     [TestMethod]
     public async Task Previous_IsInToken_must_reset_by_import()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         await farm.Update(new ServerFarmUpdateParams { MaxCertificateCount = new PatchOfInteger { Value = 2 } });
 
         var dnsName1 = $"{Guid.NewGuid()}.com";
@@ -328,8 +331,9 @@ public class CertificateTest
     [TestMethod]
     public async Task Previous_certificates_should_not_have_auto_validate()
     {
+        using var farm = await ServerFarmDom.Create();
+        
         var dnsName1 = $"{Guid.NewGuid()}.com";
-        var farm = await ServerFarmDom.Create();
         await farm.Update(new ServerFarmUpdateParams {
             AutoValidateCertificate = new PatchOfBoolean { Value = true },
             MaxCertificateCount = new PatchOfInteger { Value = 2 }
@@ -352,10 +356,10 @@ public class CertificateTest
     [TestMethod]
     public async Task Configure_should_return_all_certificates()
     {
-        var dnsName1 = $"{Guid.NewGuid()}.com";
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         await farm.Update(new ServerFarmUpdateParams { MaxCertificateCount = new PatchOfInteger { Value = 3 } });
 
+        var dnsName1 = $"{Guid.NewGuid()}.com";
         await farm.CertificateReplace(new CertificateCreateParams {
             CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
         });

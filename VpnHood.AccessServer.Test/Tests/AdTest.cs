@@ -12,7 +12,7 @@ public class AdTest
     [TestMethod]
     public async Task Create_session_with_temporary_expiration()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
 
         // create token
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams {
@@ -44,7 +44,7 @@ public class AdTest
     [TestMethod]
     public async Task Create_second_session_should_be_auto_rewarded()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
 
         // create token
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams {

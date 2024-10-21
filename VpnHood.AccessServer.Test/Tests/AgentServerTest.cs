@@ -596,7 +596,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task GetCertificateData()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         var dnsName1 = $"{Guid.NewGuid()}.com";
         var farm1 = await ServerFarmDom.Create(testApp);
         await farm1.CertificateReplace(new CertificateCreateParams {

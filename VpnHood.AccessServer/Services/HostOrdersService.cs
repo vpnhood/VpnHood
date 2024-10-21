@@ -363,7 +363,6 @@ public class HostOrdersService(
                 projectId, providerIpInfo.ProviderName, providerIpInfo.IpAddress);
 
             var location = await ipLocationProvider.GetLocation(providerIpInfo.IpAddress, CancellationToken.None);
-
             var providerHostIp = await providerIpInfo.Provider.GetIp(providerIpInfo.IpAddress, timeout);
             var hostIpModel = new HostIpModel {
 
@@ -379,7 +378,8 @@ public class HostOrdersService(
                 Description = null,
                 IsHidden = false,
                 ExistsInProvider = true
-            };
+
+                };
             await vhRepo.AddAsync(hostIpModel);
 
             // let save changes immediately as exception may occur in next items

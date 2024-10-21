@@ -31,13 +31,13 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpPost("connect")]
-    public Task Connect(Guid? clientProfileId = null, string? serverLocation = null)
+    public Task Connect(Guid? clientProfileId = null, string? serverLocation = null, string? plan = null)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPost("diagnose")]
-    public Task Diagnose(Guid? clientProfileId = null, string? serverLocation = null)
+    public Task Diagnose(Guid? clientProfileId = null, string? serverLocation = null, string? plan = null)
     {
         throw new SwaggerOnlyException();
     }

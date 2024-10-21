@@ -61,6 +61,7 @@ public class VpnHoodClient : IAsyncDisposable
     private readonly TimeSpan _tcpConnectTimeout;
     private DateTime? _autoWaitTime;
     private readonly ServerFinder _serverFinder;
+    private readonly string? _plan;
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
     private int ProtocolVersion { get; }
     internal Nat Nat { get; }
@@ -123,6 +124,7 @@ public class VpnHoodClient : IAsyncDisposable
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
         _adService = options.AdService;
+        _plan = options.Plan;
         _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken,
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
@@ -645,6 +647,7 @@ public class VpnHoodClient : IAsyncDisposable
                 ClientInfo = clientInfo,
                 TokenId = Token.TokenId,
                 ServerLocation = _serverFinder.ServerLocation,
+                Plan = _plan,
                 AllowRedirect = allowRedirect,
                 IsIpV6Supported = IsIpV6SupportedByClient
             };

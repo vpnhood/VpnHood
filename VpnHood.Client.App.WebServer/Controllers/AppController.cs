@@ -57,7 +57,8 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/connect")]
-    public Task Connect([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null, string? plan = null)
+    public Task Connect([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null, 
+        [QueryField] string? plan = null)
     {
         return App.Connect(
             clientProfileId, 
@@ -69,7 +70,8 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/diagnose")]
-    public Task Diagnose([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null, string? plan = null)
+    public Task Diagnose([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null, 
+        [QueryField] string? plan = null)
     {
         return App.Connect(clientProfileId, 
             serverLocation: serverLocation, 

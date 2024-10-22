@@ -11,7 +11,7 @@ internal class Program
             await serverApp.Start(args).VhConfigureAwait();
         }
         catch (Exception ex) {
-            Console.WriteLine(ex);
+            throw new Exception(ex.Message);
         }
     }
 }

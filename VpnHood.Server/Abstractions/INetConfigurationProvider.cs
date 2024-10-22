@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace VpnHood.Server;
+namespace VpnHood.Server.Abstractions;
 
 public interface INetConfigurationProvider
 {

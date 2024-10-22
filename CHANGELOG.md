@@ -10,6 +10,7 @@
 ### Server
 * Fix: Server listening to a test IP
 * Fix: IpV6 Subnet in auto IP configuration
+* Feature: Allow to config swap file size
 
 # v4.6.557
 ### Client

@@ -30,6 +30,7 @@ public class ServerConfig
     public string ConfigCode { get; set; } = string.Empty;
     public int? MinCompletionPortThreads { get; set; }
     public int? MaxCompletionPortThreads { get; set; }
+    public long? SwapFileSizeMb { get; set; }
     public string? AddListenerIpsToNetwork { get; set; }
     public DnsChallenge? DnsChallenge { get; set; }
     public CertificateData[] Certificates { get; set; } = [];
@@ -46,7 +47,6 @@ public class ServerConfig
     [JsonIgnore] public IPAddress[] DnsServersValue => DnsServers ?? IPAddressUtil.GoogleDnsServers;
     [JsonIgnore] public TimeSpan UpdateStatusIntervalValue => UpdateStatusInterval ?? TimeSpan.FromSeconds(120);
     [JsonIgnore] public bool LogAnonymizerValue => LogAnonymizer ?? true;
-    [JsonIgnore] public byte[]? ServerSecretValue => ServerSecret;
 
 
     public void Merge(ServerConfig obj)
@@ -62,6 +62,7 @@ public class ServerConfig
         if (obj.ServerSecret != null) ServerSecret = obj.ServerSecret;
         if (obj.MinCompletionPortThreads != null) MinCompletionPortThreads = obj.MinCompletionPortThreads;
         if (obj.MaxCompletionPortThreads != null) MaxCompletionPortThreads = obj.MaxCompletionPortThreads;
+        if (obj.SwapFileSizeMb != null) SwapFileSizeMb = obj.SwapFileSizeMb;
         if (obj.AddListenerIpsToNetwork != null) AddListenerIpsToNetwork = obj.AddListenerIpsToNetwork;
         if (obj.DnsChallenge != null) DnsChallenge = obj.DnsChallenge;
     }
@@ -76,6 +77,5 @@ public class ServerConfig
         DnsServers = DnsServersValue;
         UpdateStatusInterval = UpdateStatusIntervalValue;
         LogAnonymizer = LogAnonymizerValue;
-        ServerSecret = ServerSecretValue;
     }
 }

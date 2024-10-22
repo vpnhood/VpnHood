@@ -27,6 +27,8 @@ public class SessionOptions
     public int? TcpBufferSize { get; set; }
     public int? TcpKernelSendBufferSize { get; set; }
     public int? TcpKernelReceiveBufferSize { get; set; }
+    public int? UdpSendBufferSize { get; set; }
+    public int? UdpReceiveBufferSize { get; set; }
     public TimeSpan? TcpConnectTimeout { get; set; }
     public TimeSpan? TcpReuseTimeout { get; set; }
     public int? MaxTcpConnectWaitCount { get; set; }
@@ -64,6 +66,8 @@ public class SessionOptions
         if (obj.TcpBufferSize != null) TcpBufferSize = obj.TcpBufferSize;
         if (obj.TcpKernelSendBufferSize != null) TcpKernelSendBufferSize = obj.TcpKernelSendBufferSize;
         if (obj.TcpKernelReceiveBufferSize != null) TcpKernelReceiveBufferSize = obj.TcpKernelReceiveBufferSize;
+        if (obj.UdpSendBufferSize != null) UdpSendBufferSize = obj.UdpSendBufferSize;
+        if (obj.UdpReceiveBufferSize != null) UdpReceiveBufferSize = obj.UdpReceiveBufferSize;
         if (obj.TcpConnectTimeout != null) TcpConnectTimeout = obj.TcpConnectTimeout;
         if (obj.TcpReuseTimeout != null) TcpReuseTimeout = obj.TcpReuseTimeout;
         if (obj.MaxTcpConnectWaitCount != null) MaxTcpConnectWaitCount = obj.MaxTcpConnectWaitCount;
@@ -87,6 +91,8 @@ public class SessionOptions
         TcpBufferSize = TcpBufferSize; //no default
         TcpKernelSendBufferSize = TcpKernelSendBufferSize; //no default
         TcpKernelReceiveBufferSize = TcpKernelReceiveBufferSize; //no default
+        UdpSendBufferSize = UdpSendBufferSize; //no default
+        UdpReceiveBufferSize = UdpReceiveBufferSize; //no default
         TcpConnectTimeout = TcpConnectTimeoutValue;
         TcpReuseTimeout = TcpReuseTimeoutValue;
         MaxTcpConnectWaitCount = MaxTcpConnectWaitCountValue;

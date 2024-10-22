@@ -22,12 +22,11 @@ internal class UdpProxyEx : ITimeoutItem
     public bool Disposed { get; private set; }
     public IPEndPoint LocalEndPoint { get; }
 
-    public UdpProxyEx(IPacketReceiver packetReceiver, UdpClient udpClient, AddressFamily addressFamily,
-        TimeSpan udpTimeout)
+    public UdpProxyEx(IPacketReceiver packetReceiver, UdpClient udpClient, TimeSpan udpTimeout)
     {
         _packetReceiver = packetReceiver;
         _udpClient = udpClient;
-        AddressFamily = addressFamily;
+        AddressFamily = udpClient.Client.AddressFamily;
         DestinationEndPointMap = new TimeoutDictionary<IPEndPoint, TimeoutItem<IPEndPoint>>(udpTimeout);
         LastUsedTime = FastDateTime.Now;
         LocalEndPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;

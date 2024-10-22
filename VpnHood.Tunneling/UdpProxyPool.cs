@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Sockets;
 using PacketDotNet;
 using VpnHood.Common.Collections;
 using VpnHood.Common.Jobs;
@@ -6,6 +7,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Tunneling.Exceptions;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Utils;
+using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Tunneling;
 
@@ -13,6 +15,8 @@ public class UdpProxyPool : IPacketProxyPool, IJob
 {
     private readonly IPacketProxyReceiver _packetProxyReceiver;
     private readonly ISocketFactory _socketFactory;
+    private readonly int? _sendBufferSize;
+    private readonly int? _receiveBufferSize;
     private readonly TimeoutDictionary<IPEndPoint, UdpProxy> _udpProxies;
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly EventReporter _maxWorkerEventReporter;
@@ -24,13 +28,16 @@ public class UdpProxyPool : IPacketProxyPool, IJob
     public JobSection JobSection { get; } = new();
 
     public UdpProxyPool(IPacketProxyReceiver packetProxyReceiver, ISocketFactory socketFactory,
-        TimeSpan? udpTimeout, int? maxClientCount, LogScope? logScope = null)
+        TimeSpan? udpTimeout, int? maxClientCount, LogScope? logScope = null,
+        int? sendBufferSize = null, int? receiveBufferSize = null)
     {
         udpTimeout ??= TimeSpan.FromSeconds(120);
         maxClientCount ??= int.MaxValue;
 
         _packetProxyReceiver = packetProxyReceiver;
         _socketFactory = socketFactory;
+        _sendBufferSize = sendBufferSize;
+        _receiveBufferSize = receiveBufferSize;
         _maxClientCount = maxClientCount > 0
             ? maxClientCount.Value
             : throw new ArgumentException($"{nameof(maxClientCount)} must be greater than 0", nameof(maxClientCount));
@@ -74,7 +81,7 @@ public class UdpProxyPool : IPacketProxyPool, IJob
             }
 
             isNewLocalEndPoint = true;
-            return new UdpProxy(_packetProxyReceiver, _socketFactory.CreateUdpClient(addressFamily), key);
+            return new UdpProxy(_packetProxyReceiver, CreateUdpClient(addressFamily), key);
         });
 
         // Raise new endpoint
@@ -84,6 +91,14 @@ public class UdpProxyPool : IPacketProxyPool, IJob
 
         var dgram = udpPacket.PayloadData ?? [];
         return udpProxy.SendPacket(destinationEndPoint, dgram, noFragment);
+    }
+
+    private UdpClient CreateUdpClient(AddressFamily addressFamily)
+    {
+        var udpClient = _socketFactory.CreateUdpClient(addressFamily);
+        if (_sendBufferSize.HasValue) udpClient.Client.SendBufferSize = _sendBufferSize.Value;
+        if (_receiveBufferSize.HasValue) udpClient.Client.ReceiveBufferSize = _receiveBufferSize.Value;
+        return udpClient;
     }
 
     public Task RunJob()

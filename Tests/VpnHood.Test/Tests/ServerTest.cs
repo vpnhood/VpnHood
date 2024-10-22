@@ -131,6 +131,8 @@ public class ServerTest : TestBase
         serverConfig.SessionOptions.MaxDatagramChannelCount = 2074;
         serverConfig.SessionOptions.SyncCacheSize = 2075;
         serverConfig.SessionOptions.TcpBufferSize = 2076;
+        serverConfig.SessionOptions.UdpReceiveBufferSize = 4001 ;
+        serverConfig.SessionOptions.UdpSendBufferSize = 4002;
         serverConfig.ServerSecret = VhUtil.GenerateKey();
 
         var dateTime = DateTime.Now;
@@ -158,6 +160,8 @@ public class ServerTest : TestBase
             server.SessionManager.SessionOptions.MaxDatagramChannelCount);
         Assert.AreEqual(serverConfig.SessionOptions.SyncCacheSize, server.SessionManager.SessionOptions.SyncCacheSize);
         Assert.AreEqual(serverConfig.SessionOptions.TcpBufferSize, server.SessionManager.SessionOptions.TcpBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpSendBufferSize, server.SessionManager.SessionOptions.UdpSendBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpReceiveBufferSize, server.SessionManager.SessionOptions.UdpReceiveBufferSize);
     }
 
     [TestMethod]

@@ -3,6 +3,7 @@ using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
+using VpnHood.Server.Abstractions;
 
 namespace VpnHood.Server;
 

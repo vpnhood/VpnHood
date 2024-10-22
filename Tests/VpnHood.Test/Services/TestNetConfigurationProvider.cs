@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
-using VpnHood.Server;
+using VpnHood.Server.Abstractions;
 
 namespace VpnHood.Test.Services;
 

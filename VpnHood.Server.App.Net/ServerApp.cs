@@ -11,6 +11,7 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
+using VpnHood.Server.Abstractions;
 using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Access.Managers.File;
 using VpnHood.Server.Access.Managers.Http;
@@ -237,11 +238,16 @@ public class ServerApp : IDisposable
                 ? new LinuxNetConfigurationProvider()
                 : null;
 
+            ISwapFileProvider? swapFileProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+                ? new LinuxSwapFileProvider(VhLogger.Instance)
+                : null;
+
             // run server
             _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions {
                 Tracker = _tracker,
                 SystemInfoProvider = systemInfoProvider,
                 NetConfigurationProvider = configurationProvider,
+                SwapFileProvider = swapFileProvider,
                 StoragePath = InternalStoragePath,
                 Config = AppSettings.ServerConfig
             });

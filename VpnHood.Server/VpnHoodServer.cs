@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Drawing;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
@@ -13,6 +14,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
+using VpnHood.Server.Abstractions;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
@@ -35,6 +37,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private Task _sendStatusTask = Task.CompletedTask;
     private Http01ChallengeService? _http01ChallengeService;
     private readonly NetConfigurationService? _netConfigurationService;
+    private readonly ISystemInfoProvider _systemInfoProvider;
+    private readonly ISwapFileProvider? _swapFileProvider;
 
     public ServerHost ServerHost { get; }
     public JobSection JobSection { get; }
@@ -42,7 +46,6 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     public SessionManager SessionManager { get; }
     public ServerState State { get; private set; } = ServerState.NotStarted;
     public IAccessManager AccessManager { get; }
-    public ISystemInfoProvider SystemInfoProvider { get; }
 
     public VpnHoodServer(IAccessManager accessManager, ServerOptions options)
     {
@@ -50,7 +53,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             throw new ArgumentNullException(nameof(options.SocketFactory));
 
         AccessManager = accessManager;
-        SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
+        _systemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
         JobSection = new JobSection(options.ConfigureInterval);
         SessionManager = new SessionManager(accessManager,
             options.NetFilter,
@@ -63,6 +66,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _publicIpDiscovery = options.PublicIpDiscovery;
         _netConfigurationService = options.NetConfigurationProvider != null ? new NetConfigurationService(options.NetConfigurationProvider) : null;
+        _swapFileProvider = options.SwapFileProvider;
         _config = options.Config;
         ServerHost = new ServerHost(SessionManager);
 
@@ -99,7 +103,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         // Report current OS Version
         VhLogger.Instance.LogInformation("Module: {Module}", GetType().Assembly.GetName().FullName);
-        VhLogger.Instance.LogInformation("OS: {OS}", SystemInfoProvider.GetSystemInfo());
+        VhLogger.Instance.LogInformation("OS: {OS}", _systemInfoProvider.GetSystemInfo());
         VhLogger.Instance.LogInformation("IsDiagnoseMode: {IsDiagnoseMode}", VhLogger.IsDiagnoseMode);
 
         // Report TcpBuffers
@@ -135,17 +139,19 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             var publicIpAddresses =
                 _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses(CancellationToken.None).VhConfigureAwait() : [];
 
-            var providerSystemInfo = SystemInfoProvider.GetSystemInfo();
+            var swapFileInfo = _swapFileProvider != null ? await _swapFileProvider.GetInfo() : null;
+            var providerSystemInfo = _systemInfoProvider.GetSystemInfo();
             var serverInfo = new ServerInfo {
                 EnvironmentVersion = Environment.Version,
                 Version = ServerVersion,
                 PrivateIpAddresses = privateIpAddresses,
                 PublicIpAddresses = publicIpAddresses,
-                Status = GetStatus(),
+                Status = await GetStatus(),
                 MachineName = Environment.MachineName,
                 OsInfo = providerSystemInfo.OsInfo,
                 OsVersion = Environment.OSVersion.ToString(),
                 TotalMemory = providerSystemInfo.TotalMemory,
+                TotalSwapMemory = swapFileInfo?.TotalSize,
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 FreeUdpPortV4 = freeUdpPortV4,
                 FreeUdpPortV6 = freeUdpPortV6,
@@ -183,6 +189,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                     await _netConfigurationService.AddIpAddress(ipEndPoint.Address, serverConfig.AddListenerIpsToNetwork).VhConfigureAwait();
             }
 
+            if (_swapFileProvider != null)
+                await ConfigureSwapFile(serverConfig.SwapFileSizeMb);
+
             // Reconfigure server host
             await ServerHost.Configure(
                 serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue,
@@ -212,6 +221,34 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.",
                 JobSection.Interval.TotalSeconds);
             await SendStatusToAccessManager(false).VhConfigureAwait();
+        }
+    }
+
+    private async Task ConfigureSwapFile(long? sizeMb)
+    {
+        if (_swapFileProvider == null)
+            throw new InvalidOperationException("SwapFileProvider is not available.");
+
+        try {
+            var info = await _swapFileProvider.GetInfo();
+            var size = sizeMb * VhUtil.Megabytes ?? 0;
+            var otherSize = info.TotalSize - info.AppSize;
+            var newAppSize = Math.Max(0, size - otherSize);
+
+            if (Math.Abs(info.AppSize - newAppSize) < VhUtil.Megabytes) {
+                if (size == 0 && info.AppSize == 0)
+                    return; // there is no need to configure swap file
+
+                VhLogger.Instance.LogInformation(
+                    "Swap file size is already near to the requested size. CurrentSize: {CurrentSize}, RequestedSize: {RequestedSize}",
+                    VhUtil.FormatBytes(info.TotalSize), VhUtil.FormatBytes(size));
+                return;
+            }
+
+            await _swapFileProvider.SetAppSwapFileSize(newAppSize);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not configure swap file.");
         }
     }
 
@@ -329,15 +366,17 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         }
     }
 
-    public ServerStatus GetStatus()
+    public async Task<ServerStatus> GetStatus()
     {
-        var systemInfo = SystemInfoProvider.GetSystemInfo();
+        var swapFileInfo = _swapFileProvider != null ? await _swapFileProvider.GetInfo() : null;
+        var systemInfo = _systemInfoProvider.GetSystemInfo();
         var serverStatus = new ServerStatus {
             SessionCount = SessionManager.Sessions.Count(x => !x.Value.IsDisposed),
             TcpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.TcpChannelCount),
             UdpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.UdpConnectionCount),
             ThreadCount = Process.GetCurrentProcess().Threads.Count,
             AvailableMemory = systemInfo.AvailableMemory,
+            AvailableSwapMemory = swapFileInfo != null ? swapFileInfo.TotalSize - swapFileInfo.TotalUsed : null,
             CpuUsage = systemInfo.CpuUsage,
             UsedMemory = Process.GetCurrentProcess().WorkingSet64,
             TunnelSpeed = new Traffic {
@@ -353,7 +392,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private async Task SendStatusToAccessManager(bool allowConfigure)
     {
         try {
-            var status = GetStatus();
+            var status = await GetStatus();
             VhLogger.Instance.LogTrace("Sending status to Access... ConfigCode: {ConfigCode}", status.ConfigCode);
             var res = await AccessManager.Server_UpdateStatus(status).VhConfigureAwait();
 

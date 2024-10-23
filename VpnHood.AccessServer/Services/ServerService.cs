@@ -14,6 +14,7 @@ using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos;
 using VpnHood.Manager.Common.Utils;
+using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers.Http;
 using ConnectionInfo = Renci.SshNet.ConnectionInfo;
 
@@ -65,6 +66,7 @@ public class ServerService(
             AuthorizationCode = Guid.NewGuid(),
             ServerFarmId = serverFarm.ServerFarmId,
             AccessPoints = ValidateAccessPoints(createParams.AccessPoints ?? []),
+            ConfigSwapMemoryMb = null,
             ConfigCode = Guid.NewGuid(),
             AutoConfigure = createParams.AccessPoints == null,
             Power = createParams.Power,
@@ -74,6 +76,7 @@ public class ServerService(
             LogicalCoreCount = null,
             OsInfo = null,
             TotalMemory = null,
+            TotalSwapMemoryMb = null,
             Version = null,
             ConfigureTime = null,
             EnvironmentVersion = null,
@@ -110,6 +113,9 @@ public class ServerService(
         if (updateParams.Power?.Value < 1)
             throw new ArgumentException("Power can not be less than 1", nameof(updateParams));
 
+        // validate power
+        VhValidator.ValidateSwapMemory(updateParams.ConfigSwapMemoryMb?.Value, nameof(updateParams.ConfigSwapMemoryMb));
+
         // validate client filter
         if (updateParams.ClientFilterId is { Value: not null }) {
             var clientFilter = await vhRepo.ClientFilterGet(projectId, int.Parse(updateParams.ClientFilterId.Value));
@@ -127,6 +133,7 @@ public class ServerService(
             var serverFarm = await vhRepo.ServerFarmGet(projectId, updateParams.ServerFarmId);
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
+        if (updateParams.ConfigSwapMemoryMb != null) server.ConfigSwapMemoryMb = updateParams.ConfigSwapMemoryMb;
         if (updateParams.Tags != null) server.Tags = TagUtils.TagsToString(updateParams.Tags.Value);
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
         if (updateParams.Power != null) server.Power = updateParams.Power;

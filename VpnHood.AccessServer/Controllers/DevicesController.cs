@@ -43,9 +43,9 @@ public class DevicesController(
         return ret;
     }
 
-    [HttpGet("clientId:{clientId}")]
+    [HttpGet("clientId")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<Device> GetByClientId(Guid projectId, Guid clientId)
+    public Task<Device> GetByClientId(Guid projectId, string clientId)
     {
         return devicesService.GetByClientId(projectId, clientId);
     }

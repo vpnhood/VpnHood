@@ -1,18 +1,17 @@
-﻿using System.Diagnostics;
-using System.Net;
-using VpnHood.AccessServer.HostProviders.Ovh;
-using VpnHood.AccessServer.HostProviders.Ovh.Dto;
-using VpnHood.Common.Logging;
-using VpnHood.Common.Utils;
+﻿//using System.Diagnostics;
+//using System.Net;
+//using VpnHood.AccessServer.HostProviders.Ovh;
+//using VpnHood.AccessServer.HostProviders.Ovh.Dto;
+//using VpnHood.Common.Logging;
+//using VpnHood.Common.Utils;
 
 namespace ConsoleApp1;
 
 internal class Program
 {
-    private static string BuildProjectTag(Guid projectId) => $"#project:{projectId}";
-
   static async Task Main(string[] args)
-    {
+  {
+      _ = args;
         await Task.CompletedTask;
         //var logger = VhLogger.CreateConsoleLogger();
         //var hostProvider = new OvhHostProvider(logger, new OvhHostProviderSettings {

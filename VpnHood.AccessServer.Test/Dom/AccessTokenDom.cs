@@ -4,7 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common.Messaging;
-using Token = VpnHood.Common.Token;
+using Token = VpnHood.Common.Tokens.Token;
 
 namespace VpnHood.AccessServer.Test.Dom;
 
@@ -14,7 +14,7 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
     public AccessToken AccessToken { get; private set; } = accessToken;
     public Guid AccessTokenId => AccessToken.AccessTokenId;
 
-    public async Task<SessionDom> CreateSession(Guid? clientId = null, IPAddress? clientIp = null,
+    public async Task<SessionDom> CreateSession(string? clientId = null, IPAddress? clientIp = null,
         AddressFamily addressFamily = AddressFamily.InterNetwork, bool throwError = true,
         bool autoRedirect = false, string? serverLocation = null, ClientInfo? clientInfo = null)
     {
@@ -28,7 +28,7 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
             serverLocation, autoRedirect: autoRedirect, clientInfo: clientInfo);
     }
 
-    public async Task<SessionDom> CreateSession(IPEndPoint serverEndPoint, Guid? clientId = null,
+    public async Task<SessionDom> CreateSession(IPEndPoint serverEndPoint, string? clientId = null,
         IPAddress? clientIp = null,
         bool throwError = true, string? serverLocation = null, bool autoRedirect = false, bool allowRedirect = true,
         ClientInfo? clientInfo = null)

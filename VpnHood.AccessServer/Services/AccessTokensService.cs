@@ -6,7 +6,7 @@ using VpnHood.AccessServer.Dtos.AccessTokens;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Repos;
-using VpnHood.Common;
+using VpnHood.Common.Tokens;
 using VpnHood.Manager.Common.Utils;
 
 namespace VpnHood.AccessServer.Services;

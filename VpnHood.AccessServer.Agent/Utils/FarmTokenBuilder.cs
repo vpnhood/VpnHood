@@ -5,7 +5,7 @@ using System.Text.Json;
 using GrayMint.Common.Utils;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.Common;
+using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
 using VpnHood.Manager.Common.Utils;
 

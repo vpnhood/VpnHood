@@ -1810,7 +1810,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<Device> GetByClientIdAsync(System.Guid projectId, System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<Device> GetByClientIdAsync(System.Guid projectId, string clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1829,11 +1829,13 @@ namespace VpnHood.AccessServer.Api
 
                     var urlBuilder_ = new System.Text.StringBuilder();
                 
-                    // Operation Path: "api/v1/projects/{projectId}/devices/clientId:{clientId}"
+                    // Operation Path: "api/v1/projects/{projectId}/devices/clientId"
                     urlBuilder_.Append("api/v1/projects/");
                     urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
-                    urlBuilder_.Append("/devices/clientId:");
-                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(clientId, System.Globalization.CultureInfo.InvariantCulture)));
+                    urlBuilder_.Append("/devices/clientId");
+                    urlBuilder_.Append('?');
+                    urlBuilder_.Append(System.Uri.EscapeDataString("clientId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(clientId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    urlBuilder_.Length--;
 
                     await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);
 
@@ -9998,7 +10000,7 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("clientId")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ClientId { get; set; } = default!;
+        public string ClientId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("clientVersion")]
         public string? ClientVersion { get; set; } = default!;
@@ -11249,6 +11251,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("totalMemory")]
         public long? TotalMemory { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("totalSwapMemoryMb")]
+        public int? TotalSwapMemoryMb { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("logicalCoreCount")]
         public int? LogicalCoreCount { get; set; } = default!;
 
@@ -11307,6 +11312,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("clientFilterName")]
         public string? ClientFilterName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("configSwapMemoryMb")]
+        public int? ConfigSwapMemoryMb { get; set; } = default!;
 
     }
 
@@ -11475,6 +11483,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("clientFilterId")]
         public PatchOfString? ClientFilterId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("configSwapMemoryMb")]
+        public PatchOfNullableInteger? ConfigSwapMemoryMb { get; set; } = default!;
 
     }
 

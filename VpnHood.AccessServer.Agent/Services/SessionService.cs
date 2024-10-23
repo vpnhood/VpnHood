@@ -7,10 +7,10 @@ using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Agent.Utils;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.Common;
 using VpnHood.Common.IpLocations;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Tokens;
 using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Manager.Common.Utils;
@@ -152,7 +152,7 @@ public class SessionService(
             device = new DeviceModel {
                 DeviceId = Guid.NewGuid(),
                 ProjectId = projectId,
-                ClientId = clientInfo.ClientId,
+                ClientId = Guid.Parse(clientInfo.ClientId),
                 IpAddress = clientIpToStore,
                 ClientVersion = clientInfo.ClientVersion,
                 UserAgent = clientInfo.UserAgent,

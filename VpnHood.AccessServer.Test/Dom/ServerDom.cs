@@ -132,7 +132,7 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
         return AgentClient.Server_UpdateStatus(serverStatus);
     }
 
-    public async Task<SessionDom> CreateSession(AccessToken accessToken, Guid? clientId = null, bool assertError = true)
+    public async Task<SessionDom> CreateSession(AccessToken accessToken, string? clientId = null, bool assertError = true)
     {
         var sessionRequestEx = await TestApp.CreateSessionRequestEx(
             accessToken,

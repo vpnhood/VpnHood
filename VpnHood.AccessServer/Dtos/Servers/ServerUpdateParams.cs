@@ -16,4 +16,5 @@ public class ServerUpdateParams
     public Patch<bool>? IsEnabled { get; set; }
     public Patch<string[]>? Tags { get; set; }
     public Patch<string?>? ClientFilterId { get; set; }
+    public Patch<int?>? ConfigSwapMemoryMb { get; set; }
 }

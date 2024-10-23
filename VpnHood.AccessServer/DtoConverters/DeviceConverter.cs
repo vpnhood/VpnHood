@@ -10,7 +10,7 @@ public static class DeviceConverter
     {
         var device = new Device {
             DeviceId = model.DeviceId,
-            ClientId = model.ClientId,
+            ClientId = model.ClientId.ToString(),
             ClientVersion = model.ClientVersion,
             CreatedTime = model.CreatedTime,
             IpAddress = model.IpAddress,

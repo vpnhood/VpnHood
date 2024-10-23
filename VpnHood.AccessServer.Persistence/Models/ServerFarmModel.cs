@@ -1,5 +1,5 @@
 ﻿using GrayMint.Common.Utils;
-using VpnHood.Common;
+using VpnHood.Common.Tokens;
 
 namespace VpnHood.AccessServer.Persistence.Models;
 

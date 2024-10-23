@@ -141,6 +141,7 @@ public class AgentService(
         serverModel.MachineName = serverInfo.MachineName;
         serverModel.ConfigureTime = DateTime.UtcNow;
         serverModel.TotalMemory = serverInfo.TotalMemory ?? 0;
+        serverModel.TotalSwapMemoryMb = serverInfo.TotalSwapMemory != null ? (int?)(serverInfo.TotalSwapMemory / VhUtil.Megabytes) : null;
         serverModel.LogicalCoreCount = serverInfo.LogicalCoreCount;
         serverModel.Version = serverInfo.Version.ToString();
         serverModel.PublicIpV4 = publicIpV4?.ToString();
@@ -248,10 +249,11 @@ public class AgentService(
             UdpEndPoints = udpEndPoints,
             AddListenerIpsToNetwork = serverModel.AutoConfigure ? null : "*",
             UpdateStatusInterval = _agentOptions.ServerUpdateStatusInterval,
+            SwapMemoryMb = serverModel.ConfigSwapMemoryMb,
             SessionOptions = new SessionOptions {
                 Timeout = _agentOptions.SessionTemporaryTimeout,
                 SyncInterval = _agentOptions.SessionSyncInterval,
-                SyncCacheSize = _agentOptions.SyncCacheSize
+                SyncCacheSize = _agentOptions.SyncCacheSize,
             }
         });
 
@@ -399,6 +401,7 @@ public class AgentService(
             IsLast = true,
             CreatedTime = DateTime.UtcNow,
             AvailableMemory = serverStatus.AvailableMemory,
+            AvailableSwapMemoryMb = serverStatus.AvailableSwapMemory / VhUtil.Megabytes,
             CpuUsage = (byte?)serverStatus.CpuUsage,
             TcpConnectionCount = serverStatus.TcpConnectionCount,
             UdpConnectionCount = serverStatus.UdpConnectionCount,

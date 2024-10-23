@@ -3,10 +3,10 @@ using GrayMint.Common.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.Common;
 using VpnHood.Common.ApiClients;
+using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
-using Token = VpnHood.Common.Token;
+using Token = VpnHood.Common.Tokens.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
 

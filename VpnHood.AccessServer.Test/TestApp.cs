@@ -30,7 +30,7 @@ using AccessPointMode = VpnHood.AccessServer.Api.AccessPointMode;
 using ApiKey = VpnHood.AccessServer.Api.ApiKey;
 using ClientInfo = VpnHood.Common.Messaging.ClientInfo;
 using HttpAccessManagerOptions = VpnHood.Server.Access.Managers.Http.HttpAccessManagerOptions;
-using Token = VpnHood.Common.Token;
+using Token = VpnHood.Common.Tokens.Token;
 
 namespace VpnHood.AccessServer.Test;
 
@@ -280,14 +280,15 @@ public class TestApp : IHttpClientFactory, IDisposable
             LogicalCoreCount = logicalCore ?? 2,
             TotalMemory = 20000000,
             FreeUdpPortV4 = new Random().Next(2000, 9000),
-            FreeUdpPortV6 = new Random().Next(2000, 9000)
+            FreeUdpPortV6 = new Random().Next(2000, 9000),
+            TotalSwapMemory = 10_000_000
         };
 
         return serverInfo;
     }
 
     public async Task<SessionRequestEx> CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint,
-        Guid? clientId = null, IPAddress? clientIp = null
+        string? clientId = null, IPAddress? clientIp = null
         , string? extraData = null, string? locationPath = null, bool allowRedirect = false,
         ClientInfo? clientInfo = null)
     {
@@ -297,7 +298,7 @@ public class TestApp : IHttpClientFactory, IDisposable
                 "Could not set both clientInfo & clientId parameters at the same time.");
 
         clientInfo ??= new ClientInfo {
-            ClientId = clientId ?? Guid.NewGuid(),
+            ClientId = clientId ?? Guid.NewGuid().ToString(),
             ClientVersion = $"999.{rand.Next(0, 999)}.{rand.Next(0, 999)}",
             UserAgent = "agent",
             ProtocolVersion = 0

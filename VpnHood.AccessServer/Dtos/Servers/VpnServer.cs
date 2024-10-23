@@ -15,6 +15,7 @@ public class VpnServer
     public required string? OsInfo { get; init; }
     public required string? MachineName { get; init; }
     public required long? TotalMemory { get; init; }
+    public required int? TotalSwapMemoryMb { get; init; }
     public required int? LogicalCoreCount { get; init; }
     public required DateTime? ConfigureTime { get; init; }
     public required DateTime CreatedTime { get; init; }
@@ -33,4 +34,5 @@ public class VpnServer
     public required string[] Tags { get; set; }
     public required string? ClientFilterId { get; set; }
     public required string? ClientFilterName { get; set; }
+    public required int? ConfigSwapMemoryMb { get; set; }
 }

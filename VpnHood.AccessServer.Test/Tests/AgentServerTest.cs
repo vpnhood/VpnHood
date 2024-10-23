@@ -224,7 +224,7 @@ public class AgentServerTest
 
         // create new session to see if agent cache has been updated
         var sessionDom = await accessToken.CreateSession();
-        var token = Common.Token.FromAccessKey(sessionDom.SessionResponseEx.AccessKey!);
+        var token = Common.Tokens.Token.FromAccessKey(sessionDom.SessionResponseEx.AccessKey!);
         Assert.IsNotNull(token.ServerToken.HostEndPoints);
         Assert.AreEqual(
             token.ServerToken.HostEndPoints.First(x => x.Address.IsV4()).Address,
@@ -297,6 +297,7 @@ public class AgentServerTest
         Assert.AreEqual(serverInfo.MachineName, server.MachineName);
         Assert.AreEqual(serverInfo.TotalMemory, server.TotalMemory);
         Assert.AreEqual(serverInfo.LogicalCoreCount, server.LogicalCoreCount);
+        Assert.AreEqual(serverInfo.TotalSwapMemory / VhUtil.Megabytes, server.TotalSwapMemoryMb);
 
         Assert.IsTrue(dateTime <= server.ConfigureTime);
         Assert.AreEqual(ServerState.Configuring, server.ServerState);
@@ -335,6 +336,22 @@ public class AgentServerTest
         Assert.IsTrue(serverInfo.PublicIpAddresses.Contains(IPAddress.Parse(server.PublicIpV4!)));
         Assert.IsTrue(serverInfo.PublicIpAddresses.Contains(IPAddress.Parse(server.PublicIpV6!)));
     }
+
+    [TestMethod]
+    public async Task Configure_settings()
+    {
+        using var farm = await ServerFarmDom.Create();
+        await farm.DefaultServer.Update(new ServerUpdateParams {
+            ConfigSwapMemoryMb = new PatchOfNullableInteger{Value = 1100}
+        });
+
+        // Configure
+        await farm.DefaultServer.Configure();
+
+        // Make sure the server SwapMemoryMb has been returned
+        Assert.AreEqual(1100, farm.DefaultServer.ServerConfig.SwapMemoryMb);
+    }
+
 
     [TestMethod]
     public async Task AutoConfig_should_not_remove_access_point_by_empty_address_family()

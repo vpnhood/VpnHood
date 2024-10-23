@@ -5,7 +5,7 @@ namespace VpnHood.AccessServer.Dtos.Devices;
 public class Device
 {
     public required Guid DeviceId { get; init; }
-    public required Guid ClientId { get; init; }
+    public required string ClientId { get; init; }
     public required string? ClientVersion { get; init; }
     public required string? IpAddress { get; init; }
     public required Location? Location { get; init; }

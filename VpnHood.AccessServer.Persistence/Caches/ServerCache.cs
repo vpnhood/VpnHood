@@ -1,6 +1,6 @@
 ﻿using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.Common;
+using VpnHood.Common.Tokens;
 
 namespace VpnHood.AccessServer.Persistence.Caches;
 

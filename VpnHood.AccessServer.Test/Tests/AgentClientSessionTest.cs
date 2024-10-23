@@ -12,7 +12,7 @@ using VpnHood.Common.IpLocations.Providers;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
-using Token = VpnHood.Common.Token;
+using Token = VpnHood.Common.Tokens.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -554,7 +554,7 @@ public class AgentClientSessionTest
             });
 
         var sampleAccessToken = new AccessTokenDom(farmDom.TestApp, accessToken);
-        var clientId = Guid.NewGuid();
+        var clientId = Guid.NewGuid().ToString();
 
         var sampleSession1 = await sampleAccessToken.CreateSession(clientId);
         await sampleAccessToken.CreateSession(clientId);

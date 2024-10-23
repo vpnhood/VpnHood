@@ -5,8 +5,8 @@ using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.Common;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Tokens;
 using VpnHood.Manager.Common.Utils;
 using VpnHood.Server.Access.Messaging;
 

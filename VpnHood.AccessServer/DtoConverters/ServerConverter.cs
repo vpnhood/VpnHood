@@ -32,6 +32,7 @@ public static class ServerConverter
             ServerState = serverCache?.ServerState ?? serverState,
             ServerName = model.ServerName,
             TotalMemory = model.TotalMemory,
+            TotalSwapMemoryMb = model.TotalSwapMemoryMb,
             LogicalCoreCount = model.LogicalCoreCount,
             Version = model.Version,
             AutoConfigure = model.AutoConfigure,
@@ -41,7 +42,8 @@ public static class ServerConverter
             PublicIpV6 = model.PublicIpV6,
             Tags = TagUtils.TagsFromString(model.Tags),
             ClientFilterId = model.ClientFilterId?.ToString(),
-            ClientFilterName = model.ClientFilter?.ClientFilterName
+            ClientFilterName = model.ClientFilter?.ClientFilterName,
+            ConfigSwapMemoryMb = model.ConfigSwapMemoryMb
         };
     }
 

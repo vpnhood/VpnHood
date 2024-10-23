@@ -5,7 +5,7 @@ using GrayMint.Common.Utils;
 using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.Common;
+using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
 using AsyncLock = GrayMint.Common.Utils.AsyncLock;
 

@@ -104,7 +104,8 @@ public class ServerTest
             HostPanelUrl = new PatchOfUri { Value = new Uri("http://localhost/foo2") },
             Power = new PatchOfNullableInteger { Value = 16 },
             IsEnabled = new PatchOfBoolean { Value = !serverDom.Server.IsEnabled },
-            Tags = new PatchOfStringOf  { Value = ["#3", "#4"] }
+            Tags = new PatchOfStringOf  { Value = ["#3", "#4"] },
+            ConfigSwapMemoryMb = new PatchOfNullableInteger { Value = 200 }
         };
         await serverDom.Update(serverUpdateParam);
         await serverDom.Reload();
@@ -114,6 +115,7 @@ public class ServerTest
         Assert.AreEqual(serverUpdateParam.HostPanelUrl.Value, serverDom.Server.HostPanelUrl);
         Assert.AreEqual(serverUpdateParam.ServerName.Value, serverDom.Server.ServerName);
         Assert.AreEqual(serverUpdateParam.IsEnabled.Value, serverDom.Server.IsEnabled);
+        Assert.AreEqual(serverUpdateParam.ConfigSwapMemoryMb.Value, serverDom.Server.ConfigSwapMemoryMb);
         CollectionAssert.AreEquivalent(serverUpdateParam.Tags.Value.ToArray(), serverDom.Server.Tags.ToArray());
 
         //-----------

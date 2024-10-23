@@ -6,6 +6,7 @@ using VpnHood.AccessServer.Dtos.ServerProfiles;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common.Utils;
+using VpnHood.Manager.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 
 namespace VpnHood.AccessServer.Services;
@@ -193,7 +194,15 @@ public class ServerProfileService(
             throw new ArgumentException($"You can not set {nameof(serverConfig.ServerSecret)} here.",
                 nameof(serverConfig));
 
+        if (serverConfig.SessionOptions.UdpReceiveBufferSize < 2048)
+            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.UdpReceiveBufferSize)} smaller than {2048}.",
+                nameof(serverConfig));
 
+        if (serverConfig.SessionOptions.UdpSendBufferSize < 2048)
+            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.UdpSendBufferSize)} smaller than {2048}.",
+                nameof(serverConfig));
+
+        VhValidator.ValidateSwapMemory(serverConfig.SwapMemoryMb, nameof(serverConfig.SwapMemoryMb));
         return serverConfig;
     }
 }

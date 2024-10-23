@@ -9,7 +9,7 @@ public class DevicesService(
     ReportUsageService reportUsageService,
     VhRepo vhRepo)
 {
-    public async Task<Device> GetByClientId(Guid projectId, Guid clientId)
+    public async Task<Device> GetByClientId(Guid projectId, string clientId)
     {
         var deviceModel = await vhRepo.DeviceGetByClientId(projectId, clientId);
         return deviceModel.ToDto();

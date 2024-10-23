@@ -553,11 +553,12 @@ public class VhRepo(VhContext vhContext)
             .ExecuteDeleteAsync();
     }
 
-    public Task<DeviceModel> DeviceGetByClientId(Guid projectId, Guid clientId)
+    public Task<DeviceModel> DeviceGetByClientId(Guid projectId, string clientId)
     {
+        var clientGuid = Guid.Parse(clientId); // currently it is guid
         return vhContext.Devices
             .Where(model => model.ProjectId == projectId)
-            .SingleAsync(x => x.ClientId == clientId);
+            .SingleAsync(x => x.ClientId == clientGuid);
     }
 
     public Task<DeviceModel> DeviceGet(Guid projectId, Guid deviceId)

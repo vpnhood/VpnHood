@@ -32,7 +32,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="VpnHood.Common" Version="4.6.567-prerelease" />
+	  <PackageReference Include="VpnHood.Common" Version="4.6.572-prerelease" />
 	</ItemGroup>
 
 </Project>

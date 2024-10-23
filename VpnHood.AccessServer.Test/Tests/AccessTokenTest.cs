@@ -8,7 +8,7 @@ using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
-using Token = VpnHood.Common.Token;
+using Token = VpnHood.Common.Tokens.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
 

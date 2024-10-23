@@ -40,7 +40,7 @@ public class DeviceTest
     {
         using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken();
-        var clientId = Guid.NewGuid();
+        var clientId = Guid.NewGuid().ToString();
         await farm.DefaultServer.CreateSession(accessTokenDom.AccessToken, clientId);
         var deviceClient = farm.TestApp.DevicesClient;
 

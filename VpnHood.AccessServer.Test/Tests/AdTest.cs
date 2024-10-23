@@ -56,7 +56,7 @@ public class AdTest
         });
 
         // check access token
-        var clientId = Guid.NewGuid();
+        var clientId = Guid.NewGuid().ToString();
 
         // create session
         var sessionDom = await accessTokenDom.CreateSession(clientId: clientId);

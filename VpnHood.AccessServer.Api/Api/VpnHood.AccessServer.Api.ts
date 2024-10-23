@@ -977,13 +977,14 @@ export class DevicesClient {
     }
 
     getByClientId(projectId: string, clientId: string, cancelToken?: CancelToken): Promise<Device> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/devices/clientId:{clientId}";
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/devices/clientId?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
         if (clientId === undefined || clientId === null)
-            throw new Error("The parameter 'clientId' must be defined.");
-        url_ = url_.replace("{clientId}", encodeURIComponent("" + clientId));
+            throw new Error("The parameter 'clientId' must be defined and cannot be null.");
+        else
+            url_ += "clientId=" + encodeURIComponent("" + clientId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -8780,6 +8781,7 @@ export class VpnServer implements IVpnServer {
     osInfo?: string | null;
     machineName?: string | null;
     totalMemory?: number | null;
+    totalSwapMemoryMb?: number | null;
     logicalCoreCount?: number | null;
     configureTime?: Date | null;
     createdTime!: Date;
@@ -8798,6 +8800,7 @@ export class VpnServer implements IVpnServer {
     tags!: string[];
     clientFilterId?: string | null;
     clientFilterName?: string | null;
+    configSwapMemoryMb?: number | null;
 
     constructor(data?: IVpnServer) {
         if (data) {
@@ -8824,6 +8827,7 @@ export class VpnServer implements IVpnServer {
             this.osInfo = _data["osInfo"] !== undefined ? _data["osInfo"] : <any>null;
             this.machineName = _data["machineName"] !== undefined ? _data["machineName"] : <any>null;
             this.totalMemory = _data["totalMemory"] !== undefined ? _data["totalMemory"] : <any>null;
+            this.totalSwapMemoryMb = _data["totalSwapMemoryMb"] !== undefined ? _data["totalSwapMemoryMb"] : <any>null;
             this.logicalCoreCount = _data["logicalCoreCount"] !== undefined ? _data["logicalCoreCount"] : <any>null;
             this.configureTime = _data["configureTime"] ? new Date(_data["configureTime"].toString()) : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
@@ -8856,6 +8860,7 @@ export class VpnServer implements IVpnServer {
             }
             this.clientFilterId = _data["clientFilterId"] !== undefined ? _data["clientFilterId"] : <any>null;
             this.clientFilterName = _data["clientFilterName"] !== undefined ? _data["clientFilterName"] : <any>null;
+            this.configSwapMemoryMb = _data["configSwapMemoryMb"] !== undefined ? _data["configSwapMemoryMb"] : <any>null;
         }
     }
 
@@ -8878,6 +8883,7 @@ export class VpnServer implements IVpnServer {
         data["osInfo"] = this.osInfo !== undefined ? this.osInfo : <any>null;
         data["machineName"] = this.machineName !== undefined ? this.machineName : <any>null;
         data["totalMemory"] = this.totalMemory !== undefined ? this.totalMemory : <any>null;
+        data["totalSwapMemoryMb"] = this.totalSwapMemoryMb !== undefined ? this.totalSwapMemoryMb : <any>null;
         data["logicalCoreCount"] = this.logicalCoreCount !== undefined ? this.logicalCoreCount : <any>null;
         data["configureTime"] = this.configureTime ? this.configureTime.toISOString() : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
@@ -8904,6 +8910,7 @@ export class VpnServer implements IVpnServer {
         }
         data["clientFilterId"] = this.clientFilterId !== undefined ? this.clientFilterId : <any>null;
         data["clientFilterName"] = this.clientFilterName !== undefined ? this.clientFilterName : <any>null;
+        data["configSwapMemoryMb"] = this.configSwapMemoryMb !== undefined ? this.configSwapMemoryMb : <any>null;
         return data;
     }
 }
@@ -8919,6 +8926,7 @@ export interface IVpnServer {
     osInfo?: string | null;
     machineName?: string | null;
     totalMemory?: number | null;
+    totalSwapMemoryMb?: number | null;
     logicalCoreCount?: number | null;
     configureTime?: Date | null;
     createdTime: Date;
@@ -8937,6 +8945,7 @@ export interface IVpnServer {
     tags: string[];
     clientFilterId?: string | null;
     clientFilterName?: string | null;
+    configSwapMemoryMb?: number | null;
 }
 
 export enum ServerState {
@@ -9172,6 +9181,7 @@ export class ServerUpdateParams implements IServerUpdateParams {
     isEnabled?: PatchOfBoolean | null;
     tags?: PatchOfStringOf | null;
     clientFilterId?: PatchOfString | null;
+    configSwapMemoryMb?: PatchOfNullableInteger | null;
 
     constructor(data?: IServerUpdateParams) {
         if (data) {
@@ -9195,6 +9205,7 @@ export class ServerUpdateParams implements IServerUpdateParams {
             this.isEnabled = _data["isEnabled"] ? PatchOfBoolean.fromJS(_data["isEnabled"]) : <any>null;
             this.tags = _data["tags"] ? PatchOfStringOf.fromJS(_data["tags"]) : <any>null;
             this.clientFilterId = _data["clientFilterId"] ? PatchOfString.fromJS(_data["clientFilterId"]) : <any>null;
+            this.configSwapMemoryMb = _data["configSwapMemoryMb"] ? PatchOfNullableInteger.fromJS(_data["configSwapMemoryMb"]) : <any>null;
         }
     }
 
@@ -9218,6 +9229,7 @@ export class ServerUpdateParams implements IServerUpdateParams {
         data["isEnabled"] = this.isEnabled ? this.isEnabled.toJSON() : <any>null;
         data["tags"] = this.tags ? this.tags.toJSON() : <any>null;
         data["clientFilterId"] = this.clientFilterId ? this.clientFilterId.toJSON() : <any>null;
+        data["configSwapMemoryMb"] = this.configSwapMemoryMb ? this.configSwapMemoryMb.toJSON() : <any>null;
         return data;
     }
 }
@@ -9234,6 +9246,7 @@ export interface IServerUpdateParams {
     isEnabled?: PatchOfBoolean | null;
     tags?: PatchOfStringOf | null;
     clientFilterId?: PatchOfString | null;
+    configSwapMemoryMb?: PatchOfNullableInteger | null;
 }
 
 export class PatchOfAccessPointOf implements IPatchOfAccessPointOf {

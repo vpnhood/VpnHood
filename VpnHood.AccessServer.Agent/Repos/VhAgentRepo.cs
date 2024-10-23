@@ -2,8 +2,8 @@
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.Common;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Tokens;
 using VpnHood.Manager.Common.Utils;
 
 namespace VpnHood.AccessServer.Agent.Repos;
@@ -507,6 +507,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 IsLast = true,
                 CreatedTime = x.CreatedTime,
                 AvailableMemory = x.AvailableMemory,
+                AvailableSwapMemoryMb = x.AvailableSwapMemoryMb,
                 CpuUsage = x.CpuUsage,
                 ServerId = x.ServerId,
                 IsConfigure = x.IsConfigure,
@@ -534,11 +535,12 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .SingleOrDefaultAsync();
     }
 
-    public Task<DeviceModel?> DeviceFind(Guid projectId, Guid clientId)
+    public Task<DeviceModel?> DeviceFind(Guid projectId, string clientId)
     {
+        var clientGuid = Guid.Parse(clientId);
         return vhContext.Devices
             .Where(x => x.ProjectId == projectId)
-            .Where(x => x.ClientId == clientId)
+            .Where(x => x.ClientId == clientGuid)
             .SingleOrDefaultAsync();
     }
 

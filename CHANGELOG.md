@@ -1,4 +1,4 @@
-# Upcoming
+# v4.6.573
 ### Client
 * Feature: Update server token from multiple URLs
 * Improve: Improve initialization speed to exclude my country

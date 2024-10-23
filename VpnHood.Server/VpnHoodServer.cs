@@ -189,7 +189,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             }
 
             if (_swapFileProvider != null)
-                await ConfigureSwapFile(serverConfig.SwapFileSizeMb);
+                await ConfigureSwapMemory(serverConfig.SwapMemoryMb);
 
             // Reconfigure server host
             await ServerHost.Configure(
@@ -223,7 +223,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         }
     }
 
-    private async Task ConfigureSwapFile(long? sizeMb)
+    private async Task ConfigureSwapMemory(long? sizeMb)
     {
         if (_swapFileProvider == null)
             throw new InvalidOperationException("SwapFileProvider is not available.");

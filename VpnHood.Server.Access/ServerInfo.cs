@@ -7,25 +7,25 @@ namespace VpnHood.Server.Access;
 public class ServerInfo
 {
     [JsonConverter(typeof(VersionConverter))]
-    public required Version Version { get; init; }
+    public required Version Version { get; set; }
 
     [JsonConverter(typeof(VersionConverter))]
-    public required Version EnvironmentVersion { get; init; }
+    public required Version EnvironmentVersion { get; set; }
 
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
-    public required IPAddress[] PrivateIpAddresses { get; init; }
+    public required IPAddress[] PrivateIpAddresses { get; set; }
 
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
-    public required IPAddress[] PublicIpAddresses { get; init; }
+    public required IPAddress[] PublicIpAddresses { get; set; }
 
-    public required ServerStatus Status { get; init; }
-    public string? OsInfo { get; init; }
-    public string? OsVersion { get; init; }
-    public long? TotalMemory { get; init; }
-    public long? TotalSwapMemory { get; init; }
-    public string? MachineName { get; init; }
-    public int LogicalCoreCount { get; init; }
-    public int FreeUdpPortV4 { get; init; }
-    public int FreeUdpPortV6 { get; init; }
-    public string[]? NetworkInterfaceNames { get; init; }
+    public required ServerStatus Status { get; set; }
+    public string? OsInfo { get; set; }
+    public string? OsVersion { get; set; }
+    public long? TotalMemory { get; set; }
+    public long? TotalSwapMemory { get; set; }
+    public string? MachineName { get; set; }
+    public int LogicalCoreCount { get; set; }
+    public int FreeUdpPortV4 { get; set; }
+    public int FreeUdpPortV6 { get; set; }
+    public string[]? NetworkInterfaceNames { get; set; }
 }

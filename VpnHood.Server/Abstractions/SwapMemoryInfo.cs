@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Server.Abstractions;
 
-public class SwapFileInfo
+public class SwapMemoryInfo
 {
     public required long TotalSize { get; init; }
     public required long TotalUsed { get; init; }

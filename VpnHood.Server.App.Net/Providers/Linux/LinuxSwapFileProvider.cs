@@ -65,12 +65,13 @@ public class LinuxSwapFileProvider(ILogger logger)
         logger.LogInformation("Enabling the swap file.");
         await LinuxUtils.ExecuteCommandAsync($"swapon {SwapFilePath}");
 
+        // Let ignore the following and activate the swap file everytime after reboot
         // Ensure the swap file is listed in /etc/fstab for persistence after reboot
-        var fstabContent = await LinuxUtils.ExecuteCommandAsync("cat /etc/fstab");
-        if (!fstabContent.Contains($"{SwapFilePath}")) {
-            logger.LogInformation("Adding the swap file to /etc/fstab for persistence after reboot.");
-            await LinuxUtils.ExecuteCommandAsync($"echo '{SwapFilePath} none swap sw 0 0' | tee -a /etc/fstab");
-        }
+        //var fstabContent = await LinuxUtils.ExecuteCommandAsync("cat /etc/fstab");
+        //if (!fstabContent.Contains($"{SwapFilePath}")) {
+        //    logger.LogInformation("Adding the swap file to /etc/fstab for persistence after reboot.");
+        //    await LinuxUtils.ExecuteCommandAsync($"echo '{SwapFilePath} none swap sw 0 0' | tee -a /etc/fstab");
+        //}
     }
 
     private static SwapFile? ParseSwapFileLine(string line)

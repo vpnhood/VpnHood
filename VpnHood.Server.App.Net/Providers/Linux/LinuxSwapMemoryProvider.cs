@@ -5,17 +5,17 @@ using VpnHood.Server.Abstractions;
 
 namespace VpnHood.Server.App.Providers.Linux;
 
-public class LinuxSwapFileProvider(ILogger logger) 
-    : ISwapFileProvider
+public class LinuxSwapMemoryProvider(ILogger logger) 
+    : ISwapMemoryProvider
 {
     // ReSharper disable once NotAccessedPositionalProperty.Local
     private record struct SwapFile(string FilePath, long Size, long Used);
     private const string SwapFilePath = "/vpnhood.swap";
 
-    public async Task<SwapFileInfo> GetInfo()
+    public async Task<SwapMemoryInfo> GetInfo()
     {
         var swapFiles = await ListCurrentSwapFiles();
-        return new SwapFileInfo {
+        return new SwapMemoryInfo {
             TotalSize = swapFiles.Sum(x => x.Size),
             TotalUsed = swapFiles.Sum(x => x.Used),
             AppSize = swapFiles.Where(x=>x.FilePath == SwapFilePath).Sum(x=>x.Size),
@@ -23,7 +23,7 @@ public class LinuxSwapFileProvider(ILogger logger)
         };
     }
 
-    public async Task SetAppSwapFileSize(long size)
+    public async Task SetAppSwapMemorySize(long size)
     {
         logger.LogInformation("Configuring swap file. File: {SwapFilePath}, Size: {Size}.", SwapFilePath, VhUtil.FormatBytes(size));
 

@@ -37,7 +37,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private Http01ChallengeService? _http01ChallengeService;
     private readonly NetConfigurationService? _netConfigurationService;
     private readonly ISystemInfoProvider _systemInfoProvider;
-    private readonly ISwapFileProvider? _swapFileProvider;
+    private readonly ISwapMemoryProvider? _swapMemoryProvider;
 
     public ServerHost ServerHost { get; }
     public JobSection JobSection { get; }
@@ -65,7 +65,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _publicIpDiscovery = options.PublicIpDiscovery;
         _netConfigurationService = options.NetConfigurationProvider != null ? new NetConfigurationService(options.NetConfigurationProvider) : null;
-        _swapFileProvider = options.SwapFileProvider;
+        _swapMemoryProvider = options.SwapMemoryProvider;
         _config = options.Config;
         ServerHost = new ServerHost(SessionManager);
 
@@ -138,7 +138,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             var publicIpAddresses =
                 _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses(CancellationToken.None).VhConfigureAwait() : [];
 
-            var swapFileInfo = _swapFileProvider != null ? await _swapFileProvider.GetInfo() : null;
+            var swapMemoryInfo = _swapMemoryProvider != null ? await _swapMemoryProvider.GetInfo() : null;
             var providerSystemInfo = _systemInfoProvider.GetSystemInfo();
             var serverInfo = new ServerInfo {
                 EnvironmentVersion = Environment.Version,
@@ -150,7 +150,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 OsInfo = providerSystemInfo.OsInfo,
                 OsVersion = Environment.OSVersion.ToString(),
                 TotalMemory = providerSystemInfo.TotalMemory,
-                TotalSwapMemory = swapFileInfo?.TotalSize,
+                TotalSwapMemory = swapMemoryInfo?.TotalSize,
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 FreeUdpPortV4 = freeUdpPortV4,
                 FreeUdpPortV6 = freeUdpPortV6,
@@ -188,8 +188,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                     await _netConfigurationService.AddIpAddress(ipEndPoint.Address, serverConfig.AddListenerIpsToNetwork).VhConfigureAwait();
             }
 
-            if (_swapFileProvider != null)
-                await ConfigureSwapMemory(serverConfig.SwapMemoryMb);
+            if (_swapMemoryProvider != null)
+                await ConfigureSwapMemory(serverConfig.SwapMemorySizeMb);
 
             // Reconfigure server host
             await ServerHost.Configure(
@@ -225,11 +225,11 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
     private async Task ConfigureSwapMemory(long? sizeMb)
     {
-        if (_swapFileProvider == null)
-            throw new InvalidOperationException("SwapFileProvider is not available.");
+        if (_swapMemoryProvider == null)
+            throw new InvalidOperationException("SwapMemoryProvider is not available.");
 
         try {
-            var info = await _swapFileProvider.GetInfo();
+            var info = await _swapMemoryProvider.GetInfo();
             var size = sizeMb * VhUtil.Megabytes ?? 0;
             var otherSize = info.TotalSize - info.AppSize;
             var newAppSize = Math.Max(0, size - otherSize);
@@ -244,7 +244,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 return;
             }
 
-            await _swapFileProvider.SetAppSwapFileSize(newAppSize);
+            await _swapMemoryProvider.SetAppSwapMemorySize(newAppSize);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not configure swap file.");
@@ -367,7 +367,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
     public async Task<ServerStatus> GetStatus()
     {
-        var swapFileInfo = _swapFileProvider != null ? await _swapFileProvider.GetInfo() : null;
+        var swapMemoryInfo = _swapMemoryProvider != null ? await _swapMemoryProvider.GetInfo() : null;
         var systemInfo = _systemInfoProvider.GetSystemInfo();
         var serverStatus = new ServerStatus {
             SessionCount = SessionManager.Sessions.Count(x => !x.Value.IsDisposed),
@@ -375,7 +375,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             UdpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.UdpConnectionCount),
             ThreadCount = Process.GetCurrentProcess().Threads.Count,
             AvailableMemory = systemInfo.AvailableMemory,
-            AvailableSwapMemory = swapFileInfo != null ? swapFileInfo.TotalSize - swapFileInfo.TotalUsed : null,
+            AvailableSwapMemory = swapMemoryInfo != null ? swapMemoryInfo.TotalSize - swapMemoryInfo.TotalUsed : null,
             CpuUsage = systemInfo.CpuUsage,
             UsedMemory = Process.GetCurrentProcess().WorkingSet64,
             TunnelSpeed = new Traffic {

@@ -238,8 +238,8 @@ public class ServerApp : IDisposable
                 ? new LinuxNetConfigurationProvider()
                 : null;
 
-            ISwapFileProvider? swapFileProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-                ? new LinuxSwapFileProvider(VhLogger.Instance)
+            ISwapMemoryProvider? swapMemoryProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+                ? new LinuxSwapMemoryProvider(VhLogger.Instance)
                 : null;
 
             // run server
@@ -247,7 +247,7 @@ public class ServerApp : IDisposable
                 Tracker = _tracker,
                 SystemInfoProvider = systemInfoProvider,
                 NetConfigurationProvider = configurationProvider,
-                SwapFileProvider = swapFileProvider,
+                SwapMemoryProvider = swapMemoryProvider,
                 StoragePath = InternalStoragePath,
                 Config = AppSettings.ServerConfig
             });

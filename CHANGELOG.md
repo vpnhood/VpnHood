@@ -1,16 +1,17 @@
-# v4.6.569
+# Upcoming
 ### Client
 * Feature: Update server token from multiple URLs
 * Improve: Improve initialization speed to exclude my country
 * Update: Add token tags
 * Update: Add server tags
-* Update: Generate anonymous client id from device id
+* Update: Generate anonymous client Id from device Id
 * Fix: Startup crash on some Android devices
 
 ### Server
 * Fix: Server listening to a test IP
 * Fix: IpV6 Subnet in auto IP configuration
 * Feature: Allow to config swap file size
+* Feature: Allow to config UdpClient buffer size
 
 # v4.6.557
 ### Client

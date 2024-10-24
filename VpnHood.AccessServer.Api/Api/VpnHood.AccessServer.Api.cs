@@ -11361,8 +11361,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("availableMemory")]
         public long? AvailableMemory { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("availableSwapMemory")]
-        public long? AvailableSwapMemory { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("availableSwapMemoryMb")]
+        public long? AvailableSwapMemoryMb { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("cpuUsage")]
         public int? CpuUsage { get; set; } = default!;

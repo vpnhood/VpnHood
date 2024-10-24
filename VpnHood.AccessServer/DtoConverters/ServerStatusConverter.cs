@@ -11,7 +11,7 @@ public static class ServerStatusConverter
             CpuUsage = model.CpuUsage,
             SessionCount = model.SessionCount,
             AvailableMemory = model.AvailableMemory,
-            AvailableSwapMemory = model.AvailableSwapMemoryMb,
+            AvailableSwapMemoryMb = model.AvailableSwapMemoryMb,
             UdpConnectionCount = model.UdpConnectionCount,
             TunnelReceiveSpeed = model.TunnelReceiveSpeed,
             TunnelSendSpeed = model.TunnelSendSpeed,

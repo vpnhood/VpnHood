@@ -6,7 +6,7 @@ public class ServerStatusEx
     public required int TcpConnectionCount { get; init; }
     public required int UdpConnectionCount { get; init; }
     public required long? AvailableMemory { get; init; }
-    public required long? AvailableSwapMemory { get; init; }
+    public required long? AvailableSwapMemoryMb { get; init; }
     public required int? CpuUsage { get; init; }
     public required int ThreadCount { get; init; }
     public required long TunnelSendSpeed { get; init; }

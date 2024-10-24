@@ -138,7 +138,6 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             var publicIpAddresses =
                 _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses(CancellationToken.None).VhConfigureAwait() : [];
 
-            var swapMemoryInfo = await TryGetSwapMemoryInfo();
             var providerSystemInfo = _systemInfoProvider.GetSystemInfo();
             var serverInfo = new ServerInfo {
                 EnvironmentVersion = Environment.Version,
@@ -150,7 +149,6 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 OsInfo = providerSystemInfo.OsInfo,
                 OsVersion = Environment.OSVersion.ToString(),
                 TotalMemory = providerSystemInfo.TotalMemory,
-                TotalSwapMemory = swapMemoryInfo?.TotalSize,
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 FreeUdpPortV4 = freeUdpPortV4,
                 FreeUdpPortV6 = freeUdpPortV6,
@@ -188,8 +186,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                     await _netConfigurationService.AddIpAddress(ipEndPoint.Address, serverConfig.AddListenerIpsToNetwork).VhConfigureAwait();
             }
 
-            if (_swapMemoryProvider != null && await ConfigureSwapMemory(serverConfig.SwapMemorySizeMb)) {
-                serverInfo.TotalSwapMemory = (await TryGetSwapMemoryInfo())?.TotalSize;
+            if (_swapMemoryProvider != null) {
+                await ConfigureSwapMemory(serverConfig.SwapMemorySizeMb);
             }
 
             // Reconfigure server host
@@ -237,7 +235,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         }
     }
 
-    private async Task<bool> ConfigureSwapMemory(long? sizeMb)
+    private async Task ConfigureSwapMemory(long? sizeMb)
     {
         if (_swapMemoryProvider == null)
             throw new InvalidOperationException("SwapMemoryProvider is not available.");
@@ -250,20 +248,18 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
             if (Math.Abs(info.AppSize - newAppSize) < VhUtil.Megabytes) {
                 if (size == 0 && info.AppSize == 0)
-                    return false; // there is no need to configure swap file
+                    return; // there is no need to configure swap file
 
                 VhLogger.Instance.LogInformation(
                     "Swap file size is already near to the requested size. CurrentSize: {CurrentSize}, RequestedSize: {RequestedSize}",
                     VhUtil.FormatBytes(info.TotalSize), VhUtil.FormatBytes(size));
-                return false;
+                return;
             }
 
             await _swapMemoryProvider.SetAppSwapMemorySize(newAppSize);
-            return true;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not configure swap file.");
-            return false;
         }
     }
 
@@ -391,6 +387,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             UdpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.UdpConnectionCount),
             ThreadCount = Process.GetCurrentProcess().Threads.Count,
             AvailableMemory = systemInfo.AvailableMemory,
+            TotalSwapMemory = swapMemoryInfo?.TotalSize,
             AvailableSwapMemory = swapMemoryInfo != null ? swapMemoryInfo.TotalSize - swapMemoryInfo.TotalUsed : null,
             CpuUsage = systemInfo.CpuUsage,
             UsedMemory = Process.GetCurrentProcess().WorkingSet64,

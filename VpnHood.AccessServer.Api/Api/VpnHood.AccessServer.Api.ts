@@ -8963,6 +8963,7 @@ export class ServerStatusEx implements IServerStatusEx {
     tcpConnectionCount!: number;
     udpConnectionCount!: number;
     availableMemory?: number | null;
+    availableSwapMemory?: number | null;
     cpuUsage?: number | null;
     threadCount!: number;
     tunnelSendSpeed!: number;
@@ -8984,6 +8985,7 @@ export class ServerStatusEx implements IServerStatusEx {
             this.tcpConnectionCount = _data["tcpConnectionCount"] !== undefined ? _data["tcpConnectionCount"] : <any>null;
             this.udpConnectionCount = _data["udpConnectionCount"] !== undefined ? _data["udpConnectionCount"] : <any>null;
             this.availableMemory = _data["availableMemory"] !== undefined ? _data["availableMemory"] : <any>null;
+            this.availableSwapMemory = _data["availableSwapMemory"] !== undefined ? _data["availableSwapMemory"] : <any>null;
             this.cpuUsage = _data["cpuUsage"] !== undefined ? _data["cpuUsage"] : <any>null;
             this.threadCount = _data["threadCount"] !== undefined ? _data["threadCount"] : <any>null;
             this.tunnelSendSpeed = _data["tunnelSendSpeed"] !== undefined ? _data["tunnelSendSpeed"] : <any>null;
@@ -9005,6 +9007,7 @@ export class ServerStatusEx implements IServerStatusEx {
         data["tcpConnectionCount"] = this.tcpConnectionCount !== undefined ? this.tcpConnectionCount : <any>null;
         data["udpConnectionCount"] = this.udpConnectionCount !== undefined ? this.udpConnectionCount : <any>null;
         data["availableMemory"] = this.availableMemory !== undefined ? this.availableMemory : <any>null;
+        data["availableSwapMemory"] = this.availableSwapMemory !== undefined ? this.availableSwapMemory : <any>null;
         data["cpuUsage"] = this.cpuUsage !== undefined ? this.cpuUsage : <any>null;
         data["threadCount"] = this.threadCount !== undefined ? this.threadCount : <any>null;
         data["tunnelSendSpeed"] = this.tunnelSendSpeed !== undefined ? this.tunnelSendSpeed : <any>null;
@@ -9019,6 +9022,7 @@ export interface IServerStatusEx {
     tcpConnectionCount: number;
     udpConnectionCount: number;
     availableMemory?: number | null;
+    availableSwapMemory?: number | null;
     cpuUsage?: number | null;
     threadCount: number;
     tunnelSendSpeed: number;

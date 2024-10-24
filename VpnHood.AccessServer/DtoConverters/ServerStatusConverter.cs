@@ -8,9 +8,10 @@ public static class ServerStatusConverter
     public static ServerStatusEx ToDto(this ServerStatusBaseModel model)
     {
         return new ServerStatusEx {
+            CpuUsage = model.CpuUsage,
             SessionCount = model.SessionCount,
             AvailableMemory = model.AvailableMemory,
-            CpuUsage = model.CpuUsage,
+            AvailableSwapMemory = model.AvailableSwapMemoryMb,
             UdpConnectionCount = model.UdpConnectionCount,
             TunnelReceiveSpeed = model.TunnelReceiveSpeed,
             TunnelSendSpeed = model.TunnelSendSpeed,

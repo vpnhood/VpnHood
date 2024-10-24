@@ -22,7 +22,6 @@ public class ServerInfo
     public string? OsInfo { get; set; }
     public string? OsVersion { get; set; }
     public long? TotalMemory { get; set; }
-    public long? TotalSwapMemory { get; set; }
     public string? MachineName { get; set; }
     public int LogicalCoreCount { get; set; }
     public int FreeUdpPortV4 { get; set; }

@@ -97,6 +97,8 @@ public class Tunnel : IJob, IAsyncDisposable
         var traffic = Traffic;
         var trafficChanged = _lastTraffic != traffic;
         var duration = (FastDateTime.Now - _lastSpeedUpdateTime).TotalSeconds;
+        if (duration < 1)
+            return;
 
         Speed.Sent = (long)((traffic.Sent - _lastTraffic.Sent) / duration);
         Speed.Received = (long)((traffic.Received - _lastTraffic.Received) / duration);

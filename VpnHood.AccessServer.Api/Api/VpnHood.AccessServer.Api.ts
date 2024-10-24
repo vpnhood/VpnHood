@@ -8800,7 +8800,7 @@ export class VpnServer implements IVpnServer {
     tags!: string[];
     clientFilterId?: string | null;
     clientFilterName?: string | null;
-    configSwapMemoryMb?: number | null;
+    configSwapMemorySizeMb?: number | null;
 
     constructor(data?: IVpnServer) {
         if (data) {
@@ -8860,7 +8860,7 @@ export class VpnServer implements IVpnServer {
             }
             this.clientFilterId = _data["clientFilterId"] !== undefined ? _data["clientFilterId"] : <any>null;
             this.clientFilterName = _data["clientFilterName"] !== undefined ? _data["clientFilterName"] : <any>null;
-            this.configSwapMemoryMb = _data["configSwapMemoryMb"] !== undefined ? _data["configSwapMemoryMb"] : <any>null;
+            this.configSwapMemorySizeMb = _data["configSwapMemorySizeMb"] !== undefined ? _data["configSwapMemorySizeMb"] : <any>null;
         }
     }
 
@@ -8910,7 +8910,7 @@ export class VpnServer implements IVpnServer {
         }
         data["clientFilterId"] = this.clientFilterId !== undefined ? this.clientFilterId : <any>null;
         data["clientFilterName"] = this.clientFilterName !== undefined ? this.clientFilterName : <any>null;
-        data["configSwapMemoryMb"] = this.configSwapMemoryMb !== undefined ? this.configSwapMemoryMb : <any>null;
+        data["configSwapMemorySizeMb"] = this.configSwapMemorySizeMb !== undefined ? this.configSwapMemorySizeMb : <any>null;
         return data;
     }
 }
@@ -8945,7 +8945,7 @@ export interface IVpnServer {
     tags: string[];
     clientFilterId?: string | null;
     clientFilterName?: string | null;
-    configSwapMemoryMb?: number | null;
+    configSwapMemorySizeMb?: number | null;
 }
 
 export enum ServerState {
@@ -9181,7 +9181,7 @@ export class ServerUpdateParams implements IServerUpdateParams {
     isEnabled?: PatchOfBoolean | null;
     tags?: PatchOfStringOf | null;
     clientFilterId?: PatchOfString | null;
-    configSwapMemoryMb?: PatchOfNullableInteger | null;
+    configSwapMemorySizeMb?: PatchOfNullableInteger | null;
 
     constructor(data?: IServerUpdateParams) {
         if (data) {
@@ -9205,7 +9205,7 @@ export class ServerUpdateParams implements IServerUpdateParams {
             this.isEnabled = _data["isEnabled"] ? PatchOfBoolean.fromJS(_data["isEnabled"]) : <any>null;
             this.tags = _data["tags"] ? PatchOfStringOf.fromJS(_data["tags"]) : <any>null;
             this.clientFilterId = _data["clientFilterId"] ? PatchOfString.fromJS(_data["clientFilterId"]) : <any>null;
-            this.configSwapMemoryMb = _data["configSwapMemoryMb"] ? PatchOfNullableInteger.fromJS(_data["configSwapMemoryMb"]) : <any>null;
+            this.configSwapMemorySizeMb = _data["configSwapMemorySizeMb"] ? PatchOfNullableInteger.fromJS(_data["configSwapMemorySizeMb"]) : <any>null;
         }
     }
 
@@ -9229,7 +9229,7 @@ export class ServerUpdateParams implements IServerUpdateParams {
         data["isEnabled"] = this.isEnabled ? this.isEnabled.toJSON() : <any>null;
         data["tags"] = this.tags ? this.tags.toJSON() : <any>null;
         data["clientFilterId"] = this.clientFilterId ? this.clientFilterId.toJSON() : <any>null;
-        data["configSwapMemoryMb"] = this.configSwapMemoryMb ? this.configSwapMemoryMb.toJSON() : <any>null;
+        data["configSwapMemorySizeMb"] = this.configSwapMemorySizeMb ? this.configSwapMemorySizeMb.toJSON() : <any>null;
         return data;
     }
 }
@@ -9246,7 +9246,7 @@ export interface IServerUpdateParams {
     isEnabled?: PatchOfBoolean | null;
     tags?: PatchOfStringOf | null;
     clientFilterId?: PatchOfString | null;
-    configSwapMemoryMb?: PatchOfNullableInteger | null;
+    configSwapMemorySizeMb?: PatchOfNullableInteger | null;
 }
 
 export class PatchOfAccessPointOf implements IPatchOfAccessPointOf {

@@ -105,7 +105,7 @@ public class ServerTest
             Power = new PatchOfNullableInteger { Value = 16 },
             IsEnabled = new PatchOfBoolean { Value = !serverDom.Server.IsEnabled },
             Tags = new PatchOfStringOf  { Value = ["#3", "#4"] },
-            ConfigSwapMemoryMb = new PatchOfNullableInteger { Value = 200 }
+            ConfigSwapMemorySizeMb = new PatchOfNullableInteger { Value = 200 }
         };
         await serverDom.Update(serverUpdateParam);
         await serverDom.Reload();
@@ -115,7 +115,7 @@ public class ServerTest
         Assert.AreEqual(serverUpdateParam.HostPanelUrl.Value, serverDom.Server.HostPanelUrl);
         Assert.AreEqual(serverUpdateParam.ServerName.Value, serverDom.Server.ServerName);
         Assert.AreEqual(serverUpdateParam.IsEnabled.Value, serverDom.Server.IsEnabled);
-        Assert.AreEqual(serverUpdateParam.ConfigSwapMemoryMb.Value, serverDom.Server.ConfigSwapMemoryMb);
+        Assert.AreEqual(serverUpdateParam.ConfigSwapMemorySizeMb.Value, serverDom.Server.ConfigSwapMemorySizeMb);
         CollectionAssert.AreEquivalent(serverUpdateParam.Tags.Value.ToArray(), serverDom.Server.Tags.ToArray());
 
         //-----------

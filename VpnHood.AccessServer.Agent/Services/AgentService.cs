@@ -249,7 +249,7 @@ public class AgentService(
             UdpEndPoints = udpEndPoints,
             AddListenerIpsToNetwork = serverModel.AutoConfigure ? null : "*",
             UpdateStatusInterval = _agentOptions.ServerUpdateStatusInterval,
-            SwapMemoryMb = serverModel.ConfigSwapMemoryMb,
+            SwapMemorySizeMb = serverModel.ConfigSwapMemorySizeMb,
             SessionOptions = new SessionOptions {
                 Timeout = _agentOptions.SessionTemporaryTimeout,
                 SyncInterval = _agentOptions.SessionSyncInterval,

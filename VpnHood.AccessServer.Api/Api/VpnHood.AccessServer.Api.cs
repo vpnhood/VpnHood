@@ -11313,8 +11313,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("clientFilterName")]
         public string? ClientFilterName { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("configSwapMemoryMb")]
-        public int? ConfigSwapMemoryMb { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("configSwapMemorySizeMb")]
+        public int? ConfigSwapMemorySizeMb { get; set; } = default!;
 
     }
 
@@ -11484,8 +11484,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("clientFilterId")]
         public PatchOfString? ClientFilterId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("configSwapMemoryMb")]
-        public PatchOfNullableInteger? ConfigSwapMemoryMb { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("configSwapMemorySizeMb")]
+        public PatchOfNullableInteger? ConfigSwapMemorySizeMb { get; set; } = default!;
 
     }
 

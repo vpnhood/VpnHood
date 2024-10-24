@@ -34,5 +34,5 @@ public class VpnServer
     public required string[] Tags { get; set; }
     public required string? ClientFilterId { get; set; }
     public required string? ClientFilterName { get; set; }
-    public required int? ConfigSwapMemoryMb { get; set; }
+    public required int? ConfigSwapMemorySizeMb { get; set; }
 }

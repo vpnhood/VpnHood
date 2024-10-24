@@ -202,7 +202,7 @@ public class ServerProfileService(
             throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.UdpSendBufferSize)} smaller than {2048}.",
                 nameof(serverConfig));
 
-        VhValidator.ValidateSwapMemory(serverConfig.SwapMemoryMb, nameof(serverConfig.SwapMemoryMb));
+        VhValidator.ValidateSwapMemory(serverConfig.SwapMemorySizeMb, nameof(serverConfig.SwapMemorySizeMb));
         return serverConfig;
     }
 }

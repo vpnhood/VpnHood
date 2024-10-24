@@ -342,14 +342,14 @@ public class AgentServerTest
     {
         using var farm = await ServerFarmDom.Create();
         await farm.DefaultServer.Update(new ServerUpdateParams {
-            ConfigSwapMemoryMb = new PatchOfNullableInteger{Value = 1100}
+            ConfigSwapMemorySizeMb = new PatchOfNullableInteger{Value = 1100}
         });
 
         // Configure
         await farm.DefaultServer.Configure();
 
         // Make sure the server SwapMemoryMb has been returned
-        Assert.AreEqual(1100, farm.DefaultServer.ServerConfig.SwapMemoryMb);
+        Assert.AreEqual(1100, farm.DefaultServer.ServerConfig.SwapMemorySizeMb);
     }
 
 

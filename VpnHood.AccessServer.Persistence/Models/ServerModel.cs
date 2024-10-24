@@ -23,7 +23,7 @@ public class ServerModel
     public required Guid AuthorizationCode { get; set; }
     public required byte[] ManagementSecret { get; set; }
     public required Guid ServerFarmId { get; set; }
-    public required int? ConfigSwapMemoryMb { get; set; }
+    public required int? ConfigSwapMemorySizeMb { get; set; }
     public required Guid ConfigCode { get; set; }
     public required Guid? LastConfigCode { get; set; }
     public required string? LastConfigError { get; set; }

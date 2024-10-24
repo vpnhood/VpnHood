@@ -80,13 +80,13 @@ public class ServerProfileTest
         // update
         // -----------
         serverConfig.SessionOptions.NetScanLimit = 2000;
-        serverConfig.SwapMemoryMb = 500;
+        serverConfig.SwapMemorySizeMb = 500;
         await serverProfileDom.Update(new ServerProfileUpdateParams {
             ServerConfig = new PatchOfString { Value = JsonSerializer.Serialize(serverConfig) }
         });
         serverConfig2 = GmUtil.JsonDeserialize<ServerConfig>(serverProfileDom.ServerProfile.ServerConfig);
         Assert.AreEqual(serverConfig.SessionOptions.NetScanLimit, serverConfig2.SessionOptions.NetScanLimit);
-        Assert.AreEqual(serverConfig.SwapMemoryMb, serverConfig2.SwapMemoryMb);
+        Assert.AreEqual(serverConfig.SwapMemorySizeMb, serverConfig2.SwapMemorySizeMb);
 
         // -----------
         // Delete

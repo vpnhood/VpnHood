@@ -43,7 +43,7 @@ public static class ServerConverter
             Tags = TagUtils.TagsFromString(model.Tags),
             ClientFilterId = model.ClientFilterId?.ToString(),
             ClientFilterName = model.ClientFilter?.ClientFilterName,
-            ConfigSwapMemoryMb = model.ConfigSwapMemoryMb
+            ConfigSwapMemorySizeMb = model.ConfigSwapMemorySizeMb
         };
     }
 

@@ -66,7 +66,7 @@ public class ServerService(
             AuthorizationCode = Guid.NewGuid(),
             ServerFarmId = serverFarm.ServerFarmId,
             AccessPoints = ValidateAccessPoints(createParams.AccessPoints ?? []),
-            ConfigSwapMemoryMb = null,
+            ConfigSwapMemorySizeMb = null,
             ConfigCode = Guid.NewGuid(),
             AutoConfigure = createParams.AccessPoints == null,
             Power = createParams.Power,
@@ -114,7 +114,7 @@ public class ServerService(
             throw new ArgumentException("Power can not be less than 1", nameof(updateParams));
 
         // validate power
-        VhValidator.ValidateSwapMemory(updateParams.ConfigSwapMemoryMb?.Value, nameof(updateParams.ConfigSwapMemoryMb));
+        VhValidator.ValidateSwapMemory(updateParams.ConfigSwapMemorySizeMb?.Value, nameof(updateParams.ConfigSwapMemorySizeMb));
 
         // validate client filter
         if (updateParams.ClientFilterId is { Value: not null }) {
@@ -133,7 +133,7 @@ public class ServerService(
             var serverFarm = await vhRepo.ServerFarmGet(projectId, updateParams.ServerFarmId);
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
-        if (updateParams.ConfigSwapMemoryMb != null) server.ConfigSwapMemoryMb = updateParams.ConfigSwapMemoryMb;
+        if (updateParams.ConfigSwapMemorySizeMb != null) server.ConfigSwapMemorySizeMb = updateParams.ConfigSwapMemorySizeMb;
         if (updateParams.Tags != null) server.Tags = TagUtils.TagsToString(updateParams.Tags.Value);
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
         if (updateParams.Power != null) server.Power = updateParams.Power;

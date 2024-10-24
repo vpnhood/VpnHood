@@ -96,13 +96,15 @@ public class AgentService(
 
         // remove LastConfigCode if server send its status
         if (server.LastConfigCode?.ToString() != serverStatus.ConfigCode ||
-            server.LastConfigError != serverStatus.ConfigError) {
+            server.LastConfigError != serverStatus.ConfigError ||
+            server.TotalSwapMemoryMb != serverStatus.TotalSwapMemory / VhUtil.Megabytes) {
             logger.LogInformation("Updating a server's LastConfigCode. ServerId: {ServerId}, ConfigCode: {ConfigCode}",
                 server.ServerId, serverStatus.ConfigCode);
 
             // update db & cache
             var serverUpdate = await vhAgentRepo.FindServerAsync(server.ServerId) ??
                                throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
+            serverUpdate.TotalSwapMemoryMb = (int?)(serverStatus.TotalSwapMemory / VhUtil.Megabytes);
             serverUpdate.LastConfigError = serverStatus.ConfigError;
             serverUpdate.LastConfigCode = !string.IsNullOrEmpty(serverStatus.ConfigCode)
                 ? Guid.Parse(serverStatus.ConfigCode)
@@ -141,7 +143,6 @@ public class AgentService(
         serverModel.MachineName = serverInfo.MachineName;
         serverModel.ConfigureTime = DateTime.UtcNow;
         serverModel.TotalMemory = serverInfo.TotalMemory ?? 0;
-        serverModel.TotalSwapMemoryMb = serverInfo.TotalSwapMemory != null ? (int?)(serverInfo.TotalSwapMemory / VhUtil.Megabytes) : null;
         serverModel.LogicalCoreCount = serverInfo.LogicalCoreCount;
         serverModel.Version = serverInfo.Version.ToString();
         serverModel.PublicIpV4 = publicIpV4?.ToString();

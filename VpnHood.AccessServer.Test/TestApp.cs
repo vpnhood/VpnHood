@@ -239,7 +239,8 @@ public class TestApp : IHttpClientFactory, IDisposable
                 TunnelSpeed = new Traffic {
                     Sent = 1000000,
                     Received = 2000000
-                }
+                },
+                TotalSwapMemory = rand.Next(100, 200) * VhUtil.Megabytes
             }
             : new ServerStatus {
                 SessionCount = 0,
@@ -250,7 +251,8 @@ public class TestApp : IHttpClientFactory, IDisposable
                 ThreadCount = 5,
                 ConfigCode = configCode,
                 CpuUsage = 25,
-                TunnelSpeed = new Traffic()
+                TunnelSpeed = new Traffic(),
+                TotalSwapMemory = 100 * VhUtil.Megabytes
             };
 
         return ret;
@@ -280,8 +282,7 @@ public class TestApp : IHttpClientFactory, IDisposable
             LogicalCoreCount = logicalCore ?? 2,
             TotalMemory = 20000000,
             FreeUdpPortV4 = new Random().Next(2000, 9000),
-            FreeUdpPortV6 = new Random().Next(2000, 9000),
-            TotalSwapMemory = 10_000_000
+            FreeUdpPortV6 = new Random().Next(2000, 9000)
         };
 
         return serverInfo;

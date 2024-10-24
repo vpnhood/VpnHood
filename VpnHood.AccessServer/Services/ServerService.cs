@@ -14,7 +14,6 @@ using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos;
 using VpnHood.Manager.Common.Utils;
-using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers.Http;
 using ConnectionInfo = Renci.SshNet.ConnectionInfo;
 
@@ -127,6 +126,7 @@ public class ServerService(
         var server = await vhRepo.ServerGet(projectId, serverId, includeFarm: true);
         var oldServerFarmId = server.ServerFarmId;
         var oldAutoConfigure = server.AutoConfigure;
+        var oldConfigSwapMemorySizeMb = server.ConfigSwapMemorySizeMb;
 
         if (updateParams.ServerFarmId != null) {
             // make sure new farm belong to this account and ready for update farm token
@@ -156,6 +156,7 @@ public class ServerService(
         // reconfigure current server if required
         var reconfigure = server.AutoConfigure != oldAutoConfigure ||
                           server.ServerFarmId != oldServerFarmId ||
+                          server.ConfigSwapMemorySizeMb != oldConfigSwapMemorySizeMb ||
                           updateParams.AccessPoints != null;
         var serverCache = await serverConfigureService.SaveChangesAndInvalidateServer(projectId, server, reconfigure);
 

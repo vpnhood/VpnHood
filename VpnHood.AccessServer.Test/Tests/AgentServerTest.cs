@@ -297,7 +297,6 @@ public class AgentServerTest
         Assert.AreEqual(serverInfo.MachineName, server.MachineName);
         Assert.AreEqual(serverInfo.TotalMemory, server.TotalMemory);
         Assert.AreEqual(serverInfo.LogicalCoreCount, server.LogicalCoreCount);
-        Assert.AreEqual(serverInfo.TotalSwapMemory / VhUtil.Megabytes, server.TotalSwapMemoryMb);
 
         Assert.IsTrue(dateTime <= server.ConfigureTime);
         Assert.AreEqual(ServerState.Configuring, server.ServerState);
@@ -335,6 +334,7 @@ public class AgentServerTest
         Assert.IsTrue(server.ServerStatus?.CreatedTime > dateTime);
         Assert.IsTrue(serverInfo.PublicIpAddresses.Contains(IPAddress.Parse(server.PublicIpV4!)));
         Assert.IsTrue(serverInfo.PublicIpAddresses.Contains(IPAddress.Parse(server.PublicIpV6!)));
+        Assert.AreEqual(serverInfo.Status.TotalSwapMemory / VhUtil.Megabytes, server.TotalSwapMemoryMb);
     }
 
     [TestMethod]

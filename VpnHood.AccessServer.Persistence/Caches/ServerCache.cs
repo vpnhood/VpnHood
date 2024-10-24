@@ -22,6 +22,7 @@ public class ServerCache
     public required ServerLocationInfo LocationInfo { get; init; }
     public required int LogicalCoreCount { get; init; }
     public required int? Power { get; init; }
+    public required int? TotalSwapMemoryMb { get; init; }
     public required AccessPointModel[] AccessPoints { get; init; }
     public required bool AllowInAutoLocation { get; init; }
     public required int? ClientFilterId { get; init; } 

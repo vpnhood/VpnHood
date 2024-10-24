@@ -59,6 +59,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     Tags = TagUtils.TagsFromString(x.Server.Tags),
                     AllowInAutoLocation = x.Server.AllowInAutoLocation,
                     LogicalCoreCount = x.Server.LogicalCoreCount ?? 1,
+                    TotalSwapMemoryMb = x.Server.TotalSwapMemoryMb,
                     Power = x.Server.Power
                 },
                 Farm = new ServerFarmCache {
@@ -177,6 +178,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 Tags = TagUtils.TagsFromString(x.Tags),
                 AllowInAutoLocation = x.AllowInAutoLocation,
                 LogicalCoreCount = x.LogicalCoreCount ?? 1,
+                TotalSwapMemoryMb = x.TotalSwapMemoryMb,
                 Power = x.Power,
                 ClientFilterId = x.ClientFilterId
             })

@@ -13,6 +13,8 @@ public class AccessTest
     public async Task Foo()
     {
         await Task.Delay(0);
+        int? a = null;
+        Console.WriteLine(a / 100);
 
     }
 

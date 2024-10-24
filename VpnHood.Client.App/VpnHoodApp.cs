@@ -574,13 +574,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             throw new Exception("Last client has not been disposed properly.");
 
         // Create Client with a new PacketCapture
+        VhLogger.Instance.LogInformation("Creating PacketCapture ...");
         var packetCapture = await CreatePacketCapture().VhConfigureAwait();
         VpnHoodClient? client = null;
 
         try {
+            VhLogger.Instance.LogTrace("Creating VpnHood Client engine ...");
             client = new VpnHoodClient(packetCapture, Features.ClientId, token, clientOptions);
             client.StateChanged += Client_StateChanged;
             _client = client;
+
+            VhLogger.Instance.LogTrace("Engine is connecting... HasDiagnoseStarted: {HasDiagnoseStarted}, AutoDiagnose: {AutoDiagnose}",
+                _hasDiagnoseStarted, _autoDiagnose);
 
             if (_hasDiagnoseStarted)
                 await Diagnoser.Diagnose(client, cancellationToken).VhConfigureAwait();

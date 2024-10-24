@@ -2,6 +2,7 @@
 ### Client
 * Feature: Update server token from multiple URLs
 * Improve: Improve initialization speed to exclude my country
+* Improve: Diagnostic wrongly reports your internet may not be stable
 * Update: Add token tags
 * Update: Add server tags
 * Update: Generate anonymous client Id from device Id

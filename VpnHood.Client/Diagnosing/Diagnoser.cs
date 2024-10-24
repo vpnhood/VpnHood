@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.Diagnosing;
@@ -10,13 +11,18 @@ public class Diagnoser
 {
     private bool _isWorking;
 
-    public IPAddress[] TestPingIpAddresses { get; set; } = [IPAddress.Parse("8.8.8.8"), IPAddress.Parse("1.1.1.1")];
+    public IPAddress[] TestPingIpAddresses { get; set; } = [
+        IPAddressUtil.KidsSafeCloudflareDnsServers.First(x=>x.IsV4()),
+        IPAddressUtil.GoogleDnsServers.First(x=>x.IsV4())
+    ];
 
-    public IPEndPoint[] TestNsIpEndPoints { get; set; } =
-        [new(IPAddress.Parse("8.8.8.8"), 53), new(IPAddress.Parse("1.1.1.1"), 53)];
+    public IPEndPoint[] TestNsIpEndPoints { get; set; } = [
+        new(IPAddressUtil.KidsSafeCloudflareDnsServers.First(x=>x.IsV4()), 53),
+        new(IPAddressUtil.GoogleDnsServers.First(x=>x.IsV4()), 53)
+    ];
 
     public Uri[] TestHttpUris { get; set; } =
-        [new("https://www.google.com"), new("https://www.quad9.net/"), new("https://www.microsoft.com/")];
+        [new("https://weather.com/"), new("https://www.who.int/"), new("https://www.microsoft.com/")];
 
     public int HttpTimeout { get; set; } = 10 * 1000;
     public int NsTimeout { get; set; } = 10 * 1000;
@@ -92,12 +98,13 @@ public class Diagnoser
     {
         var taskPing = checkPing
             ? DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout)
-            : Task.FromResult((Exception?)null);
+            : Task.FromResult<Exception?>(null);
 
         var taskUdp = checkUdp
             ? DiagnoseUtil.CheckUdp(TestNsIpEndPoints, NsTimeout)
-            : Task.FromResult((Exception?)null);
+            : Task.FromResult<Exception?>(null);
 
+        using var httpClient = new HttpClient();
         var taskHttps = DiagnoseUtil.CheckHttps(TestHttpUris, HttpTimeout);
 
         await Task.WhenAll(taskPing, taskUdp, taskHttps).VhConfigureAwait();

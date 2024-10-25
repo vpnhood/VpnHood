@@ -41,12 +41,16 @@ public class ServerTest : TestBase
         accessManager.ServerConfig.AddListenerIpsToNetwork = "*";
 
         var netConfigurationProvider = new TestNetConfigurationProvider();
-        await using var server = await TestHelper.CreateServer(accessManager, netConfigurationProvider: netConfigurationProvider);
+        await using var server =
+            await TestHelper.CreateServer(accessManager, netConfigurationProvider: netConfigurationProvider);
 
-        CollectionAssert.AreEqual(await netConfigurationProvider.GetInterfaceNames(), accessManager.LastServerInfo?.NetworkInterfaceNames);
+        CollectionAssert.AreEqual(await netConfigurationProvider.GetInterfaceNames(),
+            accessManager.LastServerInfo?.NetworkInterfaceNames);
         Assert.AreEqual(1, netConfigurationProvider.IpAddresses.Count);
-        Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Key, accessManager.ServerConfig.TcpEndPointsValue.First().Address);
-        Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Value, (await netConfigurationProvider.GetInterfaceNames()).First());
+        Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Key,
+            accessManager.ServerConfig.TcpEndPointsValue.First().Address);
+        Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Value,
+            (await netConfigurationProvider.GetInterfaceNames()).First());
 
         await server.DisposeAsync();
         Assert.AreEqual(0, netConfigurationProvider.IpAddresses.Count);
@@ -131,7 +135,7 @@ public class ServerTest : TestBase
         serverConfig.SessionOptions.MaxDatagramChannelCount = 2074;
         serverConfig.SessionOptions.SyncCacheSize = 2075;
         serverConfig.SessionOptions.TcpBufferSize = 2076;
-        serverConfig.SessionOptions.UdpReceiveBufferSize = 4001 ;
+        serverConfig.SessionOptions.UdpReceiveBufferSize = 4001;
         serverConfig.SessionOptions.UdpSendBufferSize = 4002;
         serverConfig.ServerSecret = VhUtil.GenerateKey();
 
@@ -160,8 +164,10 @@ public class ServerTest : TestBase
             server.SessionManager.SessionOptions.MaxDatagramChannelCount);
         Assert.AreEqual(serverConfig.SessionOptions.SyncCacheSize, server.SessionManager.SessionOptions.SyncCacheSize);
         Assert.AreEqual(serverConfig.SessionOptions.TcpBufferSize, server.SessionManager.SessionOptions.TcpBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpSendBufferSize, server.SessionManager.SessionOptions.UdpSendBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpReceiveBufferSize, server.SessionManager.SessionOptions.UdpReceiveBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpSendBufferSize,
+            server.SessionManager.SessionOptions.UdpSendBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpReceiveBufferSize,
+            server.SessionManager.SessionOptions.UdpReceiveBufferSize);
     }
 
     [TestMethod]
@@ -367,5 +373,50 @@ public class ServerTest : TestBase
             () => accessManager.LastServerStatus!.ConfigCode);
 
         await Assert.ThrowsExceptionAsync<HttpRequestException>(() => httpClient.GetAsync(url));
+    }
+
+    [TestMethod]
+    public async Task SwapMemory_Status()
+    {
+        // create server
+        var swapMemoryProvider = new TestSwapMemoryProvider {
+                AppSize = 100 * VhUtil.Megabytes,
+                AppUsed = 10 * VhUtil.Megabytes,
+                OtherSize = 200 * VhUtil.Megabytes,
+                OtherUsed = 20 * VhUtil.Megabytes
+        };
+
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager,
+            swapMemoryProvider: swapMemoryProvider);
+
+        // check initial status. AppSize should be 0
+        swapMemoryProvider.AppUsed = 0;
+        await server.RunJob();
+        var serverStatus = accessManager.LastServerStatus;
+        Assert.AreEqual(swapMemoryProvider.OtherSize, swapMemoryProvider.Info.TotalSize);
+        Assert.AreEqual(0, swapMemoryProvider.Info.AppSize);
+        Assert.AreEqual(swapMemoryProvider.OtherSize - swapMemoryProvider.OtherUsed, serverStatus?.AvailableSwapMemory);
+        Assert.AreEqual(swapMemoryProvider.Info.TotalSize, serverStatus?.TotalSwapMemory);
+        Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed, serverStatus?.AvailableSwapMemory);
+
+        // check status after setting app swap memory
+        swapMemoryProvider.AppSize = 50 * VhUtil.Megabytes;
+        swapMemoryProvider.AppUsed = 10 * VhUtil.Megabytes;
+
+        await server.RunJob();
+        serverStatus = accessManager.LastServerStatus;
+        Assert.AreEqual(swapMemoryProvider.Info.TotalSize, accessManager.LastServerStatus?.TotalSwapMemory);
+        Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed, serverStatus?.AvailableSwapMemory);
+
+        // configure by access manager
+        accessManager.ServerConfig.SwapMemorySizeMb = 2500;
+        accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        swapMemoryProvider.AppUsed = 100 * VhUtil.Megabytes;
+        await server.RunJob();
+        serverStatus = accessManager.LastServerStatus;
+        Assert.AreEqual(swapMemoryProvider.Info.TotalSize, 2500 * VhUtil.Megabytes);
+        Assert.AreEqual(swapMemoryProvider.Info.TotalSize, accessManager.LastServerStatus?.TotalSwapMemory);
+        Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed, serverStatus?.AvailableSwapMemory);
     }
 }

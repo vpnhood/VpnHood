@@ -32,7 +32,7 @@ public static class ServerConverter
             ServerState = serverCache?.ServerState ?? serverState,
             ServerName = model.ServerName,
             TotalMemory = model.TotalMemory,
-            TotalSwapMemoryMb = model.TotalSwapMemoryMb,
+            TotalSwapMemoryMb = serverCache?.TotalSwapMemoryMb ?? model.TotalSwapMemoryMb,
             LogicalCoreCount = model.LogicalCoreCount,
             Version = model.Version,
             AutoConfigure = model.AutoConfigure,

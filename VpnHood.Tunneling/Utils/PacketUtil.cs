@@ -409,4 +409,44 @@ public static class PacketUtil
             new IPEndPoint(ipPacket.SourceAddress, 0),
             new IPEndPoint(ipPacket.DestinationAddress, 0));
     }
+
+    public static bool IsQuicHandshake(UdpPacket udpPacket)
+    {
+        var payload = udpPacket.PayloadData;
+        // Ensure the packet has enough data to analyze for QUIC
+        if (payload.Length < 6)
+            return false;
+
+        // Check the first byte to verify it’s a long header (0xC0 or above)
+        var firstByte = payload[0];
+        if ((firstByte & 0xC0) != 0xC0)
+            return false;
+
+        // Check if it's an Initial packet (0b1100xxxx)
+        if ((firstByte & 0x30) != 0x00)
+            return false;
+
+        // Optionally check Token Length and Length fields in Initial packets for further verification
+        const int tokenLengthIndex = 6; // Assuming fixed-size header, adjust as needed based on your data
+        int tokenLength = payload[tokenLengthIndex];
+
+        // Extract the length field for more validation
+        var lengthFieldIndex = tokenLengthIndex + tokenLength + 1;
+        if (lengthFieldIndex >= payload.Length)
+            return false;
+
+        // Check QUIC version (bytes 1-4)
+        var version = BitConverter.ToInt32(payload, 1);
+        
+        // Optional: further checks or more version conditions
+        return version == 0x00000001; // Most common initial version
+    }
+
+
+    public static bool IsQuicPort(UdpPacket udpPacket)
+    {
+        // Check if the packet is targeting port 443 (common for QUIC)
+        return udpPacket.DestinationPort is 80 or 443;
+    }
+
 }

@@ -133,7 +133,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions {
-            DropUdpPackets = true,
+            DropUdp = true,
             MaxDatagramChannelCount = 6
         });
 

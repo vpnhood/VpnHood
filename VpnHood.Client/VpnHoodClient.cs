@@ -87,7 +87,8 @@ public class VpnHoodClient : IAsyncDisposable
     public string UserAgent { get; }
     public IPEndPoint? HostTcpEndPoint => _connectorService?.EndPointInfo.TcpEndPoint;
     public IPEndPoint? HostUdpEndPoint { get; private set; }
-    public bool DropUdpPackets { get; set; }
+    public bool DropUdp { get; set; }
+    public bool DropQuic { get; set; }
     public ClientStat Stat { get; }
 
     public byte[] SessionKey =>
@@ -140,7 +141,8 @@ public class VpnHoodClient : IAsyncDisposable
         SessionTimeout = options.SessionTimeout;
         IncludeLocalNetwork = options.IncludeLocalNetwork;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
-        DropUdpPackets = options.DropUdpPackets;
+        DropUdp = options.DropUdp;
+        DropQuic = options.DropQuic;
         DomainFilterService = new DomainFilterService(options.DomainFilter, options.ForceLogSni);
 
         // NAT
@@ -250,10 +252,11 @@ public class VpnHoodClient : IAsyncDisposable
         _serverFinder.IncludeIpV6 = IsIpV6SupportedByClient;
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
         VhLogger.Instance.LogInformation(
-            "UseUdpChannel: {UseUdpChannel}, DropUdpPackets: {DropUdpPackets}, IncludeLocalNetwork: {IncludeLocalNetwork}, " +
-            "MinWorkerThreads: {WorkerThreads}, CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}",
-            UseUdpChannel, DropUdpPackets, IncludeLocalNetwork, workerThreads, completionPortThreads,
-            IsIpV6SupportedByClient);
+            "UseUdpChannel: {UseUdpChannel}, DropUdp: {DropUdp}, DropQuic: {DropQuic}, " +
+            "IncludeLocalNetwork: {IncludeLocalNetwork}, MinWorkerThreads: {WorkerThreads}, " +
+            "CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}",
+            UseUdpChannel, DropUdp, DropQuic, IncludeLocalNetwork, workerThreads,
+            completionPortThreads, IsIpV6SupportedByClient);
 
         // report version
         VhLogger.Instance.LogInformation(
@@ -399,46 +402,52 @@ public class VpnHoodClient : IAsyncDisposable
                         else if (isIpV6 && !IsIpV6SupportedByServer)
                             droppedPackets.Add(ipPacket);
 
-                        // Check IPv6 control message such as Solicitations
-                        else if (IsIcmpControlMessage(ipPacket))
-                            droppedPackets.Add(ipPacket);
-
                         else if (ipPacket.Protocol == ProtocolType.Tcp)
                             tcpHostPackets.Add(ipPacket);
 
-                        else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6)
-                            tunnelPackets.Add(ipPacket);
+                        else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6) {
+                            if (IsIcmpControlMessage(ipPacket))
+                                droppedPackets.Add(ipPacket);
+                            else
+                                tunnelPackets.Add(ipPacket);
+                        }
 
-                        else if (ipPacket.Protocol is ProtocolType.Udp && !DropUdpPackets)
+                        else if (ipPacket.Protocol is ProtocolType.Udp && ShouldTunnelUdpPacket(udpPacket!))
                             tunnelPackets.Add(ipPacket);
 
                         else
                             droppedPackets.Add(ipPacket);
                     }
                     else {
-                        // Drop IPv6 if not support
-                        if (isIpV6 && !IsIpV6SupportedByServer)
-                            droppedPackets.Add(ipPacket);
-
-                        // Check IPv6 control message such as Solicitations
-                        else if (IsIcmpControlMessage(ipPacket))
-                            droppedPackets.Add(ipPacket);
-
-                        else if (ipPacket.Protocol == ProtocolType.Tcp)
+                        // tcp already check for InInRange and IpV6 and Proxy
+                        if (ipPacket.Protocol == ProtocolType.Tcp)
                             tcpHostPackets.Add(ipPacket);
 
-                        // ICMP packet must go through tunnel because PingProxy does not support protect socket
-                        else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6)
-                            tunnelPackets.Add(ipPacket);
-
-                        // Udp
-                        else if (ipPacket.Protocol == ProtocolType.Udp && !DropUdpPackets) {
-                            if (IsInIpRange(ipPacket.DestinationAddress)) //todo add InInProcess
-                                tunnelPackets.Add(ipPacket);
-                            else
+                        // Drop IPv6 if not support
+                        else if (isIpV6 && !IsIpV6SupportedByServer) {
+                            if (!IsInIpRange(ipPacket.DestinationAddress))
                                 proxyPackets.Add(ipPacket);
+                            else
+                                droppedPackets.Add(ipPacket);
                         }
 
+                        // ICMP packet must go through tunnel because PingProxy does not support protect socket
+                        else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6) {
+                            if (IsIcmpControlMessage(ipPacket))
+                                droppedPackets.Add(ipPacket); // ICMP can not be proxied so we don't need to check InInRange
+                            else
+                                tunnelPackets.Add(ipPacket);
+                        }
+
+                        // Udp
+                        else if (ipPacket.Protocol == ProtocolType.Udp) { //todo add InInProcess
+                            if (!IsInIpRange(ipPacket.DestinationAddress))
+                                proxyPackets.Add(ipPacket);
+                            else if (!ShouldTunnelUdpPacket(udpPacket!))
+                                droppedPackets.Add(ipPacket);
+                            else
+                                tunnelPackets.Add(ipPacket);
+                        }
                         else
                             droppedPackets.Add(ipPacket);
                     }
@@ -455,10 +464,16 @@ public class VpnHoodClient : IAsyncDisposable
                 // send packets
                 if (tunnelPackets.Count > 0 && ShouldManageDatagramChannels)
                     _ = ManageDatagramChannels(_cancellationTokenSource.Token);
-                if (tunnelPackets.Count > 0) Tunnel.SendPackets(tunnelPackets, _cancellationTokenSource.Token);
-                if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets);
+
+                if (tunnelPackets.Count > 0)
+                    Tunnel.SendPackets(tunnelPackets, _cancellationTokenSource.Token);
+
+                if (passthruPackets.Count > 0)
+                    _packetCapture.SendPacketToOutbound(passthruPackets);
+
                 if (proxyPackets.Count > 0)
                     _proxyManager.SendPackets(proxyPackets).Wait(_cancellationTokenSource.Token);
+
                 if (tcpHostPackets.Count > 0)
                     _packetCapture.SendPacketToInbound(_clientHost.ProcessOutgoingPacket(tcpHostPackets));
             }
@@ -472,32 +487,33 @@ public class VpnHoodClient : IAsyncDisposable
         }
     }
 
+    private bool ShouldTunnelUdpPacket(UdpPacket udpPacket)
+    {
+        if (DropUdp)
+            return false;
+
+        if (DropQuic && PacketUtil.IsQuicPort(udpPacket))
+            return false;
+
+        return true;
+    }
+
     private static bool IsIcmpControlMessage(IPPacket ipPacket)
     {
-        // IPv4
-        if (ipPacket is { Version: IPVersion.IPv4, Protocol: ProtocolType.Icmp }) {
-            var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
-            return icmpPacket.TypeCode != IcmpV4TypeCode.EchoRequest; // drop all other Icmp but echo
-        }
-
-        // IPv6
-        if (ipPacket is { Version: IPVersion.IPv6, Protocol: ProtocolType.IcmpV6 }) {
-            var icmpPacket = ipPacket.Extract<IcmpV6Packet>();
-            if (icmpPacket.Type == IcmpV6Type.EchoRequest)
+        switch (ipPacket) {
+            // IPv4
+            case { Version: IPVersion.IPv4, Protocol: ProtocolType.Icmp }: {
+                    var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
+                    return icmpPacket.TypeCode != IcmpV4TypeCode.EchoRequest; // drop all other Icmp but echo
+                }
+            // IPv6
+            case { Version: IPVersion.IPv6, Protocol: ProtocolType.IcmpV6 }: {
+                    var icmpPacket = ipPacket.Extract<IcmpV6Packet>();
+                    return icmpPacket.Type != IcmpV6Type.EchoRequest;
+                }
+            default:
                 return false;
-
-            if (icmpPacket.Type == IcmpV6Type.NeighborSolicitation) {
-                //_packetCapture.SendPacketToInbound(PacketUtil.CreateIcmpV6NeighborAdvertisement(ipPacket));
-            }
-
-            else if (icmpPacket.Type == IcmpV6Type.RouterSolicitation) {
-                //_packetCapture.SendPacketToInbound(PacketUtil.CreateIcmpV6RouterAdvertisement(ipPacket));
-            }
-
-            return true; // drop all other Icmp but echo
         }
-
-        return false;
     }
 
     public bool IsInIpRange(IPAddress ipAddress)
@@ -734,7 +750,7 @@ public class VpnHoodClient : IAsyncDisposable
                     .ToArray())) // make sure there is at least one DNS server
                 throw new Exception("Could not specify any DNS server. The server is not configured properly.");
 
-            VhLogger.Instance.LogInformation("DnsServers: {DnsServers}", 
+            VhLogger.Instance.LogInformation("DnsServers: {DnsServers}",
                 string.Join(", ", DnsServers.Select(x => x.ToString())));
 
             // report Suppressed

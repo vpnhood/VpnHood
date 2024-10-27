@@ -207,8 +207,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var disconnectRequired = false;
             if (client != null) {
                 client.UseUdpChannel = UserSettings.UseUdpChannel;
-                client.DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true ||
-                                        UserSettings.DropUdpPackets;
+                client.DropUdp = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdp;
+                client.DropQuic = UserSettings.DebugData1?.Contains("/drop-quic") == true || UserSettings.DropQuic;
 
                 // check is disconnect required
                 disconnectRequired =
@@ -278,6 +278,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public AppState State {
         get {
+            var currentProfileItem = CurrentClientProfileItem;
+
+
             var client = _client;
             var connectionState = ConnectionState;
             var appState = new AppState {
@@ -290,7 +293,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CanDisconnect = !_isDisconnecting && (connectionState
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
-                ClientProfile = CurrentClientProfileItem?.BaseInfo,
+                ClientProfile = currentProfileItem?.BaseInfo,
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
                 LastError = _appPersistState.LastError,
                 HasDiagnoseStarted = _hasDiagnoseStarted,
@@ -315,8 +318,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     : null,
                 ServerLocationInfo = client?.Stat.ServerLocationInfo,
                 ClientServerLocationInfo = UserSettings.ServerLocation is null
-                    ? CurrentClientProfileItem?.ClientProfileInfo.ServerLocationInfos.FirstOrDefault(x => x.IsDefault)
-                    : CurrentClientProfileItem?.ClientProfileInfo.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation)
+                    ? currentProfileItem?.ClientProfileInfo.ServerLocationInfos.FirstOrDefault(x => x.IsDefault)
+                    : currentProfileItem?.ClientProfileInfo.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation)
             };
 
             return appState;
@@ -555,7 +558,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
             ServerQueryTimeout = _serverQueryTimeout,
-            DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets,
+            DropUdp = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdp,
+            DropQuic = UserSettings.DebugData1?.Contains("/drop-quic") == true || UserSettings.DropQuic,
             ServerLocation = ServerLocationInfo.IsAuto(serverLocation) ? null : serverLocation,
             Plan = plan,
             UseUdpChannel = UserSettings.UseUdpChannel,
@@ -945,7 +949,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
         }
 
-        // update current profile if removed
+        // update current profile if the current profile is not exists
         if (ClientProfileService.FindById(UserSettings.ClientProfileId ?? Guid.Empty) == null) {
             var clientProfiles = ClientProfileService.List();
             UserSettings.ClientProfileId = clientProfiles.Length == 1 ? clientProfiles.First().ClientProfileId : null;

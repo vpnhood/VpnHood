@@ -13,8 +13,11 @@ namespace VpnHood.Common.Utils;
 
 public static class VhUtil
 {
-    public const long Megabytes = 1024 * 1024; // 1 TB
-
+    public const long Megabytes = 1L << 20; // 1 MB
+    public const long Gigabytes = 1L << 30; // 1 GB
+    public const long Terabytes = 1L << 40; // 1 TB
+    public const long Petabytes = 1L << 50; // 1 PB
+    
     public static bool IsConnectionRefusedException(Exception ex)
     {
         return

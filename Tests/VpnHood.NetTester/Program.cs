@@ -13,7 +13,7 @@ internal class Program
     {
         if (args.Length == 0 || args.Any(x => x is "/?" or "-?" or "--help")) {
             Console.WriteLine("Usage:");
-            Console.WriteLine("nettester /ep 1.2.3.4:44  /server /client /tcp 33700 /http 8080 /up 60 /down 60");
+            Console.WriteLine("nettester /ep 1.2.3.4:44  /server /client /tcp 33700 /http 8080 /https 443 /quic 443 /up 60 /down 60");
             Console.WriteLine("nettester stop");
             return;
         }

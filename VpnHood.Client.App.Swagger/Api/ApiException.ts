@@ -1,31 +1,30 @@
 export class ApiException extends Error {
     statusCode: number;
-    response?: string;
-    exceptionTypeName?: string;
-    exceptionTypeFullName?: string;
-    headers: any;
-    data: any = {};
+    response: string | null;
+    exceptionTypeName: string | null = null;
+    exceptionTypeFullName: string | null = null;
+    headers: unknown;
+    data: { [key: string]: unknown } = {};
 
     constructor(
         message: string,
         statusCode: number,
-        response?: any,
-        headers?: any,
+        response?: unknown,
+        headers?: unknown,
         innerException?: Error | null
     ) {
         const apiError = ApiException.getApiError(response);
 
-        // Let have respone as string to show in toString
-        if (!(response instanceof String || typeof response === "string"))
-            response = JSON.stringify(response); 
+        // Let have response as string to show in toString
+        const responseStr: string | null = response instanceof String || typeof response === 'string'
+            ? response.toString() : JSON.stringify(response);
 
         // Call super with build message
-        super(ApiException.buildMessage(apiError, message, statusCode, response));
-        Object.setPrototypeOf(this, ApiException.prototype);
+        super(ApiException.buildMessage(apiError, message, statusCode, responseStr));
 
         // Set properties
         this.statusCode = statusCode;
-        this.response = response;
+        this.response = responseStr;
         this.headers = headers;
 
         // Try copy data from ApiError
@@ -43,20 +42,20 @@ export class ApiException extends Error {
         }
     }
 
-    // Try to convert an ApiError to an ApiException. it usually come from unknown type
-    public static fromApiError(apiError: any): ApiException {
+    // Try to convert an ApiError to an ApiException. it usually comes from unknown type
+    public static fromApiError(apiError: unknown): ApiException {
         if (apiError)
-            throw new Error("apiError can not be null!");
+            throw new Error('apiError can not be null!');
 
-        var apiErrorObj = this.getApiError(apiError);
-        return new ApiException(apiErrorObj?.message || "Unknown Error!", 500, apiError, null, null);
+        const apiErrorObj = this.getApiError(apiError);
+        return new ApiException(apiErrorObj?.message || 'Unknown Error!', 500, apiError, null, null);
     }
 
     private static buildMessage(
-        apiError: IApiError | null,
+        apiError: IApiErrorCamel | null,
         message: string,
         statusCode: number,
-        response?: string
+        response: string | null
     ): string {
         if (apiError)
             return apiError.message || '';
@@ -68,12 +67,12 @@ export class ApiException extends Error {
         return `HTTP Response:\n\n${this.response}\n\n${super.toString()}`;
     }
 
-    private static getApiError(apiError: any): IApiError | null {
+    private static getApiError(apiError: unknown): IApiErrorCamel | null {
         if (!apiError)
             return null;
 
         // Check if it's a string and try to parse it
-        if (typeof apiError === "string") {
+        if (typeof apiError === 'string') {
             try {
                 apiError = JSON.parse(apiError);
             } catch {
@@ -82,25 +81,25 @@ export class ApiException extends Error {
         }
 
         // Check if it's a camelCase object by looking for typeName
-        if (apiError.typeName) {
-            const newApiError: IApiError = {
-                data: apiError.data || {},
-                typeName: apiError.typeName || null,
-                typeFullName: apiError.typeFullName || null,
-                message: apiError.message || null
+        const apiErrorCamel: IApiErrorCamel = apiError as IApiErrorCamel;
+        if (apiErrorCamel.typeName) {
+            return {
+                data: apiErrorCamel.data || {},
+                typeName: apiErrorCamel.typeName || null,
+                typeFullName: apiErrorCamel.typeFullName || null,
+                message: apiErrorCamel.message || null
             };
-            return newApiError;
         }
 
         // Check if it's a PascalCase object by looking for TypeName
-        if (apiError.TypeName) {
-            const newApiError: IApiError = {
-                data: apiError.Data || {},
-                typeName: apiError.TypeName || null,
-                typeFullName: apiError.TypeFullName || null,
-                message: apiError.Message || null
+        const apiErrorPascal: IApiErrorPascal = apiError as IApiErrorPascal;
+        if (apiErrorPascal.TypeName) {
+            return {
+                data: apiErrorPascal.Data || {},
+                typeName: apiErrorPascal.TypeName || null,
+                typeFullName: apiErrorPascal.TypeFullName || null,
+                message: apiErrorPascal.Message || null
             };
-            return newApiError;
         }
 
         // Return null if not a valid PascalCase object
@@ -108,9 +107,15 @@ export class ApiException extends Error {
     }
 }
 
-interface IApiError {
-    data: { [key: string]: string | null };
-    typeName?: string;
-    typeFullName?: string;
-    message?: string;
+interface IApiErrorCamel {
+    data: { [key: string]: unknown };
+    typeName: string | null;
+    typeFullName: string | null;
+    message: string | null;
+}
+interface IApiErrorPascal {
+    Data: { [key: string]: unknown };
+    TypeName: string | null;
+    TypeFullName: string | null;
+    Message: string | null;
 }

@@ -7,6 +7,7 @@ public class ClientProfileBaseInfo(ClientProfile clientProfile)
     public Guid ClientProfileId { get; private set; } = clientProfile.ClientProfileId;
     public string ClientProfileName { get; private set; } = GetTitle(clientProfile);
     public string? SupportId { get; private set; } = clientProfile.Token.SupportId;
+    public string? CustomData { get; private set; } = clientProfile.CustomData;
 
     private static string GetTitle(ClientProfile clientProfile)
     {

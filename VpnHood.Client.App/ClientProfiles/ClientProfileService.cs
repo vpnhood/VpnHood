@@ -101,6 +101,8 @@ public class ClientProfileService
         if (updateParams.IsFavorite != null)
             item.ClientProfile.IsFavorite = updateParams.IsFavorite.Value;
 
+        if (updateParams.CustomData != null)
+            item.ClientProfile.CustomData = updateParams.CustomData.Value;
 
         Save();
         return item;

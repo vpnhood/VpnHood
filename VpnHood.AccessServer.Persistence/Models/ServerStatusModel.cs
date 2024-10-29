@@ -9,7 +9,7 @@ public class ServerStatusBaseModel
     public required int TcpConnectionCount { get; set; }
     public required int UdpConnectionCount { get; set; }
     public required long? AvailableMemory { get; set; }
-    public required long? AvailableSwapMemoryMb { get; set; }
+    public required int? AvailableSwapMemoryMb { get; set; }
     public required byte? CpuUsage { get; set; }
     public required int ThreadCount { get; set; }
     public required long TunnelSendSpeed { get; set; }

@@ -402,7 +402,8 @@ public class AgentService(
             IsLast = true,
             CreatedTime = DateTime.UtcNow,
             AvailableMemory = serverStatus.AvailableMemory,
-            AvailableSwapMemoryMb = serverStatus.AvailableSwapMemory / VhUtil.Megabytes,
+            AvailableSwapMemoryMb = serverStatus.AvailableSwapMemory != null 
+                ? (int)(serverStatus.AvailableSwapMemory.Value / VhUtil.Megabytes) : null,
             CpuUsage = (byte?)serverStatus.CpuUsage,
             TcpConnectionCount = serverStatus.TcpConnectionCount,
             UdpConnectionCount = serverStatus.UdpConnectionCount,

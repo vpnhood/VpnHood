@@ -31,7 +31,7 @@ public class ServerTest
     public async Task List()
     {
         using var testApp = await TestApp.Create();
-        var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
+        using var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
         var server1 = await farm.AddNewServer();
         await farm.AddNewServer();
 
@@ -45,7 +45,7 @@ public class ServerTest
     public async Task Crud()
     {
         using var testApp = await TestApp.Create();
-        var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
+        using var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
 
         //-----------
         // check: Create
@@ -129,7 +129,7 @@ public class ServerTest
         //-----------
         // check: Update (serverFarmId)
         //-----------
-        var farm2 = await ServerFarmDom.Create(farm.TestApp);
+        using var farm2 = await ServerFarmDom.Create(farm.TestApp);
         serverUpdateParam = new ServerUpdateParams { ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId } };
         await serverDom.Client.UpdateAsync(testApp.ProjectId, serverDom.ServerId, serverUpdateParam);
         await serverDom.Reload();

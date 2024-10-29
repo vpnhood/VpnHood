@@ -184,7 +184,7 @@ public class AgentServerTest
         // --------
         // Check: another server with different group should have one PublicInTokenAccess
         // --------
-        var farm2 = await ServerFarmDom.Create(serverCount: 0);
+        using var farm2 = await ServerFarmDom.Create(serverCount: 0);
         serverDom = await farm2.AddNewServer();
         publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(serverDom);
         Assert.IsNotNull(publicInTokenAccessPoint);
@@ -507,8 +507,8 @@ public class AgentServerTest
     [TestMethod]
     public async Task Reconfig_by_changing_farm()
     {
-        var farm1 = await ServerFarmDom.Create();
-        var farm2 = await ServerFarmDom.Create(farm1.TestApp);
+        using var farm1 = await ServerFarmDom.Create();
+        using var farm2 = await ServerFarmDom.Create(farm1.TestApp);
 
         var oldCode = farm1.DefaultServer.ServerInfo.Status.ConfigCode;
         await farm1.DefaultServer.Client.UpdateAsync(farm1.ProjectId, farm1.DefaultServer.ServerId,
@@ -615,13 +615,13 @@ public class AgentServerTest
     {
         using var testApp = await TestApp.Create();
         var dnsName1 = $"{Guid.NewGuid()}.com";
-        var farm1 = await ServerFarmDom.Create(testApp);
+        using var farm1 = await ServerFarmDom.Create(testApp);
         await farm1.CertificateReplace(new CertificateCreateParams {
             CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
         });
 
         var dnsName2 = $"{Guid.NewGuid()}.com";
-        var farm2 = await ServerFarmDom.Create(testApp);
+        using var farm2 = await ServerFarmDom.Create(testApp);
         await farm2.CertificateReplace(new CertificateCreateParams {
             CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName2 }
         });

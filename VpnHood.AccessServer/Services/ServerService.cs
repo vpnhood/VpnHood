@@ -13,6 +13,7 @@ using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Manager.Common.Utils;
 using VpnHood.Server.Access.Managers.Http;
 using ConnectionInfo = Renci.SshNet.ConnectionInfo;
@@ -45,7 +46,7 @@ public class ServerService(
         if (string.IsNullOrWhiteSpace(serverName)) serverName = Resource.NewServerTemplate;
         if (serverName.Contains("##")) {
             var names = await vhRepo.ServerGetNames(projectId);
-            serverName = AccessServerUtil.FindUniqueName(serverName, names);
+            serverName = ManagerUtils.FindUniqueName(serverName, names);
         }
 
         // validate client filter
@@ -368,7 +369,7 @@ public class ServerService(
         sshClient.Connect();
 
         var linuxCommand = GetInstallScriptForLinux(appSettings, false);
-        var res = await AccessServerUtil.ExecuteSshCommand(sshClient, linuxCommand, loginPassword?.Trim(),
+        var res = await ManagerUtils.ExecuteSshCommand(sshClient, linuxCommand, loginPassword?.Trim(),
             TimeSpan.FromMinutes(5));
 
         var check = sshClient.RunCommand("dir /opt/VpnHoodServer");

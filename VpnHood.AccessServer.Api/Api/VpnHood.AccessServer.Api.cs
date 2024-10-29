@@ -9938,6 +9938,15 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("isPublic")]
         public bool IsPublic { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("clientPolicies")]
+        public System.Collections.Generic.ICollection<ClientPolicy>? ClientPolicies { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("clientCode")]
+        public long? ClientCode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("managerCode")]
+        public long? ManagerCode { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public bool IsEnabled { get; set; } = default!;
 
@@ -9972,6 +9981,37 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("tags")]
         [System.ComponentModel.DataAnnotations.Required]
         public System.Collections.Generic.ICollection<string> Tags { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ClientPolicy
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("countryCode")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string CountryCode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("freeLocations")]
+        public System.Collections.Generic.ICollection<string>? FreeLocations { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("autoLocationOnly")]
+        public bool AutoLocationOnly { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("normal")]
+        public int? Normal { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("premiumByTrial")]
+        public int? PremiumByTrial { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("premiumByRewardAd")]
+        public int? PremiumByRewardAd { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("premiumByPurchase")]
+        public bool PremiumByPurchase { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("premiumByCode")]
+        public bool PremiumByCode { get; set; } = default!;
 
     }
 
@@ -10102,6 +10142,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("description")]
         public string? Description { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("clientPolicies")]
+        public System.Collections.Generic.ICollection<ClientPolicy>? ClientPolicies { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
         public long MaxTraffic { get; set; } = default!;
 
@@ -10129,6 +10172,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
         public PatchOfNullableDateTime? ExpirationTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("clientPolicies")]
+        public PatchOfClientPolicyOf? ClientPolicies { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public PatchOfBoolean? IsEnabled { get; set; } = default!;
@@ -10178,6 +10224,15 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("value")]
         public System.DateTime? Value { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PatchOfClientPolicyOf
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        public System.Collections.Generic.ICollection<ClientPolicy>? Value { get; set; } = default!;
 
     }
 
@@ -11362,7 +11417,7 @@ namespace VpnHood.AccessServer.Api
         public long? AvailableMemory { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("availableSwapMemoryMb")]
-        public long? AvailableSwapMemoryMb { get; set; } = default!;
+        public int? AvailableSwapMemoryMb { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("cpuUsage")]
         public int? CpuUsage { get; set; } = default!;

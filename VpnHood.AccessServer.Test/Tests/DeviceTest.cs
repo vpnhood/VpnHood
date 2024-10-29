@@ -11,8 +11,8 @@ public class DeviceTest
     [TestMethod]
     public async Task ClientId_is_unique_per_project()
     {
-        var farm1 = await ServerFarmDom.Create();
-        var farm2 = await ServerFarmDom.Create();
+        using var farm1 = await ServerFarmDom.Create();
+        using var farm2 = await ServerFarmDom.Create();
 
         var accessTokenDom1 = await farm1.CreateAccessToken();
         var accessTokenDom2 = await farm2.CreateAccessToken();

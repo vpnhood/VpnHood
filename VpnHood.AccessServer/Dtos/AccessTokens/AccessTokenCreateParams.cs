@@ -1,4 +1,5 @@
 ﻿using VpnHood.Common.Messaging;
+using ClientPolicy = VpnHood.AccessServer.Dtos.ClientPolicies.ClientPolicy;
 
 namespace VpnHood.AccessServer.Dtos.AccessTokens;
 
@@ -13,6 +14,8 @@ public class AccessTokenCreateParams
     public bool IsPublic { get; init; }
     public AdRequirement AdRequirement { get; init; }
     public string? Description { get; init; }
+    public required ClientPolicy[]? ClientPolicies { get; init; }
+
 
     public long MaxTraffic { get; init; }
     public int Lifetime { get; init; }

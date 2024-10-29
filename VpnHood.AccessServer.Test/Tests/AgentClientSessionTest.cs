@@ -219,12 +219,12 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_Data_Unauthorized_EndPoint()
     {
-        var farm1 = await ServerFarmDom.Create();
+        using var farm1 = await ServerFarmDom.Create();
         var serverDom11 = await farm1.AddNewServer();
         var serverDom12 = await farm1.AddNewServer();
         var accessTokenDom11 = await farm1.CreateAccessToken(true);
 
-        var farm2 = await ServerFarmDom.Create(farm1.TestApp);
+        using var farm2 = await ServerFarmDom.Create(farm1.TestApp);
         var serverDom21 = await farm2.AddNewServer();
         var serverDom22 = await farm2.AddNewServer();
         var accessTokenDom21 = await farm2.CreateAccessToken(true);

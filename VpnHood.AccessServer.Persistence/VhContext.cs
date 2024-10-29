@@ -174,6 +174,9 @@ public class VhContext : DbContext
             entity.Property(e => e.AccessTokenName)
                 .HasMaxLength(50);
 
+            entity.Property(e => e.ClientPolicies)
+                .HasMaxLength(1000);
+
             entity
                 .Property(e => e.Secret)
                 .HasMaxLength(16)

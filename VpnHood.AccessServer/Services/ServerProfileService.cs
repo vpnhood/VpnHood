@@ -5,6 +5,7 @@ using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.ServerProfiles;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Utils;
 using VpnHood.Manager.Common.Utils;
 using VpnHood.Server.Access.Configurations;
@@ -29,7 +30,7 @@ public class ServerProfileService(
                 .Select(x => x.ServerProfileName)
                 .ToArrayAsync();
 
-            createParams.ServerProfileName = AccessServerUtil.FindUniqueName(createParams.ServerProfileName, names);
+            createParams.ServerProfileName = ManagerUtils.FindUniqueName(createParams.ServerProfileName, names);
         }
 
         var serverProfile = new ServerProfileModel {

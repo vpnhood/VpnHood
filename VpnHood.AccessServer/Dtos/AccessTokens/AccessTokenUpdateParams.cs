@@ -1,16 +1,16 @@
 ﻿using GrayMint.Common.Utils;
 using VpnHood.Common.Messaging;
+using VpnHood.Manager.Common.ClientPolicies;
+using ClientPolicy = VpnHood.AccessServer.Dtos.ClientPolicies.ClientPolicy;
 
 namespace VpnHood.AccessServer.Dtos.AccessTokens;
 
 public class AccessTokenUpdateParams
 {
     public Patch<string>? AccessTokenName { get; set; }
-
     public Patch<Guid>? ServerFarmId { get; set; }
-
     public Patch<DateTime?>? ExpirationTime { get; set; }
-
+    public Patch<ClientPolicy[]?>? ClientPolicies { get; set; }
     public Patch<bool>? IsEnabled { get; set; }
     public Patch<AdRequirement>? AdRequirement { get; set; }
     public Patch<string>? Description { get; set; }

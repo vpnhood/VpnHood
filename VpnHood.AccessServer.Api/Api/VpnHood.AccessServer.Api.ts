@@ -5659,6 +5659,9 @@ export class AccessToken implements IAccessToken {
     firstUsedTime?: Date | null;
     lastUsedTime?: Date | null;
     isPublic!: boolean;
+    clientPolicies?: ClientPolicy[] | null;
+    clientCode?: number | null;
+    managerCode?: number | null;
     isEnabled!: boolean;
     adRequirement!: AdRequirement;
     expirationTime?: Date | null;
@@ -5693,6 +5696,16 @@ export class AccessToken implements IAccessToken {
             this.firstUsedTime = _data["firstUsedTime"] ? new Date(_data["firstUsedTime"].toString()) : <any>null;
             this.lastUsedTime = _data["lastUsedTime"] ? new Date(_data["lastUsedTime"].toString()) : <any>null;
             this.isPublic = _data["isPublic"] !== undefined ? _data["isPublic"] : <any>null;
+            if (Array.isArray(_data["clientPolicies"])) {
+                this.clientPolicies = [] as any;
+                for (let item of _data["clientPolicies"])
+                    this.clientPolicies!.push(ClientPolicy.fromJS(item));
+            }
+            else {
+                this.clientPolicies = <any>null;
+            }
+            this.clientCode = _data["clientCode"] !== undefined ? _data["clientCode"] : <any>null;
+            this.managerCode = _data["managerCode"] !== undefined ? _data["managerCode"] : <any>null;
             this.isEnabled = _data["isEnabled"] !== undefined ? _data["isEnabled"] : <any>null;
             this.adRequirement = _data["adRequirement"] !== undefined ? _data["adRequirement"] : <any>null;
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>null;
@@ -5731,6 +5744,13 @@ export class AccessToken implements IAccessToken {
         data["firstUsedTime"] = this.firstUsedTime ? this.firstUsedTime.toISOString() : <any>null;
         data["lastUsedTime"] = this.lastUsedTime ? this.lastUsedTime.toISOString() : <any>null;
         data["isPublic"] = this.isPublic !== undefined ? this.isPublic : <any>null;
+        if (Array.isArray(this.clientPolicies)) {
+            data["clientPolicies"] = [];
+            for (let item of this.clientPolicies)
+                data["clientPolicies"].push(item.toJSON());
+        }
+        data["clientCode"] = this.clientCode !== undefined ? this.clientCode : <any>null;
+        data["managerCode"] = this.managerCode !== undefined ? this.managerCode : <any>null;
         data["isEnabled"] = this.isEnabled !== undefined ? this.isEnabled : <any>null;
         data["adRequirement"] = this.adRequirement !== undefined ? this.adRequirement : <any>null;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>null;
@@ -5759,6 +5779,9 @@ export interface IAccessToken {
     firstUsedTime?: Date | null;
     lastUsedTime?: Date | null;
     isPublic: boolean;
+    clientPolicies?: ClientPolicy[] | null;
+    clientCode?: number | null;
+    managerCode?: number | null;
     isEnabled: boolean;
     adRequirement: AdRequirement;
     expirationTime?: Date | null;
@@ -5769,6 +5792,81 @@ export interface IAccessToken {
     lifetime: number;
     maxDevice: number;
     tags: string[];
+}
+
+export class ClientPolicy implements IClientPolicy {
+    countryCode!: string;
+    freeLocations?: string[] | null;
+    autoLocationOnly!: boolean;
+    normal?: number | null;
+    premiumByTrial?: number | null;
+    premiumByRewardAd?: number | null;
+    premiumByPurchase!: boolean;
+    premiumByCode!: boolean;
+
+    constructor(data?: IClientPolicy) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
+            if (Array.isArray(_data["freeLocations"])) {
+                this.freeLocations = [] as any;
+                for (let item of _data["freeLocations"])
+                    this.freeLocations!.push(item);
+            }
+            else {
+                this.freeLocations = <any>null;
+            }
+            this.autoLocationOnly = _data["autoLocationOnly"] !== undefined ? _data["autoLocationOnly"] : <any>null;
+            this.normal = _data["normal"] !== undefined ? _data["normal"] : <any>null;
+            this.premiumByTrial = _data["premiumByTrial"] !== undefined ? _data["premiumByTrial"] : <any>null;
+            this.premiumByRewardAd = _data["premiumByRewardAd"] !== undefined ? _data["premiumByRewardAd"] : <any>null;
+            this.premiumByPurchase = _data["premiumByPurchase"] !== undefined ? _data["premiumByPurchase"] : <any>null;
+            this.premiumByCode = _data["premiumByCode"] !== undefined ? _data["premiumByCode"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): ClientPolicy {
+        data = typeof data === 'object' ? data : {};
+        let result = new ClientPolicy();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
+        if (Array.isArray(this.freeLocations)) {
+            data["freeLocations"] = [];
+            for (let item of this.freeLocations)
+                data["freeLocations"].push(item);
+        }
+        data["autoLocationOnly"] = this.autoLocationOnly !== undefined ? this.autoLocationOnly : <any>null;
+        data["normal"] = this.normal !== undefined ? this.normal : <any>null;
+        data["premiumByTrial"] = this.premiumByTrial !== undefined ? this.premiumByTrial : <any>null;
+        data["premiumByRewardAd"] = this.premiumByRewardAd !== undefined ? this.premiumByRewardAd : <any>null;
+        data["premiumByPurchase"] = this.premiumByPurchase !== undefined ? this.premiumByPurchase : <any>null;
+        data["premiumByCode"] = this.premiumByCode !== undefined ? this.premiumByCode : <any>null;
+        return data;
+    }
+}
+
+export interface IClientPolicy {
+    countryCode: string;
+    freeLocations?: string[] | null;
+    autoLocationOnly: boolean;
+    normal?: number | null;
+    premiumByTrial?: number | null;
+    premiumByRewardAd?: number | null;
+    premiumByPurchase: boolean;
+    premiumByCode: boolean;
 }
 
 export enum AdRequirement {
@@ -5965,6 +6063,7 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
     isPublic!: boolean;
     adRequirement!: AdRequirement;
     description?: string | null;
+    clientPolicies?: ClientPolicy[] | null;
     maxTraffic!: number;
     lifetime!: number;
     maxDevice!: number;
@@ -5993,6 +6092,14 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
             this.isPublic = _data["isPublic"] !== undefined ? _data["isPublic"] : <any>null;
             this.adRequirement = _data["adRequirement"] !== undefined ? _data["adRequirement"] : <any>null;
             this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
+            if (Array.isArray(_data["clientPolicies"])) {
+                this.clientPolicies = [] as any;
+                for (let item of _data["clientPolicies"])
+                    this.clientPolicies!.push(ClientPolicy.fromJS(item));
+            }
+            else {
+                this.clientPolicies = <any>null;
+            }
             this.maxTraffic = _data["maxTraffic"] !== undefined ? _data["maxTraffic"] : <any>null;
             this.lifetime = _data["lifetime"] !== undefined ? _data["lifetime"] : <any>null;
             this.maxDevice = _data["maxDevice"] !== undefined ? _data["maxDevice"] : <any>null;
@@ -6025,6 +6132,11 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
         data["isPublic"] = this.isPublic !== undefined ? this.isPublic : <any>null;
         data["adRequirement"] = this.adRequirement !== undefined ? this.adRequirement : <any>null;
         data["description"] = this.description !== undefined ? this.description : <any>null;
+        if (Array.isArray(this.clientPolicies)) {
+            data["clientPolicies"] = [];
+            for (let item of this.clientPolicies)
+                data["clientPolicies"].push(item.toJSON());
+        }
         data["maxTraffic"] = this.maxTraffic !== undefined ? this.maxTraffic : <any>null;
         data["lifetime"] = this.lifetime !== undefined ? this.lifetime : <any>null;
         data["maxDevice"] = this.maxDevice !== undefined ? this.maxDevice : <any>null;
@@ -6047,6 +6159,7 @@ export interface IAccessTokenCreateParams {
     isPublic: boolean;
     adRequirement: AdRequirement;
     description?: string | null;
+    clientPolicies?: ClientPolicy[] | null;
     maxTraffic: number;
     lifetime: number;
     maxDevice: number;
@@ -6057,6 +6170,7 @@ export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
     accessTokenName?: PatchOfString | null;
     serverFarmId?: PatchOfGuid | null;
     expirationTime?: PatchOfNullableDateTime | null;
+    clientPolicies?: PatchOfClientPolicyOf | null;
     isEnabled?: PatchOfBoolean | null;
     adRequirement?: PatchOfAdRequirement | null;
     description?: PatchOfString | null;
@@ -6079,6 +6193,7 @@ export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
             this.accessTokenName = _data["accessTokenName"] ? PatchOfString.fromJS(_data["accessTokenName"]) : <any>null;
             this.serverFarmId = _data["serverFarmId"] ? PatchOfGuid.fromJS(_data["serverFarmId"]) : <any>null;
             this.expirationTime = _data["expirationTime"] ? PatchOfNullableDateTime.fromJS(_data["expirationTime"]) : <any>null;
+            this.clientPolicies = _data["clientPolicies"] ? PatchOfClientPolicyOf.fromJS(_data["clientPolicies"]) : <any>null;
             this.isEnabled = _data["isEnabled"] ? PatchOfBoolean.fromJS(_data["isEnabled"]) : <any>null;
             this.adRequirement = _data["adRequirement"] ? PatchOfAdRequirement.fromJS(_data["adRequirement"]) : <any>null;
             this.description = _data["description"] ? PatchOfString.fromJS(_data["description"]) : <any>null;
@@ -6101,6 +6216,7 @@ export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
         data["accessTokenName"] = this.accessTokenName ? this.accessTokenName.toJSON() : <any>null;
         data["serverFarmId"] = this.serverFarmId ? this.serverFarmId.toJSON() : <any>null;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toJSON() : <any>null;
+        data["clientPolicies"] = this.clientPolicies ? this.clientPolicies.toJSON() : <any>null;
         data["isEnabled"] = this.isEnabled ? this.isEnabled.toJSON() : <any>null;
         data["adRequirement"] = this.adRequirement ? this.adRequirement.toJSON() : <any>null;
         data["description"] = this.description ? this.description.toJSON() : <any>null;
@@ -6116,6 +6232,7 @@ export interface IAccessTokenUpdateParams {
     accessTokenName?: PatchOfString | null;
     serverFarmId?: PatchOfGuid | null;
     expirationTime?: PatchOfNullableDateTime | null;
+    clientPolicies?: PatchOfClientPolicyOf | null;
     isEnabled?: PatchOfBoolean | null;
     adRequirement?: PatchOfAdRequirement | null;
     description?: PatchOfString | null;
@@ -6231,6 +6348,53 @@ export class PatchOfNullableDateTime implements IPatchOfNullableDateTime {
 
 export interface IPatchOfNullableDateTime {
     value?: Date | null;
+}
+
+export class PatchOfClientPolicyOf implements IPatchOfClientPolicyOf {
+    value?: ClientPolicy[] | null;
+
+    constructor(data?: IPatchOfClientPolicyOf) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["value"])) {
+                this.value = [] as any;
+                for (let item of _data["value"])
+                    this.value!.push(ClientPolicy.fromJS(item));
+            }
+            else {
+                this.value = <any>null;
+            }
+        }
+    }
+
+    static fromJS(data: any): PatchOfClientPolicyOf {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfClientPolicyOf();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.value)) {
+            data["value"] = [];
+            for (let item of this.value)
+                data["value"].push(item.toJSON());
+        }
+        return data;
+    }
+}
+
+export interface IPatchOfClientPolicyOf {
+    value?: ClientPolicy[] | null;
 }
 
 export class PatchOfBoolean implements IPatchOfBoolean {

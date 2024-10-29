@@ -3,10 +3,13 @@ using GrayMint.Common.Utils;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.AccessTokens;
+using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Repos;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Tokens;
+using VpnHood.Manager.Common.ClientPolicies;
 using VpnHood.Manager.Common.Utils;
 
 namespace VpnHood.AccessServer.Services;
@@ -34,6 +37,9 @@ public class AccessTokensService(
             Lifetime = createParams.Lifetime,
             Tags = TagUtils.TagsToString(createParams.Tags),
             IsPublic = createParams.IsPublic,
+            ClientPolicies = ClientPolicyUtils.ArrayToString(createParams.ClientPolicies.ToTokenPolicies()),
+            ClientCode = ManagerUtils.GenerateCode(AppOptions.ClientCodeDigitCount),
+            ManagerCode = ManagerUtils.GenerateCode(AppOptions.ManagerCodeDigitCount),
             Secret = createParams.Secret ?? GmUtil.GenerateKey(),
             SupportCode = supportCode,
             AdRequirement = createParams.AdRequirement,
@@ -70,6 +76,7 @@ public class AccessTokensService(
         if (updateParams.Description != null) accessToken.Description = updateParams.Description;
         if (updateParams.IsEnabled != null) accessToken.IsEnabled = updateParams.IsEnabled;
         if (updateParams.AdRequirement != null) accessToken.AdRequirement = updateParams.AdRequirement;
+        if (updateParams.ClientPolicies != null) accessToken.ClientPolicies = ClientPolicyUtils.ArrayToString(updateParams.ClientPolicies.Value.ToTokenPolicies());
         if (updateParams.ServerFarmId != null) {
             accessToken.ServerFarmId = updateParams.ServerFarmId;
             accessToken.ServerFarm = serverFarm;
@@ -99,7 +106,8 @@ public class AccessTokensService(
             Name = accessToken.AccessTokenName,
             Tags = TagUtils.TagsFromString(accessToken.Tags),
             SupportId = accessToken.SupportCode.ToString(),
-            IssuedAt = DateTime.UtcNow
+            IssuedAt = DateTime.UtcNow,
+            ClientPolicies = ClientPolicyUtils.ArrayFromString(accessToken.ClientPolicies),
         };
 
         return token.ToAccessKey();

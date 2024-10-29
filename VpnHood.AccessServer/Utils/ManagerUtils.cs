@@ -1,13 +1,29 @@
-﻿using System.Text;
-using Renci.SshNet;
+﻿using Renci.SshNet;
+using System.Text;
 
-namespace VpnHood.AccessServer;
+namespace VpnHood.AccessServer.Utils;
 
-public static class AccessServerUtil
+public static class ManagerUtils
 {
+    public static long GenerateCode(int numberOfDigits)
+    {
+        // validate the number of digits
+        if (numberOfDigits is < 1 or > 18) {
+            throw new ArgumentException("The number of digits must be between 1 and 18", nameof(numberOfDigits));
+        }
+
+        var min = numberOfDigits == 1 ? 0 : 1L;
+        for (var i = 1; i < numberOfDigits; i++) {
+            min *= 10;
+        }
+        
+        var max = min * 10 - 1;
+        return new Random().NextInt64(min, max);
+    }
+
     public static string FindUniqueName(string template, string?[] names)
     {
-        for (var i = 1;; i++) {
+        for (var i = 1; ; i++) {
             var name = template.Replace("##", i.ToString());
             if (names.All(x => x != name))
                 return name;

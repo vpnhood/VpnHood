@@ -5,6 +5,7 @@ using VpnHood.AccessServer.Dtos.ServerFarms;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos;
+using VpnHood.AccessServer.Utils;
 using AccessPointView = VpnHood.AccessServer.Dtos.ServerFarms.AccessPointView;
 
 namespace VpnHood.AccessServer.Services;
@@ -23,7 +24,7 @@ public class ServerFarmService(
             createParams.ServerFarmName = Resource.NewServerFarmTemplate;
         if (createParams.ServerFarmName.Contains("##")) {
             var names = await vhRepo.ServerFarmNames(projectId);
-            createParams.ServerFarmName = AccessServerUtil.FindUniqueName(createParams.ServerFarmName, names);
+            createParams.ServerFarmName = ManagerUtils.FindUniqueName(createParams.ServerFarmName, names);
         }
 
         // Set ServerProfileId
@@ -37,6 +38,7 @@ public class ServerFarmService(
             ServerFarmId = serverFarmId,
             ServerProfileId = serverProfile.ServerProfileId,
             ServerFarmName = createParams.ServerFarmName,
+            AcceptClientCode = false,
             CreatedTime = DateTime.UtcNow,
             UseHostName = false,
             Secret = GmUtil.GenerateKey(),

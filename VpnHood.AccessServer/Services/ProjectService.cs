@@ -10,6 +10,7 @@ using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Messaging;
 using VpnHood.Manager.Common;
 
@@ -56,7 +57,8 @@ public class ProjectService(
             TokenJson = null,
             TokenError = null,
             PushTokenToClient = true,
-            MaxCertificateCount = 1
+            MaxCertificateCount = 1,
+            AcceptClientCode = false,
         };
 
         // create project
@@ -86,8 +88,11 @@ public class ProjectService(
                     AccessTokenName = "Public",
                     SupportCode = 1000,
                     Secret = GmUtil.GenerateKey(),
-                    IsPublic = true,
                     AdRequirement = AdRequirement.None,
+                    IsPublic = true,
+                    ClientPolicies = null,
+                    ClientCode = null, // public token can not have client code
+                    ManagerCode = null, // public token can not have manager code
                     IsEnabled = true,
                     IsDeleted = false,
                     CreatedTime = DateTime.UtcNow,
@@ -109,8 +114,11 @@ public class ProjectService(
                     ServerFarmId = serverFarm.ServerFarmId,
                     ServerFarm = serverFarm,
                     AccessTokenName = "Private 1",
-                    IsPublic = false,
                     AdRequirement = AdRequirement.None,
+                    IsPublic = false,
+                    ClientPolicies = null,
+                    ClientCode = ManagerUtils.GenerateCode(AppOptions.ClientCodeDigitCount),
+                    ManagerCode = ManagerUtils.GenerateCode(AppOptions.ManagerCodeDigitCount),
                     SupportCode = 1001,
                     MaxDevice = 5,
                     Secret = GmUtil.GenerateKey(),

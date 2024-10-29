@@ -108,14 +108,14 @@ public class ServerProfileTest
         var serverProfileDom = await ServerProfileDom.Create(testApp);
 
         // farm1
-        var farm1 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
+        using var farm1 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
             ServerProfileId = serverProfileDom.ServerProfileId
         });
         var serverDom1 = await farm1.AddNewServer();
         var serverDom2 = await farm1.AddNewServer();
 
         // farm2
-        var farm2 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
+        using var farm2 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
             ServerProfileId = serverProfileDom.ServerProfileId
         });
         var serverDom3 = await farm2.AddNewServer();
@@ -148,7 +148,7 @@ public class ServerProfileTest
         var serverProfileDom1 = await ServerProfileDom.Create(testApp);
 
         // farm1
-        var farm1 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
+        using var farm1 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
             ServerProfileId = serverProfileDom1.ServerProfileId
         }, serverCount: 0);
         await farm1.AddNewServer();

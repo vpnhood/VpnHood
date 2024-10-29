@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Tokens;
 
 namespace VpnHood.AccessServer.Persistence.Models;
 

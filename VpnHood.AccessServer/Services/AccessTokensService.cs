@@ -8,8 +8,6 @@ using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Utils;
-using VpnHood.Common.Tokens;
-using VpnHood.Manager.Common.ClientPolicies;
 using VpnHood.Manager.Common.Utils;
 
 namespace VpnHood.AccessServer.Services;
@@ -37,7 +35,7 @@ public class AccessTokensService(
             Lifetime = createParams.Lifetime,
             Tags = TagUtils.TagsToString(createParams.Tags),
             IsPublic = createParams.IsPublic,
-            ClientPolicies = ClientPolicyUtils.ArrayToString(createParams.ClientPolicies.ToTokenPolicies()),
+            ClientPolicies = null,
             ClientCode = ManagerUtils.GenerateCode(AppOptions.ClientCodeDigitCount),
             ManagerCode = ManagerUtils.GenerateCode(AppOptions.ManagerCodeDigitCount),
             Secret = createParams.Secret ?? GmUtil.GenerateKey(),
@@ -51,6 +49,7 @@ public class AccessTokensService(
             LastUsedTime = null,
             Description = createParams.Description
         };
+        accessToken.ClientPoliciesSet(createParams.ClientPolicies.ToTokenPolicies());
 
         await vhRepo.AddAsync(accessToken);
         await vhRepo.SaveChangesAsync();
@@ -76,7 +75,7 @@ public class AccessTokensService(
         if (updateParams.Description != null) accessToken.Description = updateParams.Description;
         if (updateParams.IsEnabled != null) accessToken.IsEnabled = updateParams.IsEnabled;
         if (updateParams.AdRequirement != null) accessToken.AdRequirement = updateParams.AdRequirement;
-        if (updateParams.ClientPolicies != null) accessToken.ClientPolicies = ClientPolicyUtils.ArrayToString(updateParams.ClientPolicies.Value.ToTokenPolicies());
+        if (updateParams.ClientPolicies != null) accessToken.ClientPoliciesSet(updateParams.ClientPolicies.Value.ToTokenPolicies());
         if (updateParams.ServerFarmId != null) {
             accessToken.ServerFarmId = updateParams.ServerFarmId;
             accessToken.ServerFarm = serverFarm;
@@ -99,17 +98,7 @@ public class AccessTokensService(
         ArgumentNullException.ThrowIfNull(accessToken.ServerFarm);
 
         // create token
-        var token = new Token {
-            ServerToken = accessToken.ServerFarm.GetRequiredServerToken(),
-            Secret = accessToken.Secret,
-            TokenId = accessToken.AccessTokenId.ToString(),
-            Name = accessToken.AccessTokenName,
-            Tags = TagUtils.TagsFromString(accessToken.Tags),
-            SupportId = accessToken.SupportCode.ToString(),
-            IssuedAt = DateTime.UtcNow,
-            ClientPolicies = ClientPolicyUtils.ArrayFromString(accessToken.ClientPolicies),
-        };
-
+        var token = accessToken.ToToken(accessToken.ServerFarm.GetRequiredServerToken());
         return token.ToAccessKey();
     }
 

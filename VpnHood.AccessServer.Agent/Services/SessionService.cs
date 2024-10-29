@@ -258,14 +258,7 @@ public class SessionService(
                                 await loadBalancerService.IsAllPublicInTokenServersReady(serverFarmCache.ServerFarmId);
         var farmToken = pushTokenToClient ? FarmTokenBuilder.GetServerToken(serverFarmCache.TokenJson) : null;
         if (farmToken != null)
-            ret.AccessKey = new Token {
-                ServerToken = farmToken,
-                Secret = accessToken.Secret,
-                TokenId = accessToken.AccessTokenId.ToString(),
-                Name = accessToken.AccessTokenName,
-                SupportId = accessToken.SupportCode.ToString(),
-                IssuedAt = DateTime.UtcNow
-            }.ToAccessKey();
+            ret.AccessKey = accessToken.ToToken(farmToken).ToAccessKey();
 
         // Add session to database
         var sessionModel = await vhAgentRepo.SessionAdd(session);

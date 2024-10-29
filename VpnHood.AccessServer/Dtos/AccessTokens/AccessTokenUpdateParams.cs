@@ -1,6 +1,5 @@
 ﻿using GrayMint.Common.Utils;
 using VpnHood.Common.Messaging;
-using VpnHood.Manager.Common.ClientPolicies;
 using ClientPolicy = VpnHood.AccessServer.Dtos.ClientPolicies.ClientPolicy;
 
 namespace VpnHood.AccessServer.Dtos.AccessTokens;

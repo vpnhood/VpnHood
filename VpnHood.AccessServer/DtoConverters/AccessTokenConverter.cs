@@ -1,6 +1,5 @@
 ﻿using VpnHood.AccessServer.Dtos.AccessTokens;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.Manager.Common.ClientPolicies;
 using VpnHood.Manager.Common.Utils;
 
 namespace VpnHood.AccessServer.DtoConverters;
@@ -20,7 +19,7 @@ public static class AccessTokenConverter
             LastUsedTime = model.LastUsedTime,
             ExpirationTime = model.ExpirationTime,
             IsPublic = model.IsPublic,
-            ClientPolicies = ClientPolicyUtils.ArrayFromString(model.ClientPolicies)?.ToDtos(),
+            ClientPolicies = model.ClientPoliciesGet().ToDtos(),
             ClientCode = model.ClientCode,
             ManagerCode = model.ManagerCode,
             IsEnabled = model.IsEnabled,

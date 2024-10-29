@@ -10,7 +10,6 @@ using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common.IpLocations;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
-using VpnHood.Common.Tokens;
 using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Manager.Common.Utils;

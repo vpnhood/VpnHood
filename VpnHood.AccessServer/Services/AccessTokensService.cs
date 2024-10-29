@@ -35,7 +35,6 @@ public class AccessTokensService(
             Lifetime = createParams.Lifetime,
             Tags = TagUtils.TagsToString(createParams.Tags),
             IsPublic = createParams.IsPublic,
-            ClientPolicies = null,
             ClientCode = ManagerUtils.GenerateCode(AppOptions.ClientCodeDigitCount),
             ManagerCode = ManagerUtils.GenerateCode(AppOptions.ManagerCodeDigitCount),
             Secret = createParams.Secret ?? GmUtil.GenerateKey(),
@@ -47,7 +46,8 @@ public class AccessTokensService(
             IsDeleted = false,
             FirstUsedTime = null,
             LastUsedTime = null,
-            Description = createParams.Description
+            Description = createParams.Description,
+            ClientPolicies = null, // set after creation by helper
         };
         accessToken.ClientPoliciesSet(createParams.ClientPolicies.ToTokenPolicies());
 

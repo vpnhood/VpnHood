@@ -1,49 +1,27 @@
 ﻿using System.Net;
-using System.Net.Sockets;
-using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common.Messaging;
-using VpnHood.Common.Tokens;
+using VpnHood.Common.Net;
 using VpnHood.Manager.Common.Utils;
 using VpnHood.Server.Access.Messaging;
 
 namespace VpnHood.AccessServer.Agent.Services;
 
-public class LoadBalancerService(
-    CacheService cacheService,
-    IOptions<AgentOptions> agentOptions)
+public class ServerSelectorService(
+    CacheService cacheService)
 {
-    public Task CheckRedirect(AccessTokenModel accessToken, ServerCache currentServer, IList<string> clientTags,
-        SessionRequestEx sessionRequestEx)
+    public async Task CheckRedirect(ServerCache currentServer, ServerSelectOptions options)
     {
-        return CheckRedirect(
-            accessToken: accessToken,
-            currentServer: currentServer,
-            clientTags: clientTags,
-            addressFamily: sessionRequestEx.HostEndPoint.AddressFamily,
-            locationPath: sessionRequestEx.ServerLocation,
-            allowRedirect: sessionRequestEx.AllowRedirect);
-    }
-
-    private async Task CheckRedirect(AccessTokenModel accessToken, ServerCache currentServer, IEnumerable<string> clientTags,
-        AddressFamily addressFamily, string? locationPath, bool allowRedirect)
-    {
-        // server redirect is disabled by admin
-        if (!agentOptions.Value.AllowRedirect)
-            return;
-
         // get acceptable servers for this request
-        var servers = await GetServersForRequest(accessToken.ServerFarmId, locationPath, clientTags);
+        var servers = await GetServersForRequest(options);
 
         // accept current server (no redirect) if it is in acceptable list
-        if (!allowRedirect) {
+        if (!options.AllowRedirect) {
             if (servers.All(x => x.ServerId != currentServer.ServerId))
-                throw new SessionExceptionEx(SessionErrorCode.AccessError,
-                    "This server can not serve you at this moment.");
-
+                throw new SessionExceptionEx(SessionErrorCode.AccessError, "This server can not serve you at this moment.");
             return;
         }
 
@@ -52,6 +30,7 @@ public class LoadBalancerService(
         foreach (var server in servers) {
             var serverAccessPoints = server.AccessPoints
                 .Where(x => x.IsPublic)
+                .Where(x => x.IpAddress.IsV4() || options.IncludeIpV6)
                 .OrderByDescending(x => x.IpAddress.AddressFamily); // prefer IPv6
 
             accessPoints.AddRange(serverAccessPoints);
@@ -63,11 +42,7 @@ public class LoadBalancerService(
             .ToArray();
 
         // find the best TcpEndPoint for this request
-        var bestTcpEndPoint = tcpEndPoints.FirstOrDefault(x => // if client is PublicIpV4 the single redirect must be ipv4
-            addressFamily == AddressFamily.InterNetworkV6 ||
-            x.AddressFamily == AddressFamily.InterNetwork);
-
-        // no server found
+        var bestTcpEndPoint = tcpEndPoints.FirstOrDefault();
         if (bestTcpEndPoint == null)
             throw new SessionExceptionEx(SessionErrorCode.AccessError,
                 "Could not find any available server in the given location.");
@@ -84,28 +59,26 @@ public class LoadBalancerService(
         }
     }
 
-    private async Task<ServerCache[]> GetServersForRequest(Guid serverFarmId, string? locationPath, IEnumerable<string> clientTags)
+
+   private async Task<ServerCache[]> GetServersForRequest(ServerSelectOptions options)
     {
         // get all servers of this farm
-        var servers = await cacheService.GetServers(serverFarmId: serverFarmId);
-        if (servers.Length == 0) return [];
-
-        var project = await cacheService.GetProject(servers.First().ProjectId);
-        var requestLocation = ServerLocationInfo.Parse(locationPath ?? "*");
+        var servers = await cacheService.GetServers(serverFarmId: options.ServerFarmCache.ServerFarmId);
+        if (servers.Length == 0)
+            return [];
 
         // filter acceptable servers and sort them by load
         var farmServers = servers
             .Where(server =>
                 IsServerReadyForRedirect(server) &&
-                server.ServerFarmId == serverFarmId &&
-                (server.AllowInAutoLocation || requestLocation.CountryCode != "*") &&
-                server.LocationInfo.IsMatch(requestLocation) &&
-                IsMatchClientFilter(project, server, clientTags))
+                (server.AllowInAutoLocation || !options.RequestedLocation.IsAuto()) &&
+                server.LocationInfo.IsMatch(options.RequestedLocation) &&
+                (options.AllowedLocations == null || options.AllowedLocations.Contains(server.LocationInfo.CountryCode, StringComparer.OrdinalIgnoreCase )) &&
+                IsMatchClientFilter(options.ProjectCache, server, options.ClientTags))
             .OrderBy(CalcServerLoad)
             .ToArray();
 
         // filter servers by client filter policy
-
         return farmServers;
     }
 

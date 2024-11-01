@@ -1,26 +1,10 @@
-﻿using VpnHood.AccessServer.Agent.Services;
-using VpnHood.AccessServer.Persistence.Caches;
-using VpnHood.Manager.Common;
+﻿using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.Manager.Common.Utils;
 
 namespace VpnHood.AccessServer.Agent.Utils;
 
 public static class LocationTagBuilder
 {
-    private static IEnumerable<string> GetPlanTags(ServerCache server, ProjectCache project)
-    {
-        foreach (var planTag in BuiltInTags.PlanTags) {
-
-            // check is tag not required for the client
-            if (LoadBalancerService.IsMatchClientFilter(project, server, []))
-                continue;
-
-            // check is tag required for the client
-            if (LoadBalancerService.IsMatchClientFilter(project, server, [planTag]))
-                yield return planTag;
-        }
-    }
-
     public static string BuildServerLocationWithTags(string location, IEnumerable<ServerCache> servers, ProjectCache project)
     {
         // find all servers in the location
@@ -28,7 +12,7 @@ public static class LocationTagBuilder
             .Where(server => server.LocationInfo.ServerLocation == location)
             .Select(server => new {
                 Server = server,
-                Tags = server.Tags.Concat(GetPlanTags(server, project))
+                Tags = server.Tags
             })
             .ToArray();
 

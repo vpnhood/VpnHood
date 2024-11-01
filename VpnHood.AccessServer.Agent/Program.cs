@@ -92,7 +92,7 @@ public class Program
                 .AddScoped<SessionService>()
                 .AddScoped<CacheService>()
                 .AddScoped<AgentService>()
-                .AddScoped<LoadBalancerService>()
+                .AddScoped<ServerSelectorService>()
                 .AddScoped<FarmTokenUpdater>()
                 .AddScoped<FarmTokenRepoUploader>()
                 .AddKeyedSingleton<IIpLocationProvider, DeviceIpLocationProvider>(LocationProviderDevice)

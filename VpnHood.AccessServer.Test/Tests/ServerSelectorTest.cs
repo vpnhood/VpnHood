@@ -10,7 +10,7 @@ using VpnHood.Server.Access;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class LoadBalancerTest
+public class ServerSelectorTest
 {
     [TestMethod]
     public async Task AllowInAutoLocation_is_false()
@@ -276,7 +276,7 @@ public class LoadBalancerTest
     }
 
     [TestMethod]
-    public async Task Redirect_redirect_to_ipv4_when_server_has_no_ipv6()
+    public async Task Redirect_to_ipv4_when_server_has_no_ipv6()
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;

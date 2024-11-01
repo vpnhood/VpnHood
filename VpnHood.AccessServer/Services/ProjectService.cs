@@ -12,7 +12,7 @@ using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Messaging;
-using VpnHood.Manager.Common;
+using VpnHood.Common.Tokens;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -131,7 +131,7 @@ public class ProjectService(
                     LastUsedTime = null,
                     MaxTraffic = 0,
                     Lifetime = 0,
-                    Tags = BuiltInTags.Premium,
+                    Tags = TokenRegisteredTags.Premium,
                     Description = null
                 }
             }

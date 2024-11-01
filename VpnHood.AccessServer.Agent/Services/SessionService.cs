@@ -26,7 +26,7 @@ public class SessionService(
     VhAgentRepo vhAgentRepo,
     [FromKeyedServices(Program.LocationProviderDevice)]
     IIpLocationProvider deviceLocationProvider,
-    LoadBalancerService loadBalancerService)
+    ServerSelectorService serverSelectorService)
 {
     public class NewAccess;
 
@@ -92,29 +92,29 @@ public class SessionService(
         }
     }
 
-    private async Task<SessionResponseEx> CreateSessionInternal(ServerCache server, SessionRequestEx sessionRequestEx)
+    private async Task<SessionResponseEx> CreateSessionInternal(ServerCache serverCache, SessionRequestEx sessionRequestEx)
     {
         // validate argument
-        if (server.AccessPoints == null)
-            throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
+        if (serverCache.AccessPoints == null)
+            throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(serverCache));
 
         // extract required data
-        var projectId = server.ProjectId;
-        var serverId = server.ServerId;
+        var projectId = serverCache.ProjectId;
+        var serverId = serverCache.ServerId;
         var clientIp = sessionRequestEx.ClientIp;
         var clientInfo = sessionRequestEx.ClientInfo;
-        var project = await cacheService.GetProject(server.ProjectId);
+        var projectCache = await cacheService.GetProject(serverCache.ProjectId);
 
         // Get accessTokenModel
         var accessToken = await vhAgentRepo.AccessTokenGet(projectId, Guid.Parse(sessionRequestEx.TokenId));
-        var serverFarmCache = await cacheService.GetServerFarm(server.ServerFarmId);
+        var serverFarmCache = await cacheService.GetServerFarm(serverCache.ServerFarmId);
 
         // validate the request
         if (!ValidateTokenRequest(sessionRequestEx, accessToken.Secret))
             throw new SessionExceptionEx(SessionErrorCode.AccessError, "Could not validate the request.");
 
         // can serverModel request this endpoint?
-        if (accessToken.ServerFarmId != server.ServerFarmId)
+        if (accessToken.ServerFarmId != serverCache.ServerFarmId)
             throw new SessionExceptionEx(SessionErrorCode.AccessError, "Token does not belong to server farm.");
 
         // check is token locked
@@ -127,6 +127,10 @@ public class SessionService(
         // set accessTokenModel expiration time on first use
         if (accessToken.Lifetime != 0 && accessToken.FirstUsedTime != null &&
             accessToken.FirstUsedTime + TimeSpan.FromDays(accessToken.Lifetime) < DateTime.UtcNow)
+            throw new SessionExceptionEx(SessionErrorCode.AccessExpired,
+                "Your access has been expired! Please contact the support.");
+
+        if (accessToken.ExpirationTime < DateTime.UtcNow)
             throw new SessionExceptionEx(SessionErrorCode.AccessExpired,
                 "Your access has been expired! Please contact the support.");
 
@@ -185,7 +189,7 @@ public class SessionService(
             access = await vhAgentRepo.AccessAdd(accessToken.AccessTokenId, accessDeviceId);
             newAccessLogger.LogInformation(
                 "New Access has been created. AccessId: {access.AccessId}, ProjectName: {ProjectName}, FarmName: {FarmName}",
-                access.AccessId, project.ProjectName, serverFarmCache.ServerFarmName);
+                access.AccessId, projectCache.ProjectName, serverFarmCache.ServerFarmName);
         }
         else {
             // ReSharper disable once DisposeOnUsingVariable
@@ -200,12 +204,12 @@ public class SessionService(
             throw new SessionExceptionEx(SessionErrorCode.UnsupportedClient,
                 "This version is not supported! You need to update your app.");
 
-        // assign client tag
-        var clientTags = TagUtils.TagsFromString(accessToken.Tags).ToList();
-        clientTags.Add(TagUtils.BuildLocation(device.Country));
+        // Calc server select options
+        var policyResult = ClientPolicyCalculator.Calculate(projectCache, serverFarmCache, accessToken, sessionRequestEx,
+            clientCountry: device.Country, allowRedirect: agentOptions.Value.AllowRedirect);
 
         // Check Redirect to another server if everything was ok
-        await loadBalancerService.CheckRedirect(accessToken, server, clientTags, sessionRequestEx);
+        await serverSelectorService.CheckRedirect(serverCache, policyResult.ServerSelectOptions);
 
         // check is device already rewarded
         var isAdRewardedDevice = cacheService.Ad_IsRewardedAccess(access.AccessId) &&
@@ -242,8 +246,8 @@ public class SessionService(
         var ret = await BuildSessionResponse(session, access);
         ret.AdRequirement = accessToken.AdRequirement;
         ret.ExtraData = session.ExtraData;
-        ret.GaMeasurementId = project.GaMeasurementId;
-        ret.ServerLocation = server.LocationInfo.ServerLocation;
+        ret.GaMeasurementId = projectCache.GaMeasurementId;
+        ret.ServerLocation = serverCache.LocationInfo.ServerLocation;
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 
@@ -254,7 +258,7 @@ public class SessionService(
 
         // push token to client if add server with PublicInToken are ready
         var pushTokenToClient = serverFarmCache.PushTokenToClient &&
-                                await loadBalancerService.IsAllPublicInTokenServersReady(serverFarmCache.ServerFarmId);
+                                await serverSelectorService.IsAllPublicInTokenServersReady(serverFarmCache.ServerFarmId);
         var farmToken = pushTokenToClient ? FarmTokenBuilder.GetServerToken(serverFarmCache.TokenJson) : null;
         if (farmToken != null)
             ret.AccessKey = accessToken.ToToken(farmToken).ToAccessKey();

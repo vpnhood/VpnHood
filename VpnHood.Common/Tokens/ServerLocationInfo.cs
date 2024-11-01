@@ -63,7 +63,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
         // Parse location parts
         var parts = locationPart.Split('/');
         var ret = new ServerLocationInfo {
-            CountryCode = ParseLocationPart(parts, 0),
+            CountryCode = ParseLocationPart(parts, 0).ToUpper(),
             RegionName = ParseLocationPart(parts, 1),
             Tags = tags
         };
@@ -88,6 +88,13 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
             MatchLocationPart(RegionName, serverLocationInfo.RegionName);
     }
 
+    public bool LocationEquals(string serverLocation)
+    {
+        var other = TryParse(serverLocation);
+        return Equals(other);
+    }
+
+
     private static string ParseLocationPart(IReadOnlyList<string> parts, int index)
     {
         return parts.Count <= index || string.IsNullOrWhiteSpace(parts[index]) ? "*" : parts[index].Trim();
@@ -106,7 +113,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
             return regionInfo.EnglishName;
         }
         catch (Exception) {
-            return countryCode;
+            return countryCode.ToUpper();
         }
     }
 

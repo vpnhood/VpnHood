@@ -31,13 +31,13 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpPost("connect")]
-    public Task Connect(Guid? clientProfileId = null, string? serverLocation = null, string? plan = null)
+    public Task Connect(Guid? clientProfileId = null, string? serverLocation = null, string? planId = null)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPost("diagnose")]
-    public Task Diagnose(Guid? clientProfileId = null, string? serverLocation = null, string? plan = null)
+    public Task Diagnose(Guid? clientProfileId = null, string? serverLocation = null, string? planId = null)
     {
         throw new SwaggerOnlyException();
     }
@@ -81,24 +81,6 @@ public class AppController : ControllerBase, IAppController
 
     [HttpPost("version-check-postpone")]
     public void VersionCheckPostpone()
-    {
-        throw new SwaggerOnlyException();
-    }
-
-    [HttpPut("access-keys")]
-    public Task<ClientProfileInfo> AddAccessKey(string accessKey)
-    {
-        throw new SwaggerOnlyException();
-    }
-
-    [HttpPatch("client-profiles/{clientProfileId:guid}")]
-    public Task<ClientProfileInfo> UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams)
-    {
-        throw new SwaggerOnlyException();
-    }
-
-    [HttpDelete("client-profiles/{clientProfileId:guid}")]
-    public Task DeleteClientProfile(Guid clientProfileId)
     {
         throw new SwaggerOnlyException();
     }

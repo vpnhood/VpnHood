@@ -60,7 +60,7 @@ public class ServerSelectorService(
     }
 
 
-   private async Task<ServerCache[]> GetServersForRequest(ServerSelectOptions options)
+    private async Task<ServerCache[]> GetServersForRequest(ServerSelectOptions options)
     {
         // get all servers of this farm
         var servers = await cacheService.GetServers(serverFarmId: options.ServerFarmCache.ServerFarmId);
@@ -72,8 +72,8 @@ public class ServerSelectorService(
             .Where(server =>
                 IsServerReadyForRedirect(server) &&
                 (server.AllowInAutoLocation || !options.RequestedLocation.IsAuto()) &&
+                (options.AllowedLocations == null || options.AllowedLocations.Contains(server.LocationInfo.CountryCode, StringComparer.OrdinalIgnoreCase)) &&
                 server.LocationInfo.IsMatch(options.RequestedLocation) &&
-                (options.AllowedLocations == null || options.AllowedLocations.Contains(server.LocationInfo.CountryCode, StringComparer.OrdinalIgnoreCase )) &&
                 IsMatchClientFilter(options.ProjectCache, server, options.ClientTags))
             .OrderBy(CalcServerLoad)
             .ToArray();

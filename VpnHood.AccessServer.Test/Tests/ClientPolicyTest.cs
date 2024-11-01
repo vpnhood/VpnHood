@@ -1,8 +1,11 @@
 ﻿using System.Net;
 using System.Text.Json;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
+using VpnHood.Common.Tokens;
+using ClientPolicy = VpnHood.AccessServer.Api.ClientPolicy;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -153,13 +156,12 @@ public class ClientPolicyTest
     }
 
     [TestMethod]
-    public async Task Connect_accept_by_Free()
+    public async Task Connect_accept_by_free_location_or_premium_account()
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
 
         var server10 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.1"), logicalCore: 1);
-        var server11 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("11.0.0.2"), logicalCore: 1);
         var server12 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("12.0.0.2"), logicalCore: 1);
 
         // create a public access token
@@ -177,13 +179,13 @@ public class ClientPolicyTest
                     PremiumByCode = false
                 },
                 new ClientPolicy {
-                    CountryCode = "2",
+                    CountryCode = "20",
                     FreeLocations = ["12"],
                     PremiumByTrial = 100,
                     PremiumByRewardAd = 200,
                     Normal = 50,
                     PremiumByPurchase = true,
-                    AutoLocationOnly = true,
+                    AutoLocationOnly = false,
                     PremiumByCode = true
                 }
             ]
@@ -191,16 +193,28 @@ public class ClientPolicyTest
 
         var accessTokenDom = await farm.CreateAccessToken(createParam);
 
-        // all country except 80 can select server10
-        var session = await accessTokenDom.CreateSession(serverLocation: "*", clientIp: IPAddress.Parse("1.0.0.01"), autoRedirect: true);
+        // all country except 200 can select server10
+        var session = await accessTokenDom.CreateSession(serverLocation: "*", clientIp: IPAddress.Parse("1.0.0.01"),
+            autoRedirect: true);
         Assert.AreEqual(server10.ServerId, session.ServerId);
         server10.ServerInfo.Status.SessionCount++;
         await server10.SendStatus();
 
-        session = await accessTokenDom.CreateSession(serverLocation: "*", clientIp: IPAddress.Parse("2.0.0.01"), autoRedirect: true);
+        // all country except 20 can select server11
+        session = await accessTokenDom.CreateSession(serverLocation: "*", clientIp: IPAddress.Parse("20.0.0.01"),
+            autoRedirect: true);
         Assert.AreEqual(server12.ServerId, session.ServerId);
         server12.ServerInfo.Status.SessionCount++;
         await server12.SendStatus();
 
+        // fail if country 20 request location 10
+        await Assert.ThrowsExceptionAsync<SessionExceptionEx>(() =>
+            accessTokenDom.CreateSession(serverLocation: "10", clientIp: IPAddress.Parse("20.0.0.01"), autoRedirect: true));
+
+        // try premium account
+        createParam.Tags = [TokenRegisteredTags.Premium];
+        accessTokenDom = await farm.CreateAccessToken(createParam);
+        session = await accessTokenDom.CreateSession(serverLocation: "10", clientIp: IPAddress.Parse("20.0.0.01"), autoRedirect: true);
+        Assert.AreEqual(server10.ServerId, session.ServerId);
     }
 }

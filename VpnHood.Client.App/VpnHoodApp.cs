@@ -319,7 +319,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ServerLocationInfo = client?.Stat.ServerLocationInfo,
                 ClientServerLocationInfo = UserSettings.ServerLocation is null
                     ? currentProfileItem?.ClientProfileInfo.ServerLocationInfos.FirstOrDefault(x => x.IsDefault)
-                    : currentProfileItem?.ClientProfileInfo.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation)
+                    : currentProfileItem?.ClientProfileInfo.ServerLocationInfos.FirstOrDefault(x => x.LocationEquals(UserSettings.ServerLocation))
             };
 
             return appState;
@@ -390,7 +390,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private readonly AsyncLock _connectLock = new();
     public async Task Connect(Guid? clientProfileId = null, string? serverLocation = null, bool diagnose = false,
-        string? userAgent = default, string? plan = null, bool throwException = true, CancellationToken cancellationToken = default)
+        string? userAgent = default, string? planId = null, bool throwException = true, CancellationToken cancellationToken = default)
     {
         using var lockAsync = await _connectLock.LockAsync(cancellationToken);
 
@@ -477,7 +477,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             await ConnectInternal(clientProfileItem.Token,
                     serverLocation: serverLocation,
                     userAgent: userAgent,
-                    plan: plan,
+                    planId: planId,
                     allowUpdateToken: true,
                     cancellationToken: cancellationToken)
                 .VhConfigureAwait();
@@ -531,7 +531,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return packetCapture;
     }
 
-    private async Task ConnectInternal(Token token, string? serverLocation, string? userAgent, string? plan,
+    private async Task ConnectInternal(Token token, string? serverLocation, string? userAgent, string? planId,
         bool allowUpdateToken, CancellationToken cancellationToken)
     {
         // show token info
@@ -561,7 +561,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             DropUdp = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdp,
             DropQuic = UserSettings.DebugData1?.Contains("/drop-quic") == true || UserSettings.DropQuic,
             ServerLocation = ServerLocationInfo.IsAuto(serverLocation) ? null : serverLocation,
-            Plan = plan,
+            PlanId = planId,
             UseUdpChannel = UserSettings.UseUdpChannel,
             DomainFilter = UserSettings.DomainFilter,
             ForceLogSni = LogService.LogEvents.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase),
@@ -621,7 +621,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 await ConnectInternal(token,
                         serverLocation: serverLocation,
                         userAgent: userAgent,
-                        plan: plan,
+                        planId: planId,
                         allowUpdateToken: false,
                         cancellationToken: cancellationToken)
                     .VhConfigureAwait();

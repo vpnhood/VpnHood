@@ -260,30 +260,30 @@ public class ClientProfileTest : TestBase
 
         // test two region in a same country
         var token = CreateToken();
-        token.ServerToken.ServerLocations = ["us/texas [#tag1]", "us/california [#tag1 #tag2]"];
+        token.ServerToken.ServerLocations = ["US/texas [#tag1]", "US/california [#tag1 #tag2]"];
 
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
-        app.UserSettings.ServerLocation = "us/*";
+        app.UserSettings.ClientProfileId = clientProfile.BaseInfo.ClientProfileId;
+        app.UserSettings.ServerLocation = "US/*";
         app.Settings.Save();
-        Assert.AreEqual("us/*", app.State.ClientServerLocationInfo?.ServerLocation);
+        Assert.AreEqual("US/*", app.State.ClientServerLocationInfo?.ServerLocation);
         CollectionAssert.AreEquivalent(new[] { "#tag1", "~#tag2" }, app.State.ClientServerLocationInfo?.Tags);
         Assert.IsNull(app.UserSettings.ServerLocation);
 
-        app.UserSettings.ServerLocation = "us/california";
+        app.UserSettings.ServerLocation = "US/california";
         app.Settings.Save();
         CollectionAssert.AreEquivalent(new[] { "#tag1", "#tag2" }, app.State.ClientServerLocationInfo?.Tags);
 
-        app.UserSettings.ServerLocation = "us/texas";
+        app.UserSettings.ServerLocation = "US/texas";
         app.Settings.Save();
         CollectionAssert.AreEquivalent(new[] { "#tag1", }, app.State.ClientServerLocationInfo?.Tags);
 
         // test three regin
         token = CreateToken();
-        token.ServerToken.ServerLocations = ["us/texas", "us/california [#z1 #z2]", "fr/paris [#p1 #p2]"];
+        token.ServerToken.ServerLocations = ["US/texas", "US/california [#z1 #z2]", "FR/paris [#p1 #p2]"];
         clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
-        app.UserSettings.ServerLocation = "fr/paris";
+        app.UserSettings.ClientProfileId = clientProfile.BaseInfo.ClientProfileId;
+        app.UserSettings.ServerLocation = "FR/paris";
         app.Settings.Save();
         CollectionAssert.AreEquivalent(new[] { "#p1", "#p2" }, app.State.ClientServerLocationInfo?.Tags);
 
@@ -299,13 +299,13 @@ public class ClientProfileTest : TestBase
 
         // test two region in a same country
         var token = CreateToken();
-        token.ServerToken.ServerLocations = ["us", "us/california"];
+        token.ServerToken.ServerLocations = ["US", "US/california"];
         var clientProfileItem = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         var clientProfileInfo = clientProfileItem.ClientProfileInfo;
         var serverLocations = clientProfileInfo.ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
         var i = 0;
-        Assert.AreEqual("us/*", serverLocations[i++]);
-        Assert.AreEqual("us/california", serverLocations[i++]);
+        Assert.AreEqual("US/*", serverLocations[i++]);
+        Assert.AreEqual("US/california", serverLocations[i++]);
         Assert.IsFalse(clientProfileInfo.ServerLocationInfos[0].IsNestedCountry);
         Assert.IsTrue(clientProfileInfo.ServerLocationInfos[0].IsDefault);
         Assert.IsTrue(clientProfileInfo.ServerLocationInfos[1].IsNestedCountry);
@@ -314,15 +314,15 @@ public class ClientProfileTest : TestBase
 
         // test multiple countries
         token = CreateToken();
-        token.ServerToken.ServerLocations = ["us", "us/california", "uk"];
+        token.ServerToken.ServerLocations = ["US", "US/california", "uk"];
         clientProfileItem = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         clientProfileInfo = clientProfileItem.ClientProfileInfo;
         serverLocations = clientProfileInfo.ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
         i = 0;
         Assert.AreEqual("*/*", serverLocations[i++]);
-        Assert.AreEqual("uk/*", serverLocations[i++]);
-        Assert.AreEqual("us/*", serverLocations[i++]);
-        Assert.AreEqual("us/california", serverLocations[i++]);
+        Assert.AreEqual("UK/*", serverLocations[i++]);
+        Assert.AreEqual("US/*", serverLocations[i++]);
+        Assert.AreEqual("US/california", serverLocations[i++]);
         Assert.IsFalse(clientProfileInfo.ServerLocationInfos[0].IsNestedCountry);
         Assert.IsTrue(clientProfileInfo.ServerLocationInfos[0].IsDefault);
         _ = i;
@@ -335,12 +335,12 @@ public class ClientProfileTest : TestBase
         serverLocations = clientProfileInfo.ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
         i = 0;
         Assert.AreEqual("*/*", serverLocations[i++]);
-        Assert.AreEqual("uk/*", serverLocations[i++]);
-        Assert.AreEqual("uk/england", serverLocations[i++]);
-        Assert.AreEqual("uk/region2", serverLocations[i++]);
-        Assert.AreEqual("us/*", serverLocations[i++]);
-        Assert.AreEqual("us/california", serverLocations[i++]);
-        Assert.AreEqual("us/virgina", serverLocations[i++]);
+        Assert.AreEqual("UK/*", serverLocations[i++]);
+        Assert.AreEqual("UK/england", serverLocations[i++]);
+        Assert.AreEqual("UK/region2", serverLocations[i++]);
+        Assert.AreEqual("US/*", serverLocations[i++]);
+        Assert.AreEqual("US/california", serverLocations[i++]);
+        Assert.AreEqual("US/virgina", serverLocations[i++]);
         Assert.IsFalse(clientProfileInfo.ServerLocationInfos[0].IsNestedCountry);
         Assert.IsFalse(clientProfileInfo.ServerLocationInfos[1].IsNestedCountry);
         Assert.IsTrue(clientProfileInfo.ServerLocationInfos[2].IsNestedCountry);

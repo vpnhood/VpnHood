@@ -25,4 +25,6 @@ public class SessionResponse
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IPEndPoint[]? RedirectHostEndPoints { get; set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public DateTime? ExpirationTime { get; set; }
 }

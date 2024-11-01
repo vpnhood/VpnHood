@@ -1,8 +1,6 @@
-﻿using System.Text.Json;
-using EmbedIO;
+﻿using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
-using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
@@ -14,19 +12,11 @@ internal class AppController : WebApiController, IAppController
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
-    private async Task<T> GetRequestDataAsync<T>()
-    {
-        var json = await HttpContext.GetRequestBodyAsByteArrayAsync().VhConfigureAwait();
-        var res = JsonSerializer.Deserialize<T>(json,
-            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-
-        return res ?? throw new Exception($"The request expected to have a {typeof(T).Name} but it is null!");
-    }
 
     [Route(HttpVerbs.Patch, "/configure")]
     public async Task<AppConfig> Configure(ConfigParams configParams)
     {
-        configParams = await GetRequestDataAsync<ConfigParams>().VhConfigureAwait();
+        configParams = await HttpContext.GetRequestDataAsync<ConfigParams>().VhConfigureAwait();
         App.Services.AppCultureService.AvailableCultures = configParams.AvailableCultures;
         if (configParams.Strings != null) App.Resource.Strings = configParams.Strings;
 
@@ -58,25 +48,25 @@ internal class AppController : WebApiController, IAppController
 
     [Route(HttpVerbs.Post, "/connect")]
     public Task Connect([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null, 
-        [QueryField] string? plan = null)
+        [QueryField] string? planId = null)
     {
         return App.Connect(
             clientProfileId, 
             serverLocation: serverLocation, 
             diagnose: false,
             userAgent: HttpContext.Request.UserAgent, 
-            plan: plan,
+            planId: planId,
             throwException: false);
     }
 
     [Route(HttpVerbs.Post, "/diagnose")]
     public Task Diagnose([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null, 
-        [QueryField] string? plan = null)
+        [QueryField] string? planId = null)
     {
         return App.Connect(clientProfileId, 
             serverLocation: serverLocation, 
             diagnose: true,
-            plan: plan,
+            planId: planId,
             userAgent: HttpContext.Request.UserAgent, 
             throwException: false);
     }
@@ -99,13 +89,6 @@ internal class AppController : WebApiController, IAppController
         App.VersionCheckPostpone();
     }
 
-    [Route(HttpVerbs.Put, "/access-keys")]
-    public Task<ClientProfileInfo> AddAccessKey([QueryField] string accessKey)
-    {
-        var clientProfile = App.ClientProfileService.ImportAccessKey(accessKey);
-        return Task.FromResult(clientProfile.ClientProfileInfo);
-    }
-
     [Route(HttpVerbs.Post, "/clear-last-error")]
     public void ClearLastError()
     {
@@ -115,7 +98,7 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Put, "/user-settings")]
     public async Task SetUserSettings(UserSettings userSettings)
     {
-        userSettings = await GetRequestDataAsync<UserSettings>().VhConfigureAwait();
+        userSettings = await HttpContext.GetRequestDataAsync<UserSettings>().VhConfigureAwait();
         App.Settings.UserSettings = userSettings;
         App.Settings.Save();
     }
@@ -136,24 +119,6 @@ internal class AppController : WebApiController, IAppController
     public Task<DeviceAppInfo[]> GetInstalledApps()
     {
         return Task.FromResult(App.Device.InstalledApps);
-    }
-
-    [Route(HttpVerbs.Patch, "/client-profiles/{clientProfileId}")]
-    public async Task<ClientProfileInfo> UpdateClientProfile(Guid clientProfileId,
-        ClientProfileUpdateParams updateParams)
-    {
-        updateParams = await GetRequestDataAsync<ClientProfileUpdateParams>().VhConfigureAwait();
-        var clientProfileItem = App.ClientProfileService.Update(clientProfileId, updateParams);
-        return clientProfileItem.ClientProfileInfo;
-    }
-
-    [Route(HttpVerbs.Delete, "/client-profiles/{clientProfileId}")]
-    public async Task DeleteClientProfile(Guid clientProfileId)
-    {
-        if (clientProfileId == App.CurrentClientProfileItem?.ClientProfileId)
-            await App.Disconnect(true).VhConfigureAwait();
-
-        App.ClientProfileService.Remove(clientProfileId);
     }
 
     [Route(HttpVerbs.Post, "/settings/open-always-on-page")]

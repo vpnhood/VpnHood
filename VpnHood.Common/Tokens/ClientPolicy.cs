@@ -15,6 +15,10 @@ public class ClientPolicy
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool AutoLocationOnly { get; init; }
 
+    [JsonPropertyName("uo")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool UnblockableOnly { get; init; }
+
     [JsonPropertyName("n")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int? Normal { get; init; }

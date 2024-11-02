@@ -28,14 +28,14 @@
 		<PackageReference Include="EmbedIO" Version="3.5.2" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.10" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
-		<PackageReference Include="MSTest.TestAdapter" Version="3.6.1" />
-		<PackageReference Include="MSTest.TestFramework" Version="3.6.1" />
+		<PackageReference Include="MSTest.TestAdapter" Version="3.6.2" />
+		<PackageReference Include="MSTest.TestFramework" Version="3.6.2" />
 		<PackageReference Include="coverlet.collector" Version="6.0.2">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="System.Text.Json" Version="8.0.5" />
-		<PackageReference Include="VpnHood.Server" Version="4.6.580-prerelease" />
+		<PackageReference Include="VpnHood.Server" Version="4.6.581-prerelease" />
 	</ItemGroup>
 
 	<ItemGroup>

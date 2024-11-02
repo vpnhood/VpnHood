@@ -12,4 +12,5 @@ public class ServerSelectOptions
     public required string[]? AllowedLocations { get; init; }
     public required string[] ClientTags { get; init; }
     public required bool AllowRedirect { get; init; }
+    public required bool IsPremium { get; init; }
 }

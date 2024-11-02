@@ -9998,6 +9998,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("autoLocationOnly")]
         public bool AutoLocationOnly { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("unblockableOnly")]
+        public bool UnblockableOnly { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("normal")]
         public int? Normal { get; set; } = default!;
 

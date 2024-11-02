@@ -5798,6 +5798,7 @@ export class ClientPolicy implements IClientPolicy {
     countryCode!: string;
     freeLocations?: string[] | null;
     autoLocationOnly!: boolean;
+    unblockableOnly!: boolean;
     normal?: number | null;
     premiumByTrial?: number | null;
     premiumByRewardAd?: number | null;
@@ -5825,6 +5826,7 @@ export class ClientPolicy implements IClientPolicy {
                 this.freeLocations = <any>null;
             }
             this.autoLocationOnly = _data["autoLocationOnly"] !== undefined ? _data["autoLocationOnly"] : <any>null;
+            this.unblockableOnly = _data["unblockableOnly"] !== undefined ? _data["unblockableOnly"] : <any>null;
             this.normal = _data["normal"] !== undefined ? _data["normal"] : <any>null;
             this.premiumByTrial = _data["premiumByTrial"] !== undefined ? _data["premiumByTrial"] : <any>null;
             this.premiumByRewardAd = _data["premiumByRewardAd"] !== undefined ? _data["premiumByRewardAd"] : <any>null;
@@ -5849,6 +5851,7 @@ export class ClientPolicy implements IClientPolicy {
                 data["freeLocations"].push(item);
         }
         data["autoLocationOnly"] = this.autoLocationOnly !== undefined ? this.autoLocationOnly : <any>null;
+        data["unblockableOnly"] = this.unblockableOnly !== undefined ? this.unblockableOnly : <any>null;
         data["normal"] = this.normal !== undefined ? this.normal : <any>null;
         data["premiumByTrial"] = this.premiumByTrial !== undefined ? this.premiumByTrial : <any>null;
         data["premiumByRewardAd"] = this.premiumByRewardAd !== undefined ? this.premiumByRewardAd : <any>null;
@@ -5862,6 +5865,7 @@ export interface IClientPolicy {
     countryCode: string;
     freeLocations?: string[] | null;
     autoLocationOnly: boolean;
+    unblockableOnly: boolean;
     normal?: number | null;
     premiumByTrial?: number | null;
     premiumByRewardAd?: number | null;

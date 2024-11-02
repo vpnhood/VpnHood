@@ -193,28 +193,135 @@ public class ClientPolicyTest
 
         var accessTokenDom = await farm.CreateAccessToken(createParam);
 
-        // all country except 200 can select server10
-        var session = await accessTokenDom.CreateSession(serverLocation: "*", clientIp: IPAddress.Parse("1.0.0.01"),
-            autoRedirect: true);
+        // countries that are not 20 can select location 10
+        var session = await accessTokenDom.CreateSession(serverLocation: "*", clientIp: IPAddress.Parse("1.0.0.01"), autoRedirect: true);
         Assert.AreEqual(server10.ServerId, session.ServerId);
         server10.ServerInfo.Status.SessionCount++;
         await server10.SendStatus();
 
-        // all country except 20 can select server11
-        session = await accessTokenDom.CreateSession(serverLocation: "*", clientIp: IPAddress.Parse("20.0.0.01"),
-            autoRedirect: true);
+        // Country 20 can select location 12
+        session = await accessTokenDom.CreateSession(serverLocation: "*", clientIp: IPAddress.Parse("20.0.0.01"), autoRedirect: true);
         Assert.AreEqual(server12.ServerId, session.ServerId);
         server12.ServerInfo.Status.SessionCount++;
         await server12.SendStatus();
 
-        // fail if country 20 request location 10
+        // Country 20 can not select location 10
         await Assert.ThrowsExceptionAsync<SessionExceptionEx>(() =>
             accessTokenDom.CreateSession(serverLocation: "10", clientIp: IPAddress.Parse("20.0.0.01"), autoRedirect: true));
 
-        // try premium account
+        // Country 20 can not select location 10 if it is a premium account
         createParam.Tags = [TokenRegisteredTags.Premium];
         accessTokenDom = await farm.CreateAccessToken(createParam);
         session = await accessTokenDom.CreateSession(serverLocation: "10", clientIp: IPAddress.Parse("20.0.0.01"), autoRedirect: true);
         Assert.AreEqual(server10.ServerId, session.ServerId);
+    }
+
+    [TestMethod]
+    public async Task Premium_server_must_be_selected_for_premium_users()
+    {
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
+
+        var freeServer = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.1"), logicalCore: 1);
+        var prmServer = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.2"), logicalCore: 1, tags: [ServerRegisteredTags.Premium]);
+
+        // only free server can be selected
+        var createParam = new AccessTokenCreateParams {
+            IsPublic = true,
+            ClientPolicies = [
+                new ClientPolicy {
+                    CountryCode = "*",
+                    FreeLocations = ["10"],
+                    PremiumByTrial = 10,
+                    PremiumByRewardAd = 20,
+                    Normal = 5,
+                    PremiumByPurchase = false,
+                    AutoLocationOnly = false,
+                    PremiumByCode = false
+                }
+            ]
+        };
+
+        var accessTokenDom = await farm.CreateAccessToken(createParam);
+
+        SessionDom sessionDom;
+        for (var i = 0; i < 4; i++) {
+            sessionDom = await accessTokenDom.CreateSession(serverLocation: "*", clientIp: IPAddress.Parse("1.0.0.01"), autoRedirect: true);
+            Assert.AreEqual(freeServer.ServerId, sessionDom.ServerId);
+            freeServer.ServerInfo.Status.SessionCount++;
+            await freeServer.SendStatus();
+        }
+
+        // premium server must be selected for premium users
+        createParam = new AccessTokenCreateParams {
+            IsPublic = false,
+            Tags = [TokenRegisteredTags.Premium],
+            ClientPolicies = [
+                new ClientPolicy {
+                    CountryCode = "*",
+                    FreeLocations = ["10"],
+                    PremiumByTrial = 10,
+                    PremiumByRewardAd = 20,
+                    Normal = 5,
+                    PremiumByPurchase = false,
+                    AutoLocationOnly = false,
+                    PremiumByCode = false
+                }
+            ]
+        };
+
+        accessTokenDom = await farm.CreateAccessToken(createParam);
+        for (var i = 0; i < 10; i++) {
+            sessionDom = await accessTokenDom.CreateSession(serverLocation: "*", clientIp: IPAddress.Parse("1.0.0.01"), autoRedirect: true);
+            Assert.AreEqual(prmServer.ServerId, sessionDom.ServerId);
+            prmServer.ServerInfo.Status.SessionCount++;
+            await prmServer.SendStatus();
+        }
+    }
+
+    [TestMethod]
+    public async Task Unblockable_server_must_be_listed_at_end()
+    {
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
+
+        var freeServer0 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.0"), logicalCore: 1);
+        var freeServer1 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.1"), logicalCore: 1);
+        var ublServer = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.2"), logicalCore: 1, tags: [ServerRegisteredTags.Unblockable]);
+
+        // only free server can be selected
+        var createParam = new AccessTokenCreateParams {
+            IsPublic = true,
+            ClientPolicies = [
+                new ClientPolicy {
+                    CountryCode = "*",
+                    FreeLocations = ["10"],
+                    PremiumByTrial = 10,
+                    PremiumByRewardAd = 20,
+                    Normal = 5,
+                    PremiumByPurchase = false,
+                    AutoLocationOnly = false,
+                    PremiumByCode = false
+                }
+            ]
+        };
+
+        var accessTokenDom = await farm.CreateAccessToken(createParam);
+
+        // increase the session count of the free servers to force redirect to the unblockable server
+        freeServer0.ServerInfo.Status.SessionCount = 100;
+        await freeServer0.SendStatus();
+
+        freeServer1.ServerInfo.Status.SessionCount = 80;
+        await freeServer1.SendStatus();
+
+        for (var i = 0; i < 10; i++) {
+            var sessionDom = await accessTokenDom.CreateSession(serverLocation: "*", clientIp: IPAddress.Parse("1.0.0.01"), autoRedirect: false, throwError: false);
+            Assert.AreEqual(freeServer1.Server.PublicIpV4, sessionDom.SessionResponseEx.RedirectHostEndPoints?[0].Address.ToString());
+            Assert.AreEqual(freeServer0.Server.PublicIpV4, sessionDom.SessionResponseEx.RedirectHostEndPoints?[1].Address.ToString());
+            Assert.AreEqual(ublServer.Server.PublicIpV4, sessionDom.SessionResponseEx.RedirectHostEndPoints?.Last().Address.ToString());
+            freeServer0.ServerInfo.Status.SessionCount++;
+            await freeServer0.SendStatus();
+        }
     }
 }

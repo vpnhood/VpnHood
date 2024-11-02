@@ -10,6 +10,7 @@ public static class ClientPolicyConverter
             CountryCode = tokenClientPolicy.CountryCode,
             FreeLocations = tokenClientPolicy.FreeLocations,
             AutoLocationOnly = tokenClientPolicy.AutoLocationOnly,
+            UnblockableOnly = tokenClientPolicy.UnblockableOnly,
             Normal = tokenClientPolicy.Normal,
             PremiumByTrial = tokenClientPolicy.PremiumByTrial,
             PremiumByRewardAd = tokenClientPolicy.PremiumByRewardAd,
@@ -25,11 +26,12 @@ public static class ClientPolicyConverter
             CountryCode = clientPolicy.CountryCode,
             FreeLocations = clientPolicy.FreeLocations,
             AutoLocationOnly = clientPolicy.AutoLocationOnly,
+            UnblockableOnly = clientPolicy.UnblockableOnly,
             Normal = clientPolicy.Normal,
             PremiumByTrial = clientPolicy.PremiumByTrial,
             PremiumByRewardAd = clientPolicy.PremiumByRewardAd,
             PremiumByPurchase = clientPolicy.PremiumByPurchase,
-            PremiumByCode = clientPolicy.PremiumByCode
+            PremiumByCode = clientPolicy.PremiumByCode,
         };
         return tokenClientPolicy;
     }

@@ -91,7 +91,8 @@ public static class ClientPolicyCalculator
             IncludeIpV6 = sessionRequestEx.IsIpV6Supported == true || sessionRequestEx.HostEndPoint.IsV6(),
             RequestedLocation = ServerLocationInfo.Parse(sessionRequestEx.ServerLocation ?? "*"),
             AllowedLocations = allowedLocations,
-            AllowRedirect = sessionRequestEx.AllowRedirect && allowRedirect
+            AllowRedirect = sessionRequestEx.AllowRedirect && allowRedirect,
+            IsPremium = isPremium
         };
 
         var result = new Result {

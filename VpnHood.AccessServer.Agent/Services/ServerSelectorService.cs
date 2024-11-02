@@ -5,6 +5,7 @@ using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Tokens;
 using VpnHood.Manager.Common.Utils;
 using VpnHood.Server.Access.Messaging;
 
@@ -71,11 +72,14 @@ public class ServerSelectorService(
         var farmServers = servers
             .Where(server =>
                 IsServerReadyForRedirect(server) &&
+                (options.IsPremium || !server.Tags.Contains(ServerRegisteredTags.Premium)) &&
                 (server.AllowInAutoLocation || !options.RequestedLocation.IsAuto()) &&
                 (options.AllowedLocations == null || options.AllowedLocations.Contains(server.LocationInfo.CountryCode, StringComparer.OrdinalIgnoreCase)) &&
                 server.LocationInfo.IsMatch(options.RequestedLocation) &&
                 IsMatchClientFilter(options.ProjectCache, server, options.ClientTags))
-            .OrderBy(CalcServerLoad)
+            .OrderByDescending(server => server.Tags.Contains(ServerRegisteredTags.Premium)) // first premiums
+            .ThenBy(server => server.Tags.Contains(ServerRegisteredTags.Unblockable)) // second regular then unblockable
+            .ThenBy(CalcServerLoad)
             .ToArray();
 
         // filter servers by client filter policy

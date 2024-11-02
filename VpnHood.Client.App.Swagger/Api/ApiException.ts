@@ -44,7 +44,7 @@ export class ApiException extends Error {
 
     // Try to convert an ApiError to an ApiException. it usually comes from unknown type
     public static fromApiError(apiError: unknown): ApiException {
-        if (apiError)
+        if (!apiError)
             throw new Error('apiError can not be null!');
 
         const apiErrorObj = this.getApiError(apiError);

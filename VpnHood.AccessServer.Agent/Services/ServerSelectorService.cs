@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿using System.Linq;
+using System.Net;
+using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
@@ -12,7 +14,8 @@ using VpnHood.Server.Access.Messaging;
 namespace VpnHood.AccessServer.Agent.Services;
 
 public class ServerSelectorService(
-    CacheService cacheService)
+    CacheService cacheService,
+    IOptions<AgentOptions> agentOptions)
 {
     public async Task CheckRedirect(ServerCache currentServer, ServerSelectOptions options)
     {
@@ -69,15 +72,34 @@ public class ServerSelectorService(
             return [];
 
         // filter acceptable servers and sort them by load
-        var farmServers = servers
+        var filteredServers = servers
             .Where(server =>
                 IsServerReadyForRedirect(server) &&
                 (options.IsPremium || !server.Tags.Contains(ServerRegisteredTags.Premium)) &&
                 (server.AllowInAutoLocation || !options.RequestedLocation.IsAuto()) &&
-                (options.AllowedLocations == null || options.AllowedLocations.Contains(server.LocationInfo.CountryCode, StringComparer.OrdinalIgnoreCase)) &&
+                (options.AllowedLocations == null || options.AllowedLocations.Contains(server.LocationInfo.CountryCode,
+                    StringComparer.OrdinalIgnoreCase)) &&
                 server.LocationInfo.IsMatch(options.RequestedLocation) &&
                 IsMatchClientFilter(options.ProjectCache, server, options.ClientTags))
-            .OrderByDescending(server => server.Tags.Contains(ServerRegisteredTags.Premium)) // first premiums
+            .ToArray();
+
+        // separate blockable and unblockable servers
+        var blockableServers = filteredServers
+            .Where(server => !server.Tags.Contains(ServerRegisteredTags.Unblockable));
+
+        var unblockableServers = filteredServers
+            .Where(server => server.Tags.Contains(ServerRegisteredTags.Unblockable))
+            .ToArray();
+
+        // If there is unblockable servers, we limit the blockable servers to 50
+        if (unblockableServers.Length > 0)
+            filteredServers = blockableServers
+                .Take(agentOptions.Value.MaxBlockableServerCount)
+                .Concat(unblockableServers)
+                .ToArray();
+
+        // sort by load
+        var farmServers = filteredServers.OrderByDescending(server => server.Tags.Contains(ServerRegisteredTags.Premium))
             .ThenBy(server => server.Tags.Contains(ServerRegisteredTags.Unblockable)) // second regular then unblockable
             .ThenBy(CalcServerLoad)
             .ToArray();

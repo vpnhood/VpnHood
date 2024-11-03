@@ -5,6 +5,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Tokens;
 using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -368,5 +369,30 @@ public class ServerSelectorTest
 
         Assert.AreEqual(2, serverDom1.ServerStatus.SessionCount);
         Assert.AreEqual(2, serverDom2.ServerStatus.SessionCount);
+    }
+
+    [TestMethod]
+    public async Task Blockable_server_count_should_be_limited()
+    {
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        const int maxBlockableServerCount = 5;
+        farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
+        farm.TestApp.AgentTestApp.AgentOptions.MaxBlockableServerCount = maxBlockableServerCount;
+
+        var blockableServer = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.0"), logicalCore: 1);
+        for (var i = 1; i < 10; i++)
+            await farm.AddNewServer(publicIpV4: IPAddress.Parse($"10.0.0.{i}"), logicalCore: 1);
+
+        var ublServer = await farm.AddNewServer(publicIpV4: IPAddress.Parse("11.0.0.1"), logicalCore: 1, tags: [ServerRegisteredTags.Unblockable]);
+
+        var accessTokenDom = await farm.CreateAccessToken(true);
+
+        // increase the session count of the free servers to force redirect to the unblockable server
+        blockableServer.ServerInfo.Status.SessionCount = 100;
+        await blockableServer.SendStatus();
+
+        var sessionDom = await accessTokenDom.CreateSession(clientIp: IPAddress.Parse("1.0.0.0"), autoRedirect: false, throwError: false);
+        Assert.AreEqual(ublServer.Server.PublicIpV4, sessionDom.SessionResponseEx.RedirectHostEndPoints?[maxBlockableServerCount].Address.ToString());
+
     }
 }

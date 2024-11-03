@@ -28,6 +28,7 @@ public class AgentOptions
     public TimeSpan SaveCacheInterval { get; set; } = TimeSpan.FromMinutes(5);
     public string SystemAuthorizationCode { get; set; } = "";
     public bool AllowRedirect { get; set; } = true;
+    public int MaxBlockableServerCount { get; set; } = 50;
     public TimeSpan FarmTokenRepoUpdaterInterval { get; set; } = TimeSpan.FromMinutes(60);
     public string IpLocationIoApiKey { get; set; } = "";
     public string IpInfoIoApiKey { get; set; } = "";

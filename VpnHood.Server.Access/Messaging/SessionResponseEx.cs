@@ -13,4 +13,5 @@ public class SessionResponseEx : SessionResponse
     public byte[] SessionKey { get; set; } = [];
     public AdRequirement AdRequirement { get; set; } = AdRequirement.None;
     public string? ServerLocation { get; set; }
+    public string[] ServerTags { get; set; } = [];
 }

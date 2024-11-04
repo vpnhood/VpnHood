@@ -588,7 +588,8 @@ public class ServerHost : IAsyncDisposable, IJob
             AccessKey = sessionResponse.AccessKey,
             DnsServers = DnsServers,
             AdRequirement = sessionResponse.AdRequirement,
-            ServerLocation = sessionResponse.ServerLocation
+            ServerLocation = sessionResponse.ServerLocation,
+            ServerTags = sessionResponse.ServerTags,
         };
         await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken).VhConfigureAwait();
         await clientStream.DisposeAsync().VhConfigureAwait();

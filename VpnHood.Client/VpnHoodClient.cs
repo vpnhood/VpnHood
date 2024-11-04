@@ -663,7 +663,7 @@ public class VpnHoodClient : IAsyncDisposable
                 ClientInfo = clientInfo,
                 TokenId = Token.TokenId,
                 ServerLocation = _serverFinder.ServerLocation,
-                Plan = _planId,
+                PlanId = _planId,
                 AllowRedirect = allowRedirect,
                 IsIpV6Supported = IsIpV6SupportedByClient
             };

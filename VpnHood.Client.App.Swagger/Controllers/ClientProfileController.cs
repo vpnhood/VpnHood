@@ -17,7 +17,7 @@ public class ClientProfileController : ControllerBase, IClientProfileController
     }
 
     [HttpGet("{clientProfileId:guid}")]
-    public Task<ClientProfileInfo> Get(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    public Task<ClientProfileInfo> Get(Guid clientProfileId)
     {
         throw new SwaggerOnlyException();
     }

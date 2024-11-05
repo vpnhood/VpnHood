@@ -11,8 +11,8 @@ public class ClientServerLocationInfo : ServerLocationInfo
     public static ClientServerLocationInfo[] CreateFromToken(Token token, string clientCountry)
     {
         // get country policy
-        var policy = token.ClientPolicies?.FirstOrDefault(x => x.CountryCode.Equals(clientCountry, StringComparison.OrdinalIgnoreCase)) ??
-                     token.ClientPolicies?.FirstOrDefault(x => x.CountryCode == "*");
+        var policy = token.ClientPolicies?.FirstOrDefault(x => x.ClientCountry.Equals(clientCountry, StringComparison.OrdinalIgnoreCase)) ??
+                     token.ClientPolicies?.FirstOrDefault(x => x.ClientCountry == "*");
 
         var items = AddCategoryGaps(token.ServerToken.ServerLocations ?? [], policy?.FreeLocations);
 

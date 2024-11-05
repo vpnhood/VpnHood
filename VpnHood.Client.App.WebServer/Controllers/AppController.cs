@@ -64,7 +64,8 @@ internal class AppController : WebApiController, IAppController
     public Task Diagnose([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null, 
         [QueryField] ConnectPlanId planId = ConnectPlanId.Normal)
     {
-        return App.Connect(clientProfileId, 
+        return App.Connect(
+            clientProfileId, 
             serverLocation: serverLocation, 
             diagnose: true,
             planId: planId,

@@ -5,6 +5,7 @@ using VpnHood.Client.App.Settings;
 using VpnHood.Client.App.Swagger.Exceptions;
 using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
+using VpnHood.Common.Tokens;
 
 namespace VpnHood.Client.App.Swagger.Controllers;
 
@@ -31,13 +32,13 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpPost("connect")]
-    public Task Connect(Guid? clientProfileId = null, string? serverLocation = null, string? planId = null)
+    public Task Connect(Guid? clientProfileId = null, string? serverLocation = null, ConnectPlanId planId = ConnectPlanId.Normal)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPost("diagnose")]
-    public Task Diagnose(Guid? clientProfileId = null, string? serverLocation = null, string? planId = null)
+    public Task Diagnose(Guid? clientProfileId = null, string? serverLocation = null, ConnectPlanId planId = ConnectPlanId.Normal)
     {
         throw new SwaggerOnlyException();
     }

@@ -2,6 +2,7 @@
 using Ga4.Trackers;
 using VpnHood.Client.Abstractions;
 using VpnHood.Common.Net;
+using VpnHood.Common.Tokens;
 using VpnHood.Tunneling.DomainFiltering;
 using VpnHood.Tunneling.Factory;
 
@@ -47,7 +48,7 @@ public class ClientOptions
     public bool DropUdp { get; set; }
     public bool DropQuic { get; set; }
     public string? ServerLocation { get; set; }
-    public string? PlanId { get; set; }
+    public ConnectPlanId PlanId { get; set; }
     public DomainFilter DomainFilter { get; set; } = new();
     public bool ForceLogSni { get; set; }
     public TimeSpan ServerQueryTimeout { get; set; } = TimeSpan.FromSeconds(10);

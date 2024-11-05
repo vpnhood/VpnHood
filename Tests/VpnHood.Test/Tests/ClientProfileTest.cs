@@ -89,7 +89,7 @@ public class ClientProfileTest : TestBase
         var token = CreateToken();
         token.Tags = ["#public"];
         var defaultPolicy = new ClientPolicy {
-            CountryCode = "*",
+            ClientCountry = "*",
             FreeLocations = ["US", "CA"],
             Normal = 10,
             PremiumByPurchase = true,
@@ -97,7 +97,7 @@ public class ClientProfileTest : TestBase
             PremiumByTrial = 30
         };
         var caPolicy = new ClientPolicy {
-            CountryCode = "CA",
+            ClientCountry = "CA",
             FreeLocations = ["CA"],
             PremiumByPurchase = true,
             Normal = 200,

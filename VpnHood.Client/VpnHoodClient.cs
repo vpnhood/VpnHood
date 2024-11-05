@@ -61,7 +61,7 @@ public class VpnHoodClient : IAsyncDisposable
     private readonly TimeSpan _tcpConnectTimeout;
     private DateTime? _autoWaitTime;
     private readonly ServerFinder _serverFinder;
-    private readonly string? _planId;
+    private readonly ConnectPlanId _planId;
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
     private int ProtocolVersion { get; }
     internal Nat Nat { get; }

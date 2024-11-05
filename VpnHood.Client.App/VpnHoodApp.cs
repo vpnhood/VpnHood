@@ -389,8 +389,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private readonly AsyncLock _connectLock = new();
-    public async Task Connect(Guid? clientProfileId = null, string? serverLocation = null, bool diagnose = false,
-        string? userAgent = default, string? planId = null, bool throwException = true, CancellationToken cancellationToken = default)
+    public async Task Connect(
+        Guid? clientProfileId = null, 
+        ConnectPlanId planId = ConnectPlanId.Normal, 
+        string? serverLocation = null, 
+        bool diagnose = false,
+        string? userAgent = default, 
+        bool throwException = true, 
+        CancellationToken cancellationToken = default)
     {
         using var lockAsync = await _connectLock.LockAsync(cancellationToken);
 
@@ -531,7 +537,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return packetCapture;
     }
 
-    private async Task ConnectInternal(Token token, string? serverLocation, string? userAgent, string? planId,
+    private async Task ConnectInternal(Token token, string? serverLocation, string? userAgent, ConnectPlanId planId,
         bool allowUpdateToken, CancellationToken cancellationToken)
     {
         // show token info

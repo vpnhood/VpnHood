@@ -4,6 +4,7 @@ using EmbedIO.WebApi;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
+using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.WebServer.Controllers;
@@ -48,7 +49,7 @@ internal class AppController : WebApiController, IAppController
 
     [Route(HttpVerbs.Post, "/connect")]
     public Task Connect([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null, 
-        [QueryField] string? planId = null)
+        [QueryField] ConnectPlanId planId = ConnectPlanId.Normal)
     {
         return App.Connect(
             clientProfileId, 
@@ -61,7 +62,7 @@ internal class AppController : WebApiController, IAppController
 
     [Route(HttpVerbs.Post, "/diagnose")]
     public Task Diagnose([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null, 
-        [QueryField] string? planId = null)
+        [QueryField] ConnectPlanId planId = ConnectPlanId.Normal)
     {
         return App.Connect(clientProfileId, 
             serverLocation: serverLocation, 

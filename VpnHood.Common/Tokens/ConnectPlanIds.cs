@@ -1,8 +1,11 @@
-﻿namespace VpnHood.Common.Tokens;
+﻿using System.Text.Json.Serialization;
 
-public static class ConnectPlanIds
+namespace VpnHood.Common.Tokens;
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ConnectPlanId
 {
-    public const string Normal = nameof(Normal);
-    public const string Trial = nameof(Trial);
-    public const string RewardAd = nameof(RewardAd);
+    Normal = 0,
+    PremiumByTrial = 1,
+    PremiumByAdReward = 2,
 }

@@ -1,4 +1,5 @@
-﻿using VpnHood.Common.Utils;
+﻿using System.Text.Json.Serialization;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.ClientProfiles;
 
@@ -7,7 +8,12 @@ public class ClientProfileBaseInfo(ClientProfile clientProfile)
     public Guid ClientProfileId { get; private set; } = clientProfile.ClientProfileId;
     public string ClientProfileName { get; private set; } = GetTitle(clientProfile);
     public string? SupportId { get; private set; } = clientProfile.Token.SupportId;
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CustomData { get; private set; } = clientProfile.CustomData;
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsPremiumLocationSelected { get; private set; } = clientProfile.IsPremiumLocationSelected;
 
     private static string GetTitle(ClientProfile clientProfile)
     {

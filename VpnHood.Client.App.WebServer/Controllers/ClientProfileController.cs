@@ -18,6 +18,7 @@ internal class ClientProfileController : WebApiController, IClientProfileControl
         return Task.FromResult(clientProfile.ClientProfileInfo);
     }
 
+    [Route(HttpVerbs.Get, "/{clientProfileId}")]
     public Task<ClientProfileInfo> Get(Guid clientProfileId)
     {
         var clientProfileItem = App.ClientProfileService.Get(clientProfileId);

@@ -212,12 +212,15 @@ public class ClientProfileTest : TestBase
         var updateParams = new ClientProfileUpdateParams {
             ClientProfileName = Guid.NewGuid().ToString(),
             IsFavorite = true,
-            CustomData = Guid.NewGuid().ToString()
+            CustomData = Guid.NewGuid().ToString(),
+            IsPremiumLocationSelected = true
         };
         app.ClientProfileService.Update(clientProfile1.ClientProfileId, updateParams);
-        Assert.AreEqual(updateParams.ClientProfileName.Value, app.ClientProfileService.Get(clientProfile1.ClientProfileId).BaseInfo.ClientProfileName);
-        Assert.AreEqual(updateParams.IsFavorite.Value, app.ClientProfileService.Get(clientProfile1.ClientProfileId).ClientProfile.IsFavorite);
-        Assert.AreEqual(updateParams.CustomData.Value, app.ClientProfileService.Get(clientProfile1.ClientProfileId).ClientProfile.CustomData);
+        var clientProfile = app.ClientProfileService.Get(clientProfile1.ClientProfileId);
+        Assert.AreEqual(updateParams.ClientProfileName.Value, clientProfile.BaseInfo.ClientProfileName);
+        Assert.AreEqual(updateParams.IsFavorite.Value, clientProfile.ClientProfile.IsFavorite);
+        Assert.AreEqual(updateParams.CustomData.Value, clientProfile.ClientProfile.CustomData);
+        Assert.AreEqual(updateParams.IsPremiumLocationSelected.Value, clientProfile.ClientProfile.IsPremiumLocationSelected);
 
         // ************
         // *** TEST ***: RemoveClientProfile

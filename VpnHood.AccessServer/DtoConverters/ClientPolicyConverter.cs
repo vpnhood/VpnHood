@@ -7,7 +7,7 @@ public static class ClientPolicyConverter
     public static ClientPolicy ToDto(this VpnHood.Common.Tokens.ClientPolicy tokenClientPolicy)
     {
         var dto = new ClientPolicy {
-            CountryCode = tokenClientPolicy.CountryCode,
+            ClientCountry = tokenClientPolicy.ClientCountry,
             FreeLocations = tokenClientPolicy.FreeLocations,
             AutoLocationOnly = tokenClientPolicy.AutoLocationOnly,
             UnblockableOnly = tokenClientPolicy.UnblockableOnly,
@@ -23,7 +23,7 @@ public static class ClientPolicyConverter
     public static VpnHood.Common.Tokens.ClientPolicy ToTokenPolicy(this ClientPolicy clientPolicy)
     {
         var tokenClientPolicy = new VpnHood.Common.Tokens.ClientPolicy {
-            CountryCode = clientPolicy.CountryCode,
+            ClientCountry = clientPolicy.ClientCountry,
             FreeLocations = clientPolicy.FreeLocations,
             AutoLocationOnly = clientPolicy.AutoLocationOnly,
             UnblockableOnly = clientPolicy.UnblockableOnly,

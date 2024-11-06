@@ -16,13 +16,17 @@ public static class ClientPolicyCalculator
         public required ServerSelectOptions ServerSelectOptions { get; init; }
         public required DateTime? ExpirationTime { get; init; }
         public required AdRequirement AdRequirement { get; init; }
-        public required bool IsPremium { get; init; }
+        public required bool IsPremiumToken { get; init; }
+        public required bool IsPremiumByTrial { get; init; }
+        public required bool IsPremiumByAdReward { get; init; }
+        public required int? AdRewardMinutes { get; init; }
     }
 
     public static Result Calculate(
-        ProjectCache projectCache, 
+        ProjectCache projectCache,
         ServerFarmCache serverFarmCache,
         AccessTokenModel accessToken,
+        AccessCache accessCache,
         SessionRequestEx sessionRequestEx,
         string? clientCountry,
         bool allowRedirect)
@@ -30,20 +34,23 @@ public static class ClientPolicyCalculator
         // find is premium and add the tags
         var clientTags = TagUtils.TagsFromString(accessToken.Tags).ToList();
         clientTags.Add(TagUtils.BuildLocation(clientCountry));
-        var isPremium = clientTags.Contains(TokenRegisteredTags.Premium) || !accessToken.IsPublic;
+        var isPremiumToken = clientTags.Contains(TokenRegisteredTags.Premium) || !accessToken.IsPublic;
+        var isPremiumByTrial = false;
+        var isPremiumByAdReward = false;
+        ClientPolicy? clientPolicy = null;
 
         // all policies applied to none premium users
-        DateTime? expirationTime = null;
+        var expirationTime = accessToken.ExpirationTime;
         var adRequirement = accessToken.AdRequirement;
         string[]? allowedLocations = null;
         var serverLocationInfo = ServerLocationInfo.Parse(sessionRequestEx.ServerLocation ?? "*");
 
-        if (!isPremium) {
-            var planId = sessionRequestEx.Plan ?? ConnectPlanIds.Normal; 
+        if (!isPremiumToken) {
+            var planId = sessionRequestEx.PlanId;
             var clientPolicies = accessToken.ClientPoliciesGet();
-            var clientPolicy =
-                clientPolicies?.FirstOrDefault(x => x.CountryCode.Equals(clientCountry, StringComparison.OrdinalIgnoreCase)) ??
-                clientPolicies?.FirstOrDefault(x => x.CountryCode == "*");
+            clientPolicy =
+                clientPolicies?.FirstOrDefault(x => x.ClientCountry.Equals(clientCountry, StringComparison.OrdinalIgnoreCase)) ??
+                clientPolicies?.FirstOrDefault(x => x.ClientCountry == "*");
 
             if (clientPolicy != null) {
 
@@ -51,39 +58,52 @@ public static class ClientPolicyCalculator
                 if (clientPolicy.AutoLocationOnly && !serverLocationInfo.IsAuto())
                     throw new SessionExceptionEx(SessionErrorCode.AccessError, $"You need to set the location as auto. PlanId: {planId}");
 
-                // add allowed locations
-                allowedLocations = clientPolicy.FreeLocations;
+                // continue AdReward if the amount is bigger than the premium by reward ad
+                if (clientPolicy.PremiumByRewardAd != null && accessCache.AdRewardExpirationTime != null &&
+                    accessCache.AdRewardExpirationTime >= DateTime.UtcNow.AddMinutes(clientPolicy.PremiumByRewardAd.Value)) {
+                    expirationTime = accessCache.AdRewardExpirationTime;
+                    adRequirement = AdRequirement.None;
+                    isPremiumByAdReward = true;
+                }
 
                 // normal plan
-                if (planId.Equals(ConnectPlanIds.Normal, StringComparison.OrdinalIgnoreCase)) {
+                else if (planId == ConnectPlanId.Normal) {
                     if (clientPolicy.Normal is null or < 0)
                         throw new SessionExceptionEx(SessionErrorCode.AccessError, $"The connect plan is not supported. PlanId: {planId}");
 
                     expirationTime = DateTime.UtcNow.AddMinutes(clientPolicy.Normal.Value);
                     adRequirement = accessToken.AdRequirement;
+                    allowedLocations = clientPolicy.FreeLocations;
                 }
 
                 // trial plan
-                else if (planId.Equals(ConnectPlanIds.Trial, StringComparison.OrdinalIgnoreCase)) {
+                else if (planId == ConnectPlanId.PremiumByTrial) {
                     if (clientPolicy.PremiumByTrial is null or < 0)
                         throw new SessionExceptionEx(SessionErrorCode.AccessError, $"The connect plan is not supported. PlanId: {planId}");
 
                     expirationTime = DateTime.UtcNow.AddMinutes(clientPolicy.PremiumByTrial.Value);
                     adRequirement = AdRequirement.None;
+                    isPremiumByTrial = true;
                 }
 
                 // Rewarded Ad plan
-                else if (planId.Equals(ConnectPlanIds.RewardAd, StringComparison.OrdinalIgnoreCase)) {
+                else if (planId == ConnectPlanId.PremiumByAdReward) {
                     if (clientPolicy.PremiumByRewardAd is null or < 0)
                         throw new SessionExceptionEx(SessionErrorCode.AccessError, $"The connect plan is not supported. PlanId: {planId}");
-                    
+
                     expirationTime = DateTime.UtcNow.AddMinutes(clientPolicy.PremiumByRewardAd.Value);
                     adRequirement = AdRequirement.Required;
+                    isPremiumByAdReward = true;
                 }
 
             }
         }
 
+        // expiration time can not bigger that the token expiration time
+        if (expirationTime > accessToken.ExpirationTime)
+            expirationTime = accessToken.ExpirationTime;
+
+        // fill result
         var serverSelectOptions = new ServerSelectOptions {
             ProjectCache = projectCache,
             ServerFarmCache = serverFarmCache,
@@ -92,14 +112,17 @@ public static class ClientPolicyCalculator
             RequestedLocation = ServerLocationInfo.Parse(sessionRequestEx.ServerLocation ?? "*"),
             AllowedLocations = allowedLocations,
             AllowRedirect = sessionRequestEx.AllowRedirect && allowRedirect,
-            IsPremium = isPremium
+            IsPremium = isPremiumToken || isPremiumByAdReward || isPremiumByTrial
         };
 
         var result = new Result {
             ServerSelectOptions = serverSelectOptions,
             ExpirationTime = expirationTime,
             AdRequirement = adRequirement,
-            IsPremium = isPremium
+            IsPremiumToken = isPremiumToken,
+            IsPremiumByTrial = isPremiumByTrial,
+            IsPremiumByAdReward = isPremiumByAdReward,
+            AdRewardMinutes = clientPolicy?.PremiumByRewardAd
         };
 
         return result;

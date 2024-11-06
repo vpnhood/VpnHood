@@ -21,7 +21,7 @@
 		<PackageIcon>VpnHood.AccessServer.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
-		<Version>2.0.74</Version>
+		<Version>2.0.78</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
@@ -31,7 +31,7 @@
 		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.215" />
 		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
 		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.14" />
-		<PackageReference Include="VpnHood.Server.Access" Version="4.6.581-prerelease" />
+		<PackageReference Include="VpnHood.Server.Access" Version="4.6.584-prerelease" />
 	</ItemGroup>
 
 	<ItemGroup>

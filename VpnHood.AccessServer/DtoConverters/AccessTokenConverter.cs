@@ -20,7 +20,7 @@ public static class AccessTokenConverter
             ExpirationTime = model.ExpirationTime,
             IsPublic = model.IsPublic,
             ClientPolicies = model.ClientPoliciesGet().ToDtos(),
-            ClientCode = model.ClientCode,
+            AccessCode = model.AccessCode,
             ManagerCode = model.ManagerCode,
             IsEnabled = model.IsEnabled,
             Lifetime = model.Lifetime,

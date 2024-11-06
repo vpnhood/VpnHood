@@ -5660,7 +5660,7 @@ export class AccessToken implements IAccessToken {
     lastUsedTime?: Date | null;
     isPublic!: boolean;
     clientPolicies?: ClientPolicy[] | null;
-    clientCode?: number | null;
+    accessCode?: number | null;
     managerCode?: number | null;
     isEnabled!: boolean;
     adRequirement!: AdRequirement;
@@ -5704,7 +5704,7 @@ export class AccessToken implements IAccessToken {
             else {
                 this.clientPolicies = <any>null;
             }
-            this.clientCode = _data["clientCode"] !== undefined ? _data["clientCode"] : <any>null;
+            this.accessCode = _data["accessCode"] !== undefined ? _data["accessCode"] : <any>null;
             this.managerCode = _data["managerCode"] !== undefined ? _data["managerCode"] : <any>null;
             this.isEnabled = _data["isEnabled"] !== undefined ? _data["isEnabled"] : <any>null;
             this.adRequirement = _data["adRequirement"] !== undefined ? _data["adRequirement"] : <any>null;
@@ -5749,7 +5749,7 @@ export class AccessToken implements IAccessToken {
             for (let item of this.clientPolicies)
                 data["clientPolicies"].push(item.toJSON());
         }
-        data["clientCode"] = this.clientCode !== undefined ? this.clientCode : <any>null;
+        data["accessCode"] = this.accessCode !== undefined ? this.accessCode : <any>null;
         data["managerCode"] = this.managerCode !== undefined ? this.managerCode : <any>null;
         data["isEnabled"] = this.isEnabled !== undefined ? this.isEnabled : <any>null;
         data["adRequirement"] = this.adRequirement !== undefined ? this.adRequirement : <any>null;
@@ -5780,7 +5780,7 @@ export interface IAccessToken {
     lastUsedTime?: Date | null;
     isPublic: boolean;
     clientPolicies?: ClientPolicy[] | null;
-    clientCode?: number | null;
+    accessCode?: number | null;
     managerCode?: number | null;
     isEnabled: boolean;
     adRequirement: AdRequirement;
@@ -5795,7 +5795,7 @@ export interface IAccessToken {
 }
 
 export class ClientPolicy implements IClientPolicy {
-    countryCode!: string;
+    clientCountry!: string;
     freeLocations?: string[] | null;
     autoLocationOnly!: boolean;
     unblockableOnly!: boolean;
@@ -5816,7 +5816,7 @@ export class ClientPolicy implements IClientPolicy {
 
     init(_data?: any) {
         if (_data) {
-            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
+            this.clientCountry = _data["clientCountry"] !== undefined ? _data["clientCountry"] : <any>null;
             if (Array.isArray(_data["freeLocations"])) {
                 this.freeLocations = [] as any;
                 for (let item of _data["freeLocations"])
@@ -5844,7 +5844,7 @@ export class ClientPolicy implements IClientPolicy {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
+        data["clientCountry"] = this.clientCountry !== undefined ? this.clientCountry : <any>null;
         if (Array.isArray(this.freeLocations)) {
             data["freeLocations"] = [];
             for (let item of this.freeLocations)
@@ -5862,7 +5862,7 @@ export class ClientPolicy implements IClientPolicy {
 }
 
 export interface IClientPolicy {
-    countryCode: string;
+    clientCountry: string;
     freeLocations?: string[] | null;
     autoLocationOnly: boolean;
     unblockableOnly: boolean;

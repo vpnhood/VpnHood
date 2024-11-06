@@ -4,7 +4,7 @@ public class AppOptions
 {
     public const string HttpClientNameFarmTokenRepo = "AgentFarmTokenRepoHttpClientName";
     public const string AgentHttpClientName = "AgentHttpClient";
-    public const int ClientCodeDigitCount = 12;
+    public const int AccessCodeDigitCount = 12;
     public const int ManagerCodeDigitCount = 12;
     public TimeSpan AutoMaintenanceInterval { get; set; } = TimeSpan.FromMinutes(5);
     public Uri AgentUrl { get; set; } = default!;

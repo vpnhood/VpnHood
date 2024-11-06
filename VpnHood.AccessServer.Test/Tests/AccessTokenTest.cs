@@ -462,7 +462,8 @@ public class AccessTokenTest
         var expirationTime1 = DateTime.Today.AddDays(5);
         await accessTokenDom1.Update(
             new AccessTokenUpdateParams {
-                ExpirationTime = new PatchOfNullableDateTime { Value = expirationTime1 }
+                ExpirationTime = new PatchOfNullableDateTime { Value = expirationTime1 },
+                
             });
 
         // add usage to create the new expiration
@@ -470,6 +471,28 @@ public class AccessTokenTest
         Assert.AreEqual(expirationTime1, sessionResponse.AccessUsage?.ExpirationTime);
     }
 
+    [TestMethod]
+    public async Task Update_IsEnable_should_update_cache_and_stop_access()
+    {
+        using var farm1 = await ServerFarmDom.Create();
+
+        // create access token
+        var accessTokenDom1 = await farm1.CreateAccessToken();
+
+        // create session
+        var sessionDom = await accessTokenDom1.CreateSession();
+        await sessionDom.AddUsage(); // make sure it comes into cache
+
+        // update after creating session
+        await accessTokenDom1.Update(
+            new AccessTokenUpdateParams {
+                IsEnabled = new PatchOfBoolean { Value = false }
+            });
+
+        // add usage to create the new expiration
+        var sessionResponse = await sessionDom.AddUsage();
+        Assert.AreEqual(SessionErrorCode.AccessLocked, sessionResponse.ErrorCode);
+    }
 
     [TestMethod]
     public async Task Delete_should_invalidate_its_cache()
@@ -493,6 +516,6 @@ public class AccessTokenTest
         // delete access token
         await accessTokenDom1.TestApp.AccessTokensClient.DeleteAsync(farm1.ProjectId, accessTokenDom1.AccessTokenId);
         var sessionResponse = await sessionDom.AddUsage();
-        Assert.AreEqual(SessionErrorCode.SessionClosed, sessionResponse.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.AccessLocked, sessionResponse.ErrorCode);
     }
 }

@@ -35,7 +35,7 @@ public class AccessTokensService(
             Lifetime = createParams.Lifetime,
             Tags = TagUtils.TagsToString(createParams.Tags),
             IsPublic = createParams.IsPublic,
-            ClientCode = ManagerUtils.GenerateCode(AppOptions.ClientCodeDigitCount),
+            AccessCode = ManagerUtils.GenerateCode(AppOptions.AccessCodeDigitCount),
             ManagerCode = ManagerUtils.GenerateCode(AppOptions.ManagerCodeDigitCount),
             Secret = createParams.Secret ?? GmUtil.GenerateKey(),
             SupportCode = supportCode,

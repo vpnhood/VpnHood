@@ -11,7 +11,7 @@ public class AgentOptions
     private TimeSpan? _lostServerThreshold;
 
     public TimeSpan AdRewardDeviceTimeout { get; set; } = TimeSpan.FromMinutes(60);
-    public TimeSpan AdRewardTimeout { get; set; } = TimeSpan.FromMinutes(4);
+    public TimeSpan AdRewardPendingTimeout { get; set; } = TimeSpan.FromMinutes(4);
 
     public TimeSpan ServerUpdateStatusInterval { get; set; } =
         new SessionOptions.ServerConfig().UpdateStatusIntervalValue;

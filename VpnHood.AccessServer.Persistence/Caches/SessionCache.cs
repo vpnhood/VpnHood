@@ -28,8 +28,11 @@ public class SessionCache : SessionBaseModel
             ErrorCode = ErrorCode,
             IsArchived = IsArchived,
             ExtraData = ExtraData,
-            AdExpirationTime = AdExpirationTime,
-            IsAdReward = IsAdReward
+            ExpirationTime = ExpirationTime,
+            IsAdReward = IsAdReward,
+            IsAdRewardPending = IsAdRewardPending,
+            IsTrial = IsTrial,
+            IsPremium = IsPremium
         };
     }
 }

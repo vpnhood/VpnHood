@@ -9941,8 +9941,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("clientPolicies")]
         public System.Collections.Generic.ICollection<ClientPolicy>? ClientPolicies { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("clientCode")]
-        public long? ClientCode { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("accessCode")]
+        public long? AccessCode { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("managerCode")]
         public long? ManagerCode { get; set; } = default!;
@@ -9988,9 +9988,9 @@ namespace VpnHood.AccessServer.Api
     public partial class ClientPolicy
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("countryCode")]
+        [System.Text.Json.Serialization.JsonPropertyName("clientCountry")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string CountryCode { get; set; } = default!;
+        public string ClientCountry { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("freeLocations")]
         public System.Collections.Generic.ICollection<string>? FreeLocations { get; set; } = default!;

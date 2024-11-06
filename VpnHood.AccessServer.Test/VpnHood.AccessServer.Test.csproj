@@ -35,7 +35,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="System.Text.Json" Version="8.0.5" />
-		<PackageReference Include="VpnHood.Server" Version="4.6.581-prerelease" />
+		<PackageReference Include="VpnHood.Server" Version="4.6.584-prerelease" />
 	</ItemGroup>
 
 	<ItemGroup>

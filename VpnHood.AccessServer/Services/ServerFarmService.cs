@@ -38,7 +38,7 @@ public class ServerFarmService(
             ServerFarmId = serverFarmId,
             ServerProfileId = serverProfile.ServerProfileId,
             ServerFarmName = createParams.ServerFarmName,
-            AcceptClientCode = false,
+            AllowAccessCode = false,
             CreatedTime = DateTime.UtcNow,
             UseHostName = false,
             Secret = GmUtil.GenerateKey(),

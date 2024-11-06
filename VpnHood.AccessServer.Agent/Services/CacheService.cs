@@ -130,25 +130,34 @@ public class CacheService(
     }
 
 
-    public async Task<AccessCache?> GetAccessByTokenId(Guid accessTokenId, Guid? deviceId)
+    public async Task<AccessCache> GetAccessByTokenId(AccessTokenModel accessToken, Guid? deviceId)
     {
+        var accessTokenId = accessToken.AccessTokenId;
+
         // get from cache
-        var access =
-            cacheRepo.Accesses.Values.FirstOrDefault(x => x.AccessTokenId == accessTokenId && x.DeviceId == deviceId);
+        var access = cacheRepo.Accesses.Values.FirstOrDefault(x => x.AccessTokenId == accessTokenId && x.DeviceId == deviceId);
         if (access != null)
             return access;
 
         // multiple requests may be in queued so wait for one to finish then check the cache
         using var accessLock = await AsyncLock.LockAsync($"cache_AccessByTokenId_{accessTokenId}_{deviceId}");
-        access = cacheRepo.Accesses.Values.FirstOrDefault(x =>
-            x.AccessTokenId == accessTokenId && x.DeviceId == deviceId);
+        access = cacheRepo.Accesses.Values.FirstOrDefault(x => x.AccessTokenId == accessTokenId && x.DeviceId == deviceId);
         if (access != null)
             return access;
 
         // load from db
         access = await vhAgentRepo.AccessFind(accessTokenId, deviceId);
-        if (access != null)
+        if (access != null) {
             cacheRepo.Accesses.TryAdd(access.AccessId, access);
+            return access;
+        }
+
+        // create if not exists
+        access = await vhAgentRepo.AccessAdd(accessTokenId, deviceId);
+        cacheRepo.Accesses.TryAdd(access.AccessId, access);
+        logger.LogInformation(
+            "New Access has been created. AccessId: {access.AccessId}, ProjectId: {ProjectId}, ServerFarmId: {ServerFarmId}",
+            access.AccessId, accessToken.ProjectId, accessToken.ServerFarmId);
 
         return access;
     }
@@ -186,7 +195,7 @@ public class CacheService(
         var now = FastDateTime.Now;
 
         // remove old ads
-        var oldAdItems = cacheRepo.Ads.Where(x => x.Value < now - agentOptions.Value.AdRewardTimeout).ToArray();
+        var oldAdItems = cacheRepo.Ads.Where(x => x.Value < now - agentOptions.Value.AdRewardPendingTimeout).ToArray();
         foreach (var item in oldAdItems)
             cacheRepo.Ads.TryRemove(item);
 

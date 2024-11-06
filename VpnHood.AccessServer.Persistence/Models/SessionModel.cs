@@ -15,13 +15,16 @@ public class SessionBaseModel
     public required Guid ServerId { get; set; }
     public required DateTime CreatedTime { get; set; }
     public required DateTime LastUsedTime { get; set; }
-    public required DateTime? AdExpirationTime { get; set; }
+    public required DateTime? ExpirationTime { get; set; }
     public required DateTime? EndTime { get; set; }
     public required SessionSuppressType SuppressedBy { get; set; }
     public required SessionSuppressType SuppressedTo { get; set; }
     public required SessionErrorCode ErrorCode { get; set; }
     public required bool IsArchived { get; set; }
+    public required bool IsAdRewardPending { get; set; }
     public required bool IsAdReward { get; set; }
+    public required bool IsTrial { get; set; }
+    public required bool IsPremium { get; set; }
     public required string? ErrorMessage { get; set; }
     public required string? ExtraData { get; set; }
 

@@ -2,6 +2,7 @@
 using GrayMint.Common.Utils;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Tokens;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 
@@ -132,13 +133,15 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
         return AgentClient.Server_UpdateStatus(serverStatus);
     }
 
-    public async Task<SessionDom> CreateSession(AccessToken accessToken, string? clientId = null, bool assertError = true)
+    public async Task<SessionDom> CreateSession(AccessToken accessToken, string? clientId = null, bool assertError = true, 
+        ConnectPlanId planId = ConnectPlanId.Normal)
     {
         var sessionRequestEx = await TestApp.CreateSessionRequestEx(
             accessToken,
             ServerConfig.TcpEndPointsValue.First(),
             clientId,
-            TestApp.NewIpV4());
+            TestApp.NewIpV4(),
+            planId: planId);
 
         var testSession =
             await SessionDom.Create(TestApp, ServerId, accessToken, sessionRequestEx, AgentClient, assertError);

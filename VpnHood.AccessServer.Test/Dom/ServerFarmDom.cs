@@ -78,13 +78,16 @@ public class ServerFarmDom : IDisposable
     }
 
 
-    public async Task<AccessTokenDom> CreateAccessToken(bool isPublic = false)
+    public async Task<AccessTokenDom> CreateAccessToken(bool isPublic = false, AdRequirement adRequirement = AdRequirement.None, 
+        ClientPolicy[]? clientPolicies = null)
     {
         var ret = await TestApp.AccessTokensClient.CreateAsync(TestApp.ProjectId,
             new AccessTokenCreateParams {
                 ServerFarmId = ServerFarm.ServerFarmId,
                 IsPublic = isPublic,
-                IsEnabled = true
+                AdRequirement = adRequirement,
+                IsEnabled = true,
+                ClientPolicies = clientPolicies
             });
 
         return new AccessTokenDom(TestApp, ret);

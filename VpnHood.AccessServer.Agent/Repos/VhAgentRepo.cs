@@ -99,7 +99,6 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ExtraData = x.ExtraData,
                     CreatedTime = x.CreatedTime,
                     LastUsedTime = x.LastUsedTime,
-                    AdExpirationTime = x.AdExpirationTime,
                     ClientVersion = x.ClientVersion,
                     EndTime = x.EndTime,
                     ErrorCode = x.ErrorCode,
@@ -112,7 +111,11 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     UserAgent = x.Device.UserAgent,
                     Country = x.Device.Country,
                     DeviceIp = x.DeviceIp,
-                    IsAdReward = x.IsAdReward
+                    IsAdReward = x.IsAdReward,
+                    IsAdRewardPending = x.IsAdRewardPending,
+                    IsPremium = x.IsPremium,
+                    IsTrial = x.IsTrial,
+                    ExpirationTime = x.ExpirationTime
                 },
                 Access = new AccessCache {
                     AccessId = x.AccessId,
@@ -120,6 +123,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     DeviceId = x.Access.DeviceId,
                     LastUsedTime = x.Access.LastUsedTime,
                     Description = x.Access.Description,
+                    AdRewardExpirationTime = x.Access.AdRewardExpirationTime,
+                    AdRewardMinutes = x.Access.AdRewardMinutes,
                     LastCycleSentTraffic = x.Access.LastCycleSentTraffic,
                     LastCycleReceivedTraffic = x.Access.LastCycleReceivedTraffic,
                     LastCycleTraffic = x.Access.LastCycleTraffic,
@@ -134,7 +139,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     MaxDevice = x.Access.AccessToken.MaxDevice,
                     MaxTraffic = x.Access.AccessToken.MaxTraffic,
                     IsPublic = x.Access.AccessToken.IsPublic,
-                    IsAccessTokenEnabled = !x.Access.AccessToken.IsDeleted && x.Access.AccessToken.IsEnabled
+                    IsAccessTokenEnabled = !x.Access.AccessToken.IsDeleted && x.Access.AccessToken.IsEnabled,
                 }
             })
             .AsNoTracking();
@@ -236,7 +241,9 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 MaxDevice = x.AccessToken.MaxDevice,
                 MaxTraffic = x.AccessToken.MaxTraffic,
                 IsPublic = x.AccessToken.IsPublic,
-                IsAccessTokenEnabled = !x.AccessToken.IsDeleted && x.AccessToken.IsEnabled
+                IsAccessTokenEnabled = !x.AccessToken.IsDeleted && x.AccessToken.IsEnabled,
+                AdRewardExpirationTime = x.AdRewardExpirationTime,
+                AdRewardMinutes = x.AdRewardMinutes
             })
             .AsNoTracking()
             .SingleAsync();
@@ -266,7 +273,9 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 MaxDevice = x.AccessToken.MaxDevice,
                 MaxTraffic = x.AccessToken.MaxTraffic,
                 IsPublic = x.AccessToken.IsPublic,
-                IsAccessTokenEnabled = !x.AccessToken.IsDeleted && x.AccessToken.IsEnabled
+                IsAccessTokenEnabled = !x.AccessToken.IsDeleted && x.AccessToken.IsEnabled,
+                AdRewardExpirationTime = x.AdRewardExpirationTime,
+                AdRewardMinutes = x.AdRewardMinutes
             })
             .AsNoTracking()
             .SingleOrDefaultAsync();
@@ -298,7 +307,9 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             MaxDevice = accessToken.MaxDevice,
             MaxTraffic = accessToken.MaxTraffic,
             IsPublic = accessToken.IsPublic,
-            IsAccessTokenEnabled = accessToken is { IsDeleted: false, IsEnabled: true }
+            IsAccessTokenEnabled = accessToken is { IsDeleted: false, IsEnabled: true },
+            AdRewardExpirationTime = null,
+            AdRewardMinutes = null
         };
 
         await vhContext.Accesses.AddAsync(access.ToModel());
@@ -326,8 +337,11 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             IsArchived = session.IsArchived,
             Country = session.Country,
             DeviceIp = session.DeviceIp,
-            AdExpirationTime = session.AdExpirationTime,
-            IsAdReward = session.IsAdReward
+            IsAdReward = session.IsAdReward,
+            IsAdRewardPending = session.IsAdRewardPending,
+            IsPremium = session.IsPremium,
+            IsTrial = session.IsTrial,
+            ExpirationTime = session.ExpirationTime
         };
 
         var entry = vhContext.Sessions.Attach(model);
@@ -338,8 +352,9 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         entry.Property(x => x.ErrorMessage).IsModified = true;
         entry.Property(x => x.ErrorCode).IsModified = true;
         entry.Property(x => x.IsArchived).IsModified = true;
-        entry.Property(x => x.AdExpirationTime).IsModified = true;
+        entry.Property(x => x.ExpirationTime).IsModified = true;
         entry.Property(x => x.IsAdReward).IsModified = true;
+        entry.Property(x => x.IsAdRewardPending).IsModified = true;
     }
 
     public SessionCache SessionGet(long sessionId)
@@ -355,7 +370,6 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 ExtraData = x.ExtraData,
                 CreatedTime = x.CreatedTime,
                 LastUsedTime = x.LastUsedTime,
-                AdExpirationTime = x.AdExpirationTime,
                 ClientVersion = x.ClientVersion,
                 EndTime = x.EndTime,
                 ErrorCode = x.ErrorCode,
@@ -368,7 +382,11 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 UserAgent = x.Device.UserAgent,
                 Country = x.Device.Country,
                 DeviceIp = x.DeviceIp,
-                IsAdReward = x.IsAdReward
+                IsAdReward = x.IsAdReward,
+                IsAdRewardPending = x.IsAdRewardPending,
+                IsPremium = x.IsPremium,
+                IsTrial = x.IsTrial,
+                ExpirationTime = x.ExpirationTime
             })
             .AsNoTracking()
             .Single();
@@ -403,13 +421,17 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             TotalSentTraffic = access.TotalSentTraffic,
             TotalTraffic = access.TotalTraffic,
             CycleTraffic = access.CycleTraffic,
-            Description = access.Description
+            Description = access.Description,
+            AdRewardExpirationTime = access.AdRewardExpirationTime,
+            AdRewardMinutes = access.AdRewardMinutes
         };
 
         var entry = vhContext.Accesses.Attach(model);
         entry.Property(x => x.LastUsedTime).IsModified = true;
         entry.Property(x => x.TotalReceivedTraffic).IsModified = true;
         entry.Property(x => x.TotalSentTraffic).IsModified = true;
+        entry.Property(x => x.AdRewardExpirationTime).IsModified = true;
+        entry.Property(x => x.AdRewardMinutes).IsModified = true;
     }
 
     public async Task<SessionModel> SessionAdd(SessionCache session)

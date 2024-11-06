@@ -17,7 +17,7 @@ public class AccessTokenModel
     public required int Lifetime { get; set; }
     public required string? Tags { get; set; }
     public required string? ClientPolicies { get; set; }
-    public required long? ClientCode { get; set; }
+    public required long? AccessCode { get; set; }
     public required long? ManagerCode { get; set; }
     public required DateTime? ExpirationTime { get; set; }
     public required DateTime? FirstUsedTime { get; set; }

@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Tokens;
 using Token = VpnHood.Common.Tokens.Token;
 
 namespace VpnHood.AccessServer.Test.Dom;
@@ -16,7 +17,8 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
 
     public async Task<SessionDom> CreateSession(string? clientId = null, IPAddress? clientIp = null,
         AddressFamily addressFamily = AddressFamily.InterNetwork, bool throwError = true,
-        bool autoRedirect = false, string? serverLocation = null, ClientInfo? clientInfo = null)
+        bool autoRedirect = false, string? serverLocation = null, ClientInfo? clientInfo = null, 
+        ConnectPlanId planId = ConnectPlanId.Normal)
     {
         // get server ip
         var accessKey = await GetAccessKey();
@@ -25,13 +27,14 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
             token.ServerToken.HostEndPoints?.FirstOrDefault(x => x.Address.AddressFamily == addressFamily) ??
             throw new Exception("There is no ApiUrl.");
         return await CreateSession(serverEndPoint, clientId, clientIp, throwError, serverLocation:
-            serverLocation, autoRedirect: autoRedirect, clientInfo: clientInfo);
+            serverLocation, autoRedirect: autoRedirect, clientInfo: clientInfo, planId: planId);
     }
 
     public async Task<SessionDom> CreateSession(IPEndPoint serverEndPoint, string? clientId = null,
         IPAddress? clientIp = null,
         bool throwError = true, string? serverLocation = null, bool autoRedirect = false, bool allowRedirect = true,
-        ClientInfo? clientInfo = null)
+        ClientInfo? clientInfo = null,
+        ConnectPlanId planId = ConnectPlanId.Normal)
     {
         // find server of the farm that listen to token EndPoint
         var servers = await TestApp.ServersClient.ListAsync(TestApp.ProjectId);
@@ -50,7 +53,8 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
             locationPath: serverLocation,
             clientInfo: clientInfo,
             clientId: clientId,
-            clientIp: clientIp);
+            clientIp: clientIp,
+            planId: planId);
 
         // create session
         var ret = await SessionDom.Create(
@@ -75,7 +79,8 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
                 clientIp: sessionRequestEx.ClientIp,
                 serverLocation: serverLocation,
                 throwError: throwError,
-            allowRedirect: false);
+                planId: planId,
+                allowRedirect: false);
         }
 
         if (throwError && ret.SessionResponseEx.ErrorCode != SessionErrorCode.Ok)

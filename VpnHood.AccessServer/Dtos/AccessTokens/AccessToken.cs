@@ -15,7 +15,7 @@ public class AccessToken
     public required DateTime? LastUsedTime { get; init; }
     public required bool IsPublic { get; init; }
     public required ClientPolicy[]? ClientPolicies { get; init; }
-    public required long? ClientCode { get; init; }
+    public required long? AccessCode { get; init; }
     public required long? ManagerCode { get; init; }
     public required bool IsEnabled { get; init; }
     public required AdRequirement AdRequirement { get; init; }

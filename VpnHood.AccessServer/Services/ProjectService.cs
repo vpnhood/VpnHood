@@ -58,7 +58,7 @@ public class ProjectService(
             TokenError = null,
             PushTokenToClient = true,
             MaxCertificateCount = 1,
-            AcceptClientCode = false,
+            AllowAccessCode = false,
         };
 
         // create project
@@ -91,7 +91,7 @@ public class ProjectService(
                     AdRequirement = AdRequirement.None,
                     IsPublic = true,
                     ClientPolicies = null,
-                    ClientCode = null, // public token can not have client code
+                    AccessCode = null, // public token can not have client code
                     ManagerCode = null, // public token can not have manager code
                     IsEnabled = true,
                     IsDeleted = false,
@@ -117,7 +117,7 @@ public class ProjectService(
                     AdRequirement = AdRequirement.None,
                     IsPublic = false,
                     ClientPolicies = null,
-                    ClientCode = ManagerUtils.GenerateCode(AppOptions.ClientCodeDigitCount),
+                    AccessCode = ManagerUtils.GenerateCode(AppOptions.AccessCodeDigitCount),
                     ManagerCode = ManagerUtils.GenerateCode(AppOptions.ManagerCodeDigitCount),
                     SupportCode = 1001,
                     MaxDevice = 5,

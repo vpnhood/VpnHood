@@ -23,6 +23,7 @@ using VpnHood.AccessServer.Test.Helper;
 using VpnHood.Common.IpLocations;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Messaging;
@@ -291,7 +292,8 @@ public class TestApp : IHttpClientFactory, IDisposable
     public async Task<SessionRequestEx> CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint,
         string? clientId = null, IPAddress? clientIp = null
         , string? extraData = null, string? locationPath = null, bool allowRedirect = false,
-        ClientInfo? clientInfo = null)
+        ClientInfo? clientInfo = null,
+        ConnectPlanId planId = ConnectPlanId.Normal)
     {
         var rand = new Random();
         if (clientInfo != null && clientId != null)
@@ -317,7 +319,8 @@ public class TestApp : IHttpClientFactory, IDisposable
             HostEndPoint = hostEndPoint,
             ExtraData = extraData ?? Guid.NewGuid().ToString(),
             ServerLocation = locationPath,
-            AllowRedirect = allowRedirect
+            AllowRedirect = allowRedirect,
+            PlanId = planId
         };
 
         return sessionRequestEx;

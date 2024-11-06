@@ -3,7 +3,7 @@ namespace VpnHood.AccessServer.Dtos.ClientPolicies;
 
 public class ClientPolicy
 {
-    public required string CountryCode { get; init; }
+    public required string ClientCountry { get; init; }
     public string[]? FreeLocations { get; init; }
     public bool AutoLocationOnly { get; init; }
     public bool UnblockableOnly { get; init; }

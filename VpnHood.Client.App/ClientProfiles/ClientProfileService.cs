@@ -104,6 +104,10 @@ public class ClientProfileService
         if (updateParams.CustomData != null)
             item.ClientProfile.CustomData = updateParams.CustomData.Value;
 
+        if (updateParams.IsPremiumLocationSelected != null)
+            item.ClientProfile.IsPremiumLocationSelected = updateParams.IsPremiumLocationSelected.Value;
+
+
         Save();
         return item;
     }

@@ -19,14 +19,14 @@ internal class ClientProfileController : WebApiController, IClientProfileControl
     }
 
     [Route(HttpVerbs.Get, "/{clientProfileId}")]
-    public Task<ClientProfileInfo> Get(Guid clientProfileId)
+    public Task<ClientProfileInfo> Get([QueryField] Guid clientProfileId)
     {
         var clientProfileItem = App.ClientProfileService.Get(clientProfileId);
         return Task.FromResult(clientProfileItem.ClientProfileInfo);
     }
 
     [Route(HttpVerbs.Patch, "/{clientProfileId}")]
-    public async Task<ClientProfileInfo> Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    public async Task<ClientProfileInfo> Update([QueryField] Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
         _ = updateParams;
         updateParams = await HttpContext.GetRequestDataAsync<ClientProfileUpdateParams>().VhConfigureAwait();
@@ -35,7 +35,7 @@ internal class ClientProfileController : WebApiController, IClientProfileControl
     }
 
     [Route(HttpVerbs.Delete, "/{clientProfileId}")]
-    public async Task Delete(Guid clientProfileId)
+    public async Task Delete([QueryField] Guid clientProfileId)
     {
         if (clientProfileId == App.CurrentClientProfileItem?.ClientProfileId)
             await App.Disconnect(true).VhConfigureAwait();

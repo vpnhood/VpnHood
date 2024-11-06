@@ -6,5 +6,6 @@ public class ClientProfileUpdateParams
 {
     public Patch<string?>? ClientProfileName { get; set; }
     public Patch<bool>? IsFavorite { get; set; }
+    public Patch<bool>? IsPremiumLocationSelected { get; set; }
     public Patch<string?>? CustomData { get; set; }
 }

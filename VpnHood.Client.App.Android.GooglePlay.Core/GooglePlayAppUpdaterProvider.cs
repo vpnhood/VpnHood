@@ -10,7 +10,7 @@ using Xamarin.Google.Android.Play.Core.Install.Model;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
-public class GooglePlayAppUpdaterService : IAppUpdaterService
+public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
 {
     public async Task<bool> Update(IUiContext uiContext)
     {

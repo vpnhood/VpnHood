@@ -994,7 +994,7 @@ public class VpnHoodClient : IAsyncDisposable
         }
         catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the AdReward request.");
-            throw new AdException("This server requires a display ad, but AppAdService has not been initialized.");
+            throw new AdException("This server requires a display ad, but AdService has not been initialized.");
         }
     }
 

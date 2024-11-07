@@ -2,6 +2,7 @@
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.App.Services;
 using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
 
@@ -9,9 +10,8 @@ namespace VpnHood.Client.App.WebServer.Controllers;
 
 internal class AccountController : WebApiController, IAccountController
 {
-    public IAppAccountService AccountService => VpnHoodApp.Instance.Services.AccountService
-                                                ?? throw new Exception(
-                                                    "Account service is not available at this moment.");
+    private static AppAccountService AccountService => 
+        VpnHoodApp.Instance.Services.AccountService ?? throw new Exception("Account service is not available at this moment.");
 
     [Route(HttpVerbs.Get, "/")]
     public Task<AppAccount?> Get()

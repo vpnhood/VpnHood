@@ -5,20 +5,20 @@ using VpnHood.Client.App.Abstractions;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-public class AndroidAppAppCultureService : IAppCultureService
+public class AndroidAppCultureProvider : IAppCultureProvider
 {
     public static bool IsSupported => OperatingSystem.IsAndroidVersionAtLeast(34);
 
-    private AndroidAppAppCultureService()
+    private AndroidAppCultureProvider()
     {
     }
 
-    public static AndroidAppAppCultureService Create()
+    public static AndroidAppCultureProvider Create()
     {
-        return IsSupported ? new AndroidAppAppCultureService() : throw new NotSupportedException();
+        return IsSupported ? new AndroidAppCultureProvider() : throw new NotSupportedException();
     }
 
-    public static AndroidAppAppCultureService? CreateIfSupported()
+    public static AndroidAppCultureProvider? CreateIfSupported()
     {
         return IsSupported ? Create() : null;
     }

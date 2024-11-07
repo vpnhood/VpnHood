@@ -2,7 +2,7 @@
 using VpnHood.Client.Device.WinDivert;
 using VpnHood.Tunneling.Factory;
 
-namespace VpnHood.Test.Services;
+namespace VpnHood.Test.Providers;
 
 public class TestSocketFactory : SocketFactory
 {

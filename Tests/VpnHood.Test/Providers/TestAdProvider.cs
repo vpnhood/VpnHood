@@ -3,7 +3,7 @@ using VpnHood.Client.Device;
 using VpnHood.Common.Exceptions;
 using VpnHood.Test.AccessManagers;
 
-namespace VpnHood.Test.Services;
+namespace VpnHood.Test.Providers;
 
 public class TestAdProvider(TestAccessManager accessManager) : IAppAdProvider
 {

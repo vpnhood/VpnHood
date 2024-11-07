@@ -22,9 +22,9 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         AccessKeys = AssemblyInfo.IsDebugMode ? [ClientOptions.SampleAccessKey] : [],
         UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
         IsAddAccessKeySupported = true,
-        UpdaterService = AssemblyInfo.CreateUpdaterService(),
-        CultureService = AndroidAppAppCultureService.CreateIfSupported(),
-        UiService = new AndroidAppUiService(),
+        UpdaterProvider = AssemblyInfo.CreateUpdaterProvider(),
+        CultureProvider = AndroidAppCultureProvider.CreateIfSupported(),
+        UiProvider = new AndroidUiProvider(),
         LogAnonymous = !AssemblyInfo.IsDebugMode
     };
 }

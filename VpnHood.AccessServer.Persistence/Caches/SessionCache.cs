@@ -29,10 +29,10 @@ public class SessionCache : SessionBaseModel
             IsArchived = IsArchived,
             ExtraData = ExtraData,
             ExpirationTime = ExpirationTime,
-            IsAdReward = IsAdReward,
+            IsPremiumByAdReward = IsPremiumByAdReward,
             IsAdRewardPending = IsAdRewardPending,
-            IsTrial = IsTrial,
-            IsPremium = IsPremium
+            IsPremiumByTrial = IsPremiumByTrial,
+            IsPremiumByToken = IsPremiumByToken
         };
     }
 }

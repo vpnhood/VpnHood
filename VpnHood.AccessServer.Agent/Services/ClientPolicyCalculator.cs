@@ -16,7 +16,7 @@ public static class ClientPolicyCalculator
         public required ServerSelectOptions ServerSelectOptions { get; init; }
         public required DateTime? ExpirationTime { get; init; }
         public required AdRequirement AdRequirement { get; init; }
-        public required bool IsPremiumToken { get; init; }
+        public required bool IsPremiumByToken { get; init; }
         public required bool IsPremiumByTrial { get; init; }
         public required bool IsPremiumByAdReward { get; init; }
         public required int? AdRewardMinutes { get; init; }
@@ -125,7 +125,7 @@ public static class ClientPolicyCalculator
             ServerSelectOptions = serverSelectOptions,
             ExpirationTime = expirationTime,
             AdRequirement = adRequirement,
-            IsPremiumToken = isPremiumToken,
+            IsPremiumByToken = isPremiumToken,
             IsPremiumByTrial = isPremiumByTrial,
             IsPremiumByAdReward = isPremiumByAdReward,
             AdRewardMinutes = clientPolicy?.PremiumByRewardAd

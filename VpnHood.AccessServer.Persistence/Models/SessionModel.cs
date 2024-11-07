@@ -22,9 +22,9 @@ public class SessionBaseModel
     public required SessionErrorCode ErrorCode { get; set; }
     public required bool IsArchived { get; set; }
     public required bool IsAdRewardPending { get; set; }
-    public required bool IsAdReward { get; set; }
-    public required bool IsTrial { get; set; }
-    public required bool IsPremium { get; set; }
+    public required bool IsPremiumByAdReward { get; set; }
+    public required bool IsPremiumByTrial { get; set; }
+    public required bool IsPremiumByToken { get; set; }
     public required string? ErrorMessage { get; set; }
     public required string? ExtraData { get; set; }
 

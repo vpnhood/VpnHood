@@ -111,10 +111,10 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     UserAgent = x.Device.UserAgent,
                     Country = x.Device.Country,
                     DeviceIp = x.DeviceIp,
-                    IsAdReward = x.IsAdReward,
+                    IsPremiumByAdReward = x.IsPremiumByAdReward,
                     IsAdRewardPending = x.IsAdRewardPending,
-                    IsPremium = x.IsPremium,
-                    IsTrial = x.IsTrial,
+                    IsPremiumByToken = x.IsPremiumByToken,
+                    IsPremiumByTrial = x.IsPremiumByTrial,
                     ExpirationTime = x.ExpirationTime
                 },
                 Access = new AccessCache {
@@ -337,10 +337,10 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             IsArchived = session.IsArchived,
             Country = session.Country,
             DeviceIp = session.DeviceIp,
-            IsAdReward = session.IsAdReward,
+            IsPremiumByAdReward = session.IsPremiumByAdReward,
             IsAdRewardPending = session.IsAdRewardPending,
-            IsPremium = session.IsPremium,
-            IsTrial = session.IsTrial,
+            IsPremiumByToken = session.IsPremiumByToken,
+            IsPremiumByTrial = session.IsPremiumByTrial,
             ExpirationTime = session.ExpirationTime
         };
 
@@ -353,7 +353,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         entry.Property(x => x.ErrorCode).IsModified = true;
         entry.Property(x => x.IsArchived).IsModified = true;
         entry.Property(x => x.ExpirationTime).IsModified = true;
-        entry.Property(x => x.IsAdReward).IsModified = true;
+        entry.Property(x => x.IsPremiumByAdReward).IsModified = true;
         entry.Property(x => x.IsAdRewardPending).IsModified = true;
     }
 
@@ -382,10 +382,10 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 UserAgent = x.Device.UserAgent,
                 Country = x.Device.Country,
                 DeviceIp = x.DeviceIp,
-                IsAdReward = x.IsAdReward,
+                IsPremiumByAdReward = x.IsPremiumByAdReward,
                 IsAdRewardPending = x.IsAdRewardPending,
-                IsPremium = x.IsPremium,
-                IsTrial = x.IsTrial,
+                IsPremiumByToken = x.IsPremiumByToken,
+                IsPremiumByTrial = x.IsPremiumByTrial,
                 ExpirationTime = x.ExpirationTime
             })
             .AsNoTracking()

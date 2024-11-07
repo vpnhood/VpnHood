@@ -238,9 +238,9 @@ public class SessionService(
             UserAgent = device.UserAgent,
             ClientId = device.ClientId,
             IsAdRewardPending = policyResult.AdRequirement == AdRequirement.Required,
-            IsAdReward = policyResult.IsPremiumByAdReward,
-            IsTrial = policyResult.IsPremiumByTrial,
-            IsPremium = policyResult.IsPremiumToken,
+            IsPremiumByAdReward = policyResult.IsPremiumByAdReward,
+            IsPremiumByTrial = policyResult.IsPremiumByTrial,
+            IsPremiumByToken = policyResult.IsPremiumByToken,
             ExpirationTime = policyResult.ExpirationTime
         };
 
@@ -335,13 +335,16 @@ public class SessionService(
             return;
         }
 
-        //todo
+        // premium token always follow the access token expiration
+        if (session.IsPremiumByToken)
+            session.ExpirationTime = access.ExpirationTime;
+
         // check token expiration update
-        //if (session.ExpirationTime > access.ExpirationTime) {
-        //    session.ExpirationTime = access.ExpirationTime;
-        //    session.Close(SessionErrorCode.AccessExpired, "Access has been expired.");
-        //    return;
-        //}
+        if ((session.ExpirationTime ?? DateTime.MinValue) > access.ExpirationTime) {
+            session.ExpirationTime = access.ExpirationTime;
+            session.Close(SessionErrorCode.AccessExpired, "Access has been expired.");
+            return;
+        }
 
         // check token expiration
         if (access.ExpirationTime < utcNow || session.ExpirationTime > access.ExpirationTime) {
@@ -350,13 +353,13 @@ public class SessionService(
         }
 
         // check token expiration
-        if (session is { IsAdReward: true, IsAdRewardPending: false } && access.AdRewardExpirationTime < utcNow) {
+        if (session is { IsPremiumByAdReward: true, IsAdRewardPending: false } && access.AdRewardExpirationTime < utcNow) {
             session.Close(SessionErrorCode.AccessExpired, "Reward has been consumed.");
             return;
         }
 
         // check ad expiration
-        if (session is { IsAdReward: true, IsAdRewardPending: true } && (utcNow - session.CreatedTime) > adRewardPendingTimeout) {
+        if (session is { IsPremiumByAdReward: true, IsAdRewardPending: true } && (utcNow - session.CreatedTime) > adRewardPendingTimeout) {
             session.Close(SessionErrorCode.AdError,
                 "The reward for watching an ad has not been granted within the expected timeframe.");
             return;
@@ -468,7 +471,7 @@ public class SessionService(
             }
 
             sessionCache.ExpirationTime = accessCache.AdRewardExpirationTime;
-            sessionCache.IsAdReward = true;
+            sessionCache.IsPremiumByAdReward = true;
             sessionCache.IsAdRewardPending = false;
         }
 
@@ -500,7 +503,7 @@ public class SessionService(
             SessionId = sessionCache.SessionId,
             ProjectId = server.ProjectId,
             ServerId = server.ServerId,
-            IsAdReward = sessionCache.IsAdReward
+            IsAdReward = sessionCache.IsPremiumByAdReward
         });
 
         // track

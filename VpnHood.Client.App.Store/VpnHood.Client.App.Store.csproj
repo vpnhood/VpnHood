@@ -31,11 +31,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+		<PackageReference Include="VpnHood.Store.Api" Version="1.0.52" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.Store.Api" Version="1.0.52" />
+	  <ProjectReference Include="..\VpnHood.Client.App.Abstractions\VpnHood.Client.App.Abstractions.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -28,7 +28,7 @@ public partial class App : Application
                 Resource = DefaultAppResource.Resource,
                 UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json"),
                 IsAddAccessKeySupported = true,
-                UpdaterService = new WinAppUpdaterService(),
+                UpdaterProvider = new WinAppUpdaterProvider(),
                 SingleLineConsoleLog = false,
                 LogAnonymous = !IsDebugMode,
             });

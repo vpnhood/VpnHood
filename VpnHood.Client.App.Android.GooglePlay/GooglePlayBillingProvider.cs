@@ -9,16 +9,16 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
-public class GooglePlayBillingService : IAppBillingService
+public class GooglePlayBillingProvider : IAppBillingProvider
 {
     private readonly BillingClient _billingClient;
-    private readonly IAppAuthenticationService _authenticationService;
+    private readonly IAppAuthenticationProvider _authenticationProvider;
     private ProductDetails? _productDetails;
     private IList<ProductDetails.SubscriptionOfferDetails>? _subscriptionOfferDetails;
     private TaskCompletionSource<string>? _taskCompletionSource;
     public BillingPurchaseState PurchaseState { get; private set; }
 
-    public GooglePlayBillingService(IAppAuthenticationService authenticationService)
+    public GooglePlayBillingProvider(IAppAuthenticationProvider authenticationProvider)
     {
         var builder = BillingClient.NewBuilder(Application.Context);
         builder.SetListener(PurchasesUpdatedListener);
@@ -29,7 +29,7 @@ public class GooglePlayBillingService : IAppBillingService
             PendingPurchasesParams.NewBuilder().EnableOneTimeProducts().Build()
             ).Build();
         
-        _authenticationService = authenticationService;
+        _authenticationProvider = authenticationProvider;
     }
 
     private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
@@ -114,7 +114,7 @@ public class GooglePlayBillingService : IAppBillingService
         var appUiContext = (AndroidUiContext)uiContext;
         await EnsureConnected().VhConfigureAwait();
 
-        if (_authenticationService.UserId == null)
+        if (_authenticationProvider.UserId == null)
             throw new AuthenticationException();
 
         var offerToken = _subscriptionOfferDetails == null
@@ -130,7 +130,7 @@ public class GooglePlayBillingService : IAppBillingService
             .Build();
 
         var billingFlowParams = BillingFlowParams.NewBuilder()
-            .SetObfuscatedAccountId(_authenticationService.UserId)
+            .SetObfuscatedAccountId(_authenticationProvider.UserId)
             .SetProductDetailsParamsList([productDetailsParam])
             .Build();
 

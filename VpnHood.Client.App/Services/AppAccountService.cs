@@ -5,18 +5,14 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Services;
 
-internal class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountService accountService)
-    : IAppAccountService
-{
+public class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountProvider accountProvider) {
     private AppAccount? _appAccount;
     private string AppAccountFilePath => Path.Combine(vpnHoodApp.StorageFolderPath, "account", "account.json");
 
-    public IAppAuthenticationService Authentication { get; } =
-        new AppAuthenticationService(vpnHoodApp, accountService.Authentication);
+    public AppAuthenticationService Authentication { get; } = new(vpnHoodApp, accountProvider.AuthenticationProvider);
 
-    public IAppBillingService? Billing { get; } = accountService.Billing != null
-        ? new AppBillingService(vpnHoodApp, accountService.Billing)
-        : null;
+    public AppBillingService? BillingService { get; } = accountProvider.BillingProvider != null
+        ? new AppBillingService(vpnHoodApp, accountProvider.BillingProvider) : null;
 
     public async Task<AppAccount?> GetAccount()
     {
@@ -29,14 +25,14 @@ internal class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountService accou
             return _appAccount;
 
         // Update cache from server and update local cache
-        _appAccount = await accountService.GetAccount().VhConfigureAwait();
+        _appAccount = await accountProvider.GetAccount().VhConfigureAwait();
         Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
         await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount)).VhConfigureAwait();
 
         return _appAccount;
     }
 
-    public void ClearCache()
+    internal void ClearCache()
     {
         File.Delete(AppAccountFilePath);
         _appAccount = null;
@@ -44,6 +40,6 @@ internal class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountService accou
 
     public Task<string[]> GetAccessKeys(string subscriptionId)
     {
-        return accountService.GetAccessKeys(subscriptionId);
+        return accountProvider.GetAccessKeys(subscriptionId);
     }
 }

@@ -9,7 +9,7 @@ using Permission = Android.Content.PM.Permission;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-public class AndroidAppUiService : IAppUiService
+public class AndroidUiProvider : IAppUiProvider
 {
     private const int RequestPostNotificationId = 11;
     private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;

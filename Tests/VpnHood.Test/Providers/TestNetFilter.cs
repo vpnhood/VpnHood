@@ -5,7 +5,7 @@ using PacketDotNet;
 using VpnHood.Server;
 using VpnHood.Tunneling.Utils;
 
-namespace VpnHood.Test.Services;
+namespace VpnHood.Test.Providers;
 
 public class TestNetFilter : NetFilter
 {
@@ -31,7 +31,6 @@ public class TestNetFilter : NetFilter
 
         return NetMap.GetValueOrDefault(Tuple.Create(protocol, requestEndPoint), requestEndPoint);
     }
-
 
     public override IPPacket? ProcessRequest(IPPacket ipPacket)
     {

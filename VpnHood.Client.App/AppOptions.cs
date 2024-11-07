@@ -24,11 +24,11 @@ public class AppOptions
     public string? UiName { get; set; }
     public bool IsAddAccessKeySupported { get; set; } = true;
     public string[] AccessKeys { get; set; } = [];
-    public IAppUiService? UiService { get; set; }
-    public IAppCultureService? CultureService { get; set; }
-    public IAppUpdaterService? UpdaterService { get; set; }
-    public IAppAccountService? AccountService { get; set; }
-    public AppAdService[] AdServices { get; set; } = [];
+    public IAppUiProvider? UiProvider { get; set; }
+    public IAppCultureProvider? CultureProvider { get; set; }
+    public IAppUpdaterProvider? UpdaterProvider { get; set; }
+    public IAppAccountProvider? AccountProvider { get; set; }
+    public AppAdProviderItem[] AdProviderItems { get; set; } = [];
     public ITracker? Tracker { get; set; }
     public TimeSpan ReconnectTimeout { get; set; } = ClientOptions.Default.ReconnectTimeout;
     public TimeSpan AutoWaitTimeout { get; set; } = ClientOptions.Default.AutoWaitTimeout;

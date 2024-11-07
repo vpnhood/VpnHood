@@ -64,13 +64,13 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             UpdateInfoUrl = appSettings.UpdateInfoUrl,
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
-            UpdaterService = new GooglePlayAppUpdaterService(),
-            CultureService = AndroidAppAppCultureService.CreateIfSupported(),
-            AccountService = CreateAppAccountService(appSettings, storageFolderPath),
+            UpdaterProvider = new GooglePlayAppUpdaterProvider(),
+            CultureProvider = AndroidAppCultureProvider.CreateIfSupported(),
+            AccountProvider = CreateAppAccountProvider(appSettings, storageFolderPath),
+            AdProviderItems = CreateAppAdProviderItems(appSettings),
             AllowEndPointTracker = appSettings.AllowEndPointTracker,
             Tracker = _analytics != null ? new AnalyticsTracker(_analytics) : null,
-            AdServices = CreateAppAdServices(appSettings),
-            UiService = new AndroidAppUiService(),
+            UiProvider = new AndroidUiProvider(),
             LogAnonymous = !AppSettings.IsDebugMode,
             AdOptions = new AppAdOptions {
                 PreloadAd = true
@@ -85,44 +85,43 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         _analytics?.SetUserId(VpnHoodApp.Instance.Features.ClientId);
     }
 
-    private static AppAdService[] CreateAppAdServices(AppSettings appSettings)
+    private static AppAdProviderItem[] CreateAppAdProviderItems(AppSettings appSettings)
     {
         return [
-            new AppAdService {
+            new AppAdProviderItem {
                 AdProvider = AdMobInterstitialAdProvider.Create(appSettings.AdMobInterstitialAdUnitId),
                 ExcludeCountryCodes = ["IR", "CN"],
-                ServiceName = "AdMob",
+                ProviderName = "AdMob",
             },
 
-            new AppAdService {
+            new AppAdProviderItem {
                 AdProvider = InMobiAdProvider.Create(appSettings.InmobiAccountId, appSettings.InmobiPlacementId, appSettings.InmobiIsDebugMode),
-                ServiceName = "InMobi",
+                ProviderName = "InMobi",
             },
 
-            new AppAdService {
+            new AppAdProviderItem {
                 AdProvider = ChartboostAdProvider.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),
                 ExcludeCountryCodes = ["IR", "CN"],
-                ServiceName = "Chartboost",
+                ProviderName = "Chartboost",
             },
 
-            new AppAdService {
+            new AppAdProviderItem {
                 AdProvider = AdMobInterstitialAdProvider.Create(appSettings.AdMobInterstitialNoVideoAdUnitId),
                 ExcludeCountryCodes = ["CN"],
-                ServiceName = "AdMob-NoVideo",
+                ProviderName = "AdMob-NoVideo",
             },
         ];
     }
 
-    private static StoreAccountService? CreateAppAccountService(AppSettings appSettings, string storageFolderPath)
+    private static StoreAccountProvider? CreateAppAccountProvider(AppSettings appSettings, string storageFolderPath)
     {
         try {
-            var googlePlayAuthenticationService = new GooglePlayAuthenticationService(appSettings.GoogleSignInClientId);
-            var authenticationService = new StoreAuthenticationService(storageFolderPath, appSettings.StoreBaseUri,
-                appSettings.StoreAppId, googlePlayAuthenticationService, appSettings.StoreIgnoreSslVerification);
-            var googlePlayBillingService = new GooglePlayBillingService(authenticationService);
-            var accountService =
-                new StoreAccountService(authenticationService, googlePlayBillingService, appSettings.StoreAppId);
-            return accountService;
+            var authenticationExternalProvider = new GooglePlayAuthenticationProvider(appSettings.GoogleSignInClientId);
+            var authenticationProvider = new StoreAuthenticationProvider(storageFolderPath, appSettings.StoreBaseUri,
+                appSettings.StoreAppId, authenticationExternalProvider, appSettings.StoreIgnoreSslVerification);
+            var googlePlayBillingProvider = new GooglePlayBillingProvider(authenticationProvider);
+            var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider, appSettings.StoreAppId);
+            return accountProvider;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not create AppAccountService.");

@@ -10,6 +10,7 @@ using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
+using VpnHood.Client.App.Providers;
 using VpnHood.Client.App.Services;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
@@ -66,7 +67,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly bool? _logAnonymous;
     private UserSettings _oldUserSettings;
     private readonly bool _autoDiagnose;
-    private readonly Services.AppAdService _adService;
+    private readonly AppAdService _appAppAdService;
     private readonly bool _allowEndPointTracker;
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
@@ -114,7 +115,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _logAnonymous = options.LogAnonymous;
         _autoDiagnose = options.AutoDiagnose;
         _serverQueryTimeout = options.ServerQueryTimeout;
-        _adService = new Services.AppAdService(this, options.AdServices, options.AdOptions);
+        _appAppAdService = new AppAdService(this, options.AdProviderItems, options.AdOptions);
         _allowEndPointTracker = options.AllowEndPointTracker;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), options.SingleLineConsoleLog);
@@ -148,7 +149,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Settings.UserSettings.ClientProfileId ??=
             builtInProfileIds.FirstOrDefault()?.ClientProfileId; // set first one as default
 
-        var uiService = options.UiService ?? new AppUiServiceBase();
+        var uiProvider = options.UiProvider ?? new AppNotSupportedUiProvider();
 
         // initialize features
         Features = new AppFeatures {
@@ -159,10 +160,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             UpdateInfoUrl = options.UpdateInfoUrl,
             UiName = options.UiName,
             BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId,
-            IsAccountSupported = options.AccountService != null,
-            IsBillingSupported = options.AccountService?.Billing != null,
-            IsQuickLaunchSupported = uiService.IsQuickLaunchSupported,
-            IsNotificationSupported = uiService.IsNotificationSupported,
+            IsAccountSupported = options.AccountProvider != null,
+            IsBillingSupported = options.AccountProvider?.BillingProvider != null,
+            IsQuickLaunchSupported = uiProvider.IsQuickLaunchSupported,
+            IsNotificationSupported = uiProvider.IsNotificationSupported,
             IsAlwaysOnSupported = device.IsAlwaysOnSupported,
             GaMeasurementId = options.AppGa4MeasurementId,
             ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId)
@@ -170,11 +171,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // initialize services
         Services = new AppServices {
-            AppCultureService = options.CultureService ?? new AppCultureService(this),
-            AdService = _adService,
-            AccountService = options.AccountService != null ? new AppAccountService(this, options.AccountService) : null,
-            UpdaterService = options.UpdaterService,
-            UiService = uiService,
+            CultureProvider = options.CultureProvider ?? new AppCultureProvider(this),
+            AdService = _appAppAdService,
+            AccountService = options.AccountProvider != null ? new AppAccountService(this, options.AccountProvider) : null,
+            UpdaterProvider = options.UpdaterProvider,
+            UiProvider = uiProvider,
             Tracker = options.Tracker
         };
 
@@ -230,7 +231,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UserSettings.ServerLocation = null;
 
             // sync culture to app settings
-            Services.AppCultureService.SelectedCultures =
+            Services.CultureProvider.SelectedCultures =
                 UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
 
             InitCulture();
@@ -269,8 +270,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private void ActiveUiContext_OnChanged(object sender, EventArgs e)
     {
         var uiContext = ActiveUiContext.Context;
-        if (IsIdle && _adService.IsPreloadApEnabled && uiContext != null)
-            _ = _adService.LoadAd(uiContext, CancellationToken.None);
+        if (IsIdle && Services.AdService.IsPreloadAdEnabled && uiContext != null)
+            _ = _appAppAdService.LoadAd(uiContext, CancellationToken.None);
     }
 
     public ClientProfileItem? CurrentClientProfileItem =>
@@ -312,7 +313,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture ?? SystemUiCulture),
                 SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),
                 VersionStatus = _versionCheckResult?.VersionStatus ?? VersionStatus.Unknown,
-                PurchaseState = Services.AccountService?.Billing?.PurchaseState,
+                PurchaseState = Services.AccountService?.BillingService?.PurchaseState,
                 LastPublishInfo = _versionCheckResult?.VersionStatus is VersionStatus.Deprecated or VersionStatus.Old
                     ? _versionCheckResult.PublishInfo
                     : null,
@@ -646,11 +647,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // QuickLaunch
         if (ActiveUiContext.Context != null &&
-            Services.UiService.IsQuickLaunchSupported &&
+            Services.UiProvider.IsQuickLaunchSupported &&
             Settings.IsQuickLaunchEnabled is null) {
             try {
                 Settings.IsQuickLaunchEnabled =
-                    await Services.UiService.RequestQuickLaunch(ActiveUiContext.RequiredContext, cancellationToken)
+                    await Services.UiProvider.RequestQuickLaunch(ActiveUiContext.RequiredContext, cancellationToken)
                         .VhConfigureAwait();
             }
             catch (Exception ex) {
@@ -662,11 +663,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // Notification
         if (ActiveUiContext.Context != null &&
-            Services.UiService.IsNotificationSupported &&
+            Services.UiProvider.IsNotificationSupported &&
             Settings.IsNotificationEnabled is null) {
             try {
                 Settings.IsNotificationEnabled =
-                    await Services.UiService.RequestNotification(ActiveUiContext.RequiredContext, cancellationToken)
+                    await Services.UiProvider.RequestNotification(ActiveUiContext.RequiredContext, cancellationToken)
                         .VhConfigureAwait();
             }
             catch (Exception ex) {
@@ -678,13 +679,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     public CultureInfo SystemUiCulture => new(
-        Services.AppCultureService.SystemCultures.FirstOrDefault()?.Split("-").FirstOrDefault()
+        Services.CultureProvider.SystemCultures.FirstOrDefault()?.Split("-").FirstOrDefault()
         ?? CultureInfo.InstalledUICulture.TwoLetterISOLanguageName);
 
     private void InitCulture()
     {
         // set default culture
-        var firstSelected = Services.AppCultureService.SelectedCultures.FirstOrDefault();
+        var firstSelected = Services.CultureProvider.SelectedCultures.FirstOrDefault();
         CultureInfo.CurrentUICulture = (firstSelected != null) ? new CultureInfo(firstSelected) : SystemUiCulture;
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
 
@@ -798,7 +799,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public void VersionCheckPostpone()
     {
         // version status is unknown when app container can do it
-        if (Services.UpdaterService != null) {
+        if (Services.UpdaterProvider != null) {
             _versionCheckResult = null;
             File.Delete(VersionCheckFilePath);
         }
@@ -816,8 +817,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // check version by app container
         try {
-            if (ActiveUiContext.Context != null && Services.UpdaterService != null &&
-                await Services.UpdaterService.Update(ActiveUiContext.RequiredContext).VhConfigureAwait()) {
+            if (ActiveUiContext.Context != null && Services.UpdaterProvider != null &&
+                await Services.UpdaterProvider.Update(ActiveUiContext.RequiredContext).VhConfigureAwait()) {
                 VersionCheckPostpone();
                 return;
             }
@@ -928,11 +929,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async Task RefreshAccount(bool updateCurrentClientProfile = false)
     {
-        if (Services.AccountService is not AppAccountService accountService)
+        if (Services.AccountService is null)
             throw new Exception("AccountService is not initialized.");
 
         // clear cache
-        accountService.ClearCache();
+        Services.AccountService.ClearCache();
 
         // update profiles
         // get access tokens from account

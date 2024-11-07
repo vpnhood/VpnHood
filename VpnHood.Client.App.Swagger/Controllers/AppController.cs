@@ -1,6 +1,5 @@
 using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.App.Swagger.Exceptions;
 using VpnHood.Client.App.WebServer.Api;

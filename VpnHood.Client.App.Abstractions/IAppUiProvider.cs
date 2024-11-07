@@ -2,7 +2,7 @@
 
 namespace VpnHood.Client.App.Abstractions;
 
-public interface IAppUiService
+public interface IAppUiProvider
 {
     bool IsQuickLaunchSupported { get; }
     Task<bool> RequestQuickLaunch(IUiContext uiContext, CancellationToken cancellationToken);

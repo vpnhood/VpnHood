@@ -6,27 +6,27 @@ using VpnHood.Store.Api;
 
 namespace VpnHood.Client.App.Store;
 
-public class StoreAccountService : IAppAccountService, IDisposable
+public class StoreAccountProvider : IAppAccountProvider, IDisposable
 {
     private readonly Guid _storeAppId;
-    public IAppAuthenticationService Authentication { get; }
-    public IAppBillingService? Billing { get; }
+    public IAppAuthenticationProvider AuthenticationProvider { get; }
+    public IAppBillingProvider? BillingProvider { get; }
 
-    public StoreAccountService(IAppAuthenticationService authenticationService,
-        IAppBillingService? billingService,
+    public StoreAccountProvider(IAppAuthenticationProvider authenticationProvider,
+        IAppBillingProvider? billingProvider,
         Guid storeAppId)
     {
         _storeAppId = storeAppId;
-        Authentication = authenticationService;
-        Billing = billingService != null ? new StoreBillingService(this, billingService) : null;
+        AuthenticationProvider = authenticationProvider;
+        BillingProvider = billingProvider != null ? new StoreBillingProvider(this, billingProvider) : null;
     }
 
     public async Task<AppAccount?> GetAccount()
     {
-        if (Authentication.UserId == null)
+        if (AuthenticationProvider.UserId == null)
             return null;
 
-        var httpClient = Authentication.HttpClient;
+        var httpClient = AuthenticationProvider.HttpClient;
         var authenticationClient = new AuthenticationClient(httpClient);
         var currentUser = await authenticationClient.GetCurrentUserAsync().VhConfigureAwait();
 
@@ -49,7 +49,7 @@ public class StoreAccountService : IAppAccountService, IDisposable
     // Check order state 'isProcessed' for 6 time
     public async Task WaitForProcessProviderOrder(string providerOrderId)
     {
-        var httpClient = Authentication.HttpClient;
+        var httpClient = AuthenticationProvider.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
 
         for (var counter = 0;; counter++) {
@@ -71,7 +71,7 @@ public class StoreAccountService : IAppAccountService, IDisposable
 
     public async Task<string[]> GetAccessKeys(string subscriptionId)
     {
-        var httpClient = Authentication.HttpClient;
+        var httpClient = AuthenticationProvider.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
         var accessTokens = await currentVpnUserClient
             .ListAccessTokensAsync(_storeAppId, subscriptionId: Guid.Parse(subscriptionId)).VhConfigureAwait();
@@ -88,7 +88,7 @@ public class StoreAccountService : IAppAccountService, IDisposable
 
     public void Dispose()
     {
-        Billing?.Dispose();
-        Authentication.Dispose();
+        BillingProvider?.Dispose();
+        AuthenticationProvider.Dispose();
     }
 }

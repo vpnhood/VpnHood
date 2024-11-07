@@ -8,69 +8,68 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Services;
 
-internal class AppMultiAdService
+internal class AppCompositeAdService
 {
-    public bool IsPreloadApEnabled => _adOptions.PreloadAd;
-    private App.AppAdService? _loadedAdService;
+    private AppAdProviderItem? _loadedAdProviderItem;
 
-    private readonly App.AppAdService[] _adServices;
+    private readonly AppAdProviderItem[] _adProviderItems;
     private readonly AppAdOptions _adOptions;
 
-    public AppMultiAdService(App.AppAdService[] adServices, AppAdOptions adOptions)
+    public AppCompositeAdService(AppAdProviderItem[] adProviderItems, AppAdOptions adOptions)
     {
-        _adServices = adServices;
+        _adProviderItems = adProviderItems;
         _adOptions = adOptions;
 
         // throw exception if an add has both include and exclude country codes
-        var invalidAdServices = _adServices.Where(x => x.IncludeCountryCodes.Length > 0 && x.ExcludeCountryCodes.Length > 0).ToArray();
-        if (invalidAdServices.Any())
-            throw new Exception($"An ad service cannot have both include and exclude country codes. ServiceName: {invalidAdServices.First()}");
+        var appAdProviderItems = _adProviderItems.Where(x => x.IncludeCountryCodes.Length > 0 && x.ExcludeCountryCodes.Length > 0).ToArray();
+        if (appAdProviderItems.Any())
+            throw new Exception($"An ad provider cannot have both include and exclude country codes. ProviderName: {appAdProviderItems.First().Name}");
     }
 
 
     private bool ShouldLoadAd()
     {
-        return _loadedAdService?.AdProvider.AdLoadedTime == null ||
-               (_loadedAdService.AdProvider.AdLoadedTime + _loadedAdService.AdProvider.AdLifeSpan) < DateTime.UtcNow;
+        return _loadedAdProviderItem?.AdProvider.AdLoadedTime == null ||
+               (_loadedAdProviderItem.AdProvider.AdLoadedTime + _loadedAdProviderItem.AdProvider.AdLifeSpan) < DateTime.UtcNow;
     }
 
-    private static bool IsCountrySupported(App.AppAdService adService, string countryCode)
+    private static bool IsCountrySupported(AppAdProviderItem adProviderItem, string countryCode)
     {
-        if (!VhUtil.IsNullOrEmpty(adService.IncludeCountryCodes))
-            return adService.IncludeCountryCodes.Contains(countryCode, StringComparer.OrdinalIgnoreCase);
+        if (!VhUtil.IsNullOrEmpty(adProviderItem.IncludeCountryCodes))
+            return adProviderItem.IncludeCountryCodes.Contains(countryCode, StringComparer.OrdinalIgnoreCase);
 
-        if (!VhUtil.IsNullOrEmpty(adService.ExcludeCountryCodes))
-            return !adService.ExcludeCountryCodes.Contains(countryCode, StringComparer.OrdinalIgnoreCase);
+        if (!VhUtil.IsNullOrEmpty(adProviderItem.ExcludeCountryCodes))
+            return !adProviderItem.ExcludeCountryCodes.Contains(countryCode, StringComparer.OrdinalIgnoreCase);
 
         return true;
     }
 
     private readonly AsyncLock _loadAdLock = new();
-    protected async Task LoadAd(IUiContext uiContext, string? countryCode, bool forceReload, CancellationToken cancellationToken)
+    public async Task LoadAd(IUiContext uiContext, string? countryCode, bool forceReload, CancellationToken cancellationToken)
     {
-        if (_adServices.Length == 0)
+        if (_adProviderItems.Length == 0)
             throw new Exception("There is no AdService registered in this app.");
 
         using var lockAsync = await _loadAdLock.LockAsync(cancellationToken);
         if (!forceReload && !ShouldLoadAd())
             return;
 
-        _loadedAdService = null;
+        _loadedAdProviderItem = null;
 
         // filter ad services by country code
-        var filteredAdServices = _adServices
+        var filteredAdProviderItems = _adProviderItems
             .Where(x => countryCode is null || IsCountrySupported(x, countryCode));
 
-        foreach (var adService in filteredAdServices) {
+        foreach (var adProviderItem in filteredAdProviderItems) {
             cancellationToken.ThrowIfCancellationRequested();
 
             // find first successful ad network
             try {
                 using var timeoutCts = new CancellationTokenSource(_adOptions.LoadAdTimeout);
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-                await adService.AdProvider.LoadAd(uiContext, linkedCts.Token).VhConfigureAwait();
+                await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).VhConfigureAwait();
                 await Task.Delay(_adOptions.LoadAdPostDelay, cancellationToken);
-                _loadedAdService = adService;
+                _loadedAdProviderItem = adProviderItem;
                 return;
             }
             catch (Exception ex) when (ex is UiContextNotAvailableException || ActiveUiContext.Context != uiContext) {
@@ -79,7 +78,7 @@ internal class AppMultiAdService
 
             // do not catch if parent cancel the operation
             catch (Exception ex) {
-                VhLogger.Instance.LogWarning(ex, "Could not load any ad. ServiceName: {ServiceName}.", adService.Name);
+                VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.", adProviderItem.Name);
             }
         }
 
@@ -105,20 +104,20 @@ internal class AppMultiAdService
         throw new ShowAdNoUiException();
     }
 
-    protected async Task<string> ShowLoadedAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
+    public async Task<string> ShowLoadedAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
     {
         await VerifyActiveUi();
 
-        if (_loadedAdService == null)
+        if (_loadedAdProviderItem == null)
             throw new LoadAdException("There is no loaded ad.");
 
         // show the ad
         try {
-            await _loadedAdService.AdProvider.ShowAd(uiContext, customData, cancellationToken).VhConfigureAwait();
+            await _loadedAdProviderItem.AdProvider.ShowAd(uiContext, customData, cancellationToken).VhConfigureAwait();
             await VerifyActiveUi(false); // some ad provider may not raise exception on minimize
             await Task.Delay(_adOptions.ShowAdPostDelay, cancellationToken); //wait for finishing trackers
 
-            return _loadedAdService.Name;
+            return _loadedAdProviderItem.Name;
         }
         catch (ShowAdNoUiException) {
             throw;
@@ -130,7 +129,7 @@ internal class AppMultiAdService
             throw new LoadAdException("Could not show any ad.", ex);
         }
         finally {
-            _loadedAdService = null;
+            _loadedAdProviderItem = null;
         }
     }
 

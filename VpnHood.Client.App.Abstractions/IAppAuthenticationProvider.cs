@@ -2,7 +2,7 @@
 
 namespace VpnHood.Client.App.Abstractions;
 
-public interface IAppAuthenticationService : IDisposable
+public interface IAppAuthenticationProvider : IDisposable
 {
     bool IsSignInWithGoogleSupported { get; }
     string? UserId { get; }

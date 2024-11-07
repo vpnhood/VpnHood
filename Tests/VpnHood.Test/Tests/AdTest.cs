@@ -4,7 +4,7 @@ using VpnHood.Client.Device;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
-using VpnHood.Test.Services;
+using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
 
@@ -25,8 +25,8 @@ public class AdTest : TestBase
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
         var adProvider = new TestAdProvider(accessManager);
-        var adService = new AppAdService { AdProvider = new TestAdProvider(accessManager) };
-        appOptions.AdServices = [adService];
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
+        appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         adProvider.FailLoad = true;
         adProvider.FailShow = true; // should not reach this state
@@ -49,11 +49,11 @@ public class AdTest : TestBase
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
-        var adService = new AppAdService { AdProvider = new TestAdProvider(accessManager) };
-        appOptions.AdServices = [adService];
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
+        appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         ActiveUiContext.Context = null;
-        //adService.FailShow = true;
+        //adProviderItem.FailShow = true;
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
@@ -74,11 +74,11 @@ public class AdTest : TestBase
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
-        var adService = new AppAdService { AdProvider = new TestAdProvider(accessManager) };
-        appOptions.AdServices = [adService];
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
+        appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         ActiveUiContext.Context = null;
-        //adService.FailShow = true;
+        //adProviderItem.FailShow = true;
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
@@ -99,8 +99,8 @@ public class AdTest : TestBase
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
-        var adService = new AppAdService { AdProvider = new TestAdProvider(accessManager) };
-        appOptions.AdServices = [adService];
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
+        appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
         // connect
@@ -125,8 +125,8 @@ public class AdTest : TestBase
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
-        var adService = new AppAdService { AdProvider = new TestAdProvider(accessManager) };
-        appOptions.AdServices = [adService];
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
+        appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
         // connect

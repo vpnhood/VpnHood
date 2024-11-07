@@ -29,11 +29,11 @@ public static class AssemblyInfo
     }
 
     // ReSharper disable once ReturnTypeCanBeNotNullable
-    public static IAppUpdaterService? CreateUpdaterService()
+    public static IAppUpdaterProvider? CreateUpdaterProvider()
     {
 #if GOOGLE_PLAY
         // code clean up changes inline namespace to using
-        return new GooglePlayAppUpdaterService();
+        return new GooglePlayAppUpdaterProvider();
 #else
         return null;
 #endif

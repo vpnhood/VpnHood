@@ -4,26 +4,24 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Services;
 
-internal class AppBillingService(VpnHoodApp vpnHoodApp, IAppBillingService billingService)
-    : IAppBillingService
+public class AppBillingService(VpnHoodApp vpnHoodApp, IAppBillingProvider billingProvider) : IDisposable
 {
-    public BillingPurchaseState PurchaseState => billingService.PurchaseState;
+    public BillingPurchaseState PurchaseState => billingProvider.PurchaseState;
 
     public Task<SubscriptionPlan[]> GetSubscriptionPlans()
     {
-        return billingService.GetSubscriptionPlans();
+        return billingProvider.GetSubscriptionPlans();
     }
 
     public async Task<string> Purchase(IUiContext uiContext, string planId)
     {
-        var ret = await billingService.Purchase(uiContext, planId).VhConfigureAwait();
+        var ret = await billingProvider.Purchase(uiContext, planId).VhConfigureAwait();
         await vpnHoodApp.RefreshAccount(updateCurrentClientProfile: true).VhConfigureAwait();
         return ret;
     }
 
-
     public void Dispose()
     {
-        billingService.Dispose();
+        billingProvider.Dispose();
     }
 }

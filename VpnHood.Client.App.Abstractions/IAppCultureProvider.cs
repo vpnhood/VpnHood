@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Client.App.Abstractions;
 
-public interface IAppCultureService
+public interface IAppCultureProvider
 {
     string[] SystemCultures { get; }
     string[] AvailableCultures { get; set; }

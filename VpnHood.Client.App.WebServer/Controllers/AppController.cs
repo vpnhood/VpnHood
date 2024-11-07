@@ -18,7 +18,7 @@ internal class AppController : WebApiController, IAppController
     public async Task<AppConfig> Configure(ConfigParams configParams)
     {
         configParams = await HttpContext.GetRequestDataAsync<ConfigParams>().VhConfigureAwait();
-        App.Services.AppCultureService.AvailableCultures = configParams.AvailableCultures;
+        App.Services.CultureProvider.AvailableCultures = configParams.AvailableCultures;
         if (configParams.Strings != null) App.Resource.Strings = configParams.Strings;
 
         App.UpdateUi();
@@ -33,7 +33,7 @@ internal class AppController : WebApiController, IAppController
             Settings = App.Settings,
             ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ClientProfileInfo).ToArray(),
             State = App.State,
-            AvailableCultureInfos = App.Services.AppCultureService.AvailableCultures
+            AvailableCultureInfos = App.Services.CultureProvider.AvailableCultures
                 .Select(x => new UiCultureInfo(x))
                 .ToArray()
         };
@@ -126,18 +126,18 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Post, "/settings/open-always-on-page")]
     public void OpenAlwaysOnPage()
     {
-        App.Services.UiService.OpenAlwaysOnPage(ActiveUiContext.RequiredContext);
+        App.Services.UiProvider.OpenAlwaysOnPage(ActiveUiContext.RequiredContext);
     }
 
     [Route(HttpVerbs.Post, "/settings/request-quick-launch")]
     public Task RequestQuickLaunch()
     {
-        return App.Services.UiService.RequestQuickLaunch(ActiveUiContext.RequiredContext, CancellationToken.None);
+        return App.Services.UiProvider.RequestQuickLaunch(ActiveUiContext.RequiredContext, CancellationToken.None);
     }
 
     [Route(HttpVerbs.Post, "/settings/request-notification")]
     public Task RequestNotification()
     {
-        return App.Services.UiService.RequestNotification(ActiveUiContext.RequiredContext, CancellationToken.None);
+        return App.Services.UiProvider.RequestNotification(ActiveUiContext.RequiredContext, CancellationToken.None);
     }
 }

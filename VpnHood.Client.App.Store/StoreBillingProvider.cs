@@ -4,26 +4,26 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Store;
 
-public class StoreBillingService(StoreAccountService storeAccountService, IAppBillingService billingService)
-    : IAppBillingService
+public class StoreBillingProvider(StoreAccountProvider storeAccountProvider, IAppBillingProvider billingProvider)
+    : IAppBillingProvider
 {
     public void Dispose()
     {
-        billingService.Dispose();
+        billingProvider.Dispose();
     }
 
     public Task<SubscriptionPlan[]> GetSubscriptionPlans()
     {
-        return billingService.GetSubscriptionPlans();
+        return billingProvider.GetSubscriptionPlans();
     }
 
     public async Task<string> Purchase(IUiContext uiContext, string planId)
     {
         try {
             PurchaseState = BillingPurchaseState.Started;
-            var providerOrderId = await billingService.Purchase(uiContext, planId).VhConfigureAwait();
+            var providerOrderId = await billingProvider.Purchase(uiContext, planId).VhConfigureAwait();
             PurchaseState = BillingPurchaseState.Processing;
-            await storeAccountService.WaitForProcessProviderOrder(providerOrderId).VhConfigureAwait();
+            await storeAccountProvider.WaitForProcessProviderOrder(providerOrderId).VhConfigureAwait();
             return providerOrderId;
         }
         finally {

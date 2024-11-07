@@ -172,7 +172,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Services = new AppServices {
             AppCultureService = options.CultureService ?? new AppCultureService(this),
             AdService = _adService,
-            AccountService = options.AccountService,
+            AccountService = options.AccountService != null ? new AppAccountService(this, options.AccountService) : null,
             UpdaterService = options.UpdaterService,
             UiService = uiService,
             Tracker = options.Tracker
@@ -390,12 +390,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private readonly AsyncLock _connectLock = new();
     public async Task Connect(
-        Guid? clientProfileId = null, 
-        ConnectPlanId planId = ConnectPlanId.Normal, 
-        string? serverLocation = null, 
+        Guid? clientProfileId = null,
+        ConnectPlanId planId = ConnectPlanId.Normal,
+        string? serverLocation = null,
         bool diagnose = false,
-        string? userAgent = default, 
-        bool throwException = true, 
+        string? userAgent = default,
+        bool throwException = true,
         CancellationToken cancellationToken = default)
     {
         using var lockAsync = await _connectLock.LockAsync(cancellationToken);

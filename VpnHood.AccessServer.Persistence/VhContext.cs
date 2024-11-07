@@ -514,13 +514,20 @@ public class VhContext : DbContext
             entity
                 .HasKey(e => e.SessionId);
 
-            //index for finding other active sessions of an AccessId
+            //for finding other active sessions of an AccessId
             entity
                 .HasIndex(e => e.AccessId)
                 .HasFilter($"{nameof(SessionModel.EndTime)} IS NULL");
 
+            // for sync
             entity
-                .HasIndex(e => new { e.EndTime, e.LastUsedTime }); //for sync and timeout
+                .HasIndex(e => e.IsArchived)
+                .HasFilter($"{nameof(SessionModel.IsArchived)} = 1");
+
+            // for init load
+            entity
+                .HasIndex(e => e.LastUsedTime)
+                .HasFilter($"{nameof(SessionModel.EndTime)} is null");
 
             entity
                 .Property(e => e.IsArchived);

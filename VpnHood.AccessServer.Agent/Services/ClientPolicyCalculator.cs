@@ -53,7 +53,6 @@ public static class ClientPolicyCalculator
                 clientPolicies?.FirstOrDefault(x => x.ClientCountry == "*");
 
             if (clientPolicy != null) {
-
                 // check auto-location
                 if (clientPolicy.AutoLocationOnly && !serverLocationInfo.IsAuto())
                     throw new SessionExceptionEx(SessionErrorCode.AccessError, $"You need to set the location as auto. PlanId: {planId}");
@@ -71,7 +70,7 @@ public static class ClientPolicyCalculator
                     if (clientPolicy.Normal is null or < 0)
                         throw new SessionExceptionEx(SessionErrorCode.AccessError, $"The connect plan is not supported. PlanId: {planId}");
 
-                    expirationTime = DateTime.UtcNow.AddMinutes(clientPolicy.Normal.Value);
+                    expirationTime = clientPolicy.Normal == 0 ? null : DateTime.UtcNow.AddMinutes(clientPolicy.Normal.Value);
                     adRequirement = accessToken.AdRequirement;
                     allowedLocations = clientPolicy.FreeLocations;
                 }
@@ -81,7 +80,7 @@ public static class ClientPolicyCalculator
                     if (clientPolicy.PremiumByTrial is null or < 0)
                         throw new SessionExceptionEx(SessionErrorCode.AccessError, $"The connect plan is not supported. PlanId: {planId}");
 
-                    expirationTime = DateTime.UtcNow.AddMinutes(clientPolicy.PremiumByTrial.Value);
+                    expirationTime = clientPolicy.PremiumByTrial == 0 ? null : DateTime.UtcNow.AddMinutes(clientPolicy.PremiumByTrial.Value);
                     adRequirement = AdRequirement.None;
                     isPremiumByTrial = true;
                 }
@@ -91,11 +90,18 @@ public static class ClientPolicyCalculator
                     if (clientPolicy.PremiumByRewardAd is null or < 0)
                         throw new SessionExceptionEx(SessionErrorCode.AccessError, $"The connect plan is not supported. PlanId: {planId}");
 
-                    expirationTime = DateTime.UtcNow.AddMinutes(clientPolicy.PremiumByRewardAd.Value);
+                    expirationTime = clientPolicy.PremiumByRewardAd.Value == 0 ? null : DateTime.UtcNow.AddMinutes(clientPolicy.PremiumByRewardAd.Value);
                     adRequirement = AdRequirement.Required;
                     isPremiumByAdReward = true;
-                }
 
+                    // continue previous AdReward if the remain time is bigger than 30% of the premium by reward ad
+                    var remainTime = accessCache.AdRewardExpirationTime - DateTime.UtcNow;
+                    if (remainTime?.TotalMinutes > clientPolicy.PremiumByRewardAd.Value * 0.3) {
+                        expirationTime = accessCache.AdRewardExpirationTime;
+                        adRequirement = AdRequirement.None;
+                        isPremiumByAdReward = true;
+                    }
+                }
             }
         }
 

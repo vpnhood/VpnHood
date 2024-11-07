@@ -12,6 +12,7 @@ public class AgentOptions
 
     public TimeSpan AdRewardDeviceTimeout { get; set; } = TimeSpan.FromMinutes(60);
     public TimeSpan AdRewardPendingTimeout { get; set; } = TimeSpan.FromMinutes(4);
+    public int AdRewardRetryCount { get; set; } = 5;
 
     public TimeSpan ServerUpdateStatusInterval { get; set; } =
         new SessionOptions.ServerConfig().UpdateStatusIntervalValue;

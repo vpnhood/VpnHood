@@ -14,7 +14,6 @@ using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Manager.Common.Utils;
 using VpnHood.Server.Access.Messaging;
-using AsyncLock = GrayMint.Common.Utils.AsyncLock;
 
 namespace VpnHood.AccessServer.Agent.Services;
 
@@ -181,10 +180,21 @@ public class SessionService(
                 "Your access has been locked! Please contact the support.");
 
         // get access
-        Guid? accessDeviceId = accessToken.IsPublic ? device.DeviceId : null ;
-        var accessCache = await cacheService.GetAccessByTokenId(accessToken, accessDeviceId);
+        Guid? accessDeviceId = accessToken.IsPublic ? device.DeviceId : null;
+
+        // multiple requests may be already queued so make sure the access is created and save to db before processing others;
+        // otherwise it tries to add twice and raise issue especially in tests
+        using var accessLock = await AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{accessDeviceId}");
+        var accessCache = await cacheService.AccessFindByTokenId(accessToken.AccessTokenId, accessDeviceId);
+        if (accessCache == null) {
+            accessCache = await vhAgentRepo.AccessAdd(accessToken.AccessTokenId, accessDeviceId);
+            await cacheService.AccessAdd(accessCache);
+            newAccessLogger.LogInformation(
+                "New Access has been created. AccessId: {access.AccessId}, ProjectName: {ProjectName}, FarmName: {FarmName}",
+                accessCache.AccessId, projectCache.ProjectName, serverFarmCache.ServerFarmName);
+        }
         accessCache.LastUsedTime = DateTime.UtcNow; // update used time
-        
+
         // check supported version
         if (string.IsNullOrEmpty(clientInfo.ClientVersion) ||
             Version.Parse(clientInfo.ClientVersion).CompareTo(AgentOptions.MinClientVersion) < 0)
@@ -250,7 +260,7 @@ public class SessionService(
 
 
         // push token to client if add server with PublicInToken are ready
-        var pushTokenToClient = 
+        var pushTokenToClient =
             serverFarmCache.PushTokenToClient && await serverSelectorService.IsAllPublicInTokenServersReady(serverFarmCache.ServerFarmId);
 
         var farmToken = pushTokenToClient ? FarmTokenBuilder.GetServerToken(serverFarmCache.TokenJson) : null;
@@ -293,7 +303,7 @@ public class SessionService(
 
         try {
             var session = await cacheService.GetSession(server.ServerId, sessionId);
-            var access = await cacheService.GetAccess(session.AccessId);
+            var access = await cacheService.AccessGet(session.AccessId);
             access.LastUsedTime = DateTime.UtcNow;
 
             // build response
@@ -325,12 +335,16 @@ public class SessionService(
             return;
         }
 
-        // update expiration time if it is not trial or ad reward
-        if (session is { IsTrial: false, IsAdReward: false })
-            session.ExpirationTime = access.ExpirationTime;
+        //todo
+        // check token expiration update
+        //if (session.ExpirationTime > access.ExpirationTime) {
+        //    session.ExpirationTime = access.ExpirationTime;
+        //    session.Close(SessionErrorCode.AccessExpired, "Access has been expired.");
+        //    return;
+        //}
 
         // check token expiration
-        if (access.ExpirationTime != null && access.ExpirationTime < utcNow) {
+        if (access.ExpirationTime < utcNow || session.ExpirationTime > access.ExpirationTime) {
             session.Close(SessionErrorCode.AccessExpired, "Access has been expired.");
             return;
         }
@@ -419,7 +433,7 @@ public class SessionService(
         bool closeSession, string? adData)
     {
         var sessionCache = await cacheService.GetSession(server.ServerId, sessionId);
-        var accessCache = await cacheService.GetAccess(sessionCache.AccessId);
+        var accessCache = await cacheService.AccessGet(sessionCache.AccessId);
         var projectCache = await cacheService.GetProject(sessionCache.ProjectId);
         var utcTime = DateTime.UtcNow;
 
@@ -510,11 +524,14 @@ public class SessionService(
     private async Task<bool> VerifyAdReward(Guid projectId, Guid accessId, string adData)
     {
         // check is device rewarded
-        for (var i = 0; i < 5; i++) {
+        for (var i = 0; ; i++) {
             if (cacheService.Ad_RemoveRewardData(projectId, adData)) {
                 cacheService.Ad_AddRewardedAccess(accessId);
                 return true;
             }
+
+            if (i >= agentOptions.Value.AdRewardRetryCount)
+                break;
 
             await Task.Delay(1000);
         }

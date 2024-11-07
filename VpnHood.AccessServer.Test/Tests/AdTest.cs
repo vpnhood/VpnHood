@@ -1,10 +1,8 @@
 ﻿using GrayMint.Common.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Tokens;
-using VpnHood.Common.Utils;
 using AdRequirement = VpnHood.AccessServer.Api.AdRequirement;
 using ClientPolicy = VpnHood.AccessServer.Api.ClientPolicy;
 
@@ -14,7 +12,7 @@ namespace VpnHood.AccessServer.Test.Tests;
 public class AdTest
 {
     [TestMethod]
-    public async Task Create_session_with_flexible_ad()
+    public async Task NormalAd_session_legacy()
     {
         using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(adRequirement: AdRequirement.Flexible);
@@ -23,7 +21,41 @@ public class AdTest
     }
 
     [TestMethod]
-    public async Task Pending_ad_session_must_close_after_timeout()
+    public async Task NormalAd_session()
+    {
+        using var farm = await ServerFarmDom.Create();
+        var clientPolicies = new[] { new ClientPolicy { ClientCountry = "*", Normal = 10} };
+        var accessTokenDom = await farm.CreateAccessToken(isPublic: true, clientPolicies: clientPolicies);
+        var sessionDom = await accessTokenDom.CreateSession(planId: ConnectPlanId.Normal);
+        Assert.AreEqual(SessionErrorCode.Ok, sessionDom.SessionResponseEx.ErrorCode);
+        Assert.IsTrue(sessionDom.SessionResponseEx.ExpirationTime > DateTime.UtcNow + TimeSpan.FromMinutes(8));
+    }
+
+
+    [TestMethod]
+    public async Task NormalAd_unlimited_session_if_normal_is_zero()
+    {
+        using var farm = await ServerFarmDom.Create();
+        var clientPolicies = new[] { new ClientPolicy { ClientCountry = "*", Normal = 0 } };
+        var accessTokenDom = await farm.CreateAccessToken(isPublic: true, clientPolicies: clientPolicies);
+        var sessionDom = await accessTokenDom.CreateSession(planId: ConnectPlanId.Normal);
+        Assert.AreEqual(SessionErrorCode.Ok, sessionDom.SessionResponseEx.ErrorCode);
+        Assert.IsNull(sessionDom.SessionResponseEx.ExpirationTime);
+    }
+
+    [TestMethod]
+    public async Task NormalAd_failed_if_not_set()
+    {
+        using var farm = await ServerFarmDom.Create();
+        var clientPolicies = new[] { new ClientPolicy { ClientCountry = "*", Normal = null} };
+        var accessTokenDom = await farm.CreateAccessToken(isPublic: true, clientPolicies: clientPolicies);
+        var sessionDom = await accessTokenDom.CreateSession(planId: ConnectPlanId.Normal, throwError: false);
+        Assert.AreEqual(SessionErrorCode.AccessError, sessionDom.SessionResponseEx.ErrorCode);
+    }
+
+
+    [TestMethod]
+    public async Task Reward_pending_ad_session_must_close_after_timeout()
     {
         using var farm = await ServerFarmDom.Create();
         farm.TestApp.AgentTestApp.AgentOptions.AdRewardPendingTimeout = TimeSpan.FromSeconds(1);
@@ -44,10 +76,11 @@ public class AdTest
     }
 
     [TestMethod]
-    public async Task Pending_ad_session_must_extend_by_ad()
+    public async Task Reward_pending_ad_session_must_extend_by_ad()
     {
         using var farm = await ServerFarmDom.Create();
         farm.TestApp.AgentTestApp.AgentOptions.AdRewardPendingTimeout = TimeSpan.FromSeconds(1);
+        farm.TestApp.AgentTestApp.AgentOptions.AdRewardRetryCount = 0; // we don't to retry for ad provider
 
         // create token
         var clientPolicies = new[] { new ClientPolicy { ClientCountry = "*", PremiumByRewardAd = 9 } };
@@ -64,7 +97,6 @@ public class AdTest
         await sessionDom.AddUsage(adData: adData, traffic: new Traffic());
 
         // check session
-        await Task.Delay(TimeSpan.FromMilliseconds(1500));
         var sessionResponse = await sessionDom.AddUsage(traffic: new Traffic());
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponse.ErrorCode);
 
@@ -80,12 +112,12 @@ public class AdTest
     }
 
     [TestMethod]
-    public async Task Create_second_session_should_be_auto_rewarded()
+    public async Task Reward_second_session_must_be_auto_rewarded()
     {
         using var farm = await ServerFarmDom.Create();
 
         // create token
-        var clientPolicies = new [] { new ClientPolicy { ClientCountry = "*", PremiumByRewardAd = 5} };
+        var clientPolicies = new [] { new ClientPolicy { ClientCountry = "*", PremiumByRewardAd = 10} };
         var accessTokenDom = await farm.CreateAccessToken(isPublic: true, clientPolicies: clientPolicies);
 
         // check access token
@@ -93,19 +125,18 @@ public class AdTest
 
         // create session
         var sessionDom = await accessTokenDom.CreateSession(clientId: clientId, planId: ConnectPlanId.PremiumByAdReward);
-        Assert.IsTrue(sessionDom.SessionResponseEx.AccessUsage?.ExpirationTime < DateTime.UtcNow.AddMinutes(10));
+        Assert.IsTrue(sessionDom.SessionResponseEx.AccessUsage?.ExpirationTime < DateTime.UtcNow.AddMinutes(11));
         Assert.AreEqual(AdRequirement.Required.ToString(), sessionDom.SessionResponseEx.AdRequirement.ToString());
 
-        // extend session
-        var sessionResponse = await sessionDom.AddUsage();
-        Assert.IsTrue(sessionResponse.AccessUsage?.ExpirationTime < DateTime.UtcNow.AddMinutes(10));
+        // send ad
         var adData = Guid.NewGuid().ToString();
         farm.TestApp.AgentTestApp.CacheService.Ad_AddRewardData(farm.ProjectId, adData);
-        sessionResponse = await sessionDom.AddUsage(new Traffic(), adData);
-        Assert.IsNull(sessionResponse.AccessUsage?.ExpirationTime);
+        var sessionResponse = await sessionDom.AddUsage(new Traffic(), adData);
+        Assert.AreEqual(SessionErrorCode.Ok, sessionResponse.ErrorCode);
 
         // next session should be auto rewarded
-        var sessionDom2 = await accessTokenDom.CreateSession(clientId: clientId);
-        Assert.IsNull(sessionDom2.SessionResponseEx.AccessUsage?.ExpirationTime);
+        sessionDom = await accessTokenDom.CreateSession(clientId: clientId, planId: ConnectPlanId.PremiumByAdReward);
+        Assert.IsTrue(sessionDom.SessionResponseEx.AccessUsage?.ExpirationTime < DateTime.UtcNow.AddMinutes(11));
+        Assert.AreEqual(AdRequirement.None.ToString(), sessionDom.SessionResponseEx.AdRequirement.ToString());
     }
 }

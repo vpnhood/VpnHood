@@ -81,15 +81,8 @@ public class Program
             // DbContext
             builder.Services
                 .AddDbContextPool<VhContext>(
-                    options => {
-                        options.UseSqlServer(
-                            builder.Configuration.GetConnectionString("VhDatabase"),
-                            sqlOptions => sqlOptions.EnableRetryOnFailure(
-                                maxRetryCount: 3, // Maximum number of retries
-                                maxRetryDelay: TimeSpan.FromSeconds(2), // Delay between retries
-                                errorNumbersToAdd: null // Custom SQL error numbers, if any
-                            ));
-                    }, 100);
+                    options => { options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")); }, 
+                    poolSize: 40); //max pool size for sql server is 60
 
 
             builder.Services

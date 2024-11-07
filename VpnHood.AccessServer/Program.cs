@@ -61,7 +61,8 @@ public class Program
 
             // Database
             builder.Services.AddDbContextPool<VhContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);
+                options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 
+                poolSize: 20); // max for standard tire is 60. 40 is used for agent
 
             // HttpClient
             builder.Services.AddHttpClient(AppOptions.AgentHttpClientName, httpClient => {

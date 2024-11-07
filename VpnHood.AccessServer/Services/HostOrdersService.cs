@@ -237,13 +237,17 @@ public class HostOrdersService(
 
                 // update server endpoints
                 await AddIpToServer(projectId, pendingOrder.NewIpOrderServerId, hostIp.GetIpAddress());
-
+                
                 // delete old ips
                 foreach (var oldHostIp in hostIps.Where(x => x.RenewOrderId == pendingOrder.HostOrderId)) {
                     oldHostIp.AutoReleaseTime = pendingOrder.NewIpOrderOldIpAddressReleaseTime ?? DateTime.UtcNow;
                     Logger.LogInformation("Old IP will be released. ProjectId: {ProjectId}, OrderId: {OrderId}, OldIp: {OldIp}",
                         projectId, pendingOrder.HostOrderId, oldHostIp.IpAddress);
                 }
+
+                // remove hostIp from hostIps because it is already added to a server and should not be added again
+                // we can also update the server in servers list to avoid this
+                hostIps = hostIps.Where(x => x != hostIp).ToArray();
 
                 pendingOrder.Status = HostOrderStatus.Completed;
                 pendingOrder.CompletedTime = DateTime.UtcNow;

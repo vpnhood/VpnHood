@@ -459,7 +459,7 @@ public class AccessTokenTest
         await sessionDom.AddUsage(); // make sure it comes into cache
 
         // update after creating session
-        var expirationTime1 = DateTime.Today.AddDays(5);
+        var expirationTime1 = DateTime.Today.AddDays(-5);
         await accessTokenDom1.Update(
             new AccessTokenUpdateParams {
                 ExpirationTime = new PatchOfNullableDateTime { Value = expirationTime1 },

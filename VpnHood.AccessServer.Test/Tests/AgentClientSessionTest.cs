@@ -413,8 +413,7 @@ public class AgentClientSessionTest
         //-------------
         // check: another Session_Create for same client should return same result
         //-------------
-        var sessionDom3 =
-            await accessTokenDom.CreateSession(clientId: sessionDom2.SessionRequestEx.ClientInfo.ClientId);
+        var sessionDom3 = await accessTokenDom.CreateSession(clientId: sessionDom2.SessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual(5, sessionDom3.SessionResponseEx.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(10, sessionDom3.SessionResponseEx.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, sessionDom3.SessionResponseEx.ErrorCode);

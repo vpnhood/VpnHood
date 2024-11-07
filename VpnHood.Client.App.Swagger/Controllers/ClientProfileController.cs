@@ -6,7 +6,7 @@ using VpnHood.Client.App.WebServer.Api;
 namespace VpnHood.Client.App.Swagger.Controllers;
 
 [ApiController]
-[Route("api/app")]
+[Route("api/client-profiles")]
 public class ClientProfileController : ControllerBase, IClientProfileController
 {
 

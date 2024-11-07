@@ -422,7 +422,7 @@ public static class PacketUtil
         if ((firstByte & 0xC0) != 0xC0)
             return false;
 
-        // Check if it's an Initial packet (0b1100xxxx)
+        // Check if it's an Initial packet (0b1100xxx)
         if ((firstByte & 0x30) != 0x00)
             return false;
 

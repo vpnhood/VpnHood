@@ -8,7 +8,7 @@ using GetCredentialRequest = AndroidX.Credentials.GetCredentialRequest;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
-public class GooglePlayAuthenticationService(string googleSignInClientId) : IAppAuthenticationExternalService
+public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAppAuthenticationExternalProvider
 {
     public async Task<string> SignIn(IUiContext uiContext, bool isSilentLogin)
     {

@@ -2,7 +2,6 @@
 using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
-using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Device.Droid.ActivityEvents;

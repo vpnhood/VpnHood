@@ -1,6 +1,6 @@
 ﻿using Ga4.Trackers;
 
-namespace VpnHood.Test.Services;
+namespace VpnHood.Test.Providers;
 
 internal class TestTracker : ITracker
 {

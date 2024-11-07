@@ -2,7 +2,7 @@
 using System.Net;
 using VpnHood.Server.Abstractions;
 
-namespace VpnHood.Test.Services;
+namespace VpnHood.Test.Providers;
 
 public class TestNetConfigurationProvider : INetConfigurationProvider
 {

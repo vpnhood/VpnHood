@@ -15,8 +15,8 @@ public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership
         //app init
         if (!VpnHoodApp.IsInit) {
             var options = CreateAppOptions();
-            options.UiService ??= new AndroidAppUiService();
-            options.CultureService ??= AndroidAppAppCultureService.CreateIfSupported();
+            options.UiProvider ??= new AndroidUiProvider();
+            options.CultureProvider ??= AndroidAppCultureProvider.CreateIfSupported();
 
             var vpnHoodDevice = AndroidDevice.Create();
             var vpnHoodApp = VpnHoodApp.Init(vpnHoodDevice, options);

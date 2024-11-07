@@ -1,10 +1,10 @@
 ﻿using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 
-namespace VpnHood.Client.App.Services;
+namespace VpnHood.Client.App.Providers;
 
-internal class AppUiServiceBase
-    : IAppUiService
+internal class AppNotSupportedUiProvider
+    : IAppUiProvider
 {
     public bool IsQuickLaunchSupported => false;
 

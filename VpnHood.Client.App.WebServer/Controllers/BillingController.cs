@@ -2,6 +2,7 @@
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.App.Services;
 using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
 
@@ -9,9 +10,8 @@ namespace VpnHood.Client.App.WebServer.Controllers;
 
 internal class BillingController : WebApiController, IBillingController
 {
-    public IAppBillingService BillingService => VpnHoodApp.Instance.Services.AccountService?.Billing
-                                                ?? throw new Exception(
-                                                    "Billing service is not available at this moment.");
+    private static AppBillingService BillingService => VpnHoodApp.Instance.Services.AccountService?.BillingService
+                                                ?? throw new Exception("Billing service is not available at this moment.");
 
     [Route(HttpVerbs.Get, "/subscription-plans")]
     public Task<SubscriptionPlan[]> GetSubscriptionPlans()

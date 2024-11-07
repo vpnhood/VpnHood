@@ -3,7 +3,7 @@ using VpnHood.Client;
 using VpnHood.Server;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
-using VpnHood.Test.Services;
+using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
 

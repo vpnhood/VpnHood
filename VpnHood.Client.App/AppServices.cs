@@ -1,6 +1,7 @@
 ﻿using Ga4.Trackers;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Services;
+using VpnHood.Client.App.Services.Accounts;
 
 namespace VpnHood.Client.App;
 

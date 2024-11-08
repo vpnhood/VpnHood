@@ -2,7 +2,7 @@
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.App.Services;
+using VpnHood.Client.App.Services.Accounts;
 using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
 
@@ -28,22 +28,22 @@ internal class AccountController : WebApiController, IAccountController
     [Route(HttpVerbs.Get, "/is-signin-with-google-supported")]
     public bool IsSigninWithGoogleSupported()
     {
-        return VpnHoodApp.Instance.Services.AccountService?.Authentication.IsSignInWithGoogleSupported ?? false;
+        return VpnHoodApp.Instance.Services.AccountService?.AuthenticationService.IsSignInWithGoogleSupported ?? false;
     }
 
     [Route(HttpVerbs.Post, "/signin-with-google")]
     public Task SignInWithGoogle()
     {
-        if (!AccountService.Authentication.IsSignInWithGoogleSupported)
+        if (!AccountService.AuthenticationService.IsSignInWithGoogleSupported)
             throw new NotSupportedException("Sign in with Google is not supported.");
 
-        return AccountService.Authentication.SignInWithGoogle(ActiveUiContext.RequiredContext);
+        return AccountService.AuthenticationService.SignInWithGoogle(ActiveUiContext.RequiredContext);
     }
 
     [Route(HttpVerbs.Post, "/sign-out")]
     public Task SignOut()
     {
-        return AccountService.Authentication.SignOut(ActiveUiContext.RequiredContext);
+        return AccountService.AuthenticationService.SignOut(ActiveUiContext.RequiredContext);
     }
 
     [Route(HttpVerbs.Get, "/subscriptions/{subscriptionId}/access-keys")]

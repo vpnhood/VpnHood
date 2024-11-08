@@ -2,7 +2,7 @@ using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Client.App.Services;
+namespace VpnHood.Client.App.Services.Accounts;
 
 public class AppBillingService(VpnHoodApp vpnHoodApp, IAppBillingProvider billingProvider) : IDisposable
 {

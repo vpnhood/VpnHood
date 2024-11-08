@@ -4,7 +4,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Store;
 
-public class StoreBillingProvider(StoreAccountProvider storeAccountProvider, IAppBillingProvider billingProvider)
+internal class StoreBillingProvider(StoreAccountProvider storeAccountProvider, IAppBillingProvider billingProvider)
     : IAppBillingProvider
 {
     public void Dispose()

@@ -12,6 +12,7 @@ using VpnHood.Client.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Providers;
 using VpnHood.Client.App.Services;
+using VpnHood.Client.App.Services.Accounts;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;

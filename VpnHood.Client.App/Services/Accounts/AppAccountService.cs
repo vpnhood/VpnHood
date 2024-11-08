@@ -3,20 +3,21 @@ using VpnHood.Client.App.Abstractions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Client.App.Services;
+namespace VpnHood.Client.App.Services.Accounts;
 
-public class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountProvider accountProvider) {
+public class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountProvider accountProvider)
+{
     private AppAccount? _appAccount;
     private string AppAccountFilePath => Path.Combine(vpnHoodApp.StorageFolderPath, "account", "account.json");
-
-    public AppAuthenticationService Authentication { get; } = new(vpnHoodApp, accountProvider.AuthenticationProvider);
+    
+    public AppAuthenticationService AuthenticationService { get; } = new(vpnHoodApp, accountProvider.AuthenticationProvider);
 
     public AppBillingService? BillingService { get; } = accountProvider.BillingProvider != null
         ? new AppBillingService(vpnHoodApp, accountProvider.BillingProvider) : null;
 
     public async Task<AppAccount?> GetAccount()
     {
-        if (Authentication.UserId == null)
+        if (AuthenticationService.UserId == null)
             return null;
 
         // Get from local cache

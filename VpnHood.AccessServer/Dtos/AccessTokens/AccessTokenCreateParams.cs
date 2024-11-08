@@ -14,7 +14,7 @@ public class AccessTokenCreateParams
     public bool IsPublic { get; init; }
     public AdRequirement AdRequirement { get; init; }
     public string? Description { get; init; }
-    public required ClientPolicy[]? ClientPolicies { get; init; }
+    public ClientPolicy[]? ClientPolicies { get; init; }
 
 
     public long MaxTraffic { get; init; }

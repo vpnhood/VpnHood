@@ -22,7 +22,7 @@ internal class AccountController : WebApiController, IAccountController
     [Route(HttpVerbs.Post, "/refresh")]
     public Task Refresh()
     {
-        return VpnHoodApp.Instance.RefreshAccount();
+        return AccountService.Refresh();
     }
 
     [Route(HttpVerbs.Get, "/is-signin-with-google-supported")]

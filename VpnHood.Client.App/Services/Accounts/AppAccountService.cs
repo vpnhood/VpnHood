@@ -5,15 +5,25 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Services.Accounts;
 
-public class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountProvider accountProvider)
+public class AppAccountService
 {
     private AppAccount? _appAccount;
-    private string AppAccountFilePath => Path.Combine(vpnHoodApp.StorageFolderPath, "account", "account.json");
-    
-    public AppAuthenticationService AuthenticationService { get; } = new(vpnHoodApp, accountProvider.AuthenticationProvider);
+    private readonly VpnHoodApp _vpnHoodApp;
+    private readonly IAppAccountProvider _accountProvider;
 
-    public AppBillingService? BillingService { get; } = accountProvider.BillingProvider != null
-        ? new AppBillingService(vpnHoodApp, accountProvider.BillingProvider) : null;
+    public AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountProvider accountProvider)
+    {
+        _vpnHoodApp = vpnHoodApp;
+        _accountProvider = accountProvider;
+        AuthenticationService = new AppAuthenticationService(this, accountProvider.AuthenticationProvider);
+        BillingService = accountProvider.BillingProvider != null ? new AppBillingService(this, accountProvider.BillingProvider) : null;
+    }
+
+    private string AppAccountFilePath => Path.Combine(_vpnHoodApp.StorageFolderPath, "account", "account.json");
+    
+    public AppAuthenticationService AuthenticationService { get; }
+
+    public AppBillingService? BillingService { get; }
 
     public async Task<AppAccount?> GetAccount()
     {
@@ -26,11 +36,26 @@ public class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountProvider accoun
             return _appAccount;
 
         // Update cache from server and update local cache
-        _appAccount = await accountProvider.GetAccount().VhConfigureAwait();
+        _appAccount = await _accountProvider.GetAccount().VhConfigureAwait();
         Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
         await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount)).VhConfigureAwait();
 
         return _appAccount;
+    }
+
+    public async Task Refresh(bool updateCurrentClientProfile = false)
+    {
+        // clear cache
+        ClearCache();
+
+        // get access tokens from account
+        var account = await GetAccount().VhConfigureAwait();
+        var accessKeys = account?.SubscriptionId != null
+            ? await GetAccessKeys(account.SubscriptionId).VhConfigureAwait()
+            : [];
+
+        // update profiles
+        await _vpnHoodApp.RefreshAccount(accessKeys, updateCurrentClientProfile);
     }
 
     internal void ClearCache()
@@ -41,6 +66,6 @@ public class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountProvider accoun
 
     public Task<string[]> GetAccessKeys(string subscriptionId)
     {
-        return accountProvider.GetAccessKeys(subscriptionId);
+        return _accountProvider.GetAccessKeys(subscriptionId);
     }
 }

@@ -338,16 +338,15 @@ public class ClientPolicyTest
     }
 
     [TestMethod]
-    public async Task Plan_PremiumByTrial()
+    public async Task PremiumByTrial_should_select_premium_server()
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
 
-        var freeServer = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.0"), logicalCore: 1);
+        await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.0"), logicalCore: 1);
         var prmServer = await farm.AddNewServer(publicIpV4: IPAddress.Parse("11.0.0.0"), logicalCore: 1,
             tags: [ServerRegisteredTags.Premium]);
 
-        // only free server can be selected
         var createParam = new AccessTokenCreateParams {
             IsPublic = true,
             ClientPolicies = [

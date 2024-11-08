@@ -463,10 +463,16 @@ public class SessionService(
                     break;
 
                 default:
-                    // increase current reward if it is not expired
-                    accessCache.AdRewardExpirationTime = accessCache.AdRewardExpirationTime > utcTime
-                        ? accessCache.AdRewardExpirationTime.Value.AddMinutes(accessCache.AdRewardMinutes.Value)
-                        : utcTime.AddMinutes(accessCache.AdRewardMinutes.Value);
+                    // increase current reward
+                    var maxTime = utcTime;
+                    if (accessCache.AdRewardExpirationTime > maxTime) 
+                        maxTime = accessCache.AdRewardExpirationTime.Value;
+
+                    // increase current expiration time if it is not pending ad reward
+                    if (!sessionCache.IsAdRewardPending && sessionCache.ExpirationTime > maxTime) 
+                        maxTime = sessionCache.ExpirationTime.Value;
+
+                    accessCache.AdRewardExpirationTime = maxTime.AddMinutes(accessCache.AdRewardMinutes.Value);
                     break;
             }
 

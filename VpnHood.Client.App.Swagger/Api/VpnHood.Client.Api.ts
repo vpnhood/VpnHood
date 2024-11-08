@@ -1174,7 +1174,7 @@ export class ClientProfileClient {
     }
 
     addByAccessKey(accessKey: string, cancelToken?: CancelToken): Promise<ClientProfileInfo> {
-        let url_ = this.baseUrl + "/api/app/access-keys?";
+        let url_ = this.baseUrl + "/api/client-profiles/access-keys?";
         if (accessKey === undefined || accessKey === null)
             throw new Error("The parameter 'accessKey' must be defined and cannot be null.");
         else
@@ -1226,7 +1226,7 @@ export class ClientProfileClient {
     }
 
     get(clientProfileId: string, cancelToken?: CancelToken): Promise<ClientProfileInfo> {
-        let url_ = this.baseUrl + "/api/app/{clientProfileId}";
+        let url_ = this.baseUrl + "/api/client-profiles/{clientProfileId}";
         if (clientProfileId === undefined || clientProfileId === null)
             throw new Error("The parameter 'clientProfileId' must be defined.");
         url_ = url_.replace("{clientProfileId}", encodeURIComponent("" + clientProfileId));
@@ -1277,7 +1277,7 @@ export class ClientProfileClient {
     }
 
     update(clientProfileId: string, updateParams: ClientProfileUpdateParams, cancelToken?: CancelToken): Promise<ClientProfileInfo> {
-        let url_ = this.baseUrl + "/api/app/{clientProfileId}";
+        let url_ = this.baseUrl + "/api/client-profiles/{clientProfileId}";
         if (clientProfileId === undefined || clientProfileId === null)
             throw new Error("The parameter 'clientProfileId' must be defined.");
         url_ = url_.replace("{clientProfileId}", encodeURIComponent("" + clientProfileId));
@@ -1332,7 +1332,7 @@ export class ClientProfileClient {
     }
 
     delete(clientProfileId: string, cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/{clientProfileId}";
+        let url_ = this.baseUrl + "/api/client-profiles/{clientProfileId}";
         if (clientProfileId === undefined || clientProfileId === null)
             throw new Error("The parameter 'clientProfileId' must be defined.");
         url_ = url_.replace("{clientProfileId}", encodeURIComponent("" + clientProfileId));

@@ -136,12 +136,12 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
         try {
             PurchaseState = BillingPurchaseState.Started;
+            _taskCompletionSource = new TaskCompletionSource<string>();
             var billingResult = _billingClient.LaunchBillingFlow(appUiContext.Activity, billingFlowParams);
 
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw GoogleBillingException.Create(billingResult);
 
-            _taskCompletionSource = new TaskCompletionSource<string>();
             var orderId = await _taskCompletionSource.Task.VhConfigureAwait();
             return orderId;
         }

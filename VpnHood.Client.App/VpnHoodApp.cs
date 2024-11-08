@@ -928,21 +928,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return ipRanges;
     }
 
-    public async Task RefreshAccount(bool updateCurrentClientProfile = false)
+    internal Task RefreshAccount(string[] accountAccessKeys, bool updateCurrentClientProfile)
     {
-        if (Services.AccountService is null)
-            throw new Exception("AccountService is not initialized.");
-
-        // clear cache
-        Services.AccountService.ClearCache();
-
-        // update profiles
-        // get access tokens from account
-        var account = await Services.AccountService.GetAccount().VhConfigureAwait();
-        var accessKeys = account?.SubscriptionId != null
-            ? await Services.AccountService.GetAccessKeys(account.SubscriptionId).VhConfigureAwait()
-            : [];
-        ClientProfileService.UpdateFromAccount(accessKeys);
+        ClientProfileService.UpdateFromAccount(accountAccessKeys);
 
         // Select the best client profile from their account.
         if (updateCurrentClientProfile) {
@@ -963,6 +951,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             UserSettings.ClientProfileId = clientProfiles.Length == 1 ? clientProfiles.First().ClientProfileId : null;
             Settings.Save();
         }
+
+        return Task.CompletedTask;
     }
 
     private void ReportError(Exception ex, string message, [CallerMemberName] string action = "n/a")

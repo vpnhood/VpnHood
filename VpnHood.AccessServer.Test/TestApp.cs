@@ -9,7 +9,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
@@ -21,8 +20,10 @@ using VpnHood.AccessServer.Report.Persistence;
 using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Test.Helper;
+using VpnHood.Common.IpLocations;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Messaging;
@@ -30,7 +31,7 @@ using AccessPointMode = VpnHood.AccessServer.Api.AccessPointMode;
 using ApiKey = VpnHood.AccessServer.Api.ApiKey;
 using ClientInfo = VpnHood.Common.Messaging.ClientInfo;
 using HttpAccessManagerOptions = VpnHood.Server.Access.Managers.Http.HttpAccessManagerOptions;
-using Token = VpnHood.Common.Token;
+using Token = VpnHood.Common.Tokens.Token;
 
 namespace VpnHood.AccessServer.Test;
 
@@ -92,6 +93,7 @@ public class TestApp : IHttpClientFactory, IDisposable
                     services.AddScoped<IAuthorizationProvider, TestAuthorizationProvider>();
                     services.AddSingleton<IHttpClientFactory>(this);
                     services.AddSingleton<IAcmeOrderFactory, TestAcmeOrderFactory>();
+                    services.AddSingleton<IIpLocationProvider, TestIpLocationProvider>();
                 });
             });
 
@@ -169,7 +171,7 @@ public class TestApp : IHttpClientFactory, IDisposable
         string environment = "Development", bool aggressiveJob = false, bool deleteOthers = false, bool isFree = true)
     {
         appSettings ??= new Dictionary<string, string?>();
-        appSettings[$"App:{nameof(AppOptions.HostOrderMonitorCount)}"] = "1000";
+        appSettings[$"App:{nameof(AppOptions.HostOrderMonitorRetryCount)}"] = "1000";
         appSettings[$"App:{nameof(AppOptions.HostOrderMonitorInterval)}"] = "00:00:00.500";
         if (aggressiveJob)
             appSettings[$"App:{nameof(AppOptions.AutoMaintenanceInterval)}"] = "00:00:00.500";
@@ -238,7 +240,8 @@ public class TestApp : IHttpClientFactory, IDisposable
                 TunnelSpeed = new Traffic {
                     Sent = 1000000,
                     Received = 2000000
-                }
+                },
+                TotalSwapMemory = rand.Next(100, 200) * VhUtil.Megabytes
             }
             : new ServerStatus {
                 SessionCount = 0,
@@ -249,7 +252,8 @@ public class TestApp : IHttpClientFactory, IDisposable
                 ThreadCount = 5,
                 ConfigCode = configCode,
                 CpuUsage = 25,
-                TunnelSpeed = new Traffic()
+                TunnelSpeed = new Traffic(),
+                TotalSwapMemory = 100 * VhUtil.Megabytes
             };
 
         return ret;
@@ -286,9 +290,10 @@ public class TestApp : IHttpClientFactory, IDisposable
     }
 
     public async Task<SessionRequestEx> CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint,
-        Guid? clientId = null, IPAddress? clientIp = null
+        string? clientId = null, IPAddress? clientIp = null
         , string? extraData = null, string? locationPath = null, bool allowRedirect = false,
-        ClientInfo? clientInfo = null)
+        ClientInfo? clientInfo = null,
+        ConnectPlanId planId = ConnectPlanId.Normal)
     {
         var rand = new Random();
         if (clientInfo != null && clientId != null)
@@ -296,7 +301,7 @@ public class TestApp : IHttpClientFactory, IDisposable
                 "Could not set both clientInfo & clientId parameters at the same time.");
 
         clientInfo ??= new ClientInfo {
-            ClientId = clientId ?? Guid.NewGuid(),
+            ClientId = clientId ?? Guid.NewGuid().ToString(),
             ClientVersion = $"999.{rand.Next(0, 999)}.{rand.Next(0, 999)}",
             UserAgent = "agent",
             ProtocolVersion = 0
@@ -314,7 +319,8 @@ public class TestApp : IHttpClientFactory, IDisposable
             HostEndPoint = hostEndPoint,
             ExtraData = extraData ?? Guid.NewGuid().ToString(),
             ServerLocation = locationPath,
-            AllowRedirect = allowRedirect
+            AllowRedirect = allowRedirect,
+            PlanId = planId
         };
 
         return sessionRequestEx;
@@ -350,16 +356,9 @@ public class TestApp : IHttpClientFactory, IDisposable
     // IHttpClientFactory.CreateClient
     public HttpClient CreateClient(string name)
     {
-        if (name is 
-            AgentOptions.HttpClientNameFarmTokenRepo or 
-            AppOptions.HttpClientNameFarmTokenRepo or 
-            AgentOptions.HttpClientNameIpLocation)
-            return new HttpClient();
-
-        // this for simulating Agent HTTP
         return name == AppOptions.AgentHttpClientName
             ? AgentTestApp.HttpClient
-            : WebApp.CreateClient();
+            : new HttpClient();
     }
 
     public Task<FakeHostProvider> AddTestHostProvider(TimeSpan? autoCompleteDelay = null)

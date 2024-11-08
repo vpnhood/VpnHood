@@ -30,8 +30,8 @@ public class ServerTest
     [TestMethod]
     public async Task List()
     {
-        var testApp = await TestApp.Create();
-        var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
+        using var testApp = await TestApp.Create();
+        using var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
         var server1 = await farm.AddNewServer();
         await farm.AddNewServer();
 
@@ -44,8 +44,8 @@ public class ServerTest
     [TestMethod]
     public async Task Crud()
     {
-        var testApp = await TestApp.Create();
-        var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
+        using var testApp = await TestApp.Create();
+        using var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
 
         //-----------
         // check: Create
@@ -104,7 +104,8 @@ public class ServerTest
             HostPanelUrl = new PatchOfUri { Value = new Uri("http://localhost/foo2") },
             Power = new PatchOfNullableInteger { Value = 16 },
             IsEnabled = new PatchOfBoolean { Value = !serverDom.Server.IsEnabled },
-            Tags = new PatchOfStringOf  { Value = ["#3", "#4"] }
+            Tags = new PatchOfStringOf  { Value = ["#3", "#4"] },
+            ConfigSwapMemorySizeMb = new PatchOfNullableInteger { Value = 200 }
         };
         await serverDom.Update(serverUpdateParam);
         await serverDom.Reload();
@@ -114,6 +115,7 @@ public class ServerTest
         Assert.AreEqual(serverUpdateParam.HostPanelUrl.Value, serverDom.Server.HostPanelUrl);
         Assert.AreEqual(serverUpdateParam.ServerName.Value, serverDom.Server.ServerName);
         Assert.AreEqual(serverUpdateParam.IsEnabled.Value, serverDom.Server.IsEnabled);
+        Assert.AreEqual(serverUpdateParam.ConfigSwapMemorySizeMb.Value, serverDom.Server.ConfigSwapMemorySizeMb);
         CollectionAssert.AreEquivalent(serverUpdateParam.Tags.Value.ToArray(), serverDom.Server.Tags.ToArray());
 
         //-----------
@@ -127,7 +129,7 @@ public class ServerTest
         //-----------
         // check: Update (serverFarmId)
         //-----------
-        var farm2 = await ServerFarmDom.Create(farm.TestApp);
+        using var farm2 = await ServerFarmDom.Create(farm.TestApp);
         serverUpdateParam = new ServerUpdateParams { ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId } };
         await serverDom.Client.UpdateAsync(testApp.ProjectId, serverDom.ServerId, serverUpdateParam);
         await serverDom.Reload();
@@ -278,7 +280,7 @@ public class ServerTest
     [TestMethod]
     public async Task Crud_AccessPoints()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         using var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
 
         var accessPoint1 = testApp.NewAccessPoint();

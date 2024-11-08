@@ -9,10 +9,9 @@ public class ServerProfileDom(TestApp testApp, ServerProfile serverProfile)
     public Guid ServerProfileId => ServerProfile.ServerProfileId;
     public ServerProfilesClient Client => TestApp.ServerProfilesClient;
 
-    public static async Task<ServerProfileDom> Create(TestApp? testApp = null,
+    public static async Task<ServerProfileDom> Create(TestApp testApp,
         ServerProfileCreateParams? createParams = null)
     {
-        testApp ??= await TestApp.Create();
         var serverProfile = await testApp.ServerProfilesClient.CreateAsync(testApp.ProjectId, createParams);
         return new ServerProfileDom(testApp, serverProfile);
     }

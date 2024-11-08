@@ -16,6 +16,9 @@ public class AccessTokenModel
     public required bool IsEnabled { get; set; }
     public required int Lifetime { get; set; }
     public required string? Tags { get; set; }
+    public required string? ClientPolicies { get; set; }
+    public required long? AccessCode { get; set; }
+    public required long? ManagerCode { get; set; }
     public required DateTime? ExpirationTime { get; set; }
     public required DateTime? FirstUsedTime { get; set; }
     public required DateTime? LastUsedTime { get; set; }

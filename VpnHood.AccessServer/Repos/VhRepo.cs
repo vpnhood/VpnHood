@@ -194,7 +194,7 @@ public class VhRepo(VhContext vhContext)
             };
 
         var query = baseQuery
-            .OrderByDescending(x => x.AccessToken.AccessTokenId)
+            .OrderByDescending(x => x.AccessToken.SupportCode)
             .Skip(recordIndex)
             .Take(recordCount)
             .AsNoTracking();
@@ -455,15 +455,20 @@ public class VhRepo(VhContext vhContext)
             .ToArrayAsync();
     }
 
-
     public Task<HostIpModel[]> HostIpList(Guid projectId, string? search = null,
+        bool? isAdditional = null, bool? isHidden = null, 
+        bool includeIpV4 = true, bool includeIpV6 = true,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
         return vhContext.HostIps
             .Include(x => x.HostProvider)
             .Where(x => x.ProjectId == projectId && x.DeletedTime == null)
             .Where(x => x.IpAddress == search || search == null)
-            .OrderByDescending(x => x.HostIpId)
+            .Where(x => x.IsAdditional == isAdditional || isAdditional == null)
+            .Where(x => x.IpAddress.Contains("::") || includeIpV4)
+            .Where(x => !x.IpAddress.Contains("::") || includeIpV6)
+            .Where(x => x.IsHidden == isHidden || isHidden == null)
+            .OrderByDescending(x => x.ProviderServerId)
             .Skip(recordIndex)
             .Take(recordCount)
             .ToArrayAsync();
@@ -546,5 +551,33 @@ public class VhRepo(VhContext vhContext)
             .Where(x => x.ProjectId == projectId)
             .Where(x => x.ClientFilterId == clientFilterId)
             .ExecuteDeleteAsync();
+    }
+
+    public Task<DeviceModel> DeviceGetByClientId(Guid projectId, string clientId)
+    {
+        var clientGuid = Guid.Parse(clientId); // currently it is guid
+        return vhContext.Devices
+            .Where(model => model.ProjectId == projectId)
+            .SingleAsync(x => x.ClientId == clientGuid);
+    }
+
+    public Task<DeviceModel> DeviceGet(Guid projectId, Guid deviceId)
+    {
+        return vhContext.Devices
+            .Where(model => model.ProjectId == projectId)
+            .SingleAsync(x => x.DeviceId == deviceId);
+    }
+
+    public async Task<Dictionary<Guid, DeviceModel>> DeviceUsage(Guid? projectId, Guid[]? deviceIds = null,
+        DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
+    {
+        await using var trans = await vhContext.WithNoLockTransaction();
+        return await vhContext.Devices
+            .Where(model => model.ProjectId == projectId)
+            .Where(device => usageBeginTime == null || device.LastUsedTime >= usageBeginTime)
+            .Where(device => usageEndTime == null || device.LastUsedTime <= usageEndTime)
+            .Where(device => deviceIds == null || deviceIds.Contains(device.DeviceId))
+            .AsNoTracking()
+            .ToDictionaryAsync(device => device.DeviceId, device => device);
     }
 }

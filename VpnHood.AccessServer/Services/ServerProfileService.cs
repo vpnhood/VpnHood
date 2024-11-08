@@ -5,7 +5,9 @@ using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.ServerProfiles;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Utils;
+using VpnHood.Manager.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 
 namespace VpnHood.AccessServer.Services;
@@ -28,7 +30,7 @@ public class ServerProfileService(
                 .Select(x => x.ServerProfileName)
                 .ToArrayAsync();
 
-            createParams.ServerProfileName = AccessServerUtil.FindUniqueName(createParams.ServerProfileName, names);
+            createParams.ServerProfileName = ManagerUtils.FindUniqueName(createParams.ServerProfileName, names);
         }
 
         var serverProfile = new ServerProfileModel {
@@ -185,15 +187,23 @@ public class ServerProfileService(
         if (!string.IsNullOrEmpty(serverConfig.ConfigCode))
             throw new ArgumentException($"You can not set {nameof(serverConfig.ConfigCode)}.", nameof(serverConfig));
 
-        if (serverConfig.SessionOptions.TcpBufferSize < 0x1000)
-            throw new ArgumentException($"You can not set {nameof(serverConfig.ConfigCode)} smaller than {0x1000}.",
+        if (serverConfig.SessionOptions.TcpBufferSize < 2048)
+            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.TcpBufferSize)} smaller than {2048}.",
                 nameof(serverConfig));
 
         if (serverConfig.ServerSecret != null)
             throw new ArgumentException($"You can not set {nameof(serverConfig.ServerSecret)} here.",
                 nameof(serverConfig));
 
+        if (serverConfig.SessionOptions.UdpReceiveBufferSize < 2048)
+            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.UdpReceiveBufferSize)} smaller than {2048}.",
+                nameof(serverConfig));
 
+        if (serverConfig.SessionOptions.UdpSendBufferSize < 2048)
+            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.UdpSendBufferSize)} smaller than {2048}.",
+                nameof(serverConfig));
+
+        VhValidator.ValidateSwapMemory(serverConfig.SwapMemorySizeMb, nameof(serverConfig.SwapMemorySizeMb));
         return serverConfig;
     }
 }

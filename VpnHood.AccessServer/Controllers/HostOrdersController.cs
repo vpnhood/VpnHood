@@ -12,6 +12,13 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/v{version:apiVersion}/projects/{projectId}/host-orders")]
 public class HostOrdersController(HostOrdersService hostOrdersService)
 {
+    [HttpPost("sync")]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
+    public Task Sync(Guid projectId)
+    {
+        return hostOrdersService.Sync(projectId);
+    }
+
     [HttpGet("ips/{ipAddress}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<HostIp> GetIp(Guid projectId, string ipAddress)
@@ -21,9 +28,16 @@ public class HostOrdersController(HostOrdersService hostOrdersService)
 
     [HttpGet("ips")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<HostIp[]> ListIps(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = 200)
+    public Task<HostIp[]> ListIps(Guid projectId, string? search = null,
+        bool? isAdditional = null, bool? isHidden = null, HostIpStatus? hostIpStatus = null,
+        bool includeIpV4 = true, bool includeIpV6 = true,
+        bool includeInUse = true, bool includeNotInUse = true,
+        bool forceSync = false, int recordIndex = 0, int recordCount = 200)
     {
-        return hostOrdersService.ListIps(projectId, search: search, recordIndex: recordIndex, recordCount: recordCount);
+        return hostOrdersService.ListIps(projectId, search: search,
+            isAdditional: isAdditional, isHidden: isHidden, hostIpStatus: hostIpStatus,
+            includeIpV4: includeIpV4, includeIpV6: includeIpV6,
+            recordIndex: recordIndex, recordCount: recordCount);
     }
 
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]

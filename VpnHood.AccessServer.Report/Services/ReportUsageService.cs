@@ -143,7 +143,7 @@ public class ReportUsageService(
                 SessionCount = g.Max(x => x.SessionCount),
                 TunnelTransferSpeed = g.Max(x => x.TunnelReceiveSpeed + x.TunnelSendSpeed),
                 CpuUsage = serverId != null ? g.Max(x => x.CpuUsage ?? 0) : 0,
-                AvailableMemory = serverId != null ? g.Max(x => x.AvailableMemory ?? 0) : 0
+                AvailableMemory = serverId != null ? g.Min(x => x.AvailableMemory ?? 0) : 0
             });
 
         // sum of max in status interval
@@ -154,7 +154,7 @@ public class ReportUsageService(
                 SessionCount = g.Sum(x => x.SessionCount),
                 TunnelTransferSpeed = g.Sum(x => x.TunnelTransferSpeed),
                 CpuUsage = serverId != null ? g.Max(x => x.CpuUsage) : 0,
-                AvailableMemory = serverId != null ? g.Max(x => x.AvailableMemory) : 0
+                AvailableMemory = serverId != null ? g.Min(x => x.AvailableMemory) : 0
                 // ServerCount = g.Count() 
             });
 
@@ -167,7 +167,7 @@ public class ReportUsageService(
                     SessionCount = g.Max(y => y.SessionCount),
                     TunnelTransferSpeed = g.Max(y => y.TunnelTransferSpeed),
                     CpuUsage = serverId != null ? g.Max(x => x.CpuUsage) : 0,
-                    AvailableMemory = serverId != null ? g.Max(x => x.AvailableMemory) : 0
+                    AvailableMemory = serverId != null ? g.Min(x => x.AvailableMemory) : 0
                     // ServerCount = g.Max(y=>y.ServerCount) 
                 })
             .OrderBy(x => x.Time);
@@ -295,6 +295,7 @@ public class ReportUsageService(
             from accessUsage in vhReportContext.AccessUsages
             where
                 (accessUsage.ProjectId == projectId) &&
+                (accessTokenId == null || accessUsage.AccessTokenId == accessTokenId) &&
                 (serverFarmId == null || accessUsage.ServerFarmId == serverFarmId) &&
                 (queryDeviceIds == null || queryDeviceIds.Contains(accessUsage.DeviceId)) &&
                 (accessUsage.CreatedTime >= usageBeginTime) &&

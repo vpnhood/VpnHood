@@ -1,6 +1,4 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Globalization;
-using System.Text;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 
@@ -10,12 +8,14 @@ namespace VpnHood.AccessServer.Test.Tests;
 [TestClass]
 public class AccessTest
 {
-    
 
     [TestMethod]
     public async Task Foo()
     {
         await Task.Delay(0);
+        int? a = null;
+        Console.WriteLine(a / 100);
+
     }
 
     [TestMethod]
@@ -45,7 +45,7 @@ public class AccessTest
     [TestMethod]
     public async Task List()
     {
-        var testApp2 = await TestApp.Create();
+        using var testApp2 = await TestApp.Create();
         var sample1 = await ServerFarmDom.Create(testApp2);
         var actualAccessCount = 0;
         var usageCount = 0;

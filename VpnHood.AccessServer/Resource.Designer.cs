@@ -22,7 +22,7 @@ namespace VpnHood.AccessServer {
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    public class Resource {
+    internal class Resource {
         
         private static global::System.Resources.ResourceManager resourceMan;
         
@@ -36,7 +36,7 @@ namespace VpnHood.AccessServer {
         ///   Returns the cached ResourceManager instance used by this class.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        public static global::System.Resources.ResourceManager ResourceManager {
+        internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
                     global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("VpnHood.AccessServer.Resource", typeof(Resource).Assembly);
@@ -51,7 +51,7 @@ namespace VpnHood.AccessServer {
         ///   resource lookups using this strongly typed resource class.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        public static global::System.Globalization.CultureInfo Culture {
+        internal static global::System.Globalization.CultureInfo Culture {
             get {
                 return resourceCulture;
             }
@@ -63,7 +63,7 @@ namespace VpnHood.AccessServer {
         /// <summary>
         ///   Looks up a localized string similar to (Default).
         /// </summary>
-        public static string DefaultServerProfile {
+        internal static string DefaultServerProfile {
             get {
                 return ResourceManager.GetString("DefaultServerProfile", resourceCulture);
             }
@@ -72,7 +72,7 @@ namespace VpnHood.AccessServer {
         /// <summary>
         ///   Looks up a localized string similar to Server Farm ##.
         /// </summary>
-        public static string NewServerFarmTemplate {
+        internal static string NewServerFarmTemplate {
             get {
                 return ResourceManager.GetString("NewServerFarmTemplate", resourceCulture);
             }
@@ -81,7 +81,7 @@ namespace VpnHood.AccessServer {
         /// <summary>
         ///   Looks up a localized string similar to Server Profile ##.
         /// </summary>
-        public static string NewServerProfileTemplate {
+        internal static string NewServerProfileTemplate {
             get {
                 return ResourceManager.GetString("NewServerProfileTemplate", resourceCulture);
             }
@@ -90,7 +90,7 @@ namespace VpnHood.AccessServer {
         /// <summary>
         ///   Looks up a localized string similar to Server ##.
         /// </summary>
-        public static string NewServerTemplate {
+        internal static string NewServerTemplate {
             get {
                 return ResourceManager.GetString("NewServerTemplate", resourceCulture);
             }
@@ -99,7 +99,7 @@ namespace VpnHood.AccessServer {
         /// <summary>
         ///   Looks up a localized string similar to Owners.
         /// </summary>
-        public static string ProjectOwners {
+        internal static string ProjectOwners {
             get {
                 return ResourceManager.GetString("ProjectOwners", resourceCulture);
             }
@@ -108,7 +108,7 @@ namespace VpnHood.AccessServer {
         /// <summary>
         ///   Looks up a localized string similar to Viewers.
         /// </summary>
-        public static string ProjectViewers {
+        internal static string ProjectViewers {
             get {
                 return ResourceManager.GetString("ProjectViewers", resourceCulture);
             }

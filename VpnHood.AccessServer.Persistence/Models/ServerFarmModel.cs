@@ -1,5 +1,5 @@
 ﻿using GrayMint.Common.Utils;
-using VpnHood.Common;
+using VpnHood.Common.Tokens;
 
 namespace VpnHood.AccessServer.Persistence.Models;
 
@@ -17,6 +17,7 @@ public class ServerFarmModel
     public required string? TokenError { get; set; }
     public required bool PushTokenToClient { get; set; }
     public required int MaxCertificateCount { get; set; }
+    public required bool AllowAccessCode { get; set; }
     public bool IsDeleted { get; set; } = false;
 
     public virtual ServerProfileModel? ServerProfile { get; set; }

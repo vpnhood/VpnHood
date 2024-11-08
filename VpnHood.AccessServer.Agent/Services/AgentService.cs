@@ -96,13 +96,15 @@ public class AgentService(
 
         // remove LastConfigCode if server send its status
         if (server.LastConfigCode?.ToString() != serverStatus.ConfigCode ||
-            server.LastConfigError != serverStatus.ConfigError) {
+            server.LastConfigError != serverStatus.ConfigError ||
+            server.TotalSwapMemoryMb != serverStatus.TotalSwapMemory / VhUtil.Megabytes) {
             logger.LogInformation("Updating a server's LastConfigCode. ServerId: {ServerId}, ConfigCode: {ConfigCode}",
                 server.ServerId, serverStatus.ConfigCode);
 
             // update db & cache
             var serverUpdate = await vhAgentRepo.FindServerAsync(server.ServerId) ??
                                throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
+            serverUpdate.TotalSwapMemoryMb = (int?)(serverStatus.TotalSwapMemory / VhUtil.Megabytes);
             serverUpdate.LastConfigError = serverStatus.ConfigError;
             serverUpdate.LastConfigCode = !string.IsNullOrEmpty(serverStatus.ConfigCode)
                 ? Guid.Parse(serverStatus.ConfigCode)
@@ -134,8 +136,8 @@ public class AgentService(
         var serverModel = serverFarmModel.Servers!.Single(x => x.ServerId == serverId);
 
         // update cache
-        var oublicIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.IsV4());
-        var oublicIpV6 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.IsV6());
+        var publicIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.IsV4());
+        var publicIpV6 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.IsV6());
         serverModel.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
         serverModel.OsInfo = serverInfo.OsInfo;
         serverModel.MachineName = serverInfo.MachineName;
@@ -143,9 +145,9 @@ public class AgentService(
         serverModel.TotalMemory = serverInfo.TotalMemory ?? 0;
         serverModel.LogicalCoreCount = serverInfo.LogicalCoreCount;
         serverModel.Version = serverInfo.Version.ToString();
-        serverModel.PublicIpV4 = oublicIpV4?.ToString();
-        serverModel.PublicIpV6 = oublicIpV6?.ToString();
-        serverModel.Location ??= await GetIpLocation(oublicIpV4 ?? oublicIpV6, CancellationToken.None);
+        serverModel.PublicIpV4 = publicIpV4?.ToString();
+        serverModel.PublicIpV6 = publicIpV6?.ToString();
+        serverModel.Location ??= await GetIpLocation(publicIpV4 ?? publicIpV6, CancellationToken.None);
 
         // calculate access points
         if (serverModel.AutoConfigure)
@@ -221,10 +223,13 @@ public class AgentService(
                 TcpBufferSize = AgentUtils.GetBestTcpBufferSize(serverModel.TotalMemory)
             },
             ServerSecret = serverFarmModel.Secret,
-            Certificates = serverFarmModel.Certificates.Select(x => new CertificateData {
-                CommonName = x.CommonName,
-                RawData = x.RawData
-            }).ToArray()
+            Certificates = serverFarmModel.Certificates
+                .OrderByDescending(x => x.IsInToken)
+                .Select(x => new CertificateData {
+                    CommonName = x.CommonName,
+                    RawData = x.RawData
+                })
+                .ToArray()
         };
 
         // merge with profile
@@ -245,10 +250,11 @@ public class AgentService(
             UdpEndPoints = udpEndPoints,
             AddListenerIpsToNetwork = serverModel.AutoConfigure ? null : "*",
             UpdateStatusInterval = _agentOptions.ServerUpdateStatusInterval,
+            SwapMemorySizeMb = serverModel.ConfigSwapMemorySizeMb,
             SessionOptions = new SessionOptions {
                 Timeout = _agentOptions.SessionTemporaryTimeout,
                 SyncInterval = _agentOptions.SessionSyncInterval,
-                SyncCacheSize = _agentOptions.SyncCacheSize
+                SyncCacheSize = _agentOptions.SyncCacheSize,
             }
         });
 
@@ -365,7 +371,7 @@ public class AgentService(
         AddressFamily addressFamily)
     {
         // return if already selected
-        if (accessPoints.Any(x =>x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress.AddressFamily == addressFamily))
+        if (accessPoints.Any(x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress.AddressFamily == addressFamily))
             return;
 
         // select first public as PublicInToken
@@ -396,6 +402,8 @@ public class AgentService(
             IsLast = true,
             CreatedTime = DateTime.UtcNow,
             AvailableMemory = serverStatus.AvailableMemory,
+            AvailableSwapMemoryMb = serverStatus.AvailableSwapMemory != null 
+                ? (int)(serverStatus.AvailableSwapMemory.Value / VhUtil.Megabytes) : null,
             CpuUsage = (byte?)serverStatus.CpuUsage,
             TcpConnectionCount = serverStatus.TcpConnectionCount,
             UdpConnectionCount = serverStatus.UdpConnectionCount,

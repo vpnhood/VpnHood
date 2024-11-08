@@ -1,4 +1,3 @@
-using System.Net;
 using System.Text.Json;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Authentications;
@@ -14,7 +13,6 @@ using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Agent.Services.IpLocationServices;
 using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common.IpLocations;
 
 namespace VpnHood.AccessServer.Agent;
@@ -83,7 +81,8 @@ public class Program
             // DbContext
             builder.Services
                 .AddDbContextPool<VhContext>(
-                    options => { options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")); }, 100);
+                    options => { options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")); }, 
+                    poolSize: 40); //max pool size for sql server is 60
 
 
             builder.Services
@@ -94,7 +93,7 @@ public class Program
                 .AddScoped<SessionService>()
                 .AddScoped<CacheService>()
                 .AddScoped<AgentService>()
-                .AddScoped<LoadBalancerService>()
+                .AddScoped<ServerSelectorService>()
                 .AddScoped<FarmTokenUpdater>()
                 .AddScoped<FarmTokenRepoUploader>()
                 .AddKeyedSingleton<IIpLocationProvider, DeviceIpLocationProvider>(LocationProviderDevice)
@@ -130,39 +129,39 @@ public class Program
         }
     }
 
-    private static async Task Migrate(ILogger logger, WebApplication webApp)
-    {
-        logger.LogInformation("Upgrading..");
-        var scope = webApp.Services.CreateAsyncScope();
-        await using var context = scope.ServiceProvider.GetRequiredService<VhContext>();
-        var vhAgentRepo = scope.ServiceProvider.GetRequiredService<VhAgentRepo>();
-        var locationService = scope.ServiceProvider.GetRequiredKeyedService<IIpLocationProvider>(LocationProviderServer);
+    //private static async Task Migrate(ILogger logger, WebApplication webApp)
+    //{
+    //    logger.LogInformation("Upgrading..");
+    //    var scope = webApp.Services.CreateAsyncScope();
+    //    await using var context = scope.ServiceProvider.GetRequiredService<VhContext>();
+    //    var vhAgentRepo = scope.ServiceProvider.GetRequiredService<VhAgentRepo>();
+    //    var locationService = scope.ServiceProvider.GetRequiredKeyedService<IIpLocationProvider>(LocationProviderServer);
 
-        var servers = await context.Servers.Where(x => x.LocationId != null && x.LocationId < 300).ToArrayAsync();
-        foreach (var server in servers) {
+    //    var servers = await context.Servers.Where(x => x.LocationId != null && x.LocationId < 300).ToArrayAsync();
+    //    foreach (var server in servers) {
 
-            try {
-                var ip = server.PublicIpV4 ?? server.PublicIpV6 ?? throw new Exception("no ip");
-                var location = await locationService.GetLocation(IPAddress.Parse(ip), CancellationToken.None);
-                var locationModel = await vhAgentRepo.LocationFind(countryCode: location.CountryCode, regionName: location.RegionName,
-                    cityName: location.CityName);
-                locationModel ??= await vhAgentRepo.LocationAdd(new LocationModel {
-                    LocationId = 0,
-                    CityName = location.CityName,
-                    CountryCode = location.CountryCode,
-                    RegionName = location.RegionName,
-                    ContinentCode = location.CountryCode,
-                    CountryName = location.CountryName,
-                });
-                server.Location = locationModel;
-            }
-            catch (Exception e) {
-                server.LocationId = null;
-                Console.WriteLine(e);
-            }
+    //        try {
+    //            var ip = server.PublicIpV4 ?? server.PublicIpV6 ?? throw new Exception("no ip");
+    //            var location = await locationService.GetLocation(IPAddress.Parse(ip), CancellationToken.None);
+    //            var locationModel = await vhAgentRepo.LocationFind(countryCode: location.CountryCode, regionName: location.RegionName,
+    //                cityName: location.CityName);
+    //            locationModel ??= await vhAgentRepo.LocationAdd(new LocationModel {
+    //                LocationId = 0,
+    //                CityName = location.CityName,
+    //                CountryCode = location.CountryCode,
+    //                RegionName = location.RegionName,
+    //                ContinentCode = location.CountryCode,
+    //                CountryName = location.CountryName,
+    //            });
+    //            server.Location = locationModel;
+    //        }
+    //        catch (Exception e) {
+    //            server.LocationId = null;
+    //            Console.WriteLine(e);
+    //        }
 
-            await context.SaveChangesAsync();
-        }
+    //        await context.SaveChangesAsync();
+    //    }
 
-    }
+    //}
 }

@@ -56,9 +56,9 @@ $service | Out-File $serviceFile -Encoding ASCII;
 
 # --------
 Write-Host "Copying app files..." -ForegroundColor Blue;
-$remoteDest = "$remote" +":$remoteDir";
+$remoteDest = "$remote" + ":$remoteDir";
 ssh -i $userPrivateKeyFile $remote "sudo mkdir -p $remoteDir; sudo chown $remoteUser $remoteDir";
-scp -r -i $userPrivateKeyFile $outputDir $remoteDest;
+Copy-ZipAndUnzipRemote -localDir $outputDir -remoteDir $remoteDir -remote $remote -userPrivateKeyFile $userPrivateKeyFile -remoteUser $remoteUser;
 scp -r -i $userPrivateKeyFile "$outputDir/appsettings.json" $remoteDest;
 scp -r -i $userPrivateKeyFile "$outputDir/nlog.config" $remoteDest;
 
@@ -67,7 +67,6 @@ ssh -i $userPrivateKeyFile $remote "chmod +x $remoteDir/$versionTag/$assemblyNam
 
 # --------
 Write-Host "Copying configuration files..." -ForegroundColor Blue;
-$remoteDest = "$remote" + ":$remoteDir";
 scp -r -i $userPrivateKeyFile "$configDir/*" $remoteDest
 
 # --------
@@ -97,3 +96,5 @@ if ($install_service) {
 # restarting the service
 Write-Host "Restarting $AppName service..." -ForegroundColor Blue;
 ssh -i $userPrivateKeyFile $remote "sudo systemctl restart $serviceFileName;"
+
+

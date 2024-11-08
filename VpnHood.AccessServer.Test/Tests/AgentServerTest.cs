@@ -184,7 +184,7 @@ public class AgentServerTest
         // --------
         // Check: another server with different group should have one PublicInTokenAccess
         // --------
-        var farm2 = await ServerFarmDom.Create(serverCount: 0);
+        using var farm2 = await ServerFarmDom.Create(serverCount: 0);
         serverDom = await farm2.AddNewServer();
         publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(serverDom);
         Assert.IsNotNull(publicInTokenAccessPoint);
@@ -224,7 +224,7 @@ public class AgentServerTest
 
         // create new session to see if agent cache has been updated
         var sessionDom = await accessToken.CreateSession();
-        var token = Common.Token.FromAccessKey(sessionDom.SessionResponseEx.AccessKey!);
+        var token = Common.Tokens.Token.FromAccessKey(sessionDom.SessionResponseEx.AccessKey!);
         Assert.IsNotNull(token.ServerToken.HostEndPoints);
         Assert.AreEqual(
             token.ServerToken.HostEndPoints.First(x => x.Address.IsV4()).Address,
@@ -334,7 +334,24 @@ public class AgentServerTest
         Assert.IsTrue(server.ServerStatus?.CreatedTime > dateTime);
         Assert.IsTrue(serverInfo.PublicIpAddresses.Contains(IPAddress.Parse(server.PublicIpV4!)));
         Assert.IsTrue(serverInfo.PublicIpAddresses.Contains(IPAddress.Parse(server.PublicIpV6!)));
+        Assert.AreEqual(serverInfo.Status.TotalSwapMemory / VhUtil.Megabytes, server.TotalSwapMemoryMb);
     }
+
+    [TestMethod]
+    public async Task Configure_settings()
+    {
+        using var farm = await ServerFarmDom.Create();
+        await farm.DefaultServer.Update(new ServerUpdateParams {
+            ConfigSwapMemorySizeMb = new PatchOfNullableInteger{Value = 1100}
+        });
+
+        // Configure
+        await farm.DefaultServer.Configure();
+
+        // Make sure the server SwapMemoryMb has been returned
+        Assert.AreEqual(1100, farm.DefaultServer.ServerConfig.SwapMemorySizeMb);
+    }
+
 
     [TestMethod]
     public async Task AutoConfig_should_not_remove_access_point_by_empty_address_family()
@@ -490,8 +507,8 @@ public class AgentServerTest
     [TestMethod]
     public async Task Reconfig_by_changing_farm()
     {
-        var farm1 = await ServerFarmDom.Create();
-        var farm2 = await ServerFarmDom.Create(farm1.TestApp);
+        using var farm1 = await ServerFarmDom.Create();
+        using var farm2 = await ServerFarmDom.Create(farm1.TestApp);
 
         var oldCode = farm1.DefaultServer.ServerInfo.Status.ConfigCode;
         await farm1.DefaultServer.Client.UpdateAsync(farm1.ProjectId, farm1.DefaultServer.ServerId,
@@ -596,15 +613,15 @@ public class AgentServerTest
     [TestMethod]
     public async Task GetCertificateData()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         var dnsName1 = $"{Guid.NewGuid()}.com";
-        var farm1 = await ServerFarmDom.Create(testApp);
+        using var farm1 = await ServerFarmDom.Create(testApp);
         await farm1.CertificateReplace(new CertificateCreateParams {
             CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
         });
 
         var dnsName2 = $"{Guid.NewGuid()}.com";
-        var farm2 = await ServerFarmDom.Create(testApp);
+        using var farm2 = await ServerFarmDom.Create(testApp);
         await farm2.CertificateReplace(new CertificateCreateParams {
             CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName2 }
         });

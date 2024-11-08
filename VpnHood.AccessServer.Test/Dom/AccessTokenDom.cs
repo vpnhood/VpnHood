@@ -1,9 +1,11 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common.Messaging;
-using Token = VpnHood.Common.Token;
+using VpnHood.Common.Tokens;
+using Token = VpnHood.Common.Tokens.Token;
 
 namespace VpnHood.AccessServer.Test.Dom;
 
@@ -13,9 +15,10 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
     public AccessToken AccessToken { get; private set; } = accessToken;
     public Guid AccessTokenId => AccessToken.AccessTokenId;
 
-    public async Task<SessionDom> CreateSession(Guid? clientId = null, IPAddress? clientIp = null,
-        AddressFamily addressFamily = AddressFamily.InterNetwork, bool assertError = true,
-        bool autoRedirect = false, string? serverLocation = null, ClientInfo? clientInfo = null)
+    public async Task<SessionDom> CreateSession(string? clientId = null, IPAddress? clientIp = null,
+        AddressFamily addressFamily = AddressFamily.InterNetwork, bool throwError = true,
+        bool autoRedirect = false, string? serverLocation = null, ClientInfo? clientInfo = null, 
+        ConnectPlanId planId = ConnectPlanId.Normal)
     {
         // get server ip
         var accessKey = await GetAccessKey();
@@ -23,14 +26,15 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
         var serverEndPoint =
             token.ServerToken.HostEndPoints?.FirstOrDefault(x => x.Address.AddressFamily == addressFamily) ??
             throw new Exception("There is no ApiUrl.");
-        return await CreateSession(serverEndPoint, clientId, clientIp, assertError, serverLocation:
-            serverLocation, autoRedirect: autoRedirect, clientInfo: clientInfo);
+        return await CreateSession(serverEndPoint, clientId, clientIp, throwError, serverLocation:
+            serverLocation, autoRedirect: autoRedirect, clientInfo: clientInfo, planId: planId);
     }
 
-    public async Task<SessionDom> CreateSession(IPEndPoint serverEndPoint, Guid? clientId = null,
+    public async Task<SessionDom> CreateSession(IPEndPoint serverEndPoint, string? clientId = null,
         IPAddress? clientIp = null,
-        bool assertError = true, string? serverLocation = null, bool autoRedirect = false, bool allowRedirect = true,
-        ClientInfo? clientInfo = null)
+        bool throwError = true, string? serverLocation = null, bool autoRedirect = false, bool allowRedirect = true,
+        ClientInfo? clientInfo = null,
+        ConnectPlanId planId = ConnectPlanId.Normal)
     {
         // find server of the farm that listen to token EndPoint
         var servers = await TestApp.ServersClient.ListAsync(TestApp.ProjectId);
@@ -49,12 +53,13 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
             locationPath: serverLocation,
             clientInfo: clientInfo,
             clientId: clientId,
-            clientIp: clientIp);
+            clientIp: clientIp,
+            planId: planId);
 
         // create session
         var ret = await SessionDom.Create(
             TestApp, serverData.Server.ServerId, AccessToken, sessionRequestEx,
-            assertError: assertError && !autoRedirect);
+            throwError: throwError && !autoRedirect);
 
         // redirect 
         if (autoRedirect && ret.SessionResponseEx.ErrorCode == SessionErrorCode.RedirectHost) {
@@ -73,12 +78,15 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
                 clientId: sessionRequestEx.ClientInfo.ClientId,
                 clientIp: sessionRequestEx.ClientIp,
                 serverLocation: serverLocation,
-                assertError: assertError,
+                throwError: throwError,
+                planId: planId,
                 allowRedirect: false);
         }
 
-        if (assertError)
-            Assert.AreEqual(SessionErrorCode.Ok, ret.SessionResponseEx.ErrorCode, ret.SessionResponseEx.ErrorMessage);
+        if (throwError && ret.SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
+            throw new SessionExceptionEx(
+                ret.SessionResponseEx.ErrorCode, 
+                ret.SessionResponseEx.ErrorMessage ?? ret.SessionResponseEx.ErrorCode.ToString());
 
         return ret;
     }

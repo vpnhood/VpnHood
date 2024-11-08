@@ -7,9 +7,15 @@ public class HostIpModel
     public int HostIpId { get; set; }
     public required Guid ProjectId { get; init; }
     public required string IpAddress { get; init; }
+    public required string? LocationCountry { get; set; }
+    public required string? LocationRegion { get; set; }
     public required DateTime CreatedTime { get; init; }
     public required Guid HostProviderId { get; set; }
+    public required string? ProviderServerId { get; set; }
     public required bool ExistsInProvider { get; set; }
+    public required bool IsAdditional { get; set; }
+    public required bool IsHidden { get; set; }
+    public required string? ProviderDescription { get; set; }
     public required string? Description { get; set; }
     public Guid? RenewOrderId { get; set; }
     public DateTime? AutoReleaseTime { get; set; }

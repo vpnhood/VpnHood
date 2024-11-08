@@ -3,7 +3,7 @@ using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos.Views;
-using VpnHood.AccessServer.Utils;
+using VpnHood.Manager.Common.Utils;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
@@ -32,6 +32,7 @@ public static class ServerConverter
             ServerState = serverCache?.ServerState ?? serverState,
             ServerName = model.ServerName,
             TotalMemory = model.TotalMemory,
+            TotalSwapMemoryMb = serverCache?.TotalSwapMemoryMb ?? model.TotalSwapMemoryMb,
             LogicalCoreCount = model.LogicalCoreCount,
             Version = model.Version,
             AutoConfigure = model.AutoConfigure,
@@ -39,9 +40,10 @@ public static class ServerConverter
             HostPanelUrl = string.IsNullOrEmpty(model.HostPanelUrl) ? null : new Uri(model.HostPanelUrl),
             PublicIpV4 = model.PublicIpV4,
             PublicIpV6 = model.PublicIpV6,
-            Tags = ManagerUtils.TagsFromString(model.Tags),
+            Tags = TagUtils.TagsFromString(model.Tags),
             ClientFilterId = model.ClientFilterId?.ToString(),
-            ClientFilterName = model.ClientFilter?.ClientFilterName
+            ClientFilterName = model.ClientFilter?.ClientFilterName,
+            ConfigSwapMemorySizeMb = model.ConfigSwapMemorySizeMb
         };
     }
 

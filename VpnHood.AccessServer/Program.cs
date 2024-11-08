@@ -19,6 +19,7 @@ using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
+using VpnHood.Common.IpLocations;
 
 namespace VpnHood.AccessServer;
 
@@ -60,7 +61,8 @@ public class Program
 
             // Database
             builder.Services.AddDbContextPool<VhContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);
+                options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 
+                poolSize: 20); // max for standard tire is 60. 40 is used for agent
 
             // HttpClient
             builder.Services.AddHttpClient(AppOptions.AgentHttpClientName, httpClient => {
@@ -117,7 +119,9 @@ public class Program
                 .AddScoped<HostOrdersService>()
                 .AddScoped<FarmTokenRepoService>()
                 .AddScoped<ClientFilterService>()
+                .AddScoped<DevicesService>()
                 .AddScoped<IHostProviderFactory, HostProviderFactory>()
+                .AddSingleton<IIpLocationProvider, ServerIpLocationProvider>()
                 .AddSingleton<IAcmeOrderFactory, AcmeOrderFactory>();
 
             // Report Service

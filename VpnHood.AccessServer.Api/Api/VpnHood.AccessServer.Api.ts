@@ -976,14 +976,15 @@ export class DevicesClient {
         return Promise.resolve<Device>(null as any);
     }
 
-    findByClientId(projectId: string, clientId: string, cancelToken?: CancelToken): Promise<Device> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/devices/clientId:{clientId}";
+    getByClientId(projectId: string, clientId: string, cancelToken?: CancelToken): Promise<Device> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/devices/clientId?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
         if (clientId === undefined || clientId === null)
-            throw new Error("The parameter 'clientId' must be defined.");
-        url_ = url_.replace("{clientId}", encodeURIComponent("" + clientId));
+            throw new Error("The parameter 'clientId' must be defined and cannot be null.");
+        else
+            url_ += "clientId=" + encodeURIComponent("" + clientId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -1002,11 +1003,11 @@ export class DevicesClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processFindByClientId(_response);
+            return this.processGetByClientId(_response);
         });
     }
 
-    protected processFindByClientId(response: AxiosResponse): Promise<Device> {
+    protected processGetByClientId(response: AxiosResponse): Promise<Device> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1622,6 +1623,53 @@ export class HostOrdersClient {
 
     }
 
+    sync(projectId: string, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/sync";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processSync(_response);
+        });
+    }
+
+    protected processSync(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
     getIp(projectId: string, ipAddress: string, cancelToken?: CancelToken): Promise<HostIp> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/ips/{ipAddress}";
         if (projectId === undefined || projectId === null)
@@ -1784,13 +1832,39 @@ export class HostOrdersClient {
         return Promise.resolve<void>(null as any);
     }
 
-    listIps(projectId: string, search?: string | null | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
+    listIps(projectId: string, search?: string | null | undefined, isAdditional?: boolean | null | undefined, isHidden?: boolean | null | undefined, hostIpStatus?: HostIpStatus | null | undefined, includeIpV4?: boolean | undefined, includeIpV6?: boolean | undefined, includeInUse?: boolean | undefined, includeNotInUse?: boolean | undefined, forceSync?: boolean | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<HostIp[]> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/host-orders/ips?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
         if (search !== undefined && search !== null)
             url_ += "search=" + encodeURIComponent("" + search) + "&";
+        if (isAdditional !== undefined && isAdditional !== null)
+            url_ += "isAdditional=" + encodeURIComponent("" + isAdditional) + "&";
+        if (isHidden !== undefined && isHidden !== null)
+            url_ += "isHidden=" + encodeURIComponent("" + isHidden) + "&";
+        if (hostIpStatus !== undefined && hostIpStatus !== null)
+            url_ += "hostIpStatus=" + encodeURIComponent("" + hostIpStatus) + "&";
+        if (includeIpV4 === null)
+            throw new Error("The parameter 'includeIpV4' cannot be null.");
+        else if (includeIpV4 !== undefined)
+            url_ += "includeIpV4=" + encodeURIComponent("" + includeIpV4) + "&";
+        if (includeIpV6 === null)
+            throw new Error("The parameter 'includeIpV6' cannot be null.");
+        else if (includeIpV6 !== undefined)
+            url_ += "includeIpV6=" + encodeURIComponent("" + includeIpV6) + "&";
+        if (includeInUse === null)
+            throw new Error("The parameter 'includeInUse' cannot be null.");
+        else if (includeInUse !== undefined)
+            url_ += "includeInUse=" + encodeURIComponent("" + includeInUse) + "&";
+        if (includeNotInUse === null)
+            throw new Error("The parameter 'includeNotInUse' cannot be null.");
+        else if (includeNotInUse !== undefined)
+            url_ += "includeNotInUse=" + encodeURIComponent("" + includeNotInUse) + "&";
+        if (forceSync === null)
+            throw new Error("The parameter 'forceSync' cannot be null.");
+        else if (forceSync !== undefined)
+            url_ += "forceSync=" + encodeURIComponent("" + forceSync) + "&";
         if (recordIndex === null)
             throw new Error("The parameter 'recordIndex' cannot be null.");
         else if (recordIndex !== undefined)
@@ -5585,6 +5659,9 @@ export class AccessToken implements IAccessToken {
     firstUsedTime?: Date | null;
     lastUsedTime?: Date | null;
     isPublic!: boolean;
+    clientPolicies?: ClientPolicy[] | null;
+    accessCode?: number | null;
+    managerCode?: number | null;
     isEnabled!: boolean;
     adRequirement!: AdRequirement;
     expirationTime?: Date | null;
@@ -5619,6 +5696,16 @@ export class AccessToken implements IAccessToken {
             this.firstUsedTime = _data["firstUsedTime"] ? new Date(_data["firstUsedTime"].toString()) : <any>null;
             this.lastUsedTime = _data["lastUsedTime"] ? new Date(_data["lastUsedTime"].toString()) : <any>null;
             this.isPublic = _data["isPublic"] !== undefined ? _data["isPublic"] : <any>null;
+            if (Array.isArray(_data["clientPolicies"])) {
+                this.clientPolicies = [] as any;
+                for (let item of _data["clientPolicies"])
+                    this.clientPolicies!.push(ClientPolicy.fromJS(item));
+            }
+            else {
+                this.clientPolicies = <any>null;
+            }
+            this.accessCode = _data["accessCode"] !== undefined ? _data["accessCode"] : <any>null;
+            this.managerCode = _data["managerCode"] !== undefined ? _data["managerCode"] : <any>null;
             this.isEnabled = _data["isEnabled"] !== undefined ? _data["isEnabled"] : <any>null;
             this.adRequirement = _data["adRequirement"] !== undefined ? _data["adRequirement"] : <any>null;
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>null;
@@ -5657,6 +5744,13 @@ export class AccessToken implements IAccessToken {
         data["firstUsedTime"] = this.firstUsedTime ? this.firstUsedTime.toISOString() : <any>null;
         data["lastUsedTime"] = this.lastUsedTime ? this.lastUsedTime.toISOString() : <any>null;
         data["isPublic"] = this.isPublic !== undefined ? this.isPublic : <any>null;
+        if (Array.isArray(this.clientPolicies)) {
+            data["clientPolicies"] = [];
+            for (let item of this.clientPolicies)
+                data["clientPolicies"].push(item.toJSON());
+        }
+        data["accessCode"] = this.accessCode !== undefined ? this.accessCode : <any>null;
+        data["managerCode"] = this.managerCode !== undefined ? this.managerCode : <any>null;
         data["isEnabled"] = this.isEnabled !== undefined ? this.isEnabled : <any>null;
         data["adRequirement"] = this.adRequirement !== undefined ? this.adRequirement : <any>null;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>null;
@@ -5685,6 +5779,9 @@ export interface IAccessToken {
     firstUsedTime?: Date | null;
     lastUsedTime?: Date | null;
     isPublic: boolean;
+    clientPolicies?: ClientPolicy[] | null;
+    accessCode?: number | null;
+    managerCode?: number | null;
     isEnabled: boolean;
     adRequirement: AdRequirement;
     expirationTime?: Date | null;
@@ -5695,6 +5792,85 @@ export interface IAccessToken {
     lifetime: number;
     maxDevice: number;
     tags: string[];
+}
+
+export class ClientPolicy implements IClientPolicy {
+    clientCountry!: string;
+    freeLocations?: string[] | null;
+    autoLocationOnly!: boolean;
+    unblockableOnly!: boolean;
+    normal?: number | null;
+    premiumByTrial?: number | null;
+    premiumByRewardAd?: number | null;
+    premiumByPurchase!: boolean;
+    premiumByCode!: boolean;
+
+    constructor(data?: IClientPolicy) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.clientCountry = _data["clientCountry"] !== undefined ? _data["clientCountry"] : <any>null;
+            if (Array.isArray(_data["freeLocations"])) {
+                this.freeLocations = [] as any;
+                for (let item of _data["freeLocations"])
+                    this.freeLocations!.push(item);
+            }
+            else {
+                this.freeLocations = <any>null;
+            }
+            this.autoLocationOnly = _data["autoLocationOnly"] !== undefined ? _data["autoLocationOnly"] : <any>null;
+            this.unblockableOnly = _data["unblockableOnly"] !== undefined ? _data["unblockableOnly"] : <any>null;
+            this.normal = _data["normal"] !== undefined ? _data["normal"] : <any>null;
+            this.premiumByTrial = _data["premiumByTrial"] !== undefined ? _data["premiumByTrial"] : <any>null;
+            this.premiumByRewardAd = _data["premiumByRewardAd"] !== undefined ? _data["premiumByRewardAd"] : <any>null;
+            this.premiumByPurchase = _data["premiumByPurchase"] !== undefined ? _data["premiumByPurchase"] : <any>null;
+            this.premiumByCode = _data["premiumByCode"] !== undefined ? _data["premiumByCode"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): ClientPolicy {
+        data = typeof data === 'object' ? data : {};
+        let result = new ClientPolicy();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["clientCountry"] = this.clientCountry !== undefined ? this.clientCountry : <any>null;
+        if (Array.isArray(this.freeLocations)) {
+            data["freeLocations"] = [];
+            for (let item of this.freeLocations)
+                data["freeLocations"].push(item);
+        }
+        data["autoLocationOnly"] = this.autoLocationOnly !== undefined ? this.autoLocationOnly : <any>null;
+        data["unblockableOnly"] = this.unblockableOnly !== undefined ? this.unblockableOnly : <any>null;
+        data["normal"] = this.normal !== undefined ? this.normal : <any>null;
+        data["premiumByTrial"] = this.premiumByTrial !== undefined ? this.premiumByTrial : <any>null;
+        data["premiumByRewardAd"] = this.premiumByRewardAd !== undefined ? this.premiumByRewardAd : <any>null;
+        data["premiumByPurchase"] = this.premiumByPurchase !== undefined ? this.premiumByPurchase : <any>null;
+        data["premiumByCode"] = this.premiumByCode !== undefined ? this.premiumByCode : <any>null;
+        return data;
+    }
+}
+
+export interface IClientPolicy {
+    clientCountry: string;
+    freeLocations?: string[] | null;
+    autoLocationOnly: boolean;
+    unblockableOnly: boolean;
+    normal?: number | null;
+    premiumByTrial?: number | null;
+    premiumByRewardAd?: number | null;
+    premiumByPurchase: boolean;
+    premiumByCode: boolean;
 }
 
 export enum AdRequirement {
@@ -5708,7 +5884,7 @@ export class Device implements IDevice {
     clientId!: string;
     clientVersion?: string | null;
     ipAddress?: string | null;
-    country?: string | null;
+    location?: Location | null;
     userAgent?: string | null;
     createdTime!: Date;
     modifiedTime!: Date;
@@ -5730,7 +5906,7 @@ export class Device implements IDevice {
             this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
             this.clientVersion = _data["clientVersion"] !== undefined ? _data["clientVersion"] : <any>null;
             this.ipAddress = _data["ipAddress"] !== undefined ? _data["ipAddress"] : <any>null;
-            this.country = _data["country"] !== undefined ? _data["country"] : <any>null;
+            this.location = _data["location"] ? Location.fromJS(_data["location"]) : <any>null;
             this.userAgent = _data["userAgent"] !== undefined ? _data["userAgent"] : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
             this.modifiedTime = _data["modifiedTime"] ? new Date(_data["modifiedTime"].toString()) : <any>null;
@@ -5752,7 +5928,7 @@ export class Device implements IDevice {
         data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
         data["clientVersion"] = this.clientVersion !== undefined ? this.clientVersion : <any>null;
         data["ipAddress"] = this.ipAddress !== undefined ? this.ipAddress : <any>null;
-        data["country"] = this.country !== undefined ? this.country : <any>null;
+        data["location"] = this.location ? this.location.toJSON() : <any>null;
         data["userAgent"] = this.userAgent !== undefined ? this.userAgent : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
         data["modifiedTime"] = this.modifiedTime ? this.modifiedTime.toISOString() : <any>null;
@@ -5767,12 +5943,64 @@ export interface IDevice {
     clientId: string;
     clientVersion?: string | null;
     ipAddress?: string | null;
-    country?: string | null;
+    location?: Location | null;
     userAgent?: string | null;
     createdTime: Date;
     modifiedTime: Date;
     lockedTime?: Date | null;
     osName: string;
+}
+
+export class Location implements ILocation {
+    countryCode!: string;
+    regionName?: string | null;
+    cityName?: string | null;
+    countryName!: string;
+    displayName!: string;
+
+    constructor(data?: ILocation) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
+            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
+            this.cityName = _data["cityName"] !== undefined ? _data["cityName"] : <any>null;
+            this.countryName = _data["countryName"] !== undefined ? _data["countryName"] : <any>null;
+            this.displayName = _data["displayName"] !== undefined ? _data["displayName"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): Location {
+        data = typeof data === 'object' ? data : {};
+        let result = new Location();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
+        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
+        data["cityName"] = this.cityName !== undefined ? this.cityName : <any>null;
+        data["countryName"] = this.countryName !== undefined ? this.countryName : <any>null;
+        data["displayName"] = this.displayName !== undefined ? this.displayName : <any>null;
+        return data;
+    }
+}
+
+export interface ILocation {
+    countryCode: string;
+    regionName?: string | null;
+    cityName?: string | null;
+    countryName: string;
+    displayName: string;
 }
 
 export class ListResultOfAccessData implements IListResultOfAccessData {
@@ -5839,6 +6067,7 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
     isPublic!: boolean;
     adRequirement!: AdRequirement;
     description?: string | null;
+    clientPolicies?: ClientPolicy[] | null;
     maxTraffic!: number;
     lifetime!: number;
     maxDevice!: number;
@@ -5867,6 +6096,14 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
             this.isPublic = _data["isPublic"] !== undefined ? _data["isPublic"] : <any>null;
             this.adRequirement = _data["adRequirement"] !== undefined ? _data["adRequirement"] : <any>null;
             this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
+            if (Array.isArray(_data["clientPolicies"])) {
+                this.clientPolicies = [] as any;
+                for (let item of _data["clientPolicies"])
+                    this.clientPolicies!.push(ClientPolicy.fromJS(item));
+            }
+            else {
+                this.clientPolicies = <any>null;
+            }
             this.maxTraffic = _data["maxTraffic"] !== undefined ? _data["maxTraffic"] : <any>null;
             this.lifetime = _data["lifetime"] !== undefined ? _data["lifetime"] : <any>null;
             this.maxDevice = _data["maxDevice"] !== undefined ? _data["maxDevice"] : <any>null;
@@ -5899,6 +6136,11 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
         data["isPublic"] = this.isPublic !== undefined ? this.isPublic : <any>null;
         data["adRequirement"] = this.adRequirement !== undefined ? this.adRequirement : <any>null;
         data["description"] = this.description !== undefined ? this.description : <any>null;
+        if (Array.isArray(this.clientPolicies)) {
+            data["clientPolicies"] = [];
+            for (let item of this.clientPolicies)
+                data["clientPolicies"].push(item.toJSON());
+        }
         data["maxTraffic"] = this.maxTraffic !== undefined ? this.maxTraffic : <any>null;
         data["lifetime"] = this.lifetime !== undefined ? this.lifetime : <any>null;
         data["maxDevice"] = this.maxDevice !== undefined ? this.maxDevice : <any>null;
@@ -5921,6 +6163,7 @@ export interface IAccessTokenCreateParams {
     isPublic: boolean;
     adRequirement: AdRequirement;
     description?: string | null;
+    clientPolicies?: ClientPolicy[] | null;
     maxTraffic: number;
     lifetime: number;
     maxDevice: number;
@@ -5931,6 +6174,7 @@ export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
     accessTokenName?: PatchOfString | null;
     serverFarmId?: PatchOfGuid | null;
     expirationTime?: PatchOfNullableDateTime | null;
+    clientPolicies?: PatchOfClientPolicyOf | null;
     isEnabled?: PatchOfBoolean | null;
     adRequirement?: PatchOfAdRequirement | null;
     description?: PatchOfString | null;
@@ -5953,6 +6197,7 @@ export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
             this.accessTokenName = _data["accessTokenName"] ? PatchOfString.fromJS(_data["accessTokenName"]) : <any>null;
             this.serverFarmId = _data["serverFarmId"] ? PatchOfGuid.fromJS(_data["serverFarmId"]) : <any>null;
             this.expirationTime = _data["expirationTime"] ? PatchOfNullableDateTime.fromJS(_data["expirationTime"]) : <any>null;
+            this.clientPolicies = _data["clientPolicies"] ? PatchOfClientPolicyOf.fromJS(_data["clientPolicies"]) : <any>null;
             this.isEnabled = _data["isEnabled"] ? PatchOfBoolean.fromJS(_data["isEnabled"]) : <any>null;
             this.adRequirement = _data["adRequirement"] ? PatchOfAdRequirement.fromJS(_data["adRequirement"]) : <any>null;
             this.description = _data["description"] ? PatchOfString.fromJS(_data["description"]) : <any>null;
@@ -5975,6 +6220,7 @@ export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
         data["accessTokenName"] = this.accessTokenName ? this.accessTokenName.toJSON() : <any>null;
         data["serverFarmId"] = this.serverFarmId ? this.serverFarmId.toJSON() : <any>null;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toJSON() : <any>null;
+        data["clientPolicies"] = this.clientPolicies ? this.clientPolicies.toJSON() : <any>null;
         data["isEnabled"] = this.isEnabled ? this.isEnabled.toJSON() : <any>null;
         data["adRequirement"] = this.adRequirement ? this.adRequirement.toJSON() : <any>null;
         data["description"] = this.description ? this.description.toJSON() : <any>null;
@@ -5990,6 +6236,7 @@ export interface IAccessTokenUpdateParams {
     accessTokenName?: PatchOfString | null;
     serverFarmId?: PatchOfGuid | null;
     expirationTime?: PatchOfNullableDateTime | null;
+    clientPolicies?: PatchOfClientPolicyOf | null;
     isEnabled?: PatchOfBoolean | null;
     adRequirement?: PatchOfAdRequirement | null;
     description?: PatchOfString | null;
@@ -6105,6 +6352,53 @@ export class PatchOfNullableDateTime implements IPatchOfNullableDateTime {
 
 export interface IPatchOfNullableDateTime {
     value?: Date | null;
+}
+
+export class PatchOfClientPolicyOf implements IPatchOfClientPolicyOf {
+    value?: ClientPolicy[] | null;
+
+    constructor(data?: IPatchOfClientPolicyOf) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["value"])) {
+                this.value = [] as any;
+                for (let item of _data["value"])
+                    this.value!.push(ClientPolicy.fromJS(item));
+            }
+            else {
+                this.value = <any>null;
+            }
+        }
+    }
+
+    static fromJS(data: any): PatchOfClientPolicyOf {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfClientPolicyOf();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.value)) {
+            data["value"] = [];
+            for (let item of this.value)
+                data["value"].push(item.toJSON());
+        }
+        return data;
+    }
+}
+
+export interface IPatchOfClientPolicyOf {
+    value?: ClientPolicy[] | null;
 }
 
 export class PatchOfBoolean implements IPatchOfBoolean {
@@ -7109,13 +7403,17 @@ export class HostIp implements IHostIp {
     autoReleaseTime?: Date | null;
     releaseRequestTime?: Date | null;
     serverId?: string | null;
+    isAdditional!: boolean;
+    isHidden!: boolean;
     existsInProvider!: boolean;
-    providerDescription?: string | null;
     serverName?: string | null;
     serverLocation?: Location | null;
     serverFarmId?: string | null;
+    providerServerId?: string | null;
     serverFarmName?: string | null;
     status!: HostIpStatus;
+    description?: string | null;
+    providerDescription?: string | null;
 
     constructor(data?: IHostIp) {
         if (data) {
@@ -7135,13 +7433,17 @@ export class HostIp implements IHostIp {
             this.autoReleaseTime = _data["autoReleaseTime"] ? new Date(_data["autoReleaseTime"].toString()) : <any>null;
             this.releaseRequestTime = _data["releaseRequestTime"] ? new Date(_data["releaseRequestTime"].toString()) : <any>null;
             this.serverId = _data["serverId"] !== undefined ? _data["serverId"] : <any>null;
+            this.isAdditional = _data["isAdditional"] !== undefined ? _data["isAdditional"] : <any>null;
+            this.isHidden = _data["isHidden"] !== undefined ? _data["isHidden"] : <any>null;
             this.existsInProvider = _data["existsInProvider"] !== undefined ? _data["existsInProvider"] : <any>null;
-            this.providerDescription = _data["providerDescription"] !== undefined ? _data["providerDescription"] : <any>null;
             this.serverName = _data["serverName"] !== undefined ? _data["serverName"] : <any>null;
             this.serverLocation = _data["serverLocation"] ? Location.fromJS(_data["serverLocation"]) : <any>null;
             this.serverFarmId = _data["serverFarmId"] !== undefined ? _data["serverFarmId"] : <any>null;
+            this.providerServerId = _data["providerServerId"] !== undefined ? _data["providerServerId"] : <any>null;
             this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
             this.status = _data["status"] !== undefined ? _data["status"] : <any>null;
+            this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
+            this.providerDescription = _data["providerDescription"] !== undefined ? _data["providerDescription"] : <any>null;
         }
     }
 
@@ -7161,13 +7463,17 @@ export class HostIp implements IHostIp {
         data["autoReleaseTime"] = this.autoReleaseTime ? this.autoReleaseTime.toISOString() : <any>null;
         data["releaseRequestTime"] = this.releaseRequestTime ? this.releaseRequestTime.toISOString() : <any>null;
         data["serverId"] = this.serverId !== undefined ? this.serverId : <any>null;
+        data["isAdditional"] = this.isAdditional !== undefined ? this.isAdditional : <any>null;
+        data["isHidden"] = this.isHidden !== undefined ? this.isHidden : <any>null;
         data["existsInProvider"] = this.existsInProvider !== undefined ? this.existsInProvider : <any>null;
-        data["providerDescription"] = this.providerDescription !== undefined ? this.providerDescription : <any>null;
         data["serverName"] = this.serverName !== undefined ? this.serverName : <any>null;
         data["serverLocation"] = this.serverLocation ? this.serverLocation.toJSON() : <any>null;
         data["serverFarmId"] = this.serverFarmId !== undefined ? this.serverFarmId : <any>null;
+        data["providerServerId"] = this.providerServerId !== undefined ? this.providerServerId : <any>null;
         data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
         data["status"] = this.status !== undefined ? this.status : <any>null;
+        data["description"] = this.description !== undefined ? this.description : <any>null;
+        data["providerDescription"] = this.providerDescription !== undefined ? this.providerDescription : <any>null;
         return data;
     }
 }
@@ -7180,68 +7486,31 @@ export interface IHostIp {
     autoReleaseTime?: Date | null;
     releaseRequestTime?: Date | null;
     serverId?: string | null;
+    isAdditional: boolean;
+    isHidden: boolean;
     existsInProvider: boolean;
-    providerDescription?: string | null;
     serverName?: string | null;
     serverLocation?: Location | null;
     serverFarmId?: string | null;
+    providerServerId?: string | null;
     serverFarmName?: string | null;
     status: HostIpStatus;
-}
-
-export class Location implements ILocation {
-    countryCode!: string;
-    regionName?: string | null;
-    cityName?: string | null;
-
-    constructor(data?: ILocation) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
-            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
-            this.cityName = _data["cityName"] !== undefined ? _data["cityName"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): Location {
-        data = typeof data === 'object' ? data : {};
-        let result = new Location();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
-        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
-        data["cityName"] = this.cityName !== undefined ? this.cityName : <any>null;
-        return data;
-    }
-}
-
-export interface ILocation {
-    countryCode: string;
-    regionName?: string | null;
-    cityName?: string | null;
+    description?: string | null;
+    providerDescription?: string | null;
 }
 
 export enum HostIpStatus {
-    InUse = "InUse",
-    NotInUse = "NotInUse",
     NotInProvider = "NotInProvider",
+    NotInUse = "NotInUse",
+    InUse = "InUse",
     Releasing = "Releasing",
 }
 
 export class HostIpUpdateParams implements IHostIpUpdateParams {
     autoReleaseTime?: PatchOfNullableDateTime | null;
+    isHidden?: PatchOfBoolean | null;
+    providerDescription?: PatchOfString | null;
+    description?: PatchOfString | null;
 
     constructor(data?: IHostIpUpdateParams) {
         if (data) {
@@ -7255,6 +7524,9 @@ export class HostIpUpdateParams implements IHostIpUpdateParams {
     init(_data?: any) {
         if (_data) {
             this.autoReleaseTime = _data["autoReleaseTime"] ? PatchOfNullableDateTime.fromJS(_data["autoReleaseTime"]) : <any>null;
+            this.isHidden = _data["isHidden"] ? PatchOfBoolean.fromJS(_data["isHidden"]) : <any>null;
+            this.providerDescription = _data["providerDescription"] ? PatchOfString.fromJS(_data["providerDescription"]) : <any>null;
+            this.description = _data["description"] ? PatchOfString.fromJS(_data["description"]) : <any>null;
         }
     }
 
@@ -7268,12 +7540,18 @@ export class HostIpUpdateParams implements IHostIpUpdateParams {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["autoReleaseTime"] = this.autoReleaseTime ? this.autoReleaseTime.toJSON() : <any>null;
+        data["isHidden"] = this.isHidden ? this.isHidden.toJSON() : <any>null;
+        data["providerDescription"] = this.providerDescription ? this.providerDescription.toJSON() : <any>null;
+        data["description"] = this.description ? this.description.toJSON() : <any>null;
         return data;
     }
 }
 
 export interface IHostIpUpdateParams {
     autoReleaseTime?: PatchOfNullableDateTime | null;
+    isHidden?: PatchOfBoolean | null;
+    providerDescription?: PatchOfString | null;
+    description?: PatchOfString | null;
 }
 
 export class HostOrder implements IHostOrder {
@@ -8671,6 +8949,7 @@ export class VpnServer implements IVpnServer {
     osInfo?: string | null;
     machineName?: string | null;
     totalMemory?: number | null;
+    totalSwapMemoryMb?: number | null;
     logicalCoreCount?: number | null;
     configureTime?: Date | null;
     createdTime!: Date;
@@ -8689,6 +8968,7 @@ export class VpnServer implements IVpnServer {
     tags!: string[];
     clientFilterId?: string | null;
     clientFilterName?: string | null;
+    configSwapMemorySizeMb?: number | null;
 
     constructor(data?: IVpnServer) {
         if (data) {
@@ -8715,6 +8995,7 @@ export class VpnServer implements IVpnServer {
             this.osInfo = _data["osInfo"] !== undefined ? _data["osInfo"] : <any>null;
             this.machineName = _data["machineName"] !== undefined ? _data["machineName"] : <any>null;
             this.totalMemory = _data["totalMemory"] !== undefined ? _data["totalMemory"] : <any>null;
+            this.totalSwapMemoryMb = _data["totalSwapMemoryMb"] !== undefined ? _data["totalSwapMemoryMb"] : <any>null;
             this.logicalCoreCount = _data["logicalCoreCount"] !== undefined ? _data["logicalCoreCount"] : <any>null;
             this.configureTime = _data["configureTime"] ? new Date(_data["configureTime"].toString()) : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
@@ -8747,6 +9028,7 @@ export class VpnServer implements IVpnServer {
             }
             this.clientFilterId = _data["clientFilterId"] !== undefined ? _data["clientFilterId"] : <any>null;
             this.clientFilterName = _data["clientFilterName"] !== undefined ? _data["clientFilterName"] : <any>null;
+            this.configSwapMemorySizeMb = _data["configSwapMemorySizeMb"] !== undefined ? _data["configSwapMemorySizeMb"] : <any>null;
         }
     }
 
@@ -8769,6 +9051,7 @@ export class VpnServer implements IVpnServer {
         data["osInfo"] = this.osInfo !== undefined ? this.osInfo : <any>null;
         data["machineName"] = this.machineName !== undefined ? this.machineName : <any>null;
         data["totalMemory"] = this.totalMemory !== undefined ? this.totalMemory : <any>null;
+        data["totalSwapMemoryMb"] = this.totalSwapMemoryMb !== undefined ? this.totalSwapMemoryMb : <any>null;
         data["logicalCoreCount"] = this.logicalCoreCount !== undefined ? this.logicalCoreCount : <any>null;
         data["configureTime"] = this.configureTime ? this.configureTime.toISOString() : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
@@ -8795,6 +9078,7 @@ export class VpnServer implements IVpnServer {
         }
         data["clientFilterId"] = this.clientFilterId !== undefined ? this.clientFilterId : <any>null;
         data["clientFilterName"] = this.clientFilterName !== undefined ? this.clientFilterName : <any>null;
+        data["configSwapMemorySizeMb"] = this.configSwapMemorySizeMb !== undefined ? this.configSwapMemorySizeMb : <any>null;
         return data;
     }
 }
@@ -8810,6 +9094,7 @@ export interface IVpnServer {
     osInfo?: string | null;
     machineName?: string | null;
     totalMemory?: number | null;
+    totalSwapMemoryMb?: number | null;
     logicalCoreCount?: number | null;
     configureTime?: Date | null;
     createdTime: Date;
@@ -8828,6 +9113,7 @@ export interface IVpnServer {
     tags: string[];
     clientFilterId?: string | null;
     clientFilterName?: string | null;
+    configSwapMemorySizeMb?: number | null;
 }
 
 export enum ServerState {
@@ -8845,6 +9131,7 @@ export class ServerStatusEx implements IServerStatusEx {
     tcpConnectionCount!: number;
     udpConnectionCount!: number;
     availableMemory?: number | null;
+    availableSwapMemoryMb?: number | null;
     cpuUsage?: number | null;
     threadCount!: number;
     tunnelSendSpeed!: number;
@@ -8866,6 +9153,7 @@ export class ServerStatusEx implements IServerStatusEx {
             this.tcpConnectionCount = _data["tcpConnectionCount"] !== undefined ? _data["tcpConnectionCount"] : <any>null;
             this.udpConnectionCount = _data["udpConnectionCount"] !== undefined ? _data["udpConnectionCount"] : <any>null;
             this.availableMemory = _data["availableMemory"] !== undefined ? _data["availableMemory"] : <any>null;
+            this.availableSwapMemoryMb = _data["availableSwapMemoryMb"] !== undefined ? _data["availableSwapMemoryMb"] : <any>null;
             this.cpuUsage = _data["cpuUsage"] !== undefined ? _data["cpuUsage"] : <any>null;
             this.threadCount = _data["threadCount"] !== undefined ? _data["threadCount"] : <any>null;
             this.tunnelSendSpeed = _data["tunnelSendSpeed"] !== undefined ? _data["tunnelSendSpeed"] : <any>null;
@@ -8887,6 +9175,7 @@ export class ServerStatusEx implements IServerStatusEx {
         data["tcpConnectionCount"] = this.tcpConnectionCount !== undefined ? this.tcpConnectionCount : <any>null;
         data["udpConnectionCount"] = this.udpConnectionCount !== undefined ? this.udpConnectionCount : <any>null;
         data["availableMemory"] = this.availableMemory !== undefined ? this.availableMemory : <any>null;
+        data["availableSwapMemoryMb"] = this.availableSwapMemoryMb !== undefined ? this.availableSwapMemoryMb : <any>null;
         data["cpuUsage"] = this.cpuUsage !== undefined ? this.cpuUsage : <any>null;
         data["threadCount"] = this.threadCount !== undefined ? this.threadCount : <any>null;
         data["tunnelSendSpeed"] = this.tunnelSendSpeed !== undefined ? this.tunnelSendSpeed : <any>null;
@@ -8901,6 +9190,7 @@ export interface IServerStatusEx {
     tcpConnectionCount: number;
     udpConnectionCount: number;
     availableMemory?: number | null;
+    availableSwapMemoryMb?: number | null;
     cpuUsage?: number | null;
     threadCount: number;
     tunnelSendSpeed: number;
@@ -9063,6 +9353,7 @@ export class ServerUpdateParams implements IServerUpdateParams {
     isEnabled?: PatchOfBoolean | null;
     tags?: PatchOfStringOf | null;
     clientFilterId?: PatchOfString | null;
+    configSwapMemorySizeMb?: PatchOfNullableInteger | null;
 
     constructor(data?: IServerUpdateParams) {
         if (data) {
@@ -9086,6 +9377,7 @@ export class ServerUpdateParams implements IServerUpdateParams {
             this.isEnabled = _data["isEnabled"] ? PatchOfBoolean.fromJS(_data["isEnabled"]) : <any>null;
             this.tags = _data["tags"] ? PatchOfStringOf.fromJS(_data["tags"]) : <any>null;
             this.clientFilterId = _data["clientFilterId"] ? PatchOfString.fromJS(_data["clientFilterId"]) : <any>null;
+            this.configSwapMemorySizeMb = _data["configSwapMemorySizeMb"] ? PatchOfNullableInteger.fromJS(_data["configSwapMemorySizeMb"]) : <any>null;
         }
     }
 
@@ -9109,6 +9401,7 @@ export class ServerUpdateParams implements IServerUpdateParams {
         data["isEnabled"] = this.isEnabled ? this.isEnabled.toJSON() : <any>null;
         data["tags"] = this.tags ? this.tags.toJSON() : <any>null;
         data["clientFilterId"] = this.clientFilterId ? this.clientFilterId.toJSON() : <any>null;
+        data["configSwapMemorySizeMb"] = this.configSwapMemorySizeMb ? this.configSwapMemorySizeMb.toJSON() : <any>null;
         return data;
     }
 }
@@ -9125,6 +9418,7 @@ export interface IServerUpdateParams {
     isEnabled?: PatchOfBoolean | null;
     tags?: PatchOfStringOf | null;
     clientFilterId?: PatchOfString | null;
+    configSwapMemorySizeMb?: PatchOfNullableInteger | null;
 }
 
 export class PatchOfAccessPointOf implements IPatchOfAccessPointOf {

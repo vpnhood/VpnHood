@@ -7,14 +7,13 @@ using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Agent.Utils;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.Common;
 using VpnHood.Common.IpLocations;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
+using VpnHood.Manager.Common.Utils;
 using VpnHood.Server.Access.Messaging;
-using AsyncLock = GrayMint.Common.Utils.AsyncLock;
 
 namespace VpnHood.AccessServer.Agent.Services;
 
@@ -26,7 +25,7 @@ public class SessionService(
     VhAgentRepo vhAgentRepo,
     [FromKeyedServices(Program.LocationProviderDevice)]
     IIpLocationProvider deviceLocationProvider,
-    LoadBalancerService loadBalancerService)
+    ServerSelectorService serverSelectorService)
 {
     public class NewAccess;
 
@@ -92,29 +91,29 @@ public class SessionService(
         }
     }
 
-    private async Task<SessionResponseEx> CreateSessionInternal(ServerCache server, SessionRequestEx sessionRequestEx)
+    private async Task<SessionResponseEx> CreateSessionInternal(ServerCache serverCache, SessionRequestEx sessionRequestEx)
     {
         // validate argument
-        if (server.AccessPoints == null)
-            throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
+        if (serverCache.AccessPoints == null)
+            throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(serverCache));
 
         // extract required data
-        var projectId = server.ProjectId;
-        var serverId = server.ServerId;
+        var projectId = serverCache.ProjectId;
+        var serverId = serverCache.ServerId;
         var clientIp = sessionRequestEx.ClientIp;
         var clientInfo = sessionRequestEx.ClientInfo;
-        var project = await cacheService.GetProject(server.ProjectId);
+        var projectCache = await cacheService.GetProject(serverCache.ProjectId);
 
         // Get accessTokenModel
         var accessToken = await vhAgentRepo.AccessTokenGet(projectId, Guid.Parse(sessionRequestEx.TokenId));
-        var serverFarmCache = await cacheService.GetServerFarm(server.ServerFarmId);
+        var serverFarmCache = await cacheService.GetServerFarm(serverCache.ServerFarmId);
 
         // validate the request
         if (!ValidateTokenRequest(sessionRequestEx, accessToken.Secret))
             throw new SessionExceptionEx(SessionErrorCode.AccessError, "Could not validate the request.");
 
         // can serverModel request this endpoint?
-        if (accessToken.ServerFarmId != server.ServerFarmId)
+        if (accessToken.ServerFarmId != serverCache.ServerFarmId)
             throw new SessionExceptionEx(SessionErrorCode.AccessError, "Token does not belong to server farm.");
 
         // check is token locked
@@ -127,6 +126,10 @@ public class SessionService(
         // set accessTokenModel expiration time on first use
         if (accessToken.Lifetime != 0 && accessToken.FirstUsedTime != null &&
             accessToken.FirstUsedTime + TimeSpan.FromDays(accessToken.Lifetime) < DateTime.UtcNow)
+            throw new SessionExceptionEx(SessionErrorCode.AccessExpired,
+                "Your access has been expired! Please contact the support.");
+
+        if (accessToken.ExpirationTime < DateTime.UtcNow)
             throw new SessionExceptionEx(SessionErrorCode.AccessExpired,
                 "Your access has been expired! Please contact the support.");
 
@@ -151,7 +154,7 @@ public class SessionService(
             device = new DeviceModel {
                 DeviceId = Guid.NewGuid(),
                 ProjectId = projectId,
-                ClientId = clientInfo.ClientId,
+                ClientId = Guid.Parse(clientInfo.ClientId),
                 IpAddress = clientIpToStore,
                 ClientVersion = clientInfo.ClientVersion,
                 UserAgent = clientInfo.UserAgent,
@@ -176,23 +179,21 @@ public class SessionService(
             throw new SessionExceptionEx(SessionErrorCode.AccessLocked,
                 "Your access has been locked! Please contact the support.");
 
-        // multiple requests may be already queued through lock request until first session is created
+        // get access
         Guid? accessDeviceId = accessToken.IsPublic ? device.DeviceId : null;
-        using var accessLock =
-            await AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{accessDeviceId}");
-        var access = await cacheService.GetAccessByTokenId(accessToken.AccessTokenId, accessDeviceId);
-        if (access == null) {
-            access = await vhAgentRepo.AccessAdd(accessToken.AccessTokenId, accessDeviceId);
+
+        // multiple requests may be already queued so make sure the access is created and save to db before processing others;
+        // otherwise it tries to add twice and raise issue especially in tests
+        using var accessLock = await AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{accessDeviceId}");
+        var accessCache = await cacheService.AccessFindByTokenId(accessToken.AccessTokenId, accessDeviceId);
+        if (accessCache == null) {
+            accessCache = await vhAgentRepo.AccessAdd(accessToken.AccessTokenId, accessDeviceId);
+            await cacheService.AccessAdd(accessCache);
             newAccessLogger.LogInformation(
                 "New Access has been created. AccessId: {access.AccessId}, ProjectName: {ProjectName}, FarmName: {FarmName}",
-                access.AccessId, project.ProjectName, serverFarmCache.ServerFarmName);
+                accessCache.AccessId, projectCache.ProjectName, serverFarmCache.ServerFarmName);
         }
-        else {
-            // ReSharper disable once DisposeOnUsingVariable
-            accessLock.Dispose(); // access is already exists so the next call will not create new
-        }
-
-        access.LastUsedTime = DateTime.UtcNow; // update used time
+        accessCache.LastUsedTime = DateTime.UtcNow; // update used time
 
         // check supported version
         if (string.IsNullOrEmpty(clientInfo.ClientVersion) ||
@@ -200,20 +201,25 @@ public class SessionService(
             throw new SessionExceptionEx(SessionErrorCode.UnsupportedClient,
                 "This version is not supported! You need to update your app.");
 
+        // Calc server select options
+        var policyResult = ClientPolicyCalculator.Calculate(projectCache, serverFarmCache, accessToken, accessCache,
+            sessionRequestEx, clientCountry: device.Country, allowRedirect: agentOptions.Value.AllowRedirect);
+
         // Check Redirect to another server if everything was ok
-        await loadBalancerService.CheckRedirect(accessToken, server, device, sessionRequestEx);
+        await serverSelectorService.CheckRedirect(serverCache, policyResult.ServerSelectOptions);
 
         // check is device already rewarded
-        var isAdRewardedDevice = cacheService.Ad_IsRewardedAccess(access.AccessId) &&
+        var isAdRewardedDevice = cacheService.Ad_IsRewardedAccess(accessCache.AccessId) &&
                                  accessToken.Description?.Contains("#ad-debugger") is null or false; //for ad debuggers
 
+        //todo
         var isAdRequired = accessToken.AdRequirement is AdRequirement.Required && !isAdRewardedDevice;
 
         // create session
-        var session = new SessionCache {
+        var sessionCache = new SessionCache {
             SessionId = 0,
             ProjectId = device.ProjectId,
-            AccessId = access.AccessId,
+            AccessId = accessCache.AccessId,
             DeviceId = device.DeviceId,
             SessionKey = VhUtil.GenerateKey(),
             CreatedTime = DateTime.UtcNow,
@@ -231,47 +237,46 @@ public class SessionService(
             Country = device.Country,
             UserAgent = device.UserAgent,
             ClientId = device.ClientId,
-            IsAdReward = isAdRewardedDevice,
-            AdExpirationTime = isAdRequired ? DateTime.UtcNow + agentOptions.Value.AdRewardTimeout : null
+            IsAdRewardPending = policyResult.AdRequirement == AdRequirement.Required,
+            IsPremiumByAdReward = policyResult.IsPremiumByAdReward,
+            IsPremiumByTrial = policyResult.IsPremiumByTrial,
+            IsPremiumByToken = policyResult.IsPremiumByToken,
+            ExpirationTime = policyResult.ExpirationTime
         };
 
-        var ret = await BuildSessionResponse(session, access);
-        ret.AdRequirement = accessToken.AdRequirement;
-        ret.ExtraData = session.ExtraData;
-        ret.GaMeasurementId = project.GaMeasurementId;
-        ret.ServerLocation = server.LocationInfo.ServerLocation;
+        var ret = await BuildSessionResponse(sessionCache, accessCache);
+        ret.AdRequirement = policyResult.AdRequirement;
+        ret.GaMeasurementId = projectCache.GaMeasurementId;
+        ret.ServerLocation = serverCache.LocationInfo.ServerLocation;
+        ret.ServerTags = serverCache.Tags;
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 
         // update AccessToken
         if (serverFarmCache.TokenJson == null) throw new Exception("TokenJson is not initialized for this farm.");
-        accessToken.FirstUsedTime ??= session.CreatedTime;
-        accessToken.LastUsedTime = session.CreatedTime;
+        accessToken.FirstUsedTime ??= sessionCache.CreatedTime;
+        accessToken.LastUsedTime = sessionCache.CreatedTime;
+        accessCache.AdRewardMinutes = policyResult.AdRewardMinutes;
+
 
         // push token to client if add server with PublicInToken are ready
-        var pushTokenToClient = serverFarmCache.PushTokenToClient &&
-                                await loadBalancerService.IsAllPublicInTokenServersReady(serverFarmCache.ServerFarmId);
+        var pushTokenToClient =
+            serverFarmCache.PushTokenToClient && await serverSelectorService.IsAllPublicInTokenServersReady(serverFarmCache.ServerFarmId);
+
         var farmToken = pushTokenToClient ? FarmTokenBuilder.GetServerToken(serverFarmCache.TokenJson) : null;
         if (farmToken != null)
-            ret.AccessKey = new Token {
-                ServerToken = farmToken,
-                Secret = accessToken.Secret,
-                TokenId = accessToken.AccessTokenId.ToString(),
-                Name = accessToken.AccessTokenName,
-                SupportId = accessToken.SupportCode.ToString(),
-                IssuedAt = DateTime.UtcNow
-            }.ToAccessKey();
+            ret.AccessKey = accessToken.ToToken(farmToken).ToAccessKey();
 
         // Add session to database
-        var sessionModel = await vhAgentRepo.SessionAdd(session);
+        var sessionModel = await vhAgentRepo.SessionAdd(sessionCache);
         await vhAgentRepo.SaveChangesAsync();
-        session.SessionId = sessionModel.SessionId;
+        sessionCache.SessionId = sessionModel.SessionId;
 
         // Add session to cache
-        await cacheService.AddSession(session);
-        logger.LogInformation("New Session has been created. SessionId: {SessionId}", session.SessionId);
+        await cacheService.AddSession(sessionCache);
+        logger.LogInformation("New Session has been created. SessionId: {SessionId}", sessionCache.SessionId);
 
-        ret.SessionId = (ulong)session.SessionId;
+        ret.SessionId = (ulong)sessionCache.SessionId;
         return ret;
     }
 
@@ -298,12 +303,11 @@ public class SessionService(
 
         try {
             var session = await cacheService.GetSession(server.ServerId, sessionId);
-            var access = await cacheService.GetAccess(session.AccessId);
+            var access = await cacheService.AccessGet(session.AccessId);
             access.LastUsedTime = DateTime.UtcNow;
 
             // build response
             var ret = await BuildSessionResponse(session, access);
-            ret.ExtraData = session.ExtraData;
             logger.LogInformation("Reporting a session. SessionId: {SessionId}, EndTime: {EndTime}", sessionId,
                 session.EndTime);
             return ret;
@@ -316,8 +320,9 @@ public class SessionService(
         }
     }
 
-    private static void UpdateSession(SessionBaseModel session, AccessCache access, SessionCache[] otherSessions)
+    private static void UpdateSession(SessionBaseModel session, AccessCache access, SessionCache[] otherSessions, TimeSpan adRewardPendingTimeout)
     {
+        var utcNow = DateTime.UtcNow;
         session.LastUsedTime = access.LastUsedTime;
 
         // session is already closed
@@ -326,18 +331,35 @@ public class SessionService(
 
         // make sure access is enabled
         if (!access.IsAccessTokenEnabled) {
-            session.Close(SessionErrorCode.SessionClosed, "Session has been closed.");
+            session.Close(SessionErrorCode.AccessLocked, "Your access has been locked! Please contact the support.");
             return;
         }
 
-        // check token expiration
-        if (access.ExpirationTime != null && access.ExpirationTime < DateTime.UtcNow) {
+        // premium token always follow the access token expiration
+        if (session.IsPremiumByToken)
+            session.ExpirationTime = access.ExpirationTime;
+
+        // check token expiration update
+        if ((session.ExpirationTime ?? DateTime.MinValue) > access.ExpirationTime) {
+            session.ExpirationTime = access.ExpirationTime;
             session.Close(SessionErrorCode.AccessExpired, "Access has been expired.");
             return;
         }
 
+        // check token expiration
+        if (access.ExpirationTime < utcNow || session.ExpirationTime > access.ExpirationTime) {
+            session.Close(SessionErrorCode.AccessExpired, "Access has been expired.");
+            return;
+        }
+
+        // check token expiration
+        if (session is { IsPremiumByAdReward: true, IsAdRewardPending: false } && access.AdRewardExpirationTime < utcNow) {
+            session.Close(SessionErrorCode.AccessExpired, "Reward has been consumed.");
+            return;
+        }
+
         // check ad expiration
-        if (session.AdExpirationTime != null && session.AdExpirationTime < DateTime.UtcNow) {
+        if (session is { IsPremiumByAdReward: true, IsAdRewardPending: true } && (utcNow - session.CreatedTime) > adRewardPendingTimeout) {
             session.Close(SessionErrorCode.AdError,
                 "The reward for watching an ad has not been granted within the expected timeframe.");
             return;
@@ -379,7 +401,7 @@ public class SessionService(
         var activeSession = !access.IsPublic ? await cacheService.GetActiveSessions(session.AccessId) : [];
 
         // update session
-        UpdateSession(session, access, activeSession);
+        UpdateSession(session, access, activeSession, adRewardPendingTimeout: agentOptions.Value.AdRewardPendingTimeout);
 
         // create common accessUsage
         var accessUsage = new AccessUsage {
@@ -389,15 +411,14 @@ public class SessionService(
             },
             MaxClientCount = access.MaxDevice,
             MaxTraffic = access.MaxTraffic,
-            ExpirationTime = access.ExpirationTime == null || session.AdExpirationTime < access.ExpirationTime
-                ? session.AdExpirationTime
-                : access.ExpirationTime,
+            ExpirationTime = session.ExpirationTime,
             ActiveClientCount = activeSession.Count(x => x.EndTime == null)
         };
 
         // build result
         return new SessionResponseEx {
             ErrorCode = session.ErrorCode,
+            ExtraData = session.ExtraData,
             SessionId = (uint)session.SessionId,
             CreatedTime = session.CreatedTime,
             SessionKey = session.SessionKey,
@@ -405,26 +426,59 @@ public class SessionService(
             SuppressedBy = session.SuppressedBy,
             ErrorMessage = session.ErrorMessage,
             AccessUsage = accessUsage,
-            RedirectHostEndPoint = null
+            ExpirationTime = session.ExpirationTime,
+            RedirectHostEndPoint = null,
+            RedirectHostEndPoints = null
         };
     }
 
     public async Task<SessionResponse> AddUsage(ServerCache server, uint sessionId, Traffic traffic,
         bool closeSession, string? adData)
     {
-        var session = await cacheService.GetSession(server.ServerId, sessionId);
-        var access = await cacheService.GetAccess(session.AccessId);
-        var project = await cacheService.GetProject(session.ProjectId);
+        var sessionCache = await cacheService.GetSession(server.ServerId, sessionId);
+        var accessCache = await cacheService.AccessGet(sessionCache.AccessId);
+        var projectCache = await cacheService.GetProject(sessionCache.ProjectId);
+        var utcTime = DateTime.UtcNow;
 
         // check projectId
-        if (session.ProjectId != server.ProjectId)
+        if (sessionCache.ProjectId != server.ProjectId)
             throw new AuthenticationException();
 
-        // validate ad
-        var adReward = session.AdExpirationTime != null && !string.IsNullOrEmpty(adData);
-        if (!string.IsNullOrEmpty(adData) && !await VerifyAdReward(session.ProjectId, access.AccessId, adData)) {
-            session.Close(SessionErrorCode.AdError, "Could not verify the given rewarded ad.");
-            return await BuildSessionResponse(session, access);
+        // give ad reward
+        var isAdReward = !string.IsNullOrEmpty(adData);
+        if (!string.IsNullOrEmpty(adData)) {
+            if (!await VerifyAdReward(sessionCache.ProjectId, accessCache.AccessId, adData)) {
+                sessionCache.Close(SessionErrorCode.AdError, "Could not verify the given rewarded ad.");
+                return await BuildSessionResponse(sessionCache, accessCache);
+            }
+
+            switch (accessCache.AdRewardMinutes) {
+                case null:
+                    sessionCache.Close(SessionErrorCode.AdError, "Access does not support rewarded ad.");
+                    return await BuildSessionResponse(sessionCache, accessCache);
+
+                case 0:
+                    accessCache.AdRewardExpirationTime = null;
+                    sessionCache.ExpirationTime = null;
+                    break;
+
+                default:
+                    // increase current reward
+                    var maxTime = utcTime;
+                    if (accessCache.AdRewardExpirationTime > maxTime) 
+                        maxTime = accessCache.AdRewardExpirationTime.Value;
+
+                    // increase current expiration time if it is not pending ad reward
+                    if (!sessionCache.IsAdRewardPending && sessionCache.ExpirationTime > maxTime) 
+                        maxTime = sessionCache.ExpirationTime.Value;
+
+                    accessCache.AdRewardExpirationTime = maxTime.AddMinutes(accessCache.AdRewardMinutes.Value);
+                    break;
+            }
+
+            sessionCache.ExpirationTime = accessCache.AdRewardExpirationTime;
+            sessionCache.IsPremiumByAdReward = true;
+            sessionCache.IsAdRewardPending = false;
         }
 
         // update access if session is open
@@ -432,43 +486,37 @@ public class SessionService(
             "AddUsage to a session. SessionId: {SessionId}, " +
             "SentTraffic: {SendTraffic} Bytes, ReceivedTraffic: {ReceivedTraffic} Bytes, Total: {Total}, " +
             "EndTime: {EndTime}. AdReward: {AdReward}",
-            sessionId, traffic.Sent, traffic.Received, VhUtil.FormatBytes(traffic.Total), session.EndTime, adReward);
+            sessionId, traffic.Sent, traffic.Received, VhUtil.FormatBytes(traffic.Total), sessionCache.EndTime, isAdReward);
 
         // add usage to access
-        access.TotalReceivedTraffic += traffic.Received;
-        access.TotalSentTraffic += traffic.Sent;
-        access.LastUsedTime = DateTime.UtcNow;
+        accessCache.TotalReceivedTraffic += traffic.Received;
+        accessCache.TotalSentTraffic += traffic.Sent;
+        accessCache.LastUsedTime = DateTime.UtcNow;
 
         // insert AccessUsageLog
         cacheService.AddSessionUsage(new AccessUsageModel {
-            AccessTokenId = access.AccessTokenId,
+            AccessTokenId = accessCache.AccessTokenId,
             ServerFarmId = server.ServerFarmId,
             ReceivedTraffic = traffic.Received,
             SentTraffic = traffic.Sent,
-            TotalReceivedTraffic = access.TotalReceivedTraffic,
-            TotalSentTraffic = access.TotalSentTraffic,
-            DeviceId = session.DeviceId,
-            LastCycleReceivedTraffic = access.LastCycleReceivedTraffic,
-            LastCycleSentTraffic = access.LastCycleSentTraffic,
+            TotalReceivedTraffic = accessCache.TotalReceivedTraffic,
+            TotalSentTraffic = accessCache.TotalSentTraffic,
+            DeviceId = sessionCache.DeviceId,
+            LastCycleReceivedTraffic = accessCache.LastCycleReceivedTraffic,
+            LastCycleSentTraffic = accessCache.LastCycleSentTraffic,
             CreatedTime = DateTime.UtcNow,
-            AccessId = session.AccessId,
-            SessionId = session.SessionId,
+            AccessId = sessionCache.AccessId,
+            SessionId = sessionCache.SessionId,
             ProjectId = server.ProjectId,
             ServerId = server.ServerId,
-            IsAdReward = adReward
+            IsAdReward = sessionCache.IsPremiumByAdReward
         });
 
-        // give ad reward
-        if (adReward) {
-            session.AdExpirationTime = null;
-            session.IsAdReward = true;
-        }
-
         // track
-        _ = TrackUsage(project, server, session, access, traffic, adReward);
+        _ = TrackUsage(projectCache, server, sessionCache, accessCache, traffic, isAdReward);
 
         // build response
-        var sessionResponse = await BuildSessionResponse(session, access);
+        var sessionResponse = await BuildSessionResponse(sessionCache, accessCache);
 
         // close session
         if (closeSession) {
@@ -476,7 +524,7 @@ public class SessionService(
                 "Session has been closed by user. SessionId: {SessionId}, ResponseCode: {ResponseCode}",
                 sessionId, sessionResponse.ErrorCode);
 
-            session.Close(SessionErrorCode.SessionClosed, "Session closed by client request.");
+            sessionCache.Close(SessionErrorCode.SessionClosed, "Session closed by client request.");
         }
 
         return sessionResponse;
@@ -485,11 +533,14 @@ public class SessionService(
     private async Task<bool> VerifyAdReward(Guid projectId, Guid accessId, string adData)
     {
         // check is device rewarded
-        for (var i = 0; i < 5; i++) {
+        for (var i = 0; ; i++) {
             if (cacheService.Ad_RemoveRewardData(projectId, adData)) {
                 cacheService.Ad_AddRewardedAccess(accessId);
                 return true;
             }
+
+            if (i >= agentOptions.Value.AdRewardRetryCount)
+                break;
 
             await Task.Delay(1000);
         }

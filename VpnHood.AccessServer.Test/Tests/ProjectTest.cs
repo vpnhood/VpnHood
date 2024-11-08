@@ -13,7 +13,7 @@ public class ProjectTest
     [TestMethod]
     public async Task Crud()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         var projectsClient = testApp.ProjectsClient;
         var project1A = await projectsClient.CreateAsync();
         var projectId = project1A.ProjectId;
@@ -93,7 +93,7 @@ public class ProjectTest
     public async Task MaxUserProjects()
     {
         // create first project
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
 
         // create next project the using same user
         await testApp.ProjectsClient.CreateAsync();
@@ -110,7 +110,7 @@ public class ProjectTest
     [TestMethod]
     public async Task Owner_is_created()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         var userRoles = await testApp.TeamClient.ListUserRolesAsync(testApp.ProjectId.ToString());
         Assert.AreEqual(1, userRoles.TotalCount);
 

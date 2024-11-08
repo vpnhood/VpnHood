@@ -17,6 +17,7 @@ namespace VpnHood.AccessServer.Controllers;
 public class DevicesController(
     VhContext vhContext,
     ReportUsageService reportUsageService,
+    DevicesService devicesService,
     SubscriptionService subscriptionService)
     : ControllerBase
 {
@@ -42,27 +43,18 @@ public class DevicesController(
         return ret;
     }
 
-    [HttpGet("clientId:{clientId}")]
+    [HttpGet("clientId")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public async Task<Device> FindByClientId(Guid projectId, Guid clientId)
+    public Task<Device> GetByClientId(Guid projectId, string clientId)
     {
-        var deviceModel = await vhContext.Devices
-            .SingleAsync(x => x.ProjectId == projectId && x.ClientId == clientId);
-
-        return deviceModel.ToDto();
+        return devicesService.GetByClientId(projectId, clientId);
     }
 
     [HttpPatch("{deviceId}")]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
-    public async Task<Device> Update(Guid projectId, Guid deviceId, DeviceUpdateParams updateParams)
+    public Task<Device> Update(Guid projectId, Guid deviceId, DeviceUpdateParams updateParams)
     {
-        var deviceModel = await vhContext.Devices.SingleAsync(x => x.ProjectId == projectId && x.DeviceId == deviceId);
-        if (updateParams.IsLocked != null)
-            deviceModel.LockedTime = updateParams.IsLocked && deviceModel.LockedTime == null ? DateTime.UtcNow : null;
-
-        deviceModel = vhContext.Devices.Update(deviceModel).Entity;
-        await vhContext.SaveChangesAsync();
-        return deviceModel.ToDto();
+        return devicesService.Update(projectId, deviceId, updateParams);
     }
 
     [HttpGet]
@@ -77,7 +69,7 @@ public class DevicesController(
         await using var trans = await vhContext.WithNoLockTransaction();
         var query = vhContext.Devices
             .Where(device =>
-                (device.ProjectId == projectId) &&
+                device.ProjectId == projectId &&
                 (deviceId == null || device.DeviceId == deviceId))
             .OrderByDescending(device => device.LastUsedTime)
             .Select(device => new DeviceData {
@@ -113,35 +105,8 @@ public class DevicesController(
     {
         await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
-        var usagesDictionary = await reportUsageService.GetDevicesUsage(projectId,
-            accessTokenId: accessTokenId, serverFarmId: serverFarmId, usageBeginTime: usageBeginTime, usageEndTime: usageEndTime);
-
-        var usages = usagesDictionary
-            .OrderByDescending(x => x.Value.SentTraffic + x.Value.ReceivedTraffic)
-            .Skip(recordIndex)
-            .Take(recordCount)
-            .Select(x => new {
-                DeviceId = x.Key,
-                Traffic = x.Value
-            })
-            .ToArray();
-
-        // get all devices accessed during usage time
-        await using var trans = await vhContext.WithNoLockTransaction();
-        var devices = await vhContext.Devices
-            .Where(model=>model.ProjectId == projectId)
-            .Where(device => device.LastUsedTime >= usageBeginTime && device.LastUsedTime <= usageEndTime)
-            .ToDictionaryAsync(device => device.DeviceId, device => device);
-
-        // create DeviceData
-        var deviceDatas = new List<DeviceData>();
-        foreach (var usage in usages) {
-            if (devices.TryGetValue(usage.DeviceId, out var device))
-                deviceDatas.Add(new DeviceData {
-                    Device = device.ToDto(),
-                    Usage = usage.Traffic
-                });
-        }
+        var deviceDatas = await devicesService.ListUsages(projectId, accessTokenId, serverFarmId, 
+            usageBeginTime, usageEndTime, recordIndex, recordCount);
 
         return deviceDatas.ToArray();
     }

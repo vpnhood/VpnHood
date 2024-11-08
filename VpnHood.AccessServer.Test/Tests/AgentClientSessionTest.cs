@@ -12,7 +12,7 @@ using VpnHood.Common.IpLocations.Providers;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
-using Token = VpnHood.Common.Token;
+using Token = VpnHood.Common.Tokens.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -134,7 +134,7 @@ public class AgentClientSessionTest
 
         // check Device id and its properties are created 
         var clientInfo = sessionDom.SessionRequestEx.ClientInfo;
-        var device = await farm.TestApp.DevicesClient.FindByClientIdAsync(farm.TestApp.ProjectId, clientInfo.ClientId);
+        var device = await farm.TestApp.DevicesClient.GetByClientIdAsync(farm.TestApp.ProjectId, clientInfo.ClientId);
         Assert.AreEqual(clientInfo.ClientId, device.ClientId);
         Assert.AreEqual(clientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
@@ -149,7 +149,7 @@ public class AgentClientSessionTest
         sessionDom = await accessTokenDom.CreateSession(clientInfo: clientInfo);
         var sessionRequestEx = sessionDom.SessionRequestEx;
         sessionRequestEx.ClientIp = farm.TestApp.NewIpV4();
-        device = await farm.TestApp.DevicesClient.FindByClientIdAsync(farm.TestApp.ProjectId, clientInfo.ClientId);
+        device = await farm.TestApp.DevicesClient.GetByClientIdAsync(farm.TestApp.ProjectId, clientInfo.ClientId);
         Assert.AreEqual(sessionRequestEx.ClientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
     }
@@ -190,15 +190,13 @@ public class AgentClientSessionTest
         var accessTokenDom = await serverFarmDom.CreateAccessToken();
 
         var sessionDom = await accessTokenDom.CreateSession();
-        var session = await sessionDom.GetSessionFromCache();
-        Assert.IsTrue(session.LastUsedTime >= serverFarmDom.CreatedTime);
+        Assert.IsTrue(sessionDom.SessionCache.LastUsedTime >= serverFarmDom.CreatedTime);
 
         // get the token again
         var time = DateTime.UtcNow;
         await Task.Delay(1000);
         await sessionDom.Reload(); //session get
-        session = await sessionDom.GetSessionFromCache();
-        Assert.IsTrue(session.LastUsedTime > time);
+        Assert.IsTrue(sessionDom.SessionCache.LastUsedTime > time);
     }
 
     [TestMethod]
@@ -208,26 +206,25 @@ public class AgentClientSessionTest
         var accessTokenDom = await serverFarmDom.CreateAccessToken();
 
         var sessionDom = await accessTokenDom.CreateSession();
-        var session = await sessionDom.GetSessionFromCache();
-        Assert.IsTrue(session.LastUsedTime >= serverFarmDom.CreatedTime);
+        Assert.IsTrue(sessionDom.SessionCache.LastUsedTime >= serverFarmDom.CreatedTime);
 
         // get the token again
         var time = DateTime.UtcNow;
         await Task.Delay(1000);
         await sessionDom.AddUsage(1);
-        session = await sessionDom.GetSessionFromCache();
-        Assert.IsTrue(session.LastUsedTime >= time);
+        await sessionDom.Reload();
+        Assert.IsTrue(sessionDom.SessionCache.LastUsedTime >= time);
     }
 
     [TestMethod]
     public async Task Session_Create_Data_Unauthorized_EndPoint()
     {
-        var farm1 = await ServerFarmDom.Create();
+        using var farm1 = await ServerFarmDom.Create();
         var serverDom11 = await farm1.AddNewServer();
         var serverDom12 = await farm1.AddNewServer();
         var accessTokenDom11 = await farm1.CreateAccessToken(true);
 
-        var farm2 = await ServerFarmDom.Create(farm1.TestApp);
+        using var farm2 = await ServerFarmDom.Create(farm1.TestApp);
         var serverDom21 = await farm2.AddNewServer();
         var serverDom22 = await farm2.AddNewServer();
         var accessTokenDom21 = await farm2.CreateAccessToken(true);
@@ -255,7 +252,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Close()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         testApp.AgentTestApp.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(2);
         testApp.AgentTestApp.AgentOptions.SessionTemporaryTimeout =
             TimeSpan.FromSeconds(2); //should not be less than PermanentlyTimeout
@@ -292,7 +289,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Bombard()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         using var sampleFarm1 = await SampleFarm.Create(testApp);
         using var sampleFarm2 = await SampleFarm.Create(testApp);
 
@@ -416,8 +413,7 @@ public class AgentClientSessionTest
         //-------------
         // check: another Session_Create for same client should return same result
         //-------------
-        var sessionDom3 =
-            await accessTokenDom.CreateSession(clientId: sessionDom2.SessionRequestEx.ClientInfo.ClientId);
+        var sessionDom3 = await accessTokenDom.CreateSession(clientId: sessionDom2.SessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual(5, sessionDom3.SessionResponseEx.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(10, sessionDom3.SessionResponseEx.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, sessionDom3.SessionResponseEx.ErrorCode);
@@ -557,7 +553,7 @@ public class AgentClientSessionTest
             });
 
         var sampleAccessToken = new AccessTokenDom(farmDom.TestApp, accessToken);
-        var clientId = Guid.NewGuid();
+        var clientId = Guid.NewGuid().ToString();
 
         var sampleSession1 = await sampleAccessToken.CreateSession(clientId);
         await sampleAccessToken.CreateSession(clientId);
@@ -597,7 +593,7 @@ public class AgentClientSessionTest
         var farmDom = await ServerFarmDom.Create(testApp);
         var accessTokenDom = await farmDom.CreateAccessToken();
         var sessionDom = await accessTokenDom.CreateSession(clientIp: IPAddress.Parse("8.8.8.8"));
-        var device = await farmDom.TestApp.DevicesClient.FindByClientIdAsync(farmDom.TestApp.ProjectId, sessionDom.SessionRequestEx.ClientInfo.ClientId);
-        Assert.AreEqual("US", device.Country);
+        var device = await farmDom.TestApp.DevicesClient.GetByClientIdAsync(farmDom.TestApp.ProjectId, sessionDom.SessionRequestEx.ClientInfo.ClientId);
+        Assert.AreEqual("US", device.Location?.CountryCode);
     }
 }

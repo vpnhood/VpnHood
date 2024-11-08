@@ -15,7 +15,7 @@ public class ServerProfileTest
     [TestMethod]
     public async Task Default_ServerProfile()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
 
         // -----------
         // Make sure default is created
@@ -54,7 +54,7 @@ public class ServerProfileTest
     [TestMethod]
     public async Task Crud()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
 
         // -----------
         // Create
@@ -80,11 +80,13 @@ public class ServerProfileTest
         // update
         // -----------
         serverConfig.SessionOptions.NetScanLimit = 2000;
+        serverConfig.SwapMemorySizeMb = 500;
         await serverProfileDom.Update(new ServerProfileUpdateParams {
             ServerConfig = new PatchOfString { Value = JsonSerializer.Serialize(serverConfig) }
         });
         serverConfig2 = GmUtil.JsonDeserialize<ServerConfig>(serverProfileDom.ServerProfile.ServerConfig);
         Assert.AreEqual(serverConfig.SessionOptions.NetScanLimit, serverConfig2.SessionOptions.NetScanLimit);
+        Assert.AreEqual(serverConfig.SwapMemorySizeMb, serverConfig2.SwapMemorySizeMb);
 
         // -----------
         // Delete
@@ -102,18 +104,18 @@ public class ServerProfileTest
     [TestMethod]
     public async Task Reconfigure_all_servers_on_update()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         var serverProfileDom = await ServerProfileDom.Create(testApp);
 
         // farm1
-        var farm1 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
+        using var farm1 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
             ServerProfileId = serverProfileDom.ServerProfileId
         });
         var serverDom1 = await farm1.AddNewServer();
         var serverDom2 = await farm1.AddNewServer();
 
         // farm2
-        var farm2 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
+        using var farm2 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
             ServerProfileId = serverProfileDom.ServerProfileId
         });
         var serverDom3 = await farm2.AddNewServer();
@@ -142,11 +144,11 @@ public class ServerProfileTest
     [TestMethod]
     public async Task Get_with_summaries()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         var serverProfileDom1 = await ServerProfileDom.Create(testApp);
 
         // farm1
-        var farm1 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
+        using var farm1 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams {
             ServerProfileId = serverProfileDom1.ServerProfileId
         }, serverCount: 0);
         await farm1.AddNewServer();

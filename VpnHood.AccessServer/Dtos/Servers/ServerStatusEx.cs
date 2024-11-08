@@ -2,13 +2,14 @@
 
 public class ServerStatusEx
 {
-    public int SessionCount { get; set; }
-    public int TcpConnectionCount { get; set; }
-    public int UdpConnectionCount { get; set; }
-    public long? AvailableMemory { get; set; }
-    public int? CpuUsage { get; set; }
-    public int ThreadCount { get; set; }
-    public long TunnelSendSpeed { get; set; }
-    public long TunnelReceiveSpeed { get; set; }
-    public DateTime CreatedTime { get; set; }
+    public required int SessionCount { get; init; }
+    public required int TcpConnectionCount { get; init; }
+    public required int UdpConnectionCount { get; init; }
+    public required long? AvailableMemory { get; init; }
+    public required int? AvailableSwapMemoryMb { get; init; }
+    public required int? CpuUsage { get; init; }
+    public required int ThreadCount { get; init; }
+    public required long TunnelSendSpeed { get; init; }
+    public required long TunnelReceiveSpeed { get; init; }
+    public required DateTime CreatedTime { get; init; }
 }

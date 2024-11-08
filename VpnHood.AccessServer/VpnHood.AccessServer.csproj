@@ -21,20 +21,20 @@
 		<PackageIcon>VpnHood.AccessServer.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
-		<Version>2.0.57</Version>
+		<Version>2.0.76</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Certes" Version="3.0.4" />
-		<PackageReference Include="GrayMint.Authorization" Version="3.0.116" />
-		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.212" />
-		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.212" />
-		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.212" />
+		<PackageReference Include="GrayMint.Authorization" Version="3.0.117" />
+		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.215" />
+		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.215" />
+		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.215" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
 		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.14" />
 		<PackageReference Include="SSH.NET" Version="2024.1.0" />
-		<PackageReference Include="VpnHood.Server.Access" Version="4.6.565-prerelease" />
+		<PackageReference Include="VpnHood.Server.Access" Version="4.6.581-prerelease" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -42,13 +42,14 @@
 		<ProjectReference Include="..\VpnHood.AccessServer.HostProviders\VpnHood.AccessServer.HostProviders.csproj" />
 		<ProjectReference Include="..\VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj" />
 		<ProjectReference Include="..\VpnHood.AccessServer.Report\VpnHood.AccessServer.Report.csproj" />
+		<ProjectReference Include="..\VpnHood.Manager.Common\VpnHood.Manager.Common.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Content Update="nlog.config">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		  <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-		  <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 		</Content>
 		<Content Update="Properties\launchSettings.json">
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
@@ -56,9 +57,28 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Update="nlog.xsd">
-	    <SubType>Designer</SubType>
-	  </None>
+		<Content Update="appsettings.Development.json">
+			<DependentUpon>appsettings.json</DependentUpon>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Update="Resource.Designer.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>Resource.resx</DependentUpon>
+		</Compile>
+		<EmbeddedResource Update="Resource.resx">
+			<Generator>ResXFileCodeGenerator</Generator>
+			<LastGenOutput>Resource.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="nlog.xsd">
+			<SubType>Designer</SubType>
+			<DependentUpon>nlog.config</DependentUpon>
+		</None>
 	</ItemGroup>
 
 </Project>

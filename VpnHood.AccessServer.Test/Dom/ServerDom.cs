@@ -2,6 +2,7 @@
 using GrayMint.Common.Utils;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Tokens;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 
@@ -90,16 +91,17 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
     }
 
     public static async Task<ServerDom> Create(TestApp testApp, Guid serverFarmId, bool configure = true,
-        bool sendStatus = true, IPAddress? gatewayIpV4 = null, int? logicalCore = null)
+        bool sendStatus = true, IPAddress? publicIpV4 = null, int? logicalCore = null, string[]? tags = null)
     {
         var serverDom = await Create(testApp,
             new ServerCreateParams {
-                ServerFarmId = serverFarmId
+                ServerFarmId = serverFarmId,
+                Tags= tags ?? []
             },
             configure: configure,
             sendStatus: sendStatus,
             logicalCore: logicalCore,
-            publicIpV4: gatewayIpV4);
+            publicIpV4: publicIpV4);
 
         return serverDom;
     }
@@ -131,13 +133,15 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
         return AgentClient.Server_UpdateStatus(serverStatus);
     }
 
-    public async Task<SessionDom> CreateSession(AccessToken accessToken, Guid? clientId = null, bool assertError = true)
+    public async Task<SessionDom> CreateSession(AccessToken accessToken, string? clientId = null, bool assertError = true, 
+        ConnectPlanId planId = ConnectPlanId.Normal)
     {
         var sessionRequestEx = await TestApp.CreateSessionRequestEx(
             accessToken,
             ServerConfig.TcpEndPointsValue.First(),
             clientId,
-            TestApp.NewIpV4());
+            TestApp.NewIpV4(),
+            planId: planId);
 
         var testSession =
             await SessionDom.Create(TestApp, ServerId, accessToken, sessionRequestEx, AgentClient, assertError);

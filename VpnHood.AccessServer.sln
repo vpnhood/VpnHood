@@ -37,6 +37,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Providers", "Providers", "{
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.HostProviders", "VpnHood.AccessServer.HostProviders\VpnHood.AccessServer.HostProviders.csproj", "{F3B95513-5877-487E-B67C-630DF73BDE0D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Manager.Common", "VpnHood.Manager.Common\VpnHood.Manager.Common.csproj", "{7A518961-6726-49D0-86C4-E73C0D108982}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{95F38C41-5887-48A5-B568-B94E70A14BE4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -75,6 +79,14 @@ Global
 		{F3B95513-5877-487E-B67C-630DF73BDE0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F3B95513-5877-487E-B67C-630DF73BDE0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F3B95513-5877-487E-B67C-630DF73BDE0D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A518961-6726-49D0-86C4-E73C0D108982}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A518961-6726-49D0-86C4-E73C0D108982}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A518961-6726-49D0-86C4-E73C0D108982}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A518961-6726-49D0-86C4-E73C0D108982}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95F38C41-5887-48A5-B568-B94E70A14BE4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95F38C41-5887-48A5-B568-B94E70A14BE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95F38C41-5887-48A5-B568-B94E70A14BE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95F38C41-5887-48A5-B568-B94E70A14BE4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

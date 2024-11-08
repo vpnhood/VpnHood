@@ -11,8 +11,8 @@ public class DeviceTest
     [TestMethod]
     public async Task ClientId_is_unique_per_project()
     {
-        var farm1 = await ServerFarmDom.Create();
-        var farm2 = await ServerFarmDom.Create();
+        using var farm1 = await ServerFarmDom.Create();
+        using var farm2 = await ServerFarmDom.Create();
 
         var accessTokenDom1 = await farm1.CreateAccessToken();
         var accessTokenDom2 = await farm2.CreateAccessToken();
@@ -20,13 +20,13 @@ public class DeviceTest
         var session1 = await accessTokenDom1.CreateSession();
         var session2 = await accessTokenDom2.CreateSession();
 
-        var device1 = await farm1.TestApp.DevicesClient.FindByClientIdAsync(farm1.TestApp.ProjectId,
+        var device1 = await farm1.TestApp.DevicesClient.GetByClientIdAsync(farm1.TestApp.ProjectId,
             session1.SessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual(device1.ClientId, session1.SessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual(device1.ClientVersion, session1.SessionRequestEx.ClientInfo.ClientVersion);
         Assert.AreEqual(device1.UserAgent, session1.SessionRequestEx.ClientInfo.UserAgent);
 
-        var device2 = await farm2.TestApp.DevicesClient.FindByClientIdAsync(farm2.TestApp.ProjectId,
+        var device2 = await farm2.TestApp.DevicesClient.GetByClientIdAsync(farm2.TestApp.ProjectId,
             session2.SessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual(device2.ClientId, session2.SessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual(device2.ClientVersion, session2.SessionRequestEx.ClientInfo.ClientVersion);
@@ -40,11 +40,11 @@ public class DeviceTest
     {
         using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken();
-        var clientId = Guid.NewGuid();
+        var clientId = Guid.NewGuid().ToString();
         await farm.DefaultServer.CreateSession(accessTokenDom.AccessToken, clientId);
         var deviceClient = farm.TestApp.DevicesClient;
 
-        var device = await deviceClient.FindByClientIdAsync(farm.ProjectId, clientId);
+        var device = await deviceClient.GetByClientIdAsync(farm.ProjectId, clientId);
         Assert.IsNull(device.LockedTime);
 
         await deviceClient.UpdateAsync(farm.ProjectId, device.DeviceId,
@@ -103,5 +103,31 @@ public class DeviceTest
         var res = await sampler.TestApp.DevicesClient.ListAsync(
             sampler.ProjectId, usageBeginTime: sampler.TestApp.CreatedTime);
         Assert.AreEqual(2, res.Count);
+    }
+
+    [TestMethod]
+    public async Task Usages_by_access_token()
+    {
+        var farmDom = await ServerFarmDom.Create();
+        var accessTokenDom1 = await farmDom.CreateAccessToken();
+        var accessTokenDom2 = await farmDom.CreateAccessToken();
+        
+        var session1 = await accessTokenDom1.CreateSession();
+        await session1.AddUsage(10);
+        var session2 = await accessTokenDom1.CreateSession();
+        await session2.AddUsage(10);
+
+        var token2Session1 = await accessTokenDom2.CreateSession();
+        await token2Session1.AddUsage(10);
+
+        await farmDom.TestApp.Sync();
+        
+        var deviceDatas = await farmDom.TestApp.DevicesClient.ListUsagesAsync(farmDom.ProjectId, 
+            usageBeginTime: farmDom.TestApp.CreatedTime);
+        Assert.AreEqual(3, deviceDatas.Count);
+
+        deviceDatas = await farmDom.TestApp.DevicesClient.ListUsagesAsync(farmDom.ProjectId, 
+            accessTokenId: accessTokenDom1.AccessTokenId,  usageBeginTime: farmDom.TestApp.CreatedTime);
+        Assert.AreEqual(2, deviceDatas.Count);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Utils;
@@ -98,7 +99,55 @@ public class ClientFilterTest
     [TestMethod]
     public async Task Server_should_selected_by_client_filter()
     {
+        var testApp = await TestApp.Create(isFree: false);
+        var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
+        farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
 
+        // add a ClientFilter
+        var clientFilter1 = await farm.TestApp.ClientFiltersClient.CreateAsync(farm.ProjectId, new ClientFilterCreateParams {
+            ClientFilterName = Guid.NewGuid().ToString(),
+            Filter = "#foo || (#tag1 || #tag2)",
+            Description = Guid.NewGuid().ToString()
+        });
+
+        var clientFilter2 = await farm.TestApp.ClientFiltersClient.CreateAsync(farm.ProjectId, new ClientFilterCreateParams {
+            ClientFilterName = Guid.NewGuid().ToString(),
+            Filter = "#foo || (#tag3 || #tag4)",
+            Description = Guid.NewGuid().ToString()
+        });
+
+        // add servers
+        var server1 = await farm.AddNewServer(tags: ["#p1", "#p2"]);
+        await server1.Update(new ServerUpdateParams {
+            ClientFilterId = new PatchOfString { Value = clientFilter1.ClientFilterId }
+        });
+
+        var server2 = await farm.AddNewServer(tags: ["#p3", "#p4"]);
+        await server2.Update(new ServerUpdateParams {
+            ClientFilterId = new PatchOfString { Value = clientFilter2.ClientFilterId }
+        });
+
+        // create tokens with no access
+        var accessToken = await farm.CreateAccessToken(new AccessTokenCreateParams {
+            Tags = ["tag_no_where"]
+        });
+        await VhTestUtil.AssertApiException<SessionExceptionEx>(
+            task: accessToken.CreateSession(autoRedirect: true),
+            contains: "Could not find any available");
+
+        // create tokens for server 2
+        accessToken = await farm.CreateAccessToken(new AccessTokenCreateParams {
+            Tags = ["#tag3"]
+        });
+        var session = await accessToken.CreateSession(autoRedirect: true);
+        Assert.AreEqual(server2.ServerId, session.ServerId);
+
+        // create tokens for server 1
+        accessToken = await farm.CreateAccessToken(new AccessTokenCreateParams {
+            Tags = ["#tag2"]
+        });
+        session = await accessToken.CreateSession(autoRedirect: true);
+        Assert.AreEqual(server1.ServerId, session.ServerId);
     }
 
 }

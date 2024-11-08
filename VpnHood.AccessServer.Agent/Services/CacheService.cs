@@ -28,16 +28,11 @@ public class CacheService(
         var minServerUsedTime = DateTime.UtcNow - TimeSpan.FromHours(1);
         var minSessionUsedTime = DateTime.UtcNow - TimeSpan.FromHours(2);
         var agentInit = await vhAgentRepo.GetInitView(minServerUsedTime, minSessionUsedTime);
-        cacheRepo.Projects =
-            new ConcurrentDictionary<Guid, ProjectCache>(agentInit.Projects.ToDictionary(x => x.ProjectId));
-        cacheRepo.ServerFarms =
-            new ConcurrentDictionary<Guid, ServerFarmCache>(agentInit.Farms.ToDictionary(x => x.ServerFarmId));
-        cacheRepo.Servers =
-            new ConcurrentDictionary<Guid, ServerCache>(agentInit.Servers.ToDictionary(x => x.ServerId));
-        cacheRepo.Sessions =
-            new ConcurrentDictionary<long, SessionCache>(agentInit.Sessions.ToDictionary(x => x.SessionId));
-        cacheRepo.Accesses =
-            new ConcurrentDictionary<Guid, AccessCache>(agentInit.Accesses.ToDictionary(x => x.AccessId));
+        cacheRepo.Projects = new ConcurrentDictionary<Guid, ProjectCache>(agentInit.Projects.ToDictionary(x => x.ProjectId));
+        cacheRepo.ServerFarms = new ConcurrentDictionary<Guid, ServerFarmCache>(agentInit.Farms.ToDictionary(x => x.ServerFarmId));
+        cacheRepo.Servers = new ConcurrentDictionary<Guid, ServerCache>(agentInit.Servers.ToDictionary(x => x.ServerId));
+        cacheRepo.Sessions = new ConcurrentDictionary<long, SessionCache>(agentInit.Sessions.ToDictionary(x => x.SessionId));
+        cacheRepo.Accesses = new ConcurrentDictionary<Guid, AccessCache>(agentInit.Accesses.ToDictionary(x => x.AccessId));
     }
 
     public async Task InvalidateSessions()
@@ -98,7 +93,21 @@ public class CacheService(
         return farm;
     }
 
-    public async Task<AccessCache> GetAccess(Guid accessId)
+    public Task<SessionCache> GetSession(Guid? serverId, long sessionId)
+    {
+        if (!cacheRepo.Sessions.TryGetValue(sessionId, out var session)) {
+            session = vhAgentRepo.SessionGet(sessionId);
+            cacheRepo.Sessions.TryAdd(session.SessionId, session);
+        }
+
+        // server validation
+        if (serverId != null && session.ServerId != serverId)
+            throw new KeyNotFoundException();
+
+        return Task.FromResult(session);
+    }
+
+    public async Task<AccessCache> AccessGet(Guid accessId)
     {
         if (cacheRepo.Accesses.TryGetValue(accessId, out var access))
             return access;
@@ -114,43 +123,31 @@ public class CacheService(
         return access;
     }
 
-
-    public Task<SessionCache> GetSession(Guid? serverId, long sessionId)
-    {
-        if (!cacheRepo.Sessions.TryGetValue(sessionId, out var session)) {
-            session = vhAgentRepo.SessionGet(sessionId);
-            cacheRepo.Sessions.TryAdd(session.SessionId, session);
-        }
-
-        // server validation
-        if (serverId != null && session.ServerId != serverId)
-            throw new KeyNotFoundException();
-
-        return Task.FromResult(session);
-    }
-
-
-    public async Task<AccessCache?> GetAccessByTokenId(Guid accessTokenId, Guid? deviceId)
+    public async Task<AccessCache?> AccessFindByTokenId(Guid accessTokenId, Guid? deviceId)
     {
         // get from cache
-        var access =
-            cacheRepo.Accesses.Values.FirstOrDefault(x => x.AccessTokenId == accessTokenId && x.DeviceId == deviceId);
+        var access = cacheRepo.Accesses.Values.FirstOrDefault(x => x.AccessTokenId == accessTokenId && x.DeviceId == deviceId);
         if (access != null)
             return access;
 
         // multiple requests may be in queued so wait for one to finish then check the cache
         using var accessLock = await AsyncLock.LockAsync($"cache_AccessByTokenId_{accessTokenId}_{deviceId}");
-        access = cacheRepo.Accesses.Values.FirstOrDefault(x =>
-            x.AccessTokenId == accessTokenId && x.DeviceId == deviceId);
+        access = cacheRepo.Accesses.Values.FirstOrDefault(x => x.AccessTokenId == accessTokenId && x.DeviceId == deviceId);
         if (access != null)
             return access;
 
         // load from db
         access = await vhAgentRepo.AccessFind(accessTokenId, deviceId);
-        if (access != null)
+        if (access != null) 
             cacheRepo.Accesses.TryAdd(access.AccessId, access);
 
         return access;
+    }
+
+    public Task AccessAdd(AccessCache accessCache)
+    {
+        cacheRepo.Accesses.TryAdd(accessCache.AccessId, accessCache);
+        return Task.CompletedTask;
     }
 
     public Task AddSession(SessionCache session)
@@ -186,7 +183,7 @@ public class CacheService(
         var now = FastDateTime.Now;
 
         // remove old ads
-        var oldAdItems = cacheRepo.Ads.Where(x => x.Value < now - agentOptions.Value.AdRewardTimeout).ToArray();
+        var oldAdItems = cacheRepo.Ads.Where(x => x.Value < now - agentOptions.Value.AdRewardPendingTimeout).ToArray();
         foreach (var item in oldAdItems)
             cacheRepo.Ads.TryRemove(item);
 
@@ -359,7 +356,7 @@ public class CacheService(
         // update accesses
         var accessIds = updatedSessions.Select(x => x.AccessId).Distinct();
         foreach (var accessId in accessIds) {
-            var access = await GetAccess(accessId);
+            var access = await AccessGet(accessId);
             vhAgentRepo.AccessUpdate(access);
         }
 

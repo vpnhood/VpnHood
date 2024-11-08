@@ -6,7 +6,7 @@ using VpnHood.AccessServer.Dtos.FarmTokenRepos;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos;
-using VpnHood.Common;
+using VpnHood.Common.Tokens;
 
 namespace VpnHood.AccessServer.Services;
 

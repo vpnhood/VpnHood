@@ -15,7 +15,8 @@ public class HostOrderModel
     public required DateTime? CompletedTime { get; set; }
    
     public string? NewIpOrderIpAddress { get; set; }
-    public Guid? NewIpOrderServerId { get; init; }
+    public required Guid NewIpOrderServerId { get; init; }
+    public required string NewIpOrderProviderServerId { get; init; }
     public DateTime? NewIpOrderOldIpAddressReleaseTime { get; set; }
 
     public virtual ServerModel? NewIpOrderServer { get; set; }

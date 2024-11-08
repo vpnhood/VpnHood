@@ -17,6 +17,7 @@ public class SyncTest
             ServerId = serverId,
             CreatedTime = DateTime.UtcNow,
             AvailableMemory = 0,
+            AvailableSwapMemoryMb = 0,
             CpuUsage = 0,
             IsConfigure = true,
             IsLast = isLast,

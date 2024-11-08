@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using System.Text.RegularExpressions;
 using GrayMint.Common.Utils;
 using Microsoft.Extensions.Options;
 using Renci.SshNet;
@@ -15,6 +14,7 @@ using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Utils;
+using VpnHood.Manager.Common.Utils;
 using VpnHood.Server.Access.Managers.Http;
 using ConnectionInfo = Renci.SshNet.ConnectionInfo;
 
@@ -46,7 +46,7 @@ public class ServerService(
         if (string.IsNullOrWhiteSpace(serverName)) serverName = Resource.NewServerTemplate;
         if (serverName.Contains("##")) {
             var names = await vhRepo.ServerGetNames(projectId);
-            serverName = AccessServerUtil.FindUniqueName(serverName, names);
+            serverName = ManagerUtils.FindUniqueName(serverName, names);
         }
 
         // validate client filter
@@ -66,6 +66,7 @@ public class ServerService(
             AuthorizationCode = Guid.NewGuid(),
             ServerFarmId = serverFarm.ServerFarmId,
             AccessPoints = ValidateAccessPoints(createParams.AccessPoints ?? []),
+            ConfigSwapMemorySizeMb = null,
             ConfigCode = Guid.NewGuid(),
             AutoConfigure = createParams.AccessPoints == null,
             Power = createParams.Power,
@@ -75,6 +76,7 @@ public class ServerService(
             LogicalCoreCount = null,
             OsInfo = null,
             TotalMemory = null,
+            TotalSwapMemoryMb = null,
             Version = null,
             ConfigureTime = null,
             EnvironmentVersion = null,
@@ -86,7 +88,7 @@ public class ServerService(
             HostPanelUrl = createParams.HostPanelUrl?.ToString(),
             IsDeleted = false,
             ClientFilterId = createParams.ClientFilterId != null ? int.Parse(createParams.ClientFilterId) : null,
-            Tags = ManagerUtils.TagsToString(createParams.Tags)
+            Tags = TagUtils.TagsToString(createParams.Tags)
         };
 
         // add server and update FarmToken
@@ -111,6 +113,9 @@ public class ServerService(
         if (updateParams.Power?.Value < 1)
             throw new ArgumentException("Power can not be less than 1", nameof(updateParams));
 
+        // validate power
+        VhValidator.ValidateSwapMemory(updateParams.ConfigSwapMemorySizeMb?.Value, nameof(updateParams.ConfigSwapMemorySizeMb));
+
         // validate client filter
         if (updateParams.ClientFilterId is { Value: not null }) {
             var clientFilter = await vhRepo.ClientFilterGet(projectId, int.Parse(updateParams.ClientFilterId.Value));
@@ -121,14 +126,16 @@ public class ServerService(
         // validate
         var server = await vhRepo.ServerGet(projectId, serverId, includeFarm: true);
         var oldServerFarmId = server.ServerFarmId;
+        var oldAutoConfigure = server.AutoConfigure;
+        var oldConfigSwapMemorySizeMb = server.ConfigSwapMemorySizeMb;
 
         if (updateParams.ServerFarmId != null) {
             // make sure new farm belong to this account and ready for update farm token
             var serverFarm = await vhRepo.ServerFarmGet(projectId, updateParams.ServerFarmId);
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
-
-        if (updateParams.Tags != null) server.Tags = ManagerUtils.TagsToString(updateParams.Tags.Value);
+        if (updateParams.ConfigSwapMemorySizeMb != null) server.ConfigSwapMemorySizeMb = updateParams.ConfigSwapMemorySizeMb;
+        if (updateParams.Tags != null) server.Tags = TagUtils.TagsToString(updateParams.Tags.Value);
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
         if (updateParams.Power != null) server.Power = updateParams.Power;
         if (updateParams.IsEnabled != null) server.IsEnabled = updateParams.IsEnabled;
@@ -147,9 +154,11 @@ public class ServerService(
         if (oldServerFarmId != server.ServerFarmId)
             await serverConfigureService.SaveChangesAndInvalidateServerFarm(projectId, oldServerFarmId, false);
 
-        // reconfig current server if required
-        var reconfigure = updateParams.AccessPoints != null || updateParams.AutoConfigure != null ||
-                          updateParams.ServerFarmId != null;
+        // reconfigure current server if required
+        var reconfigure = server.AutoConfigure != oldAutoConfigure ||
+                          server.ServerFarmId != oldServerFarmId ||
+                          server.ConfigSwapMemorySizeMb != oldConfigSwapMemorySizeMb ||
+                          updateParams.AccessPoints != null;
         var serverCache = await serverConfigureService.SaveChangesAndInvalidateServer(projectId, server, reconfigure);
 
         // get server again to resolve region and farm
@@ -360,7 +369,7 @@ public class ServerService(
         sshClient.Connect();
 
         var linuxCommand = GetInstallScriptForLinux(appSettings, false);
-        var res = await AccessServerUtil.ExecuteSshCommand(sshClient, linuxCommand, loginPassword?.Trim(),
+        var res = await ManagerUtils.ExecuteSshCommand(sshClient, linuxCommand, loginPassword?.Trim(),
             TimeSpan.FromMinutes(5));
 
         var check = sshClient.RunCommand("dir /opt/VpnHoodServer");

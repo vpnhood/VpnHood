@@ -1,6 +1,6 @@
 ﻿using VpnHood.AccessServer.Dtos.AccessTokens;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.AccessServer.Utils;
+using VpnHood.Manager.Common.Utils;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
@@ -19,11 +19,14 @@ public static class AccessTokenConverter
             LastUsedTime = model.LastUsedTime,
             ExpirationTime = model.ExpirationTime,
             IsPublic = model.IsPublic,
+            ClientPolicies = model.ClientPoliciesGet().ToDtos(),
+            AccessCode = model.AccessCode,
+            ManagerCode = model.ManagerCode,
             IsEnabled = model.IsEnabled,
             Lifetime = model.Lifetime,
             MaxDevice = model.MaxDevice,
             MaxTraffic = model.MaxTraffic,
-            Tags = ManagerUtils.TagsFromString(model.Tags),
+            Tags = TagUtils.TagsFromString(model.Tags),
             ProjectId = model.ProjectId,
             SupportCode = model.SupportCode,
             AdRequirement = model.AdRequirement,
@@ -32,3 +35,4 @@ public static class AccessTokenConverter
         return accessToken;
     }
 }
+

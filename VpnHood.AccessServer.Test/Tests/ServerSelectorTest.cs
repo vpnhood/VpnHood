@@ -5,12 +5,13 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Tokens;
 using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class LoadBalancerTest
+public class ServerSelectorTest
 {
     [TestMethod]
     public async Task AllowInAutoLocation_is_false()
@@ -24,12 +25,12 @@ public class LoadBalancerTest
 
         // fail if the location in auto
         var accessTokenDom = await farm.CreateAccessToken();
-        var sessionDom = await accessTokenDom.CreateSession(autoRedirect: false, assertError: false);
+        var sessionDom = await accessTokenDom.CreateSession(autoRedirect: false, throwError: false);
         Assert.AreEqual(SessionErrorCode.AccessError, sessionDom.SessionResponseEx.ErrorCode);
 
         // fail if the location in set
         sessionDom =
-            await accessTokenDom.CreateSession(autoRedirect: false, assertError: false, serverLocation: "10/*");
+            await accessTokenDom.CreateSession(autoRedirect: false, throwError: false, serverLocation: "10/*");
         Assert.AreEqual(SessionErrorCode.Ok, sessionDom.SessionResponseEx.ErrorCode);
     }
 
@@ -198,7 +199,7 @@ public class LoadBalancerTest
 
         // check redirect list for location 10
         var sessionDom2 =
-            await accessTokenDom.CreateSession(autoRedirect: false, serverLocation: "10", assertError: false);
+            await accessTokenDom.CreateSession(autoRedirect: false, serverLocation: "10", throwError: false);
         var redirectHostEndPoints =
             sessionDom2.SessionResponseEx.RedirectHostEndPoints!.Where(x => x.Address.IsV4()).ToArray();
         Assert.AreEqual(sessionDom2.SessionResponseEx.ErrorCode, SessionErrorCode.RedirectHost);
@@ -209,7 +210,7 @@ public class LoadBalancerTest
             redirectHostEndPoints[1].Address);
 
         // check redirect list for location auto
-        sessionDom2 = await accessTokenDom.CreateSession(autoRedirect: false, serverLocation: null, assertError: false);
+        sessionDom2 = await accessTokenDom.CreateSession(autoRedirect: false, serverLocation: null, throwError: false);
         redirectHostEndPoints =
             sessionDom2.SessionResponseEx.RedirectHostEndPoints!.Where(x => x.Address.IsV4()).ToArray();
         Assert.AreEqual(sessionDom2.SessionResponseEx.ErrorCode, SessionErrorCode.RedirectHost);
@@ -276,7 +277,7 @@ public class LoadBalancerTest
     }
 
     [TestMethod]
-    public async Task Redirect_redirect_to_ipv4_when_server_has_no_ipv6()
+    public async Task Redirect_to_ipv4_when_server_has_no_ipv6()
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
@@ -368,5 +369,30 @@ public class LoadBalancerTest
 
         Assert.AreEqual(2, serverDom1.ServerStatus.SessionCount);
         Assert.AreEqual(2, serverDom2.ServerStatus.SessionCount);
+    }
+
+    [TestMethod]
+    public async Task Blockable_server_count_should_be_limited()
+    {
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        const int maxBlockableServerCount = 5;
+        farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
+        farm.TestApp.AgentTestApp.AgentOptions.MaxBlockableServerCount = maxBlockableServerCount;
+
+        var blockableServer = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.0"), logicalCore: 1);
+        for (var i = 1; i < 10; i++)
+            await farm.AddNewServer(publicIpV4: IPAddress.Parse($"10.0.0.{i}"), logicalCore: 1);
+
+        var ublServer = await farm.AddNewServer(publicIpV4: IPAddress.Parse("11.0.0.1"), logicalCore: 1, tags: [ServerRegisteredTags.Unblockable]);
+
+        var accessTokenDom = await farm.CreateAccessToken(true);
+
+        // increase the session count of the free servers to force redirect to the unblockable server
+        blockableServer.ServerInfo.Status.SessionCount = 100;
+        await blockableServer.SendStatus();
+
+        var sessionDom = await accessTokenDom.CreateSession(clientIp: IPAddress.Parse("1.0.0.0"), autoRedirect: false, throwError: false);
+        Assert.AreEqual(ublServer.Server.PublicIpV4, sessionDom.SessionResponseEx.RedirectHostEndPoints?[maxBlockableServerCount].Address.ToString());
+
     }
 }

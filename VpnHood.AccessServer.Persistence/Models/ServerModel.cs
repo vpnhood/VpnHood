@@ -14,6 +14,7 @@ public class ServerModel
     public required string? Tags { get; set; }
     public required int? ClientFilterId { get; set; }
     public required long? TotalMemory { get; set; }
+    public required int? TotalSwapMemoryMb { get; set; }
     public required int? LogicalCoreCount { get; set; }
     public required DateTime? ConfigureTime { get; set; }
     public required DateTime CreatedTime { get; set; }
@@ -22,6 +23,7 @@ public class ServerModel
     public required Guid AuthorizationCode { get; set; }
     public required byte[] ManagementSecret { get; set; }
     public required Guid ServerFarmId { get; set; }
+    public required int? ConfigSwapMemorySizeMb { get; set; }
     public required Guid ConfigCode { get; set; }
     public required Guid? LastConfigCode { get; set; }
     public required string? LastConfigError { get; set; }

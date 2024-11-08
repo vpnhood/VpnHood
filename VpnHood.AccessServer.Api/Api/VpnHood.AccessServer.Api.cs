@@ -1810,7 +1810,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<Device> FindByClientIdAsync(System.Guid projectId, System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<Device> GetByClientIdAsync(System.Guid projectId, string clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1829,11 +1829,13 @@ namespace VpnHood.AccessServer.Api
 
                     var urlBuilder_ = new System.Text.StringBuilder();
                 
-                    // Operation Path: "api/v1/projects/{projectId}/devices/clientId:{clientId}"
+                    // Operation Path: "api/v1/projects/{projectId}/devices/clientId"
                     urlBuilder_.Append("api/v1/projects/");
                     urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
-                    urlBuilder_.Append("/devices/clientId:");
-                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(clientId, System.Globalization.CultureInfo.InvariantCulture)));
+                    urlBuilder_.Append("/devices/clientId");
+                    urlBuilder_.Append('?');
+                    urlBuilder_.Append(System.Uri.EscapeDataString("clientId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(clientId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    urlBuilder_.Length--;
 
                     await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);
 
@@ -3084,6 +3086,76 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task SyncAsync(System.Guid projectId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        {
+            if (projectId == null)
+                throw new System.ArgumentNullException("projectId");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Content = new System.Net.Http.StringContent(string.Empty, System.Text.Encoding.UTF8, "application/json");
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                
+                    // Operation Path: "api/v1/projects/{projectId}/host-orders/sync"
+                    urlBuilder_.Append("api/v1/projects/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
+                    urlBuilder_.Append("/host-orders/sync");
+
+                    await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    await PrepareRequestAsync(client_, request_, url_, cancellationToken).ConfigureAwait(false);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        await ProcessResponseAsync(client_, response_, cancellationToken).ConfigureAwait(false);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            return;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<HostIp> GetIpAsync(System.Guid projectId, string ipAddress, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -3322,7 +3394,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<HostIp>> ListIpsAsync(System.Guid projectId, string? search = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<HostIp>> ListIpsAsync(System.Guid projectId, string? search = null, bool? isAdditional = null, bool? isHidden = null, HostIpStatus? hostIpStatus = null, bool? includeIpV4 = null, bool? includeIpV6 = null, bool? includeInUse = null, bool? includeNotInUse = null, bool? forceSync = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -3346,6 +3418,38 @@ namespace VpnHood.AccessServer.Api
                     if (search != null)
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("search")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(search, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (isAdditional != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("isAdditional")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(isAdditional, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (isHidden != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("isHidden")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(isHidden, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (hostIpStatus != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("hostIpStatus")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(hostIpStatus, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (includeIpV4 != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("includeIpV4")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(includeIpV4, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (includeIpV6 != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("includeIpV6")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(includeIpV6, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (includeInUse != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("includeInUse")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(includeInUse, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (includeNotInUse != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("includeNotInUse")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(includeNotInUse, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (forceSync != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("forceSync")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(forceSync, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     }
                     if (recordIndex != null)
                     {
@@ -9834,6 +9938,15 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("isPublic")]
         public bool IsPublic { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("clientPolicies")]
+        public System.Collections.Generic.ICollection<ClientPolicy>? ClientPolicies { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("accessCode")]
+        public long? AccessCode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("managerCode")]
+        public long? ManagerCode { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public bool IsEnabled { get; set; } = default!;
 
@@ -9872,6 +9985,40 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ClientPolicy
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("clientCountry")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ClientCountry { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("freeLocations")]
+        public System.Collections.Generic.ICollection<string>? FreeLocations { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("autoLocationOnly")]
+        public bool AutoLocationOnly { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("unblockableOnly")]
+        public bool UnblockableOnly { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("normal")]
+        public int? Normal { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("premiumByTrial")]
+        public int? PremiumByTrial { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("premiumByRewardAd")]
+        public int? PremiumByRewardAd { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("premiumByPurchase")]
+        public bool PremiumByPurchase { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("premiumByCode")]
+        public bool PremiumByCode { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public enum AdRequirement
     {
 
@@ -9896,7 +10043,7 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("clientId")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ClientId { get; set; } = default!;
+        public string ClientId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("clientVersion")]
         public string? ClientVersion { get; set; } = default!;
@@ -9904,8 +10051,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("ipAddress")]
         public string? IpAddress { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("country")]
-        public string? Country { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("location")]
+        public Location? Location { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("userAgent")]
         public string? UserAgent { get; set; } = default!;
@@ -9924,6 +10071,30 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("osName")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string OsName { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Location
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("countryCode")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string CountryCode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("regionName")]
+        public string? RegionName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("cityName")]
+        public string? CityName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("countryName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string CountryName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("displayName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string DisplayName { get; set; } = default!;
 
     }
 
@@ -9974,6 +10145,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("description")]
         public string? Description { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("clientPolicies")]
+        public System.Collections.Generic.ICollection<ClientPolicy>? ClientPolicies { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
         public long MaxTraffic { get; set; } = default!;
 
@@ -10001,6 +10175,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
         public PatchOfNullableDateTime? ExpirationTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("clientPolicies")]
+        public PatchOfClientPolicyOf? ClientPolicies { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public PatchOfBoolean? IsEnabled { get; set; } = default!;
@@ -10050,6 +10227,15 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("value")]
         public System.DateTime? Value { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PatchOfClientPolicyOf
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        public System.Collections.Generic.ICollection<ClientPolicy>? Value { get; set; } = default!;
 
     }
 
@@ -10417,11 +10603,14 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverId")]
         public System.Guid? ServerId { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("isAdditional")]
+        public bool IsAdditional { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isHidden")]
+        public bool IsHidden { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("existsInProvider")]
         public bool ExistsInProvider { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("providerDescription")]
-        public string? ProviderDescription { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverName")]
         public string? ServerName { get; set; } = default!;
@@ -10432,6 +10621,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
         public System.Guid? ServerFarmId { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("providerServerId")]
+        public string? ProviderServerId { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
         public string? ServerFarmName { get; set; } = default!;
 
@@ -10440,21 +10632,11 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
         public HostIpStatus Status { get; set; } = default!;
 
-    }
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string? Description { get; set; } = default!;
 
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Location
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("countryCode")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string CountryCode { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("regionName")]
-        public string? RegionName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("cityName")]
-        public string? CityName { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("providerDescription")]
+        public string? ProviderDescription { get; set; } = default!;
 
     }
 
@@ -10462,14 +10644,14 @@ namespace VpnHood.AccessServer.Api
     public enum HostIpStatus
     {
 
-        [System.Runtime.Serialization.EnumMember(Value = @"InUse")]
-        InUse = 0,
+        [System.Runtime.Serialization.EnumMember(Value = @"NotInProvider")]
+        NotInProvider = 0,
 
         [System.Runtime.Serialization.EnumMember(Value = @"NotInUse")]
         NotInUse = 1,
 
-        [System.Runtime.Serialization.EnumMember(Value = @"NotInProvider")]
-        NotInProvider = 2,
+        [System.Runtime.Serialization.EnumMember(Value = @"InUse")]
+        InUse = 2,
 
         [System.Runtime.Serialization.EnumMember(Value = @"Releasing")]
         Releasing = 3,
@@ -10482,6 +10664,15 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("autoReleaseTime")]
         public PatchOfNullableDateTime? AutoReleaseTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isHidden")]
+        public PatchOfBoolean? IsHidden { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("providerDescription")]
+        public PatchOfString? ProviderDescription { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public PatchOfString? Description { get; set; } = default!;
 
     }
 
@@ -11118,6 +11309,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("totalMemory")]
         public long? TotalMemory { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("totalSwapMemoryMb")]
+        public int? TotalSwapMemoryMb { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("logicalCoreCount")]
         public int? LogicalCoreCount { get; set; } = default!;
 
@@ -11177,6 +11371,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("clientFilterName")]
         public string? ClientFilterName { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("configSwapMemorySizeMb")]
+        public int? ConfigSwapMemorySizeMb { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -11221,6 +11418,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("availableMemory")]
         public long? AvailableMemory { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("availableSwapMemoryMb")]
+        public int? AvailableSwapMemoryMb { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("cpuUsage")]
         public int? CpuUsage { get; set; } = default!;
@@ -11344,6 +11544,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("clientFilterId")]
         public PatchOfString? ClientFilterId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("configSwapMemorySizeMb")]
+        public PatchOfNullableInteger? ConfigSwapMemorySizeMb { get; set; } = default!;
 
     }
 

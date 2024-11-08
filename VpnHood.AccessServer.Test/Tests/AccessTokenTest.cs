@@ -1,5 +1,6 @@
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
@@ -8,7 +9,7 @@ using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
-using Token = VpnHood.Common.Token;
+using Token = VpnHood.Common.Tokens.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -18,8 +19,8 @@ public class AccessTokenTest
     [TestMethod]
     public async Task SupportCode_is_unique_per_project()
     {
-        var farmP1 = await ServerFarmDom.Create();
-        var farmP2 = await ServerFarmDom.Create();
+        using var farmP1 = await ServerFarmDom.Create();
+        using var farmP2 = await ServerFarmDom.Create();
 
         var accessTokenDom11 = await farmP1.CreateAccessToken();
         var accessTokenDom12 = await farmP1.CreateAccessToken();
@@ -33,7 +34,7 @@ public class AccessTokenTest
     [TestMethod]
     public async Task Crud()
     {
-        var farm1 = await ServerFarmDom.Create();
+        using var farm1 = await ServerFarmDom.Create();
         var testApp = farm1.TestApp;
 
         //-----------
@@ -62,9 +63,10 @@ public class AccessTokenTest
         Assert.AreEqual(createParam1.MaxDevice, accessTokenDom1.AccessToken.MaxDevice);
         Assert.AreEqual(createParam1.Lifetime, accessTokenDom1.AccessToken.Lifetime);
         Assert.AreEqual(createParam1.Description, accessTokenDom1.AccessToken.Description);
+        Assert.AreEqual(JsonSerializer.Serialize(createParam1.ClientPolicies), JsonSerializer.Serialize(accessTokenDom1.AccessToken.ClientPolicies));
         CollectionAssert.AreEqual(createParam1.Tags.ToArray(), accessTokenDom1.AccessToken.Tags.ToArray());
 
-        var farm2 = await ServerFarmDom.Create(testApp);
+        using var farm2 = await ServerFarmDom.Create(testApp);
         var expirationTime2 = DateTime.UtcNow.AddDays(2);
         var createParam2 = new AccessTokenCreateParams {
             ServerFarmId = farm2.ServerFarmId,
@@ -122,7 +124,7 @@ public class AccessTokenTest
             Lifetime = new PatchOfInteger { Value = 61 },
             MaxDevice = new PatchOfInteger { Value = 7 },
             MaxTraffic = new PatchOfLong { Value = 805004 },
-            Tags = new PatchOfStringOf {Value = ["#tag50", "#tag51"] },
+            Tags = new PatchOfStringOf { Value = ["#tag50", "#tag51"] },
             Description = new PatchOfString { Value = "http:" + $"//www.sss.com/new{Guid.NewGuid()}.com" },
             IsEnabled = new PatchOfBoolean { Value = false }
         };
@@ -225,7 +227,7 @@ public class AccessTokenTest
         serverDom = await farm.AddNewServer();
         await serverDom.Update(new ServerUpdateParams {
             AccessPoints = new PatchOfAccessPointOf {
-                Value = [ farm.TestApp.NewAccessPoint(farm.TestApp.NewEndPoint())]
+                Value = [farm.TestApp.NewAccessPoint(farm.TestApp.NewEndPoint())]
             }
         });
 
@@ -281,9 +283,34 @@ public class AccessTokenTest
     }
 
     [TestMethod]
+    public async Task GetAccessKey_With_Tags()
+    {
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        await farm.AddNewServer(tags: ["#a1", "#a2"], publicIpV4: IPAddress.Parse("10.0.0.1"));
+        await farm.AddNewServer(tags: ["#a1", "#b1", "#b2"], publicIpV4: IPAddress.Parse("10.0.0.1"));
+        await farm.AddNewServer(tags: ["#c1", "#c2"], publicIpV4: IPAddress.Parse("10.1.0.1"));
+
+        //-----------
+        // check: create
+        //-----------
+        var createParam1 = new AccessTokenCreateParams {
+            ServerFarmId = farm.ServerFarmId,
+            AccessTokenName = Guid.NewGuid().ToString(),
+            Tags = ["#tag1", "#tag2", "#tag3"],
+            IsEnabled = true,
+        };
+
+        var accessTokenDom1 = await farm.CreateAccessToken(createParam1);
+        var token = await accessTokenDom1.GetToken();
+        CollectionAssert.AreEquivalent(new[] { "10/0 [#a1 ~#a2 ~#b1 ~#b2]", "10/1 [#c1 #c2]" }, token.ServerToken.ServerLocations);
+        CollectionAssert.AreEquivalent(new[] { "#tag1", "#tag2", "#tag3" }, token.Tags);
+    }
+
+
+    [TestMethod]
     public async Task GetAccessKey_ForDomain()
     {
-        var testApp = await TestApp.Create();
+        using var testApp = await TestApp.Create();
         using var farm = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams {
             ServerFarmName = Guid.NewGuid().ToString()
         });
@@ -328,8 +355,8 @@ public class AccessTokenTest
     [TestMethod]
     public async Task Validate_create()
     {
-        var farm1 = await ServerFarmDom.Create();
-        var farm2 = await ServerFarmDom.Create();
+        using var farm1 = await ServerFarmDom.Create();
+        using var farm2 = await ServerFarmDom.Create();
         try {
             await farm1.TestApp.AccessTokensClient.CreateAsync(farm1.ProjectId,
                 new AccessTokenCreateParams { ServerFarmId = farm2.ServerFarmId });
@@ -343,8 +370,8 @@ public class AccessTokenTest
     [TestMethod]
     public async Task Validate_update()
     {
-        var farm1 = await ServerFarmDom.Create();
-        var farm2 = await ServerFarmDom.Create();
+        using var farm1 = await ServerFarmDom.Create();
+        using var farm2 = await ServerFarmDom.Create();
 
         var accessTokenDom1 = await farm1.CreateAccessToken();
         await VhTestUtil.AssertApiException<NotExistsException>(accessTokenDom1.Update(new AccessTokenUpdateParams {
@@ -415,7 +442,7 @@ public class AccessTokenTest
     [TestMethod]
     public async Task Update_should_invalidate_its_cache()
     {
-        var farm1 = await ServerFarmDom.Create();
+        using var farm1 = await ServerFarmDom.Create();
 
         // create access token
         var accessTokenDom1 = await farm1.CreateAccessToken(new AccessTokenCreateParams {
@@ -435,7 +462,8 @@ public class AccessTokenTest
         var expirationTime1 = DateTime.Today.AddDays(5);
         await accessTokenDom1.Update(
             new AccessTokenUpdateParams {
-                ExpirationTime = new PatchOfNullableDateTime { Value = expirationTime1 }
+                ExpirationTime = new PatchOfNullableDateTime { Value = expirationTime1 },
+                
             });
 
         // add usage to create the new expiration
@@ -443,11 +471,33 @@ public class AccessTokenTest
         Assert.AreEqual(expirationTime1, sessionResponse.AccessUsage?.ExpirationTime);
     }
 
+    [TestMethod]
+    public async Task Update_IsEnable_should_update_cache_and_stop_access()
+    {
+        using var farm1 = await ServerFarmDom.Create();
+
+        // create access token
+        var accessTokenDom1 = await farm1.CreateAccessToken();
+
+        // create session
+        var sessionDom = await accessTokenDom1.CreateSession();
+        await sessionDom.AddUsage(); // make sure it comes into cache
+
+        // update after creating session
+        await accessTokenDom1.Update(
+            new AccessTokenUpdateParams {
+                IsEnabled = new PatchOfBoolean { Value = false }
+            });
+
+        // add usage to create the new expiration
+        var sessionResponse = await sessionDom.AddUsage();
+        Assert.AreEqual(SessionErrorCode.AccessLocked, sessionResponse.ErrorCode);
+    }
 
     [TestMethod]
     public async Task Delete_should_invalidate_its_cache()
     {
-        var farm1 = await ServerFarmDom.Create();
+        using var farm1 = await ServerFarmDom.Create();
 
         // create access token
         var accessTokenDom1 = await farm1.CreateAccessToken(new AccessTokenCreateParams {
@@ -466,6 +516,6 @@ public class AccessTokenTest
         // delete access token
         await accessTokenDom1.TestApp.AccessTokensClient.DeleteAsync(farm1.ProjectId, accessTokenDom1.AccessTokenId);
         var sessionResponse = await sessionDom.AddUsage();
-        Assert.AreEqual(SessionErrorCode.SessionClosed, sessionResponse.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.AccessLocked, sessionResponse.ErrorCode);
     }
 }

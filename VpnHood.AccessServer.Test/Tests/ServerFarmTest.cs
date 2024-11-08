@@ -3,10 +3,10 @@ using GrayMint.Common.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.Common;
 using VpnHood.Common.ApiClients;
+using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
-using Token = VpnHood.Common.Token;
+using Token = VpnHood.Common.Tokens.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -16,8 +16,8 @@ public class ServerFarmTest
     [TestMethod]
     public async Task Crud()
     {
-        var testApp = await TestApp.Create();
-        var farm1 = await ServerFarmDom.Create(testApp, serverCount: 0, createParams: new ServerFarmCreateParams());
+        using var testApp = await TestApp.Create();
+        using var farm1 = await ServerFarmDom.Create(testApp, serverCount: 0, createParams: new ServerFarmCreateParams());
         Assert.IsTrue(farm1.ServerFarm.PushTokenToClient);
 
         var serverDom = await farm1.AddNewServer();
@@ -101,7 +101,7 @@ public class ServerFarmTest
     [TestMethod]
     public async Task Delete_farm_and_its_dependents()
     {
-        var farm1 = await ServerFarmDom.Create();
+        using var farm1 = await ServerFarmDom.Create();
         var accessTokenDom = await farm1.CreateAccessToken(true);
         var session = await accessTokenDom.CreateSession();
         await session.AddUsage();
@@ -109,7 +109,7 @@ public class ServerFarmTest
         //await farm1.TestApp.FlushCache();
 
         // remove server from farm
-        var farm2 = await ServerFarmDom.Create(farm1.TestApp);
+        using var farm2 = await ServerFarmDom.Create(farm1.TestApp);
         await farm1.DefaultServer.Update(new ServerUpdateParams {
             ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId }
         });
@@ -123,8 +123,8 @@ public class ServerFarmTest
     [TestMethod]
     public async Task List()
     {
-        var farm1 = await ServerFarmDom.Create(serverCount: 1);
-        var farm2 = await ServerFarmDom.Create(farm1.TestApp, serverCount: 1);
+        using var farm1 = await ServerFarmDom.Create(serverCount: 1);
+        using var farm2 = await ServerFarmDom.Create(farm1.TestApp, serverCount: 1);
         await farm1.DefaultServer.CreateSession((await farm1.CreateAccessToken()).AccessToken);
         await farm2.DefaultServer.CreateSession((await farm2.CreateAccessToken()).AccessToken);
 
@@ -138,8 +138,8 @@ public class ServerFarmTest
     [TestMethod]
     public async Task List_with_summary()
     {
-        var farm1 = await ServerFarmDom.Create(serverCount: 1);
-        var farm2 = await ServerFarmDom.Create(farm1.TestApp, serverCount: 1);
+        using var farm1 = await ServerFarmDom.Create(serverCount: 1);
+        using var farm2 = await ServerFarmDom.Create(farm1.TestApp, serverCount: 1);
         await farm1.DefaultServer.CreateSession((await farm1.CreateAccessToken()).AccessToken);
         await farm2.DefaultServer.CreateSession((await farm2.CreateAccessToken()).AccessToken);
 
@@ -152,12 +152,12 @@ public class ServerFarmTest
     [TestMethod]
     public async Task Fail_delete_a_farm_with_server()
     {
-        var farm1 = await ServerFarmDom.Create(serverCount: 0);
+        using var farm1 = await ServerFarmDom.Create(serverCount: 0);
 
         //-----------
         // check: can not delete a farm with server
         //-----------
-        var farm2 = await ServerFarmDom.Create(farm1.TestApp, serverCount: 0);
+        using var farm2 = await ServerFarmDom.Create(farm1.TestApp, serverCount: 0);
         var serverDom = await farm2.AddNewServer();
         try {
             await farm2.TestApp.ServerFarmsClient.DeleteAsync(farm2.ProjectId, farm2.ServerFarmId);

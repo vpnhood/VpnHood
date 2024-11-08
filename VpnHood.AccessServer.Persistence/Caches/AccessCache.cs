@@ -20,6 +20,8 @@ public class AccessCache : AccessBaseModel
             DeviceId = DeviceId,
             CreatedTime = CreatedTime,
             LastUsedTime = LastUsedTime,
+            AdRewardExpirationTime = AdRewardExpirationTime,
+            AdRewardMinutes = AdRewardMinutes,
             LastCycleSentTraffic = LastCycleSentTraffic,
             LastCycleReceivedTraffic = LastCycleReceivedTraffic,
             LastCycleTraffic = LastCycleTraffic,

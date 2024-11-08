@@ -74,7 +74,7 @@ public class FakeHostProvider : IHostProvider
         public ConcurrentDictionary<string, Order> Orders { get; init; } = [];
 
         // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
-        public ConcurrentDictionary<string, HostProviderIp> HostIps { get; init; } = [];
+        public ConcurrentDictionary<string, ProviderHostIp> HostIps { get; init; } = [];
     }
 
     public class Order
@@ -98,10 +98,10 @@ public class FakeHostProvider : IHostProvider
     private static IPAddress BuildRandomIpAddress()
     {
         return new IPAddress([
-            (byte)new Random().Next(128, 255),
-            (byte)new Random().Next(0, 255),
-            (byte)new Random().Next(0, 255),
-            (byte)new Random().Next(1, 255)
+            (byte)Random.Shared.Next(128, 255),
+            (byte)Random.Shared.Next(0, 255),
+            (byte)Random.Shared.Next(0, 255),
+            (byte)Random.Shared.Next(1, 255)
         ]);
     }
 
@@ -123,10 +123,11 @@ public class FakeHostProvider : IHostProvider
         foreach (var order in fakeDb.Orders.Values.Where(x => x is { IsCompleted: false, Type: Order.OrderType.NewIp })) {
             order.IsCompleted = true;
             var ipAddress = BuildRandomIpAddress();
-            if (fakeDb.HostIps.TryAdd(ipAddress.ToString(), new HostProviderIp {
+            if (fakeDb.HostIps.TryAdd(ipAddress.ToString(), new ProviderHostIp {
                 IpAddress = ipAddress,
                 Description = order.Description,
-                ServerId = order.ServerId
+                ServerId = order.ServerId,
+                IsAdditional = true
             })) {
                 _logger.LogInformation("FakeProvider allocate an Ip. Ip: {Ip}", ipAddress);
             }
@@ -157,7 +158,19 @@ public class FakeHostProvider : IHostProvider
             : fakeDb.HostIps.FirstOrDefault(x => x.Value.IpAddress.Equals(serverIp)).Value.ServerId;
     }
 
-    public async Task<string> OrderNewIp(string serverId, string? description, TimeSpan timeout)
+    //add HostIp directly to the fakeDb for test
+    public async Task AddHostIp(ProviderHostIp providerHostIp)
+    {
+        await using var scope = _serviceScopeFactory.CreateAsyncScope();
+        var vhRepo = scope.ServiceProvider.GetRequiredService<VhRepo>();
+        var fakeDb = await GetFakeDb(vhRepo);
+
+        fakeDb.HostIps.TryAdd(providerHostIp.IpAddress.ToString(), providerHostIp);
+        await Save(vhRepo, fakeDb);
+    }
+
+
+    public async Task<string> OrderNewIp(string serverId, TimeSpan timeout)
     {
         await using var scope = _serviceScopeFactory.CreateAsyncScope();
         var vhRepo = scope.ServiceProvider.GetRequiredService<VhRepo>();
@@ -165,7 +178,6 @@ public class FakeHostProvider : IHostProvider
 
         var order = new Order {
             Type = Order.OrderType.NewIp,
-            Description = description,
             ServerId = serverId,
             IsCompleted = false
         };
@@ -175,7 +187,6 @@ public class FakeHostProvider : IHostProvider
 
         if (_providerSettings.AutoCompleteDelay != null)
             _ = CompleteOrders(_providerSettings.AutoCompleteDelay.Value);
-
 
         return order.OrderId;
     }
@@ -203,13 +214,22 @@ public class FakeHostProvider : IHostProvider
             _ = CompleteOrders(_providerSettings.AutoCompleteDelay.Value);
     }
 
-    public async Task<HostProviderIp> GetIp(IPAddress ipAddress, TimeSpan timeout)
+    public async Task<ProviderHostIp> GetIp(IPAddress ipAddress, TimeSpan timeout)
     {
         await using var scope = _serviceScopeFactory.CreateAsyncScope();
         var vhRepo = scope.ServiceProvider.GetRequiredService<VhRepo>();
         var fakeDb = await GetFakeDb(vhRepo);
 
         return fakeDb.HostIps[ipAddress.ToString()];
+    }
+
+    public async Task UpdateIpDesc(IPAddress ipAddress, string? description, TimeSpan timeout)
+    {
+        await using var scope = _serviceScopeFactory.CreateAsyncScope();
+        var vhRepo = scope.ServiceProvider.GetRequiredService<VhRepo>();
+        var fakeDb = await GetFakeDb(vhRepo);
+        fakeDb.HostIps[ipAddress.ToString()].Description = description;
+        await Save(vhRepo, fakeDb);
     }
 
     public async Task<IPAddress[]> ListIps(string? search, TimeSpan timeout)

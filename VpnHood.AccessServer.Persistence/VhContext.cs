@@ -174,6 +174,9 @@ public class VhContext : DbContext
             entity.Property(e => e.AccessTokenName)
                 .HasMaxLength(50);
 
+            entity.Property(e => e.ClientPolicies)
+                .HasMaxLength(1000);
+
             entity
                 .Property(e => e.Secret)
                 .HasMaxLength(16)
@@ -511,13 +514,20 @@ public class VhContext : DbContext
             entity
                 .HasKey(e => e.SessionId);
 
-            //index for finding other active sessions of an AccessId
+            //for finding other active sessions of an AccessId
             entity
                 .HasIndex(e => e.AccessId)
                 .HasFilter($"{nameof(SessionModel.EndTime)} IS NULL");
 
+            // for sync
             entity
-                .HasIndex(e => new { e.EndTime, e.LastUsedTime }); //for sync and timeout
+                .HasIndex(e => e.IsArchived)
+                .HasFilter($"{nameof(SessionModel.IsArchived)} = 1");
+
+            // for init load
+            entity
+                .HasIndex(e => e.LastUsedTime)
+                .HasFilter($"{nameof(SessionModel.EndTime)} is null");
 
             entity
                 .Property(e => e.IsArchived);
@@ -644,8 +654,28 @@ public class VhContext : DbContext
                 .HasKey(e => e.HostIpId);
 
             entity
+                .Property(x => x.ProviderServerId)
+                .HasMaxLength(50);
+
+            entity
+                .Property(x => x.Description)
+                .HasMaxLength(450);
+
+            entity
+                .Property(x => x.ProviderDescription)
+                .HasMaxLength(450);
+
+            entity
                 .HasIndex(e => new { e.ProjectId, e.CreatedTime })
                 .HasFilter($"{nameof(HostIpModel.DeletedTime)} is null");
+
+            entity
+                .Property(x => x.LocationCountry)
+                .HasMaxLength(5);
+
+            entity
+                .Property(x => x.LocationRegion)
+                .HasMaxLength(20);
 
             entity
                 .HasIndex(e => new { e.ProjectId, e.IpAddress })
@@ -672,6 +702,10 @@ public class VhContext : DbContext
 
             entity
                 .Property(e => e.NewIpOrderIpAddress)
+                .HasMaxLength(50);
+
+            entity
+                .Property(e => e.NewIpOrderProviderServerId)
                 .HasMaxLength(50);
 
             entity
@@ -714,7 +748,7 @@ public class VhContext : DbContext
 
             entity
                 .HasOne(e => e.Project)
-                .WithMany(d => d.ClientFilterModels)
+                .WithMany(d => d.ClientFilters)
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.Cascade);
         });

@@ -57,14 +57,14 @@ public static class ClientTrackerBuilder
         };
     }
 
-    public static TrackEvent BuildUsage(Traffic usage, int requestCount, int connectionCount)
+    public static TrackEvent BuildUsage(Traffic traffic, int requestCount, int connectionCount)
     {
         var trackEvent = new TrackEvent {
             EventName = "vh_usage",
             Parameters = new Dictionary<string, object> {
-                { "traffic_total", Math.Round(usage.Total / 1_000_000d) },
-                { "traffic_sent", Math.Round(usage.Sent / 1_000_000d) },
-                { "traffic_received", Math.Round(usage.Received / 1_000_000d) },
+                { "traffic_total", Math.Round(traffic.Total / 1_000_000d) },
+                { "traffic_sent", Math.Round(traffic.Sent / 1_000_000d) },
+                { "traffic_received", Math.Round(traffic.Received / 1_000_000d) },
                 { "requests", requestCount },
                 { "connections", connectionCount }
             }

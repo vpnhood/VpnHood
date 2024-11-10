@@ -8,7 +8,7 @@ using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Messaging;
 
-namespace VpnHood.Server.Access.Managers.Http;
+namespace VpnHood.Server.Access.Managers.HttpAccessManagers;
 
 public class HttpAccessManager : ApiClientBase, IAccessManager
 {

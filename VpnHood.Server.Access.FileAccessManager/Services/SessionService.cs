@@ -1,16 +1,15 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common.Converters;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
+using VpnHood.Server.Access.Managers.FileAccessManagers.Dtos;
 using VpnHood.Server.Access.Messaging;
 
-namespace VpnHood.Server.Access.Managers.File;
+namespace VpnHood.Server.Access.Managers.FileAccessManagers.Services;
 
 public class SessionService : IDisposable, IJob
 {
@@ -70,8 +69,8 @@ public class SessionService : IDisposable, IJob
         var minCloseWaitTime = DateTime.UtcNow - _sessionTemporaryTimeout;
         var timeoutSessions = Sessions
             .Where(x =>
-                (x.Value.EndTime == null && x.Value.LastUsedTime < minSessionTime) ||
-                (x.Value.EndTime != null && x.Value.LastUsedTime < minCloseWaitTime));
+                x.Value.EndTime == null && x.Value.LastUsedTime < minSessionTime ||
+                x.Value.EndTime != null && x.Value.LastUsedTime < minCloseWaitTime);
 
         foreach (var item in timeoutSessions) {
             Sessions.TryRemove(item.Key, out _);
@@ -84,17 +83,16 @@ public class SessionService : IDisposable, IJob
         return Sessions.TryGetValue(sessionId, out var session) ? session.TokenId : null;
     }
 
-    private static bool ValidateRequest(SessionRequestEx sessionRequestEx, FileAccessManager.AccessItem accessItem)
+    private static bool ValidateRequest(SessionRequestEx sessionRequestEx, AccessTokenData accessTokenData)
     {
-        var encryptClientId = VhUtil.EncryptClientId(sessionRequestEx.ClientInfo.ClientId, accessItem.Token.Secret);
+        var encryptClientId = VhUtil.EncryptClientId(sessionRequestEx.ClientInfo.ClientId, accessTokenData.AccessToken.Secret);
         return encryptClientId.SequenceEqual(sessionRequestEx.EncryptedClientId);
     }
 
-    public SessionResponseEx CreateSession(SessionRequestEx sessionRequestEx,
-        FileAccessManager.AccessItem accessItem)
+    public SessionResponseEx CreateSession(SessionRequestEx sessionRequestEx, AccessTokenData accessTokenData)
     {
         // validate the request
-        if (!ValidateRequest(sessionRequestEx, accessItem))
+        if (!ValidateRequest(sessionRequestEx, accessTokenData))
             return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
                 ErrorMessage = "Could not validate the request."
@@ -108,7 +106,7 @@ public class SessionService : IDisposable, IJob
         // create a new session
         var session = new Session {
             SessionId = _lastSessionId,
-            TokenId = accessItem.Token.TokenId,
+            TokenId = accessTokenData.AccessToken.TokenId,
             ClientInfo = sessionRequestEx.ClientInfo,
             CreatedTime = FastDateTime.Now,
             LastUsedTime = FastDateTime.Now,
@@ -117,25 +115,25 @@ public class SessionService : IDisposable, IJob
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,
             ExtraData = sessionRequestEx.ExtraData,
-            ExpirationTime = accessItem.AdRequirement is AdRequirement.Required
+            ExpirationTime = accessTokenData.AccessToken.AdRequirement is AdRequirement.Required
                 ? DateTime.UtcNow + _adRequiredTimeout
                 : null
         };
 
         //create response
-        var ret = BuildSessionResponse(session, accessItem);
+        var ret = BuildSessionResponse(session, accessTokenData);
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 
         // add the new session to collection
         Sessions.TryAdd(session.SessionId, session);
-        System.IO.File.WriteAllText(GetSessionFilePath(session.SessionId), JsonSerializer.Serialize(session));
+        File.WriteAllText(GetSessionFilePath(session.SessionId), JsonSerializer.Serialize(session));
 
         ret.SessionId = session.SessionId;
         return ret;
     }
 
-    public SessionResponseEx GetSession(ulong sessionId, FileAccessManager.AccessItem accessItem,
+    public SessionResponseEx GetSession(ulong sessionId, AccessTokenData accessTokenData,
         IPEndPoint? hostEndPoint)
     {
         // check existence
@@ -149,11 +147,11 @@ public class SessionService : IDisposable, IJob
             session.HostEndPoint = hostEndPoint;
 
         // create response
-        var ret = BuildSessionResponse(session, accessItem);
+        var ret = BuildSessionResponse(session, accessTokenData);
         return ret;
     }
 
-    public SessionResponseEx[] GetSessions(FileAccessManager.AccessItem?[] accessItems)
+    public SessionResponseEx[] GetSessions(AccessToken?[] accessItems)
     {
         //var ret = Sessions.Values
         //    .Select(x => BuildSessionResponse(x, accessItems.f))
@@ -163,14 +161,21 @@ public class SessionService : IDisposable, IJob
         throw new NotImplementedException();
     }
 
-    private SessionResponseEx BuildSessionResponse(Session session, FileAccessManager.AccessItem accessItem)
+    private SessionResponseEx BuildSessionResponse(Session session, AccessTokenData accessTokenData)
     {
-        var accessUsage = accessItem.AccessUsage;
+        var accessToken = accessTokenData.AccessToken;
+        var accessUsage = new AccessUsage {
+            ActiveClientCount = 0,
+            ExpirationTime = accessToken.ExpirationTime,
+            MaxClientCount = accessToken.MaxClientCount,
+            MaxTraffic = accessToken.MaxTraffic,
+            Traffic = new Traffic(accessTokenData.Usage.Sent, accessTokenData.Usage.Received)
+        };
 
         // validate session status
         if (session.ErrorCode == SessionErrorCode.Ok) {
             // check token expiration
-            if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.UtcNow)
+            if (accessToken.ExpirationTime != null && accessToken.ExpirationTime < DateTime.UtcNow)
                 return new SessionResponseEx {
                     ErrorCode = SessionErrorCode.AccessExpired,
                     ErrorMessage = "Access Expired.",
@@ -247,7 +252,7 @@ public class SessionService : IDisposable, IJob
             ErrorMessage = session.ErrorMessage,
             AccessUsage = accessUsage,
             RedirectHostEndPoint = null,
-            AdRequirement = accessItem.AdRequirement,
+            AdRequirement = accessToken.AdRequirement,
             ExtraData = session.ExtraData
         };
     }
@@ -261,36 +266,6 @@ public class SessionService : IDisposable, IJob
             session.ErrorCode = SessionErrorCode.SessionClosed;
 
         session.Kill();
-    }
-
-    public class Session
-    {
-        public required ulong SessionId { get; init; }
-        public required string TokenId { get; init; }
-        public required ClientInfo ClientInfo { get; init; }
-        public required byte[] SessionKey { get; init; }
-        public DateTime CreatedTime { get; init; } = FastDateTime.Now;
-        public DateTime LastUsedTime { get; init; } = FastDateTime.Now;
-        public DateTime? EndTime { get; set; }
-        public DateTime? ExpirationTime { get; set; }
-        public bool IsAlive => EndTime == null;
-        public SessionSuppressType SuppressedBy { get; set; }
-        public SessionSuppressType SuppressedTo { get; set; }
-        public SessionErrorCode ErrorCode { get; set; }
-        public string? ErrorMessage { get; init; }
-        public string? ExtraData { get; init; }
-
-        [JsonConverter(typeof(IPEndPointConverter))]
-        public required IPEndPoint HostEndPoint { get; set; }
-
-        [JsonConverter(typeof(IPAddressConverter))]
-        public IPAddress? ClientIp { get; init; }
-
-        public void Kill()
-        {
-            if (IsAlive)
-                EndTime = FastDateTime.Now;
-        }
     }
 
     public void Dispose()

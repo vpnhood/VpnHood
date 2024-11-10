@@ -4,6 +4,10 @@ namespace VpnHood.Common.Messaging;
 
 public class Traffic : IEquatable<Traffic>, ICloneable
 {
+    public long SentTraffic {
+        set => Sent = value;
+    }
+
     public long ReceivedTraffic {
         set => Received = value;
     }

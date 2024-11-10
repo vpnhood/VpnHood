@@ -3,7 +3,7 @@ using VpnHood.Common.Collections;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
-using VpnHood.Server.Access.Managers.File;
+using VpnHood.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Server.Access.Messaging;
 
 namespace VpnHood.Test.AccessManagers;

@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Common.Messaging;
-using VpnHood.Server.Access.Managers.File;
+using VpnHood.Server.Access.Managers.FileAccessManagers;
 
 namespace VpnHood.Test.Tests;
 
@@ -17,11 +17,11 @@ public class FileAccessManagerTest : TestBase
         var accessManager = TestHelper.CreateAccessManager(options);
         await using var server = await TestHelper.CreateServer(accessManager);
 
-        var accessItem = accessManager.AccessItem_Create();
-        Assert.AreEqual(accessManager.ServerConfig.TcpEndPointsValue.First().Port,
-            accessItem.Token.ServerToken.HostPort);
-        Assert.AreEqual(accessManager.ServerConfig.IsValidHostName, accessItem.Token.ServerToken.IsValidHostName);
-        Assert.IsNull(accessItem.Token.ServerToken.CertificateHash);
+        var accessToken = accessManager.AccessTokenService.Create();
+        var token = accessManager.GetToken(accessToken);
+        Assert.AreEqual(accessManager.ServerConfig.TcpEndPointsValue.First().Port, token.ServerToken.HostPort);
+        Assert.AreEqual(accessManager.ServerConfig.IsValidHostName, token.ServerToken.IsValidHostName);
+        Assert.IsNull(token.ServerToken.CertificateHash);
     }
 
     [TestMethod]
@@ -34,22 +34,22 @@ public class FileAccessManagerTest : TestBase
         var accessManager1 = new FileAccessManager(storagePath, fileAccessManagerOptions);
 
         //add two tokens
-        var accessItem1 = accessManager1.AccessItem_Create();
-        var sessionRequestEx1 = TestHelper.CreateSessionRequestEx(accessItem1.Token);
+        var token1 = accessManager1.CreateToken();
+        var sessionRequestEx1 = TestHelper.CreateSessionRequestEx(token1);
         sessionRequestEx1.ExtraData = "1234";
 
-        var accessItem2 = accessManager1.AccessItem_Create();
-        var sessionRequestEx2 = TestHelper.CreateSessionRequestEx(accessItem2.Token);
+        var token2 = accessManager1.CreateToken();
+        var sessionRequestEx2 = TestHelper.CreateSessionRequestEx(token2);
 
-        var accessItem3 = accessManager1.AccessItem_Create();
+        var token3 = accessManager1.CreateToken();
 
         // ************
         // *** TEST ***: get all tokensId
-        var accessItems = await accessManager1.AccessItem_LoadAll();
-        Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem1.Token.TokenId));
-        Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem2.Token.TokenId));
-        Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem3.Token.TokenId));
-        Assert.AreEqual(3, accessItems.Length);
+        var accessTokenDatas = await accessManager1.AccessTokenService.List();
+        Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token1.TokenId));
+        Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token2.TokenId));
+        Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token3.TokenId));
+        Assert.AreEqual(3, accessTokenDatas.Length);
 
 
         // ************
@@ -65,12 +65,12 @@ public class FileAccessManagerTest : TestBase
 
         // ************
         // *** TEST ***: Removing token
-        accessManager1.AccessItem_Delete(accessItem1.Token.TokenId).Wait();
-        accessItems = await accessManager1.AccessItem_LoadAll();
-        Assert.IsFalse(accessItems.Any(x => x.Token.TokenId == accessItem1.Token.TokenId));
-        Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem2.Token.TokenId));
-        Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem3.Token.TokenId));
-        Assert.AreEqual(2, accessItems.Length);
+        accessManager1.AccessTokenService.Delete(token1.TokenId).Wait();
+        accessTokenDatas = await accessManager1.AccessTokenService.List();
+        Assert.IsFalse(accessTokenDatas.Any(x => x.AccessToken.TokenId == token1.TokenId));
+        Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token2.TokenId));
+        Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token3.TokenId));
+        Assert.AreEqual(2, accessTokenDatas.Length);
         Assert.AreEqual(accessManager1.Session_Create(sessionRequestEx1).Result.ErrorCode,
             SessionErrorCode.AccessError);
 
@@ -78,10 +78,10 @@ public class FileAccessManagerTest : TestBase
         // *** TEST ***: token must be retrieved by new instance after reloading (last operation is remove)
         var accessManager2 = new FileAccessManager(storagePath, fileAccessManagerOptions);
 
-        accessItems = await accessManager2.AccessItem_LoadAll();
-        Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem2.Token.TokenId));
-        Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem3.Token.TokenId));
-        Assert.AreEqual(2, accessItems.Length);
+        accessTokenDatas = await accessManager2.AccessTokenService.List();
+        Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token2.TokenId));
+        Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token3.TokenId));
+        Assert.AreEqual(2, accessTokenDatas.Length);
 
         // ************
         // *** TEST ***: token must be retrieved with TokenId
@@ -90,10 +90,10 @@ public class FileAccessManagerTest : TestBase
 
         // ************
         // *** TEST ***: token must be retrieved after reloading
-        accessManager1.AccessItem_Create();
+        accessManager1.CreateToken();
         var accessManager3 = new FileAccessManager(storagePath, fileAccessManagerOptions);
-        accessItems = await accessManager3.AccessItem_LoadAll();
-        Assert.AreEqual(3, accessItems.Length);
+        accessTokenDatas = await accessManager3.AccessTokenService.List();
+        Assert.AreEqual(3, accessTokenDatas.Length);
         Assert.AreEqual(SessionErrorCode.Ok, accessManager3.Session_Create(sessionRequestEx2).Result.ErrorCode,
             "access has not been retrieved");
     }
@@ -105,8 +105,8 @@ public class FileAccessManagerTest : TestBase
         var accessManager1 = TestHelper.CreateAccessManager(storagePath: storagePath);
 
         //add token
-        var accessItem1 = accessManager1.AccessItem_Create();
-        var sessionRequestEx1 = TestHelper.CreateSessionRequestEx(accessItem1.Token);
+        var token = accessManager1.CreateToken();
+        var sessionRequestEx1 = TestHelper.CreateSessionRequestEx(token);
 
         // create a session
         var sessionResponse = await accessManager1.Session_Create(sessionRequestEx1);

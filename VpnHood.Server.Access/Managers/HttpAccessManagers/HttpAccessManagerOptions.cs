@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Server.Access.Managers.Http;
+﻿namespace VpnHood.Server.Access.Managers.HttpAccessManagers;
 
 public class HttpAccessManagerOptions
 {

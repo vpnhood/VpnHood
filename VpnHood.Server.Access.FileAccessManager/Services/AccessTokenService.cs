@@ -9,11 +9,18 @@ using VpnHood.Server.Access.Managers.FileAccessManagers.Dtos;
 
 namespace VpnHood.Server.Access.Managers.FileAccessManagers.Services;
 
-public class AccessTokenService(string storagePath)
+public class AccessTokenService
 {
-    private const string FileExtAccessTokenLegacy = ".token";
+    private const string FileExtAccessToken = ".token2";
     private const string FileExtAccessTokenUsage = ".usage";
     private readonly ConcurrentDictionary<string, AccessTokenData> _items = new();
+    private readonly string _storagePath;
+
+    public AccessTokenService(string storagePath)
+    {
+        _storagePath = storagePath;
+        AccessTokenLegacyConverter.ConvertToken1ToToken2(storagePath, FileExtAccessToken);
+    }
 
     private string GetAccessTokenFileName(string tokenId)
     {
@@ -21,7 +28,7 @@ public class AccessTokenService(string storagePath)
         if (tokenId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             throw new InvalidOperationException("invalid character int token id.");
 
-        return Path.Combine(storagePath, tokenId + FileExtAccessTokenLegacy);
+        return Path.Combine(_storagePath, tokenId + FileExtAccessToken);
     }
 
     private string GetAccessTokenUsageFileName(string tokenId)
@@ -30,7 +37,7 @@ public class AccessTokenService(string storagePath)
         if (tokenId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             throw new InvalidOperationException("invalid character int token id.");
 
-        return Path.Combine(storagePath, tokenId + FileExtAccessTokenUsage);
+        return Path.Combine(_storagePath, tokenId + FileExtAccessTokenUsage);
     }
 
     public AccessToken Create(
@@ -65,7 +72,7 @@ public class AccessTokenService(string storagePath)
 
     public async Task<AccessTokenData[]> List()
     {
-        var files = Directory.GetFiles(storagePath, "*" + FileExtAccessTokenLegacy);
+        var files = Directory.GetFiles(_storagePath, "*" + FileExtAccessToken);
         var tokenItems = new List<AccessTokenData>();
 
         foreach (var file in files) {
@@ -79,7 +86,7 @@ public class AccessTokenService(string storagePath)
 
     public Task<int> GetTotalCount()
     {
-        var files = Directory.GetFiles(storagePath, "*" + FileExtAccessTokenLegacy);
+        var files = Directory.GetFiles(_storagePath, "*" + FileExtAccessToken);
         return Task.FromResult(files.Length);
     }
 

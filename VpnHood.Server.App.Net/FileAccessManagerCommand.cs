@@ -35,23 +35,25 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
         var endPoints = token.ServerToken.HostEndPoints?.Select(x => x.ToString()) ?? Array.Empty<string>();
 
         Console.WriteLine();
-        Console.WriteLine("Access Details:");
-        Console.WriteLine(JsonSerializer.Serialize(accessTokenData.Usage, new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine("--- Access Usage ---");
         Console.WriteLine();
-        Console.WriteLine($"{nameof(Token.SupportId)}: {token.SupportId}");
+        Console.WriteLine($"{nameof(accessTokenData.Usage.Sent)}: {VhUtil.FormatBytes(accessTokenData.Usage.Sent)}");
+        Console.WriteLine($"{nameof(accessTokenData.Usage.Received)}: {VhUtil.FormatBytes(accessTokenData.Usage.Received)}");
+
+        Console.WriteLine();
+        Console.WriteLine("--- Access Token ---");
+        Console.WriteLine();
         Console.WriteLine($"{nameof(ServerToken.HostEndPoints)}: {string.Join(",", endPoints)}");
         Console.WriteLine($"{nameof(ServerToken.HostName)}: {hostName}");
         Console.WriteLine($"{nameof(ServerToken.HostPort)}: {token.ServerToken.HostPort}");
         Console.WriteLine("TokenUpdateUrls: " + (VhUtil.IsNullOrEmpty(token.ServerToken.Urls) ? "NotSet" : ""));
         foreach (var url in token.ServerToken.Urls ?? [])
             Console.WriteLine($"\t Url: {url}");
-        Console.WriteLine("---");
 
         Console.WriteLine();
-        Console.WriteLine("AccessKey:");
+        Console.WriteLine("--- AccessKey ---");
         Console.WriteLine();
         Console.WriteLine(token.ToAccessKey());
-        Console.WriteLine("---");
         Console.WriteLine();
     }
 

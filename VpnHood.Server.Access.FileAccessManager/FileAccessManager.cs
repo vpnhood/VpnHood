@@ -263,7 +263,7 @@ public class FileAccessManager : IAccessManager
         return SessionService.GetSession(sessionId, accessTokenData, hostEndPoint);
     }
 
-    public async Task<SessionResponseEx[]> Session_GetAll()
+    public Task<SessionResponseEx[]> Session_GetAll()
     {
         // get all tokenIds
         //var tokenIds = SessionService.Sessions.Select(x => x.Value.TokenId);

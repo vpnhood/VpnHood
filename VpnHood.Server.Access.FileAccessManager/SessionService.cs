@@ -12,7 +12,7 @@ using VpnHood.Server.Access.Messaging;
 
 namespace VpnHood.Server.Access.Managers.File;
 
-public class FileAccessManagerSessionController : IDisposable, IJob
+public class SessionService : IDisposable, IJob
 {
     private const string SessionFileExtension = "session";
     private readonly TimeSpan _sessionPermanentlyTimeout = TimeSpan.FromHours(48);
@@ -24,7 +24,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
 
     public ConcurrentDictionary<ulong, Session> Sessions { get; }
 
-    public FileAccessManagerSessionController(string sessionsFolderPath)
+    public SessionService(string sessionsFolderPath)
     {
         JobRunner.Default.Add(this);
         _sessionsFolderPath = sessionsFolderPath;
@@ -124,7 +124,6 @@ public class FileAccessManagerSessionController : IDisposable, IJob
 
         //create response
         var ret = BuildSessionResponse(session, accessItem);
-        ret.ExtraData = session.ExtraData;
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 
@@ -151,8 +150,17 @@ public class FileAccessManagerSessionController : IDisposable, IJob
 
         // create response
         var ret = BuildSessionResponse(session, accessItem);
-        ret.ExtraData = session.ExtraData;
         return ret;
+    }
+
+    public SessionResponseEx[] GetSessions(FileAccessManager.AccessItem?[] accessItems)
+    {
+        //var ret = Sessions.Values
+        //    .Select(x => BuildSessionResponse(x, accessItems.f))
+        //    .ToArray();
+
+        //return ret;
+        throw new NotImplementedException();
     }
 
     private SessionResponseEx BuildSessionResponse(Session session, FileAccessManager.AccessItem accessItem)
@@ -239,7 +247,8 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             ErrorMessage = session.ErrorMessage,
             AccessUsage = accessUsage,
             RedirectHostEndPoint = null,
-            AdRequirement = accessItem.AdRequirement
+            AdRequirement = accessItem.AdRequirement,
+            ExtraData = session.ExtraData
         };
     }
 

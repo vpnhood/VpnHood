@@ -180,7 +180,7 @@ public class ServerTest : TestBase
         // create client
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
-        Assert.IsTrue(accessManager.SessionController.Sessions.TryGetValue(client.SessionId, out var session));
+        Assert.IsTrue(accessManager.SessionService.Sessions.TryGetValue(client.SessionId, out var session));
         await client.DisposeAsync();
 
         await TestHelper.WaitForClientState(client, ClientState.Disposed);
@@ -268,7 +268,7 @@ public class ServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
 
-        accessManager.SessionController.Sessions.Clear();
+        accessManager.SessionService.Sessions.Clear();
         await server.SessionManager.SyncSessions();
 
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {

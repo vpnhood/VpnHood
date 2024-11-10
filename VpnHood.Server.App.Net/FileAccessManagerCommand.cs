@@ -2,7 +2,7 @@
 using McMaster.Extensions.CommandLineUtils;
 using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
-using VpnHood.Server.Access.Managers.File;
+using VpnHood.Server.Access.Managers.FileAccessManagers;
 
 namespace VpnHood.Server.App;
 
@@ -27,29 +27,30 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
 
     private async Task PrintToken(string tokenId)
     {
-        var accessItem = await fileAccessManager.AccessItem_Read(tokenId).VhConfigureAwait();
-        if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
-        var hostName = accessItem.Token.ServerToken.HostName +
-                       (accessItem.Token.ServerToken.IsValidHostName ? "" : " (Fake)");
-        var endPoints = accessItem.Token.ServerToken.HostEndPoints?.Select(x => x.ToString()) ?? Array.Empty<string>();
+        var accessTokenData = await fileAccessManager.AccessTokenService.Get(tokenId).VhConfigureAwait();
+        var token = fileAccessManager.GetToken(accessTokenData.AccessToken);
+        if (accessTokenData == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
+        var hostName = token.ServerToken.HostName +
+                       (token.ServerToken.IsValidHostName ? "" : " (Fake)");
+        var endPoints = token.ServerToken.HostEndPoints?.Select(x => x.ToString()) ?? Array.Empty<string>();
 
         Console.WriteLine();
         Console.WriteLine("Access Details:");
-        Console.WriteLine(JsonSerializer.Serialize(accessItem.AccessUsage, new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine(JsonSerializer.Serialize(accessTokenData.Usage, new JsonSerializerOptions { WriteIndented = true }));
         Console.WriteLine();
-        Console.WriteLine($"{nameof(Token.SupportId)}: {accessItem.Token.SupportId}");
+        Console.WriteLine($"{nameof(Token.SupportId)}: {token.SupportId}");
         Console.WriteLine($"{nameof(ServerToken.HostEndPoints)}: {string.Join(",", endPoints)}");
         Console.WriteLine($"{nameof(ServerToken.HostName)}: {hostName}");
-        Console.WriteLine($"{nameof(ServerToken.HostPort)}: {accessItem.Token.ServerToken.HostPort}");
-        Console.WriteLine("TokenUpdateUrls: " + (VhUtil.IsNullOrEmpty(accessItem.Token.ServerToken.Urls) ? "NotSet" : ""));
-        foreach (var url in accessItem.Token.ServerToken.Urls ?? [])
+        Console.WriteLine($"{nameof(ServerToken.HostPort)}: {token.ServerToken.HostPort}");
+        Console.WriteLine("TokenUpdateUrls: " + (VhUtil.IsNullOrEmpty(token.ServerToken.Urls) ? "NotSet" : ""));
+        foreach (var url in token.ServerToken.Urls ?? [])
             Console.WriteLine($"\t Url: {url}");
         Console.WriteLine("---");
 
         Console.WriteLine();
         Console.WriteLine("AccessKey:");
         Console.WriteLine();
-        Console.WriteLine(accessItem.Token.ToAccessKey());
+        Console.WriteLine(token.ToAccessKey());
         Console.WriteLine("---");
         Console.WriteLine();
     }
@@ -67,7 +68,7 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
             CommandOptionType.SingleValue);
 
         cmdApp.OnExecuteAsync(async _ => {
-            var accessItem = accessManager.AccessItem_Create(
+            var accessToken = accessManager.AccessTokenService.Create(
                 tokenName: nameOption.HasValue() ? nameOption.Value() : null,
                 maxClientCount: maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()!) : 2,
                 maxTrafficByteCount: maxTrafficOptions.HasValue()
@@ -77,8 +78,8 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
             );
 
             Console.WriteLine("The following token has been generated: ");
-            await PrintToken(accessItem.Token.TokenId).VhConfigureAwait();
-            Console.WriteLine($"Store Token Count: {accessManager.AccessItem_Count()}");
+            await PrintToken(accessToken.TokenId).VhConfigureAwait();
+            Console.WriteLine($"Store Token Count: {accessManager.AccessTokenService.GetTotalCount()}");
             return 0;
         });
     }

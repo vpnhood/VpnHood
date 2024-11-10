@@ -1,9 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.IpLocations;
 using VpnHood.Common.IpLocations.Providers;
@@ -12,14 +9,14 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
+using VpnHood.Server.Access.Managers.FileAccessManagers.Dtos;
+using VpnHood.Server.Access.Managers.FileAccessManagers.Services;
 using VpnHood.Server.Access.Messaging;
 
-namespace VpnHood.Server.Access.Managers.File;
+namespace VpnHood.Server.Access.Managers.FileAccessManagers;
 
 public class FileAccessManager : IAccessManager
 {
-    private const string FileExtToken = ".token";
-    private const string FileExtUsage = ".usage";
     private ServerToken _serverToken;
     public FileAccessManagerOptions ServerConfig { get; }
     public string StoragePath { get; }
@@ -30,6 +27,7 @@ public class FileAccessManager : IAccessManager
     public ServerStatus? ServerStatus { get; private set; }
     public ServerInfo? ServerInfo { get; private set; }
     public bool IsMaintenanceMode => false; //this server never goes into maintenance mode
+    public AccessTokenService AccessTokenService { get; }
 
     public FileAccessManager(string storagePath, FileAccessManagerOptions options)
     {
@@ -41,7 +39,7 @@ public class FileAccessManager : IAccessManager
         Directory.CreateDirectory(StoragePath);
 
         var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
-        DefaultCert = System.IO.File.Exists(defaultCertFile)
+        DefaultCert = File.Exists(defaultCertFile)
             ? new X509Certificate2(defaultCertFile, options.SslCertificatesPassword ?? string.Empty, X509KeyStorageFlags.Exportable)
             : CreateSelfSignedCertificate(defaultCertFile, options.SslCertificatesPassword ?? string.Empty);
 
@@ -58,6 +56,7 @@ public class FileAccessManager : IAccessManager
 
         // get server token
         _serverToken = GetAndUpdateServerToken();
+        AccessTokenService = new AccessTokenService(storagePath);
     }
 
     public void ClearCache()
@@ -93,10 +92,10 @@ public class FileAccessManager : IAccessManager
         };
 
         // write encrypted server token
-        if (System.IO.File.Exists(encServerTokenFilePath))
+        if (File.Exists(encServerTokenFilePath))
             try {
                 var oldServerToken = ServerToken.Decrypt(serverConfig.ServerSecret ?? new byte[16],
-                    System.IO.File.ReadAllText(encServerTokenFilePath));
+                    File.ReadAllText(encServerTokenFilePath));
                 if (!oldServerToken.IsTokenUpdated(serverToken))
                     return oldServerToken;
             }
@@ -105,7 +104,7 @@ public class FileAccessManager : IAccessManager
             }
 
         Directory.CreateDirectory(Path.GetDirectoryName(encServerTokenFilePath)!);
-        System.IO.File.WriteAllText(encServerTokenFilePath, serverToken.Encrypt());
+        File.WriteAllText(encServerTokenFilePath, serverToken.Encrypt());
         return serverToken;
     }
 
@@ -115,7 +114,7 @@ public class FileAccessManager : IAccessManager
         var secretBase64 = TryToReadFile(serverSecretFile);
         if (string.IsNullOrEmpty(secretBase64)) {
             secretBase64 = Convert.ToBase64String(VhUtil.GenerateKey(128));
-            System.IO.File.WriteAllText(serverSecretFile, secretBase64);
+            File.WriteAllText(serverSecretFile, secretBase64);
         }
 
         return Convert.FromBase64String(secretBase64);
@@ -139,7 +138,7 @@ public class FileAccessManager : IAccessManager
 
                 var ipLocation = await ipLocationProvider.GetCurrentLocation(cancellationTokenSource.Token).VhConfigureAwait();
                 serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName, ipLocation.CityName);
-                await System.IO.File.WriteAllTextAsync(serverCountryFile, serverLocation, CancellationToken.None).VhConfigureAwait();
+                await File.WriteAllTextAsync(serverCountryFile, serverLocation, CancellationToken.None).VhConfigureAwait();
             }
 
             VhLogger.Instance.LogInformation("ServerLocation: {ServerLocation}", serverLocation ?? "Unknown");
@@ -154,7 +153,7 @@ public class FileAccessManager : IAccessManager
     private static string? TryToReadFile(string filePath)
     {
         try {
-            return System.IO.File.Exists(filePath) ? System.IO.File.ReadAllText(filePath) : null;
+            return File.Exists(filePath) ? File.ReadAllText(filePath) : null;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not read file: {FilePath}", filePath);
@@ -188,24 +187,52 @@ public class FileAccessManager : IAccessManager
 
     public virtual async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
-        var accessItem = await AccessItem_Read(sessionRequestEx.TokenId).VhConfigureAwait();
-        if (accessItem == null)
+        var accessTokenData = await AccessTokenService.TryGet(sessionRequestEx.TokenId).VhConfigureAwait();
+        if (accessTokenData == null)
             return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
                 ErrorMessage = "Token does not exist."
             };
 
-        var ret = SessionService.CreateSession(sessionRequestEx, accessItem);
+        var ret = SessionService.CreateSession(sessionRequestEx, accessTokenData);
         var locationInfo = _serverToken.ServerLocations?.Any() == true
             ? ServerLocationInfo.Parse(_serverToken.ServerLocations.First())
             : null;
+
         ret.ServerLocation = locationInfo?.ServerLocation;
 
         // update accesskey
         if (ServerConfig.ReplyAccessKey)
-            ret.AccessKey = accessItem.Token.ToAccessKey();
+            ret.AccessKey = GetToken(accessTokenData.AccessToken).ToAccessKey();
 
         return ret;
+    }
+
+    public Token CreateToken(int maxClientCount = 1, string? tokenName = null, int maxTrafficByteCount = 0, 
+        DateTime? expirationTime = null, AdRequirement adRequirement = AdRequirement.None)
+    {
+        var accessToken = AccessTokenService.Create(
+            tokenName: tokenName,
+            maxClientCount: maxClientCount,
+            maxTrafficByteCount: maxTrafficByteCount,
+            expirationTime: expirationTime,
+            adRequirement: adRequirement
+        );
+
+        return GetToken(accessToken);
+    }
+
+
+    public Token GetToken(AccessToken accessToken)
+    {
+        return new Token {
+            TokenId = accessToken.TokenId,
+            Name = accessToken.Name,
+            IssuedAt = accessToken.IssuedAt,
+            Secret = accessToken.Secret,
+            ServerToken = _serverToken,
+            SupportId = null
+        };
     }
 
     public virtual async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint,
@@ -224,8 +251,8 @@ public class FileAccessManager : IAccessManager
             };
 
         // read accessItem
-        var accessItem = await AccessItem_Read(tokenId).VhConfigureAwait();
-        if (accessItem == null)
+        var accessTokenData = await AccessTokenService.Get(tokenId).VhConfigureAwait();
+        if (accessTokenData == null)
             return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
                 SessionId = sessionId,
@@ -233,17 +260,18 @@ public class FileAccessManager : IAccessManager
             };
 
         // read usage
-        return SessionService.GetSession(sessionId, accessItem, hostEndPoint);
+        return SessionService.GetSession(sessionId, accessTokenData, hostEndPoint);
     }
 
     public async Task<SessionResponseEx[]> Session_GetAll()
     {
         // get all tokenIds
-        var tokenIds = SessionService.Sessions.Select(x => x.Value.TokenId);
-        // read all accessItems
-        var accessItems = await Task.WhenAll(tokenIds.Select(AccessItem_Read));
+        //var tokenIds = SessionService.Sessions.Select(x => x.Value.TokenId);
+        //// read all accessItems
+        //var accessItems = await Task.WhenAll(tokenIds.Select(AccessItem_Read));
 
-        return SessionService.GetSessions(accessItems);
+        //return SessionService.GetSessions(accessItems);
+        throw new NotImplementedException();
     }
 
     public virtual Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
@@ -273,15 +301,14 @@ public class FileAccessManager : IAccessManager
             };
 
         // read accessItem
-        var accessItem = await AccessItem_Read(tokenId).VhConfigureAwait();
-        if (accessItem == null)
+        var accessTokenData = await AccessTokenService.Get(tokenId).VhConfigureAwait();
+        if (accessTokenData == null)
             return new SessionResponse {
                 ErrorCode = SessionErrorCode.AccessError,
                 ErrorMessage = "Token does not exist."
             };
 
-        accessItem.AccessUsage.Traffic += traffic;
-        await WriteAccessItemUsage(accessItem).VhConfigureAwait();
+        await AccessTokenService.AddUsage(tokenId, traffic);
 
         if (closeSession)
             SessionService.CloseSession(sessionId);
@@ -290,7 +317,7 @@ public class FileAccessManager : IAccessManager
         if (IsValidAd(adData))
             SessionService.Sessions[sessionId].ExpirationTime = null;
 
-        var res = SessionService.GetSession(sessionId, accessItem, null);
+        var res = SessionService.GetSession(sessionId, accessTokenData, null);
         var ret = new SessionResponse {
             ErrorCode = res.ErrorCode,
             AccessUsage = res.AccessUsage,
@@ -306,23 +333,6 @@ public class FileAccessManager : IAccessManager
         SessionService.Dispose();
     }
 
-    private string GetAccessItemFileName(string tokenId)
-    {
-        // check is tokenId has any invalid file character
-        if (tokenId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-            throw new InvalidOperationException("invalid character int token id.");
-
-        return Path.Combine(StoragePath, tokenId + FileExtToken);
-    }
-
-    private string GetUsageFileName(string tokenId)
-    {
-        // check is tokenId has any invalid file character
-        if (tokenId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-            throw new InvalidOperationException("invalid character int token id.");
-
-        return Path.Combine(StoragePath, tokenId + FileExtUsage);
-    }
 
     public string GetCertFilePath(IPEndPoint ipEndPoint)
     {
@@ -335,155 +345,7 @@ public class FileAccessManager : IAccessManager
         var certificate = CertificateUtil.CreateSelfSigned();
         var buf = certificate.Export(X509ContentType.Pfx, password);
         Directory.CreateDirectory(Path.GetDirectoryName(certFilePath)!);
-        System.IO.File.WriteAllBytes(certFilePath, buf);
+        File.WriteAllBytes(certFilePath, buf);
         return new X509Certificate2(certFilePath, password, X509KeyStorageFlags.Exportable);
-    }
-
-    public async Task<AccessItem[]> AccessItem_LoadAll()
-    {
-        var files = Directory.GetFiles(StoragePath, "*" + FileExtToken);
-        var accessItems = new List<AccessItem>();
-
-        foreach (var file in files) {
-            var accessItem = await AccessItem_Read(Path.GetFileNameWithoutExtension(file)).VhConfigureAwait();
-            if (accessItem != null)
-                accessItems.Add(accessItem);
-        }
-
-        return accessItems.ToArray();
-    }
-
-    public int AccessItem_Count()
-    {
-        var files = Directory.GetFiles(StoragePath, "*" + FileExtToken);
-        return files.Length;
-    }
-
-    public AccessItem AccessItem_Create(
-        int maxClientCount = 1,
-        string? tokenName = null,
-        int maxTrafficByteCount = 0,
-        DateTime? expirationTime = null,
-        AdRequirement adRequirement = AdRequirement.None)
-    {
-        // generate key
-        var aes = Aes.Create();
-        aes.KeySize = 128;
-        aes.GenerateKey();
-
-        // create AccessItem
-        var accessItem = new AccessItem {
-            MaxTraffic = maxTrafficByteCount,
-            MaxClientCount = maxClientCount,
-            ExpirationTime = expirationTime,
-            AdRequirement = adRequirement,
-            Token = new Token {
-                IssuedAt = DateTime.UtcNow,
-                TokenId = Guid.NewGuid().ToString(),
-                Secret = aes.Key,
-                Name = tokenName,
-                SupportId = null,
-                ServerToken = _serverToken
-            }
-        };
-
-        var token = accessItem.Token;
-
-        // Write accessItem without server-token
-        var accessItemClone = VhUtil.JsonClone(accessItem);
-        accessItemClone.Token.ServerToken = null!; // remove server token part
-        System.IO.File.WriteAllText(GetAccessItemFileName(token.TokenId), JsonSerializer.Serialize(accessItemClone));
-
-        // build default usage
-        ReadAccessItemUsage(accessItem).Wait();
-        WriteAccessItemUsage(accessItem).Wait();
-
-        return accessItem;
-    }
-
-    public async Task AccessItem_Delete(string tokenId)
-    {
-        // remove index
-        _ = await AccessItem_Read(tokenId).VhConfigureAwait()
-            ?? throw new KeyNotFoundException("Could not find tokenId");
-
-        // delete files
-        if (System.IO.File.Exists(GetUsageFileName(tokenId)))
-            System.IO.File.Delete(GetUsageFileName(tokenId));
-        if (System.IO.File.Exists(GetAccessItemFileName(tokenId)))
-            System.IO.File.Delete(GetAccessItemFileName(tokenId));
-    }
-
-    public async Task<AccessItem?> AccessItem_Read(string tokenId)
-    {
-        // read access item
-        var fileName = GetAccessItemFileName(tokenId);
-        using var fileLock = await AsyncLock.LockAsync(fileName).VhConfigureAwait();
-        if (!System.IO.File.Exists(fileName))
-            return null;
-
-        var json = await System.IO.File.ReadAllTextAsync(fileName).VhConfigureAwait();
-        var accessItem = VhUtil.JsonDeserialize<AccessItem>(json);
-        accessItem.Token.ServerToken = _serverToken; // update server token
-        await ReadAccessItemUsage(accessItem).VhConfigureAwait();
-        return accessItem;
-    }
-
-    private async Task ReadAccessItemUsage(AccessItem accessItem)
-    {
-        // read usageItem
-        accessItem.AccessUsage = new AccessUsage {
-            ExpirationTime = accessItem.ExpirationTime,
-            MaxClientCount = accessItem.MaxClientCount,
-            MaxTraffic = accessItem.MaxTraffic,
-            ActiveClientCount = 0
-        };
-
-        // update usage
-        try {
-            var fileName = GetUsageFileName(accessItem.Token.TokenId);
-            using var fileLock = await AsyncLock.LockAsync(fileName).VhConfigureAwait();
-            if (System.IO.File.Exists(fileName)) {
-                var json = await System.IO.File.ReadAllTextAsync(fileName).VhConfigureAwait();
-                var accessItemUsage = JsonSerializer.Deserialize<AccessItemUsage>(json) ?? new AccessItemUsage();
-                accessItem.AccessUsage.Traffic = new Traffic { Sent = accessItemUsage.SentTraffic, Received = accessItemUsage.ReceivedTraffic };
-            }
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogWarning(
-                $"Error in reading AccessUsage of token: {accessItem.Token.TokenId}, Message: {ex.Message}");
-        }
-    }
-
-    private async Task WriteAccessItemUsage(AccessItem accessItem)
-    {
-        // write token info
-        var accessItemUsage = new AccessItemUsage {
-            ReceivedTraffic = accessItem.AccessUsage.Traffic.Received,
-            SentTraffic = accessItem.AccessUsage.Traffic.Sent
-        };
-        var json = JsonSerializer.Serialize(accessItemUsage);
-
-        // write accessItem
-        var fileName = GetUsageFileName(accessItem.Token.TokenId);
-        using var fileLock = await AsyncLock.LockAsync(fileName).VhConfigureAwait();
-        await System.IO.File.WriteAllTextAsync(fileName, json).VhConfigureAwait();
-    }
-
-    public class AccessItem
-    {
-        public DateTime? ExpirationTime { get; set; }
-        public int MaxClientCount { get; set; }
-        public long MaxTraffic { get; set; }
-        public AdRequirement AdRequirement { get; set; }
-        public required Token Token { get; set; }
-
-        [JsonIgnore] public AccessUsage AccessUsage { get; set; } = new();
-    }
-
-    private class AccessItemUsage
-    {
-        public long SentTraffic { get; init; }
-        public long ReceivedTraffic { get; init; }
     }
 }

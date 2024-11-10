@@ -16,4 +16,5 @@ public class ServerStatus
     public Traffic TunnelSpeed { get; set; } = new();
     public string? ConfigCode { get; set; }
     public string? ConfigError { get; set; }
+    public Dictionary<long, Traffic> SessionTraffics { get; set; } = new();
 }

@@ -115,7 +115,7 @@ public class ClientServerTest : TestBase
         await TestTunnel(server, client);
 
         // check HostEndPoint in server
-        accessManager.SessionController.Sessions.TryGetValue(client.SessionId, out var session);
+        accessManager.SessionService.Sessions.TryGetValue(client.SessionId, out var session);
         Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x => x.Equals(session?.HostEndPoint)));
 
         // check UserAgent in server
@@ -499,7 +499,7 @@ public class ClientServerTest : TestBase
 
         // wait for disposing session in access server
         await VhTestUtil.AssertEqualsWait(false,
-            () => accessManager.SessionController.Sessions.TryGetValue(client.SessionId, out var session) &&
+            () => accessManager.SessionService.Sessions.TryGetValue(client.SessionId, out var session) &&
                   session.IsAlive,
             "Session has not been closed in the access server.");
 

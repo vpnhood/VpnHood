@@ -23,7 +23,7 @@ public class FileAccessManager : IAccessManager
     private ServerToken _serverToken;
     public FileAccessManagerOptions ServerConfig { get; }
     public string StoragePath { get; }
-    public FileAccessManagerSessionController SessionController { get; }
+    public SessionService SessionService { get; }
     public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
     public string SessionsFolderPath => Path.Combine(StoragePath, "sessions");
     public X509Certificate2 DefaultCert { get; }
@@ -37,7 +37,7 @@ public class FileAccessManager : IAccessManager
 
         StoragePath = storagePath ?? throw new ArgumentNullException(nameof(storagePath));
         ServerConfig = options;
-        SessionController = new FileAccessManagerSessionController(SessionsFolderPath);
+        SessionService = new SessionService(SessionsFolderPath);
         Directory.CreateDirectory(StoragePath);
 
         var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
@@ -195,7 +195,7 @@ public class FileAccessManager : IAccessManager
                 ErrorMessage = "Token does not exist."
             };
 
-        var ret = SessionController.CreateSession(sessionRequestEx, accessItem);
+        var ret = SessionService.CreateSession(sessionRequestEx, accessItem);
         var locationInfo = _serverToken.ServerLocations?.Any() == true
             ? ServerLocationInfo.Parse(_serverToken.ServerLocations.First())
             : null;
@@ -215,7 +215,7 @@ public class FileAccessManager : IAccessManager
         _ = clientIp;
 
         // find token
-        var tokenId = SessionController.TokenIdFromSessionId(sessionId);
+        var tokenId = SessionService.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
             return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
@@ -233,7 +233,17 @@ public class FileAccessManager : IAccessManager
             };
 
         // read usage
-        return SessionController.GetSession(sessionId, accessItem, hostEndPoint);
+        return SessionService.GetSession(sessionId, accessItem, hostEndPoint);
+    }
+
+    public async Task<SessionResponseEx[]> Session_GetAll()
+    {
+        // get all tokenIds
+        var tokenIds = SessionService.Sessions.Select(x => x.Value.TokenId);
+        // read all accessItems
+        var accessItems = await Task.WhenAll(tokenIds.Select(AccessItem_Read));
+
+        return SessionService.GetSessions(accessItems);
     }
 
     public virtual Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
@@ -255,7 +265,7 @@ public class FileAccessManager : IAccessManager
         bool closeSession)
     {
         // find token
-        var tokenId = SessionController.TokenIdFromSessionId(sessionId);
+        var tokenId = SessionService.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
             return new SessionResponse {
                 ErrorCode = SessionErrorCode.AccessError,
@@ -274,13 +284,13 @@ public class FileAccessManager : IAccessManager
         await WriteAccessItemUsage(accessItem).VhConfigureAwait();
 
         if (closeSession)
-            SessionController.CloseSession(sessionId);
+            SessionService.CloseSession(sessionId);
 
         // manage adData for simulation
         if (IsValidAd(adData))
-            SessionController.Sessions[sessionId].ExpirationTime = null;
+            SessionService.Sessions[sessionId].ExpirationTime = null;
 
-        var res = SessionController.GetSession(sessionId, accessItem, null);
+        var res = SessionService.GetSession(sessionId, accessItem, null);
         var ret = new SessionResponse {
             ErrorCode = res.ErrorCode,
             AccessUsage = res.AccessUsage,
@@ -293,7 +303,7 @@ public class FileAccessManager : IAccessManager
 
     public virtual void Dispose()
     {
-        SessionController.Dispose();
+        SessionService.Dispose();
     }
 
     private string GetAccessItemFileName(string tokenId)

@@ -79,6 +79,11 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         return HttpGetAsync<SessionResponseEx>($"sessions/{sessionId}", parameters);
     }
 
+    public Task<SessionResponseEx[]> Session_GetAll()
+    {
+        return HttpGetAsync<SessionResponseEx[]>("sessions");
+    }
+
     public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
     {
         var parameters = new Dictionary<string, object?> {

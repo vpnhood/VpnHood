@@ -17,7 +17,7 @@ using VpnHood.Server;
 using VpnHood.Server.Abstractions;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
-using VpnHood.Server.Access.Managers.File;
+using VpnHood.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Server.Access.Messaging;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
@@ -39,7 +39,7 @@ internal static class TestHelper
     private static bool LogVerbose => true;
 
 
-    private static int _accessItemIndex;
+    private static int _accessTokenIndex;
 
     public static string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "_test_vpnhood");
 
@@ -200,12 +200,14 @@ internal static class TestHelper
     public static Token CreateAccessToken(FileAccessManager fileAccessManager,
         int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
     {
-        return fileAccessManager.AccessItem_Create(
-            tokenName: $"Test Server {++_accessItemIndex}",
+        var accessToken =  fileAccessManager.AccessTokenService.Create(
+            tokenName: $"Test Server {++_accessTokenIndex}",
             maxClientCount: maxClientCount,
             maxTrafficByteCount: maxTrafficByteCount,
             expirationTime: expirationTime
-        ).Token;
+        );
+
+        return fileAccessManager.GetToken(accessToken);
     }
 
     private static FileAccessManager GetFileAccessManagerFromServer(VpnHoodServer server)

@@ -19,8 +19,7 @@ public class AdTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
-        var accessItem = accessManager.AccessItem_Create(adRequirement: AdRequirement.Flexible);
-        accessItem.Token.ToAccessKey();
+        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
@@ -32,7 +31,7 @@ public class AdTest : TestBase
         adProvider.FailShow = true; // should not reach this state
 
         // connect
-        var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
+        var clientProfile = app.ClientProfileService.ImportAccessKey(accessManager.GetToken(accessToken).ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId);
     }
 
@@ -44,8 +43,7 @@ public class AdTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
-        var accessItem = accessManager.AccessItem_Create(adRequirement: AdRequirement.Flexible);
-        accessItem.Token.ToAccessKey();
+        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
@@ -56,7 +54,8 @@ public class AdTest : TestBase
         //adProviderItem.FailShow = true;
 
         // connect
-        var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
+        var token = accessManager.GetToken(accessToken);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() => app.Connect(clientProfile.ClientProfileId));
         await TestHelper.WaitForAppState(app, AppConnectionState.None);
     }
@@ -69,8 +68,7 @@ public class AdTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
-        var accessItem = accessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
-        accessItem.Token.ToAccessKey();
+        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Required);
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
@@ -81,7 +79,7 @@ public class AdTest : TestBase
         //adProviderItem.FailShow = true;
 
         // connect
-        var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
+        var clientProfile = app.ClientProfileService.ImportAccessKey(accessManager.GetToken(accessToken).ToAccessKey());
         await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() => app.Connect(clientProfile.ClientProfileId));
         await TestHelper.WaitForAppState(app, AppConnectionState.None);
     }
@@ -94,8 +92,7 @@ public class AdTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
-        var accessItem = accessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
-        accessItem.Token.ToAccessKey();
+        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Required);
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
@@ -104,7 +101,8 @@ public class AdTest : TestBase
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
         // connect
-        var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
+        var token = accessManager.GetToken(accessToken);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId);
 
         // assert
@@ -119,8 +117,7 @@ public class AdTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
-        var accessItem = accessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
-        accessItem.Token.ToAccessKey();
+        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Required);
         accessManager.RejectAllAds = true; // server will reject all ads
 
         // create client app
@@ -130,7 +127,8 @@ public class AdTest : TestBase
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
         // connect
-        var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
+        var token = accessManager.GetToken(accessToken);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId);
 
         // asserts

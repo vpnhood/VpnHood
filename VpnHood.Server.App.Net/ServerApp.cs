@@ -13,8 +13,8 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Abstractions;
 using VpnHood.Server.Access.Managers;
-using VpnHood.Server.Access.Managers.File;
-using VpnHood.Server.Access.Managers.Http;
+using VpnHood.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Server.Access.Managers.HttpAccessManagers;
 using VpnHood.Server.App.Providers.Linux;
 using VpnHood.Server.App.Providers.Win;
 using VpnHood.Server.SystemInformation;
@@ -219,7 +219,7 @@ public class ServerApp : IDisposable
                 throw new AnotherInstanceIsRunning();
 
             // check FileAccessManager
-            if (FileAccessManager != null && FileAccessManager.AccessItem_Count() == 0)
+            if (FileAccessManager != null && await FileAccessManager.AccessTokenService.GetTotalCount() == 0)
                 VhLogger.Instance.LogWarning(
                     "There is no token in the store! Use the following command to create one:\n " +
                     "dotnet VpnHoodServer.dll gen -?");

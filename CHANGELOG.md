@@ -13,6 +13,7 @@
 * Fix: IpV6 Subnet in auto IP configuration
 * Feature: Allow to config swap file size
 * Feature: Allow to config UdpClient buffer size
+* Update: File server internal token format
 
 # v4.6.557
 ### Client

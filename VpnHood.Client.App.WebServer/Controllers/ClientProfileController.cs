@@ -12,7 +12,7 @@ internal class ClientProfileController : WebApiController, IClientProfileControl
     private static VpnHoodApp App => VpnHoodApp.Instance;
     
     [Route(HttpVerbs.Put, "/access-keys")]
-    public Task<ClientProfileInfo> AddByAccessKey([QueryField] string accessKey)
+    public Task<ClientProfileInfo> AddByAccessKey(string accessKey)
     {
         var clientProfile = App.ClientProfileService.ImportAccessKey(accessKey);
         return Task.FromResult(clientProfile.ClientProfileInfo);

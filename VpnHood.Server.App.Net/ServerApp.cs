@@ -122,7 +122,6 @@ public class ServerApp : IDisposable
     {
         if (_vpnHoodServer != null) {
             VhLogger.Instance.LogInformation("Syncing all sessions and terminating the server...");
-            _vpnHoodServer.SessionManager.SyncSessions().Wait();
             _vpnHoodServer.Dispose();
         }
     }
@@ -178,7 +177,6 @@ public class ServerApp : IDisposable
     {
         if (!VhUtil.IsNullOrEmpty(e.Arguments) && e.Arguments[0] == "stop") {
             VhLogger.Instance.LogInformation("I have received the stop command!");
-            _vpnHoodServer?.SessionManager.SyncSessions().Wait();
             _vpnHoodServer?.Dispose();
         }
     }

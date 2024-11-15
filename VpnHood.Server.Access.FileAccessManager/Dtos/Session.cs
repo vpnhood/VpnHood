@@ -22,6 +22,7 @@ public class Session
     public SessionErrorCode ErrorCode { get; set; }
     public string? ErrorMessage { get; init; }
     public string? ExtraData { get; init; }
+    public int ProtocolVersion { get; init; }
 
     [JsonConverter(typeof(IPEndPointConverter))]
     public required IPEndPoint HostEndPoint { get; set; }

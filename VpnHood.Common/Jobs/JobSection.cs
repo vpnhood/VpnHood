@@ -13,8 +13,9 @@ public class JobSection
     public DateTime LastDoneTime { get; private set; } = FastDateTime.Now;
     public string? Name { get; init; }
 
-    public JobSection()
+    public JobSection(string? name = null)
     {
+        Name = name;
     }
 
     public JobSection(TimeSpan interval, string? name = null)

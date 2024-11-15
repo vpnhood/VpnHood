@@ -19,5 +19,6 @@ public class ServerOptions
     public string StoragePath { get; init; } = Directory.GetCurrentDirectory();
     public bool PublicIpDiscovery { get; init; } = true;
     public ServerConfig? Config { get; init; }
-    public TimeSpan CleanupInterval { get; init; } = TimeSpan.FromMinutes(1);
+    public TimeSpan DeadSessionTimeout { get; init; } = TimeSpan.FromMinutes(5);
+    public TimeSpan HeartbeatInterval { get; init; } = TimeSpan.FromMinutes(1);
 }

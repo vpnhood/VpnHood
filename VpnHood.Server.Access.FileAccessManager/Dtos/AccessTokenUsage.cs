@@ -1,3 +1,5 @@
+using VpnHood.Common.Messaging;
+
 namespace VpnHood.Server.Access.Managers.FileAccessManagers.Dtos;
 
 public class AccessTokenUsage
@@ -14,4 +16,6 @@ public class AccessTokenUsage
 
     public long Sent { get; set; }
     public long Received { get; set; }
+
+    public Traffic ToTraffic() => new() { Sent = Sent, Received = Received };
 }

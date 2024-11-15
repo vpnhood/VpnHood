@@ -5,6 +5,7 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
+using VpnHood.Server;
 using VpnHood.Test.Device;
 using VpnHood.Tunneling;
 
@@ -86,7 +87,10 @@ public class AccessTest : TestBase
     [TestMethod]
     public async Task Server_reject_trafficOverflow_access()
     {
-        await using var server = await TestHelper.CreateServer();
+        // create server
+        var managerOptions = TestHelper.CreateFileAccessManagerOptions();
+        managerOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
+        await using var server = await TestHelper.CreateServer(managerOptions);
 
         // create a fast expiring token
         var accessToken = TestHelper.CreateAccessToken(server, maxTrafficByteCount: 50);
@@ -97,24 +101,12 @@ public class AccessTest : TestBase
         await using var client1 = await TestHelper.CreateClient(accessToken);
         Assert.AreEqual(50, client1.SessionStatus.AccessUsage?.MaxTraffic);
 
-        // first try should just break the connection
-        try {
-            await TestHelper.Test_Https();
-        }
-        catch {
-            // ignored
-        }
+        VhLogger.Instance.LogTrace("Test: second try should get the AccessTrafficOverflow status.");
+        await VhTestUtil.AssertEqualsWait(SessionErrorCode.AccessTrafficOverflow, async () => {
+            await TestHelper.Test_Https(timeout: 2000, throwError: false);
+            return client1.SessionStatus.ErrorCode;
+        });
 
-        Thread.Sleep(1000);
-        try {
-            VhLogger.Instance.LogTrace("Test: second try should get the AccessTrafficOverflow status.");
-            await TestHelper.Test_Https(timeout: 2000);
-        }
-        catch {
-            // ignored
-        }
-
-        Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, client1.SessionStatus.ErrorCode);
 
         // ----------
         // check: client must disconnect at hello on traffic overflow
@@ -135,9 +127,12 @@ public class AccessTest : TestBase
     [TestMethod]
     public async Task Server_maxClient_suppress_other_sessions()
     {
+        var managerOptions = TestHelper.CreateFileAccessManagerOptions();
+        managerOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
+
         // Create Server
-        await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server, 2);
+        await using var server = await TestHelper.CreateServer(managerOptions);
+        var token = TestHelper.CreateAccessToken(server, maxClientCount: 2);
 
         // create default token with 2 client count
         await using var client1 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
@@ -145,8 +140,7 @@ public class AccessTest : TestBase
 
         // suppress by yourself
         await using var client2 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
-            token: token,
-            clientId: client1.ClientId);
+            token: token, clientId: client1.ClientId);
 
         Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.None, client2.SessionStatus.SuppressedBy);

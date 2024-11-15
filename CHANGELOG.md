@@ -1,6 +1,7 @@
-# v4.6.578
+# Upcoming
 ### Client
 * Feature: Update server token from multiple URLs
+* Feature: Handle Trial Session
 * Improve: Improve initialization speed to exclude my country
 * Improve: Diagnostic wrongly reports your internet may not be stable
 * Update: Add token tags
@@ -15,6 +16,11 @@
 * Feature: Allow to config UdpClient buffer size
 * Update: File server internal token format
 * Improve: Bulk sync to AccessManager
+
+### Development
+* Update: Migrate to .NET 9.0
+* Update: Use composite API fpr SPA
+
 
 # v4.6.557
 ### Client

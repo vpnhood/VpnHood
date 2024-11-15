@@ -76,7 +76,7 @@ public class AccessTokenService
         var tokenItems = new List<AccessTokenData>();
 
         foreach (var file in files) {
-            var tokenItem = await TryGet(Path.GetFileNameWithoutExtension(file)).VhConfigureAwait();
+            var tokenItem = await Find(Path.GetFileNameWithoutExtension(file)).VhConfigureAwait();
             if (tokenItem != null)
                 tokenItems.Add(tokenItem);
         }
@@ -90,7 +90,7 @@ public class AccessTokenService
         return Task.FromResult(files.Length);
     }
 
-    public async Task<AccessTokenData> Find(string tokenId)
+    public async Task<AccessTokenData> Get(string tokenId)
     {
         // try get from cache
         if (_items.TryGetValue(tokenId, out var accessTokenData))
@@ -138,10 +138,10 @@ public class AccessTokenService
         return accessTokenData;
     }
 
-    public async Task<AccessTokenData?> TryGet(string tokenId)
+    public async Task<AccessTokenData?> Find(string tokenId)
     {
         try {
-            return await Find(tokenId).VhConfigureAwait();
+            return await Get(tokenId).VhConfigureAwait();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Failed to get token item. TokenId: {TokenId}", tokenId);
@@ -156,7 +156,7 @@ public class AccessTokenService
         //lock tokenId
 
         // validate is it exists
-        var accessTokenData = await Find(tokenId).VhConfigureAwait();
+        var accessTokenData = await Get(tokenId).VhConfigureAwait();
 
         // add usage
         using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId)).VhConfigureAwait();
@@ -172,7 +172,7 @@ public class AccessTokenService
     public async Task Delete(string tokenId)
     {
         // validate is it exists
-        _ = await TryGet(tokenId).VhConfigureAwait()
+        _ = await Find(tokenId).VhConfigureAwait()
             ?? throw new KeyNotFoundException("Could not find tokenId");
 
         // delete from cache

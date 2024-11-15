@@ -119,7 +119,19 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         // Configure
         State = ServerState.Waiting;
+
+        // recover previous sessions
+        try {
+            VhLogger.Instance.LogInformation("Recovering old sessions...");
+            await SessionManager.RecoverSessions();
+            VhLogger.Instance.LogInformation("{SessionCount} sessions has been recovered.", SessionManager.Sessions);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not recover old sessions.");
+        }
+
         await RunJob().VhConfigureAwait();
+
     }
 
     private async Task Configure()

@@ -646,7 +646,7 @@ public class ServerHost : IAsyncDisposable, IJob
         await clientStream.DisposeAsync(false).VhConfigureAwait();
 
         // must be last
-        await _sessionManager.CloseSession(session.SessionId).VhConfigureAwait();
+        await _sessionManager.CloseSession(session.SessionId);
     }
 
     private async Task ProcessUdpPacketRequest(IClientStream clientStream, CancellationToken cancellationToken)

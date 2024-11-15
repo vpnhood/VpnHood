@@ -8,6 +8,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
+using VpnHood.Server;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
@@ -63,7 +64,8 @@ public class ServerTest : TestBase
         // Create Server
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
         serverOptions.SessionOptions.SyncCacheSize = 10000000;
-        serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMicroseconds(200);
+        serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
+        serverOptions.UpdateStatusInterval = TimeSpan.FromMilliseconds(200);
         var accessManager = TestHelper.CreateAccessManager(serverOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
 
@@ -80,9 +82,11 @@ public class ServerTest : TestBase
         await TestHelper.Test_Https();
 
         // check usage should still not be 0 after interval
-        await Task.Delay(1000);
-        sessionResponseEx = await accessManager.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);
-        Assert.IsTrue(sessionResponseEx.AccessUsage!.Traffic.Received > 0);
+        await VhTestUtil.AssertEqualsWait(true, async () => {
+            sessionResponseEx = await accessManager.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);
+            return sessionResponseEx.AccessUsage!.Traffic.Received > 0;
+
+        });
     }
 
     [TestMethod]
@@ -259,9 +263,10 @@ public class ServerTest : TestBase
     public async Task Server_should_close_session_if_it_does_not_exist_in_access_server()
     {
         // create server
-        var accessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        accessManagerOptions.SessionOptions.SyncCacheSize = 1000000;
-        using var accessManager = TestHelper.CreateAccessManager(accessManagerOptions);
+        var serverOptions = TestHelper.CreateFileAccessManagerOptions();
+        serverOptions.SessionOptions.SyncCacheSize = 1000000;
+        serverOptions.UpdateStatusInterval = TimeSpan.FromMilliseconds(200);
+        using var accessManager = TestHelper.CreateAccessManager(serverOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client
@@ -269,7 +274,6 @@ public class ServerTest : TestBase
         await using var client = await TestHelper.CreateClient(token);
 
         accessManager.SessionService.Sessions.Clear();
-        await server.SessionManager.SyncSessions();
 
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {
             await TestHelper.Test_Https(throwError: false, timeout: 1000);

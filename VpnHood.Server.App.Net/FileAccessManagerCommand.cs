@@ -26,7 +26,7 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
 
     private async Task PrintToken(string tokenId)
     {
-        var accessTokenData = await fileAccessManager.AccessTokenService.Get(tokenId).VhConfigureAwait();
+        var accessTokenData = await fileAccessManager.AccessTokenService.Find(tokenId).VhConfigureAwait();
         var token = fileAccessManager.GetToken(accessTokenData.AccessToken);
         if (accessTokenData == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
         var hostName = token.ServerToken.HostName +

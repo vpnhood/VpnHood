@@ -2,5 +2,6 @@
 
 internal class SessionManagerOptions
 {
-    public required TimeSpan CleanupInterval { get; init; }
+    public required TimeSpan DeadSessionTimeout { get; init; }
+    public required TimeSpan HeartbeatInterval { get; init; }
 }

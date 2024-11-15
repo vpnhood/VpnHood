@@ -19,9 +19,10 @@ public class SessionService : IDisposable, IJob
     private readonly TimeSpan _adRequiredTimeout = TimeSpan.FromMinutes(4);
     private ulong _lastSessionId;
     private readonly string _sessionsFolderPath;
+    private readonly ConcurrentDictionary<ulong, bool> _updatedSessionIds = new ();
+    public ConcurrentDictionary<ulong, Session> Sessions { get; }
     public JobSection JobSection { get; } = new();
 
-    public ConcurrentDictionary<ulong, Session> Sessions { get; }
 
     public SessionService(string sessionsFolderPath)
     {
@@ -78,7 +79,7 @@ public class SessionService : IDisposable, IJob
         }
     }
 
-    public string? TokenIdFromSessionId(ulong sessionId)
+    public string? FindTokenIdFromSessionId(ulong sessionId)
     {
         return Sessions.TryGetValue(sessionId, out var session) ? session.TokenId : null;
     }
@@ -115,6 +116,7 @@ public class SessionService : IDisposable, IJob
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,
             ExtraData = sessionRequestEx.ExtraData,
+            ProtocolVersion = sessionRequestEx.ClientInfo.ProtocolVersion,
             ExpirationTime = accessTokenData.AccessToken.AdRequirement is AdRequirement.Required
                 ? DateTime.UtcNow + _adRequiredTimeout
                 : null
@@ -133,7 +135,7 @@ public class SessionService : IDisposable, IJob
         return ret;
     }
 
-    public SessionResponseEx GetSession(ulong sessionId, AccessTokenData accessTokenData,
+    public SessionResponseEx GetSessionResponse(ulong sessionId, AccessTokenData accessTokenData,
         IPEndPoint? hostEndPoint)
     {
         // check existence
@@ -161,12 +163,20 @@ public class SessionService : IDisposable, IJob
         throw new NotImplementedException();
     }
 
+    public ulong[] ResetUpdatedSessions()
+    {
+        lock (_updatedSessionIds) {
+            var sessionIds = _updatedSessionIds.Select(x => x.Key).ToArray();
+            _updatedSessionIds.Clear();
+            return sessionIds;
+        }
+    }
     private SessionResponseEx BuildSessionResponse(Session session, AccessTokenData accessTokenData)
     {
         var accessToken = accessTokenData.AccessToken;
         var accessUsage = new AccessUsage {
             ActiveClientCount = 0,
-            ExpirationTime = accessToken.ExpirationTime,
+            ExpirationTime = session.ExpirationTime,
             MaxClientCount = accessToken.MaxClientCount,
             MaxTraffic = accessToken.MaxTraffic,
             Traffic = new Traffic(accessTokenData.Usage.Sent, accessTokenData.Usage.Received)
@@ -212,14 +222,18 @@ public class SessionService : IDisposable, IJob
                     selfSession.SuppressedBy = SessionSuppressType.YourSelf;
                     selfSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
                     selfSession.Kill();
+                    lock (_updatedSessionIds) {
+                        _updatedSessionIds.TryAdd(selfSession.SessionId, true);
+                    }
                 }
             }
 
             if (accessUsage.MaxClientCount != 0) {
                 // suppressedTo others by MaxClientCount
                 var otherSessions2 = otherSessions
-                    .Where(x => x.ClientInfo.ClientId != session.ClientInfo.ClientId &&
-                                x.SessionId != session.SessionId)
+                    .Where(x => 
+                        x.ClientInfo.ClientId != session.ClientInfo.ClientId &&
+                        x.SessionId != session.SessionId)
                     .OrderBy(x => x.CreatedTime).ToArray();
 
                 for (var i = 0; i <= otherSessions2.Length - accessUsage.MaxClientCount; i++) {
@@ -228,6 +242,9 @@ public class SessionService : IDisposable, IJob
                     otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
                     otherSession.EndTime = FastDateTime.Now;
                     session.SuppressedTo = SessionSuppressType.Other;
+                    lock (_updatedSessionIds) {
+                        _updatedSessionIds.TryAdd(otherSession.SessionId, true);
+                    }
                 }
             }
 
@@ -253,7 +270,8 @@ public class SessionService : IDisposable, IJob
             AccessUsage = accessUsage,
             RedirectHostEndPoint = null,
             AdRequirement = accessToken.AdRequirement,
-            ExtraData = session.ExtraData
+            ExtraData = session.ExtraData,
+            ProtocolVersion = session.ProtocolVersion,
         };
     }
 
@@ -271,4 +289,5 @@ public class SessionService : IDisposable, IJob
     public void Dispose()
     {
     }
+  
 }

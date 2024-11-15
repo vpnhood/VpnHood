@@ -1,4 +1,5 @@
 ﻿using VpnHood.Common.Messaging;
+using VpnHood.Server.Access.Messaging;
 
 namespace VpnHood.Server.Access;
 
@@ -16,5 +17,5 @@ public class ServerStatus
     public Traffic TunnelSpeed { get; set; } = new();
     public string? ConfigCode { get; set; }
     public string? ConfigError { get; set; }
-    public Dictionary<long, Traffic> SessionTraffics { get; set; } = new();
+    public SessionUsage[] SessionUsages { get; set; } = [];
 }

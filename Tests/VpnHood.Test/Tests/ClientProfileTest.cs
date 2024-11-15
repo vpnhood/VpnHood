@@ -87,7 +87,7 @@ public class ClientProfileTest : TestBase
 
         // test two region in a same country
         var token = CreateToken();
-        token.Tags = ["#public"];
+        token.IsPublic = true;
         var defaultPolicy = new ClientPolicy {
             ClientCountry = "*",
             FreeLocations = ["US", "CA"],
@@ -156,7 +156,7 @@ public class ClientProfileTest : TestBase
         Assert.AreEqual(caPolicy.PremiumByTrial, location.Options.PremiumByTrial);
 
         // create premium token
-        token.Tags = [];
+        token.IsPublic = false;
         clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         clientProfileInfo = clientProfileItem.ClientProfileInfo;
         location = clientProfileInfo.ServerLocationInfos.Single(x => x.ServerLocation == "FR/*");

@@ -38,6 +38,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Xamarin.GooglePlayServices.Ads.Lite" Version="123.1.0.1" />
+	  <PackageReference Include="Xamarin.GooglePlayServices.Ads.Lite" Version="123.5.0.1" />
 	</ItemGroup>
 </Project>

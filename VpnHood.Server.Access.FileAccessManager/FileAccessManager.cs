@@ -332,9 +332,6 @@ public class FileAccessManager : IAccessManager
         foreach (var updatedSessionId in updatedSessionIds.Where(x => !ret.ContainsKey(x))) {
             var sessionUsage = new SessionUsage {
                 SessionId = updatedSessionId,
-                Sent = 0,
-                Received = 0,
-                Closed = false
             };
 
             try {

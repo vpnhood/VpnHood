@@ -6,6 +6,6 @@ namespace VpnHood.Client.App.Maui.Common;
 internal interface IVpnHoodMauiApp
 {
     IDevice Device { get; }
-    IAppCultureService? CultureService { get; }
+    IAppCultureProvider? CultureService { get; }
     void Init(VpnHoodApp vpnHoodApp);
 }

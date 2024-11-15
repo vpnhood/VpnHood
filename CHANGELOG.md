@@ -2,11 +2,13 @@
 ### Client
 * Feature: Update server token from multiple URLs
 * Feature: Handle Trial Session
+* Feature: Drop QUIC in protocol
 * Improve: Improve initialization speed to exclude my country
 * Improve: Diagnostic wrongly reports your internet may not be stable
+* Update: Translate many error messages
 * Update: Add token tags
 * Update: Add server tags
-* Update: Generate anonymous client Id from device Id
+* Update: Generate anonymous client ID from device ID
 * Fix: Startup crash on some Android devices
 
 ### Server
@@ -14,7 +16,7 @@
 * Fix: IpV6 Subnet in auto IP configuration
 * Feature: Allow to config swap file size
 * Feature: Allow to config UdpClient buffer size
-* Update: File server internal token format
+* Update: File server-internal token format
 * Improve: Bulk sync to AccessManager
 
 ### Development

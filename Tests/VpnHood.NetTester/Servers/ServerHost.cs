@@ -64,7 +64,7 @@ internal class ServerHost(IPAddress listenerIp) : IDisposable
     private static X509Certificate2 LoadCertificate(string domain)
     {
         var raw = File.ReadAllBytes($"../certs/{domain}.pfx");
-        var cert = new X509Certificate2(raw);
+        var cert = X509CertificateLoader.LoadPkcs12(raw, password: null);
         return cert;
     }
 

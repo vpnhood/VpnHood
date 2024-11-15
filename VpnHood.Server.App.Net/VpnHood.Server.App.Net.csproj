@@ -3,7 +3,7 @@
 		<Description>VpnHood Server App.</Description>
 		<RootNamespace>VpnHood.Server.App</RootNamespace>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net9.0</TargetFramework>
 		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
 	</PropertyGroup>
 
@@ -48,10 +48,10 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
 		<PackageReference Include="NLog" Version="5.3.4" />
 		<PackageReference Include="NLog.Extensions.Logging" Version="5.3.14" />
-		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.1" />
+		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Server.Access.FileAccessManager\VpnHood.Server.Access.FileAccessManager.csproj" />

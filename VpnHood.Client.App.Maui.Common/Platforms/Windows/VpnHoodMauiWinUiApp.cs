@@ -20,7 +20,7 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
     protected AppWindow? AppWindow;
     
     public IDevice Device { get; } = new WinDivertDevice();
-    public IAppCultureService? CultureService => null;
+    public IAppCultureProvider? CultureService => null;
 
     public void Init(VpnHoodApp vpnHoodApp)
     {

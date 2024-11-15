@@ -237,11 +237,20 @@ public class ServerTest : TestBase
             TestHelper.Test_Https(timeout: 10000, throwError: false)
         );
 
-        Assert.AreEqual(1, accessManager.SessionGetCounter);
+        Assert.AreEqual(0, accessManager.SessionGetCounter, "session must loaded in startup.");
 
+        // remove session from access server
+        server2.SessionManager.Sessions.Remove(client.SessionId, out _);
 
-        await client.DisposeAsync();
-        await server2.DisposeAsync();
+        // try using recovery
+        await Task.WhenAll(
+            TestHelper.Test_Https(timeout: 10000, throwError: false),
+            TestHelper.Test_Https(timeout: 10000, throwError: false),
+            TestHelper.Test_Https(timeout: 10000, throwError: false),
+            TestHelper.Test_Https(timeout: 10000, throwError: false)
+        );
+
+        Assert.AreEqual(1, accessManager.SessionGetCounter, "session must be recovered once.");
     }
 
     [TestMethod]

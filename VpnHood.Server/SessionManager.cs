@@ -69,22 +69,28 @@ public class SessionManager : IAsyncDisposable, IJob
         IPEndPointPair ipEndPointPair,
         string requestId)
     {
-        var extraData = sessionResponseEx.ExtraData != null
-            ? VhUtil.JsonDeserialize<SessionExtraData>(sessionResponseEx.ExtraData)
-            : new SessionExtraData();
-
-        var session = new Session(_accessManager, sessionResponseEx, NetFilter, _socketFactory,
-            SessionOptions, TrackingOptions, extraData, protocolVersion: sessionResponseEx.ProtocolVersion);
-
         // add to sessions
+        var session = BuildSessionFromResponseEx(sessionResponseEx);
         if (Sessions.TryAdd(session.SessionId, session))
             return session;
 
         session.SessionResponse.ErrorMessage = "Could not add session to collection.";
         session.SessionResponse.ErrorCode = SessionErrorCode.SessionError;
         await session.DisposeAsync().VhConfigureAwait();
-        throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session,
-            session.SessionResponse, requestId);
+        throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponse, requestId);
+    }
+
+    private Session BuildSessionFromResponseEx(SessionResponseEx sessionResponseEx)
+    {
+        var extraData = sessionResponseEx.ExtraData != null
+            ? VhUtil.JsonDeserialize<SessionExtraData>(sessionResponseEx.ExtraData)
+            : new SessionExtraData();
+
+        var session = new Session(
+            _accessManager, sessionResponseEx, NetFilter, _socketFactory,
+            SessionOptions, TrackingOptions, extraData, protocolVersion: sessionResponseEx.ProtocolVersion);
+
+        return session;
     }
 
     public async Task<SessionResponseEx> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair)
@@ -122,8 +128,9 @@ public class SessionManager : IAsyncDisposable, IJob
         // Anonymous Report to GA
         _ = GaTrackNewSession(helloRequest.ClientInfo);
 
-        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Session,
-            $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
+        VhLogger.Instance.LogInformation(GeneralEventId.Session,
+            "New session has been created. SessionId: {SessionId}",
+            VhLogger.FormatSessionId(session.SessionId));
         return sessionResponseEx;
     }
 
@@ -145,6 +152,25 @@ public class SessionManager : IAsyncDisposable, IJob
                 }
             }
         ]);
+    }
+
+    public async Task RecoverSessions()
+    {
+        // recover all sessions
+        var responseExs = await _accessManager.Session_GetAll().VhConfigureAwait();
+        foreach (var responseEx in responseExs) {
+            try {
+                var session = BuildSessionFromResponseEx(responseEx);
+                if (!Sessions.TryAdd(session.SessionId, session)) {
+                    await session.DisposeAsync().VhConfigureAwait();
+                    throw new Exception("Could not add session to collection.");
+                }
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "Could not add a session. SessionId: {SessionId}",
+                    VhLogger.FormatSessionId(responseEx.SessionId));
+            }
+        }
     }
 
     private async Task<Session> RecoverSession(RequestBase sessionRequest, IPEndPointPair ipEndPointPair)

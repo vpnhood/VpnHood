@@ -109,6 +109,13 @@ public class TestEmbedIoAccessManager : IDisposable
             return res;
         }
 
+        [Route(HttpVerbs.Get, "/sessions")]
+        public async Task<SessionResponseEx[]> Session_GetAll()
+        {
+            var res = await AccessManager.Session_GetAll();
+            return res;
+        }
+
         [Route(HttpVerbs.Get, "/sessions/{sessionId}")]
         public async Task<SessionResponseEx> Session_Get(ulong sessionId,
             [QueryField] string hostEndPoint, [QueryField] string? clientIp)

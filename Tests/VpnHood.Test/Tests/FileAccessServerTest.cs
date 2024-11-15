@@ -62,6 +62,7 @@ public class FileAccessManagerTest : TestBase
         var sessionResponse = await accessManager1.Session_Get(sessionResponseEx1.SessionId,
             sessionRequestEx1.HostEndPoint, sessionRequestEx1.ClientIp);
         Assert.AreEqual(sessionRequestEx1.ExtraData, sessionResponse.ExtraData);
+        Assert.AreEqual(sessionRequestEx1.ClientInfo.ProtocolVersion, sessionResponse.ProtocolVersion);
 
         // ************
         // *** TEST ***: Removing token

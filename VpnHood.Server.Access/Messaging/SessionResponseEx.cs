@@ -4,6 +4,7 @@ namespace VpnHood.Server.Access.Messaging;
 
 public class SessionResponseEx : SessionResponse
 {
+    public int ProtocolVersion { get; set; }
     public string? ExtraData { get; set; }
     public string? GaMeasurementId { get; set; }
     public string? AccessKey { get; set; }

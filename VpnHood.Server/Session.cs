@@ -2,7 +2,6 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Common.ApiClients;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -22,20 +21,18 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Server;
 
-public class Session : IAsyncDisposable, IJob
+public class Session : IAsyncDisposable
 {
     private readonly INetFilter _netFilter;
     private readonly IAccessManager _accessManager;
     private readonly SessionProxyManager _proxyManager;
     private readonly ISocketFactory _socketFactory;
-    private readonly AsyncLock _syncLock = new();
     private readonly object _verifyRequestLock = new();
     private readonly int _maxTcpConnectWaitCount;
     private readonly int _maxTcpChannelCount;
     private readonly int? _tcpBufferSize;
     private readonly int? _tcpKernelSendBufferSize;
     private readonly int? _tcpKernelReceiveBufferSize;
-    private readonly long _syncCacheSize;
     private readonly TimeSpan _tcpConnectTimeout;
     private readonly TrackingOptions _trackingOptions;
 
@@ -51,18 +48,20 @@ public class Session : IAsyncDisposable, IJob
     private readonly EventReporter _filterReporter =
         new(VhLogger.Instance, "Some requests has been blocked.", GeneralEventId.NetProtect);
 
-    private readonly Traffic _syncTraffic = new();
+    private readonly Traffic _prevTraffic = new();
     private int _tcpConnectWaitCount;
 
     public Tunnel Tunnel { get; }
     public ulong SessionId { get; }
     public byte[] SessionKey { get; }
-    public SessionResponse SessionResponse { get; private set; }
+    public SessionResponse SessionResponse { get; internal set; }
     public UdpChannel? UdpChannel => Tunnel.UdpChannel;
-    public bool IsDisposed { get; private set; }
+    public bool IsDisposed => DisposedTime != null;
+    public DateTime? DisposedTime { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
     public JobSection JobSection { get; }
     public SessionExtraData SessionExtraData { get; }
+    public int ProtocolVersion { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
     public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (Tunnel.IsUdpMode ? 0 : Tunnel.DatagramChannelCount);
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
@@ -71,8 +70,10 @@ public class Session : IAsyncDisposable, IJob
     internal Session(IAccessManager accessManager, SessionResponseEx sessionResponse,
         INetFilter netFilter,
         ISocketFactory socketFactory,
-        SessionOptions options, TrackingOptions trackingOptions,
-        SessionExtraData sessionExtraData)
+        SessionOptions options,
+        TrackingOptions trackingOptions,
+        SessionExtraData sessionExtraData,
+        int protocolVersion)
     {
         var sessionTuple = Tuple.Create("SessionId", (object?)sessionResponse.SessionId);
         var logScope = new LogScope();
@@ -96,7 +97,6 @@ public class Session : IAsyncDisposable, IJob
         _tcpBufferSize = options.TcpBufferSize;
         _tcpKernelSendBufferSize = options.TcpKernelSendBufferSize;
         _tcpKernelReceiveBufferSize = options.TcpKernelReceiveBufferSize;
-        _syncCacheSize = options.SyncCacheSizeValue;
         _tcpConnectTimeout = options.TcpConnectTimeoutValue;
         _netFilter = netFilter;
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
@@ -104,26 +104,50 @@ public class Session : IAsyncDisposable, IJob
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         JobSection = new JobSection(options.SyncIntervalValue);
         SessionExtraData = sessionExtraData;
+        ProtocolVersion = protocolVersion;
         SessionResponse = sessionResponse;
         SessionId = sessionResponse.SessionId;
-        SessionKey = sessionResponse.SessionKey ??
-                     throw new InvalidOperationException(
-                         $"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
+        SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException(
+            $"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
         Tunnel = new Tunnel(new TunnelOptions { MaxDatagramChannelCount = options.MaxDatagramChannelCountValue });
         Tunnel.PacketReceived += Tunnel_OnPacketReceived;
 
         // ReSharper disable once MergeIntoPattern
         if (options.NetScanLimit != null && options.NetScanTimeout != null)
             NetScanDetector = new NetScanDetector(options.NetScanLimit.Value, options.NetScanTimeout.Value);
-
-        JobRunner.Default.Add(this);
     }
 
-    public Task RunJob()
+    public Traffic Traffic {
+        get {
+            lock (_prevTraffic) {
+                // Intentionally Reversed: sending to tunnel means receiving form client,
+                // Intentionally Reversed: receiving from tunnel means sending for client
+                return new Traffic {
+                    Sent = Tunnel.Traffic.Received - _prevTraffic.Sent,
+                    Received = Tunnel.Traffic.Sent - _prevTraffic.Received
+                };
+            }
+        }
+    }
+
+    public Traffic ResetTraffic()
     {
-        return IsDisposed
-            ? Task.CompletedTask
-            : Sync(true, false);
+        lock (_prevTraffic) {
+            var traffic = Traffic;
+            _prevTraffic.Add(traffic);
+            return traffic;
+        }
+    }
+
+    private bool _syncRequired;
+    public void SetSyncRequired() => _syncRequired = true;
+    public bool IsSyncRequired => _syncRequired;
+
+    public bool ResetSyncRequired()
+    {
+        var oldValue = _syncRequired;
+        _syncRequired = false;
+        return oldValue;
     }
 
     public bool UseUdpChannel {
@@ -137,7 +161,7 @@ public class Session : IAsyncDisposable, IJob
                 return;
 
             // add new channel
-            var udpChannel = new UdpChannel(SessionId, SessionKey, true, SessionExtraData.ProtocolVersion);
+            var udpChannel = new UdpChannel(SessionId, SessionKey, true, ProtocolVersion);
             try {
                 Tunnel.AddChannel(udpChannel);
             }
@@ -165,56 +189,6 @@ public class Session : IAsyncDisposable, IJob
             }
 
             _ = _proxyManager.SendPacket(ipPacket2);
-        }
-    }
-
-    public Task Sync()
-    {
-        return Sync(true, false);
-    }
-
-    private async Task Sync(bool force, bool closeSession, string? adData = null)
-    {
-        using var syncLock = await _syncLock.LockAsync().VhConfigureAwait();
-        if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
-            return;
-
-        // prepare scope
-        using var scope = VhLogger.Instance.BeginScope(
-            $"Server => SessionId: {VhLogger.FormatSessionId(SessionId)}");
-
-        // calculate traffic
-        var traffic = new Traffic {
-            Sent = Tunnel.Traffic.Received -
-                   _syncTraffic.Sent, // Intentionally Reversed: sending to tunnel means receiving form client,
-            Received = Tunnel.Traffic.Sent -
-                       _syncTraffic.Received // Intentionally Reversed: receiving from tunnel means sending for client
-        };
-
-        var shouldSync = closeSession || force || traffic.Total >= _syncCacheSize;
-        if (!shouldSync)
-            return;
-
-        // reset usage and sync time; no matter it is successful or not to prevent frequent call
-        _syncTraffic.Add(traffic);
-
-        try {
-            SessionResponse = closeSession
-                ? await _accessManager.Session_Close(SessionId, traffic).VhConfigureAwait()
-                : await _accessManager.Session_AddUsage(SessionId, traffic, adData).VhConfigureAwait();
-
-            // dispose for any error
-            if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
-                await DisposeAsync(false, false).VhConfigureAwait();
-        }
-        catch (ApiException ex) when (ex.StatusCode == (int)HttpStatusCode.NotFound) {
-            SessionResponse.ErrorCode = SessionErrorCode.AccessError;
-            SessionResponse.ErrorMessage = "Session Not Found.";
-            await DisposeAsync(false, false).VhConfigureAwait();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogWarning(GeneralEventId.AccessManager, ex,
-                "Could not report usage to the access-server.");
         }
     }
 
@@ -301,7 +275,7 @@ public class Session : IAsyncDisposable, IJob
     public async Task ProcessAdRewardRequest(AdRewardRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
-        await Sync(force: true, closeSession: false, adData: request.AdData).VhConfigureAwait();
+        SessionResponse = await _accessManager.Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData).VhConfigureAwait();
         await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken).VhConfigureAwait();
         await clientStream.DisposeAsync().VhConfigureAwait();
     }
@@ -418,28 +392,15 @@ public class Session : IAsyncDisposable, IJob
         throw new NetScanException(remoteEndPoint, this, requestId);
     }
 
-    public ValueTask Close()
+    private readonly AsyncLock _disposeLock = new();
+    public async ValueTask DisposeAsync()
     {
-        return DisposeAsync(true, true);
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        return DisposeAsync(true, false);
-    }
-
-    private async ValueTask DisposeAsync(bool sync, bool byUser)
-    {
+        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (IsDisposed) return;
-        IsDisposed = true;
-
-        // Sync must before dispose, Some dispose may take time
-        if (sync)
-            await Sync(true, byUser).VhConfigureAwait();
+        DisposedTime = DateTime.UtcNow;
 
         Tunnel.PacketReceived -= Tunnel_OnPacketReceived;
-        _ = Tunnel.DisposeAsync();
-        _ = _proxyManager.DisposeAsync();
+        await Task.WhenAll(Tunnel.DisposeAsync().AsTask(), _proxyManager.DisposeAsync().AsTask());
         _netScanExceptionReporter.Dispose();
         _maxTcpChannelExceptionReporter.Dispose();
         _maxTcpConnectWaitExceptionReporter.Dispose();
@@ -447,7 +408,7 @@ public class Session : IAsyncDisposable, IJob
         // if there is no reason it is temporary
         var reason = "Cleanup";
         if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
-            reason = byUser ? "User" : "Access";
+            reason = SessionResponse.ErrorCode == SessionErrorCode.SessionClosed ? "User" : "Access";
 
         // Report removing session
         VhLogger.Instance.LogInformation(GeneralEventId.SessionTrack,

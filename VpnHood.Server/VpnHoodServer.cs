@@ -59,7 +59,10 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             options.SocketFactory,
             options.Tracker,
             ServerVersion,
-            new SessionManagerOptions { CleanupInterval = options.CleanupInterval });
+            new SessionManagerOptions {
+                DeadSessionTimeout = options.DeadSessionTimeout,
+                HeartbeatInterval = options.HeartbeatInterval,
+            });
 
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
@@ -170,7 +173,10 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
             SessionManager.ServerSecret = serverConfig.ServerSecret ?? SessionManager.ServerSecret;
-            JobSection.Interval = serverConfig.UpdateStatusIntervalValue;
+            JobSection.Interval = serverConfig.UpdateStatusIntervalValue < serverConfig.SessionOptions.SyncIntervalValue
+                ? serverConfig.UpdateStatusIntervalValue // update status interval must be less than sync interval
+                : serverConfig.SessionOptions.SyncIntervalValue;
+
             ServerUtil.ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
             ServerUtil.ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
             var allServerIps = serverInfo.PublicIpAddresses
@@ -216,7 +222,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 _lastConfigError.Data.Add("SocketErrorCode", socketException.SocketErrorCode.ToString());
 
             SessionManager.Tracker?.VhTrackErrorAsync(ex, "Could not configure server!", "Configure");
-            VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.",
+            VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.", 
                 JobSection.Interval.TotalSeconds);
             await SendStatusToAccessManager(false).VhConfigureAwait();
         }
@@ -406,7 +412,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         try {
             var status = await GetStatus();
             VhLogger.Instance.LogTrace("Sending status to Access... ConfigCode: {ConfigCode}", status.ConfigCode);
+            status.SessionUsages = SessionManager.CollectSessionUsages();
             var res = await AccessManager.Server_UpdateStatus(status).VhConfigureAwait();
+            SessionManager.ApplySessionResponses(res.SessionResponses);
 
             // reconfigure
             if (allowConfigure && (res.ConfigCode != _lastConfigCode)) {

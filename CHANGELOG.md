@@ -14,6 +14,7 @@
 * Feature: Allow to config swap file size
 * Feature: Allow to config UdpClient buffer size
 * Update: File server internal token format
+* Improve: Bulk sync to AccessManager
 
 # v4.6.557
 ### Client

@@ -35,6 +35,7 @@ public class FileAccessManager : IAccessManager
 
         StoragePath = storagePath ?? throw new ArgumentNullException(nameof(storagePath));
         ServerConfig = options;
+        AccessTokenService = new AccessTokenService(storagePath);
         SessionService = new SessionService(SessionsFolderPath);
         Directory.CreateDirectory(StoragePath);
 
@@ -56,7 +57,6 @@ public class FileAccessManager : IAccessManager
 
         // get server token
         _serverToken = GetAndUpdateServerToken();
-        AccessTokenService = new AccessTokenService(storagePath);
     }
 
     public void ClearCache()
@@ -161,10 +161,13 @@ public class FileAccessManager : IAccessManager
         }
     }
 
-    public virtual Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
+    public virtual async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
     {
         ServerStatus = serverStatus;
-        return Task.FromResult(new ServerCommand(ServerConfig.ConfigCode));
+        var result = new ServerCommand(ServerConfig.ConfigCode) {
+            SessionResponses = await Session_AddUsages(serverStatus.SessionUsages).VhConfigureAwait()
+        };
+        return result;
     }
 
     public virtual Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
@@ -185,30 +188,7 @@ public class FileAccessManager : IAccessManager
         return Task.FromResult((ServerConfig)ServerConfig);
     }
 
-    public virtual async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
-    {
-        var accessTokenData = await AccessTokenService.TryGet(sessionRequestEx.TokenId).VhConfigureAwait();
-        if (accessTokenData == null)
-            return new SessionResponseEx {
-                ErrorCode = SessionErrorCode.AccessError,
-                ErrorMessage = "Token does not exist."
-            };
-
-        var ret = SessionService.CreateSession(sessionRequestEx, accessTokenData);
-        var locationInfo = _serverToken.ServerLocations?.Any() == true
-            ? ServerLocationInfo.Parse(_serverToken.ServerLocations.First())
-            : null;
-
-        ret.ServerLocation = locationInfo?.ServerLocation;
-
-        // update accesskey
-        if (ServerConfig.ReplyAccessKey)
-            ret.AccessKey = GetToken(accessTokenData.AccessToken).ToAccessKey();
-
-        return ret;
-    }
-
-    public Token CreateToken(int maxClientCount = 1, string? tokenName = null, int maxTrafficByteCount = 0, 
+    public Token CreateToken(int maxClientCount = 1, string? tokenName = null, int maxTrafficByteCount = 0,
         DateTime? expirationTime = null, AdRequirement adRequirement = AdRequirement.None)
     {
         var accessToken = AccessTokenService.Create(
@@ -235,6 +215,32 @@ public class FileAccessManager : IAccessManager
         };
     }
 
+    public virtual async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+    {
+        var accessTokenData = await AccessTokenService.TryGet(sessionRequestEx.TokenId).VhConfigureAwait();
+        if (accessTokenData == null)
+            return new SessionResponseEx {
+                ErrorCode = SessionErrorCode.AccessError,
+                ErrorMessage = "Token does not exist."
+            };
+
+        var ret = SessionService.CreateSession(sessionRequestEx, accessTokenData);
+        if (ret.ErrorCode != SessionErrorCode.Ok)
+            return ret;
+
+        var locationInfo = _serverToken.ServerLocations?.Any() == true
+            ? ServerLocationInfo.Parse(_serverToken.ServerLocations.First())
+            : null;
+
+        ret.ServerLocation = locationInfo?.ServerLocation;
+
+        // update accesskey
+        if (ServerConfig.ReplyAccessKey)
+            ret.AccessKey = GetToken(accessTokenData.AccessToken).ToAccessKey();
+
+        return ret;
+    }
+
     public virtual async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint,
         IPAddress? clientIp)
     {
@@ -242,7 +248,7 @@ public class FileAccessManager : IAccessManager
         _ = clientIp;
 
         // find token
-        var tokenId = SessionService.TokenIdFromSessionId(sessionId);
+        var tokenId = SessionService.FindTokenIdFromSessionId(sessionId);
         if (tokenId == null)
             return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
@@ -251,7 +257,7 @@ public class FileAccessManager : IAccessManager
             };
 
         // read accessItem
-        var accessTokenData = await AccessTokenService.Get(tokenId).VhConfigureAwait();
+        var accessTokenData = await AccessTokenService.Find(tokenId).VhConfigureAwait();
         if (accessTokenData == null)
             return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
@@ -260,7 +266,7 @@ public class FileAccessManager : IAccessManager
             };
 
         // read usage
-        return SessionService.GetSession(sessionId, accessTokenData, hostEndPoint);
+        return SessionService.GetSessionResponse(sessionId, accessTokenData, hostEndPoint);
     }
 
     public Task<SessionResponseEx[]> Session_GetAll()
@@ -274,26 +280,77 @@ public class FileAccessManager : IAccessManager
         throw new NotImplementedException();
     }
 
+
     public virtual Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
     {
-        return Session_AddUsage(sessionId, traffic, adData, false);
+        return Session_AddUsage(new SessionUsage {
+            SessionId = sessionId,
+            Sent = traffic.Sent,
+            Received = traffic.Received,
+            Closed = false,
+            AdData = adData
+        });
     }
 
     public virtual Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic)
     {
-        return Session_AddUsage(sessionId, traffic, adData: null, closeSession: true);
+        return Session_AddUsage(new SessionUsage {
+            SessionId = sessionId,
+            Sent = traffic.Sent,
+            Received = traffic.Received,
+            Closed = true
+        });
     }
 
-    protected virtual bool IsValidAd(string? adData)
+    public async Task<Dictionary<ulong, SessionResponse>> Session_AddUsages(SessionUsage[] sessionUsages)
     {
-        return true; // this server does not validate ad at server side
+        var ret = new Dictionary<ulong, SessionResponse>();
+        foreach (var sessionUsage in sessionUsages) {
+            try {
+                var sessionResponse = await Session_AddUsage(sessionUsage);
+                ret[sessionUsage.SessionId] = sessionResponse;
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "Failed to add usage. SessionId: {SessionId}", sessionUsage.SessionId);
+                ret[sessionUsage.SessionId] = new SessionResponse {
+                    ErrorCode = SessionErrorCode.AccessError,
+                    ErrorMessage = "Failed to add usage."
+                };
+            }
+        }
+
+        // add updated sessions that are not in the list
+        var updatedSessionIds = SessionService.ResetUpdatedSessions();
+        foreach (var updatedSessionId in updatedSessionIds.Where(x => !ret.ContainsKey(x))) {
+            var sessionUsage = new SessionUsage {
+                SessionId = updatedSessionId,
+                Sent = 0,
+                Received = 0,
+                Closed = false
+            };
+
+            try {
+                var sessionResponse = await Session_AddUsage(sessionUsage);
+                ret[sessionUsage.SessionId] = sessionResponse;
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "Failed to add usage. SessionId: {SessionId}", sessionUsage.SessionId);
+                ret[sessionUsage.SessionId] = new SessionResponse {
+                    ErrorCode = SessionErrorCode.AccessError,
+                    ErrorMessage = "Failed to add usage."
+                };
+            }
+        }
+
+        return ret;
     }
 
-    private async Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData,
-        bool closeSession)
+    private async Task<SessionResponse> Session_AddUsage(SessionUsage sessionUsage)
     {
+        var sessionId = sessionUsage.SessionId;
+
         // find token
-        var tokenId = SessionService.TokenIdFromSessionId(sessionId);
+        var tokenId = SessionService.FindTokenIdFromSessionId(sessionId);
         if (tokenId == null)
             return new SessionResponse {
                 ErrorCode = SessionErrorCode.AccessError,
@@ -301,23 +358,23 @@ public class FileAccessManager : IAccessManager
             };
 
         // read accessItem
-        var accessTokenData = await AccessTokenService.Get(tokenId).VhConfigureAwait();
+        var accessTokenData = await AccessTokenService.Find(tokenId).VhConfigureAwait();
         if (accessTokenData == null)
             return new SessionResponse {
                 ErrorCode = SessionErrorCode.AccessError,
                 ErrorMessage = "Token does not exist."
             };
 
-        await AccessTokenService.AddUsage(tokenId, traffic);
+        await AccessTokenService.AddUsage(tokenId, sessionUsage.ToTraffic());
 
-        if (closeSession)
+        if (sessionUsage.Closed)
             SessionService.CloseSession(sessionId);
 
         // manage adData for simulation
-        if (IsValidAd(adData))
-            SessionService.Sessions[sessionId].ExpirationTime = null;
+        if (IsValidAd(sessionUsage.AdData) && SessionService.Sessions.TryGetValue(sessionId, out var session))
+            session.ExpirationTime = null;
 
-        var res = SessionService.GetSession(sessionId, accessTokenData, null);
+        var res = SessionService.GetSessionResponse(sessionId, accessTokenData, null);
         var ret = new SessionResponse {
             ErrorCode = res.ErrorCode,
             AccessUsage = res.AccessUsage,
@@ -327,6 +384,11 @@ public class FileAccessManager : IAccessManager
 
         return ret;
     }
+    protected virtual bool IsValidAd(string? adData)
+    {
+        return true; // this server does not validate ad at server side
+    }
+
 
     public virtual void Dispose()
     {

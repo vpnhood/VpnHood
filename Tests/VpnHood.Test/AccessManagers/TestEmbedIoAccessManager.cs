@@ -110,29 +110,26 @@ public class TestEmbedIoAccessManager : IDisposable
         }
 
         [Route(HttpVerbs.Get, "/sessions/{sessionId}")]
-        public async Task<SessionResponseEx> Session_Get([QueryField] Guid serverId, ulong sessionId,
+        public async Task<SessionResponseEx> Session_Get(ulong sessionId,
             [QueryField] string hostEndPoint, [QueryField] string? clientIp)
         {
-            _ = serverId;
             var res = await AccessManager.Session_Get(sessionId, IPEndPoint.Parse(hostEndPoint),
                 clientIp != null ? IPAddress.Parse(clientIp) : null);
             return res;
         }
 
         [Route(HttpVerbs.Post, "/sessions")]
-        public async Task<SessionResponseEx> Session_Create([QueryField] Guid serverId)
+        public async Task<SessionResponseEx> Session_Create()
         {
-            _ = serverId;
             var sessionRequestEx = await GetRequestDataAsync<SessionRequestEx>();
             var res = await AccessManager.Session_Create(sessionRequestEx);
             return res;
         }
 
         [Route(HttpVerbs.Post, "/sessions/{sessionId}/usage")]
-        public async Task<SessionResponse> Session_AddUsage([QueryField] Guid serverId, ulong sessionId,
+        public async Task<SessionResponse> Session_AddUsage(ulong sessionId,
             [QueryField] bool closeSession, [QueryField] string? adData)
         {
-            _ = serverId;
             var traffic = await GetRequestDataAsync<Traffic>();
             var res = closeSession
                 ? await AccessManager.Session_Close(sessionId, traffic)
@@ -140,19 +137,26 @@ public class TestEmbedIoAccessManager : IDisposable
             return res;
         }
 
-        [Route(HttpVerbs.Post, "/status")]
-        public async Task<ServerCommand> SendServerStatus([QueryField] Guid serverId)
+        [Route(HttpVerbs.Post, "/sessions/usages")]
+        public async Task<Dictionary<ulong, SessionResponse>> Session_AddUsages()
         {
-            _ = serverId;
+            var sessionUsage = await GetRequestDataAsync<SessionUsage[]>();
+            var res = await AccessManager.Session_AddUsages(sessionUsage);
+            return res;
+        }
+
+
+        [Route(HttpVerbs.Post, "/status")]
+        public async Task<ServerCommand> SendServerStatus()
+        {
             var serverStatus = await GetRequestDataAsync<ServerStatus>();
             return await AccessManager.Server_UpdateStatus(serverStatus);
         }
 
 
         [Route(HttpVerbs.Post, "/configure")]
-        public async Task<ServerConfig> ServerConfigure([QueryField] Guid serverId)
+        public async Task<ServerConfig> ServerConfigure()
         {
-            _ = serverId;
             var serverInfo = await GetRequestDataAsync<ServerInfo>();
             return await AccessManager.Server_Configure(serverInfo);
         }

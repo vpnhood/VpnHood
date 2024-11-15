@@ -7,7 +7,7 @@ public class VpnHoodMauiApp : Singleton<VpnHoodMauiApp>
     public static VpnHoodApp Init(AppOptions options)
     {
         var app = CreateApp();
-        options.CultureService ??= app.CultureService;
+        options.CultureProvider ??= app.CultureService;
 
         var vpnHoodApp =  VpnHoodApp.Init(app.Device, options);
         app.Init(vpnHoodApp);

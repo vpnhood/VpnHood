@@ -34,8 +34,13 @@ public class Token
     [JsonPropertyName("tags")]
     public string[] Tags { get; set; } = [];
 
+    [JsonPropertyName("ispub")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsPublic { get; set; }
+
+
     [JsonPropertyName("cpols")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public ClientPolicy[]? ClientPolicies { get; set; }
 
     public string ToAccessKey()

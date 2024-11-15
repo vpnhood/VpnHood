@@ -16,18 +16,18 @@ public class ClientServerLocationInfo : ServerLocationInfo
 
         var items = AddCategoryGaps(token.ServerToken.ServerLocations ?? [], policy?.FreeLocations);
 
-        // check is any items tags have premium tag
+        // check is any items has premium tag
         var isManaged = items.Any(x => x.Tags?.Contains(ServerRegisteredTags.Premium) == true);
         if (isManaged) {
             foreach (var item in items)
-                item.RecalculateOptions(policy, tokenTags: token.Tags);
+                item.RecalculateOptions(policy, !token.IsPublic); // treat non-public as premium
         }
 
         return items;
     }
 
 
-    private void RecalculateOptions(ClientPolicy? policy, string[] tokenTags)
+    private void RecalculateOptions(ClientPolicy? policy, bool isPremium)
     {
         var tags = Tags ?? [];
         Options = new ServerLocationOptions {
@@ -35,14 +35,13 @@ public class ClientServerLocationInfo : ServerLocationInfo
             HasPremium = tags.Contains(ServerRegisteredTags.Premium) || tags.Contains($"~{ServerRegisteredTags.Premium}")
         };
 
-        // thread no public as premium
-        if (!tokenTags.Contains(TokenRegisteredTags.Public) || tokenTags.Contains(TokenRegisteredTags.Premium)) {
+        if (isPremium) {
             Options.Normal = 0;
             return;
         }
 
         // if no policy found, set normal to 0 if there is a free location. Free location is determined by the tag #premium
-        if (policy == null || !tokenTags.Contains(TokenRegisteredTags.Public)) {
+        if (policy == null) {
             Options.Normal = Options.HasFree ? 0 : null;
             return;
         }

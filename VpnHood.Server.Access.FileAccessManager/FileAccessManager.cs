@@ -217,7 +217,7 @@ public class FileAccessManager : IAccessManager
 
     public virtual async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
-        var accessTokenData = await AccessTokenService.TryGet(sessionRequestEx.TokenId).VhConfigureAwait();
+        var accessTokenData = await AccessTokenService.Find(sessionRequestEx.TokenId).VhConfigureAwait();
         if (accessTokenData == null)
             return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
@@ -257,7 +257,7 @@ public class FileAccessManager : IAccessManager
             };
 
         // read accessItem
-        var accessTokenData = await AccessTokenService.Find(tokenId).VhConfigureAwait();
+        var accessTokenData = await AccessTokenService.Get(tokenId).VhConfigureAwait();
         if (accessTokenData == null)
             return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
@@ -269,15 +269,23 @@ public class FileAccessManager : IAccessManager
         return SessionService.GetSessionResponse(sessionId, accessTokenData, hostEndPoint);
     }
 
-    public Task<SessionResponseEx[]> Session_GetAll()
+    public async Task<SessionResponseEx[]> Session_GetAll()
     {
-        // get all tokenIds
-        //var tokenIds = SessionService.Sessions.Select(x => x.Value.TokenId);
-        //// read all accessItems
-        //var accessItems = await Task.WhenAll(tokenIds.Select(AccessItem_Read));
+        // read all sessions
+        var responses = new List<SessionResponseEx>();
+        foreach (var session in SessionService.Sessions) {
+            try {
+                // read accessItem
+                var accessTokenData = await AccessTokenService.Find(session.Value.TokenId).VhConfigureAwait();
+                if (accessTokenData != null)
+                    responses.Add(SessionService.GetSessionResponse(session.Key, accessTokenData, session.Value.HostEndPoint));
+            }
+            catch (Exception e) {
+                VhLogger.Instance.LogError(e, "Failed to get session. SessionId: {SessionId}", session.Key);
+            }
+        }
 
-        //return SessionService.GetSessions(accessItems);
-        throw new NotImplementedException();
+        return responses.ToArray();
     }
 
 

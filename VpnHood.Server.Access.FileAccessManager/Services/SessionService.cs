@@ -152,17 +152,7 @@ public class SessionService : IDisposable, IJob
         var ret = BuildSessionResponse(session, accessTokenData);
         return ret;
     }
-
-    public SessionResponseEx[] GetSessions(AccessToken?[] accessItems)
-    {
-        //var ret = Sessions.Values
-        //    .Select(x => BuildSessionResponse(x, accessItems.f))
-        //    .ToArray();
-
-        //return ret;
-        throw new NotImplementedException();
-    }
-
+    
     public ulong[] ResetUpdatedSessions()
     {
         lock (_updatedSessionIds) {

@@ -21,7 +21,7 @@
 
 ### Development
 * Update: Migrate to .NET 9.0
-* Update: Use composite API fpr SPA
+* Update: Use composite API for SPA
 
 
 # v4.6.557

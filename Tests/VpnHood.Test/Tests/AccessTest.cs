@@ -5,7 +5,6 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
-using VpnHood.Server;
 using VpnHood.Test.Device;
 using VpnHood.Tunneling;
 
@@ -15,7 +14,7 @@ namespace VpnHood.Test.Tests;
 public class AccessTest : TestBase
 {
     [TestMethod]
-    public async Task Foo()
+    public async Task AFoo()
     {
         await Task.Delay(0);
     }
@@ -192,11 +191,33 @@ public class AccessTest : TestBase
         await using var client2 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
             token: token);
 
-        // suppress by yourself
         await using var client3 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
             token: token);
 
         Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedBy);
+    }
+
+    [TestMethod]
+    public async Task Client_should_not_suppress_itself_after_disconnect()
+    {
+        // Create Server
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        // create default token with 2 client count
+        var client1 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
+            token: token);
+        await client1.DisposeAsync();
+        await TestHelper.WaitForClientState(client1, ClientState.Disposed);
+
+
+        // suppress by yourself
+        await using var client2 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
+            token: token, clientId: client1.ClientId);
+
+        Assert.AreEqual(SessionSuppressType.None, client1.SessionStatus.SuppressedBy);
+        Assert.AreEqual(SessionSuppressType.None, client2.SessionStatus.SuppressedTo);
+
     }
 }

@@ -4,8 +4,8 @@ namespace VpnHood.Common.Tokens;
 
 public class ClientPolicy
 {
-    [JsonPropertyName("cc")]
-    public required string ClientCountry { get; init; }
+    [JsonPropertyName("ccs")]
+    public required string[] ClientCountries { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     [JsonPropertyName("free")]

@@ -12,7 +12,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     : FileAccessManager(storagePath, options)
 {
     private readonly TimeoutDictionary<string, TimeoutItem> _adsData = new(TimeSpan.FromMinutes(10));
-    private readonly object _lockeObject = new();
+    private readonly Lock _lockObject = new();
 
     public int SessionGetCounter { get; private set; }
     public DateTime? LastConfigureTime { get; private set; }
@@ -51,7 +51,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
 
     public override Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
-        lock (_lockeObject)
+        lock (_lockObject)
             SessionGetCounter++;
 
         return base.Session_Get(sessionId, hostEndPoint, clientIp);

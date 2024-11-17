@@ -90,7 +90,7 @@ public class AppLogService : IDisposable
         debugCommand ??= "";
         if (!defaults.Any()) defaults = [GeneralEventId.Session.Name!];
 
-        // Extract all event names from debugData that contains "log:EventName1,EventName2
+        // Extract all event names from debugData that contains "log:EventName1,EventName2"
         var names = new List<string>();
         var parts = debugCommand.Split(' ').Where(x => x.Contains("/log:", StringComparison.OrdinalIgnoreCase));
         foreach (var part in parts)

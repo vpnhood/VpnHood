@@ -11,7 +11,7 @@ public class Speedometer : IJob, IDisposable
     private readonly string _name;
     private readonly bool _packetCounter;
     private readonly Stopwatch _stopwatch = new();
-    private readonly object _lockObject = new();
+    private readonly Lock _lockObject = new();
 
     private long _succeededCount;
     private long _failedCount;

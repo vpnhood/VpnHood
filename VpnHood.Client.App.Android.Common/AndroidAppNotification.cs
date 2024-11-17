@@ -10,7 +10,7 @@ public sealed class AndroidAppNotification : IDisposable
     private const string NotificationChannelGeneralId = "general";
     private const string NotificationChannelGeneralName = "General";
     private readonly Notification.Builder _notificationBuilder;
-    private readonly object _stateLock = new();
+    private readonly Lock _stateLock = new();
     private AppConnectionState _lastNotifyState = AppConnectionState.None;
     public static int NotificationId => 3500;
 

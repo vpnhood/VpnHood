@@ -17,7 +17,7 @@ public class SessionService : IDisposable, IJob
     private readonly TimeSpan _sessionPermanentlyTimeout = TimeSpan.FromHours(48);
     private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
     private readonly TimeSpan _adRequiredTimeout = TimeSpan.FromMinutes(4);
-    private ulong _lastSessionId;
+    private long _lastSessionId;
     private readonly string _sessionsFolderPath;
     private readonly ConcurrentDictionary<ulong, bool> _updatedSessionIds = new ();
     public ConcurrentDictionary<ulong, Session> Sessions { get; }
@@ -101,12 +101,11 @@ public class SessionService : IDisposable, IJob
 
 
         //increment session id using atomic operation
-        lock (Sessions)
-            _lastSessionId++;
+        Interlocked.Increment(ref _lastSessionId);
 
         // create a new session
         var session = new Session {
-            SessionId = _lastSessionId,
+            SessionId = (ulong)_lastSessionId,
             TokenId = accessTokenData.AccessToken.TokenId,
             ClientInfo = sessionRequestEx.ClientInfo,
             CreatedTime = FastDateTime.Now,

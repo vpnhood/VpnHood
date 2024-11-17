@@ -8,7 +8,6 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
-using VpnHood.Server;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;

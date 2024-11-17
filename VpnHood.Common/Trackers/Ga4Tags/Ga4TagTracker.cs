@@ -23,7 +23,7 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
             ("tid", MeasurementId), // MeasurementId
             ("gtm", Environment.TickCount), // GTM Hash
             ("_p", Environment.TickCount + 10), // fingerprint, a random number 
-            ("cid", ClientId), // Client Id
+            ("cid", ClientId), // Client ID
 
             // client device info, user agent info
             ("ul", CultureInfo.CurrentCulture.Name.ToLower()), // user language

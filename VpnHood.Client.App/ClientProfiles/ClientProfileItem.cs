@@ -2,10 +2,9 @@
 
 namespace VpnHood.Client.App.ClientProfiles;
 
-public class ClientProfileItem(ClientProfile clientProfile, string clientCountry)
+public class ClientProfileItem(ClientProfile clientProfile)
 {
     private ClientProfileInfo? _clientProfileInfo;
-    private string _clientCountry = clientCountry;
     public ClientProfile ClientProfile { get; } = clientProfile;
     public Guid ClientProfileId => ClientProfile.ClientProfileId;
     public Token Token => ClientProfile.Token;
@@ -13,14 +12,13 @@ public class ClientProfileItem(ClientProfile clientProfile, string clientCountry
 
     public ClientProfileInfo ClientProfileInfo {
         get {
-            _clientProfileInfo ??= new ClientProfileInfo(ClientProfile, _clientCountry);
+            _clientProfileInfo ??= new ClientProfileInfo(ClientProfile);
             return _clientProfileInfo;
         }
     }
 
-    internal void Refresh(string clientCountry)
+    internal void Refresh()
     {
-        _clientCountry = clientCountry;
         _clientProfileInfo = null;
     }
 }

@@ -110,7 +110,8 @@ public class SessionManager : IAsyncDisposable, IJob
             ServerLocation = helloRequest.ServerLocation,
             PlanId = helloRequest.PlanId,
             AllowRedirect = helloRequest.AllowRedirect,
-            IsIpV6Supported = helloRequest.IsIpV6Supported
+            IsIpV6Supported = helloRequest.IsIpV6Supported,
+            AccessCode = helloRequest.AccessCode
         }).VhConfigureAwait();
 
         // Access Error should not pass to the client in create session

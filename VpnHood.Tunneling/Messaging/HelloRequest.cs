@@ -1,4 +1,5 @@
-﻿using VpnHood.Common.Messaging;
+﻿using System.Text.Json.Serialization;
+using VpnHood.Common.Messaging;
 using VpnHood.Common.Tokens;
 
 namespace VpnHood.Tunneling.Messaging;
@@ -13,4 +14,5 @@ public class HelloRequest()
     public ConnectPlanId PlanId { get; init; }
     public bool AllowRedirect { get; init; } = true;
     public bool? IsIpV6Supported { get; init; }
+    public string? AccessCode { get; set; }
 }

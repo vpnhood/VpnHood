@@ -23,4 +23,7 @@ public class SessionRequestEx
     public ConnectPlanId PlanId { get; set; }
     public bool AllowRedirect { get; set; } = true;
     public bool? IsIpV6Supported { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public string? AccessCode { get; set; }
 }

@@ -513,8 +513,8 @@ public class ServerHost : IAsyncDisposable, IJob
             "Creating a session... TokenId: {TokenId}, ClientId: {ClientId}, ClientVersion: {ClientVersion}, UserAgent: {UserAgent}",
             VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId),
             request.ClientInfo.ClientVersion, request.ClientInfo.UserAgent);
-        var sessionResponse = await _sessionManager.CreateSession(request, ipEndPointPair).VhConfigureAwait();
-        var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ??
+        var sessionResponseEx = await _sessionManager.CreateSession(request, ipEndPointPair).VhConfigureAwait();
+        var session = _sessionManager.GetSessionById(sessionResponseEx.SessionId) ??
                       throw new InvalidOperationException("Session is lost!");
 
         // check client version; unfortunately it must be after CreateSession to preserve server anonymity
@@ -549,7 +549,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
         // reply hello session
         VhLogger.Instance.LogTrace(GeneralEventId.Session,
-            $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponse.SessionId)}");
+            $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponseEx.SessionId)}");
 
         // find udp port that match to the same tcp local IpAddress
         var udpPort = _udpChannelTransmitters
@@ -560,36 +560,37 @@ public class ServerHost : IAsyncDisposable, IJob
             .LocalEndPoint.Port;
 
         var helloResponse = new HelloResponse {
-            ErrorCode = sessionResponse.ErrorCode,
-            ErrorMessage = sessionResponse.ErrorMessage,
-            AccessUsage = sessionResponse.AccessUsage,
-            SuppressedBy = sessionResponse.SuppressedBy,
-            RedirectHostEndPoint = sessionResponse.RedirectHostEndPoint,
-            RedirectHostEndPoints = sessionResponse.RedirectHostEndPoints,
-            SessionId = sessionResponse.SessionId,
-            SessionKey = sessionResponse.SessionKey,
+            ErrorCode = sessionResponseEx.ErrorCode,
+            ErrorMessage = sessionResponseEx.ErrorMessage,
+            AccessUsage = sessionResponseEx.AccessUsage,
+            SuppressedBy = sessionResponseEx.SuppressedBy,
+            RedirectHostEndPoint = sessionResponseEx.RedirectHostEndPoint,
+            RedirectHostEndPoints = sessionResponseEx.RedirectHostEndPoints,
+            SessionId = sessionResponseEx.SessionId,
+            SessionKey = sessionResponseEx.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,
             UdpPort = udpPort,
-            GaMeasurementId = sessionResponse.GaMeasurementId,
+            GaMeasurementId = sessionResponseEx.GaMeasurementId,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
             ServerProtocolVersion = ServerProtocolVersion,
-            SuppressedTo = sessionResponse.SuppressedTo,
+            SuppressedTo = sessionResponseEx.SuppressedTo,
             MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
             ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,
             IncludeIpRanges = NetFilterIncludeIpRanges,
             PacketCaptureIncludeIpRanges = NetFilterPacketCaptureIncludeIpRanges,
             IsIpV6Supported = IsIpV6Supported,
+            IsReviewRequested = sessionResponseEx.IsReviewRequested,
             // client should wait more to get session exception replies
             RequestTimeout = _sessionManager.SessionOptions.TcpConnectTimeoutValue +
                              TunnelDefaults.ClientRequestTimeoutDelta,
             // client should wait less to make sure server is not closing the connection
             TcpReuseTimeout = _sessionManager.SessionOptions.TcpReuseTimeoutValue -
                               TunnelDefaults.ClientRequestTimeoutDelta,
-            AccessKey = sessionResponse.AccessKey,
+            AccessKey = sessionResponseEx.AccessKey,
             DnsServers = DnsServers,
-            AdRequirement = sessionResponse.AdRequirement,
-            ServerLocation = sessionResponse.ServerLocation,
-            ServerTags = sessionResponse.ServerTags,
+            AdRequirement = sessionResponseEx.AdRequirement,
+            ServerLocation = sessionResponseEx.ServerLocation,
+            ServerTags = sessionResponseEx.ServerTags,
         };
         await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken).VhConfigureAwait();
         await clientStream.DisposeAsync().VhConfigureAwait();

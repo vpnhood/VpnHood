@@ -7,15 +7,14 @@ using System.Windows.Media.Imaging;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using VpnHood.Client.App.WebServer;
-using VpnHood.Client.App.Win.Common;
 using VpnHood.Client.Device;
 
-namespace VpnHood.Client.App.Win;
+namespace VpnHood.Client.App.Win.Common.WpfSpa;
 
 // ReSharper disable once RedundantExtendsListEntry
-public partial class MainWindow : Window
+public partial class VpnHoodWpfSpaMainWindow : Window
 {
-    public MainWindow()
+    public VpnHoodWpfSpaMainWindow()
     {
         InitializeComponent();
         var backgroundColor = VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor;

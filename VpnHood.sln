@@ -99,6 +99,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.NetTester", "Tests\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Server.Access.FileAccessManager", "VpnHood.Server.Access.FileAccessManager\VpnHood.Server.Access.FileAccessManager.csproj", "{4D625537-609E-4BFC-BD67-32285805A814}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Win.Common.WpfSpa", "VpnHood.Client.App.Win.Common.WpfSpa\VpnHood.Client.App.Win.Common.WpfSpa.csproj", "{52DF241C-B8FB-4EDC-A247-199A306A77D0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -673,6 +675,26 @@ Global
 		{4D625537-609E-4BFC-BD67-32285805A814}.Release|x64.Build.0 = Release|Any CPU
 		{4D625537-609E-4BFC-BD67-32285805A814}.Release|x86.ActiveCfg = Release|Any CPU
 		{4D625537-609E-4BFC-BD67-32285805A814}.Release|x86.Build.0 = Release|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Debug|ARM.Build.0 = Debug|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Debug|x64.Build.0 = Debug|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Debug|x86.Build.0 = Debug|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Release|ARM.ActiveCfg = Release|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Release|ARM.Build.0 = Release|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Release|ARM64.Build.0 = Release|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Release|x64.ActiveCfg = Release|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Release|x64.Build.0 = Release|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Release|x86.ActiveCfg = Release|Any CPU
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -700,6 +722,7 @@ Global
 		{235F3F4A-F075-477D-9923-FE2360FB7EEA} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 		{D666EB32-78AA-4F7B-9CE0-D430C34E3118} = {DC9319F3-8348-498C-9A5B-77399106DB10}
 		{BC0CE9CB-1490-4AC6-B2C5-100EE5025AD6} = {B06C66A0-47AA-4894-A794-8FAE74DB271F}
+		{52DF241C-B8FB-4EDC-A247-199A306A77D0} = {BD1C4F74-C48B-4302-90C3-0B7243C0DD20}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19BAEB35-FD38-4E41-9963-46313AF87C41}

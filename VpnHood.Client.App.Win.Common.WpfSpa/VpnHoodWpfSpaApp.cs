@@ -1,19 +1,18 @@
 ﻿using System.IO;
 using System.Net;
-using System.Security.Principal;
 using System.Windows;
 using Microsoft.Extensions.Logging;
-using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.WebServer;
-using VpnHood.Client.App.Win.Common;
 using VpnHood.Client.Device.WinDivert;
 using VpnHood.Common.Logging;
 
-namespace VpnHood.Client.App.Win;
+namespace VpnHood.Client.App.Win.Common.WpfSpa;
 
 // ReSharper disable once RedundantExtendsListEntry
-public partial class App : Application
+public abstract class VpnHoodWpfSpaApp : Application
 {
+    protected abstract AppOptions CreateAppOptions();
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -22,23 +21,14 @@ public partial class App : Application
             VpnHoodWinApp.Instance.PreStart(e.Args);
 
             // initialize VpnHoodApp
-            VpnHoodApp.Init(new WinDivertDevice(), new AppOptions {
-                AppId = "com.vpnhood.client.windows",
-                DeviceId = WindowsIdentity.GetCurrent().User?.Value,
-                Resource = DefaultAppResource.Resource,
-                UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json"),
-                IsAddAccessKeySupported = true,
-                UpdaterProvider = new WinAppUpdaterProvider(),
-                SingleLineConsoleLog = false,
-                LogAnonymous = !IsDebugMode,
-            });
+            var appOptions = CreateAppOptions();
+            VpnHoodApp.Init(new WinDivertDevice(), appOptions);
 
             // initialize SPA
-            ArgumentNullException.ThrowIfNull(DefaultAppResource.Resource.SpaZipData);
-            using var spaResource = new MemoryStream(DefaultAppResource.Resource.SpaZipData);
+            ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resource.SpaZipData);
+            using var spaResource = new MemoryStream(VpnHoodApp.Instance.Resource.SpaZipData);
             VpnHoodAppWebServer.Init(spaResource,
-                url: VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), 80),
-                    "myvpnhood"));
+                url: VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), 80), "myvpnhood"));
 
             // initialize Win
             VpnHoodWinApp.Instance.ExitRequested += (_, _) => Shutdown();
@@ -46,6 +36,10 @@ public partial class App : Application
                 VpnHoodWinApp.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
             VpnHoodWinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
             VpnHoodWinApp.Instance.Start();
+
+            // run the app
+            var mainWindow = new VpnHoodWpfSpaMainWindow();
+            mainWindow.Show();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not run the app.");
@@ -73,15 +67,5 @@ public partial class App : Application
         if (VpnHoodApp.IsInit) VpnHoodApp.Instance.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5));
 
         base.OnExit(e);
-    }
-
-    public static bool IsDebugMode {
-        get {
-#if DEBUG
-            return true;
-#else
-            return false;
-#endif
-        }
     }
 }

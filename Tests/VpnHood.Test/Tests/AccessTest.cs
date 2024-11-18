@@ -14,12 +14,6 @@ namespace VpnHood.Test.Tests;
 public class AccessTest : TestBase
 {
     [TestMethod]
-    public async Task AFoo()
-    {
-        await Task.Delay(0);
-    }
-
-    [TestMethod]
     public async Task Server_reject_invalid_requests()
     {
         await using var server = await TestHelper.CreateServer();

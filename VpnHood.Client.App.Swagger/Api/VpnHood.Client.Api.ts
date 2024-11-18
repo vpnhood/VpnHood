@@ -1916,6 +1916,7 @@ export interface IAppLogSettings {
     logLevel: LogLevel;
 }
 
+/** Defines logging severity levels. */
 export enum LogLevel {
     Trace = "Trace",
     Debug = "Debug",
@@ -2589,6 +2590,7 @@ export interface IAccessUsage {
 }
 
 export class Traffic implements ITraffic {
+    sentTraffic!: number;
     receivedTraffic!: number;
     sent!: number;
     received!: number;
@@ -2604,6 +2606,7 @@ export class Traffic implements ITraffic {
 
     init(_data?: any) {
         if (_data) {
+            this.sentTraffic = _data["sentTraffic"] !== undefined ? _data["sentTraffic"] : <any>null;
             this.receivedTraffic = _data["receivedTraffic"] !== undefined ? _data["receivedTraffic"] : <any>null;
             this.sent = _data["sent"] !== undefined ? _data["sent"] : <any>null;
             this.received = _data["received"] !== undefined ? _data["received"] : <any>null;
@@ -2619,6 +2622,7 @@ export class Traffic implements ITraffic {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
+        data["sentTraffic"] = this.sentTraffic !== undefined ? this.sentTraffic : <any>null;
         data["receivedTraffic"] = this.receivedTraffic !== undefined ? this.receivedTraffic : <any>null;
         data["sent"] = this.sent !== undefined ? this.sent : <any>null;
         data["received"] = this.received !== undefined ? this.received : <any>null;
@@ -2627,6 +2631,7 @@ export class Traffic implements ITraffic {
 }
 
 export interface ITraffic {
+    sentTraffic: number;
     receivedTraffic: number;
     sent: number;
     received: number;

@@ -7,7 +7,7 @@ namespace VpnHood.Client.App.Droid.Connect;
 
 internal class AppConfigs : Singleton<AppConfigs>
 {
-    public Uri? UpdateInfoUrl { get; init; }
+    public string? UpdateInfoUrl { get; init; }
     public bool ListenToAllIps { get; init; } = IsDebugMode;
     public bool AllowEndPointTracker { get; init; }
     public int? DefaultSpaPort { get; init; } = IsDebugMode ? 9571 : 9570;
@@ -21,7 +21,7 @@ internal class AppConfigs : Singleton<AppConfigs>
         "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; //YOUR_FIREBASE_CLIENT_ID
 
     // VpnHood Store server
-    public Uri StoreBaseUri { get; init; } = new("https://store-api.vpnhood.com");
+    public string StoreBaseUri { get; init; } = new("https://store-api.vpnhood.com");
 
     public Guid StoreAppId { get; init; } =
         Guid.Parse("00000000-0000-0000-0000-000000000000"); //YOUR_VPNHOOD_STORE_APP_ID
@@ -46,14 +46,20 @@ internal class AppConfigs : Singleton<AppConfigs>
     public bool InmobiIsDebugMode { get; init; } = IsDebugMode;
     
 
-    public static AppConfigs Create()
+    public static AppConfigs Load()
     {
-        var appSettingsJson = VhUtil.GetAssemblyMetadata(typeof(AppConfigs).Assembly, "AppSettings", "");
-        return string.IsNullOrEmpty(appSettingsJson)
-            ? new AppConfigs()
-            : VhUtil.JsonDeserialize<AppConfigs>(appSettingsJson);
+        var appConfigs = new AppConfigs();
+        appConfigs.Merge("AppSettings");
+        appConfigs.Merge("AppSettings_Environment");
+        return appConfigs;
     }
 
+    private void Merge(string configName)
+    {
+        var json = VhUtil.GetAssemblyMetadata(typeof(AppConfigs).Assembly, configName, "");
+        if (!string.IsNullOrEmpty(json)) 
+            JsonSerializerExt.PopulateObject(this, json);
+    }
 
     public static bool IsDebugMode {
         get {

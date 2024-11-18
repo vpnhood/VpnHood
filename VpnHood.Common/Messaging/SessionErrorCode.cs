@@ -10,9 +10,11 @@ public enum SessionErrorCode
     SessionClosed,
     SessionSuppressedBy,
     SessionError,
+    SessionExpired, // not used yet
     AccessExpired,
-    AccessTrafficOverflow,
+    AccessCodeRejected,
     AccessLocked,
+    AccessTrafficOverflow,
     AccessError,
     AdError,
     Maintenance,

@@ -5,7 +5,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
-internal class AppSettings : Singleton<AppSettings>
+internal class AppConfigs : Singleton<AppConfigs>
 {
     public Uri? UpdateInfoUrl { get; init; }
     public bool ListenToAllIps { get; init; } = IsDebugMode;
@@ -46,12 +46,12 @@ internal class AppSettings : Singleton<AppSettings>
     public bool InmobiIsDebugMode { get; init; } = IsDebugMode;
     
 
-    public static AppSettings Create()
+    public static AppConfigs Create()
     {
-        var appSettingsJson = VhUtil.GetAssemblyMetadata(typeof(AppSettings).Assembly, "AppSettings", "");
+        var appSettingsJson = VhUtil.GetAssemblyMetadata(typeof(AppConfigs).Assembly, "AppSettings", "");
         return string.IsNullOrEmpty(appSettingsJson)
-            ? new AppSettings()
-            : VhUtil.JsonDeserialize<AppSettings>(appSettingsJson);
+            ? new AppConfigs()
+            : VhUtil.JsonDeserialize<AppConfigs>(appSettingsJson);
     }
 
 

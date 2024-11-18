@@ -7,6 +7,8 @@ public class ClientProfileBaseInfo(ClientProfile clientProfile)
 {
     public Guid ClientProfileId { get; private set; } = clientProfile.ClientProfileId;
     public string ClientProfileName { get; private set; } = GetTitle(clientProfile);
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? SupportId { get; private set; } = clientProfile.Token.SupportId;
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -14,6 +16,9 @@ public class ClientProfileBaseInfo(ClientProfile clientProfile)
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool IsPremiumLocationSelected { get; private set; } = clientProfile.IsPremiumLocationSelected;
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsPremiumAccount = !clientProfile.Token.IsPublic;
 
     private static string GetTitle(ClientProfile clientProfile)
     {

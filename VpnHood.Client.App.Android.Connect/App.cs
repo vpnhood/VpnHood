@@ -55,13 +55,13 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
 
-        var appConfigs = AppConfigs.Create();
+        var appConfigs = AppConfigs.Load();
         return new AppOptions(appId: PackageName!) {
             StorageFolderPath = storageFolderPath,
             DeviceId = AndroidUtil.GetDeviceId(this), //this will be hashed using AppId
             AccessKeys = [appConfigs.DefaultAccessKey],
             Resource = resources,
-            UpdateInfoUrl = appConfigs.UpdateInfoUrl,
+            UpdateInfoUrl = appConfigs.UpdateInfoUrl != null ? new Uri(appConfigs.UpdateInfoUrl) : null,
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
             UpdaterProvider = new GooglePlayAppUpdaterProvider(),
@@ -117,7 +117,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         try {
             var authenticationExternalProvider = new GooglePlayAuthenticationProvider(appConfigs.GoogleSignInClientId);
-            var authenticationProvider = new StoreAuthenticationProvider(storageFolderPath, appConfigs.StoreBaseUri,
+            var authenticationProvider = new StoreAuthenticationProvider(storageFolderPath, new Uri(appConfigs.StoreBaseUri),
                 appConfigs.StoreAppId, authenticationExternalProvider, appConfigs.StoreIgnoreSslVerification);
             var googlePlayBillingProvider = new GooglePlayBillingProvider(authenticationProvider);
             var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider, appConfigs.StoreAppId);

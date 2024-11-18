@@ -5,6 +5,9 @@ namespace VpnHood.Common.Messaging;
 public class AccessUsage
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsPremium { get; set; } = new();
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Traffic Traffic { get; set; } = new();
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]

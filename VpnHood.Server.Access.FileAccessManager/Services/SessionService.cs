@@ -118,7 +118,7 @@ public class SessionService : IDisposable, IJob
             ProtocolVersion = sessionRequestEx.ClientInfo.ProtocolVersion,
             ExpirationTime = accessTokenData.AccessToken.AdRequirement is AdRequirement.Required
                 ? DateTime.UtcNow + _adRequiredTimeout
-                : null
+                : null,
         };
 
         //create response
@@ -168,7 +168,8 @@ public class SessionService : IDisposable, IJob
             ExpirationTime = session.ExpirationTime,
             MaxClientCount = accessToken.MaxClientCount,
             MaxTraffic = accessToken.MaxTraffic,
-            Traffic = new Traffic(accessTokenData.Usage.Sent, accessTokenData.Usage.Received)
+            Traffic = new Traffic(accessTokenData.Usage.Sent, accessTokenData.Usage.Received),
+            IsPremium = true, // token is always premium in File Access Manager
         };
 
         // validate session status

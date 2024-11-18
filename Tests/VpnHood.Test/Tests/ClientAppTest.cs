@@ -522,14 +522,13 @@ public class ClientAppTest : TestBase
 
         // create app
         var appOptions = TestHelper.CreateAppOptions();
-        await using var app =
-            TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
         app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsUri1.Host];
 
         // connect
         var token = TestHelper.CreateAccessToken(server);
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, diagnose: true);
+        var clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfileItem.ClientProfileId, diagnose: true);
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
 
         // text include
@@ -542,4 +541,20 @@ public class ClientAppTest : TestBase
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
         Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
     }
+
+    [TestMethod]
+    public async Task Premium_token_must_create_premium_session()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        await using var app = TestHelper.CreateClientApp();
+        var clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfileItem.ClientProfileId, diagnose: true);
+
+
+        Assert.IsTrue(app.State.ClientProfile?.IsPremiumAccount);
+        Assert.IsTrue(app.State.SessionStatus?.AccessUsage?.IsPremium);
+    }
+
 }

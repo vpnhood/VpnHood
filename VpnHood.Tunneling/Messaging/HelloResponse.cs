@@ -23,6 +23,7 @@ public class HelloResponse : SessionResponse
     public SessionSuppressType SuppressedTo { get; set; }
     public int MaxDatagramChannelCount { get; set; }
     public bool IsIpV6Supported { get; set; }
+    public bool IsReviewRequested { get; set; }
     public IpRange[]? IncludeIpRanges { get; set; }
     public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
     public string? GaMeasurementId { get; init; }

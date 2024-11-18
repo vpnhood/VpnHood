@@ -2,6 +2,7 @@
 
 namespace VpnHood.Client.App.Abstractions;
 
+//todo: remove
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum BillingPurchaseState
 {

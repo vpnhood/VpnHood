@@ -113,7 +113,7 @@ public class ClientProfileTest : TestBase
         ];
 
         // test free US client
-        app.ClientProfileService.Reload("US");
+        app.UpdateCurrentCountry("US");
         var clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         var clientProfileInfo = clientProfileItem.ClientProfileInfo;
 
@@ -145,7 +145,7 @@ public class ClientProfileTest : TestBase
         Assert.AreEqual(defaultPolicy.PremiumByTrial, location.Options.PremiumByTrial);
 
         // (US/*) no free for CA clients
-        app.ClientProfileService.Reload("CA");
+        app.UpdateCurrentCountry("CA");
         clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ClientProfileInfo;
         location = clientProfileInfo.ServerLocationInfos.Single(x => x.ServerLocation == "US/*");
         Assert.IsFalse(location.Options.HasFree);

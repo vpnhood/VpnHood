@@ -39,5 +39,5 @@ public class AppOptions
     public bool AutoDiagnose { get; set; } = true;
     public AppAdOptions AdOptions { get; set; } = new();
     public bool AllowEndPointTracker { get; set; }
-    public string? DeviceId { get; init; }
+    public string? DeviceId { get; set; }
 }

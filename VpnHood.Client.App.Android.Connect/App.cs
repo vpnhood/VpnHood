@@ -48,17 +48,17 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         }
 
         // load app settings and resources
-        var storageFolderPath = AppOptions.DefaultStorageFolderPath;
+        var storageFolderPath = AppOptions.BuildStorageFolderPath(PackageName!);
         var appSettings = AppSettings.Create();
         var resources = DefaultAppResource.Resource;
+        resources.Strings.AppName = "VpnHood! CONNECT";
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
 
-        return new AppOptions {
-            AppId = PackageName!,
-            DeviceId = AndroidUtil.GetDeviceId(this), //this will be hashed using AppId
+        return new AppOptions(appId: PackageName!) {
             StorageFolderPath = storageFolderPath,
+            DeviceId = AndroidUtil.GetDeviceId(this), //this will be hashed using AppId
             AccessKeys = [appSettings.DefaultAccessKey],
             Resource = DefaultAppResource.Resource,
             UpdateInfoUrl = appSettings.UpdateInfoUrl,

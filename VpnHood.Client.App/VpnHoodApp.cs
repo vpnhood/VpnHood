@@ -120,8 +120,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _allowEndPointTracker = options.AllowEndPointTracker;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), options.SingleLineConsoleLog);
-        ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles),
-            _appPersistState.ClientCountryCode ?? RegionInfo.CurrentRegion.Name);
+        ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
         IpRangeLocationProvider = new LocalIpRangeLocationProvider(
             () => new ZipArchive(new MemoryStream(App.Resource.IpLocations)),
             () => _appPersistState.ClientCountryCode);
@@ -194,11 +193,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         JobRunner.Default.Add(this);
     }
 
-    private void UpdateCurrentCountry(string country)
+    public void UpdateCurrentCountry(string country)
     {
         if (_appPersistState.ClientCountryCode == country) return;
         _appPersistState.ClientCountryCode = country;
-        ClientProfileService.Reload(country);
+        ClientProfileService.Reload();
     }
 
     private void ApplySettings()

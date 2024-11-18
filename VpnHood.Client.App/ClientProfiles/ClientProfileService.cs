@@ -14,15 +14,13 @@ public class ClientProfileService
     private List<ClientProfileItem> _clientProfileItems;
     private ClientProfileItem? _cache;
     private readonly object _updateByUrlLock = new();
-    private string _clientCountry;
     private string ClientProfilesFilePath => Path.Combine(_folderPath, FilenameProfiles);
 
-    public ClientProfileService(string folderPath, string clientCountry)
+    public ClientProfileService(string folderPath)
     {
         _folderPath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
-        _clientCountry = clientCountry;
         ClientProfileServiceLegacy.Migrate(folderPath, ClientProfilesFilePath);
-        _clientProfileItems = Load(_clientCountry).ToList();
+        _clientProfileItems = Load().ToList();
     }
 
     public ClientProfileItem? FindById(Guid clientProfileId)
@@ -151,7 +149,7 @@ public class ClientProfileService
                     IsBuiltIn = isBuiltIn
                 };
 
-                _clientProfileItems.Add(new ClientProfileItem(clientProfile, _clientCountry));
+                _clientProfileItems.Add(new ClientProfileItem(clientProfile));
             }
 
             // save profiles
@@ -274,24 +272,20 @@ public class ClientProfileService
         // clear cache
         _cache = null;
         foreach (var item in _clientProfileItems)
-            item.Refresh(_clientCountry);
+            item.Refresh();
     }
 
-    public void Reload(string clientCountry)
+    public void Reload()
     {
-        if (_clientCountry == clientCountry)
-            return;
-
-        _clientCountry = clientCountry;
-        _clientProfileItems = Load(clientCountry).ToList();
+        _clientProfileItems = Load().ToList();
     }
 
-    private IEnumerable<ClientProfileItem> Load(string clientCountry)
+    private IEnumerable<ClientProfileItem> Load()
     {
         try {
             var json = File.ReadAllText(ClientProfilesFilePath);
             var clientProfiles = VhUtil.JsonDeserialize<ClientProfile[]>(json);
-            return clientProfiles.Select(x => new ClientProfileItem(x, clientCountry));
+            return clientProfiles.Select(x => new ClientProfileItem(x));
         }
         catch {
             return [];

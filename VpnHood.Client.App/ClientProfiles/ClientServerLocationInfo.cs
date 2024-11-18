@@ -8,8 +8,10 @@ public class ClientServerLocationInfo : ServerLocationInfo
     public required bool IsDefault { get; init; }
     public ServerLocationOptions Options { get; set; } = new() { Normal = 0 };
 
-    public static ClientServerLocationInfo[] CreateFromToken(Token token, string clientCountry)
+    public static ClientServerLocationInfo[] CreateFromToken(Token token)
     {
+        var clientCountry = VpnHoodApp.Instance.GetCurrentCountryCode();
+
         // get country policy
         var policy = token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y.Equals(clientCountry, StringComparison.OrdinalIgnoreCase))) ??
                      token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));

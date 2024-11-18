@@ -8,20 +8,3 @@ using System.Windows;
                                               //(used if a resource is not found in the page,
                                               // app, or any theme specific resource dictionaries)
 )]
-
-
-
-namespace VpnHood.Client.App.Win.Connect.Properties;
-
-public static class AssemblyInfo
-{
-    public static bool IsDebugMode {
-        get {
-#if DEBUG
-            return true;
-#else
-            return false;
-#endif
-        }
-    }
-}

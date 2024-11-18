@@ -1,5 +1,6 @@
 # Upcoming
 ### Client
+* Feature: Improve premium sessions
 * Feature: Update server token from multiple URLs
 * Feature: Handle Trial Session
 * Feature: Drop QUIC in protocol

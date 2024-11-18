@@ -15,15 +15,19 @@ public class App : VpnHoodWpfSpaApp
         app.Run();
     }
 
-    protected override AppOptions CreateAppOptions() => new() {
-        AppId = "com.vpnhood.client.windows",
-        DeviceId = WindowsIdentity.GetCurrent().User?.Value,
-        Resource = DefaultAppResource.Resource,
-        AccessKeys = AssemblyInfo.IsDebugMode ? [ClientOptions.SampleAccessKey] : [],
-        UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json"),
-        UpdaterProvider = new WinAppUpdaterProvider(),
-        IsAddAccessKeySupported = true,
-        SingleLineConsoleLog = false,
-        LogAnonymous = !AssemblyInfo.IsDebugMode
-    };
+    protected override AppOptions CreateAppOptions()
+    {
+        return new AppOptions("com.vpnhood.client.windows") {
+            DeviceId = WindowsIdentity.GetCurrent().User?.Value,
+            StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHood"),
+            Resource = DefaultAppResource.Resource,
+            AccessKeys = AssemblyInfo.IsDebugMode ? [ClientOptions.SampleAccessKey] : [],
+            UpdateInfoUrl =
+                new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json"),
+            UpdaterProvider = new WinAppUpdaterProvider(),
+            IsAddAccessKeySupported = true,
+            SingleLineConsoleLog = false,
+            LogAnonymous = !AssemblyInfo.IsDebugMode
+        };
+    }
 }

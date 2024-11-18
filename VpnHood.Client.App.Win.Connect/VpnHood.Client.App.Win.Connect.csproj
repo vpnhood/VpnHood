@@ -31,17 +31,26 @@
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-		<PlatformTarget>AnyCPU</PlatformTarget>
-	</PropertyGroup>
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\win\appsettings.$(Configuration).json')">
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>AppSettings</_Parameter1>
+			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodConnect\win\appsettings.$(Configuration).json"))</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<PlatformTarget>AnyCPU</PlatformTarget>
-	</PropertyGroup>
-
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\win\appsettings.json')">
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>AppSettings</_Parameter1>
+			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.json"))</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Win.Common.WpfSpa\VpnHood.Client.App.Win.Common.WpfSpa.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App.Win.Common\VpnHood.Client.App.Win.Common.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -4,15 +4,13 @@ using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
 
-public class AppOptions
+public class AppOptions(string appId)
 {
-    public required string AppId { get; init; }
-    public static string DefaultStorageFolderPath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
+    public static string BuildStorageFolderPath(string appId) =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appId);
 
-    public string StorageFolderPath { get; set; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
-
+    public string AppId { get; init; } = appId;
+    public string StorageFolderPath { get; set; } = BuildStorageFolderPath(appId);
     public TimeSpan SessionTimeout { get; set; } = ClientOptions.Default.SessionTimeout;
     public SocketFactory? SocketFactory { get; set; }
     public TimeSpan VersionCheckInterval { get; set; } = TimeSpan.FromHours(24);

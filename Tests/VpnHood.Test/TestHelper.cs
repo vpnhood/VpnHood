@@ -409,9 +409,8 @@ internal static class TestHelper
     public static AppOptions CreateAppOptions()
     {
         var tracker = new TestTracker();
-        var appOptions = new AppOptions {
-            AppId = "com.vpnhood.client.test",
-            StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
+        var appOptions = new AppOptions("com.vpnhood.client.test") {
+            StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
             SessionTimeout = TimeSpan.FromSeconds(2),
             AppGa4MeasurementId = null,
             Tracker = tracker,

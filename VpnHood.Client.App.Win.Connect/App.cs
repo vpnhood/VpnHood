@@ -41,6 +41,7 @@ public class App : VpnHoodWpfSpaApp
             SingleLineConsoleLog = false,
             LogAnonymous = !AppConfigs.IsDebugMode,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
+            LocalSpaHostName = "my-vpnhood-connect"
         };
     }
 }

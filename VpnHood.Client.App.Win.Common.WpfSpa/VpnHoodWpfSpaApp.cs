@@ -17,18 +17,23 @@ public abstract class VpnHoodWpfSpaApp : Application
     {
         base.OnStartup(e);
         try {
+            // initialize WinApp
+            var appOptions = CreateAppOptions();
+            VpnHoodWinApp.Init(appOptions.AppId, appOptions.StorageFolderPath);
+
             // check command line
             VpnHoodWinApp.Instance.PreStart(e.Args);
 
             // initialize VpnHoodApp
-            var appOptions = CreateAppOptions();
             VpnHoodApp.Init(new WinDivertDevice(), appOptions);
 
             // initialize SPA
             ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resource.SpaZipData);
             using var spaResource = new MemoryStream(VpnHoodApp.Instance.Resource.SpaZipData);
-            VpnHoodAppWebServer.Init(spaResource,
-                url: VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), 80), "myvpnhood"));
+            var localSpaUrl = !string.IsNullOrEmpty(appOptions.LocalSpaHostName)
+                ? VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), 80), appOptions.LocalSpaHostName)
+                : null;
+            VpnHoodAppWebServer.Init(spaResource, url: localSpaUrl);
 
             // initialize Win
             VpnHoodWinApp.Instance.ExitRequested += (_, _) => Shutdown();

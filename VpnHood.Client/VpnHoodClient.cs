@@ -668,8 +668,7 @@ public class VpnHoodClient : IAsyncDisposable
                 IsIpV6Supported = IsIpV6SupportedByClient
             };
 
-            await using var requestResult =
-                await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();
+            await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();
             var sessionResponse = requestResult.Response;
             if (sessionResponse.ServerProtocolVersion < 4)
                 throw new SessionException(SessionErrorCode.UnsupportedServer,

@@ -18,7 +18,7 @@ public class ClientProfileBaseInfo(ClientProfile clientProfile)
     public bool IsPremiumLocationSelected { get; private set; } = clientProfile.IsPremiumLocationSelected;
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public bool IsPremiumAccount = !clientProfile.Token.IsPublic;
+    public bool IsPremiumAccount { get; private set; } = !clientProfile.Token.IsPublic;
 
     private static string GetTitle(ClientProfile clientProfile)
     {

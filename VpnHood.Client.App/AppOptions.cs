@@ -38,4 +38,5 @@ public class AppOptions(string appId)
     public AppAdOptions AdOptions { get; set; } = new();
     public bool AllowEndPointTracker { get; set; }
     public string? DeviceId { get; set; }
+    public string? LocalSpaHostName { get; set; }
 }

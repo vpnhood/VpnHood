@@ -11,14 +11,15 @@ using WinNative;
 
 namespace VpnHood.Client.App.Win.Common;
 
-public class VpnHoodWinApp : IDisposable
+public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
 {
+    private readonly string _appId;
     private const string FileNameAppCommand = "appcommand";
     private Mutex? _instanceMutex;
     private SystemTray? _sysTray;
     private readonly CommandListener _commandListener;
     private bool _disposed;
-    private readonly string _appLocalDataPath;
+    private readonly string _storageFolder;
     private readonly Icon _appIcon;
     private Icon? _disconnectedIcon;
     private Icon? _connectedIcon;
@@ -27,32 +28,35 @@ public class VpnHoodWinApp : IDisposable
     private int _disconnectMenuItemId;
     private int _openMainWindowMenuItemId;
     private int _openMainWindowInBrowserMenuItemId;
-    private static readonly Lazy<VpnHoodWinApp> InstanceFiled = new(() => new VpnHoodWinApp());
 
     public event EventHandler? OpenMainWindowRequested;
     public event EventHandler? OpenMainWindowInBrowserRequested;
     public event EventHandler? ExitRequested;
-    public static VpnHoodWinApp Instance => InstanceFiled.Value;
     public bool ShowWindowAfterStart { get; private set; }
     public bool ConnectAfterStart { get; private set; }
     public bool EnableOpenMainWindow { get; set; } = true;
+    
+    [DllImport("DwmApi")]
+    private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);
 
-    private VpnHoodWinApp()
+
+    private VpnHoodWinApp(string appId, string storageFolder)
     {
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
-        _appLocalDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "VpnHood");
-        _appIcon = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly()?.Location ??
-                                              throw new Exception("Could not get the location of Assembly."))
+        _appId = appId;
+        _storageFolder = storageFolder;
+        _appIcon = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly()?.Location ?? throw new Exception("Could not get the location of Assembly."))
                    ?? throw new Exception("Could not get the icon of the executing assembly.");
 
         //create command Listener
-        _commandListener = new CommandListener(Path.Combine(_appLocalDataPath, FileNameAppCommand));
+        _commandListener = new CommandListener(Path.Combine(_storageFolder, FileNameAppCommand));
         _commandListener.CommandReceived += CommandListener_CommandReceived;
     }
 
-    [DllImport("DwmApi")]
-    private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);
+    public static VpnHoodWinApp Init(string appId, string storageFolder)
+    {
+        return new VpnHoodWinApp(appId, storageFolder);
+    }
 
     public static void SetWindowTitleBarColor(IntPtr hWnd, Color color)
     {
@@ -76,10 +80,9 @@ public class VpnHoodWinApp : IDisposable
             OpenMainWindow();
     }
 
-    public bool IsAnotherInstanceRunning(string? name = null)
+    public bool IsAnotherInstanceRunning()
     {
-        name ??= typeof(VpnHoodWinApp).FullName;
-        _instanceMutex ??= new Mutex(false, name);
+        _instanceMutex ??= new Mutex(false, _appId);
 
         // Make single instance
         // if you like to wait a few seconds in case that the instance is just shutting down
@@ -103,7 +106,7 @@ public class VpnHoodWinApp : IDisposable
 
         // configuring Windows Firewall
         try {
-            OpenLocalFirewall(_appLocalDataPath);
+            OpenLocalFirewall(_storageFolder);
         }
         catch {
             /*ignored*/
@@ -283,6 +286,7 @@ public class VpnHoodWinApp : IDisposable
         _disposed = true;
 
         _sysTray?.Dispose();
+        DisposeSingleton();
     }
 
     public static Uri? RegisterLocalDomain(IPEndPoint hostEndPoint, string localHost)

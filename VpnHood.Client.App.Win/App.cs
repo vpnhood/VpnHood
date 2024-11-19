@@ -27,7 +27,8 @@ public class App : VpnHoodWpfSpaApp
             UpdaterProvider = new WinAppUpdaterProvider(),
             IsAddAccessKeySupported = true,
             SingleLineConsoleLog = false,
-            LogAnonymous = !AssemblyInfo.IsDebugMode
+            LogAnonymous = !AssemblyInfo.IsDebugMode,
+            LocalSpaHostName = "my-vpnhood"
         };
     }
 }

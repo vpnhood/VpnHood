@@ -16,7 +16,9 @@ internal class AccountController : WebApiController, IAccountController
     [Route(HttpVerbs.Get, "/")]
     public Task<AppAccount?> Get()
     {
-        return AccountService.GetAccount();
+        return VpnHoodApp.Instance.Services.AccountService != null
+            ? VpnHoodApp.Instance.Services.AccountService.GetAccount()
+            : Task.FromResult<AppAccount?>(null);
     }
 
     [Route(HttpVerbs.Post, "/refresh")]

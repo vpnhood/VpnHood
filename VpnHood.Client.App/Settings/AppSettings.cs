@@ -1,16 +1,15 @@
 ﻿using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Settings;
 
 public class AppSettings
 {
+    private string _filePath = default!;
     private readonly object _saveLock = new();
     public event EventHandler? BeforeSave;
 
-    [JsonIgnore] public string SettingsFilePath { get; private set; } = null!;
     public int Version { get; set; } = 2;
     public bool? IsQuickLaunchEnabled { get; set; }
     public bool? IsNotificationEnabled { get; set; }
@@ -25,7 +24,7 @@ public class AppSettings
         lock (_saveLock) {
             ConfigTime = DateTime.Now;
             var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
+            File.WriteAllText(_filePath, json, Encoding.UTF8);
         }
     }
 
@@ -39,7 +38,7 @@ public class AppSettings
         }
         
         // Update version and settings file path
-        res.SettingsFilePath = settingsFilePath;
+        res._filePath = settingsFilePath;
 
         // Save settings if changed
         if (isChanged) {

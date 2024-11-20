@@ -78,7 +78,12 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
 
         // manage region
         if (sessionRequestEx.ServerLocation != null) {
-            var redirectEndPoint = ServerLocations[sessionRequestEx.ServerLocation];
+            // check is location is valid
+            if (!ServerLocations.TryGetValue(sessionRequestEx.ServerLocation, out var redirectEndPoint)) {
+                ret.ErrorCode = SessionErrorCode.NoServerAvailable;
+                return ret;
+            }
+
             if (!sessionRequestEx.HostEndPoint.Equals(redirectEndPoint)) {
                 ret.RedirectHostEndPoint = ServerLocations[sessionRequestEx.ServerLocation];
                 ret.ErrorCode = SessionErrorCode.RedirectHost;

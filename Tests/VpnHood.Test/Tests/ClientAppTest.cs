@@ -7,8 +7,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
+using VpnHood.Common.Exceptions;
 using VpnHood.Common.IpLocations.Providers;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Test.Device;
@@ -50,7 +52,7 @@ public class ClientAppTest : TestBase
         // make sure GetIpRange works
         Assert.IsTrue((await app.IpRangeLocationProvider.GetIpRanges("US")).Any());
     }
-    
+
 
     [TestMethod]
     public async Task State_Diagnose_info()
@@ -557,4 +559,28 @@ public class ClientAppTest : TestBase
         Assert.IsTrue(app.State.SessionStatus?.AccessUsage?.IsPremium);
     }
 
+    [TestMethod]
+    public async Task ServerLocation_must_rest_to_default_for_not_server_error()
+    {
+        // Create Server 1
+        using var accessManager = TestHelper.CreateAccessManager(serverLocation: "US/california");
+        await using var server1 = await TestHelper.CreateServer(accessManager);
+
+        // Create Client
+        var token = accessManager.CreateToken();
+
+        // Create App
+        await using var clientApp = TestHelper.CreateClientApp();
+        var clientProfileItem = clientApp.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        clientApp.UserSettings.ServerLocation = "UK/london";
+
+        // Connect
+        try {
+            await clientApp.Connect(clientProfileItem.ClientProfileId);
+        }
+        catch (SessionException ex) {
+            Assert.AreEqual(SessionErrorCode.NoServerAvailable, ex.SessionResponse.ErrorCode);
+        }
+        Assert.AreEqual(null, clientApp.UserSettings.ServerLocation);
+    }
 }

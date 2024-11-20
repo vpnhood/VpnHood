@@ -16,6 +16,7 @@ public enum SessionErrorCode
     AccessLocked,
     AccessTrafficOverflow,
     AccessError,
+    NoServerAvailable,
     AdError,
     Maintenance,
     RedirectHost,

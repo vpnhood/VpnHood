@@ -146,9 +146,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // add default test public server if not added yet
         var builtInProfileIds = ClientProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
-        Settings.UserSettings.ClientProfileId ??=
-            builtInProfileIds.FirstOrDefault()?.ClientProfileId; // set first one as default
 
+        // remove default client profile if not exists
+        if (Settings.UserSettings.ClientProfileId!=null && ClientProfileService.FindById(Settings.UserSettings.ClientProfileId.Value)==null)
+            Settings.UserSettings.ClientProfileId = null;
+
+        // set first built in profile as default if default is not set
+        Settings.UserSettings.ClientProfileId ??= builtInProfileIds.FirstOrDefault()?.ClientProfileId;
+
+        // set default server location if not set
         var uiProvider = options.UiProvider ?? new AppNotSupportedUiProvider();
 
         // initialize features
@@ -491,6 +497,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception ex) {
             ReportError(ex, "Could not connect.");
+
+            // Reset server location if no server is available
+            if (ex is SessionException { SessionResponse.ErrorCode: SessionErrorCode.NoServerAvailable }) {
+                UserSettings.ServerLocation = null;
+                Settings.Save();
+            }
 
             //user may disconnect before connection closed
             if (!_hasDisconnectedByUser)

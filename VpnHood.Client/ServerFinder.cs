@@ -169,10 +169,9 @@ public class ServerFinder(
     private static async Task<bool> VerifyServerStatus(ConnectorService connector, CancellationToken cancellationToken)
     {
         try {
-            var requestResult = await connector.SendRequest<ServerStatusResponse>(
-                    new ServerStatusRequest {
+            var requestResult = await connector.SendRequest<SessionResponse>(
+                    new ServerCheckRequest {
                         RequestId = Guid.NewGuid().ToString(),
-                        Message = "Hi, How are you?"
                     },
                     cancellationToken)
                 .VhConfigureAwait();
@@ -182,6 +181,9 @@ public class ServerFinder(
                 throw new SessionException(requestResult.Response.ErrorCode);
 
             return true;
+        }
+        catch (UnauthorizedAccessException) {
+            return true; // server is available but not authorized
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             throw; // query cancelled due to discovery cancellationToken
@@ -203,7 +205,7 @@ public class ServerFinder(
         };
         var connector = new ConnectorService(endPointInfo, socketFactory, serverQueryTimeout, false);
         connector.Init(serverProtocolVersion: 0, tcpRequestTimeout: serverQueryTimeout,
-            serverSecret: serverToken.Secret, tcpReuseTimeout: TimeSpan.Zero);
+            serverSecret: null, tcpReuseTimeout: TimeSpan.Zero);
         return connector;
     }
 }

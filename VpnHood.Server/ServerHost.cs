@@ -255,6 +255,7 @@ public class ServerHost : IAsyncDisposable, IJob
             // int.TryParse(headers.GetValueOrDefault("X-Version", "0"), out var xVersion);
             Enum.TryParse<BinaryStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var binaryStreamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
+            bool.TryParse(headers.GetValueOrDefault("X-DirectResponse", "false"), out var directResponse);
             var authorization = headers.GetValueOrDefault("Authorization", string.Empty);
 
             // read api key
@@ -268,7 +269,8 @@ public class ServerHost : IAsyncDisposable, IJob
             }
 
             // use binary stream only for authenticated clients
-            await sslStream.WriteAsync(HttpResponseBuilder.Ok(), cancellationToken).VhConfigureAwait();
+            if (!directResponse)
+                await sslStream.WriteAsync(HttpResponseBuilder.Ok(), cancellationToken).VhConfigureAwait();
 
             switch (binaryStreamType) {
                 case BinaryStreamType.Standard:
@@ -281,7 +283,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
                 case BinaryStreamType.Unknown:
                 default:
-                    throw new NotSupportedException("Unknown BinaryStreamType");
+                    throw new UnauthorizedAccessException(); //Unknown BinaryStreamType
             }
         }
         catch (Exception ex) {
@@ -442,16 +444,16 @@ public class ServerHost : IAsyncDisposable, IJob
 
         var requestCode = (RequestCode)buffer[0];
         switch (requestCode) {
+            case RequestCode.Hello:
+                await ProcessHello(clientStream, cancellationToken).VhConfigureAwait();
+                break;
+
             case RequestCode.ServerStatus:
                 await ProcessServerStatus(clientStream, cancellationToken).VhConfigureAwait();
                 break;
 
             case RequestCode.SessionStatus:
                 await ProcessSessionStatus(clientStream, cancellationToken).VhConfigureAwait();
-                break;
-
-            case RequestCode.Hello:
-                await ProcessHello(clientStream, cancellationToken).VhConfigureAwait();
                 break;
 
             case RequestCode.TcpDatagramChannel:

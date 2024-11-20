@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using VpnHood.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
@@ -13,6 +15,18 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class AccessTest : TestBase
 {
+    public class Foo1
+    {
+        public string Name { get; set; }
+        public int Age { get; set; }
+    }
+
+    [TestMethod]
+    public async Task AFoo()
+    {
+        await Task.Delay(0);
+    }
+
     [TestMethod]
     public async Task Server_reject_invalid_requests()
     {

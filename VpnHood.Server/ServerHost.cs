@@ -594,6 +594,7 @@ public class ServerHost : IAsyncDisposable, IJob
             ServerLocation = sessionResponseEx.ServerLocation,
             ServerTags = sessionResponseEx.ServerTags,
         };
+        
         await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken).VhConfigureAwait();
         await clientStream.DisposeAsync().VhConfigureAwait();
     }

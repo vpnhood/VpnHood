@@ -197,19 +197,6 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
-    public async Task UnsupportedClient()
-    {
-        // Create Server
-        await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
-
-        // Create Client
-        await using var client = await TestHelper.CreateClient(token,
-            packetCapture: new TestNullPacketCapture(),
-            clientOptions: new ClientOptions { UseUdpChannel = true });
-    }
-
-    [TestMethod]
     public async Task DatagramChannel_Stream()
     {
         // Create Server
@@ -586,9 +573,8 @@ public class ClientServerTest : TestBase
         await TestHelper.WaitForClientState(client6, ClientState.Connected);
     }
 
-#if DEBUG
     [TestMethod]
-    public async Task Disconnect_for_unsupported_client()
+    public async Task Disconnect_if_client_notsupported()
     {
         // create server
         await using var server = await TestHelper.CreateServer();
@@ -602,7 +588,6 @@ public class ClientServerTest : TestBase
         await Assert.ThrowsExceptionAsync<SessionException>(() => client.Connect());
         Assert.AreEqual(SessionErrorCode.UnsupportedClient, client.SessionStatus.ErrorCode);
     }
-#endif
 
     [TestMethod]
     public async Task Server_limit_by_Max_TcpConnectWait()

@@ -697,8 +697,8 @@ public class VpnHoodClient : IAsyncDisposable
                 $"SessionId: {VhLogger.FormatId(sessionResponse.SessionId)}, " +
                 $"ServerVersion: {sessionResponse.ServerVersion}, " +
                 $"ServerMinProtocolVersion: {sessionResponse.MinProtocolVersion}, " +
-                $"ServerMinProtocolVersion: {sessionResponse.MinProtocolVersion}, " +
-                $"UsedProtocolVersion: {ConnectorService.ProtocolVersion}, " +
+                $"ServerMaxProtocolVersion: {sessionResponse.MaxProtocolVersion}, " +
+                $"CurrentProtocolVersion: {ConnectorService.ProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}");
 
             // get session id

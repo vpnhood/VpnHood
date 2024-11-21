@@ -1,5 +1,4 @@
-﻿using System.IO;
-using System.Net;
+﻿using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using VpnHood.Common.Utils;
@@ -53,11 +52,11 @@ public static class HttpUtil
         
         // Check if the first line starts with "HTTP/" (basic HTTP format validation).
         if (firstLine.StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase) != true)
-            throw new Exception("Invalid HTTP response format.");
+            throw new Exception("Invalid HTTP response format. Make sure you have the latest version.");
 
         var parts = firstLine.Split(' ');
         if (parts.Length < 2)
-            throw new Exception("Invalid HTTP response.");
+            throw new Exception("Invalid HTTP response. Make sure you have the latest version.");
 
         return new HttpResponseMessage((HttpStatusCode)int.Parse(parts[1]));
     }

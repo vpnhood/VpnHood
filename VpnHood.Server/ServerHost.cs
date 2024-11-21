@@ -10,6 +10,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Exceptions;
+using VpnHood.Server.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.Channels.Streams;
@@ -275,11 +276,16 @@ public class ServerHost : IAsyncDisposable, IJob
             switch (binaryStreamType) {
                 case BinaryStreamType.Standard:
                     return new TcpClientStream(tcpClient,
-                        new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer), streamId,
-                        ReuseClientStream);
+                        new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer),
+                        streamId, ReuseClientStream) {
+                        RequireHttpResponse = directResponse
+                    };
 
                 case BinaryStreamType.None:
-                    return new TcpClientStream(tcpClient, sslStream, streamId);
+                    return new TcpClientStream(tcpClient, sslStream, streamId) {
+                        RequireHttpResponse = directResponse
+                    };
+
 
                 case BinaryStreamType.Unknown:
                 default:
@@ -301,8 +307,7 @@ public class ServerHost : IAsyncDisposable, IJob
     {
         // add timeout to cancellationToken
         using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
-        using var cancellationTokenSource =
-            CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
+        using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
         cancellationToken = cancellationTokenSource.Token;
 
         IClientStream? clientStream = null;
@@ -380,11 +385,6 @@ public class ServerHost : IAsyncDisposable, IJob
             await ProcessRequest(clientStream, cancellationToken).VhConfigureAwait();
         }
         catch (SessionException ex) {
-            // reply the error to caller if it is SessionException
-            // Should not reply anything when user is unknown
-            await StreamUtil.WriteJsonAsync(clientStream.Stream, ex.SessionResponse, cancellationToken)
-                .VhConfigureAwait();
-
             if (ex is ISelfLog loggable)
                 loggable.Log();
             else
@@ -395,20 +395,18 @@ public class ServerHost : IAsyncDisposable, IJob
                     "Could not process the request. SessionErrorCode: {SessionErrorCode}",
                     ex.SessionResponse.ErrorCode);
 
-            await clientStream.DisposeAsync().VhConfigureAwait();
+            // reply the error to caller if it is SessionException
+            // Should not reply anything when user is unknown. ServerUnauthorizedException will be thrown when user is unauthenticated
+            clientStream.WriteFinalResponse(ex.SessionResponse, cancellationToken).VhConfigureAwait();
         }
         catch (Exception ex) when (VhLogger.IsSocketCloseException(ex)) {
             VhLogger.LogError(GeneralEventId.Tcp, ex,
                 "Connection has been closed. ClientStreamId: {ClientStreamId}.",
                 clientStream.ClientStreamId);
 
-            await clientStream.DisposeAsync().VhConfigureAwait();
+            await clientStream.DisposeAsync(false).VhConfigureAwait();
         }
         catch (Exception ex) {
-            // return 401 for ANY non SessionException to keep server's anonymity
-            await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken)
-                .VhConfigureAwait();
-
             if (ex is ISelfLog loggable)
                 loggable.Log();
             else
@@ -416,6 +414,8 @@ public class ServerHost : IAsyncDisposable, IJob
                     "Could not process the request and return 401. ClientStreamId: {ClientStreamId}",
                     clientStream.ClientStreamId);
 
+            // return 401 for ANY non SessionException to keep server's anonymity
+            await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).VhConfigureAwait();
             await clientStream.DisposeAsync(false).VhConfigureAwait();
         }
         finally {
@@ -555,9 +555,9 @@ public class ServerHost : IAsyncDisposable, IJob
 
         // find udp port that match to the same tcp local IpAddress
         var udpPort = _udpChannelTransmitters
-            .SingleOrDefault(x => 
+            .SingleOrDefault(x =>
                 (x.LocalEndPoint.Address.Equals(IPAddress.Any) && ipEndPointPair.LocalEndPoint.IsV4()) ||
-                (x.LocalEndPoint.Address.Equals(IPAddress.IPv6Any) && ipEndPointPair.LocalEndPoint.IsV6()) || 
+                (x.LocalEndPoint.Address.Equals(IPAddress.IPv6Any) && ipEndPointPair.LocalEndPoint.IsV6()) ||
                 x.LocalEndPoint.Address.Equals(ipEndPointPair.LocalEndPoint.Address))?
             .LocalEndPoint.Port;
 
@@ -594,9 +594,8 @@ public class ServerHost : IAsyncDisposable, IJob
             ServerLocation = sessionResponseEx.ServerLocation,
             ServerTags = sessionResponseEx.ServerTags,
         };
-        
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken).VhConfigureAwait();
-        await clientStream.DisposeAsync().VhConfigureAwait();
+
+        await clientStream.WriteFinalResponse(helloResponse, cancellationToken).VhConfigureAwait();
     }
 
     private async Task ProcessAdRewardRequest(IClientStream clientStream, CancellationToken cancellationToken)
@@ -613,16 +612,15 @@ public class ServerHost : IAsyncDisposable, IJob
         var request = await ReadRequest<ServerStatusRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         // Before calling CloseSession. Session must be validated by GetSession
-        await StreamUtil.WriteJsonAsync(clientStream.Stream,
+        await clientStream.WriteFinalResponse(
                 new ServerStatusResponse {
                     ErrorCode = SessionErrorCode.Ok,
                     Message = request.Message == "Hi, How are you?" ? "I am OK. How are you?" : "OK. Who are you?"
                 }, cancellationToken)
             .VhConfigureAwait();
-
-        await clientStream.DisposeAsync().VhConfigureAwait();
     }
 
+    // todo: it must be removed
     private async Task ProcessSessionStatus(IClientStream clientStream, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the SessionStatus request...");
@@ -645,9 +643,8 @@ public class ServerHost : IAsyncDisposable, IJob
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
 
         // Before calling CloseSession. Session must be validated by GetSession
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponse { ErrorCode = SessionErrorCode.Ok },
-            cancellationToken).VhConfigureAwait();
-        await clientStream.DisposeAsync(false).VhConfigureAwait();
+        await clientStream.WriteFinalResponseUngracefully(new SessionResponse { ErrorCode = SessionErrorCode.Ok }, cancellationToken)
+            .VhConfigureAwait();
 
         // must be last
         await _sessionManager.CloseSession(session.SessionId);

@@ -12,10 +12,6 @@ public class ClientOptions
 {
     public static ClientOptions Default { get; } = new();
 
-#if DEBUG
-    public int ProtocolVersion { get; set; }
-#endif
-
     /// <summary>
     ///     a never used IPv4 that must be outside the local network
     /// </summary>

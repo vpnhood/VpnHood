@@ -16,7 +16,10 @@ public class HelloResponse : SessionResponse
 
     public int? UdpPort { get; set; }
     public string ServerVersion { get; set; } = default!;
+    [Obsolete("Use MaxProtocolVersion and MinProtocolVersion")]
     public int ServerProtocolVersion { get; set; }
+    public int MaxProtocolVersion { get; set; }
+    public int MinProtocolVersion { get; set; }
     public byte[] ServerSecret { get; set; } = default!;
     public ulong SessionId { get; set; }
     public byte[] SessionKey { get; set; } = [];

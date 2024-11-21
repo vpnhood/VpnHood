@@ -10,8 +10,10 @@ public static class ClientStreamExtensions
     public static async Task WriteResponse(this IClientStream clientStream, SessionResponse sessionResponse, CancellationToken cancellationToken)
     {
         // If the client stream requires an HTTP response, write it to the client stream
-        if (clientStream.RequireHttpResponse) 
+        if (clientStream.RequireHttpResponse) {
+            clientStream.RequireHttpResponse = false;
             await clientStream.Stream.WriteAsync(HttpResponseBuilder.Ok(), cancellationToken).VhConfigureAwait();
+        }
 
         // Write the session response to the client stream
         await StreamUtil.WriteJsonAsync(clientStream.Stream, sessionResponse, cancellationToken).VhConfigureAwait();

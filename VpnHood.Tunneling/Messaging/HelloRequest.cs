@@ -1,5 +1,4 @@
-﻿using System.Text.Json.Serialization;
-using VpnHood.Common.Messaging;
+﻿using VpnHood.Common.Messaging;
 using VpnHood.Common.Tokens;
 
 namespace VpnHood.Tunneling.Messaging;

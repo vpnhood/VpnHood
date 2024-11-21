@@ -31,7 +31,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
     public ConnectorStat Stat { get; }
     public TimeSpan RequestTimeout { get; private set; }
     public TimeSpan TcpReuseTimeout { get; private set; }
-    public int ServerProtocolVersion { get; private set; }
+    public int ProtocolVersion { get; private set; } = 5;
 
     public ConnectorServiceBase(ConnectorEndPointInfo endPointInfo, ISocketFactory socketFactory,
         TimeSpan tcpConnectTimeout, bool allowTcpReuse)
@@ -47,45 +47,50 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         JobRunner.Default.Add(this);
     }
 
-    public void Init(int serverProtocolVersion, TimeSpan tcpRequestTimeout, byte[]? serverSecret,
+    public void Init(int protocolVersion, TimeSpan tcpRequestTimeout, byte[]? serverSecret,
         TimeSpan tcpReuseTimeout)
     {
-        ServerProtocolVersion = serverProtocolVersion;
+        ProtocolVersion = protocolVersion;
         RequestTimeout = tcpRequestTimeout;
         TcpReuseTimeout = tcpReuseTimeout;
         _apiKey = serverSecret != null ? HttpUtil.GetApiKey(serverSecret, TunnelDefaults.HttpPassCheck) : string.Empty;
     }
 
-    private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, string streamId,
-        CancellationToken cancellationToken)
+    private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, 
+        string streamId, CancellationToken cancellationToken)
     {
         const bool useBuffer = true;
-        const int version = 3;
-        var binaryStreamType = string.IsNullOrEmpty(_apiKey) || !_allowTcpReuse
-            ? BinaryStreamType.None
-            : BinaryStreamType.Standard;
+        var binaryStreamType = ProtocolVersion switch {
+            <= 5 => string.IsNullOrEmpty(_apiKey) || !_allowTcpReuse ? BinaryStreamType.None : BinaryStreamType.Standard,
+            >= 6 => BinaryStreamType.Standard,
+        };
 
         // write HTTP request
         var header =
             $"POST /{Guid.NewGuid()} HTTP/1.1\r\n" +
             $"Authorization: ApiKey {_apiKey}\r\n" +
-            $"X-Version: {version}\r\n" +
             $"X-BinaryStream: {binaryStreamType}\r\n" +
             $"X-Buffered: {useBuffer}\r\n" +
+            $"X-ProtocolVersion: {ProtocolVersion}\r\n" +
             "\r\n";
 
         // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).VhConfigureAwait();
-        await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken).VhConfigureAwait();
-        return binaryStreamType == BinaryStreamType.None
+        if (ProtocolVersion <= 5)
+            await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken).VhConfigureAwait();
+
+        var srcStream = ProtocolVersion >= 6 ? sslStream : tcpClient.GetStream();
+        var clientStream = binaryStreamType == BinaryStreamType.None
             ? new TcpClientStream(tcpClient, sslStream, streamId)
-            : new TcpClientStream(tcpClient, new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer),
-                streamId, ReuseStreamClient);
+            : new TcpClientStream(tcpClient, new BinaryStreamStandard(srcStream, streamId, useBuffer), streamId, ReuseStreamClient);
+
+        clientStream.RequireHttpResponse = ProtocolVersion >= 6;
+        return clientStream;
     }
 
     protected async Task<IClientStream> GetTlsConnectionToServer(string streamId, CancellationToken cancellationToken)
     {
-        if (EndPointInfo == null)
+        if (EndPointInfo == null)   
             throw new InvalidOperationException($"{nameof(EndPointInfo)} has not been initialized.");
         var tcpEndPoint = EndPointInfo.TcpEndPoint;
         var hostName = EndPointInfo.HostName;
@@ -94,8 +99,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         var tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint.AddressFamily);
 
         // Client.SessionTimeout does not affect in ConnectAsync
-        VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}",
-            VhLogger.Format(tcpEndPoint));
+        VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
         await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpConnectTimeout,
             cancellationToken).VhConfigureAwait();
 
@@ -109,8 +113,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
             }, cancellationToken)
             .VhConfigureAwait();
 
-        var clientStream =
-            await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken).VhConfigureAwait();
+        var clientStream = await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken).VhConfigureAwait();
         lock (Stat) Stat.CreatedConnectionCount++;
         return clientStream;
     }

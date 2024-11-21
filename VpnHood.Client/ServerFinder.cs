@@ -55,8 +55,7 @@ public class ServerFinder(
         VhUtil.Shuffle(hostEndPoints);
 
         // find the best server
-        _hostEndPointStatuses =
-            await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
+        _hostEndPointStatuses = await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
         var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
         _ = TrackEndPointsAvailability([], _hostEndPointStatuses).VhConfigureAwait();
@@ -204,8 +203,9 @@ public class ServerFinder(
             TcpEndPoint = tcpEndPoint
         };
         var connector = new ConnectorService(endPointInfo, socketFactory, serverQueryTimeout, false);
-        connector.Init(serverProtocolVersion: 0, tcpRequestTimeout: serverQueryTimeout,
-            serverSecret: null, tcpReuseTimeout: TimeSpan.Zero);
+        connector.Init(
+            protocolVersion: connector.ProtocolVersion, tcpRequestTimeout: serverQueryTimeout, serverSecret: null, 
+            tcpReuseTimeout: TimeSpan.Zero);
         return connector;
     }
 }

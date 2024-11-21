@@ -10,7 +10,6 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
-using VpnHood.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Tunneling;
@@ -573,8 +572,7 @@ public class ClientServerTest : TestBase
         // Check: Go Maintenance mode by replying 404 from access-server
         // ----------
         accessManager.EmbedIoAccessManager.HttpException = HttpException.Forbidden();
-        await using var client5 =
-            await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
+        await using var client5 = await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client5.Connect());
 
         await TestHelper.WaitForClientState(client5, ClientState.Disposed);
@@ -594,11 +592,12 @@ public class ClientServerTest : TestBase
     {
         // create server
         await using var server = await TestHelper.CreateServer();
+        server.ServerHost.MinClientProtocolVersion = 1000;
+
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using var client = await TestHelper.CreateClient(token, autoConnect: false,
-            clientOptions: new ClientOptions { ProtocolVersion = 1 });
+        await using var client = await TestHelper.CreateClient(token, autoConnect: false);
 
         await Assert.ThrowsExceptionAsync<SessionException>(() => client.Connect());
         Assert.AreEqual(SessionErrorCode.UnsupportedClient, client.SessionStatus.ErrorCode);
@@ -666,8 +665,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client =
-            await TestHelper.CreateClient(token, clientOptions: TestHelper.CreateClientOptions(useUdp: true));
+        await using var client = await TestHelper.CreateClient(token, clientOptions: TestHelper.CreateClientOptions(useUdp: true));
         var lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
         var lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
 

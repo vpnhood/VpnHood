@@ -15,12 +15,6 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class AccessTest : TestBase
 {
-    public class Foo1
-    {
-        public string Name { get; set; }
-        public int Age { get; set; }
-    }
-
     [TestMethod]
     public async Task AFoo()
     {

@@ -11,6 +11,7 @@ using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Access.Messaging;
 using VpnHood.Server.Exceptions;
+using VpnHood.Server.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.ClientStreams;
@@ -237,7 +238,7 @@ public class Session : IAsyncDisposable
         CancellationToken cancellationToken)
     {
         // send OK reply
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken).VhConfigureAwait();
+        await clientStream.WriteResponse(SessionResponse, cancellationToken).VhConfigureAwait();
 
         // Disable UdpChannel
         UseUdpChannel = false;
@@ -268,16 +269,14 @@ public class Session : IAsyncDisposable
     public async Task ProcessSessionStatusRequest(SessionStatusRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken).VhConfigureAwait();
-        await clientStream.DisposeAsync().VhConfigureAwait();
+        await clientStream .WriteFinalResponse(SessionResponse, cancellationToken).VhConfigureAwait();
     }
 
     public async Task ProcessAdRewardRequest(AdRewardRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
         SessionResponse = await _accessManager.Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData).VhConfigureAwait();
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken).VhConfigureAwait();
-        await clientStream.DisposeAsync().VhConfigureAwait();
+        await clientStream.WriteFinalResponse(SessionResponse, cancellationToken).VhConfigureAwait();
     }
 
     public async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IClientStream clientStream,
@@ -320,7 +319,7 @@ public class Session : IAsyncDisposable
                 true, true, null);
 
             // send response
-            await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken).VhConfigureAwait();
+            await clientStream.WriteResponse(SessionResponse, cancellationToken).VhConfigureAwait();
 
             // add the connection
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,

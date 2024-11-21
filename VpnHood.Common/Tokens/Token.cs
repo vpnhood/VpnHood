@@ -45,7 +45,7 @@ public class Token
 
     public string ToAccessKey()
     {
-        var json = JsonSerializer.Serialize(this);
+        var json = JsonSerializer.Serialize(this, new JsonSerializerOptions{DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault});
         return "vh://" + Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
     }
 

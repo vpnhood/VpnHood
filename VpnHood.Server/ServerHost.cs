@@ -24,7 +24,6 @@ namespace VpnHood.Server;
 public class ServerHost : IAsyncDisposable, IJob
 {
     private readonly HashSet<IClientStream> _clientStreams = [];
-    private const int ServerProtocolVersion = 5;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly SessionManager _sessionManager;
     private readonly List<TcpListener> _tcpListeners;
@@ -32,6 +31,9 @@ public class ServerHost : IAsyncDisposable, IJob
     private readonly List<Task> _tcpListenerTasks = [];
     private bool _disposed;
 
+    public const int MaxProtocolVersion =  6;
+    public const int MinProtocolVersion =  4;
+    public int MinClientProtocolVersion { get; set; }  = MinProtocolVersion; // used for tests
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
     public bool IsIpV6Supported { get; set; }
     public IpRange[]? NetFilterPacketCaptureIncludeIpRanges { get; set; }
@@ -253,39 +255,49 @@ public class ServerHost : IAsyncDisposable, IJob
                 await HttpUtil.ParseHeadersAsync(sslStream, cancellationToken).VhConfigureAwait()
                 ?? throw new Exception("Connection has been closed before receiving any request.");
 
-            // int.TryParse(headers.GetValueOrDefault("X-Version", "0"), out var xVersion);
             Enum.TryParse<BinaryStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var binaryStreamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
-            bool.TryParse(headers.GetValueOrDefault("X-DirectResponse", "false"), out var directResponse);
+            int.TryParse(headers.GetValueOrDefault("X-ProtocolVersion", "5"), out var protocolVersion);
             var authorization = headers.GetValueOrDefault("Authorization", string.Empty);
 
-            // read api key
-            if (!CheckApiKeyAuthorization(authorization)) {
-                // process hello without api key
-                if (authorization != "ApiKey")
-                    throw new UnauthorizedAccessException();
+            // check version; Throw unauthorized to prevent fingerprinting
+            if (protocolVersion < MinProtocolVersion || protocolVersion > MaxProtocolVersion)
+                throw new UnauthorizedAccessException();
 
-                await sslStream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).VhConfigureAwait();
-                return new TcpClientStream(tcpClient, sslStream, streamId);
+            // read api key
+            if (protocolVersion <= 5 ) {
+                if (!CheckApiKeyAuthorization(authorization)) {
+                    // process hello without api key
+                    if (authorization != "ApiKey")
+                        throw new UnauthorizedAccessException();
+
+                    await sslStream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).VhConfigureAwait();
+                    return new TcpClientStream(tcpClient, sslStream, streamId);
+                }
+
+                await sslStream.WriteAsync(HttpResponseBuilder.Ok(), cancellationToken).VhConfigureAwait();
             }
 
-            // use binary stream only for authenticated clients
-            if (!directResponse)
-                await sslStream.WriteAsync(HttpResponseBuilder.Ok(), cancellationToken).VhConfigureAwait();
-
             switch (binaryStreamType) {
-                case BinaryStreamType.Standard:
+                case BinaryStreamType.Standard when protocolVersion <= 5:
                     return new TcpClientStream(tcpClient,
                         new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer),
                         streamId, ReuseClientStream) {
-                        RequireHttpResponse = directResponse
+                        RequireHttpResponse = false
+                    };
+                
+                // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                case BinaryStreamType.Standard when protocolVersion == 6:
+                    return new TcpClientStream(tcpClient,
+                        new BinaryStreamStandard(sslStream, streamId, useBuffer),
+                        streamId, ReuseClientStream) {
+                        RequireHttpResponse = true
                     };
 
                 case BinaryStreamType.None:
                     return new TcpClientStream(tcpClient, sslStream, streamId) {
-                        RequireHttpResponse = directResponse
+                        RequireHttpResponse = protocolVersion >= 6
                     };
-
 
                 case BinaryStreamType.Unknown:
                 default:
@@ -346,8 +358,7 @@ public class ServerHost : IAsyncDisposable, IJob
     {
         lock (_clientStreams) _clientStreams.Add(clientStream);
         using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
-        using var cancellationTokenSource =
-            CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
+        using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
         var cancellationToken = cancellationTokenSource.Token;
 
         // don't add new client in disposing
@@ -397,7 +408,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
             // reply the error to caller if it is SessionException
             // Should not reply anything when user is unknown. ServerUnauthorizedException will be thrown when user is unauthenticated
-            clientStream.WriteFinalResponse(ex.SessionResponse, cancellationToken).VhConfigureAwait();
+            await clientStream.WriteFinalResponse(ex.SessionResponse, cancellationToken).VhConfigureAwait();
         }
         catch (Exception ex) when (VhLogger.IsSocketCloseException(ex)) {
             VhLogger.LogError(GeneralEventId.Tcp, ex,
@@ -520,7 +531,7 @@ public class ServerHost : IAsyncDisposable, IJob
                       throw new InvalidOperationException("Session is lost!");
 
         // check client version; unfortunately it must be after CreateSession to preserve server anonymity
-        if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 4)
+        if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < MinClientProtocolVersion)
             throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint, session,
                 SessionErrorCode.UnsupportedClient, request.RequestId,
                 "This client is outdated and not supported anymore! Please update your app.");
@@ -574,7 +585,11 @@ public class ServerHost : IAsyncDisposable, IJob
             UdpPort = udpPort,
             GaMeasurementId = sessionResponseEx.GaMeasurementId,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
-            ServerProtocolVersion = ServerProtocolVersion,
+#pragma warning disable CS0618 // Type or member is obsolete
+            ServerProtocolVersion = 5,
+#pragma warning restore CS0618 // Type or member is obsolete
+            MaxProtocolVersion = MaxProtocolVersion,
+            MinProtocolVersion = MinProtocolVersion,
             SuppressedTo = sessionResponseEx.SuppressedTo,
             MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
             ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,

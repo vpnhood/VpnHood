@@ -325,8 +325,7 @@ public class Session : IAsyncDisposable
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
                 "Adding a StreamProxyChannel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
-            tcpClientStreamHost =
-                new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
+            tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
             streamProxyChannel = new StreamProxyChannel(request.RequestId, tcpClientStreamHost, clientStream,
                 _tcpBufferSize, _tcpBufferSize);
 

@@ -4,6 +4,7 @@
 * Feature: Update server token from multiple URLs
 * Feature: Handle Trial Session
 * Feature: Drop QUIC in protocol
+* Feature: Protocol Version 6
 * Improve: Improve initialization speed to exclude my country
 * Improve: Diagnostic wrongly reports your internet may not be stable
 * Update: Translate many error messages
@@ -17,6 +18,7 @@
 * Fix: IpV6 Subnet in auto IP configuration
 * Feature: Allow to config swap file size
 * Feature: Allow to config UdpClient buffer size
+* Feature: Protocol Version 6
 * Update: File server-internal token format
 * Improve: Bulk sync to AccessManager
 

@@ -1,4 +1,6 @@
-﻿using System.Security.Cryptography;
+﻿using System.IO;
+using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using VpnHood.Common.Utils;
 
@@ -41,6 +43,23 @@ public static class HttpUtil
             await memStream.DisposeAsync().VhConfigureAwait();
             throw;
         }
+    }
+
+    public static async Task<HttpResponseMessage> ReadResponse(Stream stream, CancellationToken cancellationToken, int maxLength = 8192)
+    {
+        using var headerStream = await ReadHeadersAsync(stream, cancellationToken, maxLength);
+        using var reader = new StreamReader(headerStream, Encoding.UTF8);
+        var firstLine = await reader.ReadLineAsync();
+        
+        // Check if the first line starts with "HTTP/" (basic HTTP format validation).
+        if (firstLine.StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase) != true)
+            throw new Exception("Invalid HTTP response format.");
+
+        var parts = firstLine.Split(' ');
+        if (parts.Length < 2)
+            throw new Exception("Invalid HTTP response.");
+
+        return new HttpResponseMessage((HttpStatusCode)int.Parse(parts[1]));
     }
 
 

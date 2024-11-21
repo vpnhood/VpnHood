@@ -30,6 +30,8 @@ namespace VpnHood.Client;
 
 public class VpnHoodClient : IAsyncDisposable
 {
+    private const int MaxProtocolVersion = 6;
+    private const int MinProtocolVersion = 4;
     private bool _disposed;
     private readonly bool _autoDisposePacketCapture;
     private readonly CancellationTokenSource _cancellationTokenSource;
@@ -63,7 +65,6 @@ public class VpnHoodClient : IAsyncDisposable
     private readonly ServerFinder _serverFinder;
     private readonly ConnectPlanId _planId;
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
-    private int ProtocolVersion { get; }
     internal Nat Nat { get; }
     internal Tunnel Tunnel { get; }
     internal ClientSocketFactory SocketFactory { get; }
@@ -136,7 +137,6 @@ public class VpnHoodClient : IAsyncDisposable
         Token = token;
         Version = options.Version;
         UserAgent = options.UserAgent;
-        ProtocolVersion = 4;
         ClientId = clientId;
         SessionTimeout = options.SessionTimeout;
         IncludeLocalNetwork = options.IncludeLocalNetwork;
@@ -162,10 +162,6 @@ public class VpnHoodClient : IAsyncDisposable
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
         Stat = new ClientStat(this);
-
-#if DEBUG
-        if (options.ProtocolVersion != 0) ProtocolVersion = options.ProtocolVersion;
-#endif
     }
 
     public IPAddress[] DnsServers {
@@ -260,8 +256,10 @@ public class VpnHoodClient : IAsyncDisposable
 
         // report version
         VhLogger.Instance.LogInformation(
-            "ClientVersion: {ClientVersion}, ClientProtocolVersion: {ClientProtocolVersion}, ClientId: {ClientId}",
-            Version, ProtocolVersion, VhLogger.FormatId(ClientId));
+            "ClientVersion: {ClientVersion}, " +
+            "ClientMinProtocolVersion: {ClientMinProtocolVersion}, ClientMinProtocolVersion: {ClientMaxProtocolVersion}, " +
+            "ClientId: {ClientId}",
+            Version, MinProtocolVersion, MaxProtocolVersion, VhLogger.FormatId(ClientId));
 
         // Starting
         State = ClientState.Connecting;
@@ -632,7 +630,7 @@ public class VpnHoodClient : IAsyncDisposable
         }
 
         var udpClient = SocketFactory.CreateUdpClient(HostTcpEndPoint.AddressFamily);
-        var udpChannel = new UdpChannel(SessionId, _sessionKey, false, ConnectorService.ServerProtocolVersion);
+        var udpChannel = new UdpChannel(SessionId, _sessionKey, false, ConnectorService.ProtocolVersion);
         try {
             var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, ServerSecret);
             udpChannel.SetRemote(udpChannelTransmitter, HostUdpEndPoint);
@@ -653,7 +651,7 @@ public class VpnHoodClient : IAsyncDisposable
             var clientInfo = new ClientInfo {
                 ClientId = ClientId,
                 ClientVersion = Version.ToString(3),
-                ProtocolVersion = ProtocolVersion,
+                ProtocolVersion = ConnectorService.ProtocolVersion,
                 UserAgent = UserAgent
             };
 
@@ -670,13 +668,25 @@ public class VpnHoodClient : IAsyncDisposable
 
             await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();
             var sessionResponse = requestResult.Response;
-            if (sessionResponse.ServerProtocolVersion < 4)
+            
+#pragma warning disable CS0618 // Type or member is obsolete
+            if (sessionResponse is { MinProtocolVersion: 0, ServerProtocolVersion: 5 }) {
+                sessionResponse.MinProtocolVersion = 5;
+                sessionResponse.MaxProtocolVersion = 5;
+            }
+#pragma warning restore CS0618 // Type or member is obsolete
+
+            if (sessionResponse.MinProtocolVersion < MinProtocolVersion)
                 throw new SessionException(SessionErrorCode.UnsupportedServer,
-                    "This server is outdated and does not support this client!");
+                    "The server is outdated and does not support by your app!");
+
+            if (sessionResponse.MaxProtocolVersion > MaxProtocolVersion)
+                throw new SessionException(SessionErrorCode.UnsupportedServer,
+                    "This app is outdated and does not support by the server!");
 
             // initialize the connector
             ConnectorService.Init(
-                sessionResponse.ServerProtocolVersion,
+                Math.Min(sessionResponse.MaxProtocolVersion, MaxProtocolVersion),
                 sessionResponse.RequestTimeout,
                 sessionResponse.ServerSecret,
                 sessionResponse.TcpReuseTimeout);
@@ -686,7 +696,9 @@ public class VpnHoodClient : IAsyncDisposable
                 "Hurray! Client has been connected! " +
                 $"SessionId: {VhLogger.FormatId(sessionResponse.SessionId)}, " +
                 $"ServerVersion: {sessionResponse.ServerVersion}, " +
-                $"ServerProtocolVersion: {sessionResponse.ServerProtocolVersion}, " +
+                $"ServerMinProtocolVersion: {sessionResponse.MinProtocolVersion}, " +
+                $"ServerMinProtocolVersion: {sessionResponse.MinProtocolVersion}, " +
+                $"UsedProtocolVersion: {ConnectorService.ProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}");
 
             // get session id

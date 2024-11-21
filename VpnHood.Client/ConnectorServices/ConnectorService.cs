@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Net;
+using Microsoft.Extensions.Logging;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
@@ -7,6 +8,7 @@ using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
+using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Client.ConnectorServices;
 
@@ -28,8 +30,7 @@ internal class ConnectorService(
 
         // set request timeout
         using var cancellationTokenSource = new CancellationTokenSource(RequestTimeout);
-        using var linkedCancellationTokenSource =
-            CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
+        using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
         cancellationToken = linkedCancellationTokenSource.Token;
 
         await using var mem = new MemoryStream();
@@ -81,14 +82,27 @@ internal class ConnectorService(
 
         // send request
         try {
+            // send the request
             await clientStream.Stream.WriteAsync(request, cancellationToken).VhConfigureAwait();
+
+            // parse the HTTP request
+            if (clientStream.RequireHttpResponse) {
+                clientStream.RequireHttpResponse = false;
+                var responseMessage = await HttpUtil.ReadResponse(clientStream.Stream, cancellationToken).VhConfigureAwait();
+                if (responseMessage.StatusCode == HttpStatusCode.Unauthorized)
+                    throw new UnauthorizedAccessException();
+
+                // other error response will be handled by the SessionResponse
+            }
+
+            // read the response
             var response2 = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken).VhConfigureAwait();
             return new ConnectorRequestResult<T> {
                 Response = response2,
                 ClientStream = clientStream
             };
         }
-        catch {
+        catch{
             DisposingTasks.Add(clientStream.DisposeAsync(false));
             throw;
         }

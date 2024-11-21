@@ -11,6 +11,9 @@ internal class AccessTokenLegacyConverter
     public static void ConvertToken1ToToken2(string storagePath, string token2Extension)
     {
         try {
+            if (!Directory.Exists(storagePath))
+                return;
+
             var files = Directory.GetFiles(storagePath, "*.token");
             if (files.Length > 0) {
                 VhLogger.Instance.LogInformation("Converting old token1 files to Token2 format. TokenCount: {TokenCount}", files.Length);

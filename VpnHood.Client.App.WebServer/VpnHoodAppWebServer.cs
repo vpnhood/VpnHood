@@ -143,8 +143,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         await using var text = context.OpenResponseText(new UTF8Encoding(false));
         await text.WriteAsync(JsonSerializer.Serialize(data,
                 new JsonSerializerOptions {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.Never
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                 }))
             .VhConfigureAwait();
     }

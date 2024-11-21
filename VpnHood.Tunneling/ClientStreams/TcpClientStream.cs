@@ -17,6 +17,7 @@ public class TcpClientStream : IClientStream
 
     public TcpClient TcpClient { get; }
     public Stream Stream { get; set; }
+    public bool RequireHttpResponse { get; set; }
     public IPEndPointPair IpEndPointPair { get; }
 
     public string ClientStreamId {

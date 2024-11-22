@@ -35,5 +35,4 @@ public class AppState
     public required bool CanDiagnose { get; init; }
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }
-    public required BillingPurchaseState? PurchaseState { get; init; }
 }

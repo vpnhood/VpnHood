@@ -6,8 +6,6 @@ namespace VpnHood.Client.App.Services.Accounts;
 
 public class AppBillingService(AppAccountService accountService, IAppBillingProvider billingProvider) : IDisposable
 {
-    public BillingPurchaseState PurchaseState => billingProvider.PurchaseState;
-
     public Task<SubscriptionPlan[]> GetSubscriptionPlans()
     {
         return billingProvider.GetSubscriptionPlans();

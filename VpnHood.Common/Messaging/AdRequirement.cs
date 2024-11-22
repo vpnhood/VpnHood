@@ -7,5 +7,5 @@ public enum AdRequirement
 {
     None,
     Flexible,
-    Required
+    Rewarded,
 }

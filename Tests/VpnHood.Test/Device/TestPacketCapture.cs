@@ -4,11 +4,11 @@ using VpnHood.Client.Device.WinDivert;
 
 namespace VpnHood.Test.Device;
 
-internal class TestPacketCapture(TestDeviceOptions deviceOptions) : WinDivertPacketCapture
+internal class TestPacketCapture(TestPacketCaptureOptions packetCaptureOptions) : WinDivertPacketCapture
 {
     private IPAddress[]? _dnsServers;
 
-    public override bool IsDnsServersSupported => deviceOptions.IsDnsServerSupported;
+    public override bool IsDnsServersSupported => packetCaptureOptions.IsDnsServerSupported;
 
     public override IPAddress[]? DnsServers {
         get => IsDnsServersSupported ? _dnsServers : base.DnsServers;
@@ -20,7 +20,7 @@ internal class TestPacketCapture(TestDeviceOptions deviceOptions) : WinDivertPac
         }
     }
 
-    public override bool CanSendPacketToOutbound => deviceOptions.CanSendPacketToOutbound;
+    public override bool CanSendPacketToOutbound => packetCaptureOptions.CanSendPacketToOutbound;
 
     protected override void ProcessPacketReceivedFromInbound(IPPacket ipPacket)
     {
@@ -28,8 +28,8 @@ internal class TestPacketCapture(TestDeviceOptions deviceOptions) : WinDivertPac
 
         ignore |=
             ipPacket.Extract<UdpPacket>()?.DestinationPort == 53 &&
-            deviceOptions.CaptureDnsAddresses != null &&
-            deviceOptions.CaptureDnsAddresses.All(x => !x.Equals(ipPacket.DestinationAddress));
+            packetCaptureOptions.CaptureDnsAddresses != null &&
+            packetCaptureOptions.CaptureDnsAddresses.All(x => !x.Equals(ipPacket.DestinationAddress));
 
         // ignore protected packets
         if (ignore)

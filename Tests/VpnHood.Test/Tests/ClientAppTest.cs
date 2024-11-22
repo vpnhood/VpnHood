@@ -132,8 +132,7 @@ public class ClientAppTest : TestBase
         appOptions.SessionTimeout = TimeSpan.FromSeconds(20);
         appOptions.ReconnectTimeout = TimeSpan.FromSeconds(1);
         appOptions.AutoWaitTimeout = TimeSpan.FromSeconds(2);
-        await using var app =
-            TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, device: TestHelper.CreateDevice());
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId);
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
@@ -185,13 +184,13 @@ public class ClientAppTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
-        var deviceOptions = new TestDeviceOptions {
+        var deviceOptions = new TestPacketCaptureOptions {
             CanSendPacketToOutbound = usePassthru,
             IsDnsServerSupported = isDnsServerSupported,
             CaptureDnsAddresses = TestHelper.TestIpAddresses.ToArray()
         };
 
-        await using var app = TestHelper.CreateClientApp(deviceOptions: deviceOptions);
+        await using var app = TestHelper.CreateClientApp(device: TestHelper.CreateDevice(deviceOptions));
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         var customIps = (await Dns.GetHostAddressesAsync(TestConstants.HttpsUri1.Host))
             .Select(x => new IpRange(x))
@@ -494,9 +493,7 @@ public class ClientAppTest : TestBase
         await using var server = await TestHelper.CreateServer();
 
         // create app
-        var appOptions = TestHelper.CreateAppOptions();
-        await using var app =
-            TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
+        await using var app = TestHelper.CreateClientApp(device: TestHelper.CreateDevice());
         app.UserSettings.DomainFilter.Includes = [TestConstants.HttpsUri1.Host];
 
         // connect
@@ -523,8 +520,7 @@ public class ClientAppTest : TestBase
         await using var server = await TestHelper.CreateServer();
 
         // create app
-        var appOptions = TestHelper.CreateAppOptions();
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
+        await using var app = TestHelper.CreateClientApp(device: TestHelper.CreateDevice());
         app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsUri1.Host];
 
         // connect

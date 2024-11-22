@@ -1,9 +1,12 @@
 ﻿
+using System.Text.Json.Serialization;
+
 namespace VpnHood.Common.Messaging;
 
 public class AccessUsage
 {
-    public bool CanExtendPremiumByAd { get; set; }
+    [JsonPropertyName("ExByRAD")]
+    public bool CanExtendPremiumByAdReward { get; set; }
 
     public bool IsPremium { get; set; } 
 

@@ -3,7 +3,9 @@ using VpnHood.Client.App;
 using VpnHood.Client.Device;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
+using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
@@ -67,9 +69,6 @@ public class AdTest : TestBase
         using var accessManager = TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
 
-        // create access item
-        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Required);
-
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
@@ -78,8 +77,11 @@ public class AdTest : TestBase
         ActiveUiContext.Context = null;
         //adProviderItem.FailShow = true;
 
+        // create access token
+        var token = accessManager.CreateToken(adRequirement: AdRequirement.Rewarded);
+
         // connect
-        var clientProfile = app.ClientProfileService.ImportAccessKey(accessManager.GetToken(accessToken).ToAccessKey());
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() => app.Connect(clientProfile.ClientProfileId));
         await TestHelper.WaitForAppState(app, AppConnectionState.None);
     }
@@ -91,8 +93,6 @@ public class AdTest : TestBase
         using var accessManager = TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
 
-        // create access item
-        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Required);
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
@@ -100,8 +100,10 @@ public class AdTest : TestBase
         appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
+        // create access token
+        var token = accessManager.CreateToken(adRequirement: AdRequirement.Rewarded);
+
         // connect
-        var token = accessManager.GetToken(accessToken);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId);
 
@@ -115,9 +117,6 @@ public class AdTest : TestBase
         // create server
         using var accessManager = TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-
-        // create access item
-        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Required);
         accessManager.RejectAllAds = true; // server will reject all ads
 
         // create client app
@@ -126,13 +125,40 @@ public class AdTest : TestBase
         appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
+        // create token
+        var token = accessManager.CreateToken(adRequirement: AdRequirement.Rewarded);
+
         // connect
-        var token = accessManager.GetToken(accessToken);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId);
 
         // asserts
         Assert.IsNotNull(app.State.SessionStatus?.AccessUsage?.ExpirationTime);
         Assert.IsTrue(app.State.SessionStatus.AccessUsage.ExpirationTime < DateTime.UtcNow.AddMinutes(10));
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task extend_by_ad_should_be_enabled_from_access_manager(bool canDetectInProcessPacket)
+    {
+        // create server
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        accessManager.CanExtendPremiumByAd = true;
+
+        // create client app
+        var device = new TestDevice(() => new NullPacketCapture { CanDetectInProcessPacket = canDetectInProcessPacket });
+        await using var app = TestHelper.CreateClientApp(device: device);
+
+        // create token
+        var token = accessManager.CreateToken();
+
+        // connect
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByTrial);
+
+        // asserts
+        Assert.AreEqual(canDetectInProcessPacket, app.State.SessionStatus?.AccessUsage?.CanExtendPremiumByAdReward);
     }
 }

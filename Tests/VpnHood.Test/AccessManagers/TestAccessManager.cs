@@ -22,6 +22,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public IPEndPoint[]? RedirectHostEndPoints { get; set; }
     public Dictionary<string, IPEndPoint?> ServerLocations { get; set; } = new();
     public bool RejectAllAds { get; set; }
+    public bool CanExtendPremiumByAd { get; set; }
 
     public void AddAdData(string adData)
     {
@@ -49,17 +50,24 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         return base.Server_Configure(serverInfo);
     }
 
-    public override Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    public override async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
         lock (_lockObject)
             SessionGetCounter++;
 
-        return base.Session_Get(sessionId, hostEndPoint, clientIp);
+        var session = await base.Session_Get(sessionId, hostEndPoint, clientIp);
+
+        if (session.AccessUsage != null)
+            session.AccessUsage.CanExtendPremiumByAdReward = CanExtendPremiumByAd;
+
+        return session;
     }
 
     public override async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
         var ret = await base.Session_Create(sessionRequestEx);
+        if (ret.AccessUsage != null)
+            ret.AccessUsage.CanExtendPremiumByAdReward = CanExtendPremiumByAd;
 
         if (!sessionRequestEx.AllowRedirect)
             return ret;

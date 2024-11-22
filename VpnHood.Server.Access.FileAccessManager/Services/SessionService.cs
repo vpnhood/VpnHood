@@ -116,7 +116,7 @@ public class SessionService : IDisposable, IJob
             ClientIp = sessionRequestEx.ClientIp,
             ExtraData = sessionRequestEx.ExtraData,
             ProtocolVersion = sessionRequestEx.ClientInfo.ProtocolVersion,
-            ExpirationTime = accessTokenData.AccessToken.AdRequirement is AdRequirement.Required
+            ExpirationTime = accessTokenData.AccessToken.AdRequirement is AdRequirement.Rewarded
                 ? DateTime.UtcNow + _adRequiredTimeout
                 : null,
         };

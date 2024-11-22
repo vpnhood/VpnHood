@@ -2,11 +2,11 @@
 
 namespace VpnHood.Test.Device;
 
-internal class TestDeviceOptions
+internal class TestPacketCaptureOptions
 {
     public bool CanSendPacketToOutbound { get; set; } = true;
-    public bool IsDnsServerSupported { get; set; } = false;
-
+    public bool IsDnsServerSupported { get; set; }
+    
     // DNS requests are always captured by DNS. Test Adapter ignores them if CaptureDnsAddresses is specified
     public IPAddress[]? CaptureDnsAddresses { get; set; }
 }

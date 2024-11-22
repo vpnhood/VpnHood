@@ -122,9 +122,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         // recover previous sessions
         try {
-            VhLogger.Instance.LogInformation("Recovering old sessions...");
+            VhLogger.Instance.LogInformation("Recovering the old sessions...");
             await SessionManager.RecoverSessions();
-            VhLogger.Instance.LogInformation("{SessionCount} sessions has been recovered.", SessionManager.Sessions.Count);
+            VhLogger.Instance.LogInformation("The old sessions have been recovered. SessionCount: {SessionCount}", SessionManager.Sessions.Count);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not recover old sessions.");

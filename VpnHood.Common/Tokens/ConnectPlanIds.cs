@@ -7,5 +7,5 @@ public enum ConnectPlanId
 {
     Normal = 0,
     PremiumByTrial = 1,
-    PremiumByAdReward = 2,
+    PremiumByRewardedAd = 2,
 }

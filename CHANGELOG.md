@@ -12,10 +12,12 @@
 * Update: Add server tags
 * Update: Generate anonymous client ID from device ID
 * Fix: Startup crash on some Android devices
+* Fix: IPv6 Ping
 
 ### Server
 * Fix: Server listening to a test IP
 * Fix: IpV6 Subnet in auto IP configuration
+* Fix: IPv6 Ping
 * Feature: Allow to config swap file size
 * Feature: Allow to config UdpClient buffer size
 * Feature: Protocol Version 6

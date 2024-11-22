@@ -12,24 +12,25 @@ public class ServerToken
     [JsonPropertyName("ct")]
     public required DateTime CreatedTime { get; set; }
 
-    [JsonPropertyName("hname")] 
+    [JsonPropertyName("hname")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required string HostName { get; set; }
 
-    [JsonPropertyName("hport")] 
+    [JsonPropertyName("hport")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required int HostPort { get; set; }
 
-    [JsonPropertyName("isv")] 
+    [JsonPropertyName("isv")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required bool IsValidHostName { get; set; }
 
-    [JsonPropertyName("sec")] 
+    [JsonPropertyName("sec")]
     public required byte[]? Secret { get; set; }
 
     [JsonPropertyName("ch")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public byte[]? CertificateHash { get; set; }
 
     [JsonPropertyName("url")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     [Obsolete("Use Urls. Version 558 or upper")]
     public string? Url {
         get => Urls?.FirstOrDefault();
@@ -40,16 +41,13 @@ public class ServerToken
     }
 
     [JsonPropertyName("urls")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string[]? Urls { get; set; }
 
     [JsonPropertyName("ep")]
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IPEndPoint[]? HostEndPoints { get; set; }
 
     [JsonPropertyName("loc")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     [Obsolete]
     public string[]? ServerLocationsLegacy {
         get => ServerLocations?.Select(x => x.Split("[").First()).ToArray();
@@ -65,7 +63,10 @@ public class ServerToken
 
     public string Encrypt(byte[]? iv = null)
     {
-        var json = JsonSerializer.Serialize(this);
+        var json = JsonSerializer.Serialize(this, new JsonSerializerOptions {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
+        });
+
         if (Secret is null)
             throw new Exception("There is no Secret in ServerToken.");
 

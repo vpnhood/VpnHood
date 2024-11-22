@@ -87,7 +87,7 @@ public static class IPAddressUtil
 
         return ret.ToArray();
     }
-    
+
     public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily, CancellationToken cancellationToken)
     {
         try {
@@ -190,16 +190,10 @@ public static class IPAddressUtil
         };
     }
 
-    public static bool IsSupported(AddressFamily addressFamily)
-    {
-        return addressFamily
-            is AddressFamily.InterNetworkV6
-            or AddressFamily.InterNetwork;
-    }
-
     public static void Verify(AddressFamily addressFamily)
     {
-        if (!IsSupported(addressFamily))
+        var isSupported = addressFamily is AddressFamily.InterNetworkV6 or AddressFamily.InterNetwork;
+        if (!isSupported)
             throw new NotSupportedException($"{addressFamily} is not supported!");
     }
 

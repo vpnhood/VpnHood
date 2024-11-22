@@ -369,6 +369,19 @@ public class ClientServerTest : TestBase
             "Not enough data has been sent through the server.");
         Assert.AreNotEqual(oldServerReceivedByteCount, serverSession.Tunnel.Traffic.Received, 500,
             "Not enough data has been received through the server.");
+
+        if (await TestHelper.IsIpV6Supported()) {
+            await TestHelper.Test_Ping(ipAddress: TestConstants.PingV6Address1);
+
+            Assert.AreNotEqual(oldClientSentByteCount, client.Stat.SessionTraffic.Sent, 500,
+                "Not enough data has been sent through the client.");
+            Assert.AreNotEqual(oldClientReceivedByteCount, client.Stat.SessionTraffic.Received, 500,
+                "Not enough data has been received through the client.");
+            Assert.AreNotEqual(oldServerSentByteCount, serverSession.Tunnel.Traffic.Sent, 500,
+                "Not enough data has been sent through the server.");
+            Assert.AreNotEqual(oldServerReceivedByteCount, serverSession.Tunnel.Traffic.Received, 500,
+                "Not enough data has been received through the server.");
+        }
     }
 
     [TestMethod]
@@ -574,7 +587,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
-    public async Task Disconnect_if_client_notsupported()
+    public async Task Disconnect_if_client_not_supported()
     {
         // create server
         await using var server = await TestHelper.CreateServer();

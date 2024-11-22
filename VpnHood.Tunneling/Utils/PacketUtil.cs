@@ -26,10 +26,11 @@ public static class PacketUtil
         }
         else if (ipPacket.Protocol == ProtocolType.Icmp) {
             var icmpPacket = ExtractIcmp(ipPacket);
-            UpdateIcmpChecksum(icmpPacket);
+            icmpPacket.UpdateIcmpChecksum();
         }
         else if (ipPacket.Protocol == ProtocolType.IcmpV6) {
-            // nothing need to do due to packet.UpdateCalculatedValues
+            var icmpV6Packet = ExtractIcmpV6(ipPacket);
+            icmpV6Packet.UpdateIcmpChecksum();
         }
         else {
             if (throwIfNotSupported)
@@ -39,15 +40,16 @@ public static class PacketUtil
         // update IP
         if (ipPacket is IPv4Packet ipV4Packet) {
             ipV4Packet.UpdateIPChecksum();
-            ipPacket.UpdateCalculatedValues();
         }
-        else if (ipPacket is IPv6Packet) {
-            ipPacket.UpdateCalculatedValues();
+        else if (ipPacket is IPv6Packet ipV6Packet) {
+            ipV6Packet.UpdateCalculatedValues();
         }
         else {
             if (throwIfNotSupported)
                 throw new NotSupportedException("Does not support this packet!");
         }
+
+        ipPacket.UpdateCalculatedValues();
     }
 
     public static IPPacket ClonePacket(IPPacket ipPacket)
@@ -213,17 +215,6 @@ public static class PacketUtil
 
         UpdateIpPacket(newIpPacket);
         return newIpPacket;
-    }
-
-    public static void UpdateIcmpChecksum(IcmpV4Packet icmpPacket)
-    {
-        if (icmpPacket is null) throw new ArgumentNullException(nameof(icmpPacket));
-
-        icmpPacket.Checksum = 0;
-        var buf = icmpPacket.Bytes;
-        icmpPacket.Checksum = buf != null
-            ? (ushort)ChecksumUtils.OnesComplementSum(buf, 0, buf.Length)
-            : (ushort)0;
     }
 
     public static ushort ReadPacketLength(byte[] buffer, int bufferIndex)

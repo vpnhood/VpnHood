@@ -77,10 +77,8 @@ public static class IPAddressUtil
         var ret = new List<IPAddress>();
 
         //note: api.ipify.org may not work in parallel call
-        var ipV4Task = await GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken)
-            .VhConfigureAwait();
-        var ipV6Task = await GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken)
-            .VhConfigureAwait();
+        var ipV4Task = await GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken).VhConfigureAwait();
+        var ipV6Task = await GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken).VhConfigureAwait();
 
         if (ipV4Task != null) ret.Add(ipV4Task);
         if (ipV6Task != null) ret.Add(ipV6Task);

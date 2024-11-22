@@ -39,8 +39,9 @@ public class ClientSocketFactory(
         socketFactory.SetKeepAlive(socket, enable);
     }
 
-    public bool? IsInProcessPacket(PacketDotNet.ProtocolType protocol, IPEndPoint localEndPoint,
-        IPEndPoint remoteEndPoint)
+    public bool CanDetectInProcessPacket => packetCapture.CanDetectInProcessPacket;
+
+    public bool IsInProcessPacket(PacketDotNet.ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
     {
         return packetCapture.IsInProcessPacket(protocol, localEndPoint, remoteEndPoint);
     }

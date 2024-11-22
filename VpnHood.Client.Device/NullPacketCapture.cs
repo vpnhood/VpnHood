@@ -23,7 +23,8 @@ public class NullPacketCapture : IPacketCapture
     public virtual bool IsAddIpV6AddressSupported { get; set; } = true;
     public virtual bool AddIpV6Address { get; set; } = true;
     public virtual bool CanProtectSocket { get; set; } = true;
-    public virtual bool CanSendPacketToOutbound { get; set; } = false;
+    public virtual bool CanSendPacketToOutbound { get; set; }
+    public bool CanDetectInProcessPacket { get; set; }
 
     public virtual void StartCapture()
     {
@@ -62,9 +63,12 @@ public class NullPacketCapture : IPacketCapture
         // nothing
     }
 
-    public bool? IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+    public bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
     {
-        return null;
+        if (!IsAddIpV6AddressSupported)
+            throw new NotSupportedException("InProcessPacket is not supported");
+
+        return false;
     }
 
     public virtual void Dispose()

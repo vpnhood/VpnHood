@@ -126,7 +126,7 @@ public class VpnHoodClient : IAsyncDisposable
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
         _adService = options.AdService;
-        _planId = options.PlanId;
+        _planId = ConnectPlanId.PremiumByTrial; // options.PlanId; //todo
         _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken,
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
@@ -374,7 +374,7 @@ public class VpnHoodClient : IAsyncDisposable
                 for (var i = 0; i < e.IpPackets.Count; i++) {
                     var ipPacket = e.IpPackets[i];
                     if (_disposed) return;
-                    var isIpV6 = ipPacket.DestinationAddress.AddressFamily == AddressFamily.InterNetworkV6;
+                    var isIpV6 = ipPacket.DestinationAddress.IsV6();
                     var udpPacket = ipPacket.Protocol == ProtocolType.Udp ? ipPacket.Extract<UdpPacket>() : null;
                     var isDnsPacket = udpPacket?.DestinationPort == 53;
 
@@ -438,10 +438,10 @@ public class VpnHoodClient : IAsyncDisposable
                         }
 
                         // Udp
-                        else if (ipPacket.Protocol == ProtocolType.Udp) { //todo add InInProcess
-                            if (!IsInIpRange(ipPacket.DestinationAddress))
+                        else if (ipPacket.Protocol == ProtocolType.Udp && udpPacket != null) { 
+                            if (!IsInIpRange(ipPacket.DestinationAddress) || _clientHost.ShouldPassthru(ipPacket, udpPacket.SourcePort, udpPacket.DestinationPort))
                                 proxyPackets.Add(ipPacket);
-                            else if (!ShouldTunnelUdpPacket(udpPacket!))
+                            else if (!ShouldTunnelUdpPacket(udpPacket))
                                 droppedPackets.Add(ipPacket);
                             else
                                 tunnelPackets.Add(ipPacket);
@@ -668,7 +668,7 @@ public class VpnHoodClient : IAsyncDisposable
 
             await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();
             var sessionResponse = requestResult.Response;
-            
+
 #pragma warning disable CS0618 // Type or member is obsolete
             if (sessionResponse is { MinProtocolVersion: 0, ServerProtocolVersion: 5 }) {
                 sessionResponse.MinProtocolVersion = 5;
@@ -863,6 +863,8 @@ public class VpnHoodClient : IAsyncDisposable
         try {
             // create a connection and send the request 
             var requestResult = await ConnectorService.SendRequest<T>(request, cancellationToken).VhConfigureAwait();
+            if (requestResult.Response.AccessUsage != null)
+                requestResult.Response.AccessUsage.CanExtendPremiumByAd &= _packetCapture.CanDetectInProcessPacket;
 
             // set SessionStatus
             if (requestResult.Response.AccessUsage != null)
@@ -966,6 +968,7 @@ public class VpnHoodClient : IAsyncDisposable
                 throw new InvalidOperationException("Client's AdService has not been initialized.");
 
             _isWaitingForAd = true;
+            _clientHost.PassthruInProcessPackets = true;
             var adResult = await _adService.ShowAd(ActiveUiContext.RequiredContext, SessionId.ToString(), cancellationToken).VhConfigureAwait();
             if (!string.IsNullOrEmpty(adResult.AdData) && required)
                 _ = SendAdReward(adResult.AdData, cancellationToken);
@@ -986,6 +989,8 @@ public class VpnHoodClient : IAsyncDisposable
         }
         finally {
             _isWaitingForAd = false;
+            _clientHost.PassthruInProcessPackets = false;
+
         }
     }
 

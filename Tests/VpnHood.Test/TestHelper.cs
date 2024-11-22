@@ -206,7 +206,7 @@ internal static class TestHelper
     public static Token CreateAccessToken(FileAccessManager fileAccessManager,
         int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
     {
-        var accessToken =  fileAccessManager.AccessTokenService.Create(
+        var accessToken = fileAccessManager.AccessTokenService.Create(
             tokenName: $"Test Server {++_accessTokenIndex}",
             maxClientCount: maxClientCount,
             maxTrafficByteCount: maxTrafficByteCount,
@@ -344,27 +344,24 @@ internal static class TestHelper
         return server;
     }
 
-    public static TestDeviceOptions CreateDeviceOptions()
+    public static TestPacketCaptureOptions CreateTestPacketCaptureOptions()
     {
-        return new TestDeviceOptions();
+        return new TestPacketCaptureOptions();
     }
 
-    public static IDevice CreateDevice(TestDeviceOptions? options = default)
+    public static TestPacketCapture CreateTestPacketCapture(TestPacketCaptureOptions? options = null)
     {
-        options ??= new TestDeviceOptions();
-        return new TestDevice(options, false);
-    }
-
-    public static IDevice CreateNullDevice()
-    {
-        return new TestDevice(new TestDeviceOptions(), true);
+        options ??= CreateTestPacketCaptureOptions();
+        return new TestPacketCapture(options);
     }
 
 
-    public static IPacketCapture CreatePacketCapture(TestDeviceOptions? options = default)
+    public static TestDevice CreateDevice(TestPacketCaptureOptions? options = default)
     {
-        return CreateDevice(options).CreatePacketCapture(null).Result;
+        options ??= CreateTestPacketCaptureOptions();
+        return new TestDevice(()=>new TestPacketCapture(options));
     }
+
 
     public static ClientOptions CreateClientOptions(bool useUdp = false)
     {
@@ -379,13 +376,12 @@ internal static class TestHelper
 
     public static async Task<VpnHoodClient> CreateClient(Token token,
         IPacketCapture? packetCapture = default,
-        TestDeviceOptions? deviceOptions = default,
         string? clientId = default,
         bool autoConnect = true,
         ClientOptions? clientOptions = default,
         bool throwConnectException = true)
     {
-        packetCapture ??= CreatePacketCapture(deviceOptions);
+        packetCapture ??= new TestPacketCapture(new TestPacketCaptureOptions());
         clientId ??= Guid.NewGuid().ToString();
         clientOptions ??= CreateClientOptions();
         if (clientOptions.ConnectTimeout == new ClientOptions().ConnectTimeout)
@@ -435,13 +431,12 @@ internal static class TestHelper
         return appOptions;
     }
 
-    public static VpnHoodApp CreateClientApp(TestDeviceOptions? deviceOptions = default,
-        AppOptions? appOptions = default)
+    public static VpnHoodApp CreateClientApp(AppOptions? appOptions = default, IDevice? device = default)
     {
-        //create app
         appOptions ??= CreateAppOptions();
+        device ??= new TestDevice(() => new TestNullPacketCapture());
 
-        var device = deviceOptions != null ? CreateDevice(deviceOptions) : CreateNullDevice();
+        //create app
         var clientApp = VpnHoodApp.Init(device, appOptions);
         clientApp.Diagnoser.HttpTimeout = 2000;
         clientApp.Diagnoser.NsTimeout = 2000;

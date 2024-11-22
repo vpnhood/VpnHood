@@ -774,7 +774,7 @@ public class VpnHoodClient : IAsyncDisposable
             // show ad if required
             string? adNetworkName = null;
             if (sessionResponse.AdRequirement is not AdRequirement.None)
-                adNetworkName = await ShowAd(sessionResponse.AdRequirement is AdRequirement.Required, cancellationToken)
+                adNetworkName = await ShowAd(sessionResponse.AdRequirement is AdRequirement.Rewarded, cancellationToken)
                     .VhConfigureAwait();
 
             // usage trackers
@@ -864,7 +864,7 @@ public class VpnHoodClient : IAsyncDisposable
             // create a connection and send the request 
             var requestResult = await ConnectorService.SendRequest<T>(request, cancellationToken).VhConfigureAwait();
             if (requestResult.Response.AccessUsage != null)
-                requestResult.Response.AccessUsage.CanExtendPremiumByAd &= _packetCapture.CanDetectInProcessPacket;
+                requestResult.Response.AccessUsage.CanExtendPremiumByAdReward &= _packetCapture.CanDetectInProcessPacket;
 
             // set SessionStatus
             if (requestResult.Response.AccessUsage != null)

@@ -42,7 +42,7 @@ public class ClientServerTest : TestBase
 
         // Create Client
         var token1 = TestHelper.CreateAccessToken(accessManager1);
-        await using var client = await TestHelper.CreateClient(token1, deviceOptions: TestHelper.CreateDeviceOptions());
+        await using var client = await TestHelper.CreateClient(token1, packetCapture: TestHelper.CreateTestPacketCapture());
         await TestHelper.Test_Https();
 
         Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
@@ -161,7 +161,7 @@ public class ClientServerTest : TestBase
         // Check: Client MaxDatagramChannelCount larger than server
         // --------
         await using var client = await TestHelper.CreateClient(token,
-            deviceOptions: TestHelper.CreateDeviceOptions(),
+            packetCapture: TestHelper.CreateTestPacketCapture(),
             clientOptions: new ClientOptions {
                 UseUdpChannel = false,
                 MaxDatagramChannelCount = 6
@@ -205,7 +205,7 @@ public class ClientServerTest : TestBase
 
         // Create Client
         await using var client = await TestHelper.CreateClient(token,
-            deviceOptions: TestHelper.CreateDeviceOptions(),
+            packetCapture: TestHelper.CreateTestPacketCapture(),
             clientOptions: new ClientOptions {
                 UseUdpChannel = false,
                 MaxDatagramChannelCount = 4
@@ -229,7 +229,7 @@ public class ClientServerTest : TestBase
 
         // Create Client
         await using var client = await TestHelper.CreateClient(token,
-            deviceOptions: TestHelper.CreateDeviceOptions(),
+            packetCapture: TestHelper.CreateTestPacketCapture(),
             clientOptions: new ClientOptions {
                 UseUdpChannel = true
             });
@@ -405,7 +405,7 @@ public class ClientServerTest : TestBase
 
         // create client
         await using var client = await TestHelper.CreateClient(token,
-            deviceOptions: TestHelper.CreateDeviceOptions(),
+            packetCapture: TestHelper.CreateTestPacketCapture(),
             clientOptions: new ClientOptions { SessionTimeout = TimeSpan.FromSeconds(1) });
 
         await TestHelper.Test_Https();
@@ -443,14 +443,14 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using (await TestHelper.CreateClient(token, deviceOptions: TestHelper.CreateDeviceOptions())) {
+        await using (await TestHelper.CreateClient(token, packetCapture: TestHelper.CreateTestPacketCapture())) {
             // test Icmp & Udp
             await TestHelper.Test_Ping(ping);
             await TestHelper.Test_Udp(udpClient, TestConstants.UdpV4EndPoint1);
         }
 
         // create client
-        await using (await TestHelper.CreateClient(token, deviceOptions: TestHelper.CreateDeviceOptions())) {
+        await using (await TestHelper.CreateClient(token, packetCapture: TestHelper.CreateTestPacketCapture())) {
             // test Icmp & Udp
             await TestHelper.Test_Ping(ping);
             await TestHelper.Test_Udp(udpClient, TestConstants.UdpV4EndPoint1);
@@ -490,7 +490,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // connect
-        await using var client = await TestHelper.CreateClient(token, deviceOptions: TestHelper.CreateDeviceOptions());
+        await using var client = await TestHelper.CreateClient(token, packetCapture: TestHelper.CreateTestPacketCapture());
         Assert.AreEqual(ClientState.Connected, client.State);
 
         // close session

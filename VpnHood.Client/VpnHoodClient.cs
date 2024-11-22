@@ -864,7 +864,7 @@ public class VpnHoodClient : IAsyncDisposable
             // create a connection and send the request 
             var requestResult = await ConnectorService.SendRequest<T>(request, cancellationToken).VhConfigureAwait();
             if (requestResult.Response.AccessUsage != null)
-                requestResult.Response.AccessUsage.CanExtendPremiumByAdReward &= _packetCapture.CanDetectInProcessPacket;
+                requestResult.Response.AccessUsage.CanExtendPremiumByRewardedAd &= _packetCapture.CanDetectInProcessPacket;
 
             // set SessionStatus
             if (requestResult.Response.AccessUsage != null)
@@ -971,7 +971,7 @@ public class VpnHoodClient : IAsyncDisposable
             _clientHost.PassthruInProcessPackets = true;
             var adResult = await _adService.ShowAd(ActiveUiContext.RequiredContext, SessionId.ToString(), cancellationToken).VhConfigureAwait();
             if (!string.IsNullOrEmpty(adResult.AdData) && required)
-                _ = SendAdReward(adResult.AdData, cancellationToken);
+                _ = SendRewardedAd(adResult.AdData, cancellationToken);
 
             return adResult.NetworkName;
         }
@@ -994,12 +994,12 @@ public class VpnHoodClient : IAsyncDisposable
         }
     }
 
-    private async Task SendAdReward(string adData, CancellationToken cancellationToken)
+    private async Task SendRewardedAd(string adData, CancellationToken cancellationToken)
     {
         try {
             // request reward from server
             await using var requestResult = await SendRequest<SessionResponse>(
-                    new AdRewardRequest {
+                    new RewardedAdRequest {
                         RequestId = Guid.NewGuid() + ":client",
                         SessionId = SessionId,
                         SessionKey = SessionKey,
@@ -1009,7 +1009,7 @@ public class VpnHoodClient : IAsyncDisposable
                 .VhConfigureAwait();
         }
         catch (Exception ex) {
-            VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the AdReward request.");
+            VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the RewardedAd request.");
             throw new AdException("This server requires a display ad, but AdService has not been initialized.");
         }
     }

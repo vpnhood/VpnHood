@@ -2976,7 +2976,7 @@ export interface IAppStrings {
 export enum ConnectPlanId {
     Normal = "Normal",
     PremiumByTrial = "PremiumByTrial",
-    PremiumByAdReward = "PremiumByAdReward",
+    PremiumByRewardedAd = "PremiumByRewardedAd",
 }
 
 export class DeviceAppInfo implements IDeviceAppInfo {

@@ -58,7 +58,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         var session = await base.Session_Get(sessionId, hostEndPoint, clientIp);
 
         if (session.AccessUsage != null)
-            session.AccessUsage.CanExtendPremiumByAdReward = CanExtendPremiumByAd;
+            session.AccessUsage.CanExtendPremiumByRewardedAd = CanExtendPremiumByAd;
 
         return session;
     }
@@ -67,7 +67,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     {
         var ret = await base.Session_Create(sessionRequestEx);
         if (ret.AccessUsage != null)
-            ret.AccessUsage.CanExtendPremiumByAdReward = CanExtendPremiumByAd;
+            ret.AccessUsage.CanExtendPremiumByRewardedAd = CanExtendPremiumByAd;
 
         if (!sessionRequestEx.AllowRedirect)
             return ret;

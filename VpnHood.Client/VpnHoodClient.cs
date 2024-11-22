@@ -126,7 +126,7 @@ public class VpnHoodClient : IAsyncDisposable
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
         _adService = options.AdService;
-        _planId = ConnectPlanId.PremiumByTrial; // options.PlanId; //todo
+        _planId = options.PlanId; 
         _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken,
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,

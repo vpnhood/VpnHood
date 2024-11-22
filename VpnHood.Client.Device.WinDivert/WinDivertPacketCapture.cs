@@ -61,9 +61,10 @@ public class WinDivertPacketCapture : IPacketCapture
         set => throw new NotSupportedException();
     }
 
-    public bool? IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+    public bool CanDetectInProcessPacket => false;
+    public bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
     {
-        return null;
+        throw new NotSupportedException();
     }
 
     public WinDivertPacketCapture()

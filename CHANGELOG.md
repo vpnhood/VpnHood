@@ -7,6 +7,7 @@
 * Feature: Protocol Version 6
 * Improve: Improve initialization speed to exclude my country
 * Improve: Diagnostic wrongly reports your internet may not be stable
+* Improve: Check for the latest version after the connection is established
 * Update: Translate many error messages
 * Update: Add token tags
 * Update: Add server tags

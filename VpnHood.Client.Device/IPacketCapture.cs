@@ -22,6 +22,7 @@ public interface IPacketCapture : IDisposable
     bool AddIpV6Address { get; set; }
     bool CanProtectSocket { get; }
     bool CanSendPacketToOutbound { get; }
+    bool CanDetectInProcessPacket { get; }
     void StartCapture();
     void StopCapture();
     void ProtectSocket(System.Net.Sockets.Socket socket);
@@ -29,5 +30,5 @@ public interface IPacketCapture : IDisposable
     void SendPacketToInbound(IList<IPPacket> packets);
     void SendPacketToOutbound(IPPacket ipPacket);
     void SendPacketToOutbound(IList<IPPacket> ipPackets);
-    bool? IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint);
+    bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint);
 }

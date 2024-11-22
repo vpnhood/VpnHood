@@ -479,8 +479,8 @@ public class ServerHost : IAsyncDisposable, IJob
                 await ProcessUdpPacketRequest(clientStream, cancellationToken).VhConfigureAwait();
                 break;
 
-            case RequestCode.AdReward:
-                await ProcessAdRewardRequest(clientStream, cancellationToken).VhConfigureAwait();
+            case RequestCode.RewardedAd:
+                await ProcessRewardedAdRequest(clientStream, cancellationToken).VhConfigureAwait();
                 break;
 
             case RequestCode.Bye:
@@ -613,12 +613,12 @@ public class ServerHost : IAsyncDisposable, IJob
         await clientStream.WriteFinalResponse(helloResponse, cancellationToken).VhConfigureAwait();
     }
 
-    private async Task ProcessAdRewardRequest(IClientStream clientStream, CancellationToken cancellationToken)
+    private async Task ProcessRewardedAdRequest(IClientStream clientStream, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the RewardAd request...");
-        var request = await ReadRequest<AdRewardRequest>(clientStream, cancellationToken).VhConfigureAwait();
+        var request = await ReadRequest<RewardedAdRequest>(clientStream, cancellationToken).VhConfigureAwait();
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
-        await session.ProcessAdRewardRequest(request, clientStream, cancellationToken).VhConfigureAwait();
+        await session.ProcessRewardedAdRequest(request, clientStream, cancellationToken).VhConfigureAwait();
     }
 
     private static async Task ProcessServerStatus(IClientStream clientStream, CancellationToken cancellationToken)

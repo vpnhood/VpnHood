@@ -159,6 +159,6 @@ public class AdTest : TestBase
         await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByTrial);
 
         // asserts
-        Assert.AreEqual(canDetectInProcessPacket, app.State.SessionStatus?.AccessUsage?.CanExtendPremiumByAdReward);
+        Assert.AreEqual(canDetectInProcessPacket, app.State.SessionStatus?.AccessUsage?.CanExtendPremiumByRewardedAd);
     }
 }

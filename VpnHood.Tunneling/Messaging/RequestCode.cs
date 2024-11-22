@@ -8,7 +8,7 @@ public enum RequestCode : byte
     StreamProxyChannel = 3,
     SessionStatus = 4,
     UdpPacket = 5,
-    AdReward = 10,
+    RewardedAd = 10,
     ServerStatus = 20, //todo: deprecated
     ServerCheck = 30,
     Bye = 50

@@ -68,8 +68,13 @@ public class Diagnoser
 
             // ping server
             VhLogger.Instance.LogTrace("Checking the VpnServer ping...");
-            var hostEndPoint = await ServerTokenHelper.ResolveHostEndPoint(vpnHoodClient.Token.ServerToken, cancellationToken)
-                .VhConfigureAwait();
+            var hostEndPoints = await ServerTokenHelper.ResolveHostEndPoints(vpnHoodClient.Token.ServerToken, cancellationToken).VhConfigureAwait();
+            if (!await IPAddressUtil.IsIpv6Supported() && hostEndPoints.Any(x => x.IsV6())) {
+                VhLogger.Instance.LogTrace("IpV6 is not supported. Excluding IpV6 addresses");
+                hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6()).ToArray();
+            }
+
+            var hostEndPoint = hostEndPoints.First() ?? throw new Exception("Could not resolve any host endpoint from AccessToken."); 
             var pingRes = await DiagnoseUtil.CheckPing([hostEndPoint.Address], NsTimeout, true).VhConfigureAwait();
             if (pingRes == null)
                 VhLogger.Instance.LogTrace("Pinging server is OK.");

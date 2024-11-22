@@ -148,10 +148,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             VhLogger.Instance.LogTrace("Finding public addresses...");
             var privateIpAddresses = await IPAddressUtil.GetPrivateIpAddresses().VhConfigureAwait();
 
-            VhLogger.Instance.LogTrace("Finding public addresses..., PublicIpDiscovery: {PublicIpDiscovery}",
-                _publicIpDiscovery);
-            var publicIpAddresses =
-                _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses(CancellationToken.None).VhConfigureAwait() : [];
+            VhLogger.Instance.LogTrace("Finding public addresses..., PublicIpDiscovery: {PublicIpDiscovery}", _publicIpDiscovery);
+            var publicIpAddresses = _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses(CancellationToken.None).VhConfigureAwait() : [];
 
             var providerSystemInfo = _systemInfoProvider.GetSystemInfo();
             var serverInfo = new ServerInfo {
@@ -172,11 +170,10 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                     : null
             };
 
-            var publicIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
-            var publicIpV6 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
-            var isIpV6Supported = publicIpV6 != null || await IPAddressUtil.IsIpv6Supported().VhConfigureAwait();
-            VhLogger.Instance.LogInformation("Public IPv4: {IPv4}, Public IPv6: {IpV6}, IsV6Supported: {IsV6Supported}",
-                VhLogger.Format(publicIpV4), VhLogger.Format(publicIpV6), isIpV6Supported);
+            var publicIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.IsV4());
+            var publicIpV6 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.IsV6());
+            VhLogger.Instance.LogInformation("Public IPv4: {IPv4}, Public IPv6: {IpV6}",
+                VhLogger.Format(publicIpV4), VhLogger.Format(publicIpV6));
 
             // get configuration from access server
             VhLogger.Instance.LogTrace("Sending config request to the Access Server...");
@@ -196,7 +193,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
 
             ConfigNetFilter(SessionManager.NetFilter, ServerHost, serverConfig.NetFilterOptions,
-                privateAddresses: allServerIps, isIpV6Supported, dnsServers: serverConfig.DnsServersValue);
+                privateAddresses: allServerIps, publicIpV6 != null, dnsServers: serverConfig.DnsServersValue);
 
             // Add listener ip addresses to the ip address manager if requested
             if (_netConfigurationService != null) {
@@ -234,7 +231,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 _lastConfigError.Data.Add("SocketErrorCode", socketException.SocketErrorCode.ToString());
 
             SessionManager.Tracker?.VhTrackErrorAsync(ex, "Could not configure server!", "Configure");
-            VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.", 
+            VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.",
                 JobSection.Interval.TotalSeconds);
             await SendStatusToAccessManager(false).VhConfigureAwait();
         }

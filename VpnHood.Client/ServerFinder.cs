@@ -38,8 +38,6 @@ public class ServerFinder(
     {
         // get all endpoints from serverToken
         var hostEndPoints = await ServerTokenHelper.ResolveHostEndPoints(serverToken, cancellationToken);
-        if (!hostEndPoints.Any())
-            throw new Exception("Could not find any server endpoint. Please check your access key.");
 
         // exclude ip v6 if not supported
         if (!IncludeIpV6)

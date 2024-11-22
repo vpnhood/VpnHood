@@ -1,5 +1,4 @@
-﻿using System.Text.Json.Serialization;
-using VpnHood.Common.Utils;
+﻿using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.ClientProfiles;
 

@@ -37,7 +37,13 @@ internal static class TestHelper
     public static TestWebServer WebServer { get; private set; } = default!;
     public static TestNetFilter NetFilter { get; private set; } = default!;
     private static bool LogVerbose => true;
+    private static bool? _isIpV6Supported;
 
+    public static async Task<bool> IsIpV6Supported()
+    {
+        _isIpV6Supported ??= await IPAddressUtil.IsIpv6Supported();
+        return _isIpV6Supported.Value;
+    }
 
     private static int _accessTokenIndex;
 

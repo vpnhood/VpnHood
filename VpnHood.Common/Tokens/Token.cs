@@ -11,21 +11,27 @@ namespace VpnHood.Common.Tokens;
 public class Token
 {
     [JsonPropertyName("v")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public int Version => 4;
 
     [JsonPropertyName("name")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required string? Name { get; set; }
 
     [JsonPropertyName("sid")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required string? SupportId { get; set; }
 
     [JsonPropertyName("tid")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required string TokenId { get; set; }
 
     [JsonPropertyName("iat")]
-    public DateTime IssuedAt { get; set; } = DateTime.MinValue; // for backward compatibility it is not required
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public DateTime IssuedAt { get; set; } = DateTime.MinValue; // for backward compatibility. Default value it is not required
 
     [JsonPropertyName("sec")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required byte[] Secret { get; set; }
 
     [JsonPropertyName("ser")]
@@ -45,7 +51,9 @@ public class Token
 
     public string ToAccessKey()
     {
-        var json = JsonSerializer.Serialize(this, new JsonSerializerOptions{DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault});
+        var json = JsonSerializer.Serialize(this, new JsonSerializerOptions {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+        });
         return "vh://" + Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
     }
 

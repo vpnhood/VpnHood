@@ -272,7 +272,7 @@ public class Session : IAsyncDisposable
         await clientStream .WriteFinalResponse(SessionResponse, cancellationToken).VhConfigureAwait();
     }
 
-    public async Task ProcessAdRewardRequest(AdRewardRequest request, IClientStream clientStream,
+    public async Task ProcessRewardedAdRequest(RewardedAdRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
         SessionResponse = await _accessManager.Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData).VhConfigureAwait();

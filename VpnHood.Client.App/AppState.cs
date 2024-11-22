@@ -1,5 +1,4 @@
-﻿using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.App.ClientProfiles;
+﻿using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Common.ApiClients;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Tokens;

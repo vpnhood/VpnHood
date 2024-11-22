@@ -1,7 +1,7 @@
 ﻿namespace VpnHood.Tunneling.Messaging;
 
-public class AdRewardRequest()
-    : RequestBase(Messaging.RequestCode.AdReward)
+public class RewardedAdRequest()
+    : RequestBase(Messaging.RequestCode.RewardedAd)
 {
     public required string AdData { get; init; }
 }

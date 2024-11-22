@@ -19,17 +19,8 @@ internal class StoreBillingProvider(StoreAccountProvider storeAccountProvider, I
 
     public async Task<string> Purchase(IUiContext uiContext, string planId)
     {
-        try {
-            PurchaseState = BillingPurchaseState.Started;
-            var providerOrderId = await billingProvider.Purchase(uiContext, planId).VhConfigureAwait();
-            PurchaseState = BillingPurchaseState.Processing;
-            await storeAccountProvider.WaitForProcessProviderOrder(providerOrderId).VhConfigureAwait();
-            return providerOrderId;
-        }
-        finally {
-            PurchaseState = BillingPurchaseState.None;
-        }
+        var providerOrderId = await billingProvider.Purchase(uiContext, planId).VhConfigureAwait();
+        await storeAccountProvider.WaitForProcessProviderOrder(providerOrderId).VhConfigureAwait();
+        return providerOrderId;
     }
-
-    public BillingPurchaseState PurchaseState { get; private set; }
 }

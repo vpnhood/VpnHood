@@ -16,7 +16,6 @@ public class GooglePlayBillingProvider : IAppBillingProvider
     private ProductDetails? _productDetails;
     private IList<ProductDetails.SubscriptionOfferDetails>? _subscriptionOfferDetails;
     private TaskCompletionSource<string>? _taskCompletionSource;
-    public BillingPurchaseState PurchaseState { get; private set; }
 
     public GooglePlayBillingProvider(IAppAuthenticationProvider authenticationProvider)
     {
@@ -135,7 +134,6 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             .Build();
 
         try {
-            PurchaseState = BillingPurchaseState.Started;
             _taskCompletionSource = new TaskCompletionSource<string>();
             var billingResult = _billingClient.LaunchBillingFlow(appUiContext.Activity, billingFlowParams);
 
@@ -152,9 +150,6 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not get order id from google play LaunchBillingFlow.");
             throw;
-        }
-        finally {
-            PurchaseState = BillingPurchaseState.None;
         }
     }
 

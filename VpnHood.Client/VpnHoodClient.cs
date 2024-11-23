@@ -1140,6 +1140,8 @@ public class VpnHoodClient : IAsyncDisposable
         public Traffic Speed => _client.Tunnel.Speed;
         public Traffic SessionTraffic => _client.Tunnel.Traffic;
         public Traffic AccountTraffic => _client._helloTraffic + SessionTraffic;
+        public int TcpTunnelledCount => _client._clientHost.TcpTunnelledCount;
+        public int TcpPassthruCount => _client._clientHost.TcpPassthruCount;
         public int DatagramChannelCount => _client.Tunnel.DatagramChannelCount;
         public bool IsUdpMode => _client.Tunnel.IsUdpMode;
         public bool IsUdpChannelSupported => _client.HostUdpEndPoint != null;

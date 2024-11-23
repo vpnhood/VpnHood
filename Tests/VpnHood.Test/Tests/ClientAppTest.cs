@@ -361,7 +361,7 @@ public class ClientAppTest : TestBase
         await using var app = TestHelper.CreateClientApp();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
-        _ = app.Connect(clientProfile.ClientProfileId);
+        await app.Connect(clientProfile.ClientProfileId);
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
 
         // get data through tunnel
@@ -493,8 +493,10 @@ public class ClientAppTest : TestBase
         await using var server = await TestHelper.CreateServer();
 
         // create app
-        await using var app = TestHelper.CreateClientApp(device: TestHelper.CreateDevice());
-        app.UserSettings.DomainFilter.Includes = [TestConstants.HttpsUri1.Host];
+        var packetCaptureOptions = TestHelper.CreateTestPacketCaptureOptions();
+        packetCaptureOptions.CanSendPacketToOutbound = false;
+        await using var app = TestHelper.CreateClientApp(device: TestHelper.CreateDevice(packetCaptureOptions));
+        app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsUri1.Host];
 
         // connect
         var token = TestHelper.CreateAccessToken(server);
@@ -503,14 +505,18 @@ public class ClientAppTest : TestBase
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
 
         // text include
-        var oldReceivedByteCount = app.State.SessionTraffic.Received;
+        var oldTcpTunnelledCount = app.State.TcpTunnelledCount;
+        var oldTcpPassthruCount = app.State.TcpPassthruCount;
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
-        Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
+        Assert.AreEqual(oldTcpTunnelledCount, app.State.TcpTunnelledCount);
+        Assert.AreEqual(oldTcpPassthruCount + 1, app.State.TcpPassthruCount);
 
         // text exclude
-        oldReceivedByteCount = app.State.SessionTraffic.Received;
+        oldTcpTunnelledCount = app.State.TcpTunnelledCount;
+        oldTcpPassthruCount = app.State.TcpPassthruCount;
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
-        Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
+        Assert.AreEqual(oldTcpTunnelledCount + 1, app.State.TcpTunnelledCount);
+        Assert.AreEqual(oldTcpPassthruCount, app.State.TcpPassthruCount);
     }
 
     [TestMethod]
@@ -520,7 +526,9 @@ public class ClientAppTest : TestBase
         await using var server = await TestHelper.CreateServer();
 
         // create app
-        await using var app = TestHelper.CreateClientApp(device: TestHelper.CreateDevice());
+        var packetCaptureOptions = TestHelper.CreateTestPacketCaptureOptions();
+        packetCaptureOptions.CanSendPacketToOutbound = false;
+        await using var app = TestHelper.CreateClientApp(device: TestHelper.CreateDevice(packetCaptureOptions));
         app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsUri1.Host];
 
         // connect
@@ -530,14 +538,18 @@ public class ClientAppTest : TestBase
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
 
         // text include
-        var oldReceivedByteCount = app.State.SessionTraffic.Received;
+        var oldTcpTunnelledCount = app.State.TcpTunnelledCount;
+        var oldTcpPassthruCount = app.State.TcpPassthruCount;
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
-        Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
+        Assert.AreEqual(oldTcpTunnelledCount + 1, app.State.TcpTunnelledCount);
+        Assert.AreEqual(oldTcpPassthruCount, app.State.TcpPassthruCount);
 
         // text exclude
-        oldReceivedByteCount = app.State.SessionTraffic.Received;
+        oldTcpTunnelledCount = app.State.TcpTunnelledCount;
+        oldTcpPassthruCount = app.State.TcpPassthruCount;
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
-        Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
+        Assert.AreEqual(oldTcpTunnelledCount, app.State.TcpTunnelledCount);
+        Assert.AreEqual(oldTcpPassthruCount + 1, app.State.TcpPassthruCount);
     }
 
     [TestMethod]

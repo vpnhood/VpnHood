@@ -1,4 +1,5 @@
-﻿using VpnHood.Client.App.ClientProfiles;
+﻿using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Common.ApiClients;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Tokens;
@@ -35,4 +36,6 @@ public class AppState
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }
     public required BillingPurchaseState? PurchaseState { get; init; }
+    public required int? TcpTunnelledCount { get; init; }
+    public required int? TcpPassthruCount { get; init; }
 }

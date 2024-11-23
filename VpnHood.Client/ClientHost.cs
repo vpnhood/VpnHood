@@ -34,6 +34,8 @@ internal class ClientHost(
     public IPAddress CatcherAddressIpV4 { get; } = catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 { get; } = catcherAddressIpV6;
     public bool PassthruInProcessPackets { get; set; }
+    public int TcpTunnelledCount { get; private set; }
+    public int TcpPassthruCount { get; private set; }
 
     public void Start()
     {
@@ -266,6 +268,7 @@ internal class ClientHost(
                         new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
                         channelId, filterResult.ReadData, cancellationToken)
                     .VhConfigureAwait();
+                TcpPassthruCount++;
                 return;
             }
 
@@ -296,6 +299,7 @@ internal class ClientHost(
             // add stream proxy
             channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
             vpnHoodClient.Tunnel.AddChannel(channel);
+            TcpTunnelledCount++;
         }
         catch (Exception ex) {
             // disable IPv6 if detect the new network does not have IpV6

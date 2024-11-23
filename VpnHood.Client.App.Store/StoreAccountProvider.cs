@@ -40,7 +40,13 @@ public class StoreAccountProvider : IAppAccountProvider, IDisposable
             Name = currentUser.Name,
             Email = currentUser.Email,
             SubscriptionId = subscriptionLastOrder?.SubscriptionId.ToString(),
-            ProviderPlanId = subscriptionLastOrder?.ProviderPlanId
+            ProviderPlanId = subscriptionLastOrder?.ProviderPlanId,
+            CreatedTime = subscriptionLastOrder?.CreatedTime,
+            ExpirationTime = subscriptionLastOrder?.ExpirationTime,
+            PriceAmount = subscriptionLastOrder?.PriceAmount,
+            PriceCurrency = subscriptionLastOrder?.PriceCurrency,
+            IsAutoRenew = subscriptionLastOrder?.IsAutoRenew,
+            ProviderSubscriptionId = subscriptionLastOrder?.ProviderSubscriptionId,
         };
 
         return appAccount;
@@ -61,7 +67,7 @@ public class StoreAccountProvider : IAppAccountProvider, IDisposable
                 throw new Exception("Order has not processed yet.");
             }
             catch (Exception ex) {
-                // We might encounter a ‘not exist’ exception. Therefore, we need to wait for Google to send the provider order to the Store.
+                // We might encounter a ï¿½not existï¿½ exception. Therefore, we need to wait for Google to send the provider order to the Store.
                 VhLogger.Instance.LogWarning(ex, ex.Message);
                 if (counter == 5) throw;
                 await Task.Delay(TimeSpan.FromSeconds(5)).VhConfigureAwait();

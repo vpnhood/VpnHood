@@ -110,6 +110,13 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 ExcludeCountryCodes = ["CN"],
                 ProviderName = "AdMob-NoVideo",
             },
+
+            new AppAdProviderItem {
+                AdProvider = AdMobRewardedAdProvider.Create(appConfigs.AdMobRewardedAdId),
+                ExcludeCountryCodes = ["IR", "CN"],
+                ProviderName = "AdMob-Rewarded",
+            },
+
         ];
     }
 

@@ -941,6 +941,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return ipRanges;
     }
 
+    public Task ShowRewardedAd(CancellationToken cancellationToken)
+    {
+        if (_client?.State!=ClientState.Connected)
+            throw new InvalidOperationException("Could not show ad. The VPN is not connected.");
+
+        return _client.ShowAd(true, cancellationToken);
+    }
+
     internal Task RefreshAccount(string[] accountAccessKeys, bool updateCurrentClientProfile)
     {
         ClientProfileService.UpdateFromAccount(accountAccessKeys);

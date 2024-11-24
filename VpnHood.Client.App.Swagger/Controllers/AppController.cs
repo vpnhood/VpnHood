@@ -54,6 +54,12 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
+    [HttpPost("show-rewarded-ad")]
+    public Task ShowRewardedAd()
+    {
+        throw new SwaggerOnlyException();
+    }
+
     [HttpPut("user-settings")]
     public Task SetUserSettings(UserSettings userSettings)
     {

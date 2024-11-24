@@ -126,7 +126,7 @@ public class VpnHoodClient : IAsyncDisposable
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
         _adService = options.AdService;
-        _planId = options.PlanId; 
+        _planId = options.PlanId;
         _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken,
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
@@ -438,7 +438,7 @@ public class VpnHoodClient : IAsyncDisposable
                         }
 
                         // Udp
-                        else if (ipPacket.Protocol == ProtocolType.Udp && udpPacket != null) { 
+                        else if (ipPacket.Protocol == ProtocolType.Udp && udpPacket != null) {
                             if (!IsInIpRange(ipPacket.DestinationAddress) || _clientHost.ShouldPassthru(ipPacket, udpPacket.SourcePort, udpPacket.DestinationPort))
                                 proxyPackets.Add(ipPacket);
                             else if (!ShouldTunnelUdpPacket(udpPacket))
@@ -771,11 +771,10 @@ public class VpnHoodClient : IAsyncDisposable
             else if (sessionResponse.SuppressedTo == SessionSuppressType.Other)
                 VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
-            // show ad if required
+            // show ad
             string? adNetworkName = null;
             if (sessionResponse.AdRequirement is not AdRequirement.None)
-                adNetworkName = await ShowAd(sessionResponse.AdRequirement is AdRequirement.Rewarded, cancellationToken)
-                    .VhConfigureAwait();
+                adNetworkName = await ShowAd(sessionResponse.AdRequirement is AdRequirement.Rewarded, cancellationToken).VhConfigureAwait();
 
             // usage trackers
             if (_allowAnonymousTracker) {
@@ -864,7 +863,8 @@ public class VpnHoodClient : IAsyncDisposable
             // create a connection and send the request 
             var requestResult = await ConnectorService.SendRequest<T>(request, cancellationToken).VhConfigureAwait();
             if (requestResult.Response.AccessUsage != null)
-                requestResult.Response.AccessUsage.CanExtendPremiumByRewardedAd &= _packetCapture.CanDetectInProcessPacket;
+                requestResult.Response.AccessUsage.CanExtendPremiumByRewardedAd &= 
+                    _packetCapture.CanDetectInProcessPacket && _adService is { CanShowRewarded: true };
 
             // set SessionStatus
             if (requestResult.Response.AccessUsage != null)
@@ -958,20 +958,23 @@ public class VpnHoodClient : IAsyncDisposable
     }
 
     /// <returns>NetworkName</returns>
-    private async Task<string?> ShowAd(bool required, CancellationToken cancellationToken)
+    public async Task<string?> ShowAd(bool rewarded, CancellationToken cancellationToken)
     {
-        if (SessionId == 0)
-            throw new InvalidOperationException("SessionId is not set.");
-
         try {
             if (_adService == null)
                 throw new InvalidOperationException("Client's AdService has not been initialized.");
 
+            if (SessionId == 0)
+                throw new InvalidOperationException("Session has not been established.");
+
             _isWaitingForAd = true;
             _clientHost.PassthruInProcessPackets = true;
-            var adResult = await _adService.ShowAd(ActiveUiContext.RequiredContext, SessionId.ToString(), cancellationToken).VhConfigureAwait();
-            if (!string.IsNullOrEmpty(adResult.AdData) && required)
-                _ = SendRewardedAd(adResult.AdData, cancellationToken);
+            var adResult = rewarded 
+                ? await _adService.ShowRewarded(ActiveUiContext.RequiredContext, SessionId.ToString(), cancellationToken).VhConfigureAwait()
+                : await _adService.ShowInterstitial(ActiveUiContext.RequiredContext, SessionId.ToString(), cancellationToken).VhConfigureAwait();
+
+            if (!string.IsNullOrEmpty(adResult.AdData) && rewarded)
+                await SendRewardedAd(adResult.AdData, cancellationToken);
 
             return adResult.NetworkName;
         }
@@ -979,12 +982,11 @@ public class VpnHoodClient : IAsyncDisposable
             throw new ShowAdNoUiException();
         }
         catch (LoadAdException ex) {
-            if (required)
-                throw new LoadAdException("Could not load the rewarded ad.", ex);
+            if (rewarded)
+                throw new LoadAdException("Could not load any rewarded ad.", ex);
 
             VhLogger.Instance.LogInformation(ex, "Could not load any ad.");
             // ignore exception for flexible ad if load failed
-
             return null;
         }
         finally {

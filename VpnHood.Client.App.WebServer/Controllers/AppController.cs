@@ -97,6 +97,12 @@ internal class AppController : WebApiController, IAppController
         App.ClearLastError();
     }
 
+    [Route(HttpVerbs.Post, "/show-rewarded-ad")]
+    public Task ShowRewardedAd()
+    {
+        return App.ShowRewardedAd(HttpContext.CancellationToken);
+    }
+
     [Route(HttpVerbs.Put, "/user-settings")]
     public async Task SetUserSettings(UserSettings userSettings)
     {

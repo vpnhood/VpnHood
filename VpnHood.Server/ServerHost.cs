@@ -615,7 +615,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessRewardedAdRequest(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the RewardAd request...");
+        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the RewardedAd request...");
         var request = await ReadRequest<RewardedAdRequest>(clientStream, cancellationToken).VhConfigureAwait();
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
         await session.ProcessRewardedAdRequest(request, clientStream, cancellationToken).VhConfigureAwait();

@@ -35,7 +35,7 @@ public abstract class ApiClientCommon
         return Task.CompletedTask;
     }
 
-    protected virtual Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken ct)
+    protected virtual Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }

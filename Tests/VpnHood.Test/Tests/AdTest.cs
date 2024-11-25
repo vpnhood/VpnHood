@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client.App;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
@@ -26,7 +27,7 @@ public class AdTest : TestBase
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
         var adProvider = new TestAdProvider(accessManager);
-        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd) };
         appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         adProvider.FailLoad = true;
@@ -49,7 +50,7 @@ public class AdTest : TestBase
 
         // create client app
         var appOptions = TestHelper.CreateAppOptions();
-        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd ) };
         appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         ActiveUiContext.Context = null;
@@ -112,7 +113,31 @@ public class AdTest : TestBase
     }
 
     [TestMethod]
-    public async Task Session_exception_should_be_short_if_ad_is_not_accepted()
+    public async Task Session_expiration_must_increase_by_rewarded()
+    {
+        // create server
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // create client app
+        var appOptions = TestHelper.CreateAppOptions();
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
+        appOptions.AdProviderItems = [adProviderItem];
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+
+        // create access token
+        var token = accessManager.CreateToken(adRequirement: AdRequirement.Rewarded);
+
+        // connect
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfile.ClientProfileId);
+
+        // assert
+        await VhTestUtil.AssertEqualsWait(null, () => app.State.SessionStatus?.AccessUsage?.ExpirationTime);
+    }
+
+    [TestMethod]
+    public async Task Session_expiration_should_be_short_if_ad_is_not_accepted()
     {
         // create server
         using var accessManager = TestHelper.CreateAccessManager();
@@ -140,7 +165,7 @@ public class AdTest : TestBase
     [TestMethod]
     [DataRow(true)]
     [DataRow(false)]
-    public async Task extend_by_ad_should_be_enabled_from_access_manager(bool canDetectInProcessPacket)
+    public async Task RewardedAd_should_be_enabled_from_access_manager(bool canDetectInProcessPacket)
     {
         // create server
         using var accessManager = TestHelper.CreateAccessManager();
@@ -148,8 +173,11 @@ public class AdTest : TestBase
         accessManager.CanExtendPremiumByAd = true;
 
         // create client app
+        var appOptions = TestHelper.CreateAppOptions();
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
+        appOptions.AdProviderItems = [adProviderItem];
         var device = new TestDevice(() => new NullPacketCapture { CanDetectInProcessPacket = canDetectInProcessPacket });
-        await using var app = TestHelper.CreateClientApp(device: device);
+        await using var app = TestHelper.CreateClientApp(device: device, appOptions: appOptions);
 
         // create token
         var token = accessManager.CreateToken();

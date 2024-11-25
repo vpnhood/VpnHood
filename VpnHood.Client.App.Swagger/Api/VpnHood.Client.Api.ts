@@ -2488,7 +2488,7 @@ export interface IClientServerLocationInfo extends IServerLocationInfo {
 export class ServerLocationOptions implements IServerLocationOptions {
     normal?: number | null;
     premiumByTrial?: number | null;
-    premiumByRewardAd?: number | null;
+    premiumByRewardedAd?: number | null;
     premiumByPurchase!: boolean;
     hasFree!: boolean;
     hasPremium!: boolean;
@@ -2507,7 +2507,7 @@ export class ServerLocationOptions implements IServerLocationOptions {
         if (_data) {
             this.normal = _data["normal"] !== undefined ? _data["normal"] : <any>null;
             this.premiumByTrial = _data["premiumByTrial"] !== undefined ? _data["premiumByTrial"] : <any>null;
-            this.premiumByRewardAd = _data["premiumByRewardAd"] !== undefined ? _data["premiumByRewardAd"] : <any>null;
+            this.premiumByRewardedAd = _data["premiumByRewardedAd"] !== undefined ? _data["premiumByRewardedAd"] : <any>null;
             this.premiumByPurchase = _data["premiumByPurchase"] !== undefined ? _data["premiumByPurchase"] : <any>null;
             this.hasFree = _data["hasFree"] !== undefined ? _data["hasFree"] : <any>null;
             this.hasPremium = _data["hasPremium"] !== undefined ? _data["hasPremium"] : <any>null;
@@ -2526,7 +2526,7 @@ export class ServerLocationOptions implements IServerLocationOptions {
         data = typeof data === 'object' ? data : {};
         data["normal"] = this.normal !== undefined ? this.normal : <any>null;
         data["premiumByTrial"] = this.premiumByTrial !== undefined ? this.premiumByTrial : <any>null;
-        data["premiumByRewardAd"] = this.premiumByRewardAd !== undefined ? this.premiumByRewardAd : <any>null;
+        data["premiumByRewardedAd"] = this.premiumByRewardedAd !== undefined ? this.premiumByRewardedAd : <any>null;
         data["premiumByPurchase"] = this.premiumByPurchase !== undefined ? this.premiumByPurchase : <any>null;
         data["hasFree"] = this.hasFree !== undefined ? this.hasFree : <any>null;
         data["hasPremium"] = this.hasPremium !== undefined ? this.hasPremium : <any>null;
@@ -2538,7 +2538,7 @@ export class ServerLocationOptions implements IServerLocationOptions {
 export interface IServerLocationOptions {
     normal?: number | null;
     premiumByTrial?: number | null;
-    premiumByRewardAd?: number | null;
+    premiumByRewardedAd?: number | null;
     premiumByPurchase: boolean;
     hasFree: boolean;
     hasPremium: boolean;

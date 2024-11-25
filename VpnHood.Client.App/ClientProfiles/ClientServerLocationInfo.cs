@@ -50,9 +50,9 @@ public class ClientServerLocationInfo : ServerLocationInfo
 
         Options.Normal = Options.HasFree ? policy.Normal : null;
         Options.PremiumByTrial = Options.HasPremium ? policy.PremiumByTrial : null;
-        Options.PremiumByRewardAd = Options.HasPremium ? policy.PremiumByRewardAd : null;
+        Options.PremiumByRewardedAd = Options.HasPremium ? policy.PremiumByRewardedAd : null;
         Options.PremiumByPurchase = Options.HasPremium && policy.PremiumByPurchase;
-        Options.Prompt = Options.PremiumByTrial != null || Options.PremiumByRewardAd != null || Options.PremiumByPurchase;
+        Options.Prompt = Options.PremiumByTrial != null || Options.PremiumByRewardedAd != null || Options.PremiumByPurchase;
     }
 
     private static ClientServerLocationInfo[] AddCategoryGaps(string[] serverLocations, string[]? freeLocations)

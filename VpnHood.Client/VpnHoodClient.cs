@@ -957,6 +957,8 @@ public class VpnHoodClient : IAsyncDisposable
         }
     }
 
+    //todo: Test For Rewarded ad to extend session
+
     /// <returns>NetworkName</returns>
     public async Task<string?> ShowAd(bool rewarded, CancellationToken cancellationToken)
     {

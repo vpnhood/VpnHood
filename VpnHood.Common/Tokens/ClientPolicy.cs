@@ -23,7 +23,7 @@ public class ClientPolicy
     public int? PremiumByTrial { get; init; }
 
     [JsonPropertyName("pbr")]
-    public int? PremiumByRewardAd { get; init; }
+    public int? PremiumByRewardedAd { get; init; }
     
     [JsonPropertyName("pbe")]
     public bool CanExtendPremiumByAd { get; init; }

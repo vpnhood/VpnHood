@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Tokens;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Managers.FileAccessManagers.Dtos;
 using VpnHood.Server.Access.Messaging;
@@ -17,6 +18,7 @@ public class SessionService : IDisposable, IJob
     private readonly TimeSpan _sessionPermanentlyTimeout = TimeSpan.FromHours(48);
     private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
     private readonly TimeSpan _adRequiredTimeout = TimeSpan.FromMinutes(4);
+    private readonly TimeSpan _trialTimeout = TimeSpan.FromMinutes(10);
     private long _lastSessionId;
     private readonly string _sessionsFolderPath;
     private readonly ConcurrentDictionary<ulong, bool> _updatedSessionIds = new ();
@@ -115,23 +117,43 @@ public class SessionService : IDisposable, IJob
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,
             ExtraData = sessionRequestEx.ExtraData,
-            ProtocolVersion = sessionRequestEx.ClientInfo.ProtocolVersion,
-            ExpirationTime = accessTokenData.AccessToken.AdRequirement is AdRequirement.Rewarded
-                ? DateTime.UtcNow + _adRequiredTimeout
-                : null,
+            ProtocolVersion = sessionRequestEx.ClientInfo.ProtocolVersion
         };
 
+        // process plan id
+        var adRequirement = ProcessPlanId(session, accessTokenData, sessionRequestEx.PlanId); 
+
         //create response
-        var ret = BuildSessionResponse(session, accessTokenData);
-        if (ret.ErrorCode != SessionErrorCode.Ok)
-            return ret;
+        var responseEx = BuildSessionResponse(session, accessTokenData);
+        responseEx.AdRequirement = adRequirement;
+        if (responseEx.ErrorCode != SessionErrorCode.Ok)
+            return responseEx;
 
         // add the new session to collection
         Sessions.TryAdd(session.SessionId, session);
         File.WriteAllText(GetSessionFilePath(session.SessionId), JsonSerializer.Serialize(session));
 
-        ret.SessionId = session.SessionId;
-        return ret;
+        responseEx.SessionId = session.SessionId;
+        return responseEx;
+    }
+
+    private AdRequirement ProcessPlanId(Session session, AccessTokenData accessTokenData, ConnectPlanId planId)
+    {
+        switch (planId) {
+            // PremiumByRewardedAd is just used for test purpose in File Access Manager. 
+            case ConnectPlanId.PremiumByRewardedAd:
+                session.ExpirationTime = DateTime.UtcNow + _adRequiredTimeout;
+                return AdRequirement.Rewarded;
+
+            // ad is just used for test purpose in File Access Manager
+            case ConnectPlanId.PremiumByTrial:
+                session.ExpirationTime = DateTime.UtcNow + _trialTimeout;
+                return AdRequirement.None;
+
+            case ConnectPlanId.Normal:
+            default:
+                return accessTokenData.AccessToken.AdRequirement;
+        }
     }
 
     public SessionResponseEx GetSessionResponse(ulong sessionId, AccessTokenData accessTokenData,

@@ -928,7 +928,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return ipRanges;
     }
 
-    public Task ShowRewardedAd(CancellationToken cancellationToken)
+    public Task ExtendByRewardedAd(CancellationToken cancellationToken)
     {
         if (_client?.State!=ClientState.Connected)
             throw new InvalidOperationException("Could not show ad. The VPN is not connected.");

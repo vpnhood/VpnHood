@@ -54,8 +54,8 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
-    [HttpPost("show-rewarded-ad")]
-    public Task ShowRewardedAd()
+    [HttpPost("extend-by-rewarded-ad")]
+    public Task ExtendByRewardedAd()
     {
         throw new SwaggerOnlyException();
     }

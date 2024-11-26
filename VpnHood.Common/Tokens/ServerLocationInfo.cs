@@ -11,6 +11,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
     public string[]? Tags { get; set; }
     public string ServerLocation => $"{CountryCode}/{RegionName}";
     public string CountryName => GetCountryName(CountryCode);
+    public bool IsAuto => IsAutoLocation(ServerLocation);
 
     public int CompareTo(ServerLocationInfo other)
     {
@@ -90,7 +91,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
 
     public bool LocationEquals(string? serverLocation)
     {
-        if (serverLocation == null) return IsAuto();
+        if (serverLocation == null) return IsAuto;
         var other = TryParse(serverLocation);
         return Equals(other);
     }
@@ -118,9 +119,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
         }
     }
 
-    public bool IsAuto() => IsAuto(ServerLocation);
-
-    public static bool IsAuto(string? serverLocation)
+    public static bool IsAutoLocation(string? serverLocation)
     {
         if (string.IsNullOrEmpty(serverLocation))
             return true;

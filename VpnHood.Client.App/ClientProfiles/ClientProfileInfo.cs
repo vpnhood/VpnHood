@@ -16,7 +16,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public string? SelectedLocation {
         get {
             var serverLocation =
-                ClientServerLocationInfos.FirstOrDefault(x => x.LocationEquals(clientProfile.SelectedLocation))?.ServerLocation ??
+                ClientServerLocationInfos.FirstOrDefault(x => x.LocationEquals(ClientProfile.SelectedLocation))?.ServerLocation ??
                 ClientServerLocationInfos.FirstOrDefault(x => x.IsAuto())?.ServerLocation ??
                 ClientServerLocationInfos.FirstOrDefault()?.ServerLocation;
 

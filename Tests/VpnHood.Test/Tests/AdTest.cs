@@ -139,7 +139,7 @@ public class AdTest : TestBase
         Assert.IsNotNull(app.State.SessionStatus?.AccessUsage?.ExpirationTime);
 
         // show ad
-        await app.ShowRewardedAd(CancellationToken.None);
+        await app.ExtendByRewardedAd(CancellationToken.None);
         Assert.AreEqual(acceptAd, app.State.SessionStatus?.AccessUsage?.ExpirationTime == null);
     }
 

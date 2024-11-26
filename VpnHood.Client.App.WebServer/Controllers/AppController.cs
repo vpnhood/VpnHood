@@ -97,10 +97,10 @@ internal class AppController : WebApiController, IAppController
         App.ClearLastError();
     }
 
-    [Route(HttpVerbs.Post, "/show-rewarded-ad")]
-    public Task ShowRewardedAd()
+    [Route(HttpVerbs.Post, "/extend-by-rewarded-ad")]
+    public Task ExtendByRewardedAd()
     {
-        return App.ShowRewardedAd(HttpContext.CancellationToken);
+        return App.ExtendByRewardedAd(HttpContext.CancellationToken);
     }
 
     [Route(HttpVerbs.Put, "/user-settings")]

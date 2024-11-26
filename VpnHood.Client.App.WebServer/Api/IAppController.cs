@@ -21,5 +21,5 @@ public interface IAppController
     void OpenAlwaysOnPage();
     Task RequestQuickLaunch();
     Task RequestNotification();
-    Task ShowRewardedAd();
+    Task ExtendByRewardedAd();
 }

@@ -213,7 +213,8 @@ public class ClientProfileTest : TestBase
             ClientProfileName = Guid.NewGuid().ToString(),
             IsFavorite = true,
             CustomData = Guid.NewGuid().ToString(),
-            IsPremiumLocationSelected = true
+            IsPremiumLocationSelected = true,
+            SelectedLocation = "us/california"
         };
         app.ClientProfileService.Update(clientProfile1.ClientProfileId, updateParams);
         var clientProfile = app.ClientProfileService.Get(clientProfile1.ClientProfileId);
@@ -221,6 +222,7 @@ public class ClientProfileTest : TestBase
         Assert.AreEqual(updateParams.IsFavorite.Value, clientProfile.ClientProfile.IsFavorite);
         Assert.AreEqual(updateParams.CustomData.Value, clientProfile.ClientProfile.CustomData);
         Assert.AreEqual(updateParams.IsPremiumLocationSelected.Value, clientProfile.ClientProfile.IsPremiumLocationSelected);
+        Assert.AreEqual(updateParams.SelectedLocation.Value, clientProfile.ClientProfile.SelectedLocation);
 
         // ************
         // *** TEST ***: RemoveClientProfile

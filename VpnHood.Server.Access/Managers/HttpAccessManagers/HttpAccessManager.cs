@@ -1,10 +1,8 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
-using Microsoft.Extensions.Logging;
 using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
-using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
@@ -52,8 +50,7 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         try {
             return await base.HttpSendAsync<T>(urlPart, parameters, request, cancellationToken).VhConfigureAwait();
         }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not send a request to the server. Assume it is in maintenance mode.");
+        catch (Exception ex) when (VhUtil.IsConnectionRefusedException(ex)) {
             IsMaintenanceMode = true;
             throw new MaintenanceException();
         }

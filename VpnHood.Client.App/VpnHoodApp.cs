@@ -319,8 +319,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     ? _versionCheckResult.PublishInfo
                     : null,
                 ServerLocationInfo = client?.Stat.ServerLocationInfo,
-                ClientServerLocationInfo = currentProfileItem?.ClientProfileInfo.ClientServerLocationInfos
-                    .FirstOrDefault(x => x.LocationEquals(currentProfileItem.ClientProfileInfo.SelectedLocation))
+                ClientServerLocationInfo = currentProfileItem?.ClientProfileInfo.SelectedLocationInfo
             };
 
             return appState;
@@ -404,7 +403,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // set use default clientProfile and serverLocation
         clientProfileId ??= UserSettings.ClientProfileId ?? throw new NotExistsException("ClientProfile is not set."); 
         var clientProfileItem = ClientProfileService.FindById(clientProfileId.Value) ?? throw new NotExistsException("Could not find any VPN profile to connect.");
-        serverLocation ??= clientProfileItem.ClientProfileInfo.SelectedLocation;
+        serverLocation ??= clientProfileItem.ClientProfileInfo.SelectedLocationInfo?.ServerLocation;
         
         // protect double call
         if (!IsIdle) {
@@ -451,7 +450,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
             _activeClientProfileId = UserSettings.ClientProfileId;
-            _activeServerLocation = clientProfileItem.ClientProfileInfo.SelectedLocation;
+            _activeServerLocation = clientProfileItem.ClientProfileInfo.SelectedLocationInfo?.ServerLocation;
 
             // log general info
             VhLogger.Instance.LogInformation("AppVersion: {AppVersion}", GetType().Assembly.GetName().Version);
@@ -491,7 +490,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // Reset server location if no server is available
             if (ex is SessionException { SessionResponse.ErrorCode: SessionErrorCode.NoServerAvailable }) {
-                ClientProfileService.Update(clientProfileId.Value, new ClientProfileUpdateParams { SelectedLocation = null });
+                ClientProfileService.Update(clientProfileId.Value, new ClientProfileUpdateParams { SelectedLocation = new Patch<string?>(null) });
             }
 
             //user may disconnect before connection closed
@@ -569,7 +568,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ServerQueryTimeout = _serverQueryTimeout,
             DropUdp = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdp,
             DropQuic = UserSettings.DebugData1?.Contains("/drop-quic") == true || UserSettings.DropQuic,
-            ServerLocation = ServerLocationInfo.IsAuto(serverLocation) ? null : serverLocation,
+            ServerLocation = ServerLocationInfo.IsAutoLocation(serverLocation) ? null : serverLocation,
             PlanId = planId,
             UseUdpChannel = UserSettings.UseUdpChannel,
             DomainFilter = UserSettings.DomainFilter,

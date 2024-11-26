@@ -595,9 +595,8 @@ public class ClientAppTest : TestBase
             Assert.AreEqual(SessionErrorCode.NoServerAvailable, ex.SessionResponse.ErrorCode);
         }
 
-        throw new NotImplementedException();
         // reload clientProfileItem
         clientProfileItem =  clientApp.ClientProfileService.Get(clientProfileItem.ClientProfileId);
-        Assert.AreEqual("FR/Paris", clientProfileItem.ClientProfileInfo.SelectedLocation);
+        Assert.IsTrue(clientProfileItem.ClientProfileInfo.SelectedLocationInfo?.IsAuto);
     }
 }

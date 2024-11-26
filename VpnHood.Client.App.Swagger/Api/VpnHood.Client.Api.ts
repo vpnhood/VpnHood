@@ -665,8 +665,8 @@ export class AppClient {
         return Promise.resolve<void>(null as any);
     }
 
-    showRewardedAd( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/show-rewarded-ad";
+    extendByRewardedAd( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/extend-by-rewarded-ad";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -684,11 +684,11 @@ export class AppClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processShowRewardedAd(_response);
+            return this.processExtendByRewardedAd(_response);
         });
     }
 
-    protected processShowRewardedAd(response: AxiosResponse): Promise<void> {
+    protected processExtendByRewardedAd(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1731,7 +1731,6 @@ export class UserSettings implements IUserSettings {
     logging!: AppLogSettings;
     cultureCode?: string | null;
     clientProfileId?: string | null;
-    serverLocation?: string | null;
     maxDatagramChannelCount!: number;
     tunnelClientCountry!: boolean;
     appFilters!: string[];
@@ -1773,7 +1772,6 @@ export class UserSettings implements IUserSettings {
             this.logging = _data["logging"] ? AppLogSettings.fromJS(_data["logging"]) : new AppLogSettings();
             this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : <any>null;
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
-            this.serverLocation = _data["serverLocation"] !== undefined ? _data["serverLocation"] : <any>null;
             this.maxDatagramChannelCount = _data["maxDatagramChannelCount"] !== undefined ? _data["maxDatagramChannelCount"] : <any>null;
             this.tunnelClientCountry = _data["tunnelClientCountry"] !== undefined ? _data["tunnelClientCountry"] : <any>null;
             if (Array.isArray(_data["appFilters"])) {
@@ -1848,7 +1846,6 @@ export class UserSettings implements IUserSettings {
         data["logging"] = this.logging ? this.logging.toJSON() : <any>null;
         data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : <any>null;
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
-        data["serverLocation"] = this.serverLocation !== undefined ? this.serverLocation : <any>null;
         data["maxDatagramChannelCount"] = this.maxDatagramChannelCount !== undefined ? this.maxDatagramChannelCount : <any>null;
         data["tunnelClientCountry"] = this.tunnelClientCountry !== undefined ? this.tunnelClientCountry : <any>null;
         if (Array.isArray(this.appFilters)) {
@@ -1898,7 +1895,6 @@ export interface IUserSettings {
     logging: AppLogSettings;
     cultureCode?: string | null;
     clientProfileId?: string | null;
-    serverLocation?: string | null;
     maxDatagramChannelCount: number;
     tunnelClientCountry: boolean;
     appFilters: string[];
@@ -2384,6 +2380,7 @@ export class ServerLocationInfo implements IServerLocationInfo {
     tags?: string[] | null;
     serverLocation!: string;
     countryName!: string;
+    isAuto!: boolean;
 
     constructor(data?: IServerLocationInfo) {
         if (data) {
@@ -2408,6 +2405,7 @@ export class ServerLocationInfo implements IServerLocationInfo {
             }
             this.serverLocation = _data["serverLocation"] !== undefined ? _data["serverLocation"] : <any>null;
             this.countryName = _data["countryName"] !== undefined ? _data["countryName"] : <any>null;
+            this.isAuto = _data["isAuto"] !== undefined ? _data["isAuto"] : <any>null;
         }
     }
 
@@ -2429,6 +2427,7 @@ export class ServerLocationInfo implements IServerLocationInfo {
         }
         data["serverLocation"] = this.serverLocation !== undefined ? this.serverLocation : <any>null;
         data["countryName"] = this.countryName !== undefined ? this.countryName : <any>null;
+        data["isAuto"] = this.isAuto !== undefined ? this.isAuto : <any>null;
         return data;
     }
 }
@@ -2439,6 +2438,7 @@ export interface IServerLocationInfo {
     tags?: string[] | null;
     serverLocation: string;
     countryName: string;
+    isAuto: boolean;
 }
 
 export class ClientServerLocationInfo extends ServerLocationInfo implements IClientServerLocationInfo {
@@ -2857,13 +2857,14 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
     isValidHostName!: boolean;
     isBuiltIn!: boolean;
     isForAccount!: boolean;
-    serverLocationInfos!: ClientServerLocationInfo[];
+    locationInfos!: ClientServerLocationInfo[];
+    selectedLocationInfo?: ClientServerLocationInfo | null;
 
     constructor(data?: IClientProfileInfo) {
         super(data);
         if (!data) {
             this.hostNames = [];
-            this.serverLocationInfos = [];
+            this.locationInfos = [];
         }
     }
 
@@ -2882,14 +2883,15 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
             this.isValidHostName = _data["isValidHostName"] !== undefined ? _data["isValidHostName"] : <any>null;
             this.isBuiltIn = _data["isBuiltIn"] !== undefined ? _data["isBuiltIn"] : <any>null;
             this.isForAccount = _data["isForAccount"] !== undefined ? _data["isForAccount"] : <any>null;
-            if (Array.isArray(_data["serverLocationInfos"])) {
-                this.serverLocationInfos = [] as any;
-                for (let item of _data["serverLocationInfos"])
-                    this.serverLocationInfos!.push(ClientServerLocationInfo.fromJS(item));
+            if (Array.isArray(_data["locationInfos"])) {
+                this.locationInfos = [] as any;
+                for (let item of _data["locationInfos"])
+                    this.locationInfos!.push(ClientServerLocationInfo.fromJS(item));
             }
             else {
-                this.serverLocationInfos = <any>null;
+                this.locationInfos = <any>null;
             }
+            this.selectedLocationInfo = _data["selectedLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["selectedLocationInfo"]) : <any>null;
         }
     }
 
@@ -2911,11 +2913,12 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
         data["isValidHostName"] = this.isValidHostName !== undefined ? this.isValidHostName : <any>null;
         data["isBuiltIn"] = this.isBuiltIn !== undefined ? this.isBuiltIn : <any>null;
         data["isForAccount"] = this.isForAccount !== undefined ? this.isForAccount : <any>null;
-        if (Array.isArray(this.serverLocationInfos)) {
-            data["serverLocationInfos"] = [];
-            for (let item of this.serverLocationInfos)
-                data["serverLocationInfos"].push(item.toJSON());
+        if (Array.isArray(this.locationInfos)) {
+            data["locationInfos"] = [];
+            for (let item of this.locationInfos)
+                data["locationInfos"].push(item.toJSON());
         }
+        data["selectedLocationInfo"] = this.selectedLocationInfo ? this.selectedLocationInfo.toJSON() : <any>null;
         super.toJSON(data);
         return data;
     }
@@ -2927,7 +2930,8 @@ export interface IClientProfileInfo extends IClientProfileBaseInfo {
     isValidHostName: boolean;
     isBuiltIn: boolean;
     isForAccount: boolean;
-    serverLocationInfos: ClientServerLocationInfo[];
+    locationInfos: ClientServerLocationInfo[];
+    selectedLocationInfo?: ClientServerLocationInfo | null;
 }
 
 export class ConfigParams implements IConfigParams {
@@ -3158,6 +3162,7 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
     clientProfileName?: PatchOfString | null;
     isFavorite?: PatchOfBoolean | null;
     isPremiumLocationSelected?: PatchOfBoolean | null;
+    selectedLocation?: PatchOfString | null;
     customData?: PatchOfString | null;
 
     constructor(data?: IClientProfileUpdateParams) {
@@ -3174,6 +3179,7 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
             this.clientProfileName = _data["clientProfileName"] ? PatchOfString.fromJS(_data["clientProfileName"]) : <any>null;
             this.isFavorite = _data["isFavorite"] ? PatchOfBoolean.fromJS(_data["isFavorite"]) : <any>null;
             this.isPremiumLocationSelected = _data["isPremiumLocationSelected"] ? PatchOfBoolean.fromJS(_data["isPremiumLocationSelected"]) : <any>null;
+            this.selectedLocation = _data["selectedLocation"] ? PatchOfString.fromJS(_data["selectedLocation"]) : <any>null;
             this.customData = _data["customData"] ? PatchOfString.fromJS(_data["customData"]) : <any>null;
         }
     }
@@ -3190,6 +3196,7 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
         data["clientProfileName"] = this.clientProfileName ? this.clientProfileName.toJSON() : <any>null;
         data["isFavorite"] = this.isFavorite ? this.isFavorite.toJSON() : <any>null;
         data["isPremiumLocationSelected"] = this.isPremiumLocationSelected ? this.isPremiumLocationSelected.toJSON() : <any>null;
+        data["selectedLocation"] = this.selectedLocation ? this.selectedLocation.toJSON() : <any>null;
         data["customData"] = this.customData ? this.customData.toJSON() : <any>null;
         return data;
     }
@@ -3199,6 +3206,7 @@ export interface IClientProfileUpdateParams {
     clientProfileName?: PatchOfString | null;
     isFavorite?: PatchOfBoolean | null;
     isPremiumLocationSelected?: PatchOfBoolean | null;
+    selectedLocation?: PatchOfString | null;
     customData?: PatchOfString | null;
 }
 

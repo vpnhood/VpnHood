@@ -4,16 +4,18 @@ namespace VpnHood.Client.App.ClientProfiles;
 
 public class ClientProfileBaseInfo(ClientProfile clientProfile)
 {
-    public Guid ClientProfileId { get; private set; } = clientProfile.ClientProfileId;
-    public string ClientProfileName { get; private set; } = GetTitle(clientProfile);
+    protected ClientProfile ClientProfile = clientProfile;
+
+    public Guid ClientProfileId => ClientProfile.ClientProfileId;
+    public string ClientProfileName => GetTitle(ClientProfile);
     
-    public string? SupportId { get; private set; } = clientProfile.Token.SupportId;
+    public string? SupportId => ClientProfile.Token.SupportId;
     
-    public string? CustomData { get; private set; } = clientProfile.CustomData;
+    public string? CustomData => ClientProfile.CustomData;
     
-    public bool IsPremiumLocationSelected { get; private set; } = clientProfile.IsPremiumLocationSelected;
+    public bool IsPremiumLocationSelected => ClientProfile.IsPremiumLocationSelected;
     
-    public bool IsPremiumAccount { get; private set; } = !clientProfile.Token.IsPublic;
+    public bool IsPremiumAccount => !ClientProfile.Token.IsPublic;
 
     private static string GetTitle(ClientProfile clientProfile)
     {

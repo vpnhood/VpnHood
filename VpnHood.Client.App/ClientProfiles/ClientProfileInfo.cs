@@ -11,16 +11,15 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public bool IsValidHostName => ClientProfile.Token.ServerToken.IsValidHostName;
     public bool IsBuiltIn => ClientProfile.IsBuiltIn;
     public bool IsForAccount => ClientProfile.IsForAccount;
-    public ClientServerLocationInfo[] ClientServerLocationInfos { get; } = ClientServerLocationInfo.CreateFromToken(clientProfile.Token);
-
-    public string? SelectedLocation {
+    public ClientServerLocationInfo[] LocationInfos { get; } = ClientServerLocationInfo.CreateFromToken(clientProfile.Token);
+    public ClientServerLocationInfo? SelectedLocationInfo {
         get {
-            var serverLocation =
-                ClientServerLocationInfos.FirstOrDefault(x => x.LocationEquals(ClientProfile.SelectedLocation))?.ServerLocation ??
-                ClientServerLocationInfos.FirstOrDefault(x => x.IsAuto())?.ServerLocation ??
-                ClientServerLocationInfos.FirstOrDefault()?.ServerLocation;
+            var ret =
+                LocationInfos.FirstOrDefault(x => x.LocationEquals(ClientProfile.SelectedLocation)) ??
+                LocationInfos.FirstOrDefault(x => x.IsAuto) ??
+                LocationInfos.FirstOrDefault();
 
-            return serverLocation;
+            return ret;
         }
     }
 

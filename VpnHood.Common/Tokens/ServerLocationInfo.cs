@@ -88,8 +88,9 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
             MatchLocationPart(RegionName, serverLocationInfo.RegionName);
     }
 
-    public bool LocationEquals(string serverLocation)
+    public bool LocationEquals(string? serverLocation)
     {
+        if (serverLocation == null) return IsAuto();
         var other = TryParse(serverLocation);
         return Equals(other);
     }

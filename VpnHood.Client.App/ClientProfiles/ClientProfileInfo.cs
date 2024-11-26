@@ -4,16 +4,25 @@ using VpnHood.Common.Utils;
 namespace VpnHood.Client.App.ClientProfiles;
 
 public class ClientProfileInfo(ClientProfile clientProfile)
-    : ClientProfileBaseInfo(clientProfile)
+    : ClientProfileBaseInfo(clientProfile) //todo
 {
     public string TokenId { get; private set; } = clientProfile.Token.TokenId;
     public string[] HostNames { get; private set; } = GetEndPoints(clientProfile.Token.ServerToken);
     public bool IsValidHostName { get; private set; } = clientProfile.Token.ServerToken.IsValidHostName;
     public bool IsBuiltIn { get; private set; } = clientProfile.IsBuiltIn;
     public bool IsForAccount { get; private set; } = clientProfile.IsForAccount;
+    public ClientServerLocationInfo[] ClientServerLocationInfos { get; } = ClientServerLocationInfo.CreateFromToken(clientProfile.Token);
 
-    public ClientServerLocationInfo[] ServerLocationInfos { get; private set; } =
-        ClientServerLocationInfo.CreateFromToken(clientProfile.Token);
+    public string? SelectedLocation {
+        get {
+            var serverLocation =
+                ClientServerLocationInfos.FirstOrDefault(x => x.LocationEquals(clientProfile.SelectedLocation))?.ServerLocation ??
+                ClientServerLocationInfos.FirstOrDefault(x => x.IsAuto())?.ServerLocation ??
+                ClientServerLocationInfos.FirstOrDefault()?.ServerLocation;
+
+            return serverLocation;
+        }
+    }
 
     private static string[] GetEndPoints(ServerToken serverToken)
     {

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
+using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.IpLocations.Providers;
 using VpnHood.Common.Logging;
@@ -568,7 +569,7 @@ public class ClientAppTest : TestBase
     }
 
     [TestMethod]
-    public async Task ServerLocation_must_rest_to_default_for_not_server_error()
+    public async Task ServerLocation_must_reset_to_default_for_no_server_error()
     {
         // Create Server 1
         using var accessManager = TestHelper.CreateAccessManager(serverLocation: "US/california");
@@ -580,7 +581,9 @@ public class ClientAppTest : TestBase
         // Create App
         await using var clientApp = TestHelper.CreateClientApp();
         var clientProfileItem = clientApp.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        clientApp.UserSettings.ServerLocation = "UK/london";
+        clientApp.ClientProfileService.Update(clientProfileItem.ClientProfileId, new ClientProfileUpdateParams {
+            SelectedLocation = "UK/london"
+        });
 
         // Connect
         try {
@@ -589,6 +592,9 @@ public class ClientAppTest : TestBase
         catch (SessionException ex) {
             Assert.AreEqual(SessionErrorCode.NoServerAvailable, ex.SessionResponse.ErrorCode);
         }
-        Assert.AreEqual(null, clientApp.UserSettings.ServerLocation);
+
+        // reload clientProfileItem
+        clientProfileItem =  clientApp.ClientProfileService.Get(clientProfileItem.ClientProfileId);
+        Assert.AreEqual("US/california", clientProfileItem.ClientProfileInfo.SelectedLocation);
     }
 }

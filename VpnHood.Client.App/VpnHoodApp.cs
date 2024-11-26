@@ -221,7 +221,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 disconnectRequired =
                     (_oldUserSettings.TunnelClientCountry != UserSettings.TunnelClientCountry) ||
                     (_activeClientProfileId != UserSettings.ClientProfileId) || //ClientProfileId has been changed
-                    (_activeServerLocation != UserSettings.ServerLocation) || //ClientProfileId has been changed
                     (UserSettings.IncludeLocalNetwork !=
                      client.IncludeLocalNetwork); // IncludeLocalNetwork has been changed
             }
@@ -229,12 +228,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // Enable trackers
             if (Services.Tracker != null)
                 Services.Tracker.IsEnabled = Settings.UserSettings.AllowAnonymousTracker;
-
-            // set ServerLocation to null if the item is SameAsGlobalAuto
-            if (UserSettings.ServerLocation != null &&
-                CurrentClientProfileItem?.ClientProfileInfo.ClientServerLocationInfos
-                    .FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation)?.IsDefault == true)
-                UserSettings.ServerLocation = null;
 
             // sync culture to app settings
             Services.CultureProvider.SelectedCultures =
@@ -409,9 +402,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         using var lockAsync = await _connectLock.LockAsync(cancellationToken);
 
         // set use default clientProfile and serverLocation
-        serverLocation ??= UserSettings.ServerLocation;
-        clientProfileId ??= UserSettings.ClientProfileId;
-
+        clientProfileId ??= UserSettings.ClientProfileId ?? throw new NotExistsException("ClientProfile is not set."); 
+        var clientProfileItem = ClientProfileService.FindById(clientProfileId.Value) ?? throw new NotExistsException("Could not find any VPN profile to connect.");
+        serverLocation ??= clientProfileItem.ClientProfileInfo.SelectedLocation;
+        
         // protect double call
         if (!IsIdle) {
             if (_activeClientProfileId == clientProfileId &&
@@ -449,19 +443,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LogLevel = _logVerbose || diagnose ? LogLevel.Trace : LogLevel.Information
             });
 
-            var clientProfileItem = ClientProfileService.FindById(clientProfileId ?? Guid.Empty) ??
-                                throw new NotExistsException("Could not find any VPN profile to connect.");
-
             // set current profile only if it has been updated to avoid unnecessary new config time
-            if (clientProfileItem.ClientProfileId != UserSettings.ClientProfileId ||
-                serverLocation != UserSettings.ServerLocation) {
+            if (clientProfileItem.ClientProfileId != UserSettings.ClientProfileId || serverLocation != clientProfileItem.ClientProfile.SelectedLocation) {
+                ClientProfileService.Update(clientProfileId.Value, new ClientProfileUpdateParams { SelectedLocation = serverLocation });
                 UserSettings.ClientProfileId = clientProfileItem.ClientProfileId;
-                UserSettings.ServerLocation = serverLocation;
                 Settings.Save();
             }
 
             _activeClientProfileId = UserSettings.ClientProfileId;
-            _activeServerLocation = UserSettings.ServerLocation;
+            _activeServerLocation = clientProfileItem.ClientProfileInfo.SelectedLocation;
 
             // log general info
             VhLogger.Instance.LogInformation("AppVersion: {AppVersion}", GetType().Assembly.GetName().Version);
@@ -501,8 +491,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // Reset server location if no server is available
             if (ex is SessionException { SessionResponse.ErrorCode: SessionErrorCode.NoServerAvailable }) {
-                UserSettings.ServerLocation = null;
-                Settings.Save();
+                ClientProfileService.Update(clientProfileId.Value, new ClientProfileUpdateParams { SelectedLocation = null });
             }
 
             //user may disconnect before connection closed

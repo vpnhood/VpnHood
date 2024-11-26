@@ -573,28 +573,31 @@ public class ClientAppTest : TestBase
     {
         // Create Server 1
         using var accessManager = TestHelper.CreateAccessManager(serverLocation: "US/california");
-        await using var server1 = await TestHelper.CreateServer(accessManager);
+        await using var server = await TestHelper.CreateServer(accessManager);
 
         // Create Client
         var token = accessManager.CreateToken();
+        token.ServerToken.ServerLocations = ["US", "FR/Paris"];
 
         // Create App
         await using var clientApp = TestHelper.CreateClientApp();
         var clientProfileItem = clientApp.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         clientApp.ClientProfileService.Update(clientProfileItem.ClientProfileId, new ClientProfileUpdateParams {
-            SelectedLocation = "UK/london"
+            SelectedLocation = "FR/Paris"
         });
 
         // Connect
         try {
             await clientApp.Connect(clientProfileItem.ClientProfileId);
+            Assert.Fail("SessionException was expected.");
         }
         catch (SessionException ex) {
             Assert.AreEqual(SessionErrorCode.NoServerAvailable, ex.SessionResponse.ErrorCode);
         }
 
+        throw new NotImplementedException();
         // reload clientProfileItem
         clientProfileItem =  clientApp.ClientProfileService.Get(clientProfileItem.ClientProfileId);
-        Assert.AreEqual("US/california", clientProfileItem.ClientProfileInfo.SelectedLocation);
+        Assert.AreEqual("FR/Paris", clientProfileItem.ClientProfileInfo.SelectedLocation);
     }
 }

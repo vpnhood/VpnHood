@@ -48,7 +48,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _hasDiagnoseStarted;
     private bool _hasDisconnectedByUser;
     private Guid? _activeClientProfileId;
-    private string? _activeServerLocation;
     private DateTime? _connectRequestTime;
     private bool _isConnecting;
     private bool _isDisconnecting;
@@ -273,15 +272,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _ = _appAppAdService.LoadAd(uiContext, CancellationToken.None);
     }
 
-    public ClientProfileItem? CurrentClientProfileItem =>
-        ClientProfileService.FindById(UserSettings.ClientProfileId ?? Guid.Empty);
+    public ClientProfileInfo? CurrentClientProfileInfo =>
+        ClientProfileService.FindInfo(UserSettings.ClientProfileId ?? Guid.Empty);
 
     public AppState State {
         get {
-            var currentProfileItem = CurrentClientProfileItem;
-
-
             var client = _client;
+            var clientProfileInfo = CurrentClientProfileInfo;
             var connectionState = ConnectionState;
             var appState = new AppState {
                 ConfigTime = Settings.ConfigTime,
@@ -293,7 +290,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CanDisconnect = !_isDisconnecting && (connectionState
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
-                ClientProfile = currentProfileItem?.BaseInfo,
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
                 LastError = _appPersistState.LastError,
                 HasDiagnoseStarted = _hasDiagnoseStarted,
@@ -319,7 +315,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     ? _versionCheckResult.PublishInfo
                     : null,
                 ServerLocationInfo = client?.Stat.ServerLocationInfo,
-                ClientServerLocationInfo = currentProfileItem?.ClientProfileInfo.SelectedLocationInfo
+                ClientProfile = clientProfileInfo?.ToBaseInfo()
             };
 
             return appState;
@@ -370,13 +366,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void DeviceOnStartedAsService(object sender, EventArgs e)
     {
-        if (CurrentClientProfileItem == null) {
+        if (CurrentClientProfileInfo == null) {
             var ex = new Exception("Could not start as service. No server is selected.");
             _appPersistState.LastError = new ApiError(ex);
             throw ex;
         }
 
-        _ = Connect(CurrentClientProfileItem.ClientProfileId);
+        _ = Connect(CurrentClientProfileInfo.ClientProfileId);
     }
 
     public void ClearLastError()
@@ -402,14 +398,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // set use default clientProfile and serverLocation
         clientProfileId ??= UserSettings.ClientProfileId ?? throw new NotExistsException("ClientProfile is not set."); 
-        var clientProfileItem = ClientProfileService.FindById(clientProfileId.Value) ?? throw new NotExistsException("Could not find any VPN profile to connect.");
-        serverLocation ??= clientProfileItem.ClientProfileInfo.SelectedLocationInfo?.ServerLocation;
+        var clientProfile = ClientProfileService.Get(clientProfileId.Value);
+        var clientProfileInfo = ClientProfileService.GetInfo(clientProfileId.Value); 
+        serverLocation ??= clientProfileInfo.SelectedLocationInfo?.ServerLocation;
         
         // protect double call
         if (!IsIdle) {
             if (_activeClientProfileId == clientProfileId &&
                 diagnose == _hasDiagnoseStarted && // client may request diagnose the current connection
-                string.Equals(_activeServerLocation, serverLocation, StringComparison.OrdinalIgnoreCase))
+                string.Equals(clientProfileInfo.SelectedLocationInfo?.ServerLocation, serverLocation, StringComparison.OrdinalIgnoreCase))
                 throw new Exception("Connection is already in progress.");
 
             // make sure current session has been disconnected and packet-capture has been released
@@ -443,14 +440,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             });
 
             // set current profile only if it has been updated to avoid unnecessary new config time
-            if (clientProfileItem.ClientProfileId != UserSettings.ClientProfileId || serverLocation != clientProfileItem.ClientProfile.SelectedLocation) {
-                ClientProfileService.Update(clientProfileId.Value, new ClientProfileUpdateParams { SelectedLocation = serverLocation });
-                UserSettings.ClientProfileId = clientProfileItem.ClientProfileId;
+            if (clientProfile.ClientProfileId != UserSettings.ClientProfileId || serverLocation != clientProfileInfo.SelectedLocationInfo?.ServerLocation) {
+                clientProfile = ClientProfileService.Update(clientProfileId.Value, new ClientProfileUpdateParams { SelectedLocation = serverLocation });
+                UserSettings.ClientProfileId = clientProfile.ClientProfileId;
                 Settings.Save();
             }
 
             _activeClientProfileId = UserSettings.ClientProfileId;
-            _activeServerLocation = clientProfileItem.ClientProfileInfo.SelectedLocationInfo?.ServerLocation;
 
             // log general info
             VhLogger.Instance.LogInformation("AppVersion: {AppVersion}", GetType().Assembly.GetName().Version);
@@ -477,7 +473,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             lockAsync.Dispose(); //let new request come cancel this one
 
             // connect
-            await ConnectInternal(clientProfileItem.Token,
+            await ConnectInternal(clientProfile.Token,
                     serverLocation: serverLocation,
                     userAgent: userAgent,
                     planId: planId,
@@ -787,7 +783,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         finally {
             _appPersistState.LastError ??= LastSessionStatus?.Error;
             _activeClientProfileId = null;
-            _activeServerLocation = null;
             _lastSessionStatus = _client?.SessionStatus;
             _isConnecting = false;
             _isDisconnecting = false;
@@ -944,7 +939,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (updateCurrentClientProfile) {
             var clientProfiles = ClientProfileService
                 .List()
-                .Where(x => x.ClientProfile.IsForAccount)
+                .Where(x => x.IsForAccount)
                 .ToArray();
 
             if (clientProfiles.Any()) {

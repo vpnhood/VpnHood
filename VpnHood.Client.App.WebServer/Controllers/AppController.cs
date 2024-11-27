@@ -1,6 +1,7 @@
 ﻿using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
+using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
@@ -31,7 +32,7 @@ internal class AppController : WebApiController, IAppController
         var ret = new AppConfig {
             Features = App.Features,
             Settings = App.Settings,
-            ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ClientProfileInfo).ToArray(),
+            ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),
             State = App.State,
             AvailableCultureInfos = App.Services.CultureProvider.AvailableCultures
                 .Select(x => new UiCultureInfo(x))

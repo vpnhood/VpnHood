@@ -534,8 +534,8 @@ public class ClientAppTest : TestBase
 
         // connect
         var token = TestHelper.CreateAccessToken(server);
-        var clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfileItem.ClientProfileId, diagnose: true);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfile.ClientProfileId, diagnose: true);
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
 
         // text include
@@ -560,8 +560,8 @@ public class ClientAppTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         await using var app = TestHelper.CreateClientApp();
-        var clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfileItem.ClientProfileId, diagnose: true);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfile.ClientProfileId, diagnose: true);
 
 
         Assert.IsTrue(app.State.ClientProfile?.IsPremiumAccount);
@@ -581,22 +581,22 @@ public class ClientAppTest : TestBase
 
         // Create App
         await using var clientApp = TestHelper.CreateClientApp();
-        var clientProfileItem = clientApp.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        clientApp.ClientProfileService.Update(clientProfileItem.ClientProfileId, new ClientProfileUpdateParams {
+        var clientProfile = clientApp.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        clientApp.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
             SelectedLocation = "FR/Paris"
         });
 
         // Connect
         try {
-            await clientApp.Connect(clientProfileItem.ClientProfileId);
+            await clientApp.Connect(clientProfile.ClientProfileId);
             Assert.Fail("SessionException was expected.");
         }
         catch (SessionException ex) {
             Assert.AreEqual(SessionErrorCode.NoServerAvailable, ex.SessionResponse.ErrorCode);
         }
 
-        // reload clientProfileItem
-        clientProfileItem =  clientApp.ClientProfileService.Get(clientProfileItem.ClientProfileId);
-        Assert.IsTrue(clientProfileItem.ClientProfileInfo.SelectedLocationInfo?.IsAuto);
+        // reload clientProfile
+        clientProfile =  clientApp.ClientProfileService.Get(clientProfile.ClientProfileId);
+        Assert.IsTrue(clientProfile.ToInfo().SelectedLocationInfo?.IsAuto);
     }
 }

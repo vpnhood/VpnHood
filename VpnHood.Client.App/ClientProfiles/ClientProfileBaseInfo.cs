@@ -1,35 +1,12 @@
-﻿using VpnHood.Common.Utils;
+﻿namespace VpnHood.Client.App.ClientProfiles;
 
-namespace VpnHood.Client.App.ClientProfiles;
-
-public class ClientProfileBaseInfo(ClientProfile clientProfile)
+public class ClientProfileBaseInfo
 {
-    protected ClientProfile ClientProfile = clientProfile;
-
-    public Guid ClientProfileId => ClientProfile.ClientProfileId;
-    public string ClientProfileName => GetTitle(ClientProfile);
-    
-    public string? SupportId => ClientProfile.Token.SupportId;
-    
-    public string? CustomData => ClientProfile.CustomData;
-    
-    public bool IsPremiumLocationSelected => ClientProfile.IsPremiumLocationSelected;
-    
-    public bool IsPremiumAccount => !ClientProfile.Token.IsPublic;
-
-    private static string GetTitle(ClientProfile clientProfile)
-    {
-        var token = clientProfile.Token;
-
-        if (!string.IsNullOrWhiteSpace(clientProfile.ClientProfileName))
-            return clientProfile.ClientProfileName;
-
-        if (!string.IsNullOrWhiteSpace(token.Name))
-            return token.Name;
-
-        if (token.ServerToken is { IsValidHostName: false, HostEndPoints.Length: > 0 })
-            return VhUtil.RedactEndPoint(token.ServerToken.HostEndPoints.First());
-
-        return VhUtil.RedactHostName(token.ServerToken.HostName);
-    }
+    public required Guid ClientProfileId { get; init; }
+    public required string ClientProfileName { get; init; }
+    public required string? SupportId { get; init; }
+    public required string? CustomData { get; init; }
+    public required bool IsPremiumLocationSelected { get; init; }
+    public required bool IsPremiumAccount { get; init; }
+    public required ClientServerLocationInfo? SelectedLocationInfo { get; init; }
 }

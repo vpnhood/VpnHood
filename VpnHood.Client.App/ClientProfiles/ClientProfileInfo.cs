@@ -4,23 +4,45 @@ using VpnHood.Common.Utils;
 namespace VpnHood.Client.App.ClientProfiles;
 
 public class ClientProfileInfo(ClientProfile clientProfile)
-    : ClientProfileBaseInfo(clientProfile)
 {
-    public string TokenId => ClientProfile.Token.TokenId;
-    public string[] HostNames => GetEndPoints(ClientProfile.Token.ServerToken);
-    public bool IsValidHostName => ClientProfile.Token.ServerToken.IsValidHostName;
-    public bool IsBuiltIn => ClientProfile.IsBuiltIn;
-    public bool IsForAccount => ClientProfile.IsForAccount;
-    public ClientServerLocationInfo[] LocationInfos { get; } = ClientServerLocationInfo.CreateFromToken(clientProfile.Token);
+    public Guid ClientProfileId => clientProfile.ClientProfileId;
+    public string ClientProfileName => GetTitle();
+    public string? SupportId => clientProfile.Token.SupportId;
+    public string? CustomData => clientProfile.CustomData;
+    public bool IsPremiumLocationSelected => clientProfile.IsPremiumLocationSelected;
+    public bool IsPremiumAccount => !clientProfile.Token.IsPublic;
+    public string TokenId => clientProfile.Token.TokenId;
+    public string[] HostNames => GetEndPoints(clientProfile.Token.ServerToken);
+    public bool IsValidHostName => clientProfile.Token.ServerToken.IsValidHostName;
+    public bool IsBuiltIn => clientProfile.IsBuiltIn;
+    public bool IsForAccount => clientProfile.IsForAccount;
+    public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile.Token);
+
     public ClientServerLocationInfo? SelectedLocationInfo {
         get {
             var ret =
-                LocationInfos.FirstOrDefault(x => x.LocationEquals(ClientProfile.SelectedLocation)) ??
+                LocationInfos.FirstOrDefault(x => x.LocationEquals(clientProfile.SelectedLocation)) ??
                 LocationInfos.FirstOrDefault(x => x.IsAuto) ??
                 LocationInfos.FirstOrDefault();
 
             return ret;
         }
+    }
+
+    private string GetTitle()
+    {
+        var token = clientProfile.Token;
+
+        if (!string.IsNullOrWhiteSpace(clientProfile.ClientProfileName))
+            return clientProfile.ClientProfileName;
+
+        if (!string.IsNullOrWhiteSpace(token.Name))
+            return token.Name;
+
+        if (token.ServerToken is { IsValidHostName: false, HostEndPoints.Length: > 0 })
+            return VhUtil.RedactEndPoint(token.ServerToken.HostEndPoints.First());
+
+        return VhUtil.RedactHostName(token.ServerToken.HostName);
     }
 
     private static string[] GetEndPoints(ServerToken serverToken)

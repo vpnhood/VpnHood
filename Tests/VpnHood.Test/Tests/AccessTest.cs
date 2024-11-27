@@ -67,6 +67,7 @@ public class AccessTest : TestBase
     public async Task Server_reject_expired_access_at_runtime()
     {
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.SyncInterval = TimeSpan.FromMinutes(10); // make sure the disconnect is not due to sync
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create a short expiring token

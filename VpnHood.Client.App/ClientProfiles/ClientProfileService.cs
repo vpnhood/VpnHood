@@ -11,37 +11,46 @@ public class ClientProfileService
 {
     private const string FilenameProfiles = "vpn_profiles.json";
     private readonly string _folderPath;
-    private List<ClientProfileItem> _clientProfileItems;
-    private ClientProfileItem? _cache;
+    private List<ClientProfile> _clientProfiles;
     private readonly object _updateByUrlLock = new();
+    private ClientProfileInfo? _cashInfo;
+
     private string ClientProfilesFilePath => Path.Combine(_folderPath, FilenameProfiles);
 
     public ClientProfileService(string folderPath)
     {
         _folderPath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
         ClientProfileServiceLegacy.Migrate(folderPath, ClientProfilesFilePath);
-        _clientProfileItems = Load().ToList();
+        _clientProfiles = Load().ToList();
     }
 
-    public ClientProfileItem? FindById(Guid clientProfileId)
+    public ClientProfileInfo? FindInfo(Guid clientProfileId)
     {
-        if (_cache?.ClientProfileId == clientProfileId)
-            return _cache;
+        if (_cashInfo?.ClientProfileId == clientProfileId)
+            return _cashInfo;
 
-        _cache = _clientProfileItems.SingleOrDefault(x => x.ClientProfileId == clientProfileId);
-        return _cache;
+        var clientProfile = FindById(clientProfileId);
+        _cashInfo = clientProfile?.ToInfo();
+        return _cashInfo;
     }
 
-    public ClientProfileItem? FindByTokenId(string tokenId)
+    public ClientProfileInfo GetInfo(Guid clientProfileId)
     {
-        if (_cache?.Token.TokenId == tokenId)
-            return _cache;
-
-        _cache = _clientProfileItems.SingleOrDefault(x => x.Token.TokenId == tokenId);
-        return _cache;
+        return FindInfo(clientProfileId)
+               ?? throw new NotExistsException($"Could not find ClientProfile. ClientProfileId={clientProfileId}");
     }
 
-    public ClientProfileItem Get(Guid clientProfileId)
+    public ClientProfile? FindById(Guid clientProfileId)
+    {
+        return _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId);
+    }
+
+    public ClientProfile? FindByTokenId(string tokenId)
+    {
+        return _clientProfiles.SingleOrDefault(x => x.Token.TokenId == tokenId);
+    }
+
+    public ClientProfile Get(Guid clientProfileId)
     {
         return FindById(clientProfileId)
                ?? throw new NotExistsException($"Could not find ClientProfile. ClientProfileId={clientProfileId}");
@@ -49,42 +58,42 @@ public class ClientProfileService
 
     public Token GetToken(string tokenId)
     {
-        var clientProfileItem = FindByTokenId(tokenId) ??
+        var clientProfile = FindByTokenId(tokenId) ??
                             throw new NotExistsException($"TokenId does not exist. TokenId: {tokenId}");
-        return clientProfileItem.Token;
+        return clientProfile.Token;
     }
 
-    public ClientProfileItem[] List()
+    public ClientProfile[] List()
     {
-        return _clientProfileItems.ToArray();
+        return _clientProfiles.ToArray();
     }
 
     public void Remove(Guid clientProfileId)
     {
         var item =
-            _clientProfileItems.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
+            _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
             ?? throw new NotExistsException();
 
         // BuiltInToken should not be removed
-        if (item.ClientProfile.IsBuiltIn)
+        if (item.IsBuiltIn)
             throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
 
-        _clientProfileItems.Remove(item);
+        _clientProfiles.Remove(item);
         Save();
     }
 
     public void TryRemoveByTokenId(string tokenId)
     {
-        var items = _clientProfileItems.Where(x => x.Token.TokenId == tokenId).ToArray();
+        var items = _clientProfiles.Where(x => x.Token.TokenId == tokenId).ToArray();
         foreach (var item in items)
-            _clientProfileItems.Remove(item);
+            _clientProfiles.Remove(item);
 
         Save();
     }
 
-    public ClientProfileItem Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    public ClientProfile Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
-        var item = _clientProfileItems.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
+        var item = _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
                             ?? throw new NotExistsException(
                                 "ClientProfile does not exists. ClientProfileId: {clientProfileId}");
 
@@ -93,32 +102,32 @@ public class ClientProfileService
             var name = updateParams.ClientProfileName.Value?.Trim();
             if (name == item.Token.Name?.Trim()) name = null; // set default if the name is same as token name
             if (name?.Length == 0) name = null;
-            item.ClientProfile.ClientProfileName = name;
+            item.ClientProfileName = name;
         }
 
         if (updateParams.IsFavorite != null)
-            item.ClientProfile.IsFavorite = updateParams.IsFavorite.Value;
+            item.IsFavorite = updateParams.IsFavorite.Value;
 
         if (updateParams.CustomData != null)
-            item.ClientProfile.CustomData = updateParams.CustomData.Value;
+            item.CustomData = updateParams.CustomData.Value;
 
         if (updateParams.IsPremiumLocationSelected != null)
-            item.ClientProfile.IsPremiumLocationSelected = updateParams.IsPremiumLocationSelected.Value;
+            item.IsPremiumLocationSelected = updateParams.IsPremiumLocationSelected.Value;
 
         if (updateParams.SelectedLocation != null)
-            item.ClientProfile.SelectedLocation = updateParams.SelectedLocation;
+            item.SelectedLocation = updateParams.SelectedLocation;
 
 
         Save();
         return item;
     }
 
-    public ClientProfileItem ImportAccessKey(string accessKey)
+    public ClientProfile ImportAccessKey(string accessKey)
     {
         return ImportAccessKey(accessKey, false);
     }
 
-    private ClientProfileItem ImportAccessKey(string accessKey, bool isForAccount)
+    private ClientProfile ImportAccessKey(string accessKey, bool isForAccount)
     {
         var token = Token.FromAccessKey(accessKey);
         return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false, isForAccount: isForAccount);
@@ -126,25 +135,25 @@ public class ClientProfileService
 
     private readonly object _importLock = new();
     // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
-    private ClientProfileItem ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn,
+    private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn,
         bool isForAccount = false, bool isBuiltIn = false)
     {
         lock (_importLock) {
 
             // make sure no one overwrites built-in tokens
-            if (!allowOverwriteBuiltIn && _clientProfileItems.Any(x => x.ClientProfile.IsBuiltIn && x.Token.TokenId == token.TokenId))
+            if (!allowOverwriteBuiltIn && _clientProfiles.Any(x => x.IsBuiltIn && x.Token.TokenId == token.TokenId))
                 throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
 
             // update tokens
-            foreach (var item in _clientProfileItems.Where(clientProfile =>
+            foreach (var item in _clientProfiles.Where(clientProfile =>
                          clientProfile.Token.TokenId == token.TokenId)) {
                 if (overwriteNewer || token.IssuedAt >= item.Token.IssuedAt)
-                    item.ClientProfile.Token = token;
+                    item.Token = token;
             }
 
             // add if it is a new token
-            if (_clientProfileItems.All(x => x.Token.TokenId != token.TokenId)) {
-                var clientProfile = new ClientProfile{
+            if (_clientProfiles.All(x => x.Token.TokenId != token.TokenId)) {
+                var clientProfile = new ClientProfile {
                     ClientProfileId = Guid.NewGuid(),
                     ClientProfileName = token.Name,
                     Token = token,
@@ -152,18 +161,18 @@ public class ClientProfileService
                     IsBuiltIn = isBuiltIn
                 };
 
-                _clientProfileItems.Add(new ClientProfileItem(clientProfile));
+                _clientProfiles.Add(clientProfile);
             }
 
             // save profiles
             Save();
 
-            var ret = _clientProfileItems.First(x => x.Token.TokenId == token.TokenId);
+            var ret = _clientProfiles.First(x => x.Token.TokenId == token.TokenId);
             return ret;
         }
     }
 
-    internal ClientProfileItem[] ImportBuiltInAccessKeys(string[] accessKeys)
+    internal ClientProfile[] ImportBuiltInAccessKeys(string[] accessKeys)
     {
         // insert & update new built-in access tokens
         var accessTokens = accessKeys.Select(Token.FromAccessKey);
@@ -171,8 +180,8 @@ public class ClientProfileService
             ImportAccessToken(token, overwriteNewer: false, allowOverwriteBuiltIn: true, isBuiltIn: true));
 
         // remove old built-in client profiles that does not exist in the new list
-        if (_clientProfileItems.RemoveAll(x =>
-                x.ClientProfile.IsBuiltIn && clientProfiles.All(y => y.ClientProfileId != x.ClientProfileId)) > 0)
+        if (_clientProfiles.RemoveAll(x =>
+                x.IsBuiltIn && clientProfiles.All(y => y.ClientProfileId != x.ClientProfileId)) > 0)
             Save();
 
         return clientProfiles.ToArray();
@@ -269,26 +278,23 @@ public class ClientProfileService
     private void Save()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(ClientProfilesFilePath)!);
-        var clientProfiles = _clientProfileItems.Select(x => x.ClientProfile).ToArray();
-        File.WriteAllText(ClientProfilesFilePath, JsonSerializer.Serialize(clientProfiles));
+        File.WriteAllText(ClientProfilesFilePath, JsonSerializer.Serialize(_clientProfiles));
 
         // clear cache
-        _cache = null;
-        foreach (var item in _clientProfileItems)
-            item.Refresh();
+        _cashInfo = null;
     }
 
     public void Reload()
     {
-        _clientProfileItems = Load().ToList();
+        _clientProfiles = Load().ToList();
     }
 
-    private IEnumerable<ClientProfileItem> Load()
+    private IEnumerable<ClientProfile> Load()
     {
         try {
             var json = File.ReadAllText(ClientProfilesFilePath);
             var clientProfiles = VhUtil.JsonDeserialize<ClientProfile[]>(json);
-            return clientProfiles.Select(x => new ClientProfileItem(x));
+            return clientProfiles;
         }
         catch {
             return [];
@@ -300,8 +306,8 @@ public class ClientProfileService
         var accessTokens = accessKeys.Select(Token.FromAccessKey);
 
         // Remove client profiles that does not exist in the account
-        var toRemoves = _clientProfileItems
-            .Where(x => x.ClientProfile.IsForAccount)
+        var toRemoves = _clientProfiles
+            .Where(x => x.IsForAccount)
             .Where(x => accessTokens.All(y => y.TokenId != x.Token.TokenId))
             .Select(x => x.ClientProfileId)
             .ToArray();
@@ -313,4 +319,5 @@ public class ClientProfileService
         foreach (var accessKey in accessKeys)
             ImportAccessKey(accessKey, true);
     }
+
 }

@@ -4,7 +4,7 @@ namespace VpnHood.Client.App.Resources;
 
 public static class DefaultAppResource
 {
-    public static AppResource Resource { get; } = new() {
+    private static readonly Lazy<AppResource> LazyResource = new(() => new AppResource {
         SpaZipData = EmbeddedResource.SPA,
         Colors = new AppResource.AppColors {
             NavigationBarColor = Color.FromArgb(18, 34, 114),
@@ -16,5 +16,7 @@ public static class DefaultAppResource
             SystemTrayConnectingIcon = new AppResource.IconData(EmbeddedResource.VpnConnectingIcon),
             SystemTrayDisconnectedIcon = new AppResource.IconData(EmbeddedResource.VpnDisconnectedIcon)
         }
-    };
+    });
+
+    public static AppResource Resource => LazyResource.Value;
 }

@@ -77,7 +77,7 @@ public class ClientProfileTest : TestBase
         Assert.AreEqual(tokens2[0].TokenId, clientProfiles[0].Token.TokenId);
         Assert.AreEqual(tokens2[1].TokenId, clientProfiles[1].Token.TokenId);
         foreach (var clientProfile in clientProfiles)
-            Assert.IsTrue(clientProfile.ClientProfile.IsBuiltIn);
+            Assert.IsTrue(clientProfile.ToInfo().IsBuiltIn);
     }
 
     [TestMethod]
@@ -114,8 +114,8 @@ public class ClientProfileTest : TestBase
 
         // test free US client
         app.UpdateCurrentCountry("US");
-        var clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        var clientProfileInfo = clientProfileItem.ClientProfileInfo;
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var clientProfileInfo = clientProfile.ToInfo();
 
         // default (*/*)
         var location = clientProfileInfo.LocationInfos.Single(x => x.ServerLocation == "*/*");
@@ -146,7 +146,7 @@ public class ClientProfileTest : TestBase
 
         // (US/*) no free for CA clients
         app.UpdateCurrentCountry("CA");
-        clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ClientProfileInfo;
+        clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo();
         location = clientProfileInfo.LocationInfos.Single(x => x.ServerLocation == "US/*");
         Assert.IsFalse(location.Options.HasFree);
         Assert.IsTrue(location.Options.HasPremium);
@@ -157,8 +157,8 @@ public class ClientProfileTest : TestBase
 
         // create premium token
         token.IsPublic = false;
-        clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        clientProfileInfo = clientProfileItem.ClientProfileInfo;
+        clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        clientProfileInfo = clientProfile.ToInfo();
         location = clientProfileInfo.LocationInfos.Single(x => x.ServerLocation == "FR/*");
         Assert.IsFalse(location.Options.HasFree);
         Assert.IsTrue(location.Options.HasPremium);
@@ -179,9 +179,9 @@ public class ClientProfileTest : TestBase
         // *** TEST ***: AddAccessKey should add a clientProfile
         var token1 = CreateToken();
         token1.ServerToken.ServerLocations = ["us", "us/california"];
-        var clientProfile1 = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
         Assert.IsNotNull(app.ClientProfileService.FindByTokenId(token1.TokenId), "ClientProfile is not added");
-        Assert.AreEqual(token1.TokenId, clientProfile1.Token.TokenId,
+        Assert.AreEqual(token1.TokenId, clientProfile.Token.TokenId,
             "invalid tokenId has been assigned to clientProfile");
 
         // ************
@@ -216,18 +216,18 @@ public class ClientProfileTest : TestBase
             IsPremiumLocationSelected = true,
             SelectedLocation = "us/california"
         };
-        app.ClientProfileService.Update(clientProfile1.ClientProfileId, updateParams);
-        var clientProfile = app.ClientProfileService.Get(clientProfile1.ClientProfileId);
-        Assert.AreEqual(updateParams.ClientProfileName.Value, clientProfile.BaseInfo.ClientProfileName);
-        Assert.AreEqual(updateParams.IsFavorite.Value, clientProfile.ClientProfile.IsFavorite);
-        Assert.AreEqual(updateParams.CustomData.Value, clientProfile.ClientProfile.CustomData);
-        Assert.AreEqual(updateParams.IsPremiumLocationSelected.Value, clientProfile.ClientProfile.IsPremiumLocationSelected);
-        Assert.AreEqual(updateParams.SelectedLocation.Value, clientProfile.ClientProfile.SelectedLocation);
+        app.ClientProfileService.Update(clientProfile.ClientProfileId, updateParams);
+        clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
+        Assert.AreEqual(updateParams.ClientProfileName.Value, clientProfile.ClientProfileName);
+        Assert.AreEqual(updateParams.IsFavorite.Value, clientProfile.IsFavorite);
+        Assert.AreEqual(updateParams.CustomData.Value, clientProfile.CustomData);
+        Assert.AreEqual(updateParams.IsPremiumLocationSelected.Value, clientProfile.IsPremiumLocationSelected);
+        Assert.AreEqual(updateParams.SelectedLocation.Value, clientProfile.SelectedLocation);
 
         // ************
         // *** TEST ***: RemoveClientProfile
-        app.ClientProfileService.Remove(clientProfile1.ClientProfileId);
-        Assert.IsNull(app.ClientProfileService.FindById(clientProfile1.ClientProfileId),
+        app.ClientProfileService.Remove(clientProfile.ClientProfileId);
+        Assert.IsNull(app.ClientProfileService.FindById(clientProfile.ClientProfileId),
             "ClientProfile has not been removed!");
     }
 
@@ -267,38 +267,38 @@ public class ClientProfileTest : TestBase
         token.ServerToken.ServerLocations = null;
 
         // if there is no server location, it should be null
-        var clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        Assert.IsNull(clientProfileItem.ClientProfileInfo.SelectedLocationInfo?.ServerLocation);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo();
+        Assert.IsNull(clientProfile.SelectedLocationInfo?.ServerLocation);
 
         // if there is no server location, it should be null
         token.ServerToken.ServerLocations = [];
-        clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        Assert.IsNull(clientProfileItem.ClientProfileInfo.SelectedLocationInfo?.ServerLocation);
+        clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo();
+        Assert.IsNull(clientProfile.SelectedLocationInfo?.ServerLocation);
 
         // if no server location is set, it should return the first server location
         token.ServerToken.ServerLocations = ["US/California"];
-        clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        Assert.AreEqual("US/California", clientProfileItem.ClientProfileInfo.SelectedLocationInfo?.ServerLocation);
+        clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo();
+        Assert.AreEqual("US/California", clientProfile.SelectedLocationInfo?.ServerLocation);
 
         // if null server location is set, it should return the first server location
-        app.ClientProfileService.Update(clientProfileItem.ClientProfileId,
+        app.ClientProfileService.Update(clientProfile.ClientProfileId, 
             new ClientProfileUpdateParams { SelectedLocation = null });
-        Assert.AreEqual("US/California", clientProfileItem.ClientProfileInfo.SelectedLocationInfo?.ServerLocation);
+        Assert.AreEqual("US/California", clientProfile.SelectedLocationInfo?.ServerLocation);
 
         // if wrong server location is set for one location, it should return the first server location
-        app.ClientProfileService.Update(clientProfileItem.ClientProfileId,
+        app.ClientProfileService.Update(clientProfile.ClientProfileId,
             new ClientProfileUpdateParams { SelectedLocation = "US/Cal_Wrong" });
-        Assert.AreEqual("US/California", clientProfileItem.ClientProfileInfo.SelectedLocationInfo?.ServerLocation);
+        Assert.AreEqual("US/California", clientProfile.SelectedLocationInfo?.ServerLocation);
 
         // if no server location is set for two location, it should return auto
         token.ServerToken.ServerLocations = ["US/California", "FR/Paris"];
-        clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        Assert.IsTrue(ServerLocationInfo.IsAutoLocation(clientProfileItem.ClientProfileInfo.SelectedLocationInfo?.ServerLocation));
+        clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo();
+        Assert.IsTrue(ServerLocationInfo.IsAutoLocation(clientProfile.SelectedLocationInfo?.ServerLocation));
 
         // if wrong server location is set for two location, it should return auto
         token.ServerToken.ServerLocations = ["US/California", "FR/Paris"];
-        Assert.IsTrue(ServerLocationInfo.IsAutoLocation(clientProfileItem.ClientProfileInfo.SelectedLocationInfo?.ServerLocation));
-        app.ClientProfileService.Update(clientProfileItem.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "US/Cal_Wrong" });
+        Assert.IsTrue(ServerLocationInfo.IsAutoLocation(clientProfile.SelectedLocationInfo?.ServerLocation));
+        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "US/Cal_Wrong" });
     }
 
 
@@ -311,30 +311,30 @@ public class ClientProfileTest : TestBase
         var token = CreateToken();
         token.ServerToken.ServerLocations = ["US/texas [#tag1]", "US/california [#tag1 #tag2]"];
 
-        var clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        app.UserSettings.ClientProfileId = clientProfileItem.BaseInfo.ClientProfileId;
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
         
-        app.ClientProfileService.Update(clientProfileItem.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "US/*" });
-        Assert.AreEqual("US/*", app.State.ClientServerLocationInfo?.ServerLocation);
-        CollectionAssert.AreEquivalent(new[] { "#tag1", "~#tag2" }, app.State.ClientServerLocationInfo?.Tags);
+        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "US/*" });
+        Assert.AreEqual("US/*", app.State.ClientProfile?.SelectedLocationInfo?.ServerLocation);
+        CollectionAssert.AreEquivalent(new[] { "#tag1", "~#tag2" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
         
-        app.ClientProfileService.Update(clientProfileItem.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "US/california" });
-        CollectionAssert.AreEquivalent(new[] { "#tag1", "#tag2" }, app.State.ClientServerLocationInfo?.Tags);
+        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "US/california" });
+        CollectionAssert.AreEquivalent(new[] { "#tag1", "#tag2" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
 
-        app.ClientProfileService.Update(clientProfileItem.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "US/texas" });
-        CollectionAssert.AreEquivalent(new[] { "#tag1", }, app.State.ClientServerLocationInfo?.Tags);
+        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "US/texas" });
+        CollectionAssert.AreEquivalent(new[] { "#tag1", }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
 
         // test three regin
         token = CreateToken();
         token.ServerToken.ServerLocations = ["US/texas", "US/california [#z1 #z2]", "FR/paris [#p1 #p2]"];
-        clientProfileItem = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        app.UserSettings.ClientProfileId = clientProfileItem.BaseInfo.ClientProfileId;
-        app.ClientProfileService.Update(clientProfileItem.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "FR/paris" });
-        CollectionAssert.AreEquivalent(new[] { "#p1", "#p2" }, app.State.ClientServerLocationInfo?.Tags);
+        clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
+        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "FR/paris" });
+        CollectionAssert.AreEquivalent(new[] { "#p1", "#p2" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
 
-        app.ClientProfileService.Update(clientProfileItem.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "*/*" });
+        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "*/*" });
         app.Settings.Save();
-        CollectionAssert.AreEquivalent(new[] { "~#p1", "~#p2", "~#z1", "~#z2" }, app.State.ClientServerLocationInfo?.Tags);
+        CollectionAssert.AreEquivalent(new[] { "~#p1", "~#p2", "~#z1", "~#z2" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
     }
 
     [TestMethod]
@@ -345,8 +345,8 @@ public class ClientProfileTest : TestBase
         // test two region in a same country
         var token = CreateToken();
         token.ServerToken.ServerLocations = ["US", "US/california"];
-        var clientProfileItem = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        var clientProfileInfo = clientProfileItem.ClientProfileInfo;
+        var clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var clientProfileInfo = clientProfile.ToInfo();
         var serverLocations = clientProfileInfo.LocationInfos.Select(x => x.ServerLocation).ToArray();
         var i = 0;
         Assert.AreEqual("US/*", serverLocations[i++]);
@@ -360,8 +360,8 @@ public class ClientProfileTest : TestBase
         // test multiple countries
         token = CreateToken();
         token.ServerToken.ServerLocations = ["US", "US/california", "uk"];
-        clientProfileItem = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        clientProfileInfo = clientProfileItem.ClientProfileInfo;
+        clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        clientProfileInfo = clientProfile.ToInfo();
         serverLocations = clientProfileInfo.LocationInfos.Select(x => x.ServerLocation).ToArray();
         i = 0;
         Assert.AreEqual("*/*", serverLocations[i++]);
@@ -375,8 +375,8 @@ public class ClientProfileTest : TestBase
         // test multiple countries
         token = CreateToken();
         token.ServerToken.ServerLocations = ["us/virgina", "us/california", "uk/england [#pr]", "uk/region2"];
-        clientProfileItem = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        clientProfileInfo = clientProfileItem.ClientProfileInfo;
+        clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        clientProfileInfo = clientProfile.ToInfo();
         serverLocations = clientProfileInfo.LocationInfos.Select(x => x.ServerLocation).ToArray();
         i = 0;
         Assert.AreEqual("*/*", serverLocations[i++]);

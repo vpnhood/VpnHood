@@ -2,8 +2,21 @@
 
 public static class ClientProfileExtensions
 {
-    public static ClientProfileBaseInfo ToBaseInfo(this ClientProfile clientProfile)
+    public static ClientProfileInfo ToInfo(this ClientProfile clientProfile)
     {
-        return new ClientProfileBaseInfo(clientProfile);
+        return new ClientProfileInfo(clientProfile);
+    }
+
+    public static ClientProfileBaseInfo ToBaseInfo(this ClientProfileInfo clientProfileInfo)
+    {
+        return new ClientProfileBaseInfo {
+            ClientProfileId = clientProfileInfo.ClientProfileId,
+            ClientProfileName = clientProfileInfo.ClientProfileName,
+            SupportId = clientProfileInfo.SupportId,
+            CustomData = clientProfileInfo.CustomData,
+            IsPremiumLocationSelected = clientProfileInfo.IsPremiumLocationSelected,
+            IsPremiumAccount = clientProfileInfo.IsPremiumAccount,
+            SelectedLocationInfo = clientProfileInfo.SelectedLocationInfo
+        };
     }
 }

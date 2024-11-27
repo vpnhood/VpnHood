@@ -8,7 +8,7 @@ $outBaseFile = "VpnHood.Client.Api";
 $noBuild = $false;
 
 # run
-$nswagExe = "${Env:ProgramFiles(x86)}/Rico Suter/NSwagStudio/Net80/dotnet-nswag.exe";
+$nswagExe = "${Env:ProgramFiles(x86)}/Rico Suter/NSwagStudio/Net90/dotnet-nswag.exe";
 $variables="/variables:namespace=$namespace,apiBaseFile=$outBaseFile,projectFile=$projectFile,nobuid=$noBuild";
 & "$nswagExe" run $nswagFile $variables;
 

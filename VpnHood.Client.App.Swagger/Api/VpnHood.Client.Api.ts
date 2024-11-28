@@ -2085,7 +2085,6 @@ export class AppState implements IAppState {
     connectionState!: AppConnectionState;
     lastError?: ApiError | null;
     clientProfile?: ClientProfileBaseInfo | null;
-    clientServerLocationInfo?: ClientServerLocationInfo | null;
     serverLocationInfo?: ServerLocationInfo | null;
     isIdle!: boolean;
     logExists!: boolean;
@@ -2134,7 +2133,6 @@ export class AppState implements IAppState {
             this.connectionState = _data["connectionState"] !== undefined ? _data["connectionState"] : <any>null;
             this.lastError = _data["lastError"] ? ApiError.fromJS(_data["lastError"]) : <any>null;
             this.clientProfile = _data["clientProfile"] ? ClientProfileBaseInfo.fromJS(_data["clientProfile"]) : <any>null;
-            this.clientServerLocationInfo = _data["clientServerLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["clientServerLocationInfo"]) : <any>null;
             this.serverLocationInfo = _data["serverLocationInfo"] ? ServerLocationInfo.fromJS(_data["serverLocationInfo"]) : <any>null;
             this.isIdle = _data["isIdle"] !== undefined ? _data["isIdle"] : <any>null;
             this.logExists = _data["logExists"] !== undefined ? _data["logExists"] : <any>null;
@@ -2176,7 +2174,6 @@ export class AppState implements IAppState {
         data["connectionState"] = this.connectionState !== undefined ? this.connectionState : <any>null;
         data["lastError"] = this.lastError ? this.lastError.toJSON() : <any>null;
         data["clientProfile"] = this.clientProfile ? this.clientProfile.toJSON() : <any>null;
-        data["clientServerLocationInfo"] = this.clientServerLocationInfo ? this.clientServerLocationInfo.toJSON() : <any>null;
         data["serverLocationInfo"] = this.serverLocationInfo ? this.serverLocationInfo.toJSON() : <any>null;
         data["isIdle"] = this.isIdle !== undefined ? this.isIdle : <any>null;
         data["logExists"] = this.logExists !== undefined ? this.logExists : <any>null;
@@ -2211,7 +2208,6 @@ export interface IAppState {
     connectionState: AppConnectionState;
     lastError?: ApiError | null;
     clientProfile?: ClientProfileBaseInfo | null;
-    clientServerLocationInfo?: ClientServerLocationInfo | null;
     serverLocationInfo?: ServerLocationInfo | null;
     isIdle: boolean;
     logExists: boolean;
@@ -2325,6 +2321,7 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
     customData?: string | null;
     isPremiumLocationSelected!: boolean;
     isPremiumAccount!: boolean;
+    selectedLocationInfo?: ClientServerLocationInfo | null;
 
     constructor(data?: IClientProfileBaseInfo) {
         if (data) {
@@ -2343,6 +2340,7 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
             this.customData = _data["customData"] !== undefined ? _data["customData"] : <any>null;
             this.isPremiumLocationSelected = _data["isPremiumLocationSelected"] !== undefined ? _data["isPremiumLocationSelected"] : <any>null;
             this.isPremiumAccount = _data["isPremiumAccount"] !== undefined ? _data["isPremiumAccount"] : <any>null;
+            this.selectedLocationInfo = _data["selectedLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["selectedLocationInfo"]) : <any>null;
         }
     }
 
@@ -2361,6 +2359,7 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
         data["customData"] = this.customData !== undefined ? this.customData : <any>null;
         data["isPremiumLocationSelected"] = this.isPremiumLocationSelected !== undefined ? this.isPremiumLocationSelected : <any>null;
         data["isPremiumAccount"] = this.isPremiumAccount !== undefined ? this.isPremiumAccount : <any>null;
+        data["selectedLocationInfo"] = this.selectedLocationInfo ? this.selectedLocationInfo.toJSON() : <any>null;
         return data;
     }
 }
@@ -2372,6 +2371,7 @@ export interface IClientProfileBaseInfo {
     customData?: string | null;
     isPremiumLocationSelected: boolean;
     isPremiumAccount: boolean;
+    selectedLocationInfo?: ClientServerLocationInfo | null;
 }
 
 export class ServerLocationInfo implements IServerLocationInfo {
@@ -2851,7 +2851,13 @@ export enum BillingPurchaseState {
     Processing = "Processing",
 }
 
-export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientProfileInfo {
+export class ClientProfileInfo implements IClientProfileInfo {
+    clientProfileId!: string;
+    clientProfileName!: string;
+    supportId?: string | null;
+    customData?: string | null;
+    isPremiumLocationSelected!: boolean;
+    isPremiumAccount!: boolean;
     tokenId!: string;
     hostNames!: string[];
     isValidHostName!: boolean;
@@ -2861,16 +2867,26 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
     selectedLocationInfo?: ClientServerLocationInfo | null;
 
     constructor(data?: IClientProfileInfo) {
-        super(data);
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
         if (!data) {
             this.hostNames = [];
             this.locationInfos = [];
         }
     }
 
-    override init(_data?: any) {
-        super.init(_data);
+    init(_data?: any) {
         if (_data) {
+            this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
+            this.clientProfileName = _data["clientProfileName"] !== undefined ? _data["clientProfileName"] : <any>null;
+            this.supportId = _data["supportId"] !== undefined ? _data["supportId"] : <any>null;
+            this.customData = _data["customData"] !== undefined ? _data["customData"] : <any>null;
+            this.isPremiumLocationSelected = _data["isPremiumLocationSelected"] !== undefined ? _data["isPremiumLocationSelected"] : <any>null;
+            this.isPremiumAccount = _data["isPremiumAccount"] !== undefined ? _data["isPremiumAccount"] : <any>null;
             this.tokenId = _data["tokenId"] !== undefined ? _data["tokenId"] : <any>null;
             if (Array.isArray(_data["hostNames"])) {
                 this.hostNames = [] as any;
@@ -2895,15 +2911,21 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
         }
     }
 
-    static override fromJS(data: any): ClientProfileInfo {
+    static fromJS(data: any): ClientProfileInfo {
         data = typeof data === 'object' ? data : {};
         let result = new ClientProfileInfo();
         result.init(data);
         return result;
     }
 
-    override toJSON(data?: any) {
+    toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
+        data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
+        data["clientProfileName"] = this.clientProfileName !== undefined ? this.clientProfileName : <any>null;
+        data["supportId"] = this.supportId !== undefined ? this.supportId : <any>null;
+        data["customData"] = this.customData !== undefined ? this.customData : <any>null;
+        data["isPremiumLocationSelected"] = this.isPremiumLocationSelected !== undefined ? this.isPremiumLocationSelected : <any>null;
+        data["isPremiumAccount"] = this.isPremiumAccount !== undefined ? this.isPremiumAccount : <any>null;
         data["tokenId"] = this.tokenId !== undefined ? this.tokenId : <any>null;
         if (Array.isArray(this.hostNames)) {
             data["hostNames"] = [];
@@ -2919,12 +2941,17 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
                 data["locationInfos"].push(item.toJSON());
         }
         data["selectedLocationInfo"] = this.selectedLocationInfo ? this.selectedLocationInfo.toJSON() : <any>null;
-        super.toJSON(data);
         return data;
     }
 }
 
-export interface IClientProfileInfo extends IClientProfileBaseInfo {
+export interface IClientProfileInfo {
+    clientProfileId: string;
+    clientProfileName: string;
+    supportId?: string | null;
+    customData?: string | null;
+    isPremiumLocationSelected: boolean;
+    isPremiumAccount: boolean;
     tokenId: string;
     hostNames: string[];
     isValidHostName: boolean;

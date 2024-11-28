@@ -112,7 +112,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             },
 
             new AppAdProviderItem {
-                AdProvider = AdMobRewardedAdProvider.Create(appConfigs.AdMobRewardedAdId),
+                AdProvider = AdMobRewardedAdProvider.Create(appConfigs.AdMobRewardedAdUnitId),
                 ExcludeCountryCodes = ["IR", "CN"],
                 ProviderName = "AdMob-Rewarded",
             },

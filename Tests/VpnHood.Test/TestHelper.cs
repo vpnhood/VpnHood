@@ -423,6 +423,7 @@ internal static class TestHelper
             ServerQueryTimeout = TimeSpan.FromSeconds(2),
             AutoDiagnose = false,
             SingleLineConsoleLog = false,
+            CanExtendByRewardedAdThreshold = TimeSpan.Zero,
             AdOptions = new AppAdOptions {
                 ShowAdPostDelay = TimeSpan.Zero,
                 LoadAdPostDelay = TimeSpan.Zero

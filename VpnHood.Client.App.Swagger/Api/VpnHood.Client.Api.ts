@@ -3188,9 +3188,9 @@ export interface ISubscriptionPlan {
 export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
     clientProfileName?: PatchOfString | null;
     isFavorite?: PatchOfBoolean | null;
-    isPremiumLocationSelected?: PatchOfBoolean | null;
     selectedLocation?: PatchOfString | null;
     customData?: PatchOfString | null;
+    isPremiumLocationSelected?: PatchOfBoolean | null;
 
     constructor(data?: IClientProfileUpdateParams) {
         if (data) {
@@ -3205,9 +3205,9 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
         if (_data) {
             this.clientProfileName = _data["clientProfileName"] ? PatchOfString.fromJS(_data["clientProfileName"]) : <any>null;
             this.isFavorite = _data["isFavorite"] ? PatchOfBoolean.fromJS(_data["isFavorite"]) : <any>null;
-            this.isPremiumLocationSelected = _data["isPremiumLocationSelected"] ? PatchOfBoolean.fromJS(_data["isPremiumLocationSelected"]) : <any>null;
             this.selectedLocation = _data["selectedLocation"] ? PatchOfString.fromJS(_data["selectedLocation"]) : <any>null;
             this.customData = _data["customData"] ? PatchOfString.fromJS(_data["customData"]) : <any>null;
+            this.isPremiumLocationSelected = _data["isPremiumLocationSelected"] ? PatchOfBoolean.fromJS(_data["isPremiumLocationSelected"]) : <any>null;
         }
     }
 
@@ -3222,9 +3222,9 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
         data = typeof data === 'object' ? data : {};
         data["clientProfileName"] = this.clientProfileName ? this.clientProfileName.toJSON() : <any>null;
         data["isFavorite"] = this.isFavorite ? this.isFavorite.toJSON() : <any>null;
-        data["isPremiumLocationSelected"] = this.isPremiumLocationSelected ? this.isPremiumLocationSelected.toJSON() : <any>null;
         data["selectedLocation"] = this.selectedLocation ? this.selectedLocation.toJSON() : <any>null;
         data["customData"] = this.customData ? this.customData.toJSON() : <any>null;
+        data["isPremiumLocationSelected"] = this.isPremiumLocationSelected ? this.isPremiumLocationSelected.toJSON() : <any>null;
         return data;
     }
 }
@@ -3232,9 +3232,9 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
 export interface IClientProfileUpdateParams {
     clientProfileName?: PatchOfString | null;
     isFavorite?: PatchOfBoolean | null;
-    isPremiumLocationSelected?: PatchOfBoolean | null;
     selectedLocation?: PatchOfString | null;
     customData?: PatchOfString | null;
+    isPremiumLocationSelected?: PatchOfBoolean | null;
 }
 
 export class PatchOfString implements IPatchOfString {

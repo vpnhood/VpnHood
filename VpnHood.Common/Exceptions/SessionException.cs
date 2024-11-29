@@ -1,4 +1,5 @@
-﻿using VpnHood.Common.Messaging;
+﻿using VpnHood.Common.ApiClients;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.Common.Exceptions;
 
@@ -19,4 +20,12 @@ public class SessionException : Exception
     }
 
     public SessionResponse SessionResponse { get; }
+
+    public virtual ApiError ToApiError()
+    {
+        var apiError = new ApiError(this);
+        apiError.Data.Add(nameof(SessionResponse.ErrorCode), SessionResponse.ErrorCode.ToString());
+        apiError.Data.Add(nameof(SessionResponse.SuppressedBy), SessionResponse.SuppressedBy.ToString());
+        return apiError;
+    }
 }

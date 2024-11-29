@@ -1048,8 +1048,8 @@ public class VpnHoodClient : IAsyncDisposable
         if (SessionStatus.ErrorCode == SessionErrorCode.Ok) {
             if (ex is SessionException sessionException) {
                 SessionStatus.ErrorCode = sessionException.SessionResponse.ErrorCode;
-                SessionStatus.Error = new ApiError(sessionException);
                 SessionStatus.SuppressedBy = sessionException.SessionResponse.SuppressedBy;
+                SessionStatus.Error = sessionException.ToApiError();
                 if (sessionException.SessionResponse.AccessUsage != null) //update AccessUsage if exists
                 {
                     SessionStatus.AccessUsage = sessionException.SessionResponse.AccessUsage;

@@ -39,4 +39,5 @@ public class AppOptions(string appId)
     public bool AllowEndPointTracker { get; set; }
     public string? DeviceId { get; set; }
     public string? LocalSpaHostName { get; set; }
+    public TimeSpan CanExtendByRewardedAdThreshold { get; set; } = TimeSpan.FromMinutes(5);
 }

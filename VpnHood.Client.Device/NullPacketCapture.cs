@@ -65,8 +65,8 @@ public class NullPacketCapture : IPacketCapture
 
     public bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
     {
-        if (!IsAddIpV6AddressSupported)
-            throw new NotSupportedException("InProcessPacket is not supported");
+        if (!CanDetectInProcessPacket)
+            throw new NotSupportedException("This device can not detect IsInProcessPacket.");
 
         return false;
     }

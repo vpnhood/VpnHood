@@ -126,10 +126,12 @@ public class AdTest : TestBase
         var appOptions = TestHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        var device = new TestDevice(() => new NullPacketCapture { CanDetectInProcessPacket = true });
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, device: device);
 
         // create access token
         var token = accessManager.CreateToken();
+        token.IsPublic = true;
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
@@ -161,6 +163,7 @@ public class AdTest : TestBase
 
         // create token
         var token = accessManager.CreateToken();
+        token.IsPublic = true;
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
@@ -190,6 +193,7 @@ public class AdTest : TestBase
 
         // create token
         var token = accessManager.CreateToken();
+        token.IsPublic = true;
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());

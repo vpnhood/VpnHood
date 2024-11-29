@@ -64,6 +64,9 @@ public class VpnHoodClient : IAsyncDisposable
     private DateTime? _autoWaitTime;
     private readonly ServerFinder _serverFinder;
     private readonly ConnectPlanId _planId;
+    private SessionStatus _sessionStatus = new();
+    private readonly TimeSpan _canExtendByRewardedAdThreshold;
+
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
     internal Nat Nat { get; }
     internal Tunnel Tunnel { get; }
@@ -80,7 +83,6 @@ public class VpnHoodClient : IAsyncDisposable
     public Token Token { get; }
     public string ClientId { get; }
     public ulong SessionId { get; private set; }
-    public SessionStatus SessionStatus { get; private set; } = new();
     public Version Version { get; }
     public bool IncludeLocalNetwork { get; }
     public IpRangeOrderedList IncludeIpRanges { get; private set; } = new(IpNetwork.All.ToIpRanges());
@@ -127,6 +129,7 @@ public class VpnHoodClient : IAsyncDisposable
         _useUdpChannel = options.UseUdpChannel;
         _adService = options.AdService;
         _planId = options.PlanId;
+        _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
         _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken,
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
@@ -164,6 +167,15 @@ public class VpnHoodClient : IAsyncDisposable
         Stat = new ClientStat(this);
     }
 
+    public SessionStatus SessionStatus {
+        get {
+            if (_sessionStatus.AccessUsage != null)
+                _sessionStatus.AccessUsage.CanExtendPremiumByRewardedAd = CanExtendByRewardedAd(_sessionStatus.AccessUsage);
+            return _sessionStatus;
+        }
+    }
+
+
     public IPAddress[] DnsServers {
         get => _dnsServers;
         private set {
@@ -186,6 +198,15 @@ public class VpnHoodClient : IAsyncDisposable
                 VhLogger.Instance.LogWarning(ex, "Could not fire client's StateChanged.");
             }
         }
+    }
+
+    private bool CanExtendByRewardedAd(AccessUsage accessUsage)
+    {
+        return accessUsage is { CanExtendPremiumByRewardedAd: true, ExpirationTime: not null } &&
+               accessUsage.ExpirationTime > FastDateTime.UtcNow + _canExtendByRewardedAdThreshold &&
+               _packetCapture.CanDetectInProcessPacket &&
+               _adService is { CanShowRewarded: true } &&
+               Token.IsPublic;
     }
 
     public bool UseUdpChannel {
@@ -263,7 +284,7 @@ public class VpnHoodClient : IAsyncDisposable
 
         // Starting
         State = ClientState.Connecting;
-        SessionStatus = new SessionStatus();
+        _sessionStatus = new SessionStatus();
 
         // Connect
         try {
@@ -863,9 +884,8 @@ public class VpnHoodClient : IAsyncDisposable
             // create a connection and send the request 
             var requestResult = await ConnectorService.SendRequest<T>(request, cancellationToken).VhConfigureAwait();
             if (requestResult.Response.AccessUsage != null)
-                requestResult.Response.AccessUsage.CanExtendPremiumByRewardedAd &= 
-                    _packetCapture.CanDetectInProcessPacket && _adService is { CanShowRewarded: true };
-            
+                requestResult.Response.AccessUsage.CanExtendPremiumByRewardedAd = CanExtendByRewardedAd(requestResult.Response.AccessUsage);
+
             // set SessionStatus
             if (requestResult.Response.AccessUsage != null)
                 SessionStatus.AccessUsage = requestResult.Response.AccessUsage;
@@ -969,7 +989,7 @@ public class VpnHoodClient : IAsyncDisposable
 
             _isWaitingForAd = true;
             _clientHost.PassthruInProcessPackets = true;
-            var adResult = rewarded 
+            var adResult = rewarded
                 ? await _adService.ShowRewarded(ActiveUiContext.RequiredContext, SessionId.ToString(), cancellationToken).VhConfigureAwait()
                 : await _adService.ShowInterstitial(ActiveUiContext.RequiredContext, SessionId.ToString(), cancellationToken).VhConfigureAwait();
 
@@ -1051,6 +1071,7 @@ public class VpnHoodClient : IAsyncDisposable
     }
 
     private readonly AsyncLock _disposeLock = new();
+
     public async ValueTask DisposeAsync(bool waitForBye)
     {
         using var lockResult = await _disposeLock.LockAsync(TimeSpan.Zero).VhConfigureAwait();

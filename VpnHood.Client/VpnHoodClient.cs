@@ -865,7 +865,7 @@ public class VpnHoodClient : IAsyncDisposable
             if (requestResult.Response.AccessUsage != null)
                 requestResult.Response.AccessUsage.CanExtendPremiumByRewardedAd &= 
                     _packetCapture.CanDetectInProcessPacket && _adService is { CanShowRewarded: true };
-
+            
             // set SessionStatus
             if (requestResult.Response.AccessUsage != null)
                 SessionStatus.AccessUsage = requestResult.Response.AccessUsage;
@@ -1016,9 +1016,11 @@ public class VpnHoodClient : IAsyncDisposable
         }
     }
 
-    private ValueTask DisposeAsync(Exception ex)
+    private readonly AsyncLock _disposeLockEx = new();
+    private async ValueTask DisposeAsync(Exception ex)
     {
-        if (_disposed) return default;
+        using var lockResult = await _disposeLockEx.LockAsync().VhConfigureAwait();
+        if (_disposed || !lockResult.Succeeded) return;
 
         VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Disposing...");
 
@@ -1040,7 +1042,7 @@ public class VpnHoodClient : IAsyncDisposable
             }
         }
 
-        return DisposeAsync(false);
+        await DisposeAsync(false);
     }
 
     public ValueTask DisposeAsync()
@@ -1049,11 +1051,10 @@ public class VpnHoodClient : IAsyncDisposable
     }
 
     private readonly AsyncLock _disposeLock = new();
-
     public async ValueTask DisposeAsync(bool waitForBye)
     {
-        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
-        if (_disposed) return;
+        using var lockResult = await _disposeLock.LockAsync(TimeSpan.Zero).VhConfigureAwait();
+        if (_disposed || !lockResult.Succeeded) return;
         _disposed = true;
 
         // shutdown

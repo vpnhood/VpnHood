@@ -34,7 +34,7 @@ internal class AppConfigs : Singleton<AppConfigs>
     public const string AdMobApplicationId = "ca-app-pub-8662231806304184~1740102860"; //YOUR_ADMOB_APP_ID
     public string AdMobInterstitialAdUnitId { get; init; } = "ca-app-pub-3940256099942544/8691691433";
     public string AdMobInterstitialNoVideoAdUnitId { get; init; } = "ca-app-pub-3940256099942544/1033173712";
-    public string AdMobRewardedAdId { get; init; } = "";
+    public string AdMobRewardedAdUnitId { get; init; } = "";
 
     // Chartboost
     public string ChartboostAppId { get; init; } = "000000000000000000000000"; //YOUR_CHATBOOST_APP_ID

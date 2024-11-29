@@ -9,7 +9,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public string ClientProfileName => GetTitle();
     public string? SupportId => clientProfile.Token.SupportId;
     public string? CustomData => clientProfile.CustomData;
-    public bool? IsPremiumLocationSelected => clientProfile.IsPremiumLocationSelected;
+    public bool IsPremiumLocationSelected => clientProfile.IsPremiumLocationSelected;
     public bool IsPremiumAccount => !clientProfile.Token.IsPublic;
     public string TokenId => clientProfile.Token.TokenId;
     public string[] HostNames => GetEndPoints(clientProfile.Token.ServerToken);

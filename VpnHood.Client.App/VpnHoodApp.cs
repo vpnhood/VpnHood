@@ -69,6 +69,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly bool _autoDiagnose;
     private readonly AppAdService _appAppAdService;
     private readonly bool _allowEndPointTracker;
+    private readonly TimeSpan _canExtendByRewardedAdThreshold;
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -117,6 +118,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _serverQueryTimeout = options.ServerQueryTimeout;
         _appAppAdService = new AppAdService(this, options.AdProviderItems, options.AdOptions);
         _allowEndPointTracker = options.AllowEndPointTracker;
+        _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), options.SingleLineConsoleLog);
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
@@ -147,7 +149,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var builtInProfileIds = ClientProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
 
         // remove default client profile if not exists
-        if (Settings.UserSettings.ClientProfileId!=null && ClientProfileService.FindById(Settings.UserSettings.ClientProfileId.Value)==null)
+        if (Settings.UserSettings.ClientProfileId != null && ClientProfileService.FindById(Settings.UserSettings.ClientProfileId.Value) == null)
             Settings.UserSettings.ClientProfileId = null;
 
         // set first built in profile as default if default is not set
@@ -397,11 +399,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         using var lockAsync = await _connectLock.LockAsync(cancellationToken);
 
         // set use default clientProfile and serverLocation
-        clientProfileId ??= UserSettings.ClientProfileId ?? throw new NotExistsException("ClientProfile is not set."); 
+        clientProfileId ??= UserSettings.ClientProfileId ?? throw new NotExistsException("ClientProfile is not set.");
         var clientProfile = ClientProfileService.Get(clientProfileId.Value);
-        var clientProfileInfo = ClientProfileService.GetInfo(clientProfileId.Value); 
+        var clientProfileInfo = ClientProfileService.GetInfo(clientProfileId.Value);
         serverLocation ??= clientProfileInfo.SelectedLocationInfo?.ServerLocation;
-        
+
         // protect double call
         if (!IsIdle) {
             if (_activeClientProfileId == clientProfileId &&
@@ -571,7 +573,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ForceLogSni = LogService.LogEvents.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase),
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
             AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
-            Tracker = Services.Tracker
+            Tracker = Services.Tracker,
+            CanExtendByRewardedAdThreshold = _canExtendByRewardedAdThreshold
         };
 
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
@@ -925,8 +928,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public Task ExtendByRewardedAd(CancellationToken cancellationToken)
     {
-        if (_client?.State!=ClientState.Connected)
+        if (_client?.State != ClientState.Connected)
             throw new InvalidOperationException("Could not show ad. The VPN is not connected.");
+
+        if (State.SessionStatus?.AccessUsage?.CanExtendPremiumByRewardedAd != true)
+            throw new InvalidOperationException("Can not extend session by a rewarded ad at this time.");
 
         return _client.ShowAd(true, cancellationToken);
     }

@@ -18,6 +18,7 @@ public enum SessionErrorCode
     AccessError,
     NoServerAvailable,
     AdError,
+    RewardedAdRejected,
     Maintenance,
     RedirectHost,
     UnsupportedClient,

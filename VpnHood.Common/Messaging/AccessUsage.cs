@@ -6,7 +6,7 @@ namespace VpnHood.Common.Messaging;
 public class AccessUsage
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public bool CanExtendPremiumByRewardedAd { get; set; }
+    public bool CanExtendByRewardedAd { get; set; }
 
     public bool IsPremium { get; set; } 
 

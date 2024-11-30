@@ -173,7 +173,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public SessionStatus SessionStatus {
         get {
             if (_sessionStatus.AccessUsage != null)
-                _sessionStatus.AccessUsage.CanExtendPremiumByRewardedAd = CanExtendByRewardedAd(_sessionStatus.AccessUsage);
+                _sessionStatus.AccessUsage.CanExtendByRewardedAd = CanExtendByRewardedAd(_sessionStatus.AccessUsage);
             return _sessionStatus;
         }
     }
@@ -205,7 +205,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
     private bool CanExtendByRewardedAd(AccessUsage accessUsage)
     {
-        return accessUsage is { CanExtendPremiumByRewardedAd: true, ExpirationTime: not null } &&
+        return accessUsage is { CanExtendByRewardedAd: true, ExpirationTime: not null } &&
                accessUsage.ExpirationTime > FastDateTime.UtcNow + _canExtendByRewardedAdThreshold &&
                _packetCapture.CanDetectInProcessPacket &&
                _adService is { CanShowRewarded: true } &&
@@ -887,7 +887,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             // create a connection and send the request 
             var requestResult = await ConnectorService.SendRequest<T>(request, cancellationToken).VhConfigureAwait();
             if (requestResult.Response.AccessUsage != null)
-                requestResult.Response.AccessUsage.CanExtendPremiumByRewardedAd = CanExtendByRewardedAd(requestResult.Response.AccessUsage);
+                requestResult.Response.AccessUsage.CanExtendByRewardedAd = CanExtendByRewardedAd(requestResult.Response.AccessUsage);
 
             // set SessionStatus
             if (requestResult.Response.AccessUsage != null)

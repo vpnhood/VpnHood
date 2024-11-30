@@ -72,12 +72,13 @@ internal class AppCompositeAdService
                 _loadedAdProviderItem = adProviderItem;
                 return;
             }
-            catch (Exception ex) when (ex is UiContextNotAvailableException || ActiveUiContext.Context != uiContext) {
+            catch (UiContextNotAvailableException){
                 throw new ShowAdNoUiException();
             }
 
             // do not catch if parent cancel the operation
             catch (Exception ex) {
+                await VerifyActiveUi();
                 VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.", adProviderItem.Name);
             }
         }
@@ -118,6 +119,9 @@ internal class AppCompositeAdService
             await Task.Delay(_adOptions.ShowAdPostDelay, cancellationToken); //wait for finishing trackers
 
             return _loadedAdProviderItem.Name;
+        }
+        catch (UiContextNotAvailableException){
+            throw new ShowAdNoUiException();
         }
         catch (ShowAdNoUiException) {
             throw;

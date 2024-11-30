@@ -934,7 +934,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (State.SessionStatus?.AccessUsage?.CanExtendByRewardedAd != true)
             throw new InvalidOperationException("Can not extend session by a rewarded ad at this time.");
 
-        return _client.ShowAd(true, cancellationToken);
+        return _client.ShowRewardedAd(cancellationToken);
     }
 
     internal Task RefreshAccount(string[] accountAccessKeys, bool updateCurrentClientProfile)

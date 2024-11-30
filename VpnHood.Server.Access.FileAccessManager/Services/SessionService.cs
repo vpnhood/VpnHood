@@ -157,7 +157,7 @@ public class SessionService : IDisposable, IJob
     }
 
     public SessionResponseEx GetSessionResponse(ulong sessionId, AccessTokenData accessTokenData,
-        IPEndPoint? hostEndPoint)
+        IPEndPoint? hostEndPoint, bool? isValidAd = null)
     {
         // check existence
         if (!Sessions.TryGetValue(sessionId, out var session))
@@ -170,7 +170,7 @@ public class SessionService : IDisposable, IJob
             session.HostEndPoint = hostEndPoint;
 
         // create response
-        var ret = BuildSessionResponse(session, accessTokenData);
+        var ret = BuildSessionResponse(session, accessTokenData, isValidAd);
         return ret;
     }
     
@@ -182,8 +182,13 @@ public class SessionService : IDisposable, IJob
             return sessionIds;
         }
     }
-    private SessionResponseEx BuildSessionResponse(Session session, AccessTokenData accessTokenData)
+    private SessionResponseEx BuildSessionResponse(Session session, AccessTokenData accessTokenData, bool? isValidAd = null)
     {
+        // check if the ad is valid. MUST before access usage
+        if (isValidAd == true)
+            session.ExpirationTime = null;
+
+        // build access usage
         var accessToken = accessTokenData.AccessToken;
         var accessUsage = new AccessUsage {
             ActiveClientCount = 0,
@@ -194,7 +199,16 @@ public class SessionService : IDisposable, IJob
             IsPremium = true, // token is always premium in File Access Manager
         };
 
+
+        if (isValidAd == false)
+            return new SessionResponseEx {
+                ErrorCode = SessionErrorCode.RewardedAdRejected,
+                ErrorMessage = "Could not validate the RewardedAd.",
+                AccessUsage = accessUsage
+            };
+
         // validate session status
+        // ReSharper disable once InvertIf
         if (session.ErrorCode == SessionErrorCode.Ok) {
             // check token expiration
             if (accessToken.ExpirationTime != null && accessToken.ExpirationTime < DateTime.UtcNow)
@@ -261,9 +275,9 @@ public class SessionService : IDisposable, IJob
             }
 
             // set to session expiration time if session expiration time is shorter than accessUsage.ExpirationTime
-            if (session.ExpirationTime != null && (accessUsage.ExpirationTime == null ||
-                                                   session.ExpirationTime < accessUsage.ExpirationTime))
+            if (session.ExpirationTime != null && (accessUsage.ExpirationTime == null || session.ExpirationTime < accessUsage.ExpirationTime)) {
                 accessUsage.ExpirationTime = session.ExpirationTime.Value;
+            }
 
             accessUsage.ActiveClientCount = otherSessions
                 .GroupBy(x => x.ClientInfo.ClientId)

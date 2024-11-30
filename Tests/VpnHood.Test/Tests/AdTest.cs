@@ -60,6 +60,26 @@ public class AdTest : TestBase
     }
 
     [TestMethod]
+    public async Task flexible_ad_should_not_be_displayed_on_trial()
+    {
+        // create server
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // create client app
+        var appOptions = TestHelper.CreateAppOptions();
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        ActiveUiContext.Context = null;
+        //adProviderItem.FailShow = true;
+
+        // connect
+        var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfile.ClientProfileId, planId: ConnectPlanId.PremiumByTrial);
+        await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
+    }
+
+    [TestMethod]
     public async Task Session_must_be_closed_after_few_minutes_if_ad_is_not_accepted()
     {
         // create server

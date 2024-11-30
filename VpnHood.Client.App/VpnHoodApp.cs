@@ -931,7 +931,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (_client?.State != ClientState.Connected)
             throw new InvalidOperationException("Could not show ad. The VPN is not connected.");
 
-        if (State.SessionStatus?.AccessUsage?.CanExtendPremiumByRewardedAd != true)
+        if (State.SessionStatus?.AccessUsage?.CanExtendByRewardedAd != true)
             throw new InvalidOperationException("Can not extend session by a rewarded ad at this time.");
 
         return _client.ShowAd(true, cancellationToken);

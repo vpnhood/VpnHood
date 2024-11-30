@@ -376,10 +376,9 @@ public class FileAccessManager : IAccessManager
             SessionService.CloseSession(sessionId);
 
         // manage adData for simulation
-        if (IsValidAd(sessionUsage.AdData) && SessionService.Sessions.TryGetValue(sessionId, out var session))
-            session.ExpirationTime = null;
+        var isValidAd = string.IsNullOrEmpty(sessionUsage.AdData) ? (bool?)null : IsValidAd(sessionUsage.AdData);
 
-        var res = SessionService.GetSessionResponse(sessionId, accessTokenData, null);
+        var res = SessionService.GetSessionResponse(sessionId, accessTokenData, null, isValidAd: isValidAd);
         var ret = new SessionResponse {
             ErrorCode = res.ErrorCode,
             AccessUsage = res.AccessUsage,

@@ -797,8 +797,10 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             // show ad
             string? adNetworkName = null;
-            if (sessionResponse.AdRequirement is not AdRequirement.None)
-                adNetworkName = await ShowAd(sessionResponse.AdRequirement is AdRequirement.Rewarded, cancellationToken).VhConfigureAwait();
+            if (sessionResponse.AdRequirement is AdRequirement.Flexible)
+                adNetworkName = await ShowNormalAd(cancellationToken).VhConfigureAwait();
+            if (sessionResponse.AdRequirement is AdRequirement.Rewarded)
+                adNetworkName = await ShowRewardedAd(cancellationToken).VhConfigureAwait();
 
             // usage trackers
             if (_allowAnonymousTracker) {
@@ -911,7 +913,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             // close session if server has ended the session
             if (ex.SessionResponse.ErrorCode != SessionErrorCode.GeneralError &&
-                ex.SessionResponse.ErrorCode != SessionErrorCode.RedirectHost)
+                ex.SessionResponse.ErrorCode != SessionErrorCode.RedirectHost &&
+                ex.SessionResponse.ErrorCode != SessionErrorCode.RewardedAdRejected)
                 _ = DisposeAsync(ex);
 
             throw;
@@ -980,8 +983,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
     }
 
-    /// <returns>NetworkName</returns>
-    public async Task<string?> ShowAd(bool rewarded, CancellationToken cancellationToken)
+    public async Task<string?> ShowRewardedAd(CancellationToken cancellationToken)
     {
         try {
             if (_adService == null)
@@ -992,11 +994,11 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             _isWaitingForAd = true;
             _clientHost.PassthruInProcessPackets = true;
-            var adResult = rewarded
-                ? await _adService.ShowRewarded(ActiveUiContext.RequiredContext, SessionId.ToString(), cancellationToken).VhConfigureAwait()
-                : await _adService.ShowInterstitial(ActiveUiContext.RequiredContext, SessionId.ToString(), cancellationToken).VhConfigureAwait();
+            var adResult = await _adService
+                .ShowRewarded(ActiveUiContext.RequiredContext, SessionId.ToString(), cancellationToken)
+                .VhConfigureAwait();
 
-            if (!string.IsNullOrEmpty(adResult.AdData) && rewarded)
+            if (!string.IsNullOrEmpty(adResult.AdData))
                 await SendRewardedAd(adResult.AdData, cancellationToken);
 
             return adResult.NetworkName;
@@ -1004,9 +1006,35 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         catch (UiContextNotAvailableException) {
             throw new ShowAdNoUiException();
         }
+        finally {
+            _isWaitingForAd = false;
+            _clientHost.PassthruInProcessPackets = false;
+        }
+    }
+
+
+    /// <returns>NetworkName</returns>
+    public async Task<string?> ShowNormalAd(CancellationToken cancellationToken)
+    {
+        try {
+            if (_adService == null)
+                throw new InvalidOperationException("Client's AdService has not been initialized.");
+
+            if (SessionId == 0)
+                throw new InvalidOperationException("Session has not been established.");
+
+            _isWaitingForAd = true;
+            _clientHost.PassthruInProcessPackets = true;
+            var adResult = await _adService
+                .ShowInterstitial(ActiveUiContext.RequiredContext, SessionId.ToString(), cancellationToken)
+                .VhConfigureAwait();
+
+            return adResult.NetworkName;
+        }
+        catch (UiContextNotAvailableException) {
+            throw new ShowAdNoUiException();
+        }
         catch (LoadAdException ex) {
-            if (rewarded)
-                throw new LoadAdException("Could not load any rewarded ad.", ex);
 
             VhLogger.Instance.LogInformation(ex, "Could not load any ad.");
             // ignore exception for flexible ad if load failed
@@ -1045,7 +1073,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
         catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the RewardedAd request.");
-            throw new AdException("This server requires a display ad, but AdService has not been initialized.");
+            throw;
         }
     }
 

@@ -5,6 +5,7 @@ using VpnHood.Client.Device;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Tokens;
+using VpnHood.Common.Utils;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
 
@@ -122,13 +123,17 @@ public class AdTest : TestBase
 
         // create access token
         var token = accessManager.CreateToken();
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // connect
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd);
-
-        // assert
-        Assert.AreEqual(acceptAd, app.State.SessionStatus?.AccessUsage?.ExpirationTime==null);
+        if (acceptAd) {
+            await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd);
+            Assert.IsNull(app.State.SessionStatus?.AccessUsage?.ExpirationTime);
+        }
+        else {
+            var ex = await Assert.ThrowsExceptionAsync<SessionException>(()=>app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd));
+            Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
+        }
     }
 
     [TestMethod]
@@ -161,8 +166,16 @@ public class AdTest : TestBase
         Assert.IsNotNull(app.State.SessionStatus?.AccessUsage?.ExpirationTime);
 
         // show ad
-        await app.ExtendByRewardedAd(CancellationToken.None);
-        Assert.AreEqual(acceptAd, app.State.SessionStatus?.AccessUsage?.ExpirationTime == null);
+        if (acceptAd) {
+            await app.ExtendByRewardedAd(CancellationToken.None);
+            Assert.IsNull(app.State.SessionStatus?.AccessUsage?.ExpirationTime);
+        }
+        else {
+            var ex = await Assert.ThrowsExceptionAsync<SessionException>(() => app.ExtendByRewardedAd(CancellationToken.None));
+            Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
+            await Task.Delay(500);
+            await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
+        }
     }
 
     [TestMethod]

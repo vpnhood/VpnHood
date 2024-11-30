@@ -2611,6 +2611,7 @@ export enum SessionErrorCode {
     AccessError = "AccessError",
     NoServerAvailable = "NoServerAvailable",
     AdError = "AdError",
+    RewardedAdRejected = "RewardedAdRejected",
     Maintenance = "Maintenance",
     RedirectHost = "RedirectHost",
     UnsupportedClient = "UnsupportedClient",
@@ -2618,7 +2619,7 @@ export enum SessionErrorCode {
 }
 
 export class AccessUsage implements IAccessUsage {
-    canExtendPremiumByRewardedAd!: boolean;
+    canExtendByRewardedAd!: boolean;
     isPremium!: boolean;
     traffic!: Traffic;
     maxTraffic!: number;
@@ -2640,7 +2641,7 @@ export class AccessUsage implements IAccessUsage {
 
     init(_data?: any) {
         if (_data) {
-            this.canExtendPremiumByRewardedAd = _data["canExtendPremiumByRewardedAd"] !== undefined ? _data["canExtendPremiumByRewardedAd"] : <any>null;
+            this.canExtendByRewardedAd = _data["canExtendByRewardedAd"] !== undefined ? _data["canExtendByRewardedAd"] : <any>null;
             this.isPremium = _data["isPremium"] !== undefined ? _data["isPremium"] : <any>null;
             this.traffic = _data["traffic"] ? Traffic.fromJS(_data["traffic"]) : new Traffic();
             this.maxTraffic = _data["maxTraffic"] !== undefined ? _data["maxTraffic"] : <any>null;
@@ -2659,7 +2660,7 @@ export class AccessUsage implements IAccessUsage {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["canExtendPremiumByRewardedAd"] = this.canExtendPremiumByRewardedAd !== undefined ? this.canExtendPremiumByRewardedAd : <any>null;
+        data["canExtendByRewardedAd"] = this.canExtendByRewardedAd !== undefined ? this.canExtendByRewardedAd : <any>null;
         data["isPremium"] = this.isPremium !== undefined ? this.isPremium : <any>null;
         data["traffic"] = this.traffic ? this.traffic.toJSON() : <any>null;
         data["maxTraffic"] = this.maxTraffic !== undefined ? this.maxTraffic : <any>null;
@@ -2671,7 +2672,7 @@ export class AccessUsage implements IAccessUsage {
 }
 
 export interface IAccessUsage {
-    canExtendPremiumByRewardedAd: boolean;
+    canExtendByRewardedAd: boolean;
     isPremium: boolean;
     traffic: Traffic;
     maxTraffic: number;

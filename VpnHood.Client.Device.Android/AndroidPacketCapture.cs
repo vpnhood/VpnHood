@@ -251,7 +251,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     public bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
     {
         // check if the packet is in process
-        if (!CanDetectInProcessPacket)
+        if (!CanDetectInProcessPacket || !OperatingSystem.IsAndroidVersionAtLeast(29))
             throw new NotSupportedException("IsInProcessPacket is not supported on this device.");
 
         // check if the packet is from the current app

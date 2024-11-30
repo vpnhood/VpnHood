@@ -11,6 +11,7 @@ using VpnHood.Client.Device.Exceptions;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
+using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -28,7 +29,7 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client;
 
-public class VpnHoodClient : IAsyncDisposable
+public class VpnHoodClient : IJob, IAsyncDisposable
 {
     private const int MaxProtocolVersion = 6;
     private const int MinProtocolVersion = 4;
@@ -72,6 +73,7 @@ public class VpnHoodClient : IAsyncDisposable
     internal Tunnel Tunnel { get; }
     internal ClientSocketFactory SocketFactory { get; }
 
+    public JobSection JobSection { get; } = new();
     public event EventHandler? StateChanged;
     public Version? ServerVersion { get; private set; }
     public IPAddress? PublicAddress { get; private set; }
@@ -165,6 +167,7 @@ public class VpnHoodClient : IAsyncDisposable
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
         Stat = new ClientStat(this);
+        JobRunner.Default.Add(this);
     }
 
     public SessionStatus SessionStatus {
@@ -1015,6 +1018,16 @@ public class VpnHoodClient : IAsyncDisposable
 
         }
     }
+    public Task RunJob()
+    {
+        if (_disposed)
+            return Task.CompletedTask;
+
+        if (FastDateTime.UtcNow > SessionStatus.AccessUsage?.ExpirationTime)
+            _ = DisposeAsync(new SessionException(SessionErrorCode.AccessExpired));
+
+        return Task.CompletedTask;
+    }
 
     private async Task SendRewardedAd(string adData, CancellationToken cancellationToken)
     {
@@ -1107,6 +1120,9 @@ public class VpnHoodClient : IAsyncDisposable
 
     private async Task Finalize(bool wasConnected)
     {
+        // dispose job runner (not required)
+        JobRunner.Default.Remove(this);
+
         // Anonymous usage tracker
         _ = _clientUsageTracker?.DisposeAsync();
 
@@ -1178,4 +1194,5 @@ public class VpnHoodClient : IAsyncDisposable
             _client = vpnHoodClient;
         }
     }
+
 }

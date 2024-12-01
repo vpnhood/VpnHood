@@ -677,14 +677,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
+    private CultureInfo? _systemUiCulture;
     public CultureInfo SystemUiCulture => 
-        new(Services.CultureProvider.SystemCultures.FirstOrDefault() ?? CultureInfo.InstalledUICulture.Name);
+        _systemUiCulture ?? new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ?? CultureInfo.InstalledUICulture.Name);
 
     private void InitCulture()
     {
+        // set system UI culture
+        var systemCulture = new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ?? CultureInfo.InstalledUICulture.Name);
+        var availableCultures = Services.CultureProvider.AvailableCultures;
+        _systemUiCulture = availableCultures.Contains(systemCulture.Name, StringComparer.CurrentCultureIgnoreCase)
+                ? systemCulture : systemCulture.Parent;
+
         // set default culture
         var firstSelected = Services.CultureProvider.SelectedCultures.FirstOrDefault();
-        CultureInfo.CurrentUICulture = (firstSelected != null) ? new CultureInfo(firstSelected) : SystemUiCulture;
+        CultureInfo.CurrentUICulture = firstSelected != null ? new CultureInfo(firstSelected) : _systemUiCulture;
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
 
         // sync UserSettings from the System App Settings

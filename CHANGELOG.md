@@ -22,8 +22,10 @@
 * Feature: Allow to config swap file size
 * Feature: Allow to config UdpClient buffer size
 * Feature: Protocol Version 6
+* Feature: SetTcpCongestionControl at runtime
 * Update: File server-internal token format
 * Improve: Bulk sync to AccessManager
+* 
 
 ### Development
 * Update: Migrate to .NET 9.0

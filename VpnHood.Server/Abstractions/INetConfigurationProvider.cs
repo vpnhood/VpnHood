@@ -8,4 +8,6 @@ public interface INetConfigurationProvider
     Task AddIpAddress(IPAddress ipAddress, string interfaceName);
     Task RemoveIpAddress(IPAddress ipAddress, string interfaceName);
     Task<bool> IpAddressExists(IPAddress ipAddress);
+    Task<string> GetTcpCongestionControl();
+    Task SetTcpCongestionControl(string value);
 }

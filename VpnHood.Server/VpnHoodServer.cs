@@ -99,7 +99,6 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     {
         using var scope = VhLogger.Instance.BeginScope("Server");
         if (_disposed) throw new ObjectDisposedException(nameof(VpnHoodServer));
-
         if (State != ServerState.NotStarted)
             throw new Exception("Server has already started!");
 
@@ -165,15 +164,10 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 FreeUdpPortV4 = freeUdpPortV4,
                 FreeUdpPortV6 = freeUdpPortV6,
-                NetworkInterfaceNames = _netConfigurationService != null
-                    ? await _netConfigurationService.GetNetworkInterfaceNames()
-                    : null
-            };
+                NetworkInterfaceNames = _netConfigurationService != null ? await _netConfigurationService.GetNetworkInterfaceNames() : null,
+                TcpCongestionControl = _netConfigurationService != null ? await _netConfigurationService.GetTcpCongestionControl() : null };
 
-            var publicIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.IsV4());
-            var publicIpV6 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.IsV6());
-            VhLogger.Instance.LogInformation("Public IPv4: {IPv4}, Public IPv6: {IpV6}",
-                VhLogger.Format(publicIpV4), VhLogger.Format(publicIpV6));
+            VhLogger.Instance.LogInformation("ServerInfo: {ServerInfo}", GetServerInfoReport(serverInfo));
 
             // get configuration from access server
             VhLogger.Instance.LogTrace("Sending config request to the Access Server...");
@@ -193,12 +187,19 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
 
             ConfigNetFilter(SessionManager.NetFilter, ServerHost, serverConfig.NetFilterOptions,
-                privateAddresses: allServerIps, publicIpV6 != null, dnsServers: serverConfig.DnsServersValue);
+                privateAddresses: allServerIps, 
+                isIpV6Supported: serverInfo.PublicIpAddresses.Any(x => x.IsV6()), 
+                dnsServers: serverConfig.DnsServersValue);
 
             // Add listener ip addresses to the ip address manager if requested
             if (_netConfigurationService != null) {
                 foreach (var ipEndPoint in serverConfig.TcpEndPointsValue)
                     await _netConfigurationService.AddIpAddress(ipEndPoint.Address, serverConfig.AddListenerIpsToNetwork).VhConfigureAwait();
+            }
+
+            // Set TcpCongestionControl
+            if (_netConfigurationService != null && !string.IsNullOrEmpty(serverConfig.TcpCongestionControlValue)) {
+                await _netConfigurationService.SetTcpCongestionControl(serverConfig.TcpCongestionControlValue).VhConfigureAwait();
             }
 
             if (_swapMemoryProvider != null) {
@@ -343,6 +344,17 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         // override defaults
         return serverConfig;
+    }
+
+    private static string GetServerInfoReport(ServerInfo serverInfo)
+    {
+        var json = JsonSerializer.Serialize(serverInfo, new JsonSerializerOptions { WriteIndented = true });
+        return VhLogger.IsAnonymousMode
+            ? VhUtil.RedactJsonValue(json, [
+                nameof(ServerInfo.PrivateIpAddresses),
+                nameof(ServerInfo.PublicIpAddresses)
+            ])
+            : json;
     }
 
     private static string GetServerConfigReport(ServerConfig serverConfig)

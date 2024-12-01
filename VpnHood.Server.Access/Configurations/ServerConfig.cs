@@ -34,19 +34,15 @@ public class ServerConfig
     public string? AddListenerIpsToNetwork { get; set; }
     public DnsChallenge? DnsChallenge { get; set; }
     public CertificateData[] Certificates { get; set; } = [];
+    public string? TcpCongestionControl { get; set; } = "bbr";
 
     // Inherit
-    [JsonIgnore]
-    public IPEndPoint[] TcpEndPointsValue =>
-        TcpEndPoints ?? [new IPEndPoint(IPAddress.Any, 443), new IPEndPoint(IPAddress.IPv6Any, 443)];
-
-    [JsonIgnore]
-    public IPEndPoint[] UdpEndPointsValue =>
-        UdpEndPoints ?? [new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.IPv6Any, 0)];
-
+    [JsonIgnore] public IPEndPoint[] TcpEndPointsValue => TcpEndPoints ?? [new IPEndPoint(IPAddress.Any, 443), new IPEndPoint(IPAddress.IPv6Any, 443)];
+    [JsonIgnore] public IPEndPoint[] UdpEndPointsValue => UdpEndPoints ?? [new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.IPv6Any, 0)];
     [JsonIgnore] public IPAddress[] DnsServersValue => DnsServers ?? IPAddressUtil.GoogleDnsServers;
     [JsonIgnore] public TimeSpan UpdateStatusIntervalValue => UpdateStatusInterval ?? TimeSpan.FromSeconds(120);
     [JsonIgnore] public bool LogAnonymizerValue => LogAnonymizer ?? true;
+    [JsonIgnore] public string? TcpCongestionControlValue => TcpCongestionControl;
 
 
     public void Merge(ServerConfig obj)
@@ -65,6 +61,7 @@ public class ServerConfig
         if (obj.SwapMemorySizeMb != null) SwapMemorySizeMb = obj.SwapMemorySizeMb;
         if (obj.AddListenerIpsToNetwork != null) AddListenerIpsToNetwork = obj.AddListenerIpsToNetwork;
         if (obj.DnsChallenge != null) DnsChallenge = obj.DnsChallenge;
+        if (obj.TcpCongestionControl != null) TcpCongestionControl = obj.TcpCongestionControl;
     }
 
     public void ApplyDefaults()
@@ -77,5 +74,6 @@ public class ServerConfig
         DnsServers = DnsServersValue;
         UpdateStatusInterval = UpdateStatusIntervalValue;
         LogAnonymizer = LogAnonymizerValue;
+        TcpCongestionControl = TcpCongestionControlValue;
     }
 }

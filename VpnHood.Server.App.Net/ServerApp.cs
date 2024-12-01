@@ -233,7 +233,7 @@ public class ServerApp : IDisposable
 
             // NetConfigurationProvider
             INetConfigurationProvider? configurationProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-                ? new LinuxNetConfigurationProvider()
+                ? new LinuxNetConfigurationProvider(VhLogger.Instance)
                 : null;
 
             ISwapMemoryProvider? swapMemoryProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)

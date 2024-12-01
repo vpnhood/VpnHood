@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Server.Abstractions;
 
@@ -7,8 +8,32 @@ namespace VpnHood.Server.App.Providers.Linux;
 
 
 // add & remove ip address for linux server
-public class LinuxNetConfigurationProvider : INetConfigurationProvider
+public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationProvider
 {
+    public async Task<string> GetTcpCongestionControl()
+    {
+        var active = await LinuxUtils.ExecuteCommandAsync("sysctl net.ipv4.tcp_congestion_control");
+        return active.Split('=').Last().Trim();
+    }
+
+    public async Task SetTcpCongestionControl(string value)
+    {
+        // Check if the value is already set
+        if (await GetTcpCongestionControl() == value)
+            return;
+
+        logger.LogInformation("Updating TcpCongestionControl to {value}...", value);
+        var available = await LinuxUtils.ExecuteCommandAsync("sysctl net.ipv4.tcp_available_congestion_control");
+        if (!available.Contains(value, StringComparison.CurrentCultureIgnoreCase))
+            throw new InvalidOperationException($"{value} is not available.");
+
+        // ReSharper disable StringLiteralTypo
+        // Set new config
+        await LinuxUtils.ExecuteCommandAsync("sysctl -w net.core.default_qdisc=fq");
+        await LinuxUtils.ExecuteCommandAsync($"sysctl -w net.ipv4.tcp_congestion_control={value}");
+        // ReSharper restore StringLiteralTypo
+    }
+
     private static void ValidateInterfaceName(string interfaceName)
     {
         const string pattern = "^[a-zA-Z0-9_-]+$";

@@ -29,4 +29,14 @@ public class TestNetConfigurationProvider : INetConfigurationProvider
     {
         return Task.FromResult(IpAddresses.ContainsKey(ipAddress));
     }
+
+    public Task<string> GetTcpCongestionControl()
+    {
+        throw new NotSupportedException();
+    }
+
+    public Task SetTcpCongestionControl(string value)
+    {
+        throw new NotSupportedException();
+    }
 }

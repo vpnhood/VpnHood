@@ -24,7 +24,7 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
 
     private Task<bool> IpAddressExists(IPAddress ipAddress)
     {
-        if (ipAddress.Equals(IPAddress.Any) || 
+        if (ipAddress.Equals(IPAddress.Any) ||
             ipAddress.Equals(IPAddress.IPv6Any))
             return Task.FromResult(true);
 
@@ -80,6 +80,31 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not remove IP address from system. IP: {IP}, InterfaceName: {interfaceName}",
                 ipAddress, interfaceName);
+        }
+    }
+
+    public async Task<string?> GetTcpCongestionControl()
+    {
+        try {
+            return await netConfigurationProvider.GetTcpCongestionControl();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could no read TCP congestion control.");
+            return null;
+        }
+    }
+
+    public async Task SetTcpCongestionControl(string value)
+    {
+        try {
+            var tcpCongestionControl = await GetTcpCongestionControl();
+            if (value == tcpCongestionControl || value =="*" || tcpCongestionControl == null)
+                return;
+
+            await netConfigurationProvider.SetTcpCongestionControl(value);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could no set TCP congestion control.");
         }
     }
 

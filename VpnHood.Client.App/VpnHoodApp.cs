@@ -332,7 +332,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (_isDisconnecting || client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
             if (_isConnecting || client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
             if (client?.State == ClientState.Waiting) return AppConnectionState.Waiting;
-            if (client?.Stat.IsWaitingForAd is true) return AppConnectionState.Connecting;
             if (client?.State == ClientState.Connected) return AppConnectionState.Connected;
             return AppConnectionState.None;
         }

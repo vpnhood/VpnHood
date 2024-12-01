@@ -677,9 +677,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public CultureInfo SystemUiCulture => new(
-        Services.CultureProvider.SystemCultures.FirstOrDefault()?.Split("-").FirstOrDefault()
-        ?? CultureInfo.InstalledUICulture.TwoLetterISOLanguageName);
+    public CultureInfo SystemUiCulture => 
+        new(Services.CultureProvider.SystemCultures.FirstOrDefault() ?? CultureInfo.InstalledUICulture.Name);
 
     private void InitCulture()
     {
@@ -689,7 +688,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
 
         // sync UserSettings from the System App Settings
-        UserSettings.CultureCode = firstSelected?.Split("-").FirstOrDefault();
+        UserSettings.CultureCode = firstSelected;
     }
 
     private void SettingsBeforeSave(object sender, EventArgs e)

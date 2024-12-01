@@ -9,6 +9,9 @@ public class UiCultureInfo(CultureInfo cultureInfo)
     {
     }
 
-    public string Code { get; } = cultureInfo.TwoLetterISOLanguageName;
+    public string Code { get; } = cultureInfo.Name;
     public string NativeName { get; } = cultureInfo.NativeName;
+    public UiCultureInfo? ParentCode { get; } = string.IsNullOrEmpty(cultureInfo.Parent.Name) 
+        ? null : new UiCultureInfo(cultureInfo.Parent);
+
 }

@@ -5,6 +5,7 @@
 * Feature: Handle Trial Session
 * Feature: Drop QUIC in protocol
 * Feature: Protocol Version 6
+* Feature: Add Portuguese (Brazil) language
 * Improve: Improve initialization speed to exclude my country
 * Improve: Diagnostic wrongly reports your internet may not be stable
 * Improve: Check for the latest version after the connection is established
@@ -22,10 +23,9 @@
 * Feature: Allow to config swap file size
 * Feature: Allow to config UdpClient buffer size
 * Feature: Protocol Version 6
-* Feature: SetTcpCongestionControl at runtime
+* Feature: Allow to config TcpCongestionControl on Linux
 * Update: File server-internal token format
 * Improve: Bulk sync to AccessManager
-* 
 
 ### Development
 * Update: Migrate to .NET 9.0

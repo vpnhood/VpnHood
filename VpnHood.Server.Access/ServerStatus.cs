@@ -11,6 +11,7 @@ public class ServerStatus
     public long? AvailableMemory { get; set; }
     public long? TotalSwapMemory { get; set; }
     public long? AvailableSwapMemory { get; set; }
+    public string? TcpCongestionControl { get; set; }
     public int? CpuUsage { get; set; }
     public long UsedMemory { get; set; }
     public int ThreadCount { get; set; }

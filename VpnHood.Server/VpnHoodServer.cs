@@ -38,6 +38,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private readonly NetConfigurationService? _netConfigurationService;
     private readonly ISystemInfoProvider _systemInfoProvider;
     private readonly ISwapMemoryProvider? _swapMemoryProvider;
+    private string? _tcpCongestionControl;
 
     public ServerHost ServerHost { get; }
     public JobSection JobSection { get; }
@@ -164,8 +165,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 FreeUdpPortV4 = freeUdpPortV4,
                 FreeUdpPortV6 = freeUdpPortV6,
-                NetworkInterfaceNames = _netConfigurationService != null ? await _netConfigurationService.GetNetworkInterfaceNames() : null,
-                TcpCongestionControl = _netConfigurationService != null ? await _netConfigurationService.GetTcpCongestionControl() : null };
+                NetworkInterfaceNames = _netConfigurationService != null ? await _netConfigurationService.GetNetworkInterfaceNames() : null
+            };
 
             VhLogger.Instance.LogInformation("ServerInfo: {ServerInfo}", GetServerInfoReport(serverInfo));
 
@@ -201,6 +202,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             if (_netConfigurationService != null && !string.IsNullOrEmpty(serverConfig.TcpCongestionControlValue)) {
                 await _netConfigurationService.SetTcpCongestionControl(serverConfig.TcpCongestionControlValue).VhConfigureAwait();
             }
+            _tcpCongestionControl = _netConfigurationService != null
+                ? await _netConfigurationService.GetTcpCongestionControl()
+                : null;
 
             if (_swapMemoryProvider != null) {
                 await ConfigureSwapMemory(serverConfig.SwapMemorySizeMb);
@@ -416,6 +420,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             AvailableMemory = systemInfo.AvailableMemory,
             TotalSwapMemory = swapMemoryInfo?.TotalSize,
             AvailableSwapMemory = swapMemoryInfo != null ? swapMemoryInfo.TotalSize - swapMemoryInfo.TotalUsed : null,
+            TcpCongestionControl = _tcpCongestionControl,
             CpuUsage = systemInfo.CpuUsage,
             UsedMemory = Process.GetCurrentProcess().WorkingSet64,
             TunnelSpeed = new Traffic {
@@ -471,7 +476,6 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     }
 
     private readonly AsyncLock _disposeLock = new();
-
     public async ValueTask DisposeAsync()
     {
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();

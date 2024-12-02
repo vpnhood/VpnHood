@@ -23,6 +23,8 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
             return;
 
         logger.LogInformation("Updating TcpCongestionControl to {value}...", value);
+        await LinuxUtils.ExecuteCommandAsync($"modprobe tcp_{value}");
+
         var available = await LinuxUtils.ExecuteCommandAsync("sysctl net.ipv4.tcp_available_congestion_control");
         if (!available.Contains(value, StringComparison.CurrentCultureIgnoreCase))
             throw new InvalidOperationException($"{value} is not available.");

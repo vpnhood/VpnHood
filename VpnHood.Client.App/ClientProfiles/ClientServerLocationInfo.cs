@@ -25,6 +25,10 @@ public class ClientServerLocationInfo : ServerLocationInfo
                 item.RecalculateOptions(policy, !token.IsPublic); // treat non-public as premium
         }
 
+        // show unblockable only if the policy is set
+        if (policy?.UnblockableOnly == true)
+            items = items.Where(x => x.Options.HasUnblockable).ToArray();
+
         return items;
     }
 
@@ -34,7 +38,8 @@ public class ClientServerLocationInfo : ServerLocationInfo
         var tags = Tags ?? [];
         Options = new ServerLocationOptions {
             HasFree = !tags.Contains(ServerRegisteredTags.Premium) || tags.Contains($"~{ServerRegisteredTags.Premium}"),
-            HasPremium = tags.Contains(ServerRegisteredTags.Premium) || tags.Contains($"~{ServerRegisteredTags.Premium}")
+            HasPremium = tags.Contains(ServerRegisteredTags.Premium) || tags.Contains($"~{ServerRegisteredTags.Premium}"),
+            HasUnblockable = tags.Contains(ServerRegisteredTags.Unblockable) || tags.Contains($"~{ServerRegisteredTags.Unblockable}")
         };
 
         if (isPremium) {

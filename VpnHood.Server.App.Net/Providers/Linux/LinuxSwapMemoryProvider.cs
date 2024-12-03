@@ -5,7 +5,7 @@ using VpnHood.Server.Abstractions;
 
 namespace VpnHood.Server.App.Providers.Linux;
 
-public class LinuxSwapMemoryProvider(ILogger logger) 
+public class LinuxSwapMemoryProvider(ILogger logger)
     : ISwapMemoryProvider
 {
     // ReSharper disable once NotAccessedPositionalProperty.Local
@@ -18,7 +18,7 @@ public class LinuxSwapMemoryProvider(ILogger logger)
         return new SwapMemoryInfo {
             TotalSize = swapFiles.Sum(x => x.Size),
             TotalUsed = swapFiles.Sum(x => x.Used),
-            AppSize = swapFiles.Where(x=>x.FilePath == SwapFilePath).Sum(x=>x.Size),
+            AppSize = swapFiles.Where(x => x.FilePath == SwapFilePath).Sum(x => x.Size),
             AppUsed = swapFiles.Where(x => x.FilePath == SwapFilePath).Sum(x => x.Used),
         };
     }
@@ -33,7 +33,9 @@ public class LinuxSwapMemoryProvider(ILogger logger)
 
             // it may raise exception if the swap file is not active
             try {
-                await LinuxUtils.ExecuteCommandAsync($"swapoff {SwapFilePath}");
+                var swapFiles = await ListCurrentSwapFiles();
+                if (swapFiles.Any(x => x.FilePath == SwapFilePath))
+                    await LinuxUtils.ExecuteCommandAsync($"swapoff {SwapFilePath}");
             }
             catch (Exception ex) {
                 logger.LogWarning(ex, "Failed to disable the current swap file.");
@@ -79,8 +81,8 @@ public class LinuxSwapMemoryProvider(ILogger logger)
         // ReSharper disable once CommentTypo
         // Expected output line format: "NAME      TYPE      SIZE   USED  PRIO"
         var columns = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
-        if (columns.Length < 4 || 
-            !long.TryParse(columns[2], out var sizeInBytes) || 
+        if (columns.Length < 4 ||
+            !long.TryParse(columns[2], out var sizeInBytes) ||
             !long.TryParse(columns[3], out var usedInBytes))
             return null;
 

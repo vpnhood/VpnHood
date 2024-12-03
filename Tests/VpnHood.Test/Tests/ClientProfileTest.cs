@@ -281,7 +281,7 @@ public class ClientProfileTest : TestBase
         Assert.AreEqual("US/California", clientProfile.SelectedLocationInfo?.ServerLocation);
 
         // if null server location is set, it should return the first server location
-        app.ClientProfileService.Update(clientProfile.ClientProfileId, 
+        app.ClientProfileService.Update(clientProfile.ClientProfileId,
             new ClientProfileUpdateParams { SelectedLocation = null });
         Assert.AreEqual("US/California", clientProfile.SelectedLocationInfo?.ServerLocation);
 
@@ -303,7 +303,7 @@ public class ClientProfileTest : TestBase
 
 
     [TestMethod]
-    public async Task Update_server_location()
+    public async Task Calculate_server_location_tags()
     {
         await using var app = TestHelper.CreateClientApp();
 
@@ -313,11 +313,11 @@ public class ClientProfileTest : TestBase
 
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
-        
+
         app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "US/*" });
         Assert.AreEqual("US/*", app.State.ClientProfile?.SelectedLocationInfo?.ServerLocation);
         CollectionAssert.AreEquivalent(new[] { "#tag1", "~#tag2" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
-        
+
         app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "US/california" });
         CollectionAssert.AreEquivalent(new[] { "#tag1", "#tag2" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
 
@@ -338,7 +338,7 @@ public class ClientProfileTest : TestBase
     }
 
     [TestMethod]
-    public async Task ServerLocations()
+    public async Task Create_parent_ServerLocations()
     {
         await using var app1 = TestHelper.CreateClientApp();
 
@@ -391,5 +391,44 @@ public class ClientProfileTest : TestBase
         Assert.IsTrue(clientProfileInfo.LocationInfos[2].IsNestedCountry);
         Assert.IsTrue(clientProfileInfo.LocationInfos[3].IsNestedCountry);
         _ = i;
+    }
+
+    [TestMethod]
+    public async Task Filter_unblockable()
+    {
+        await using var app = TestHelper.CreateClientApp();
+
+        var defaultPolicy = new ClientPolicy {
+            ClientCountries = ["*"],
+            FreeLocations = ["US", "CA"],
+            Normal = 10,
+            PremiumByPurchase = true,
+            PremiumByRewardedAd = 20,
+            PremiumByTrial = 30,
+            UnblockableOnly = true,
+        };
+
+        // test two region in a same country
+        var token = CreateToken();
+        token.ClientPolicies = [defaultPolicy];
+        token.ServerToken.ServerLocations = [
+            "US/texas [#tag1]",
+            "US/california [#tag1 #unblockable]",
+            "CA/toronto [#tag1]",
+            "UK/london [#unblockable]",
+        ];
+
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
+
+        var clientProfileInfo = clientProfile.ToInfo();
+        // test three regin
+        Assert.IsTrue(clientProfileInfo.LocationInfos.Any(x => x.ServerLocation == "US/*"));
+        Assert.IsTrue(clientProfileInfo.LocationInfos.Any(x => x.ServerLocation == "US/california"));
+        Assert.IsFalse(clientProfileInfo.LocationInfos.Any(x => x.ServerLocation == "UK/*"));
+        Assert.IsTrue(clientProfileInfo.LocationInfos.Any(x => x.ServerLocation == "UK/london"));
+        Assert.IsFalse(clientProfileInfo.LocationInfos.Any(x => x.ServerLocation == "US/texas"));
+        Assert.IsFalse(clientProfileInfo.LocationInfos.Any(x => x.ServerLocation == "CA/*"));
+        Assert.IsFalse(clientProfileInfo.LocationInfos.Any(x => x.ServerLocation == "CA/toronto"));
     }
 }

@@ -35,7 +35,7 @@ public class App : VpnHoodWpfSpaApp
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             Resource = resources,
             AccessKeys = [appConfigs.DefaultAccessKey],
-            UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood-Connect/releases/latest/download/VpnHoodConnect-win-x64.json"),
+            UpdateInfoUrl = appConfigs.UpdateInfoUrl != null ? new Uri(appConfigs.UpdateInfoUrl) : null,
             UpdaterProvider = new WinAppUpdaterProvider(),
             IsAddAccessKeySupported = false,
             SingleLineConsoleLog = false,

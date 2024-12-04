@@ -129,8 +129,7 @@ internal static class TestHelper
 
     public static void Test_Dns(UdpClient? udpClient = null, IPEndPoint? nsEndPoint = default, int timeout = 3000)
     {
-        var hostEntry = DiagnoseUtil
-            .GetHostEntry("www.google.com", nsEndPoint ?? TestConstants.NsEndPoint1, udpClient, timeout).Result;
+        var hostEntry = DnsResolver.GetHostEntry("www.google.com", nsEndPoint ?? TestConstants.NsEndPoint1, udpClient, timeout).Result;
         Assert.IsNotNull(hostEntry);
         Assert.IsTrue(hostEntry.AddressList.Length > 0);
     }

@@ -112,13 +112,16 @@ public class ClientServerLocationInfo : ServerLocationInfo
                 Tags = [] // set it later
             });
 
-        // set head item tags
-        foreach (var locationInfo in results) {
-            if (locationInfo.CountryCode == AutoCountryCode)
-                locationInfo.Tags = CalcCategoryTags(results.Where(x => x.CountryCode != AutoCountryCode)).ToArray();
-            else if (locationInfo.RegionName == "*")
-                locationInfo.Tags = CalcCategoryTags(results.Where(x => x.CountryCode == locationInfo.CountryCode && x.RegionName != "*")).ToArray();
+        // set head sub auto items
+        foreach (var locationInfo in results.Where(x => !x.IsAuto && x.RegionName == "*")) {
+            locationInfo.Tags = CalcCategoryTags(results.Where(x => x.CountryCode == locationInfo.CountryCode && x.RegionName != "*")).ToArray();
         }
+
+        // set head the auto after setting all sub auto items. This is to make sure the auto tags are calculated after all sub auto tags are set
+        foreach (var locationInfo in results.Where(x => x.IsAuto)) {
+            locationInfo.Tags = CalcCategoryTags(results.Where(x => x.CountryCode != AutoCountryCode)).ToArray();
+        }
+
 
         results.Sort();
         var distinctResults = results.Distinct().ToArray();
@@ -127,10 +130,10 @@ public class ClientServerLocationInfo : ServerLocationInfo
 
     private static IEnumerable<string> CalcCategoryTags(IEnumerable<ServerLocationInfo> items)
     {
-        // get distinct of all tags in items and include the not tag (!#tag) if the tag is not present is all items
+        // get distinct of all tags in items and include the partial tag (~#tag) if the tag does not present in all items
         var itemArray = items.ToArray();
         var tags = itemArray.SelectMany(x => x.Tags).Distinct().ToList();
-        foreach (var tag in tags.ToArray()) {
+        foreach (var tag in tags.Where(x => x.Length > 0 && x[0] != '~').ToArray()) {
             if (itemArray.Any(x => x.Tags?.Contains(tag) != true)) {
                 tags.Remove(tag);
                 tags.Add($"~{tag}");

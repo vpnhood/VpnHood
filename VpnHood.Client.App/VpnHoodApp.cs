@@ -378,9 +378,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public void ClearLastError()
     {
-        if (!IsIdle)
-            return; //can just set in Idle State
-
         _appPersistState.LastError = null;
         _hasDiagnoseStarted = false;
     }

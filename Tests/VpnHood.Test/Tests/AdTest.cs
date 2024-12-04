@@ -5,7 +5,6 @@ using VpnHood.Client.Device;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Tokens;
-using VpnHood.Common.Utils;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
 

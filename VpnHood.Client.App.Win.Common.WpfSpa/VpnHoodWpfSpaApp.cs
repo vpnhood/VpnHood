@@ -11,7 +11,7 @@ namespace VpnHood.Client.App.Win.Common.WpfSpa;
 // ReSharper disable once RedundantExtendsListEntry
 public abstract class VpnHoodWpfSpaApp : Application
 {
-    protected abstract AppOptions CreateAppOptions();
+    protected abstract AppOptionsEx CreateAppOptions();
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -31,13 +31,14 @@ public abstract class VpnHoodWpfSpaApp : Application
             ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resource.SpaZipData);
             using var spaResource = new MemoryStream(VpnHoodApp.Instance.Resource.SpaZipData);
             var localSpaUrl = !string.IsNullOrEmpty(appOptions.LocalSpaHostName)
-                ? VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), 80), appOptions.LocalSpaHostName)
+                ? VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), appOptions.DefaultSpaPort), appOptions.LocalSpaHostName)
                 : null;
-            VpnHoodAppWebServer.Init(spaResource, url: localSpaUrl);
+            VpnHoodAppWebServer.Init(spaResource, defaultPort: appOptions.DefaultSpaPort, url: localSpaUrl, 
+                listenToAllIps: appOptions.ListenToAllIps);
 
             // initialize Win
             VpnHoodWinApp.Instance.ExitRequested += (_, _) => Shutdown();
-            VpnHoodWinApp.Instance.OpenMainWindowInBrowserRequested += (_, _) =>
+            VpnHoodWinApp.Instance.OpenMainWindowInBrowserRequested += (_, _) => 
                 VpnHoodWinApp.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
             VpnHoodWinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
             VpnHoodWinApp.Instance.Start();

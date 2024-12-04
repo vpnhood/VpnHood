@@ -15,9 +15,9 @@ public class App : VpnHoodWpfSpaApp
         app.Run();
     }
 
-    protected override AppOptions CreateAppOptions()
+    protected override AppOptionsEx CreateAppOptions()
     {
-        return new AppOptions("com.vpnhood.client.windows") {
+        return new AppOptionsEx("com.vpnhood.client.windows") {
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHood"),
             Resource = DefaultAppResource.Resource,
@@ -28,7 +28,8 @@ public class App : VpnHoodWpfSpaApp
             IsAddAccessKeySupported = true,
             SingleLineConsoleLog = false,
             LogAnonymous = !AssemblyInfo.IsDebugMode,
-            LocalSpaHostName = "my-vpnhood"
+            LocalSpaHostName = "my-vpnhood",
+            ListenToAllIps = AssemblyInfo.IsDebugMode
         };
     }
 }

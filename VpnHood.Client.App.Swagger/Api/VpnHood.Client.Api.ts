@@ -1729,6 +1729,7 @@ export interface IAppSettings {
 
 export class UserSettings implements IUserSettings {
     logging!: AppLogSettings;
+    isLicenseAccepted!: boolean;
     cultureCode?: string | null;
     clientProfileId?: string | null;
     maxDatagramChannelCount!: number;
@@ -1770,6 +1771,7 @@ export class UserSettings implements IUserSettings {
     init(_data?: any) {
         if (_data) {
             this.logging = _data["logging"] ? AppLogSettings.fromJS(_data["logging"]) : new AppLogSettings();
+            this.isLicenseAccepted = _data["isLicenseAccepted"] !== undefined ? _data["isLicenseAccepted"] : <any>null;
             this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : <any>null;
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
             this.maxDatagramChannelCount = _data["maxDatagramChannelCount"] !== undefined ? _data["maxDatagramChannelCount"] : <any>null;
@@ -1844,6 +1846,7 @@ export class UserSettings implements IUserSettings {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["logging"] = this.logging ? this.logging.toJSON() : <any>null;
+        data["isLicenseAccepted"] = this.isLicenseAccepted !== undefined ? this.isLicenseAccepted : <any>null;
         data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : <any>null;
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
         data["maxDatagramChannelCount"] = this.maxDatagramChannelCount !== undefined ? this.maxDatagramChannelCount : <any>null;
@@ -1893,6 +1896,7 @@ export class UserSettings implements IUserSettings {
 
 export interface IUserSettings {
     logging: AppLogSettings;
+    isLicenseAccepted: boolean;
     cultureCode?: string | null;
     clientProfileId?: string | null;
     maxDatagramChannelCount: number;
@@ -2492,6 +2496,7 @@ export class ServerLocationOptions implements IServerLocationOptions {
     premiumByPurchase!: boolean;
     hasFree!: boolean;
     hasPremium!: boolean;
+    hasUnblockable!: boolean;
     prompt!: boolean;
 
     constructor(data?: IServerLocationOptions) {
@@ -2511,6 +2516,7 @@ export class ServerLocationOptions implements IServerLocationOptions {
             this.premiumByPurchase = _data["premiumByPurchase"] !== undefined ? _data["premiumByPurchase"] : <any>null;
             this.hasFree = _data["hasFree"] !== undefined ? _data["hasFree"] : <any>null;
             this.hasPremium = _data["hasPremium"] !== undefined ? _data["hasPremium"] : <any>null;
+            this.hasUnblockable = _data["hasUnblockable"] !== undefined ? _data["hasUnblockable"] : <any>null;
             this.prompt = _data["prompt"] !== undefined ? _data["prompt"] : <any>null;
         }
     }
@@ -2530,6 +2536,7 @@ export class ServerLocationOptions implements IServerLocationOptions {
         data["premiumByPurchase"] = this.premiumByPurchase !== undefined ? this.premiumByPurchase : <any>null;
         data["hasFree"] = this.hasFree !== undefined ? this.hasFree : <any>null;
         data["hasPremium"] = this.hasPremium !== undefined ? this.hasPremium : <any>null;
+        data["hasUnblockable"] = this.hasUnblockable !== undefined ? this.hasUnblockable : <any>null;
         data["prompt"] = this.prompt !== undefined ? this.prompt : <any>null;
         return data;
     }
@@ -2542,6 +2549,7 @@ export interface IServerLocationOptions {
     premiumByPurchase: boolean;
     hasFree: boolean;
     hasPremium: boolean;
+    hasUnblockable: boolean;
     prompt: boolean;
 }
 

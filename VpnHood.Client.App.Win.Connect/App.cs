@@ -16,7 +16,7 @@ public class App : VpnHoodWpfSpaApp
         app.Run();
     }
 
-    protected override AppOptions CreateAppOptions()
+    protected override AppOptionsEx CreateAppOptions()
     {
         // load app settings and resources
         var storageFolderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHoodConnect");
@@ -29,19 +29,22 @@ public class App : VpnHoodWpfSpaApp
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
 
         var appConfigs = AppConfigs.Load();
-        return new AppOptions("com.vpnhood.connect.windows") {
+        return new AppOptionsEx("com.vpnhood.connect.windows") {
             UiName = "VpnHoodConnect",
             StorageFolderPath = storageFolderPath,
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             Resource = resources,
             AccessKeys = [appConfigs.DefaultAccessKey],
-            UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodConnect-win-x64.json"),
+            UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood-Connect/releases/latest/download/VpnHoodConnect-win-x64.json"),
             UpdaterProvider = new WinAppUpdaterProvider(),
             IsAddAccessKeySupported = false,
             SingleLineConsoleLog = false,
             LogAnonymous = !AppConfigs.IsDebugMode,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
-            LocalSpaHostName = "my-vpnhood-connect"
+            LocalSpaHostName = "my-vpnhood-connect",
+            Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            ListenToAllIps = appConfigs.ListenToAllIps,
+            DefaultSpaPort = appConfigs.DefaultSpaPort,
         };
     }
 }

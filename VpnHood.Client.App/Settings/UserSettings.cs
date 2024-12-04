@@ -11,6 +11,7 @@ public class UserSettings
     private static readonly ClientOptions DefaultClientOptions = new();
 
     public AppLogSettings Logging { get; set; } = new();
+    public bool IsLicenseAccepted { get; set; }
     public string? CultureCode { get; set; }
     public Guid? ClientProfileId { get; set; }
     public int MaxDatagramChannelCount { get; set; } = DefaultClientOptions.MaxDatagramChannelCount;

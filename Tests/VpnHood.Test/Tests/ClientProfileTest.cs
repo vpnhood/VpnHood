@@ -338,6 +338,19 @@ public class ClientProfileTest : TestBase
     }
 
     [TestMethod]
+    public async Task Calculate_server_parent_location_tags_auto()
+    {
+        await using var app = TestHelper.CreateClientApp();
+        var token = CreateToken();
+        token.ServerToken.ServerLocations = ["US/texas [#tag1]", "US/california [#tag1]", "CA/toronto [#tag1]"];
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var serverLocations = clientProfile.ToInfo().LocationInfos.ToArray();
+        var autoLocation = serverLocations.Single(x=>x.IsAuto);
+        Assert.IsTrue(autoLocation.Tags?.Contains("#tag1") );
+        Assert.IsFalse(autoLocation.Tags?.Contains("~#tag1") );
+    }
+
+    [TestMethod]
     public async Task Create_parent_ServerLocations()
     {
         await using var app1 = TestHelper.CreateClientApp();

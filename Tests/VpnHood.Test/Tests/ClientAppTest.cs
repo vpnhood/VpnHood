@@ -70,7 +70,6 @@ public class ClientAppTest : TestBase
         // Test: With diagnose
         await app.Connect(clientProfile1.ClientProfileId, diagnose: true);
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected, 10000);
-        app.ClearLastError(); // should not affect
         await app.Disconnect(true);
         await TestHelper.WaitForAppState(app, AppConnectionState.None);
 

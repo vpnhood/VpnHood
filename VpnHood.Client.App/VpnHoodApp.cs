@@ -42,7 +42,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly SocketFactory? _socketFactory;
     private readonly bool _useInternalLocationService;
     private readonly bool _useExternalLocationService;
-    private readonly string? _appGa4MeasurementId;
+    private readonly string? _ga4MeasurementId;
     private bool _hasConnectRequested;
     private bool _hasDisconnectRequested;
     private bool _hasDiagnoseStarted;
@@ -107,7 +107,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _socketFactory = options.SocketFactory;
         _useInternalLocationService = options.UseInternalLocationService;
         _useExternalLocationService = options.UseExternalLocationService;
-        _appGa4MeasurementId = options.AppGa4MeasurementId;
+        _ga4MeasurementId = options.Ga4MeasurementId;
         _versionCheckInterval = options.VersionCheckInterval;
         _reconnectTimeout = options.ReconnectTimeout;
         _autoWaitTimeout = options.AutoWaitTimeout;
@@ -172,7 +172,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsQuickLaunchSupported = uiProvider.IsQuickLaunchSupported,
             IsNotificationSupported = uiProvider.IsNotificationSupported,
             IsAlwaysOnSupported = device.IsAlwaysOnSupported,
-            GaMeasurementId = options.AppGa4MeasurementId,
+            GaMeasurementId = options.Ga4MeasurementId,
             ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId)
         };
 
@@ -248,11 +248,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private ITracker CreateBuildInTracker(string? userAgent)
     {
-        if (string.IsNullOrEmpty(_appGa4MeasurementId))
+        if (string.IsNullOrEmpty(_ga4MeasurementId))
             throw new InvalidOperationException("AppGa4MeasurementId is required to create a built-in tracker.");
 
         var tracker = new Ga4TagTracker {
-            MeasurementId = _appGa4MeasurementId,
+            MeasurementId = _ga4MeasurementId,
             SessionCount = 1,
             ClientId = Settings.ClientId,
             SessionId = Guid.NewGuid().ToString(),
@@ -427,7 +427,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // initialize built-in tracker after acquire userAgent
             if (Services.Tracker == null && UserSettings.AllowAnonymousTracker &&
-                !string.IsNullOrEmpty(_appGa4MeasurementId))
+                !string.IsNullOrEmpty(_ga4MeasurementId))
                 Services.Tracker = CreateBuildInTracker(userAgent);
 
             // prepare logger

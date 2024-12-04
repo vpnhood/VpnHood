@@ -9,7 +9,7 @@ public class AppOptions(string appId)
     public static string BuildStorageFolderPath(string appId) =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appId);
 
-    public string AppId { get; init; } = appId;
+    public string AppId { get; } = appId;
     public string StorageFolderPath { get; set; } = BuildStorageFolderPath(appId);
     public TimeSpan SessionTimeout { get; set; } = ClientOptions.Default.SessionTimeout;
     public SocketFactory? SocketFactory { get; set; }
@@ -18,7 +18,7 @@ public class AppOptions(string appId)
     public bool UseInternalLocationService { get; set; } = true;
     public bool UseExternalLocationService { get; set; } = true;
     public AppResource Resource { get; set; } = new();
-    public string? AppGa4MeasurementId { get; set; } = "G-4LE99XKZYE";
+    public string? Ga4MeasurementId { get; set; } = "G-4LE99XKZYE";
     public string? UiName { get; set; }
     public bool IsAddAccessKeySupported { get; set; } = true;
     public string[] AccessKeys { get; set; } = [];

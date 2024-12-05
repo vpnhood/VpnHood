@@ -16,7 +16,7 @@ internal class AppController : WebApiController, IAppController
 
 
     [Route(HttpVerbs.Patch, "/configure")]
-    public async Task<AppConfig> Configure(ConfigParams configParams)
+    public async Task<AppData> Configure(ConfigParams configParams)
     {
         configParams = await HttpContext.GetRequestDataAsync<ConfigParams>().VhConfigureAwait();
         App.Services.CultureProvider.AvailableCultures = configParams.AvailableCultures;
@@ -27,9 +27,9 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Get, "/config")]
-    public Task<AppConfig> GetConfig()
+    public Task<AppData> GetConfig()
     {
-        var ret = new AppConfig {
+        var ret = new AppData {
             Features = App.Features,
             Settings = App.Settings,
             ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),

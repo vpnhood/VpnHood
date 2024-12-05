@@ -3,7 +3,7 @@ using VpnHood.Client.App.Settings;
 
 namespace VpnHood.Client.App.WebServer.Api;
 
-public class AppConfig
+public class AppData
 {
     public required AppFeatures Features { get; init; }
     public required AppSettings Settings { get; init; }

@@ -18,7 +18,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     protected override AppOptions CreateAppOptions() => new(PackageName!) {
         DeviceId = AndroidUtil.GetDeviceId(this), //this will be hashed using AppId
         StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHood"), // for compatibility with old versions
-        Resource = DefaultAppResource.Resource,
+        Resource = DefaultAppResource.Resources,
         AccessKeys = AssemblyInfo.IsDebugMode ? [ClientOptions.SampleAccessKey] : [],
         UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
         IsAddAccessKeySupported = true,

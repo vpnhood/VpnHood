@@ -49,7 +49,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         // load app settings and resources
         var storageFolderPath = AppOptions.BuildStorageFolderPath(PackageName!);
-        var resources = DefaultAppResource.Resource;
+        var resources = DefaultAppResource.Resources;
         resources.Strings.AppName = "VpnHood! CONNECT";
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);

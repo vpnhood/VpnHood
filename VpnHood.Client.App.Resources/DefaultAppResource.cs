@@ -18,5 +18,5 @@ public static class DefaultAppResource
         }
     });
 
-    public static AppResource Resource => LazyResource.Value;
+    public static AppResource Resources => LazyResource.Value;
 }

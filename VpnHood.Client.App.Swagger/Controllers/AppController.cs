@@ -13,13 +13,13 @@ namespace VpnHood.Client.App.Swagger.Controllers;
 public class AppController : ControllerBase, IAppController
 {
     [HttpPatch("configure")]
-    public Task<AppConfig> Configure(ConfigParams configParams)
+    public Task<AppData> Configure(ConfigParams configParams)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpGet("config")]
-    public Task<AppConfig> GetConfig()
+    public Task<AppData> GetConfig()
     {
         throw new SwaggerOnlyException();
     }

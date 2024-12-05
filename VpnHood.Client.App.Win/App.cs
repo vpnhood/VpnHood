@@ -17,10 +17,13 @@ public class App : VpnHoodWpfSpaApp
 
     protected override AppOptionsEx CreateAppOptions()
     {
+        var resources = DefaultAppResource.Resources;
+        resources.Strings.AppName = "VpnHood! CLIENT";
+
         return new AppOptionsEx("com.vpnhood.client.windows") {
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHood"),
-            Resource = DefaultAppResource.Resource,
+            Resource = resources,
             AccessKeys = AssemblyInfo.IsDebugMode ? [ClientOptions.SampleAccessKey] : [],
             UpdateInfoUrl =
                 new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json"),

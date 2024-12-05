@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.Client.App.Droid.Connect</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
-		<ApplicationVersion>563</ApplicationVersion>
-		<ApplicationDisplayVersion>4.6.563</ApplicationDisplayVersion>
+		<ApplicationVersion>604</ApplicationVersion>
+		<ApplicationDisplayVersion>5.0.604</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
@@ -30,7 +30,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>4.6.563</Version>
+		<Version>5.0.604</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>

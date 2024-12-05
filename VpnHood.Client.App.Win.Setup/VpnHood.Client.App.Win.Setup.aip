@@ -19,10 +19,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{58492FC1-65B3-478D-9884-41EDC99DCF38} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{2D5DDAB6-FFD4-4F2D-9009-AE809A82F94C} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood! CLIENT"/>
-    <ROW Property="ProductVersion" Value="5.0.603" Options="20"/>
+    <ROW Property="ProductVersion" Value="5.0.604" Options="20"/>
     <ROW Property="RUNAPPLICATION" Value="1" Type="4"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND"/>
     <ROW Property="UpgradeCode" Value="{38FCFAB0-A40C-4840-A9F9-B7A06A5BC552}"/>
@@ -72,7 +72,7 @@
     <ROW Directory="zhHant_Dir" Directory_Parent="APPDIR" DefaultDir="zh-Hant" DirectoryOptions="3"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{BE9AE5D8-702C-41F0-8A82-C37EF9CB5A42}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{E94A95F3-48E0-4447-BBB2-7FDFCFE04D45}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{21851DB9-D1F6-4B22-9844-D91CE291D8A3}" Directory_="APPDIR" Attributes="260" KeyPath="NoModify" Options="1"/>
     <ROW Component="APPDIR" ComponentId="{6782C70B-B5DB-4ACB-ACED-FA77FF112859}" Directory_="APPDIR" Attributes="0"/>
     <ROW Component="Accessibility.dll" ComponentId="{6125235F-C8DC-42E0-BC59-0E11D956B841}" Directory_="APPDIR" Attributes="0" KeyPath="Accessibility.dll"/>

@@ -1,5 +1,4 @@
 ﻿using System.Drawing;
-using System.IO;
 using System.Security.Principal;
 using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.Win.Common;
@@ -19,10 +18,7 @@ public class App : VpnHoodWpfSpaApp
     protected override AppOptionsEx CreateAppOptions()
     {
         // load app settings and resources
-        var storageFolderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHoodConnect");
-
-        //var appSettings = AppSettings.Create();
-        var resources = DefaultAppResource.Resource;
+        var resources = DefaultAppResource.Resources;
         resources.Strings.AppName = "VpnHood! CONNECT";
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
@@ -31,7 +27,7 @@ public class App : VpnHoodWpfSpaApp
         var appConfigs = AppConfigs.Load();
         return new AppOptionsEx("com.vpnhood.connect.windows") {
             UiName = "VpnHoodConnect",
-            StorageFolderPath = storageFolderPath,
+            StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHoodConnect"),
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             Resource = resources,
             AccessKeys = [appConfigs.DefaultAccessKey],

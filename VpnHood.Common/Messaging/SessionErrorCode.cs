@@ -6,6 +6,8 @@ namespace VpnHood.Common.Messaging;
 public enum SessionErrorCode
 {
     Ok,
+    AccessError, // unauthorized
+    PlanRejected,
     GeneralError,
     SessionClosed,
     SessionSuppressedBy,
@@ -15,7 +17,6 @@ public enum SessionErrorCode
     AccessCodeRejected,
     AccessLocked,
     AccessTrafficOverflow,
-    AccessError,
     NoServerAvailable,
     AdError,
     RewardedAdRejected,

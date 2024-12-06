@@ -4,4 +4,6 @@ public class AndroidMainActivityWebViewOptions : AndroidMainActivityOptions
 {
     public bool ListenToAllIps { get; init; }
     public int? DefaultSpaPort { get; init; }
+    public Uri? WebViewUpgradeUrl { get; init; } = new Uri("/webview-upgrade/index.html");
+    public int WebViewRequiredVersion { get; init; } = 69;
 }

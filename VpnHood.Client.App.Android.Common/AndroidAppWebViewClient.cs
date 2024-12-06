@@ -21,11 +21,6 @@ internal class AndroidAppWebViewClient : WebViewClient
         if (webView == null || url == null || IsMainHost(url))
             return false;
 
-        // ignore root
-        var uri = new Uri(url);
-        if (uri.AbsolutePath == "/" || string.IsNullOrEmpty(uri.AbsolutePath))
-            return false;
-
         try {
             var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(url));
             intent.SetFlags(ActivityFlags.NewTask);

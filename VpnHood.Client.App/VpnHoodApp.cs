@@ -612,6 +612,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _ = VersionCheck();
         }
         catch (Exception) when (client is not null) {
+            // update access token if ResponseAccessKey is set
+            if (!string.IsNullOrWhiteSpace(client.ResponseAccessKey))
+                _ = ClientProfileService.UpdateTokenByAccessKey(token, client.ResponseAccessKey);
+
+            // dispose client
             client.StateChanged -= Client_StateChanged;
             await client.DisposeAsync().VhConfigureAwait();
             _client = null;

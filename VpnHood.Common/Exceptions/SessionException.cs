@@ -24,6 +24,8 @@ public class SessionException : Exception
     {
         return errorCode switch {
             SessionErrorCode.Ok => "Operation completed successfully.",
+            SessionErrorCode.AccessError => "An access error occurred.",
+            SessionErrorCode.PlanRejected => "The requested connection plan has been rejected.",
             SessionErrorCode.GeneralError => "A general error occurred.",
             SessionErrorCode.SessionClosed => "The session has been closed.",
             SessionErrorCode.SessionSuppressedBy => "The session was suppressed by another session.",
@@ -33,7 +35,6 @@ public class SessionException : Exception
             SessionErrorCode.AccessCodeRejected => "The access code was rejected.",
             SessionErrorCode.AccessLocked => "Access is locked.",
             SessionErrorCode.AccessTrafficOverflow => "Access traffic overflow occurred.",
-            SessionErrorCode.AccessError => "An access error occurred.",
             SessionErrorCode.NoServerAvailable => "No server is available.",
             SessionErrorCode.AdError => "An advertisement error occurred.",
             SessionErrorCode.RewardedAdRejected => "The rewarded advertisement was rejected.",

@@ -51,6 +51,7 @@ if ($nugets) {
 	& "$solutionDir/VpnHood.Client.App.Win.Common.WpfSpa/_publish.ps1";
 	& "$solutionDir/VpnHood.Server/_publish.ps1";
 	& "$solutionDir/VpnHood.Server.Access/_publish.ps1";
+	& "$solutionDir/VpnHood.Server.Access.FileAccessManager/_publish.ps1";
 }
 
 # publish MAUI nugets

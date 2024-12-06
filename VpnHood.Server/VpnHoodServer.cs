@@ -39,6 +39,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private readonly ISystemInfoProvider _systemInfoProvider;
     private readonly ISwapMemoryProvider? _swapMemoryProvider;
     private string? _tcpCongestionControl;
+    private bool _isRestarted = true;
 
     public ServerHost ServerHost { get; }
     public JobSection JobSection { get; }
@@ -165,6 +166,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 FreeUdpPortV4 = freeUdpPortV4,
                 FreeUdpPortV6 = freeUdpPortV6,
+                IsRestarted = _isRestarted,
                 NetworkInterfaceNames = _netConfigurationService != null ? await _netConfigurationService.GetNetworkInterfaceNames() : null
             };
 
@@ -380,6 +382,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     {
         try {
             var serverConfig = await AccessManager.Server_Configure(serverInfo).VhConfigureAwait();
+            _isRestarted = false; // is restarted should send once
             try {
                 await File.WriteAllTextAsync(_lastConfigFilePath, JsonSerializer.Serialize(serverConfig))
                     .VhConfigureAwait();

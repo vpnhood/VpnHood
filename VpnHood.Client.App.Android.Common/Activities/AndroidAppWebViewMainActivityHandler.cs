@@ -1,4 +1,5 @@
-﻿using Android.Content.Res;
+﻿using Android.Content.PM;
+using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
@@ -79,6 +80,28 @@ public class AndroidAppWebViewMainActivityHandler(
         }
     }
 
+    private static int GetWebViewVersion(PackageManager? packageManager)
+    {
+        var versionName = OperatingSystem.IsAndroidVersionAtLeast(26)
+            ? WebView.CurrentWebViewPackage?.VersionName
+            : packageManager?.GetPackageInfo("com.google.android.webview", 0)?.VersionName;
+
+        var parts = versionName?.Split('.');
+        return parts?.Length > 0 ? int.Parse(parts[0]) : 0;
+    }
+
+    private string GetLaunchUrl()
+    {
+        var mainUrl = $"{VpnHoodAppWebServer.Instance.Url}?nocache={VpnHoodAppWebServer.Instance.SpaHash}";
+        if (GetWebViewVersion(ActivityEvent.Activity.PackageManager) >= options.WebViewRequiredVersion || options.WebViewUpgradeUrl == null )
+            return mainUrl;
+
+        var upgradeUrl = options.WebViewUpgradeUrl.IsAbsoluteUri
+            ? new Uri(VpnHoodAppWebServer.Instance.Url, "/webview_upgrade/index.html")
+            : options.WebViewUpgradeUrl;
+        return upgradeUrl.ToString();
+    }
+
     private void InitWebUi()
     {
         WebView = new WebView(ActivityEvent.Activity);
@@ -99,7 +122,7 @@ public class AndroidAppWebViewMainActivityHandler(
 #if DEBUG
         WebView.SetWebContentsDebuggingEnabled(true);
 #endif
-        WebView.LoadUrl($"{VpnHoodAppWebServer.Instance.Url}?nocache={VpnHoodAppWebServer.Instance.SpaHash}");
+        WebView.LoadUrl(GetLaunchUrl());
     }
 
     private void WebViewClient_PageLoaded(object? sender, EventArgs e)

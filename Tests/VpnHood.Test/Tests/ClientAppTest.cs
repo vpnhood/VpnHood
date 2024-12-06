@@ -408,6 +408,32 @@ public class ClientAppTest : TestBase
     }
 
     [TestMethod]
+    public async Task update_token_from_server()
+    {
+        // create Access Manager and token
+        using var accessManager = TestHelper.CreateAccessManager();
+        var token = TestHelper.CreateAccessToken(accessManager, expirationTime: DateTime.UtcNow.AddDays(-1));
+        var orgTokenName = token.Name;
+
+        // Update ServerTokenUrl after token creation
+        token.Name = Guid.NewGuid().ToString();
+
+        // create server and app
+        await using var server = await TestHelper.CreateServer(accessManager);
+        await using var app = TestHelper.CreateClientApp();
+        var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+
+        // wait for connect error
+        var ex = await Assert.ThrowsExceptionAsync<SessionException>(()=>app.Connect(clientProfile1.ClientProfileId));
+        Assert.AreEqual(SessionErrorCode.AccessExpired, ex.SessionResponse.ErrorCode);
+
+        // token name must be updated
+        var token2 = app.ClientProfileService.GetToken(token.TokenId);
+        Assert.AreEqual(orgTokenName, token2.Name);
+
+    }
+
+    [TestMethod]
     public async Task update_server_token_from_server_token_url()
     {
         // create update webserver

@@ -908,6 +908,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             if (ex.SessionResponse.AccessUsage != null)
                 SessionStatus.AccessUsage = ex.SessionResponse.AccessUsage;
 
+            if (!string.IsNullOrEmpty(ex.SessionResponse.AccessKey))
+                ResponseAccessKey = ex.SessionResponse.AccessKey;
+
             // SessionException means that the request accepted by server but there is an error for that request
             _lastConnectionErrorTime = null;
 

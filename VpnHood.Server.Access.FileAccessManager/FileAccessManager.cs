@@ -225,13 +225,13 @@ public class FileAccessManager : IAccessManager
             };
 
         var ret = SessionService.CreateSession(sessionRequestEx, accessTokenData);
-        if (ret.ErrorCode != SessionErrorCode.Ok)
-            return ret;
+        if (ret.ErrorCode is SessionErrorCode.AccessError or SessionErrorCode.AccessLocked)
+            return ret; // not more information should send
 
+        // set server location
         var locationInfo = _serverToken.ServerLocations?.Any() == true
             ? ServerLocationInfo.Parse(_serverToken.ServerLocations.First())
             : null;
-
         ret.ServerLocation = locationInfo?.ServerLocation;
 
         // update accesskey

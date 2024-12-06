@@ -103,25 +103,8 @@ public class AccessTokenService
             throw new KeyNotFoundException($"Could not find tokenId. TokenId: {tokenId}");
 
         // try read token
-        var accessToken = VhUtil.JsonDeserializeFile<AccessToken>(tokenFileName);
-        if (accessToken == null || string.IsNullOrEmpty(accessToken.TokenId)) // try legacy
-        {
-            var accessTokenLegacy = VhUtil.JsonDeserializeFile<AccessTokenLegacy>(tokenFileName);
-            if (accessTokenLegacy == null || string.IsNullOrEmpty(accessTokenLegacy.Token.TokenId))
-                throw new KeyNotFoundException($"Could not find tokenId. TokenId: {tokenId}");
-
-            accessToken = new AccessToken {
-                TokenId = accessTokenLegacy.Token.TokenId,
-                IssuedAt = accessTokenLegacy.Token.IssuedAt,
-                MaxClientCount = accessTokenLegacy.MaxClientCount,
-                MaxTraffic = accessTokenLegacy.MaxTraffic,
-                ExpirationTime = accessTokenLegacy.ExpirationTime,
-                AdRequirement = accessTokenLegacy.AdRequirement,
-                Secret = accessTokenLegacy.Token.Secret,
-                Name = accessTokenLegacy.Token.Name,
-            };
-            await File.WriteAllTextAsync(GetAccessTokenFileName(accessToken.TokenId), JsonSerializer.Serialize(accessToken));
-        }
+        var tokenJson = await File.ReadAllTextAsync(tokenFileName);
+        var accessToken = VhUtil.JsonDeserialize<AccessToken>(tokenJson);
 
         // try read usage
         var usageFileName = GetAccessTokenUsageFileName(tokenId);
@@ -137,6 +120,18 @@ public class AccessTokenService
         _items[tokenId] = accessTokenData;
         return accessTokenData;
     }
+
+    public async Task<AccessTokenData> Update(string tokenId, string tokenName)
+    {
+        var accessTokenData = await Get(tokenId);
+        accessTokenData.AccessToken.Name = tokenName;
+        await File
+            .WriteAllTextAsync(GetAccessTokenUsageFileName(tokenId), JsonSerializer.Serialize(accessTokenData.Usage))
+            .VhConfigureAwait();
+
+        return accessTokenData;
+    }
+
 
     public async Task<AccessTokenData?> Find(string tokenId)
     {

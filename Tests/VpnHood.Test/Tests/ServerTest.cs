@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -29,8 +28,7 @@ public class ServerTest : TestBase
         Assert.IsNotNull(accessManager.LastServerInfo);
         Assert.IsTrue(accessManager.LastServerInfo.FreeUdpPortV4 > 0);
         Assert.IsTrue(
-            accessManager.LastServerInfo.PrivateIpAddresses.All(
-                x => x.AddressFamily != AddressFamily.InterNetworkV6) ||
+            accessManager.LastServerInfo.PrivateIpAddresses.All(x => x.IsV4()) || 
             accessManager.LastServerInfo?.FreeUdpPortV6 > 0);
     }
 
@@ -145,6 +143,7 @@ public class ServerTest : TestBase
         var dateTime = DateTime.Now;
         await using var server = await TestHelper.CreateServer(accessManager);
         Assert.IsTrue(accessManager.LastConfigureTime > dateTime);
+        Assert.IsTrue(accessManager.LastServerInfo?.IsRestarted);
 
         dateTime = DateTime.Now;
         accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
@@ -155,22 +154,18 @@ public class ServerTest : TestBase
         Assert.IsTrue(accessManager.LastConfigureTime > dateTime);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackClientIp);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackLocalPort);
-        Assert.AreEqual(serverConfig.TrackingOptions.TrackClientIp,
-            server.SessionManager.TrackingOptions.TrackClientIp);
-        Assert.AreEqual(serverConfig.TrackingOptions.TrackLocalPort,
-            server.SessionManager.TrackingOptions.TrackLocalPort);
+        Assert.AreEqual(serverConfig.TrackingOptions.TrackClientIp, server.SessionManager.TrackingOptions.TrackClientIp);
+        Assert.AreEqual(serverConfig.TrackingOptions.TrackLocalPort, server.SessionManager.TrackingOptions.TrackLocalPort);
         Assert.AreEqual(serverConfig.SessionOptions.TcpTimeout, server.SessionManager.SessionOptions.TcpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.IcmpTimeout, server.SessionManager.SessionOptions.IcmpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.UdpTimeout, server.SessionManager.SessionOptions.UdpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.Timeout, server.SessionManager.SessionOptions.Timeout);
-        Assert.AreEqual(serverConfig.SessionOptions.MaxDatagramChannelCount,
-            server.SessionManager.SessionOptions.MaxDatagramChannelCount);
+        Assert.AreEqual(serverConfig.SessionOptions.MaxDatagramChannelCount, server.SessionManager.SessionOptions.MaxDatagramChannelCount);
         Assert.AreEqual(serverConfig.SessionOptions.SyncCacheSize, server.SessionManager.SessionOptions.SyncCacheSize);
         Assert.AreEqual(serverConfig.SessionOptions.TcpBufferSize, server.SessionManager.SessionOptions.TcpBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpSendBufferSize,
-            server.SessionManager.SessionOptions.UdpSendBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpReceiveBufferSize,
-            server.SessionManager.SessionOptions.UdpReceiveBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpSendBufferSize, server.SessionManager.SessionOptions.UdpSendBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpReceiveBufferSize, server.SessionManager.SessionOptions.UdpReceiveBufferSize);
+        Assert.IsFalse(accessManager.LastServerInfo?.IsRestarted);
     }
 
     [TestMethod]

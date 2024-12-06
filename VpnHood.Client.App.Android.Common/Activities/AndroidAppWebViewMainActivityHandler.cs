@@ -97,8 +97,9 @@ public class AndroidAppWebViewMainActivityHandler(
             return mainUrl;
 
         var upgradeUrl = options.WebViewUpgradeUrl.IsAbsoluteUri
-            ? new Uri(VpnHoodAppWebServer.Instance.Url, "/webview_upgrade/index.html")
-            : options.WebViewUpgradeUrl;
+            ? options.WebViewUpgradeUrl
+            : new Uri(VpnHoodAppWebServer.Instance.Url, options.WebViewUpgradeUrl);
+
         return upgradeUrl.ToString();
     }
 

@@ -325,7 +325,7 @@ export class AppClient {
 
     }
 
-    configure(configParams: ConfigParams, cancelToken?: CancelToken): Promise<AppConfig> {
+    configure(configParams: ConfigParams, cancelToken?: CancelToken): Promise<AppData> {
         let url_ = this.baseUrl + "/api/app/configure";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -353,7 +353,7 @@ export class AppClient {
         });
     }
 
-    protected processConfigure(response: AxiosResponse): Promise<AppConfig> {
+    protected processConfigure(response: AxiosResponse): Promise<AppData> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -367,17 +367,17 @@ export class AppClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = AppConfig.fromJS(resultData200);
-            return Promise.resolve<AppConfig>(result200);
+            result200 = AppData.fromJS(resultData200);
+            return Promise.resolve<AppData>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<AppConfig>(null as any);
+        return Promise.resolve<AppData>(null as any);
     }
 
-    getConfig( cancelToken?: CancelToken): Promise<AppConfig> {
+    getConfig( cancelToken?: CancelToken): Promise<AppData> {
         let url_ = this.baseUrl + "/api/app/config";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -401,7 +401,7 @@ export class AppClient {
         });
     }
 
-    protected processGetConfig(response: AxiosResponse): Promise<AppConfig> {
+    protected processGetConfig(response: AxiosResponse): Promise<AppData> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -415,14 +415,14 @@ export class AppClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = AppConfig.fromJS(resultData200);
-            return Promise.resolve<AppConfig>(result200);
+            result200 = AppData.fromJS(resultData200);
+            return Promise.resolve<AppData>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<AppConfig>(null as any);
+        return Promise.resolve<AppData>(null as any);
     }
 
     getState( cancelToken?: CancelToken): Promise<AppState> {
@@ -1499,14 +1499,14 @@ export interface IAppAccount {
     providerSubscriptionId?: string | null;
 }
 
-export class AppConfig implements IAppConfig {
+export class AppData implements IAppData {
     features!: AppFeatures;
     settings!: AppSettings;
     state!: AppState;
     clientProfileInfos!: ClientProfileInfo[];
     availableCultureInfos!: UiCultureInfo[];
 
-    constructor(data?: IAppConfig) {
+    constructor(data?: IAppData) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -1546,9 +1546,9 @@ export class AppConfig implements IAppConfig {
         }
     }
 
-    static fromJS(data: any): AppConfig {
+    static fromJS(data: any): AppData {
         data = typeof data === 'object' ? data : {};
-        let result = new AppConfig();
+        let result = new AppData();
         result.init(data);
         return result;
     }
@@ -1572,7 +1572,7 @@ export class AppConfig implements IAppConfig {
     }
 }
 
-export interface IAppConfig {
+export interface IAppData {
     features: AppFeatures;
     settings: AppSettings;
     state: AppState;
@@ -2607,6 +2607,8 @@ export interface ISessionStatus {
 
 export enum SessionErrorCode {
     Ok = "Ok",
+    AccessError = "AccessError",
+    PlanRejected = "PlanRejected",
     GeneralError = "GeneralError",
     SessionClosed = "SessionClosed",
     SessionSuppressedBy = "SessionSuppressedBy",
@@ -2616,7 +2618,6 @@ export enum SessionErrorCode {
     AccessCodeRejected = "AccessCodeRejected",
     AccessLocked = "AccessLocked",
     AccessTrafficOverflow = "AccessTrafficOverflow",
-    AccessError = "AccessError",
     NoServerAvailable = "NoServerAvailable",
     AdError = "AdError",
     RewardedAdRejected = "RewardedAdRejected",

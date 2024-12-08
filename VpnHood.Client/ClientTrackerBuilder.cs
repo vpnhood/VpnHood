@@ -56,6 +56,16 @@ public static class ClientTrackerBuilder
             }
         };
     }
+public static TrackEvent BuildShowAdStatus(string adNetwork, bool isShow)
+    {
+        return new TrackEvent {
+            EventName = "vh_ad_status",
+            Parameters = new Dictionary<string, object> {
+                { "ad_network", adNetwork },
+                { "is_show", isShow },
+            }
+        };
+    }
 
     public static TrackEvent BuildUsage(Traffic traffic, int requestCount, int connectionCount)
     {

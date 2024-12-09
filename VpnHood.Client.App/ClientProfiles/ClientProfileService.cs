@@ -118,7 +118,7 @@ public class ClientProfileService
             item.SelectedLocation = updateParams.SelectedLocation;
 
         if (updateParams.AccessCode != null)
-            item.SelectedLocation = updateParams.AccessCode;
+            item.AccessCode = updateParams.AccessCode;
 
 
 

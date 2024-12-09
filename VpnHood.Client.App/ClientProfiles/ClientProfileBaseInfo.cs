@@ -9,4 +9,6 @@ public class ClientProfileBaseInfo
     public required bool IsPremiumLocationSelected { get; init; }
     public required bool IsPremiumAccount { get; init; }
     public required ClientServerLocationInfo? SelectedLocationInfo { get; init; }
+    public required bool HasAccessCode { get; set; }
+
 }

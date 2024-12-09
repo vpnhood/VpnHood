@@ -28,4 +28,6 @@ public class SessionResponse
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? AccessKey { get; set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public string? ClientCountry { get; set; }
 }

@@ -1,7 +1,5 @@
 ﻿using Android.Content.PM;
 using Android.Content.Res;
-using Android.Graphics;
-using Android.OS;
 using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
@@ -131,25 +129,8 @@ public class AndroidAppWebViewMainActivityHandler(
         }
         catch (Exception ex) {
             WebViewCreateException = ex;
-            InitWebViewExceptionMessage(ex);
+            WebViewUpdaterPage.InitPage(ActivityEvent.Activity, ex);
         }
-    }
-
-    private void InitWebViewExceptionMessage(Exception ex)
-    {
-        // get all current cpu architecture in a string
-        var cpuArch = string.Join(", ", Build.SupportedAbis ?? []);
-
-        // Create a new TextView and set it as the content of the activity
-        var textView = new TextView(ActivityEvent.Activity);
-        textView.Text = $"WebView initialization failed. Please update your Android System WebView and Chrome Browser. " +
-                        $"CpuArchitectures: {cpuArch}, Error: {ex.Message}";
-        textView.TextSize = 20;
-
-        // set font color to red
-        textView.SetTextColor(Color.Red);
-        ActivityEvent.Activity.SetContentView(textView);
-
     }
 
     private void WebViewClient_PageLoaded(object? sender, EventArgs e)

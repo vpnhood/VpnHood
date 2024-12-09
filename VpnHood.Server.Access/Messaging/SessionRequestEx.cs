@@ -17,6 +17,7 @@ public class SessionRequestEx
 
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress? ClientIp { get; set; }
+    public string? ClientCountry { get; set; }
 
     public required string? ExtraData { get; set; }
     public string? ServerLocation { get; set; }

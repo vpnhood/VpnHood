@@ -22,7 +22,7 @@ public class AppAdService(
 
     public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        var countryCode = await regionProvider.GetCurrentCountryCodeAsync(cancellationToken);
+        var countryCode = await regionProvider.GetCurrentCountryAsync(cancellationToken);
         await _compositeInterstitialAdService.LoadAd(uiContext, countryCode: countryCode, forceReload: false,
             cancellationToken);
     }
@@ -47,7 +47,7 @@ public class AppAdService(
         IUiContext uiContext, string sessionId, CancellationToken cancellationToken)
     {
         var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
-        var countryCode = await regionProvider.GetCurrentCountryCodeAsync(cancellationToken);
+        var countryCode = await regionProvider.GetCurrentCountryAsync(cancellationToken);
         await appCompositeAdService.LoadAd(uiContext, countryCode: countryCode, forceReload: false, cancellationToken);
         var networkName = await appCompositeAdService.ShowLoadedAd(uiContext, adData, cancellationToken);
         var showAdResult = new ShowedAdResult {

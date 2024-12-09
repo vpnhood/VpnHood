@@ -2,6 +2,6 @@
 
 public interface IRegionProvider
 {
-    string GetCurrentCountryCode();
-    Task<string> GetCurrentCountryCodeAsync(CancellationToken cancellationToken);
+    string GetClientCountry();
+    Task<string> GetCurrentCountryAsync(CancellationToken cancellationToken);
 }

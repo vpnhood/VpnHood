@@ -1,5 +1,7 @@
 ﻿using Android.Content.PM;
 using Android.Content.Res;
+using Android.Graphics;
+using Android.OS;
 using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
@@ -15,6 +17,7 @@ public class AndroidAppWebViewMainActivityHandler(
 {
     private bool _isWeViewVisible;
     private WebView? WebView { get; set; }
+    public Exception? WebViewCreateException { get; private set; }
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -105,25 +108,48 @@ public class AndroidAppWebViewMainActivityHandler(
 
     private void InitWebUi()
     {
-        WebView = new WebView(ActivityEvent.Activity);
-        WebView.Settings.JavaScriptEnabled = true;
-        WebView.Settings.DomStorageEnabled = true;
-        WebView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
-        WebView.Settings.SetSupportMultipleWindows(true);
-        WebView.SetLayerType(LayerType.Hardware, null);
-        if (VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor != null)
-            WebView.SetBackgroundColor(VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor.Value
-                .ToAndroidColor());
+        try {
+            WebView = new WebView(ActivityEvent.Activity);
+            WebView.Settings.JavaScriptEnabled = true;
+            WebView.Settings.DomStorageEnabled = true;
+            WebView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
+            WebView.Settings.SetSupportMultipleWindows(true);
+            WebView.SetLayerType(LayerType.Hardware, null);
+            if (VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor != null)
+                WebView.SetBackgroundColor(VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor.Value
+                    .ToAndroidColor());
 
-        var webViewClient = new AndroidAppWebViewClient();
-        webViewClient.PageLoaded += WebViewClient_PageLoaded;
-        WebView.SetWebViewClient(webViewClient);
-        WebView.SetWebChromeClient(new AndroidAppWebChromeClient());
+            var webViewClient = new AndroidAppWebViewClient();
+            webViewClient.PageLoaded += WebViewClient_PageLoaded;
+            WebView.SetWebViewClient(webViewClient);
+            WebView.SetWebChromeClient(new AndroidAppWebChromeClient());
 
 #if DEBUG
-        WebView.SetWebContentsDebuggingEnabled(true);
+            WebView.SetWebContentsDebuggingEnabled(true);
 #endif
-        WebView.LoadUrl(GetLaunchUrl());
+            WebView.LoadUrl(GetLaunchUrl());
+        }
+        catch (Exception ex) {
+            WebViewCreateException = ex;
+            InitWebViewExceptionMessage(ex);
+        }
+    }
+
+    private void InitWebViewExceptionMessage(Exception ex)
+    {
+        // get all current cpu architecture in a string
+        var cpuArch = string.Join(", ", Build.SupportedAbis ?? []);
+
+        // Create a new TextView and set it as the content of the activity
+        var textView = new TextView(ActivityEvent.Activity);
+        textView.Text = $"WebView initialization failed. Please update your Android System WebView and Chrome Browser. " +
+                        $"CpuArchitectures: {cpuArch}, Error: {ex.Message}";
+        textView.TextSize = 20;
+
+        // set font color to red
+        textView.SetTextColor(Color.Red);
+        ActivityEvent.Activity.SetContentView(textView);
+
     }
 
     private void WebViewClient_PageLoaded(object? sender, EventArgs e)

@@ -13,4 +13,6 @@ public class ClientProfile
     public string? SelectedLocation{ get; set; }
     public bool IsForAccount { get; set; }
     public bool IsBuiltIn { get; set; }
+    public string? AccessCode { get; set; }
+    public ClientProfileAccess? Access { get; set; }
 }

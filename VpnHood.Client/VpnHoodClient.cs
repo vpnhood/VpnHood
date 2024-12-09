@@ -43,7 +43,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private readonly SendingPackets _sendingPackets = new();
     private readonly ClientHost _clientHost;
     private readonly SemaphoreSlim _datagramChannelsSemaphore = new(1, 1);
-    private readonly IIpRangeProvider? _ipRangeProvider;
     private readonly IAdService? _adService;
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
@@ -87,7 +86,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public ulong SessionId { get; private set; }
     public Version Version { get; }
     public bool IncludeLocalNetwork { get; }
-    public IpRangeOrderedList IncludeIpRanges { get; private set; } = new(IpNetwork.All.ToIpRanges());
+    public IpRangeOrderedList IncludeIpRanges { get; private set; }
     public IpRangeOrderedList PacketCaptureIncludeIpRanges { get; private set; }
     public string UserAgent { get; }
     public IPEndPoint? HostTcpEndPoint => _connectorService?.EndPointInfo.TcpEndPoint;
@@ -95,6 +94,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public bool DropUdp { get; set; }
     public bool DropQuic { get; set; }
     public ClientStat Stat { get; }
+    public IPAddress? ClientPublicIpAddress { get; private set; }
+    public string? ClientCountry { get; private set; }
 
     public byte[] SessionKey =>
         _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
@@ -125,7 +126,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _autoDisposePacketCapture = options.AutoDisposePacketCapture;
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _proxyManager = new ClientProxyManager(packetCapture, SocketFactory, new ProxyManagerOptions());
-        _ipRangeProvider = options.IpRangeProvider;
+        IncludeIpRanges = options.IncludeIpRanges;
         _usageTracker = options.Tracker;
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
@@ -145,10 +146,12 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         ClientId = clientId;
         SessionTimeout = options.SessionTimeout;
         IncludeLocalNetwork = options.IncludeLocalNetwork;
-        PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         DropUdp = options.DropUdp;
         DropQuic = options.DropQuic;
         DomainFilterService = new DomainFilterService(options.DomainFilter, options.ForceLogSni);
+        var dnsRange = DnsServers.Select(x => new IpRange(x)).ToArray();
+        PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges.Union(dnsRange);
+        IncludeIpRanges = options.IncludeIpRanges.Union(dnsRange);
 
         // NAT
         Nat = new Nat(true);
@@ -692,6 +695,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();
             var sessionResponse = requestResult.Response;
+            ClientPublicIpAddress = sessionResponse.ClientPublicAddress;
 
 #pragma warning disable CS0618 // Type or member is obsolete
             if (sessionResponse is { MinProtocolVersion: 0, ServerProtocolVersion: 5 }) {
@@ -723,7 +727,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 $"ServerMinProtocolVersion: {sessionResponse.MinProtocolVersion}, " +
                 $"ServerMaxProtocolVersion: {sessionResponse.MaxProtocolVersion}, " +
                 $"CurrentProtocolVersion: {ConnectorService.ProtocolVersion}, " +
-                $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}");
+                $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}",
+                $"ClientCountry: {sessionResponse.ClientCountry}");
 
             // get session id
             SessionId = sessionResponse.SessionId != 0
@@ -753,16 +758,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             if (!VhUtil.IsNullOrEmpty(sessionResponse.IncludeIpRanges) &&
                 !sessionResponse.IncludeIpRanges.ToOrderedList().IsAll())
                 IncludeIpRanges = IncludeIpRanges.Intersect(sessionResponse.IncludeIpRanges);
-
-            // Get IncludeIpRange for clientIp
-            if (_ipRangeProvider != null) {
-                var filterIpRanges = await _ipRangeProvider
-                    .GetIncludeIpRanges(sessionResponse.ClientPublicAddress, cancellationToken).VhConfigureAwait();
-                if (!VhUtil.IsNullOrEmpty(filterIpRanges)) {
-                    filterIpRanges = filterIpRanges.Union(DnsServers.Select((x => new IpRange(x))));
-                    IncludeIpRanges = IncludeIpRanges.Intersect(filterIpRanges);
-                }
-            }
 
             // set DNS after setting IpFilters
             VhLogger.Instance.LogInformation("Configuring Client DNS servers... DnsServers: {DnsServers}",
@@ -910,6 +905,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             if (!string.IsNullOrEmpty(ex.SessionResponse.AccessKey))
                 ResponseAccessKey = ex.SessionResponse.AccessKey;
+
+            if (!string.IsNullOrEmpty(ex.SessionResponse.ClientCountry))
+                ClientCountry = ex.SessionResponse.ClientCountry;
 
             // SessionException means that the request accepted by server but there is an error for that request
             _lastConnectionErrorTime = null;

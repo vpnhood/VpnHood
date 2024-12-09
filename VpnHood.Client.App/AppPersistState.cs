@@ -50,9 +50,19 @@ internal class AppPersistState
         }
     }
 
-    [JsonIgnore] 
-    public string? ClientCountryName => VhUtil.TryGetCountryName(ClientCountryCode);
+    // prop
+    private string? _clientCountryCodeByServer;
+    public string? ClientCountryCodeByServer {
+        get => _clientCountryCodeByServer;
+        set {
+            if (_clientCountryCodeByServer == value)
+                return;
 
+            // set country code and its name
+            _clientCountryCodeByServer = value?.ToUpper();
+            Save();
+        }
+    }
 
     internal static AppPersistState Load(string filePath)
     {

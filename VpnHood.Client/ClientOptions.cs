@@ -31,8 +31,8 @@ public class ClientOptions
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
     public bool UseUdpChannel { get; set; }
     public bool IncludeLocalNetwork { get; set; }
-    public IIpRangeProvider? IpRangeProvider { get; set; }
     public IAdService? AdService { get; set; }
+    public IpRangeOrderedList IncludeIpRanges { get; set; } = new(IpNetwork.All.ToIpRanges());
     public IpRangeOrderedList PacketCaptureIncludeIpRanges { get; set; } = new(IpNetwork.All.ToIpRanges());
     public SocketFactory SocketFactory { get; set; } = new();
     public int MaxDatagramChannelCount { get; set; } = 4;

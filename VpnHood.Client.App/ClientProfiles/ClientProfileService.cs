@@ -191,12 +191,13 @@ public class ClientProfileService
         return clientProfiles.ToArray();
     }
 
-    public Token UpdateTokenByAccessKey(Token token, string accessKey)
+    public bool UpdateTokenByAccessKey(string tokenId, string accessKey)
     {
         try {
+            var token = GetToken(tokenId);
             var newToken = Token.FromAccessKey(accessKey);
             if (VhUtil.JsonEquals(token, newToken))
-                return token;
+                return false;
 
             if (token.TokenId != newToken.TokenId)
                 throw new Exception("Could not update the token via access key because its token ID is not the same.");
@@ -204,11 +205,11 @@ public class ClientProfileService
             // allow to overwrite builtIn because update token is from internal source and can update itself
             ImportAccessToken(newToken, overwriteNewer: true, allowOverwriteBuiltIn: true);
             VhLogger.Instance.LogInformation("ServerToken has been updated.");
-            return newToken;
+            return true;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not update token from the given access-key.");
-            return token;
+            return false;
         }
     }
 

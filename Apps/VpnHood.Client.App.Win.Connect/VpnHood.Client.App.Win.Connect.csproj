@@ -46,12 +46,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.App.Win.Common.WpfSpa\VpnHood.Client.App.Win.Common.WpfSpa.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.App.Win.Common\VpnHood.Client.App.Win.Common.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.App.Win.Common.WpfSpa\VpnHood.Client.App.Win.Common.WpfSpa.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.App.Win.Common\VpnHood.Client.App.Win.Common.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

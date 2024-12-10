@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Tunneling", "VpnHoo
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Server", "VpnHood.Server\VpnHood.Server.csproj", "{A3FE316B-2060-42A7-9752-AB1194FC778F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Server.App.Net", "Apps\VpnHood.Server.App.Net\VpnHood.Server.App.Net.csproj", "{1654B92F-F63E-4F89-82CD-145997667EDF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Server.App.Net", "VpnHood.Apps\VpnHood.Server.App.Net\VpnHood.Server.App.Net.csproj", "{1654B92F-F63E-4F89-82CD-145997667EDF}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client", "VpnHood.Client\VpnHood.Client.csproj", "{F281E640-1C58-4799-9A3A-FEFD30887580}"
 EndProject
@@ -59,7 +59,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		VpnHood.sln.DotSettings = VpnHood.sln.DotSettings
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.Connect.Google", "Apps\VpnHood.Client.App.Android.Connect\VpnHood.Client.App.Android.Connect.Google.csproj", "{93CA0868-8D4E-470F-ACEA-253BDAE2EDB7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.Connect.Google", "VpnHood.Apps\VpnHood.Client.App.Android.Connect\VpnHood.Client.App.Android.Connect.Google.csproj", "{93CA0868-8D4E-470F-ACEA-253BDAE2EDB7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.Common", "VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj", "{D6C362F7-9679-4482-9260-DAEA9F91D51C}"
 EndProject
@@ -96,17 +96,19 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Server.Access.FileA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Win.Common.WpfSpa", "VpnHood.Client.App.Win.Common.WpfSpa\VpnHood.Client.App.Win.Common.WpfSpa.csproj", "{52DF241C-B8FB-4EDC-A247-199A306A77D0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Win.Connect", "Apps\VpnHood.Client.App.Win.Connect\VpnHood.Client.App.Win.Connect.csproj", "{AF705FAC-B638-4F81-9621-E2ACC808FFA0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Win.Connect", "VpnHood.Apps\VpnHood.Client.App.Win.Connect\VpnHood.Client.App.Win.Connect.csproj", "{AF705FAC-B638-4F81-9621-E2ACC808FFA0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Android.Connect.Web", "Apps\VpnHood.Client.App.Android.Connect.Web\VpnHood.Client.App.Android.Connect.Web.csproj", "{EFEC5397-7102-4F9F-A590-7FBB87B750FB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Android.Connect.Web", "VpnHood.Apps\VpnHood.Client.App.Android.Connect.Web\VpnHood.Client.App.Android.Connect.Web.csproj", "{EFEC5397-7102-4F9F-A590-7FBB87B750FB}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Apps", "Apps", "{3DEEAA54-6191-41E5-AEE2-0B715D2D3F29}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VpnHood.Apps", "VpnHood.Apps", "{3DEEAA54-6191-41E5-AEE2-0B715D2D3F29}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Android.Client.Google", "Apps\VpnHood.Client.App.Android.Client.Google\VpnHood.Client.App.Android.Client.Google.csproj", "{351B4EC6-66D3-49E2-B7EB-36E0DCAB427C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Android.Client.Google", "VpnHood.Apps\VpnHood.Client.App.Android.Client.Google\VpnHood.Client.App.Android.Client.Google.csproj", "{351B4EC6-66D3-49E2-B7EB-36E0DCAB427C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Android.Client.Web", "Apps\VpnHood.Client.App.Android.Client.Web\VpnHood.Client.App.Android.Client.Web.csproj", "{5D0737CA-3DBC-4B73-8EF9-B4AD0E80C177}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Android.Client.Web", "VpnHood.Apps\VpnHood.Client.App.Android.Client.Web\VpnHood.Client.App.Android.Client.Web.csproj", "{5D0737CA-3DBC-4B73-8EF9-B4AD0E80C177}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Win.Client", "Apps\VpnHood.Client.App.Win.Client\VpnHood.Client.App.Win.Client.csproj", "{DEAD2653-E032-4755-95C6-40A73A1A8232}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Win.Client", "VpnHood.Apps\VpnHood.Client.App.Win.Client\VpnHood.Client.App.Win.Client.csproj", "{DEAD2653-E032-4755-95C6-40A73A1A8232}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VpnHood.Core.Libs", "VpnHood.Core.Libs", "{CD65BE88-FB2C-4A0A-94EE-405F77BCF311}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -787,8 +789,16 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{031C3347-5944-48E0-BC3E-03515FC21552} = {CD65BE88-FB2C-4A0A-94EE-405F77BCF311}
+		{A3FE316B-2060-42A7-9752-AB1194FC778F} = {CD65BE88-FB2C-4A0A-94EE-405F77BCF311}
 		{1654B92F-F63E-4F89-82CD-145997667EDF} = {3DEEAA54-6191-41E5-AEE2-0B715D2D3F29}
+		{F281E640-1C58-4799-9A3A-FEFD30887580} = {CD65BE88-FB2C-4A0A-94EE-405F77BCF311}
 		{53914191-5B94-41CC-8CE4-37C9B2E0A877} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
+		{669C0BF5-1AA1-4C16-9ED2-E5B21271D8D8} = {CD65BE88-FB2C-4A0A-94EE-405F77BCF311}
+		{ABB3F907-FD5B-4372-B74F-FDB77D3B828E} = {CD65BE88-FB2C-4A0A-94EE-405F77BCF311}
+		{4C474EAA-EB63-424C-BCFA-AE2AE2067736} = {CD65BE88-FB2C-4A0A-94EE-405F77BCF311}
+		{CA6D2E1D-BCC2-4F8E-B78D-D28EBD943831} = {CD65BE88-FB2C-4A0A-94EE-405F77BCF311}
+		{CAF87B57-E046-466F-B8C5-32066CF8886B} = {CD65BE88-FB2C-4A0A-94EE-405F77BCF311}
 		{CCEB6931-2B59-49D5-8916-BE184CEB0BA1} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 		{986CE90B-9F4F-4DEF-8C2C-9BFD8F6A1855} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 		{BF1D9516-444A-4B12-83C2-F41F8D8F0344} = {BD1C4F74-C48B-4302-90C3-0B7243C0DD20}
@@ -807,6 +817,7 @@ Global
 		{235F3F4A-F075-477D-9923-FE2360FB7EEA} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 		{D666EB32-78AA-4F7B-9CE0-D430C34E3118} = {DC9319F3-8348-498C-9A5B-77399106DB10}
 		{BC0CE9CB-1490-4AC6-B2C5-100EE5025AD6} = {B06C66A0-47AA-4894-A794-8FAE74DB271F}
+		{4D625537-609E-4BFC-BD67-32285805A814} = {CD65BE88-FB2C-4A0A-94EE-405F77BCF311}
 		{52DF241C-B8FB-4EDC-A247-199A306A77D0} = {BD1C4F74-C48B-4302-90C3-0B7243C0DD20}
 		{AF705FAC-B638-4F81-9621-E2ACC808FFA0} = {3DEEAA54-6191-41E5-AEE2-0B715D2D3F29}
 		{EFEC5397-7102-4F9F-A590-7FBB87B750FB} = {3DEEAA54-6191-41E5-AEE2-0B715D2D3F29}

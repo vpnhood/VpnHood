@@ -13,7 +13,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Server.App.Net", "V
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client", "VpnHood.Client\VpnHood.Client.csproj", "{F281E640-1C58-4799-9A3A-FEFD30887580}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App", "VpnHood.Client.App\VpnHood.Client.App.csproj", "{53914191-5B94-41CC-8CE4-37C9B2E0A877}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App", "VpnHood.Client.App.Libs\VpnHood.Client.App\VpnHood.Client.App.csproj", "{53914191-5B94-41CC-8CE4-37C9B2E0A877}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.Device.WinDivert", "VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj", "{669C0BF5-1AA1-4C16-9ED2-E5B21271D8D8}"
 EndProject
@@ -41,13 +41,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.Device", "Vp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.Device.Android", "VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj", "{CAF87B57-E046-466F-B8C5-32066CF8886B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Resources", "VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj", "{CCEB6931-2B59-49D5-8916-BE184CEB0BA1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Resources", "VpnHood.Client.App.Libs\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj", "{CCEB6931-2B59-49D5-8916-BE184CEB0BA1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Swagger", "VpnHood.Client.App.Swagger\VpnHood.Client.App.Swagger.csproj", "{986CE90B-9F4F-4DEF-8C2C-9BFD8F6A1855}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Swagger", "VpnHood.Client.App.Libs\VpnHood.Client.App.Swagger\VpnHood.Client.App.Swagger.csproj", "{986CE90B-9F4F-4DEF-8C2C-9BFD8F6A1855}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Win.Common", "VpnHood.Client.App.Win.Common\VpnHood.Client.App.Win.Common.csproj", "{BF1D9516-444A-4B12-83C2-F41F8D8F0344}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Win.Common", "VpnHood.Client.App.Libs\VpnHood.Client.App.Win.Common\VpnHood.Client.App.Win.Common.csproj", "{BF1D9516-444A-4B12-83C2-F41F8D8F0344}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.WebServer", "VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj", "{28C9E8D4-8288-4A32-8B5C-8892B9C6958C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.WebServer", "VpnHood.Client.App.Libs\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj", "{28C9E8D4-8288-4A32-8B5C-8892B9C6958C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{B06C66A0-47AA-4894-A794-8FAE74DB271F}"
 EndProject
@@ -61,7 +61,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.Connect.Google", "VpnHood.Apps\VpnHood.Client.App.Android.Connect\VpnHood.Client.App.Android.Connect.Google.csproj", "{93CA0868-8D4E-470F-ACEA-253BDAE2EDB7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.Common", "VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj", "{D6C362F7-9679-4482-9260-DAEA9F91D51C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.Common", "VpnHood.Client.App.Libs\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj", "{D6C362F7-9679-4482-9260-DAEA9F91D51C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{18FA0808-ABCC-481B-A596-F9304363675A}"
 	ProjectSection(SolutionItems) = preProject
@@ -72,29 +72,29 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{18FA0808-A
 		Pub\Core\VersionBump.ps1 = Pub\Core\VersionBump.ps1
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.GooglePlay", "VpnHood.Client.App.Android.GooglePlay\VpnHood.Client.App.Android.GooglePlay.csproj", "{0F4C6018-BE2F-4041-8816-F2E4E95CCDBC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.GooglePlay", "VpnHood.Client.App.Libs\VpnHood.Client.App.Android.GooglePlay\VpnHood.Client.App.Android.GooglePlay.csproj", "{0F4C6018-BE2F-4041-8816-F2E4E95CCDBC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Store", "VpnHood.Client.App.Store\VpnHood.Client.App.Store.csproj", "{EACB2DB6-65D0-49C6-8634-DC72140BE82F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Store", "VpnHood.Client.App.Libs\VpnHood.Client.App.Store\VpnHood.Client.App.Store.csproj", "{EACB2DB6-65D0-49C6-8634-DC72140BE82F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Android", "Android", "{DC9319F3-8348-498C-9A5B-77399106DB10}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Windows", "Windows", "{BD1C4F74-C48B-4302-90C3-0B7243C0DD20}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.GooglePlay.Core", "VpnHood.Client.App.Android.GooglePlay.Core\VpnHood.Client.App.Android.GooglePlay.Core.csproj", "{2701D6B3-7E6A-43B6-B285-4BB434DA48CC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.GooglePlay.Core", "VpnHood.Client.App.Libs\VpnHood.Client.App.Android.GooglePlay.Core\VpnHood.Client.App.Android.GooglePlay.Core.csproj", "{2701D6B3-7E6A-43B6-B285-4BB434DA48CC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Maui.Common", "VpnHood.Client.App.Maui.Common\VpnHood.Client.App.Maui.Common.csproj", "{1300A1A6-F165-4894-A11D-D8B1E27F6516}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Maui.Common", "VpnHood.Client.App.Libs\VpnHood.Client.App.Maui.Common\VpnHood.Client.App.Maui.Common.csproj", "{1300A1A6-F165-4894-A11D-D8B1E27F6516}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Maui", "Maui", "{5796A333-9E01-484E-88BA-FE2291CA8932}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Abstractions", "VpnHood.Client.App.Abstractions\VpnHood.Client.App.Abstractions.csproj", "{235F3F4A-F075-477D-9923-FE2360FB7EEA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Abstractions", "VpnHood.Client.App.Libs\VpnHood.Client.App.Abstractions\VpnHood.Client.App.Abstractions.csproj", "{235F3F4A-F075-477D-9923-FE2360FB7EEA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.Ads.AdMob", "VpnHood.Client.App.Android.Ads.AdMob\VpnHood.Client.App.Android.Ads.AdMob.csproj", "{D666EB32-78AA-4F7B-9CE0-D430C34E3118}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.Ads.AdMob", "VpnHood.Client.App.Libs\VpnHood.Client.App.Android.Ads.AdMob\VpnHood.Client.App.Android.Ads.AdMob.csproj", "{D666EB32-78AA-4F7B-9CE0-D430C34E3118}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.NetTester", "Tests\VpnHood.NetTester\VpnHood.NetTester.csproj", "{BC0CE9CB-1490-4AC6-B2C5-100EE5025AD6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Server.Access.FileAccessManager", "VpnHood.Server.Access.FileAccessManager\VpnHood.Server.Access.FileAccessManager.csproj", "{4D625537-609E-4BFC-BD67-32285805A814}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Win.Common.WpfSpa", "VpnHood.Client.App.Win.Common.WpfSpa\VpnHood.Client.App.Win.Common.WpfSpa.csproj", "{52DF241C-B8FB-4EDC-A247-199A306A77D0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Win.Common.WpfSpa", "VpnHood.Client.App.Libs\VpnHood.Client.App.Win.Common.WpfSpa\VpnHood.Client.App.Win.Common.WpfSpa.csproj", "{52DF241C-B8FB-4EDC-A247-199A306A77D0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Win.Connect", "VpnHood.Apps\VpnHood.Client.App.Win.Connect\VpnHood.Client.App.Win.Connect.csproj", "{AF705FAC-B638-4F81-9621-E2ACC808FFA0}"
 EndProject

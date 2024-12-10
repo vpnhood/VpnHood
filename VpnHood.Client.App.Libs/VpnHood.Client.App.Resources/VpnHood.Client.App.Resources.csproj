@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Readymade Vpn App skeleton for VpnHood clients. You just need to create an UI on it.</Description>
+		<Description>UI Resources for client such as strings and icons.</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
 	</PropertyGroup>
 
@@ -24,11 +24,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Client.App.Abstractions\VpnHood.Client.App.Abstractions.csproj" />
-		<ProjectReference Include="..\VpnHood.Client\VpnHood.Client.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
 			<PackagePath></PackagePath>
@@ -36,14 +31,22 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Update="Resource.Designer.cs">
+	  <ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Update="EmbeddedResource.Designer.cs">
 			<DesignTime>True</DesignTime>
 			<AutoGen>True</AutoGen>
-			<DependentUpon>Resource.resx</DependentUpon>
+			<DependentUpon>EmbeddedResource.resx</DependentUpon>
 		</Compile>
-		<EmbeddedResource Update="Resource.resx">
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Update="EmbeddedResource.resx">
+			<SubType>Designer</SubType>
 			<Generator>ResXFileCodeGenerator</Generator>
-			<LastGenOutput>Resource.Designer.cs</LastGenOutput>
+			<LastGenOutput>EmbeddedResource.Designer.cs</LastGenOutput>
 		</EmbeddedResource>
 	</ItemGroup>
 

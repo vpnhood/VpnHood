@@ -59,8 +59,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
-		<ProjectReference Include="..\..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.App.Libs\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.App.Libs\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
 	</ItemGroup>
 
 </Project>

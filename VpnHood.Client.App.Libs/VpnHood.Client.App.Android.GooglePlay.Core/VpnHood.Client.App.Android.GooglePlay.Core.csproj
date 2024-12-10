@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>UI Resources for client such as strings and icons.</Description>
-		<TargetFramework>netstandard2.1</TargetFramework>
+		<Description>VpnHood Android Client App Common Library for Google Core</Description>
+		<TargetFramework>net9.0-android35.0</TargetFramework>
+		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+		<RootNamespace>VpnHood.Client.App.Droid.GooglePlay</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,11 +23,8 @@
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<Version>5.0.608</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+		<BaseIntermediateOutputPath />
 	</PropertyGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
-	</ItemGroup>
 
 	<ItemGroup>
 		<None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
@@ -35,19 +34,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Update="EmbeddedResource.Designer.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>EmbeddedResource.resx</DependentUpon>
-		</Compile>
+	  <PackageReference Include="Xamarin.Google.Android.Play.Core" Version="1.10.3.15" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Update="EmbeddedResource.resx">
-			<SubType>Designer</SubType>
-			<Generator>ResXFileCodeGenerator</Generator>
-			<LastGenOutput>EmbeddedResource.Designer.cs</LastGenOutput>
-		</EmbeddedResource>
+	  <ProjectReference Include="..\VpnHood.Client.App.Abstractions\VpnHood.Client.App.Abstractions.csproj" />
+	  <ProjectReference Include="..\..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
 	</ItemGroup>
 
 </Project>

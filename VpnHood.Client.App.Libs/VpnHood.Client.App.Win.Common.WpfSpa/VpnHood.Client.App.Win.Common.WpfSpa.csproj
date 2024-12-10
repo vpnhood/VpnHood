@@ -1,9 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Android Client App Common Library</Description>
-		<TargetFramework>net9.0-android35.0</TargetFramework>
-		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.Client.App.Droid.Common</RootNamespace>
+		<Description>Shared library for VpnHood Windows WPF Clients using SPA.</Description>
+		<TargetFramework>netstandard2.1</TargetFramework>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -23,20 +21,32 @@
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<Version>5.0.608</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
-		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
 	<ItemGroup>
 		<None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
-			<Pack>True</Pack>
 			<PackagePath></PackagePath>
+			<Pack>True</Pack>
 		</None>
 	</ItemGroup>
 
+	<PropertyGroup>
+		<TargetFramework>net9.0-windows</TargetFramework>
+		<Nullable>enable</Nullable>
+		<UseWPF>true</UseWPF>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App.Win.Common\VpnHood.Client.App.Win.Common.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+	</ItemGroup>
+
+
 
 </Project>

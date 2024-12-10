@@ -1,0 +1,27 @@
+services:
+  vpnhoodserver:
+    image: vpnhood/vpnhoodserver
+    container_name: VpnHoodServer
+    network_mode: "host"
+    restart: always
+    stop_grace_period: 30s
+    volumes:
+        - /opt/VpnHoodServer/storage:/app/storage
+    labels:
+        - "com.centurylinklabs.watchtower.scope=vpnhood"
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: VpnHoodUpdater
+    command: VpnHoodUpdater VpnHoodServer
+    restart: always
+    volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+        - WATCHTOWER_CLEANUP=true
+        - WATCHTOWER_LABEL_ENABLE=true
+        - WATCHTOWER_INCLUDE_RESTARTING=true
+        - WATCHTOWER_SCOPE=vpnhood
+    labels:
+        - "com.centurylinklabs.watchtower.enable=true"
+        - "com.centurylinklabs.watchtower.scope=vpnhood"

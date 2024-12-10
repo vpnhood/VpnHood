@@ -1,5 +1,4 @@
-﻿using Android.Content.PM;
-using Android.Content.Res;
+﻿using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
@@ -81,20 +80,32 @@ public class AndroidAppWebViewMainActivityHandler(
         }
     }
 
-    private static int GetWebViewVersion(PackageManager? packageManager)
+    private static string GetChromeVersionFromUserAgent(string? userAgent)
+    {
+        if (userAgent == null) 
+            throw new ArgumentNullException(nameof(userAgent));
+
+        var parts = userAgent.Split("Chrome/");
+        if (parts.Length < 2)
+            throw new ArgumentException("Could not extract Chrome version from user agent.");
+
+        return  parts[1].Split(' ').First();
+    }
+
+    private static int GetWebViewVersion(WebView webView)
     {
         var versionName = OperatingSystem.IsAndroidVersionAtLeast(26)
             ? WebView.CurrentWebViewPackage?.VersionName
-            : packageManager?.GetPackageInfo("com.google.android.webview", 0)?.VersionName;
+            : GetChromeVersionFromUserAgent(webView.Settings.UserAgentString);
 
         var parts = versionName?.Split('.');
         return parts?.Length > 0 ? int.Parse(parts[0]) : 0;
     }
 
-    private string GetLaunchUrl()
+    private string GetLaunchUrl(WebView webView)
     {
         var mainUrl = $"{VpnHoodAppWebServer.Instance.Url}?nocache={VpnHoodAppWebServer.Instance.SpaHash}";
-        if (GetWebViewVersion(ActivityEvent.Activity.PackageManager) >= options.WebViewRequiredVersion || options.WebViewUpgradeUrl == null )
+        if (GetWebViewVersion(webView) >= options.WebViewRequiredVersion || options.WebViewUpgradeUrl == null )
             return mainUrl;
 
         var upgradeUrl = options.WebViewUpgradeUrl.IsAbsoluteUri
@@ -125,7 +136,7 @@ public class AndroidAppWebViewMainActivityHandler(
 #if DEBUG
             WebView.SetWebContentsDebuggingEnabled(true);
 #endif
-            WebView.LoadUrl(GetLaunchUrl());
+            WebView.LoadUrl(GetLaunchUrl(WebView));
         }
         catch (Exception ex) {
             WebViewCreateException = ex;

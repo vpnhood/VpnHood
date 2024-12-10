@@ -3,5 +3,5 @@
 public class AppOptionsEx(string appId) : AppOptions(appId)
 {
     public bool ListenToAllIps { get; init; }
-    public int DefaultSpaPort { get; init; } = 80;
+    public int? DefaultSpaPort { get; init; } = 80;
 }

@@ -3,7 +3,6 @@ param(
 	[Parameter(Mandatory=$true)] [String]$packageFileTitle,
 	[Parameter(Mandatory=$true)] [String]$packageId,
 	[Parameter(Mandatory=$true)] [String]$distribution,
-	[Parameter(Mandatory=$true)] [String]$background,
 	[switch]$apk, [switch]$aab)
 
 . "$PSScriptRoot/Common.ps1"
@@ -42,10 +41,6 @@ $appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
 Write-Host;
 Write-Host "*** Creating $module_packageFileName ..." -BackgroundColor Blue -ForegroundColor White;
 
-# set app icon
-$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/$background");
-$appIconXmlDoc.save($appIconXml);
-
 # ------------- apk
 if ($apk)
 {
@@ -64,10 +59,9 @@ if ($apk)
 		UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_infoFileName";
 		PackageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
 		InstallationPageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
-		GooglePlayUrl = "https://play.google.com/store/apps/details?id=$packageId";
 		ReleaseDate = "$releaseDate";
 		DeprecatedVersion = "$deprecatedVersion";
-		NotificationDelay = "03.00:00:00";
+		NotificationDelay = "03:00:00";
 	};
 
 	$json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII;
@@ -91,13 +85,8 @@ if ($aab)
 			/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 			/p:ApplicationId=$packageId `
 			/p:SolutionDir=$solutionDir `
-			/p:DefineConstants=GOOGLE_PLAY `
 			/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
 }
-
-# restore standard icon
-$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_web");
-$appIconXmlDoc.save($appIconXml);
 
 # copy to module
 Copy-Item -path $signedPacakgeFile -Destination $module_packageFile -Force

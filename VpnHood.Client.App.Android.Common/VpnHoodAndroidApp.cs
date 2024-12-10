@@ -1,5 +1,6 @@
 ﻿using Android.Runtime;
 using VpnHood.Client.Device.Droid;
+using VpnHood.Client.Device.Droid.Utils;
 
 namespace VpnHood.Client.App.Droid.Common;
 
@@ -17,6 +18,7 @@ public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership
             var options = CreateAppOptions();
             options.UiProvider ??= new AndroidUiProvider();
             options.CultureProvider ??= AndroidAppCultureProvider.CreateIfSupported();
+            options.DeviceId ??= AndroidUtil.GetDeviceId(this); //this will be hashed using AppId
 
             var vpnHoodDevice = AndroidDevice.Create();
             var vpnHoodApp = VpnHoodApp.Init(vpnHoodDevice, options);

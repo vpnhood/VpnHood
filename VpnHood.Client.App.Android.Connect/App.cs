@@ -12,19 +12,20 @@ using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.Store;
 using VpnHood.Client.Device.Droid.Utils;
 using VpnHood.Common.Logging;
+using VpnHood.Client.App.Droid.Common.Constants;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
 [Application(
-    Label = "@string/app_name",
-    Icon = "@mipmap/appicon",
-    Banner = "@mipmap/banner", // for TV
-    NetworkSecurityConfig = "@xml/network_security_config", // required for localhost
-    SupportsRtl = true, AllowBackup = true)]
+    Label = AndroidAppConstants.Label,
+    Icon = AndroidAppConstants.Icon,
+    Banner = AndroidAppConstants.Banner,
+    NetworkSecurityConfig = AndroidAppConstants.NetworkSecurityConfig,
+    SupportsRtl = AndroidAppConstants.SupportsRtl,
+    AllowBackup = AndroidAppConstants.AllowBackup)]
 [MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AppConfigs.AdMobApplicationId)]
 [MetaData("com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION", Value = "true")]
 [MetaData("com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING", Value = "true")]
-
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
@@ -65,12 +66,10 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
             UpdaterProvider = new GooglePlayAppUpdaterProvider(),
-            CultureProvider = AndroidAppCultureProvider.CreateIfSupported(),
             AccountProvider = CreateAppAccountProvider(appConfigs, storageFolderPath),
             AdProviderItems = CreateAppAdProviderItems(appConfigs),
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Tracker = _analytics != null ? new AnalyticsTracker(_analytics) : null,
-            UiProvider = new AndroidUiProvider(),
             LogAnonymous = !AppConfigs.IsDebugMode,
             AdOptions = new AppAdOptions {
                 PreloadAd = true

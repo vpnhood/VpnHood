@@ -86,12 +86,15 @@ if ($clientAndroid) {
 # publish android
 if ($connectAndroid) {	
 	& "$solutionDir/VpnHood.Client.App.Android.connect/_publish_aab.ps1";
+	& "$solutionDir/VpnHood.Client.App.Android.connect.web/_publish.ps1";
 }
 
 
 # distribute
 if ($distribute) {
-	& "$PSScriptRoot/PublishToGitHub.ps1";
+    & "$PSScriptRoot/PublishToGitHub.ps1" `
+		-mainRepo ($clientWin -or $clientAndroid -or $server) `	
+		-connectRepo ($connectWin -or $connectAndroid);
 }
 
 

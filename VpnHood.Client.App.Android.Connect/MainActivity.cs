@@ -1,22 +1,19 @@
 using Android.Content;
-using Android.Content.PM;
 using Android.Service.QuickSettings;
-using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;
+using VpnHood.Client.App.Droid.Common.Constants;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
 [Activity(
-    Label = "@string/app_name",
-    Theme = "@android:style/Theme.DeviceDefault.NoActionBar",
     MainLauncher = true,
-    Exported = true,
-    WindowSoftInputMode = SoftInput.AdjustResize, // resize app when keyboard is shown
-    // LaunchMode = LaunchMode.SingleInstance, If enabled, reopening the app after minimizing it will not show the ad activity
-    ScreenOrientation = ScreenOrientation.Unspecified,
-    ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |
-                           ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale |
-                           ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
+    Label = AndroidMainActivityConstants.Label,
+    Theme = AndroidMainActivityConstants.Theme,
+    LaunchMode = AndroidMainActivityConstants.LaunchMode, 
+    Exported = AndroidMainActivityConstants.Exported,
+    WindowSoftInputMode = AndroidMainActivityConstants.WindowSoftInputMode,
+    ScreenOrientation = AndroidMainActivityConstants.ScreenOrientation,
+    ConfigurationChanges = AndroidMainActivityConstants.ConfigChanges)]
 [IntentFilter([Intent.ActionMain], Categories = [Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher])]
 [IntentFilter([TileService.ActionQsTilePreferences])]
 

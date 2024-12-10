@@ -4,11 +4,13 @@ param(
 $ErrorActionPreference = "Stop";
 
 $solutionDir = Split-Path -parent (Split-Path -parent $PSScriptRoot);
+$vhDir = Split-Path -parent $solutionDir;
 $pubDir = "$solutionDir/Pub";
 $msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe";
 $credentials = (Get-Content "$solutionDir/../.user/credentials.json" | Out-String | ConvertFrom-Json);
 $nugetApiKey = $credentials.NugetApiKey;
 $msverbosity = "minimal";
+
 
 # Version
 . "$PSScriptRoot/VersionBump.ps1" -versionFile "$pubDir/PubVersion.json" -bump $bump;
@@ -22,6 +24,9 @@ $packageConnectDirName = "VpnHoodConnect";
 # Prepare the latest folder
 $packagesRootDirLatest = "$pubDir/bin/latest" + (&{if($isLatest) {""} else {"/????"}});
 $moduleGooglePlayLastestDir = "$solutionDir/pub/Android.GooglePlay/apk/latest";
+
+# Release root such as latet or pre-release folder
+$releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootDir}})
 
 # ZipFiles, PowerShell Compression has a bug and does not respoect slash for linux
 function ZipFiles([string]$Path, [string]$DestinationPath)

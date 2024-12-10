@@ -13,7 +13,7 @@
 * Update: Add token tags
 * Update: Add server tags
 * Update: Generate anonymous client ID from device ID
-* Update: Detect client country for exclude my country
+* Update: Detect client country to exclude my country
 * Fix: Startup crash on some Android devices
 * Fix: IPv6 Ping
 

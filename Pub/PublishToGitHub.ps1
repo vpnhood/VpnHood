@@ -1,3 +1,8 @@
+param( 
+	[Parameter(Mandatory=$true)][object]$mainRepo,
+	[Parameter(Mandatory=$true)][object]$connectRepo
+	);
+
 . "$PSScriptRoot/Core/Common.ps1"
 
 # update CHANGELOG
@@ -44,7 +49,6 @@ if (!$prerelease)
 }
 
 # publish using github CLI: https://github.com/github/hub
-$releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootDir}})
 $androidGoogleLatestDir = Join-Path $pubDir "Android.GooglePlay/apk/latest";
 
 gh release create "$versionTag" `

@@ -1,2 +1,6 @@
-& "$PSScriptRoot/../Pub/Core/PublishAndroidApp.ps1" $PSScriptRoot "VpnHoodClient" `
-	"com.vpnhood.client.android" "google" "appicon_background" -aab;
+& "$PSScriptRoot/../Pub/Core/PublishAndroidApp.ps1" $PSScriptRoot  `
+	-packageFileTitle "VpnHoodClient" `
+	-packageId "com.vpnhood.client.android" `
+	-distribution "google" `
+	-aab;
+

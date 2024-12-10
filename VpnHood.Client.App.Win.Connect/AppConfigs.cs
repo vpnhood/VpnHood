@@ -10,7 +10,7 @@ internal class AppConfigs : Singleton<AppConfigs>
     public string? UpdateInfoUrl { get; init; }
     public bool ListenToAllIps { get; init; } = IsDebugMode;
     public bool AllowEndPointTracker { get; init; }
-    public int DefaultSpaPort { get; init; } = IsDebugMode ? 9571 : 80;
+    public int? DefaultSpaPort { get; init; } = IsDebugMode ? 9571 : 80;
     public string? Ga4MeasurementId { get; init; }
 
     // This is a test access key, you should replace it with your own access key.

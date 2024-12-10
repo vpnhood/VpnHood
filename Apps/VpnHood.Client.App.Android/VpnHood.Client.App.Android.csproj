@@ -45,10 +45,11 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.App.Android.GooglePlay.Core\VpnHood.Client.App.Android.GooglePlay.Core.csproj" />
 	</ItemGroup>
 
 </Project>

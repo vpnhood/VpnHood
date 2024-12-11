@@ -18,7 +18,7 @@ using VpnHood.Client.App.Abstractions;
 [assembly: UsesPermission(Name = "com.google.android.gms.permission.AD_ID")] // InMobi
 
 
-namespace VpnHood.Client.App.Droid.Connect.Properties;
+namespace VpnHood.Client.App.Android.Client.Google.Properties;
 
 public static class AssemblyInfo
 {

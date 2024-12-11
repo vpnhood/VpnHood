@@ -51,7 +51,6 @@
 		<ProjectReference Include="..\..\VpnHood.Client.App.Libs\VpnHood.Client.App.Win.Common.WpfSpa\VpnHood.Client.App.Win.Common.WpfSpa.csproj" />
 		<ProjectReference Include="..\..\VpnHood.Client.App.Libs\VpnHood.Client.App.Win.Common\VpnHood.Client.App.Win.Common.csproj" />
 		<ProjectReference Include="..\..\VpnHood.Client.App.Libs\VpnHood.Client.App\VpnHood.Client.App.csproj" />
-		<ProjectReference Include="..\..\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -25,7 +25,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.App.Abstractions\VpnHood.Client.App.Abstractions.csproj" />
-		<ProjectReference Include="..\..\VpnHood.Client\VpnHood.Client.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Core.Libs\VpnHood.Client\VpnHood.Client.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

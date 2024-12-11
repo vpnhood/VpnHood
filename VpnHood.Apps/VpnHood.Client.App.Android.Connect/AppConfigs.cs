@@ -1,12 +1,16 @@
-using VpnHood.Common.Utils;
+using VpnHood.Client.App.Utils;
 
 // ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo
-
 namespace VpnHood.Client.App.Android.Client.Google;
 
-internal class AppConfigs : Singleton<AppConfigs>
+internal class AppConfigs : AppConfigsBase<AppConfigs>
 {
+    public string AppName { get; init; } = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
+    public Uri? UpdateInfoUrl { get; init; } = new ("https://github.com/vpnhood/VpnHood.Client.App.Connect/releases/latest/download/VpnHoodConnect-Android.json");
+    public int? SpaDefaultPort { get; init; }= IsDebugMode ? 9571 : 9570;
+    public bool SpaListenToAllIps { get; init; } = IsDebugMode;
+
     // This is a test access key, you should replace it with your own access key.
     // It is limited and can not be used in production.
     public string DefaultAccessKey { get; init; } = ClientOptions.SampleAccessKey;
@@ -21,6 +25,7 @@ internal class AppConfigs : Singleton<AppConfigs>
     public Guid StoreAppId { get; init; } =
         Guid.Parse("00000000-0000-0000-0000-000000000000"); //YOUR_VPNHOOD_STORE_APP_ID
 
+    public bool StoreIgnoreSslVerification { get; init; } = IsDebugMode;
 
     // AdMob
     // Default value is AdMob test AdUnit id, References: https://developers.google.com/admob/android/test-ads
@@ -38,8 +43,7 @@ internal class AppConfigs : Singleton<AppConfigs>
     // Inmobi
     public string InmobiAccountId { get; init; } = "000000000000000000000000"; //YOUR_INMMOBI_ACCOUNT_ID
     public string InmobiPlacementId { get; init; } = "000000000000"; //YOUR_INMOBI_PLACEMENT_ID
-    public bool InmobiIsDebugMode { get; init; } = App.IsDebugMode;
-    
+    public bool InmobiIsDebugMode { get; init; } = IsDebugMode;
 
     public static AppConfigs Load()
     {
@@ -49,10 +53,10 @@ internal class AppConfigs : Singleton<AppConfigs>
         return appConfigs;
     }
 
-    private void Merge(string configName)
-    {
-        var json = VhUtil.GetAssemblyMetadata(typeof(AppConfigs).Assembly, configName, "");
-        if (!string.IsNullOrEmpty(json)) 
-            JsonSerializerExt.PopulateObject(this, json);
-    }
+#if DEBUG
+    public static bool IsDebugMode => true;
+#else
+    public static bool IsDebugMode => false;
+#endif
+
 }

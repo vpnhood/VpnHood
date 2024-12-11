@@ -1,16 +1,20 @@
-using VpnHood.Common.Utils;
+using VpnHood.Client.App.Utils;
 
 // ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo
-
 namespace VpnHood.Client.App.Droid.Connect.Web;
 
-internal class AppConfigs : Singleton<AppConfigs>
+internal class AppConfigs : AppConfigsBase<AppConfigs>
 {
+    public string AppName { get; init; } = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
+    public Uri? UpdateInfoUrl { get; init; } = new("https://github.com/vpnhood/VpnHood.Client.App.Connect/releases/latest/download/VpnHoodConnect-Android-web.json");
+    public int? SpaDefaultPort { get; init; } = IsDebugMode ? 9571 : 9570;
+    public bool SpaListenToAllIps { get; init; } = IsDebugMode;
+    public bool AllowEndPointTracker { get; init; } = true;
+    public string? Ga4MeasurementId { get; init; }
     // SampleAccessKey is a test access key, you should replace it with your own access key.
     // It is limited and can not be used in production.
     public string DefaultAccessKey { get; init; } = ClientOptions.SampleAccessKey;
-    public string? Ga4MeasurementId { get; init; }
 
     public static AppConfigs Load()
     {
@@ -20,10 +24,9 @@ internal class AppConfigs : Singleton<AppConfigs>
         return appConfigs;
     }
 
-    private void Merge(string configName)
-    {
-        var json = VhUtil.GetAssemblyMetadata(typeof(AppConfigs).Assembly, configName, "");
-        if (!string.IsNullOrEmpty(json)) 
-            JsonSerializerExt.PopulateObject(this, json);
-    }
+#if DEBUG
+    public static bool IsDebugMode => true;
+#else
+    public static bool IsDebugMode => false;
+#endif
 }

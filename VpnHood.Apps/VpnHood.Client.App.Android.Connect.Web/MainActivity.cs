@@ -22,8 +22,8 @@ public class MainActivity : AndroidAppMainActivity
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions {
-            SpaDefaultPort = App.SpaDefaultPort,
-            SpaListenToAllIps = App.SpaListenToAllIps 
+            SpaDefaultPort = AppConfigs.Instance.SpaDefaultPort,
+            SpaListenToAllIps = AppConfigs.Instance.SpaListenToAllIps 
         });
     }
 }

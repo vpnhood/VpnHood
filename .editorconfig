@@ -21,6 +21,7 @@ csharp_style_expression_bodied_local_functions = false:silent
 csharp_space_around_binary_operators = before_and_after
 csharp_style_allow_blank_lines_between_consecutive_braces_experimental = true:silent
 csharp_new_line_before_open_brace = types,methods
+csharp_prefer_system_threading_lock = true:suggestion
 
 [*.{cs,vb}]
 #### Naming styles ####
@@ -78,3 +79,5 @@ dotnet_style_null_propagation = true:suggestion
 dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
 dotnet_style_prefer_auto_properties = true:silent
 dotnet_style_namespace_match_folder = true:suggestion
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_collection_initializer = true:suggestion

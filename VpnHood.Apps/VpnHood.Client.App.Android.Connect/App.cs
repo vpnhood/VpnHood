@@ -11,7 +11,6 @@ using VpnHood.Client.App.Droid.Common.Constants;
 using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.Store;
-using VpnHood.Client.Device.Droid.Utils;
 using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Android.Client.Google;
@@ -30,47 +29,36 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
     private FirebaseAnalytics? _analytics;
+    public static int? SpaDefaultPort => IsDebugMode ? 9581 : 9580;
+    public static bool SpaListenToAllIps => IsDebugMode;
 
     protected override AppOptions CreateAppOptions()
     {
         // initialize Firebase services
-        try {
-            _analytics = FirebaseAnalytics.GetInstance(this);
-        }
-        catch {
-            /* ignored*/
-        }
-
-        try {
-            FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(Java.Lang.Boolean.True);
-        }
-        catch {
-            /* ignored */
-        }
+        try { _analytics = FirebaseAnalytics.GetInstance(this); } catch { /* ignored*/ }
+        try { FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(Java.Lang.Boolean.True); } catch { /* ignored */ }
 
         // load app settings and resources
         var storageFolderPath = AppOptions.BuildStorageFolderPath(PackageName!);
         var resources = DefaultAppResource.Resources;
-        resources.Strings.AppName = "VpnHood! CONNECT";
+        resources.Strings.AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
 
         var appConfigs = AppConfigs.Load();
-        return new AppOptions(appId: PackageName!) {
+        return new AppOptions(appId: PackageName!, IsDebugMode) {
             StorageFolderPath = storageFolderPath,
-            DeviceId = AndroidUtil.GetDeviceId(this), //this will be hashed using AppId
             AccessKeys = [appConfigs.DefaultAccessKey],
             Resource = resources,
-            UpdateInfoUrl = appConfigs.UpdateInfoUrl != null ? new Uri(appConfigs.UpdateInfoUrl) : null,
+            UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodConnect-android.json"),
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
             UpdaterProvider = new GooglePlayAppUpdaterProvider(),
             AccountProvider = CreateAppAccountProvider(appConfigs, storageFolderPath),
             AdProviderItems = CreateAppAdProviderItems(appConfigs),
-            AllowEndPointTracker = appConfigs.AllowEndPointTracker,
+            AllowEndPointTracker = _analytics != null,
             Tracker = _analytics != null ? new AnalyticsTracker(_analytics) : null,
-            LogAnonymous = !AppConfigs.IsDebugMode,
             AdOptions = new AppAdOptions {
                 PreloadAd = true
             }
@@ -124,7 +112,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         try {
             var authenticationExternalProvider = new GooglePlayAuthenticationProvider(appConfigs.GoogleSignInClientId);
             var authenticationProvider = new StoreAuthenticationProvider(storageFolderPath, new Uri(appConfigs.StoreBaseUri),
-                appConfigs.StoreAppId, authenticationExternalProvider, appConfigs.StoreIgnoreSslVerification);
+                appConfigs.StoreAppId, authenticationExternalProvider, ignoreSslVerification: IsDebugMode);
             var googlePlayBillingProvider = new GooglePlayBillingProvider(authenticationProvider);
             var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider, appConfigs.StoreAppId);
             return accountProvider;
@@ -134,4 +122,10 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             return null;
         }
     }
+
+#if DEBUG
+    public static bool IsDebugMode => true;
+#else
+    public static bool IsDebugMode => false;
+#endif
 }

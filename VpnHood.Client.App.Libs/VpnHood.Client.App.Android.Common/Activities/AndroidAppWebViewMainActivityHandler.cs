@@ -27,7 +27,7 @@ public class AndroidAppWebViewMainActivityHandler(
         if (!VpnHoodAppWebServer.IsInit) {
             ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resource.SpaZipData);
             using var memoryStream = new MemoryStream(VpnHoodApp.Instance.Resource.SpaZipData);
-            VpnHoodAppWebServer.Init(memoryStream, options.DefaultSpaPort, listenToAllIps: options.ListenToAllIps);
+            VpnHoodAppWebServer.Init(memoryStream, options.SpaDefaultPort, listenToAllIps: options.SpaListenToAllIps);
         }
 
         InitWebUi();

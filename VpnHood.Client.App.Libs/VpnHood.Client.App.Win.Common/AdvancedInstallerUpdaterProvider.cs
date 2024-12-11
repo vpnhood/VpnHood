@@ -8,7 +8,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Win.Common;
 
-public class WinAppUpdaterProvider : IAppUpdaterProvider
+public class AdvancedInstallerUpdaterProvider : IAppUpdaterProvider
 {
     // return false if the app update system does not work
     public async Task<bool> Update(IUiContext uiContext)

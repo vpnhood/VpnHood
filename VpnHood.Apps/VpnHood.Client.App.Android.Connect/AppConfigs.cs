@@ -7,11 +7,6 @@ namespace VpnHood.Client.App.Android.Client.Google;
 
 internal class AppConfigs : Singleton<AppConfigs>
 {
-    public string? UpdateInfoUrl { get; init; }
-    public bool ListenToAllIps { get; init; } = IsDebugMode;
-    public bool AllowEndPointTracker { get; init; }
-    public int? DefaultSpaPort { get; init; } = IsDebugMode ? 9571 : 9570;
-
     // This is a test access key, you should replace it with your own access key.
     // It is limited and can not be used in production.
     public string DefaultAccessKey { get; init; } = ClientOptions.SampleAccessKey;
@@ -26,7 +21,6 @@ internal class AppConfigs : Singleton<AppConfigs>
     public Guid StoreAppId { get; init; } =
         Guid.Parse("00000000-0000-0000-0000-000000000000"); //YOUR_VPNHOOD_STORE_APP_ID
 
-    public bool StoreIgnoreSslVerification { get; init; } = IsDebugMode;
 
     // AdMob
     // Default value is AdMob test AdUnit id, References: https://developers.google.com/admob/android/test-ads
@@ -44,7 +38,7 @@ internal class AppConfigs : Singleton<AppConfigs>
     // Inmobi
     public string InmobiAccountId { get; init; } = "000000000000000000000000"; //YOUR_INMMOBI_ACCOUNT_ID
     public string InmobiPlacementId { get; init; } = "000000000000"; //YOUR_INMOBI_PLACEMENT_ID
-    public bool InmobiIsDebugMode { get; init; } = IsDebugMode;
+    public bool InmobiIsDebugMode { get; init; } = App.IsDebugMode;
     
 
     public static AppConfigs Load()
@@ -60,15 +54,5 @@ internal class AppConfigs : Singleton<AppConfigs>
         var json = VhUtil.GetAssemblyMetadata(typeof(AppConfigs).Assembly, configName, "");
         if (!string.IsNullOrEmpty(json)) 
             JsonSerializerExt.PopulateObject(this, json);
-    }
-
-    public static bool IsDebugMode {
-        get {
-#if DEBUG
-            return true;
-#else
-            return false;
-#endif
-        }
     }
 }

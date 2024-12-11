@@ -1,10 +1,10 @@
 ﻿using Android.Content;
 using Android.Service.QuickSettings;
+using VpnHood.Client.App.Droid.Client.Google.Properties;
 using VpnHood.Client.App.Droid.Common.Activities;
 using VpnHood.Client.App.Droid.Common.Constants;
-using VpnHood.Client.App.Droid.Properties;
 
-namespace VpnHood.Client.App.Droid;
+namespace VpnHood.Client.App.Droid.Client.Google;
 
 [Activity(
     MainLauncher = true,

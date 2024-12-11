@@ -1,5 +1,4 @@
 ﻿using System.Drawing;
-using System.Security.Principal;
 using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.Win.Common;
 using VpnHood.Client.App.Win.Common.WpfSpa;
@@ -15,32 +14,34 @@ public class App : VpnHoodWpfSpaApp
         app.Run();
     }
 
-    protected override AppOptionsEx CreateAppOptions()
+    protected override AppOptions CreateAppOptions()
     {
         // load app settings and resources
         var resources = DefaultAppResource.Resources;
-        resources.Strings.AppName = "VpnHood! CONNECT";
+        resources.Strings.AppName = IsDebugMode ? "VpnHOOD! Connect (DEBUG)" : "VpnHood! Connect";
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
 
         var appConfigs = AppConfigs.Load();
-        return new AppOptionsEx("com.vpnhood.connect.windows") {
+        return new AppOptions("com.vpnhood.connect.windows", IsDebugMode) {
             UiName = "VpnHoodConnect",
             StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHoodConnect"),
-            DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             Resource = resources,
             AccessKeys = [appConfigs.DefaultAccessKey],
-            UpdateInfoUrl = appConfigs.UpdateInfoUrl != null ? new Uri(appConfigs.UpdateInfoUrl) : null,
-            UpdaterProvider = new WinAppUpdaterProvider(),
+            UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood.Client.App.Connect/releases/latest/download/VpnHoodConnect-win-x64.json"),
+            UpdaterProvider = new AdvancedInstallerUpdaterProvider(),
             IsAddAccessKeySupported = false,
             SingleLineConsoleLog = false,
-            LogAnonymous = !AppConfigs.IsDebugMode,
-            AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             LocalSpaHostName = "my-vpnhood-connect",
-            Ga4MeasurementId = appConfigs.Ga4MeasurementId,
-            ListenToAllIps = appConfigs.ListenToAllIps,
-            DefaultSpaPort = appConfigs.DefaultSpaPort,
+            AllowEndPointTracker = true,
+            Ga4MeasurementId = appConfigs.Ga4MeasurementId
         };
     }
+
+#if DEBUG
+    public override bool IsDebugMode => true;
+#else
+    public override bool IsDebugMode => false;
+#endif
 }

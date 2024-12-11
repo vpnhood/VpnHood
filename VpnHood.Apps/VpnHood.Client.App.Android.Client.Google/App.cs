@@ -1,10 +1,8 @@
 ﻿using Android.Runtime;
-using VpnHood.Client.App.Droid.Client.Google.Properties;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.Common.Constants;
 using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Client.App.Resources;
-using VpnHood.Client.Device.Droid.Utils;
 
 namespace VpnHood.Client.App.Droid.Client.Google;
 
@@ -18,32 +16,27 @@ namespace VpnHood.Client.App.Droid.Client.Google;
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
-    public static int? DefaultSpaPort => AssemblyInfo.IsDebugMode ? 9581 : 9580;
+    public static int? SpaDefaultPort => IsDebugMode ? 9581 : 9580;
+    public static bool SpaListenToAllIps => IsDebugMode;
 
     protected override AppOptions CreateAppOptions()
     {
         var resources = DefaultAppResource.Resources;
-        resources.Strings.AppName = AssemblyInfo.IsDebugMode ? "VpnHOOD! Client (DEBUG)" : "VpnHood! Client";
+        resources.Strings.AppName = IsDebugMode ? "VpnHOOD! CLIENT (DEBUG)" : "VpnHood! CLIENT";
 
-        return new AppOptions(PackageName!) {
-            DeviceId = AndroidUtil.GetDeviceId(this), //this will be hashed using AppId
+        return new AppOptions(PackageName!, IsDebugMode) {
             StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHood"), // for compatibility with old versions
             Resource = resources,
-            AccessKeys = AssemblyInfo.IsDebugMode ? [ClientOptions.SampleAccessKey] : [],
+            AccessKeys = IsDebugMode ? [ClientOptions.SampleAccessKey] : [],
             UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.json"),
             IsAddAccessKeySupported = true,
-            UpdaterProvider = new GooglePlayAppUpdaterProvider(),
-            LogAnonymous = !AssemblyInfo.IsDebugMode
+            UpdaterProvider = new GooglePlayAppUpdaterProvider()
         };
     }
 
-    public static bool IsDebugMode {
-        get {
 #if DEBUG
-            return true;
+    public static bool IsDebugMode => true;
 #else
-            return false;
+    public override bool IsDebugMode => false;
 #endif
-        }
-    }
 }

@@ -2,20 +2,19 @@ using VpnHood.Client.App.Utils;
 
 // ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo
-namespace VpnHood.Client.App.Win.Connect;
+namespace VpnHood.Client.App.Win.Client;
 
 internal class AppConfigs : AppConfigsBase<AppConfigs>
 {
-    public string AppName { get; init; } = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
-    public Uri? UpdateInfoUrl { get; init; } = new ("https://github.com/vpnhood/VpnHood.Client.App.Connect/releases/latest/download/VpnHoodConnect-win-x64.json");
+    public string AppName { get; init; } = IsDebugMode ? "VpnHOOD! CLIENT (DEBUG)" : "VpnHood! CLIENT";
+    public Uri? UpdateInfoUrl { get; init; } = new("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json");
     public int? SpaDefaultPort { get; init; } = IsDebugMode ? 9571 : 80;
     public bool SpaListenToAllIps { get; init; } = IsDebugMode;
+    public string? Ga4MeasurementId { get; init; }
 
     // SampleAccessKey is a test access key, you should replace it with your own access key.
     // It is limited and can not be used in production.
     public string DefaultAccessKey { get; init; } = ClientOptions.SampleAccessKey;
-    public bool AllowEndPointTracker { get; init; } = true;
-    public string? Ga4MeasurementId { get; init; }
 
     public static AppConfigs Load()
     {

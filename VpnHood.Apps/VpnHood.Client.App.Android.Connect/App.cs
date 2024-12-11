@@ -29,11 +29,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
     private FirebaseAnalytics? _analytics;
-    public static int? SpaDefaultPort => IsDebugMode ? 9581 : 9580;
-    public static bool SpaListenToAllIps => IsDebugMode;
 
     protected override AppOptions CreateAppOptions()
     {
+        var appConfigs = AppConfigs.Load();
+
         // initialize Firebase services
         try { _analytics = FirebaseAnalytics.GetInstance(this); } catch { /* ignored*/ }
         try { FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(Java.Lang.Boolean.True); } catch { /* ignored */ }
@@ -41,17 +41,16 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         // load app settings and resources
         var storageFolderPath = AppOptions.BuildStorageFolderPath(PackageName!);
         var resources = DefaultAppResource.Resources;
-        resources.Strings.AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
+        resources.Strings.AppName = appConfigs.AppName;
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
 
-        var appConfigs = AppConfigs.Load();
-        return new AppOptions(appId: PackageName!, IsDebugMode) {
+        return new AppOptions(appId: PackageName!, AppConfigs.IsDebugMode) {
             StorageFolderPath = storageFolderPath,
             AccessKeys = [appConfigs.DefaultAccessKey],
             Resource = resources,
-            UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodConnect-android.json"),
+            UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
             UpdaterProvider = new GooglePlayAppUpdaterProvider(),
@@ -112,7 +111,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         try {
             var authenticationExternalProvider = new GooglePlayAuthenticationProvider(appConfigs.GoogleSignInClientId);
             var authenticationProvider = new StoreAuthenticationProvider(storageFolderPath, new Uri(appConfigs.StoreBaseUri),
-                appConfigs.StoreAppId, authenticationExternalProvider, ignoreSslVerification: IsDebugMode);
+                appConfigs.StoreAppId, authenticationExternalProvider, ignoreSslVerification: appConfigs.StoreIgnoreSslVerification);
             var googlePlayBillingProvider = new GooglePlayBillingProvider(authenticationProvider);
             var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider, appConfigs.StoreAppId);
             return accountProvider;
@@ -122,10 +121,4 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             return null;
         }
     }
-
-#if DEBUG
-    public static bool IsDebugMode => true;
-#else
-    public static bool IsDebugMode => false;
-#endif
 }

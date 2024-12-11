@@ -23,8 +23,8 @@ public class MainActivity : AndroidAppMainActivity
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions {
-            SpaDefaultPort = App.SpaDefaultPort,
-            SpaListenToAllIps = App.SpaListenToAllIps // if true it will cause crash in network change
+            SpaDefaultPort = AppConfigs.Instance.SpaDefaultPort,
+            SpaListenToAllIps = AppConfigs.Instance.SpaListenToAllIps // if true it will cause crash in network change
         });
     }
 }

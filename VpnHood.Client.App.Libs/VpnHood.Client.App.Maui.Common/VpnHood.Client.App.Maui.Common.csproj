@@ -51,18 +51,18 @@
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0-android35.0'">
 		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Core.Libs\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Core.Libs\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0-windows10.0.22621.0'">
-		<ProjectReference Include="..\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Win.Common\VpnHood.Client.App.Win.Common.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Core.Libs\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.Device\VpnHood.Client.Device.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.App.Libs\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Core.Libs\VpnHood.Client.Device\VpnHood.Client.Device.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

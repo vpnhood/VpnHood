@@ -24,7 +24,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\VpnHood.Client.Device\VpnHood.Client.Device.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Core.Libs\VpnHood.Client.Device\VpnHood.Client.Device.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

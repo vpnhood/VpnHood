@@ -6,7 +6,7 @@
 [assembly: UsesFeature("android.software.leanback", Required = false)]
 [assembly: UsesFeature("android.hardware.touchscreen", Required = false)]
 
-namespace VpnHood.Client.App.Droid.Properties;
+namespace VpnHood.Client.App.Droid.Client.Google.Properties;
 
 public static class AssemblyInfo
 {

@@ -3,7 +3,7 @@ using VpnHood.Common.Utils;
 // ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo
 
-namespace VpnHood.Client.App.Droid.Connect;
+namespace VpnHood.Client.App.Android.Client.Google;
 
 internal class AppConfigs : Singleton<AppConfigs>
 {

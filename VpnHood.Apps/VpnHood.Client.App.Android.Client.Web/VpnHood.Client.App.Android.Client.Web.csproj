@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<Description>VpnHood Android Client App</Description>
 		<TargetFramework>net9.0-android35.0</TargetFramework>
-		<RootNamespace>VpnHood.Client.App.Droid</RootNamespace>
+		<RootNamespace>VpnHood.Client.App.Droid.Client.Web</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.client.android.web</ApplicationId>
 		<ApplicationVersion>608</ApplicationVersion>

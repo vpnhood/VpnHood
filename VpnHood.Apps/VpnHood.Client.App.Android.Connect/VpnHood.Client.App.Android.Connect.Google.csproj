@@ -53,8 +53,8 @@
 
 	<ItemGroup>
 		<AndroidResource Update="Resources\xml\locales_config.xml">
-		  <SubType>Designer</SubType>
-		  <Generator>MSBuild:UpdateGeneratedFiles</Generator>
+			<SubType>Designer</SubType>
+			<Generator>MSBuild:UpdateGeneratedFiles</Generator>
 		</AndroidResource>
 	</ItemGroup>
 
@@ -65,18 +65,17 @@
 		<ProjectReference Include="..\..\VpnHood.Client.App.Libs\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
 		<ProjectReference Include="..\..\VpnHood.Client.App.Libs\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
 		<ProjectReference Include="..\..\VpnHood.Client.App.Libs\VpnHood.Client.App.Store\VpnHood.Client.App.Store.csproj" />
-		<ProjectReference Include="..\..\VpnHood.Client.App.Libs\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-    <PackageReference Include="VpnHood.Client.App.Android.Ads.Chartboost" Version="4.5.557" />
-    <PackageReference Include="VpnHood.Client.App.Android.Ads.InMobi" Version="4.5.566" />
-    <PackageReference Include="Xamarin.Firebase.Analytics" Version="122.1.2.1" />
+		<PackageReference Include="VpnHood.Client.App.Android.Ads.Chartboost" Version="4.5.557" />
+		<PackageReference Include="VpnHood.Client.App.Android.Ads.InMobi" Version="4.5.566" />
+		<PackageReference Include="Xamarin.Firebase.Analytics" Version="122.1.2.1" />
 		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="119.2.1.1" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <GoogleServicesJson Include="Properties\google-services.json" />
+		<GoogleServicesJson Include="Properties\google-services.json" />
 	</ItemGroup>
 
 </Project>

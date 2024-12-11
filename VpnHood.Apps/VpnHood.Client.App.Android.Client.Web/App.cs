@@ -1,10 +1,10 @@
 ﻿using Android.Runtime;
+using VpnHood.Client.App.Droid.Client.Web.Properties;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.Common.Constants;
-using VpnHood.Client.App.Droid.Properties;
 using VpnHood.Client.App.Resources;
 
-namespace VpnHood.Client.App.Droid;
+namespace VpnHood.Client.App.Droid.Client.Web;
 
 [Application(
     Label = AndroidAppConstants.Label,

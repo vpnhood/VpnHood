@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Net;
+using System.Security.Principal;
 using System.Windows;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.WebServer;
@@ -11,14 +12,19 @@ namespace VpnHood.Client.App.Win.Common.WpfSpa;
 // ReSharper disable once RedundantExtendsListEntry
 public abstract class VpnHoodWpfSpaApp : Application
 {
-    protected abstract AppOptionsEx CreateAppOptions();
+    protected abstract AppOptions CreateAppOptions();
+    public abstract bool IsDebugMode { get; }
+    public virtual bool ListenToAllIps => IsDebugMode;
+    public virtual int DefaultSpaPort => IsDebugMode ? 9571 : 80;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         try {
-            // initialize WinApp
+            // initialize Ain App
             var appOptions = CreateAppOptions();
+            appOptions.DeviceId ??= WindowsIdentity.GetCurrent().User?.Value;
+
             VpnHoodWinApp.Init(appOptions.AppId, appOptions.StorageFolderPath);
 
             // check command line
@@ -31,10 +37,9 @@ public abstract class VpnHoodWpfSpaApp : Application
             ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resource.SpaZipData);
             using var spaResource = new MemoryStream(VpnHoodApp.Instance.Resource.SpaZipData);
             var localSpaUrl = !string.IsNullOrEmpty(appOptions.LocalSpaHostName)
-                ? VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), appOptions.DefaultSpaPort ?? 80), appOptions.LocalSpaHostName)
+                ? VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), DefaultSpaPort), appOptions.LocalSpaHostName)
                 : null;
-            VpnHoodAppWebServer.Init(spaResource, defaultPort: appOptions.DefaultSpaPort, url: localSpaUrl, 
-                listenToAllIps: appOptions.ListenToAllIps);
+            VpnHoodAppWebServer.Init(spaResource, defaultPort: DefaultSpaPort, url: localSpaUrl, listenToAllIps: ListenToAllIps);
 
             // initialize Win
             VpnHoodWinApp.Instance.ExitRequested += (_, _) => Shutdown();

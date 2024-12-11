@@ -5,18 +5,3 @@
 
 [assembly: UsesFeature("android.software.leanback", Required = false)]
 [assembly: UsesFeature("android.hardware.touchscreen", Required = false)]
-
-namespace VpnHood.Client.App.Droid.Client.Google.Properties;
-
-public static class AssemblyInfo
-{
-    public static bool IsDebugMode {
-        get {
-#if DEBUG
-            return true;
-#else
-            return false;
-#endif
-        }
-    }
-}

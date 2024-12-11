@@ -7,15 +7,11 @@ namespace VpnHood.Client.App.Win.Connect;
 
 internal class AppConfigs : Singleton<AppConfigs>
 {
-    public string? UpdateInfoUrl { get; init; }
-    public bool ListenToAllIps { get; init; } = IsDebugMode;
-    public bool AllowEndPointTracker { get; init; }
-    public int? DefaultSpaPort { get; init; } = IsDebugMode ? 9571 : 80;
-    public string? Ga4MeasurementId { get; init; }
-
-    // This is a test access key, you should replace it with your own access key.
+    // SampleAccessKey is a test access key, you should replace it with your own access key.
     // It is limited and can not be used in production.
     public string DefaultAccessKey { get; init; } = ClientOptions.SampleAccessKey;
+
+    public string? Ga4MeasurementId { get; init; }
 
     public static AppConfigs Load()
     {
@@ -30,15 +26,5 @@ internal class AppConfigs : Singleton<AppConfigs>
         var json = VhUtil.GetAssemblyMetadata(typeof(AppConfigs).Assembly, configName, "");
         if (!string.IsNullOrEmpty(json)) 
             JsonSerializerExt.PopulateObject(this, json);
-    }
-
-    public static bool IsDebugMode {
-        get {
-#if DEBUG
-            return true;
-#else
-            return false;
-#endif
-        }
     }
 }

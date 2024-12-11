@@ -33,8 +33,8 @@ public class MainActivity : AndroidAppMainActivity
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions {
-            DefaultSpaPort = App.DefaultSpaPort,
-            ListenToAllIps = AssemblyInfo.IsDebugMode,
+            SpaDefaultPort = App.SpaDefaultPort,
+            SpaListenToAllIps = App.SpaListenToAllIps,
             AccessKeySchemes = [AccessKeyScheme1, AccessKeyScheme2],
             AccessKeyMimes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3]
         });

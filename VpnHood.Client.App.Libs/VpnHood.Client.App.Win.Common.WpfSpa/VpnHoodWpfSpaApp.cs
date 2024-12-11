@@ -13,9 +13,8 @@ namespace VpnHood.Client.App.Win.Common.WpfSpa;
 public abstract class VpnHoodWpfSpaApp : Application
 {
     protected abstract AppOptions CreateAppOptions();
-    public abstract bool IsDebugMode { get; }
-    public virtual bool ListenToAllIps => IsDebugMode;
-    public virtual int DefaultSpaPort => IsDebugMode ? 9571 : 80;
+    public abstract bool SpaListenToAllIps { get; }
+    public abstract int? SpaDefaultPort { get; }
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -37,9 +36,9 @@ public abstract class VpnHoodWpfSpaApp : Application
             ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resource.SpaZipData);
             using var spaResource = new MemoryStream(VpnHoodApp.Instance.Resource.SpaZipData);
             var localSpaUrl = !string.IsNullOrEmpty(appOptions.LocalSpaHostName)
-                ? VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), DefaultSpaPort), appOptions.LocalSpaHostName)
+                ? VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), SpaDefaultPort ?? 80), appOptions.LocalSpaHostName)
                 : null;
-            VpnHoodAppWebServer.Init(spaResource, defaultPort: DefaultSpaPort, url: localSpaUrl, listenToAllIps: ListenToAllIps);
+            VpnHoodAppWebServer.Init(spaResource, defaultPort: SpaDefaultPort, url: localSpaUrl, listenToAllIps: SpaListenToAllIps);
 
             // initialize Win
             VpnHoodWinApp.Instance.ExitRequested += (_, _) => Shutdown();

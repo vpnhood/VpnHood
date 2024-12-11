@@ -16,27 +16,20 @@ namespace VpnHood.Client.App.Droid.Client.Google;
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
-    public static int? SpaDefaultPort => IsDebugMode ? 9581 : 9580;
-    public static bool SpaListenToAllIps => IsDebugMode;
-
     protected override AppOptions CreateAppOptions()
     {
+        var appConfigs = AppConfigs.Load();
+        
         var resources = DefaultAppResource.Resources;
-        resources.Strings.AppName = IsDebugMode ? "VpnHOOD! CLIENT (DEBUG)" : "VpnHood! CLIENT";
+        resources.Strings.AppName = appConfigs.AppName;
 
-        return new AppOptions(PackageName!, IsDebugMode) {
+        return new AppOptions(PackageName!, AppConfigs.IsDebugMode) {
             StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHood"), // for compatibility with old versions
             Resource = resources,
-            AccessKeys = IsDebugMode ? [ClientOptions.SampleAccessKey] : [],
-            UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.json"),
+            AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
+            UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             IsAddAccessKeySupported = true,
             UpdaterProvider = new GooglePlayAppUpdaterProvider()
         };
     }
-
-#if DEBUG
-    public static bool IsDebugMode => true;
-#else
-    public override bool IsDebugMode => false;
-#endif
 }

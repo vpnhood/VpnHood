@@ -14,27 +14,26 @@ public class App : VpnHoodWpfSpaApp
         app.Run();
     }
 
+    public override bool SpaListenToAllIps => AppConfigs.Instance.SpaListenToAllIps;
+    public override int? SpaDefaultPort => AppConfigs.Instance.SpaDefaultPort;
+
     protected override AppOptions CreateAppOptions()
     {
-        var resources = DefaultAppResource.Resources;
-        resources.Strings.AppName = IsDebugMode ? "VpnHOOD! Client (DEBUG)" : "VpnHood! Client";
+        var appConfigs = AppConfigs.Load();
 
-        return new AppOptions("com.vpnhood.client.windows", IsDebugMode) {
+        var resources = DefaultAppResource.Resources;
+        resources.Strings.AppName = appConfigs.AppName;
+
+        return new AppOptions("com.vpnhood.client.windows", AppConfigs.IsDebugMode) {
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHood"),
             Resource = resources,
-            AccessKeys = IsDebugMode ? [ClientOptions.SampleAccessKey] : [],
-            UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json"),
+            AccessKeys = AppConfigs.IsDebugMode ? [appConfigs.DefaultAccessKey] : [],
+            UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             UpdaterProvider = new AdvancedInstallerUpdaterProvider(),
             IsAddAccessKeySupported = true,
             SingleLineConsoleLog = false,
             LocalSpaHostName = "my-vpnhood"
         };
     }
-
-#if DEBUG
-    public override bool IsDebugMode => true;
-#else
-    public override bool IsDebugMode => false;
-#endif
 }

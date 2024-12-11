@@ -17,34 +17,27 @@ namespace VpnHood.Client.App.Droid.Connect.Web;
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
-    public static int? SpaDefaultPort => IsDebugMode ? 9581 : 9580;
-    public static bool SpaListenToAllIps => IsDebugMode; // if true it will cause crash in network change
-
     protected override AppOptions CreateAppOptions()
     {
         // load app settings and resources
+        var appConfigs = AppConfigs.Load();
+        
         var resources = DefaultAppResource.Resources;
-        resources.Strings.AppName = "VpnHood! CONNECT";
+        resources.Strings.AppName = appConfigs.AppName;
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
 
-        var appConfigs = AppConfigs.Load();
-        return new AppOptions(appId: PackageName!, IsDebugMode) {
+        return new AppOptions(appId: PackageName!, AppConfigs.IsDebugMode) {
             DeviceId = AndroidUtil.GetDeviceId(this), //this will be hashed using AppId
             AccessKeys = [appConfigs.DefaultAccessKey],
             Resource = resources,
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
-            UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood.Client.App.Connect/releases/latest/download/VpnHoodConnect-android-web.json"),
-            AllowEndPointTracker = true,
+            UpdateInfoUrl = appConfigs.UpdateInfoUrl,
+            AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId
         };
     }
 
-#if DEBUG
-    public static bool IsDebugMode => true;
-#else
-    public static bool IsDebugMode => false;
-#endif
 }

@@ -15,29 +15,19 @@ namespace VpnHood.Client.App.Droid.Client.Web;
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
-    public static int? SpaDefaultPort => IsDebugMode ? 9581 : 9580;
-    public static bool SpaListenToAllIps => IsDebugMode;
-
     protected override AppOptions CreateAppOptions()
     {
-        var resources = DefaultAppResource.Resources;
-        resources.Strings.AppName = IsDebugMode ? "VpnHOOD! CLIENT (DEBUG)" : "VpnHood! CLIENT";
+        var appConfigs = AppConfigs.Load();
 
-        return new AppOptions(PackageName!, IsDebugMode) {
+        var resources = DefaultAppResource.Resources;
+        resources.Strings.AppName = appConfigs.AppName;
+
+        return new AppOptions(PackageName!, AppConfigs.IsDebugMode) {
             StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHood"), // for compatibility with old VpnHood app versions to keep tokens
             Resource = resources,
-            AccessKeys = IsDebugMode ? [ClientOptions.SampleAccessKey] : [],
-            UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android-web.json"),
-            IsAddAccessKeySupported = true,
-            LogAnonymous = !IsDebugMode
+            AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
+            UpdateInfoUrl = appConfigs.UpdateInfoUrl,
+            IsAddAccessKeySupported = true
         };
     }
-
-
-#if DEBUG
-    public static bool IsDebugMode => true;
-#else
-    public static bool IsDebugMode => false;
-#endif
-
 }

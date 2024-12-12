@@ -11,7 +11,6 @@ $credentials = (Get-Content "$solutionDir/../.user/credentials.json" | Out-Strin
 $nugetApiKey = $credentials.NugetApiKey;
 $msverbosity = "minimal";
 
-
 # Version
 . "$PSScriptRoot/VersionBump.ps1" -versionFile "$pubDir/PubVersion.json" -bump $bump;
 

@@ -30,14 +30,14 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>5.0.608</Version>
+		<Version>5.0.609</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseOutputPath></BaseOutputPath>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
+		<None Include="..\..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
 			<PackagePath></PackagePath>
 		</None>

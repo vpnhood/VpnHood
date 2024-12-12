@@ -347,3 +347,4 @@ MigrationBackup/
 .ionide/
 /Foo
 /VpnHood.Client.App.Win.Setup/VpnHood.Client.App.Win.Setup-cache
+/VpnHood.Apps/VpnHood.Client.App.Win.Client.Setup/VpnHood.Client.App.Win.Client.Setup-cache

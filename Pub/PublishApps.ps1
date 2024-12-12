@@ -32,61 +32,62 @@ Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 
 # rebuild libraries
 if ($nugets) {
-	& "$solutionDir/VpnHood.Common/_publish.ps1";
-	& "$solutionDir/VpnHood.Tunneling/_publish.ps1";
-	& "$solutionDir/VpnHood.Client/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.Device.Android/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.Device/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.Device.WinDivert/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.App.Abstractions/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.App/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.App.Resources/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.App.WebServer/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.App.Store/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.App.Android.Common/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.App.Android.GooglePlay/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.App.Android.GooglePlay.Core/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.App.Android.Ads.AdMob/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.App.Win.Common/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.App.Win.Common.WpfSpa/_publish.ps1";
-	& "$solutionDir/VpnHood.Server/_publish.ps1";
-	& "$solutionDir/VpnHood.Server.Access/_publish.ps1";
-	& "$solutionDir/VpnHood.Server.Access.FileAccessManager/_publish.ps1";
+	& "$solutionDir/VpnHood.Core.Libs/VpnHood.Common/_publish.ps1";
+	& "$solutionDir/VpnHood.Core.Libs/VpnHood.Tunneling/_publish.ps1";
+	& "$solutionDir/VpnHood.Core.Libs/VpnHood.Client/_publish.ps1";
+	& "$solutionDir/VpnHood.Core.Libs/VpnHood.Client.Device.Android/_publish.ps1";
+	& "$solutionDir/VpnHood.Core.Libs/VpnHood.Client.Device/_publish.ps1";
+	& "$solutionDir/VpnHood.Core.Libs/VpnHood.Client.Device.WinDivert/_publish.ps1";
+	& "$solutionDir/VpnHood.Core.Libs/VpnHood.Server/_publish.ps1";
+	& "$solutionDir/VpnHood.Core.Libs/VpnHood.Server.Access/_publish.ps1";
+	& "$solutionDir/VpnHood.Core.Libs/VpnHood.Server.Access.FileAccessManager/_publish.ps1";
+
+	& "$solutionDir/VpnHood.Client.App.Libs/VpnHood.Client.App.Abstractions/_publish.ps1";
+	& "$solutionDir/VpnHood.Client.App.Libs/VpnHood.Client.App/_publish.ps1";
+	& "$solutionDir/VpnHood.Client.App.Libs/VpnHood.Client.App.Resources/_publish.ps1";
+	& "$solutionDir/VpnHood.Client.App.Libs/VpnHood.Client.App.WebServer/_publish.ps1";
+	& "$solutionDir/VpnHood.Client.App.Libs/VpnHood.Client.App.Store/_publish.ps1";
+	& "$solutionDir/VpnHood.Client.App.Libs/VpnHood.Client.App.Android.Common/_publish.ps1";
+	& "$solutionDir/VpnHood.Client.App.Libs/VpnHood.Client.App.Android.GooglePlay/_publish.ps1";
+	& "$solutionDir/VpnHood.Client.App.Libs/VpnHood.Client.App.Android.GooglePlay.Core/_publish.ps1";
+	& "$solutionDir/VpnHood.Client.App.Libs/VpnHood.Client.App.Android.Ads.AdMob/_publish.ps1";
+	& "$solutionDir/VpnHood.Client.App.Libs/VpnHood.Client.App.Win.Common/_publish.ps1";
+	& "$solutionDir/VpnHood.Client.App.Libs/VpnHood.Client.App.Win.Common.WpfSpa/_publish.ps1";
 }
 
 # publish MAUI nugets
 if ($maui) {
-	& "$solutionDir/VpnHood.Client.App.Maui.Common/_publish.ps1";
+	& "$solutionDir/VpnHood.Client.App.Libs/VpnHood.Client.App.Maui.Common/_publish.ps1";
 }
 
 # publish win client
 if ($clientWin) {
-	& "$solutionDir/VpnHood.Client.App.Win/_publish.ps1";
+	& "$solutionDir/VpnHood.Apps/VpnHood.Client.App.Win.Client/_publish.ps1";
 }
 
 # publish win client
 if ($connectWin) {
-	& "$solutionDir/VpnHood.Client.App.Win.Connect/_publish.ps1";
+	& "$solutionDir/VpnHood.Apps/VpnHood.Client.App.Win.Connect/_publish.ps1";
 }
 
 # publish server
 if ($server) {	
-	& "$solutionDir/VpnHood.Server.App.Net/Pub/publish_win.ps1";
-	& "$solutionDir/VpnHood.Server.App.Net/Pub/publish_linux_x64.ps1";
-	& "$solutionDir/VpnHood.Server.App.Net/Pub/publish_linux_arm64.ps1";
-	& "$solutionDir/VpnHood.Server.App.Net/Pub/publish_docker.ps1" -distribute $distribute;
+	& "$solutionDir/VpnHood.Apps/VpnHood.Server.App.Net/Pub/publish_win.ps1";
+	& "$solutionDir/VpnHood.Apps/VpnHood.Server.App.Net/Pub/publish_linux_x64.ps1";
+	& "$solutionDir/VpnHood.Apps/VpnHood.Server.App.Net/Pub/publish_linux_arm64.ps1";
+	& "$solutionDir/VpnHood.Apps/VpnHood.Server.App.Net/Pub/publish_docker.ps1" -distribute $distribute;
 }
 
 # publish android
 if ($clientAndroid) {	
-	& "$solutionDir/VpnHood.Client.App.Android/_publish_aab.ps1";
-	& "$solutionDir/VpnHood.Client.App.Android/_publish_apk.ps1";
+	& "$solutionDir/VpnHood.Apps/VpnHood.Client.App.Android.Google/_publish.ps1";
+	& "$solutionDir/VpnHood.Apps/VpnHood.Client.App.Android.Web/_publish.ps1";
 }
 
 # publish android
 if ($connectAndroid) {	
-	& "$solutionDir/VpnHood.Client.App.Android.connect/_publish_aab.ps1";
-	& "$solutionDir/VpnHood.Client.App.Android.connect.web/_publish.ps1";
+	& "$solutionDir/VpnHood.Apps/VpnHood.Client.App.Android.Connect.Google/_publish.ps1";
+	& "$solutionDir/VpnHood.Apps/VpnHood.Client.App.Android.Connect.Web/_publish.ps1";
 }
 
 

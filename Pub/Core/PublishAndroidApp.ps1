@@ -47,10 +47,15 @@ if ($apk)
 	$outputPath = Join-Path $projectDir "bin/Release-$distribution/";
 	$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
 	if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:SolutionDir=$solutionDir /p:OutputPath=$outputPath /verbosity:$msverbosity; }
-	dotnet build $projectFile -c Release /t:SignAndroidPackage /p:Version=$versionParam /p:OutputPath=$outputPath /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
-		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-		/p:ApplicationId=$packageId `
+	dotnet build $projectFile /t:SignAndroidPackage /verbosity:$msverbosity `
 		/p:SolutionDir=$solutionDir `
+		/p:Configuration=Release `
+		/p:ApplicationId=$packageId `
+		/p:Version=$versionParam `
+		/p:OutputPath=$outputPath `
+		/p:ArchiveOnBuild=true `
+		/p:AndroidPackageFormat="apk" `
+		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
 	 
 	# publish info
@@ -81,11 +86,15 @@ if ($aab)
 	$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
 	if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /p:SolutionDir=$solutionDir /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
-		dotnet build $projectFile /p:Configuration=Release /p:Version=$versionParam /p:OutputPath=$outputPath /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
-			/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-			/p:ApplicationId=$packageId `
-			/p:SolutionDir=$solutionDir `
-			/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
+	dotnet build $projectFile /t:SignAndroidPackage /verbosity:$msverbosity `
+		/p:SolutionDir=$solutionDir `
+		/p:Configuration=Release `
+		/p:ApplicationId=$packageId `
+		/p:Version=$versionParam `
+		/p:OutputPath=$outputPath `
+		/p:ArchiveOnBuild=true `
+		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
+		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
 }
 
 # copy to module

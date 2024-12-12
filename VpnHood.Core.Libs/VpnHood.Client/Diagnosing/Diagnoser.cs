@@ -48,7 +48,7 @@ public class Diagnoser
         catch (Exception) {
             VhLogger.Instance.LogTrace("Checking the Internet connection...");
             IsWorking = true;
-            if (!await NetworkCheck().VhConfigureAwait())
+            if (!await NetworkCheck(successOnAny: true).VhConfigureAwait())
                 throw new NoInternetException();
 
             throw;
@@ -63,7 +63,7 @@ public class Diagnoser
         try {
             VhLogger.Instance.LogTrace("Checking the Internet connection...");
             IsWorking = true;
-            if (!await NetworkCheck().VhConfigureAwait())
+            if (!await NetworkCheck(successOnAny: true).VhConfigureAwait())
                 throw new NoInternetException();
 
             // ping server
@@ -88,9 +88,8 @@ public class Diagnoser
 
             VhLogger.Instance.LogTrace("Checking the Vpn Connection...");
             IsWorking = true;
-            await Task.Delay(2000, cancellationToken)
-                .VhConfigureAwait(); // connections can not be established on android immediately
-            if (!await NetworkCheck().VhConfigureAwait())
+            await Task.Delay(2000, cancellationToken).VhConfigureAwait(); // connections can not be established on android immediately
+            if (!await NetworkCheck(successOnAny: false).VhConfigureAwait())
                 throw new NoStableVpnException();
             VhLogger.Instance.LogTrace("VPN has been established and tested successfully.");
         }
@@ -99,7 +98,7 @@ public class Diagnoser
         }
     }
 
-    private async Task<bool> NetworkCheck(bool checkPing = true, bool checkUdp = true)
+    private async Task<bool> NetworkCheck(bool successOnAny, bool checkPing = true, bool checkUdp = true)
     {
         var taskPing = checkPing
             ? DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout)
@@ -113,7 +112,10 @@ public class Diagnoser
         var taskHttps = DiagnoseUtil.CheckHttps(TestHttpUris, HttpTimeout);
 
         await Task.WhenAll(taskPing, taskUdp, taskHttps).VhConfigureAwait();
-        var hasInternet = taskPing.Result == null && taskUdp.Result == null && taskHttps.Result == null;
+        var hasInternet = successOnAny
+            ? taskPing.Result == null || taskUdp.Result == null || taskHttps.Result == null
+            : taskPing.Result == null && taskUdp.Result == null && taskHttps.Result == null;
+
         return hasInternet;
     }
 }

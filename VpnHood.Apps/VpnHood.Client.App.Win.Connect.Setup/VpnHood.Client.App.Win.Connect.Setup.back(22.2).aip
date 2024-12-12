@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="17.7" version="22.3" Modules="professional" RootPath="." Language="en" Id="{F5BEDA55-1847-4909-B85B-443D6C887C92}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="17.7" version="22.2" Modules="professional" RootPath="." Language="en" Id="{F5BEDA55-1847-4909-B85B-443D6C887C92}">
   <COMPONENT cid="caphyon.advinst.msicomp.MsiPropsComponent">
     <ROW Property="AI_APP_FILE" Value="[#VpnHoodConnect.exe]"/>
     <ROW Property="AI_BITMAP_DISPLAY_MODE" Value="0"/>
@@ -19,10 +19,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{1C7A605D-81FE-44B4-9598-B157E950C124} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{E28A7A84-49C5-42D5-94A0-E3565C7DB2EC} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood! CONNECT"/>
-    <ROW Property="ProductVersion" Value="5.0.609" Options="20"/>
+    <ROW Property="ProductVersion" Value="5.0.608" Options="20"/>
     <ROW Property="RUNAPPLICATION" Value="1" Type="4"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND"/>
     <ROW Property="UpgradeCode" Value="{CD5160B9-4A66-4F81-A162-9BA69FC81313}"/>
@@ -72,7 +72,7 @@
     <ROW Directory="zhHant_Dir" Directory_Parent="APPDIR" DefaultDir="zh-Hant" DirectoryOptions="3"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{D17D62CE-1FBC-4615-9354-E634DCE5AFB9}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{DD9E0B29-C64E-4C53-BCC1-27ABCEF52BA8}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{21851DB9-D1F6-4B22-9844-D91CE291D8A3}" Directory_="APPDIR" Attributes="260" KeyPath="NoModify" Options="1"/>
     <ROW Component="APPDIR" ComponentId="{6782C70B-B5DB-4ACB-ACED-FA77FF112859}" Directory_="APPDIR" Attributes="0"/>
     <ROW Component="Accessibility.dll" ComponentId="{6125235F-C8DC-42E0-BC59-0E11D956B841}" Directory_="APPDIR" Attributes="0" KeyPath="Accessibility.dll"/>
@@ -997,7 +997,7 @@
     <ROW Path="&lt;AI_DICTS&gt;ui_en.ail"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DynamicPropertyComponent">
-    <ROW Property="ProductVersion" Type="3" SourcePath="..\..\Pub\PubVersion.json" PathInSource="Root\Version"/>
+    <ROW Property="ProductVersion" Type="3" SourcePath="..\Pub\PubVersion.json" PathInSource="Root\Version"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FragmentComponent">
     <ROW Fragment="CommonUI.aip" Path="&lt;AI_FRAGS&gt;CommonUI.aip"/>
@@ -1705,7 +1705,7 @@
     <ROW FileKey="__1" Component_="UIAutomationProvider.resources.dll_11" DirProperty="WebView2_Dir" InstallMode="3"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiShortsComponent">
-    <ROW Shortcut="CheckforVpnHoodUpdates" Directory_="SHORTCUTDIR" Name="UPDATE~1|Update [|ProductName]" Component_="updater.exe" Target="[#updater.exe]" Arguments="/checknow" Hotkey="0" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
+    <ROW Shortcut="CheckforVpnHoodUpdates" Directory_="SHORTCUTDIR" Name="CHECKF~2|Check for [|ProductName] Updates" Component_="updater.exe" Target="[#updater.exe]" Arguments="/checknow" Hotkey="0" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
     <ROW Shortcut="UninstallProductName" Directory_="SHORTCUTDIR" Name="UNINST~1|Uninstall [|ProductName]" Component_="UIAutomationProvider.resources.dll_11" Target="[SystemFolder]msiexec.exe" Arguments="/x [ProductCode]" Hotkey="0" Icon_="SystemFoldermsiexec.exe" IconIndex="0" ShowCmd="1"/>
     <ROW Shortcut="VpnHoodConnect" Directory_="SHORTCUTDIR" Name="VPNHOO~2|[|ProductName]" Component_="VpnHoodConnect.exe" Target="[#VpnHoodConnect.exe]" Hotkey="0" IconIndex="0" ShowCmd="1" WkDir="APPDIR" CustomFlags="1"/>
     <ROW Shortcut="VpnHoodConnect_1" Directory_="DesktopFolder" Name="VPNHOO~2|[|ProductName]" Component_="VpnHoodConnect.exe" Target="[#VpnHoodConnect.exe]" Hotkey="0" IconIndex="0" ShowCmd="1" WkDir="APPDIR" CustomFlags="1"/>

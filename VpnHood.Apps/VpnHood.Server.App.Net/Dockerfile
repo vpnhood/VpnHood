@@ -5,16 +5,16 @@ WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-COPY ["VpnHood.Server.App.Net/NLog.xsd", "VpnHood.Server.App.Net/"]
-COPY ["VpnHood.Server.App.Net/NLog.config", "VpnHood.Server.App.Net/"]
-COPY ["VpnHood.Server.App.Net/VpnHood.Server.App.Net.csproj", "VpnHood.Server.App.Net/"]
-COPY ["VpnHood.Server/VpnHood.Server.csproj", "VpnHood.Server/"]
-COPY ["VpnHood.Server.Access/VpnHood.Server.Access.csproj", "VpnHood.Server.Access/"]
-COPY ["VpnHood.Common/VpnHood.Common.csproj", "VpnHood.Common/"]
-COPY ["VpnHood.Tunneling/VpnHood.Tunneling.csproj", "VpnHood.Tunneling/"]
+COPY ["VpnHood.Apps/VpnHood.Server.App.Net/NLog.xsd", "VpnHood.Server.App.Net/"]
+COPY ["VpnHood.Apps/VpnHood.Server.App.Net/NLog.config", "VpnHood.Server.App.Net/"]
+COPY ["VpnHood.Apps/VpnHood.Server.App.Net/VpnHood.Server.App.Net.csproj", "VpnHood.Server.App.Net/"]
+COPY ["VpnHood.Core.Libs/VpnHood.Server/VpnHood.Server.csproj", "VpnHood.Server/"]
+COPY ["VpnHood.Core.Libs/VpnHood.Common/VpnHood.Common.csproj", "VpnHood.Common/"]
+COPY ["VpnHood.Core.Libs/VpnHood.Tunneling/VpnHood.Tunneling.csproj", "VpnHood.Tunneling/"]
+COPY ["VpnHood.Core.Libs/VpnHood.Server.Access/VpnHood.Server.Access.csproj", "VpnHood.Server.Access/"]
 RUN dotnet restore "VpnHood.Server.App.Net/VpnHood.Server.App.Net.csproj"
 COPY . .
-WORKDIR "/src/VpnHood.Server.App.Net"
+WORKDIR "/src/VpnHood.Apps/VpnHood.Server.App.Net"
 RUN dotnet build "VpnHood.Server.App.Net.csproj" -c Release -o /app/build
 
 FROM build AS publish

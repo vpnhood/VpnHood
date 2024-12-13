@@ -171,7 +171,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsNotificationSupported = uiProvider.IsNotificationSupported,
             IsAlwaysOnSupported = device.IsAlwaysOnSupported,
             GaMeasurementId = options.Ga4MeasurementId,
-            ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId)
+            ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId),
+            IsDebugMode = options.IsDebugMode
         };
 
         // initialize services

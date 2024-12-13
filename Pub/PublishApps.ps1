@@ -80,8 +80,8 @@ if ($server) {
 
 # publish android
 if ($clientAndroid) {	
-	& "$solutionDir/VpnHood.Apps/VpnHood.Client.App.Android.Google/_publish.ps1";
-	& "$solutionDir/VpnHood.Apps/VpnHood.Client.App.Android.Web/_publish.ps1";
+	& "$solutionDir/VpnHood.Apps/VpnHood.Client.App.Android.Client.Google/_publish.ps1";
+	& "$solutionDir/VpnHood.Apps/VpnHood.Client.App.Android.Client.Web/_publish.ps1";
 }
 
 # publish android

@@ -25,6 +25,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6D
 	ProjectSection(SolutionItems) = preProject
 		CHANGELOG.md = CHANGELOG.md
 		Pub\PublishApps.ps1 = Pub\PublishApps.ps1
+		Pub\PublishToGitHub-Connect.ps1 = Pub\PublishToGitHub-Connect.ps1
 		Pub\PublishToGitHub.ps1 = Pub\PublishToGitHub.ps1
 		Pub\PubVersion.json = Pub\PubVersion.json
 	EndProjectSection

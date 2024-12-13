@@ -87,6 +87,7 @@ if ($connectRepo) {
 	# set Connect Variables
 	$connectRepoDir = Join-Path $vhDir "VpnHood.Client.App.Connect";
 	echo $connectRepoDir
+	exit
 	$androidGoogleLatestDir = Join-Path $connectRepoDir "pub/Android.GooglePlay/apk/latest";
 	echo $connectRepoDir
 	echo $androidGoogleLatestDir

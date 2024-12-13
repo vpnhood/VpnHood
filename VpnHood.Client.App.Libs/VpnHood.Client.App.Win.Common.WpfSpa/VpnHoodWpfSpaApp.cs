@@ -38,7 +38,13 @@ public abstract class VpnHoodWpfSpaApp : Application
             var localSpaUrl = !string.IsNullOrEmpty(appOptions.LocalSpaHostName)
                 ? VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), SpaDefaultPort ?? 80), appOptions.LocalSpaHostName)
                 : null;
-            VpnHoodAppWebServer.Init(spaResource, defaultPort: SpaDefaultPort, url: localSpaUrl, listenToAllIps: SpaListenToAllIps);
+            
+            VpnHoodAppWebServer.Init(new WebServerOptions {
+                SpaZipStream = spaResource,
+                DefaultPort = SpaDefaultPort,
+                ListenOnAllIps = SpaListenToAllIps,
+                Url = localSpaUrl
+            });
 
             // initialize Win
             VpnHoodWinApp.Instance.ExitRequested += (_, _) => Shutdown();

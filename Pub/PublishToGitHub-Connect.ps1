@@ -29,7 +29,7 @@ if ($isLatest) {
 	$releaseNote | Out-File -FilePath "$packagesRootDirLatest/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;
 }
 
-if ($mainRepo) {
+if ($mainRepo and $false) {
 	Write-Host "*** Publish MainRepo releases" -BackgroundColor Blue
 
 	# Publishing to GitHub
@@ -86,6 +86,7 @@ if ($connectRepo) {
 
 	# set Connect Variables
 	$connectRepoDir = Join-Path $vhDir "VpnHood.Client.App.Connect";
+	echo $connectRepoDir
 	$androidGoogleLatestDir = Join-Path $connectRepoDir "pub/Android.GooglePlay/apk/latest";
 	echo $connectRepoDir
 	echo $androidGoogleLatestDir

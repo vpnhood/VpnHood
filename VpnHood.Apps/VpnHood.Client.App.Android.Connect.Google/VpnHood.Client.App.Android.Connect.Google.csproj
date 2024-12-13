@@ -5,16 +5,16 @@
 		<RootNamespace>VpnHood.Client.App.Android.Client.Google</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
-		<ApplicationVersion>609</ApplicationVersion>
-		<ApplicationDisplayVersion>5.0.609</ApplicationDisplayVersion>
+		<ApplicationVersion>610</ApplicationVersion>
+		<ApplicationDisplayVersion>5.0.610</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
 		<DebugSymbols>True</DebugSymbols>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
 		<PublishTrimmed>True</PublishTrimmed>
 		<RunAOTCompilation>True</RunAOTCompilation>
-		<RuntimeIdentifiers>android-arm;android-arm64;android-x64</RuntimeIdentifiers>
+		<RuntimeIdentifiers>android-arm64;android-x64;android-arm</RuntimeIdentifiers>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -32,7 +32,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>5.0.609</Version>
+		<Version>5.0.610</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>

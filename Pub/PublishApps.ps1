@@ -94,7 +94,7 @@ if ($connectAndroid) {
 # distribute
 if ($distribute) {
     & "$PSScriptRoot/PublishToGitHub.ps1" `
-		-mainRepo ($clientWin -or $clientAndroid -or $server) `	
+		-mainRepo ($clientWin -or $clientAndroid -or $server) `
 		-connectRepo ($connectWin -or $connectAndroid);
 }
 

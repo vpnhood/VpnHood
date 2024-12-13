@@ -22,11 +22,11 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     private string? _spaHash;
     private readonly bool _listenOnAllIps;
 
-    private VpnHoodAppWebServer(Stream spaZipStream, int defaultPort, Uri? url = default, bool listenOnAllIps = false)
+    private VpnHoodAppWebServer(WebServerOptions options)
     {
-        _spaZipStream = spaZipStream;
-        Url = url ?? new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, defaultPort)}");
-        _listenOnAllIps = listenOnAllIps;
+        _spaZipStream = options.SpaZipStream;
+        Url = options.Url ?? new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, options.DefaultPort ?? 9090)}");
+        _listenOnAllIps = options.ListenOnAllIps;
     }
 
     public Uri Url { get; }
@@ -40,10 +40,9 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         DisposeSingleton();
     }
 
-    public static VpnHoodAppWebServer Init(Stream zipStream, int? defaultPort = default, Uri? url = default,
-        bool listenToAllIps = false)
+    public static VpnHoodAppWebServer Init(WebServerOptions options)
     {
-        var ret = new VpnHoodAppWebServer(zipStream, defaultPort ?? 9090, url, listenToAllIps);
+        var ret = new VpnHoodAppWebServer(options);
         ret.Start();
         return ret;
     }
@@ -124,7 +123,10 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
             .WithWebApi("/api/billing", ResponseSerializerCallback, c => c
                 .WithController<BillingController>()
                 .HandleUnhandledException(ExceptionHandler.DataResponseForException))
-            .WithStaticFolder("/", spaPath, true, c => c.HandleMappingFailed(HandleMappingFailed))
+            .WithStaticFolder("/", spaPath, true, c => {
+                c.WithContentCaching(!VpnHoodApp.Instance.Features.IsDebugMode);
+                c.HandleMappingFailed(HandleMappingFailed);
+            })
             .HandleHttpException(ExceptionHandler.DataResponseForHttpException);
 
         return server;

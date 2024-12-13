@@ -26,8 +26,12 @@ public class AndroidAppWebViewMainActivityHandler(
         // Initialize UI
         if (!VpnHoodAppWebServer.IsInit) {
             ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resource.SpaZipData);
-            using var memoryStream = new MemoryStream(VpnHoodApp.Instance.Resource.SpaZipData);
-            VpnHoodAppWebServer.Init(memoryStream, options.SpaDefaultPort, listenToAllIps: options.SpaListenToAllIps);
+            using var spaZipStream = new MemoryStream(VpnHoodApp.Instance.Resource.SpaZipData);
+            VpnHoodAppWebServer.Init(new WebServerOptions {
+                SpaZipStream = spaZipStream,
+                DefaultPort = options.SpaDefaultPort,
+                ListenOnAllIps = options.SpaListenToAllIps
+            });
         }
 
         InitWebUi();
@@ -82,14 +86,14 @@ public class AndroidAppWebViewMainActivityHandler(
 
     private static string GetChromeVersionFromUserAgent(string? userAgent)
     {
-        if (userAgent == null) 
+        if (userAgent == null)
             throw new ArgumentNullException(nameof(userAgent));
 
         var parts = userAgent.Split("Chrome/");
         if (parts.Length < 2)
             throw new ArgumentException("Could not extract Chrome version from user agent.");
 
-        return  parts[1].Split(' ').First();
+        return parts[1].Split(' ').First();
     }
 
     private static int GetWebViewVersion(WebView webView)
@@ -105,7 +109,7 @@ public class AndroidAppWebViewMainActivityHandler(
     private string GetLaunchUrl(WebView webView)
     {
         var mainUrl = $"{VpnHoodAppWebServer.Instance.Url}?nocache={VpnHoodAppWebServer.Instance.SpaHash}";
-        if (GetWebViewVersion(webView) >= options.WebViewRequiredVersion || options.WebViewUpgradeUrl == null )
+        if (GetWebViewVersion(webView) >= options.WebViewRequiredVersion || options.WebViewUpgradeUrl == null)
             return mainUrl;
 
         var upgradeUrl = options.WebViewUpgradeUrl.IsAbsoluteUri

@@ -1,4 +1,4 @@
-# v5.0.608
+# v5.0.610
 ### Client
 * Feature: Improve premium sessions
 * Feature: Update server token from multiple URLs

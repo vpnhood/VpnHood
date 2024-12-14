@@ -3,7 +3,6 @@ using System.Net;
 using System.Security.Principal;
 using System.Windows;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppFramework;
 using VpnHood.AppFramework.WebServer;
 using VpnHood.Client.Device.WinDivert;
 using VpnHood.Common.Logging;

@@ -1,9 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Android Ad Library for AdMob</Description>
-		<TargetFramework>net9.0-android35.0</TargetFramework>
-		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.AppFramework.Droid.Ads.VhAdMob</RootNamespace>
+		<Description>UI Resources for client such as strings and icons.</Description>
+		<TargetFramework>netstandard2.1</TargetFramework>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -23,7 +21,6 @@
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<Version>5.0.610</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
-		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -34,10 +31,23 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\Android.Common\VpnHood.AppFramework.Android.Common.csproj" />
+	  <ProjectReference Include="..\VpnHood.AppFramework\VpnHood.AppFramework.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Xamarin.GooglePlayServices.Ads.Lite" Version="123.5.0.1" />
+		<Compile Update="EmbeddedResource.Designer.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>EmbeddedResource.resx</DependentUpon>
+		</Compile>
 	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Update="EmbeddedResource.resx">
+			<SubType>Designer</SubType>
+			<Generator>ResXFileCodeGenerator</Generator>
+			<LastGenOutput>EmbeddedResource.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+	</ItemGroup>
+
 </Project>

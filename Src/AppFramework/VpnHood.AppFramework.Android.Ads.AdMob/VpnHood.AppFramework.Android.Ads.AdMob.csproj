@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Shared library for VpnHood Windows Clients.</Description>
-		<TargetFramework>netstandard2.1</TargetFramework>
+		<Description>VpnHood Android Ad Library for AdMob</Description>
+		<TargetFramework>net9.0-android35.0</TargetFramework>
+		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+		<RootNamespace>VpnHood.AppFramework.Droid.Ads.VhAdMob</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,23 +23,21 @@
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<Version>5.0.610</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
 	<ItemGroup>
 		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
-			<PackagePath></PackagePath>
 			<Pack>True</Pack>
+			<PackagePath></PackagePath>
 		</None>
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
-		<PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+	  <ProjectReference Include="..\VpnHood.AppFramework.Android.Common\VpnHood.AppFramework.Android.Common.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\Abstractions\VpnHood.AppFramework.Abstractions.csproj" />
-	  <ProjectReference Include="..\AppFramework\VpnHood.AppFramework.csproj" />
+	  <PackageReference Include="Xamarin.GooglePlayServices.Ads.Lite" Version="123.5.0.1" />
 	</ItemGroup>
-
 </Project>

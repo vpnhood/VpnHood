@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
 	<PropertyGroup>
 		<Description>VpnHood Server App.</Description>
-		<RootNamespace>VpnHood.Server.App</RootNamespace>
+		<RootNamespace>VpnHood.Apps.Server</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net9.0</TargetFramework>
 		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>

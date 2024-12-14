@@ -40,6 +40,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLibs.App\VpnHood.AppLibs.App.csproj" />
 		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLibs.Win.Common.WpfSpa\VpnHood.AppLibs.Win.Common.WpfSpa.csproj" />
 		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLibs.Resources\VpnHood.AppLibs.Resources.csproj" />
 	</ItemGroup>

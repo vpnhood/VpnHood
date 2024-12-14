@@ -65,7 +65,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\VpnHood.AppLibs\VpnHood.AppLibs.csproj" />
+	  <ProjectReference Include="..\VpnHood.AppLibs.App\VpnHood.AppLibs.App.csproj" />
 	</ItemGroup>
 
 </Project>

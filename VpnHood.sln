@@ -108,7 +108,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Apps.Client.Android
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Src", "Src", "{E073E9E7-230C-4F99-A0F1-300FB450F4B1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppLibs", "Src\AppLibs\VpnHood.AppLibs\VpnHood.AppLibs.csproj", "{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppLibs.App", "Src\AppLibs\VpnHood.AppLibs.App\VpnHood.AppLibs.App.csproj", "{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Apps.Server.Net", "Src\Apps\Server.Net\VpnHood.Apps.Server.Net.csproj", "{FDCDD4D4-995F-4B48-A0D1-D9C92AAEE771}"
 EndProject

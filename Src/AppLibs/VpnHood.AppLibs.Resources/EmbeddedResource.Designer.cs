@@ -39,7 +39,7 @@ namespace VpnHood.AppLibs.Resources {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("VpnHood.AppLibs.Resources.EmbeddedResource", typeof(EmbeddedResource).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("VpnHood.AppLibs.App.Resources.EmbeddedResource", typeof(EmbeddedResource).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

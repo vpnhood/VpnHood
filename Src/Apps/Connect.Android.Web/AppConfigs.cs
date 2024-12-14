@@ -8,7 +8,7 @@ namespace VpnHood.Apps.Connect.Droid.Web;
 internal class AppConfigs : AppConfigsBase<AppConfigs>
 {
     public string AppName { get; init; } = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
-    public Uri? UpdateInfoUrl { get; init; } = new("https://github.com/vpnhood/VpnHood.AppLibs.Connect/releases/latest/download/VpnHoodConnect-Android-web.json");
+    public Uri? UpdateInfoUrl { get; init; } = new("https://github.com/vpnhood/VpnHood.AppLibs.App.Connect/releases/latest/download/VpnHoodConnect-Android-web.json");
     public int? SpaDefaultPort { get; init; } = IsDebugMode ? 9571 : 9570;
     public bool SpaListenToAllIps { get; init; } = IsDebugMode;
     public bool AllowEndPointTracker { get; init; } = true;

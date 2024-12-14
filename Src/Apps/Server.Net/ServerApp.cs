@@ -6,22 +6,23 @@ using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
 using NLog;
 using NLog.Extensions.Logging;
+using VpnHood.Apps.Server.Providers.Linux;
+using VpnHood.Apps.Server.Providers.Win;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
+using VpnHood.Server;
 using VpnHood.Server.Abstractions;
 using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Server.Access.Managers.HttpAccessManagers;
-using VpnHood.Server.App.Providers.Linux;
-using VpnHood.Server.App.Providers.Win;
 using VpnHood.Server.SystemInformation;
 using VpnHood.Tunneling;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
-namespace VpnHood.Server.App;
+namespace VpnHood.Apps.Server;
 
 public class ServerApp : IDisposable
 {

@@ -1,9 +1,0 @@
-{
-  "profiles": {
-    "VpnHood.Client.App.Windows": {
-      "commandName": "Executable",
-      "executablePath": "dotnet",
-      "commandLineArgs": "VpnHoodConnect.dll"
-    }
-  }
-}

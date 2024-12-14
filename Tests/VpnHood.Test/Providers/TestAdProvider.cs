@@ -1,4 +1,4 @@
-﻿using VpnHood.Client.App.Abstractions;
+﻿using VpnHood.AppFramework.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Common.Exceptions;
 using VpnHood.Test.AccessManagers;

@@ -5,9 +5,9 @@ using System.Text.Json;
 using EmbedIO;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AppFramework;
+using VpnHood.AppFramework.ClientProfiles;
 using VpnHood.Client;
-using VpnHood.Client.App;
-using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.IpLocations.Providers;
 using VpnHood.Common.Logging;
@@ -27,7 +27,7 @@ public class ClientAppTest : TestBase
     {
         // update current ipLocation in app project after a week
         var solutionFolder = TestHelper.GetParentDirectory(Directory.GetCurrentDirectory(), 5);
-        var ipLocationFile = Path.Combine(solutionFolder, "VpnHood.Client.App.Libs", "VpnHood.Client.App", "Resources", "IpLocations.zip");
+        var ipLocationFile = Path.Combine(solutionFolder, "Src", "AppFramework", "Resources", "IpLocations.zip");
 
         // find token
         var userSecretFile = Path.Combine(Path.GetDirectoryName(solutionFolder)!, ".user", "credentials.json");

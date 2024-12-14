@@ -91,7 +91,7 @@ if ($connectRepo) {
 	Write-Host "*** Publish MainRepo releases" -BackgroundColor Blue
 
 	# set Connect Variables
-	$connectRepoDir = Join-Path $vhDir "VpnHood.Client.App.Connect";
+	$connectRepoDir = Join-Path $vhDir "VpnHood.AppFramework.Connect";
 	$androidGoogleLatestDir = Join-Path $connectRepoDir "pub/Android.GooglePlay/apk/latest";
 	
 	# Publishing to GitHub

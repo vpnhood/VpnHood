@@ -25,8 +25,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Src\Core\VpnHood.Common\VpnHood.Common.csproj" />
-		<ProjectReference Include="..\..\Src\Core\VpnHood.Server.Access\VpnHood.Server.Access.csproj" />
+		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
+		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Server.Access\VpnHood.Core.Server.Access.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

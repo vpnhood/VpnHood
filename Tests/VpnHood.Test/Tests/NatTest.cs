@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
-using VpnHood.Tunneling;
-using VpnHood.Tunneling.Utils;
+using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Test.Tests;
 

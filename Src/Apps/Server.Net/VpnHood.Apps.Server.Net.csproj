@@ -54,9 +54,9 @@
 		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.0" />
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\..\Core\VpnHood.Server.Access.FileAccessManager\VpnHood.Server.Access.FileAccessManager.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Tunneling\VpnHood.Tunneling.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Server\VpnHood.Server.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Server.Access.FileAccessManager\VpnHood.Core.Server.Access.FileAccessManager.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<Folder Include="Resources\" />

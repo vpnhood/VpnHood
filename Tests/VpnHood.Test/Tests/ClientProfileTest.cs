@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AppFramework.ClientProfiles;
-using VpnHood.Common.Exceptions;
-using VpnHood.Common.Tokens;
+using VpnHood.AppLibs.ClientProfiles;
+using VpnHood.Core.Common.Exceptions;
+using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.Test.Tests;
 

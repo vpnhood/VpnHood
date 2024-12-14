@@ -1,10 +1,10 @@
 ﻿using System.Drawing;
 using Android.Runtime;
-using VpnHood.AppFramework;
-using VpnHood.AppFramework.Droid.Common;
-using VpnHood.AppFramework.Droid.Common.Constants;
-using VpnHood.AppFramework.Resources;
-using VpnHood.Client.Device.Droid.Utils;
+using VpnHood.AppLibs;
+using VpnHood.AppLibs.Droid.Common;
+using VpnHood.AppLibs.Droid.Common.Constants;
+using VpnHood.AppLibs.Resources;
+using VpnHood.Core.Client.Device.Droid.Utils;
 
 namespace VpnHood.Apps.Connect.Droid.Web;
 

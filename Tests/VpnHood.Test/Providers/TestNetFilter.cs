@@ -2,8 +2,8 @@
 using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
-using VpnHood.Server;
-using VpnHood.Tunneling.Utils;
+using VpnHood.Core.Server;
+using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Test.Providers;
 

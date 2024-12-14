@@ -1,4 +1,4 @@
-﻿using VpnHood.Common.Utils;
+﻿using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.Apps.Server;
 

@@ -45,9 +45,9 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Android.Common\VpnHood.AppFramework.Android.Common.csproj" />
-		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Resources\VpnHood.AppFramework.Resources.csproj" />
-		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Android.GooglePlay.Core\VpnHood.AppFramework.Android.GooglePlay.Core.csproj" />
+		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLibs.Android.Common\VpnHood.AppLibs.Android.Common.csproj" />
+		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLibs.Resources\VpnHood.AppLibs.Resources.csproj" />
+		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLibs.Android.GooglePlay.Core\VpnHood.AppLibs.Android.GooglePlay.Core.csproj" />
 	</ItemGroup>
 
 </Project>

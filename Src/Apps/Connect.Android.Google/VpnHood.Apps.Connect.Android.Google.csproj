@@ -59,17 +59,17 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Android.Ads.AdMob\VpnHood.AppFramework.Android.Ads.AdMob.csproj" />
-		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Android.GooglePlay.Core\VpnHood.AppFramework.Android.GooglePlay.Core.csproj" />
-		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Android.GooglePlay\VpnHood.AppFramework.Android.GooglePlay.csproj" />
-		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Android.Common\VpnHood.AppFramework.Android.Common.csproj" />
-		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Resources\VpnHood.AppFramework.Resources.csproj" />
-		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Store\VpnHood.AppFramework.Store.csproj" />
+		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLibs.Android.Ads.AdMob\VpnHood.AppLibs.Android.Ads.AdMob.csproj" />
+		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLibs.Android.GooglePlay.Core\VpnHood.AppLibs.Android.GooglePlay.Core.csproj" />
+		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLibs.Android.GooglePlay\VpnHood.AppLibs.Android.GooglePlay.csproj" />
+		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLibs.Android.Common\VpnHood.AppLibs.Android.Common.csproj" />
+		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLibs.Resources\VpnHood.AppLibs.Resources.csproj" />
+		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLibs.Store\VpnHood.AppLibs.Store.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.Client.App.Android.Ads.Chartboost" Version="4.5.557" />
-		<PackageReference Include="VpnHood.Client.App.Android.Ads.InMobi" Version="4.5.566" />
+		<PackageReference Include="VpnHood.Core.Client.App.Android.Ads.Chartboost" Version="4.5.557" />
+		<PackageReference Include="VpnHood.Core.Client.App.Android.Ads.InMobi" Version="4.5.566" />
 		<PackageReference Include="Xamarin.Firebase.Analytics" Version="122.1.2.1" />
 		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="119.2.1.1" />
 	</ItemGroup>

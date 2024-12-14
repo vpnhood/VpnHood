@@ -36,11 +36,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Src\AppFramework\VpnHood.AppFramework.Abstractions\VpnHood.AppFramework.Abstractions.csproj" />
-		<ProjectReference Include="..\..\Src\AppFramework\VpnHood.AppFramework\VpnHood.AppFramework.csproj" />
-		<ProjectReference Include="..\..\Src\Core\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
-		<ProjectReference Include="..\..\Src\Core\VpnHood.Server.Access.FileAccessManager\VpnHood.Server.Access.FileAccessManager.csproj" />
-		<ProjectReference Include="..\..\Src\Core\VpnHood.Server\VpnHood.Server.csproj" />
+		<ProjectReference Include="..\..\Src\AppLibs\VpnHood.AppLibs.Abstractions\VpnHood.AppLibs.Abstractions.csproj" />
+		<ProjectReference Include="..\..\Src\AppLibs\VpnHood.AppLibs\VpnHood.AppLibs.csproj" />
+		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Client.Device.WinDivert\VpnHood.Core.Client.Device.WinDivert.csproj" />
+		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Server.Access.FileAccessManager\VpnHood.Core.Server.Access.FileAccessManager.csproj" />
+		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

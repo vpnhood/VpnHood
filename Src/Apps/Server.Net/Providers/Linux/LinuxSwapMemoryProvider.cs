@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.Common.Utils;
-using VpnHood.Server.Abstractions;
+using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Server.Abstractions;
 
 // ReSharper disable StringLiteralTypo
 

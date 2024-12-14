@@ -1,4 +1,4 @@
-﻿using VpnHood.Server.Abstractions;
+﻿using VpnHood.Core.Server.Abstractions;
 
 namespace VpnHood.Test.Providers;
 

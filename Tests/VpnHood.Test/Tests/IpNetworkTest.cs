@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Common.Net;
+using VpnHood.Core.Common.Net;
 
 // ReSharper disable StringLiteralTypo
 namespace VpnHood.Test.Tests;

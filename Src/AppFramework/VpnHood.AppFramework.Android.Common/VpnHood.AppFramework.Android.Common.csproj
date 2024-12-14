@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Android Client App Common Library for Google</Description>
+		<Description>VpnHood Android Client App Common Library</Description>
 		<TargetFramework>net9.0-android35.0</TargetFramework>
 		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.AppFramework.Droid.GooglePlay</RootNamespace>
+		<RootNamespace>VpnHood.AppFramework.Droid.Common</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -33,19 +33,9 @@
 		</None>
 	</ItemGroup>
 
-
-	<!--Xamarin.GooglePlayServices.Auth 121.0.0.1 so uspport GoogleSignIn-->
-	<!--Xamarin.GooglePlayServices.Auth 6.1.0.2 so uspport GoogleSignIn-->
 	<ItemGroup>
-		<PackageReference Include="Xamarin.AndroidX.Credentials" Version="1.3.0.1" />
-		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="7.1.1.1" />
-		<PackageReference Include="Xamarin.AndroidX.Credentials.PlayServicesAuth" Version="1.3.0.1" />
-		<PackageReference Include="Xamarin.GoogleAndroid.Libraries.Identity.GoogleId" Version="1.1.0.7" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\Android.Common\VpnHood.AppFramework.Android.Common.csproj" />
-	  <ProjectReference Include="..\Android.GooglePlay.Core\VpnHood.AppFramework.Android.GooglePlay.Core.csproj" />
+		<ProjectReference Include="..\VpnHood.AppFramework.WebServer\VpnHood.AppFramework.WebServer.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
 	</ItemGroup>
 
 </Project>

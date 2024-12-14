@@ -47,10 +47,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\AppFramework\Resources\VpnHood.AppFramework.Resources.csproj" />
-		<ProjectReference Include="..\..\AppFramework\WebServer\VpnHood.AppFramework.WebServer.csproj" />
-		<ProjectReference Include="..\..\AppFramework\Win.Common.WpfSpa\VpnHood.AppFramework.Win.Common.WpfSpa.csproj" />
-		<ProjectReference Include="..\..\AppFramework\Win.Common\VpnHood.AppFramework.Win.Common.csproj" />
+		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Resources\VpnHood.AppFramework.Resources.csproj" />
+		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.WebServer\VpnHood.AppFramework.WebServer.csproj" />
+		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Win.Common.WpfSpa\VpnHood.AppFramework.Win.Common.WpfSpa.csproj" />
+		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Win.Common\VpnHood.AppFramework.Win.Common.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

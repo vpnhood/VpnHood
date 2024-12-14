@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Tiny internal webserver to server your single-page application (SPA). You need this only if you want to create a UI for your VpnHood client by single-page application (SPA).</Description>
+		<Description>Readymade Vpn App skeleton for VpnHood clients. You just need to create an UI on it.</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
+		<RootNamespace>VpnHood.AppFramework</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -24,18 +25,27 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="..\..\..\VpnHood.png">
+		<ProjectReference Include="..\VpnHood.AppFramework.Abstractions\VpnHood.AppFramework.Abstractions.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Client\VpnHood.Client.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
+			<PackagePath></PackagePath>
 		</None>
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="EmbedIO" Version="3.5.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\AppFramework\VpnHood.AppFramework.csproj" />
+		<Compile Update="Resource.Designer.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>Resource.resx</DependentUpon>
+		</Compile>
+		<EmbeddedResource Update="Resource.resx">
+			<Generator>ResXFileCodeGenerator</Generator>
+			<LastGenOutput>Resource.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
 	</ItemGroup>
 
 </Project>

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Shared library for VpnHood Windows WPF Clients using SPA.</Description>
+		<Description>Tiny internal webserver to server your single-page application (SPA). You need this only if you want to create a UI for your VpnHood client by single-page application (SPA).</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
 	</PropertyGroup>
 
@@ -24,29 +24,18 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
-			<PackagePath></PackagePath>
+		<None Include="..\..\..\VpnHood.png">
 			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
 		</None>
 	</ItemGroup>
 
-	<PropertyGroup>
-		<TargetFramework>net9.0-windows</TargetFramework>
-		<Nullable>enable</Nullable>
-		<UseWPF>true</UseWPF>
-		<ImplicitUsings>enable</ImplicitUsings>
-	</PropertyGroup>
-
 	<ItemGroup>
-		<ProjectReference Include="..\WebServer\VpnHood.AppFramework.WebServer.csproj" />
-		<ProjectReference Include="..\Win.Common\VpnHood.AppFramework.Win.Common.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
+		<PackageReference Include="EmbedIO" Version="3.5.2" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+	  <ProjectReference Include="..\VpnHood.AppFramework\VpnHood.AppFramework.csproj" />
 	</ItemGroup>
-
-
 
 </Project>

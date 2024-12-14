@@ -37,11 +37,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.Device", "Sr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.Device.Android", "Src\Core\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj", "{CAF87B57-E046-466F-B8C5-32066CF8886B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AppFramework.Resources", "Src\AppFramework\Resources\VpnHood.AppFramework.Resources.csproj", "{CCEB6931-2B59-49D5-8916-BE184CEB0BA1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AppFramework.Resources", "Src\AppFramework\VpnHood.AppFramework.Resources\VpnHood.AppFramework.Resources.csproj", "{CCEB6931-2B59-49D5-8916-BE184CEB0BA1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AppFramework.Swagger", "Src\AppFramework\Swagger\VpnHood.AppFramework.Swagger.csproj", "{986CE90B-9F4F-4DEF-8C2C-9BFD8F6A1855}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AppFramework.Swagger", "Src\AppFramework\VpnHood.AppFramework.Swagger\VpnHood.AppFramework.Swagger.csproj", "{986CE90B-9F4F-4DEF-8C2C-9BFD8F6A1855}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AppFramework.WebServer", "Src\AppFramework\WebServer\VpnHood.AppFramework.WebServer.csproj", "{28C9E8D4-8288-4A32-8B5C-8892B9C6958C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AppFramework.WebServer", "Src\AppFramework\VpnHood.AppFramework.WebServer\VpnHood.AppFramework.WebServer.csproj", "{28C9E8D4-8288-4A32-8B5C-8892B9C6958C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{B06C66A0-47AA-4894-A794-8FAE74DB271F}"
 EndProject
@@ -62,7 +62,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{18FA0808-A
 		Pub\Core\VersionBump.ps1 = Pub\Core\VersionBump.ps1
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AppFramework.Store", "Src\AppFramework\Store\VpnHood.AppFramework.Store.csproj", "{EACB2DB6-65D0-49C6-8634-DC72140BE82F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AppFramework.Store", "Src\AppFramework\VpnHood.AppFramework.Store\VpnHood.AppFramework.Store.csproj", "{EACB2DB6-65D0-49C6-8634-DC72140BE82F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Android", "Android", "{DC9319F3-8348-498C-9A5B-77399106DB10}"
 EndProject
@@ -84,21 +84,21 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Apps.Client.Android
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{CD65BE88-FB2C-4A0A-94EE-405F77BCF311}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Android.Ads.AdMob", "Src\AppFramework\Android.Ads.AdMob\VpnHood.AppFramework.Android.Ads.AdMob.csproj", "{F5EF4425-9936-4CE1-937B-82FB02F591B6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Android.Ads.AdMob", "Src\AppFramework\VpnHood.AppFramework.Android.Ads.AdMob\VpnHood.AppFramework.Android.Ads.AdMob.csproj", "{F5EF4425-9936-4CE1-937B-82FB02F591B6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Android.Common", "Src\AppFramework\Android.Common\VpnHood.AppFramework.Android.Common.csproj", "{5BFB6D5B-D281-41E8-8800-887FDBEB5B42}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Android.Common", "Src\AppFramework\VpnHood.AppFramework.Android.Common\VpnHood.AppFramework.Android.Common.csproj", "{5BFB6D5B-D281-41E8-8800-887FDBEB5B42}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Android.GooglePlay", "Src\AppFramework\Android.GooglePlay\VpnHood.AppFramework.Android.GooglePlay.csproj", "{13B3D280-42CD-48DB-824A-CB57D41322CA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Android.GooglePlay", "Src\AppFramework\VpnHood.AppFramework.Android.GooglePlay\VpnHood.AppFramework.Android.GooglePlay.csproj", "{13B3D280-42CD-48DB-824A-CB57D41322CA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Android.GooglePlay.Core", "Src\AppFramework\Android.GooglePlay.Core\VpnHood.AppFramework.Android.GooglePlay.Core.csproj", "{FCD1DC64-3B9D-4ABF-BC86-86A63A22DB03}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Android.GooglePlay.Core", "Src\AppFramework\VpnHood.AppFramework.Android.GooglePlay.Core\VpnHood.AppFramework.Android.GooglePlay.Core.csproj", "{FCD1DC64-3B9D-4ABF-BC86-86A63A22DB03}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Maui.Common", "Src\AppFramework\Maui.Common\VpnHood.AppFramework.Maui.Common.csproj", "{96BFA9CE-40E4-4435-B61C-A6A40588FE29}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Maui.Common", "Src\AppFramework\VpnHood.AppFramework.Maui.Common\VpnHood.AppFramework.Maui.Common.csproj", "{96BFA9CE-40E4-4435-B61C-A6A40588FE29}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Win.Common", "Src\AppFramework\Win.Common\VpnHood.AppFramework.Win.Common.csproj", "{F1E6E171-BB5C-41CE-8E36-A18A6C518473}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Win.Common", "Src\AppFramework\VpnHood.AppFramework.Win.Common\VpnHood.AppFramework.Win.Common.csproj", "{F1E6E171-BB5C-41CE-8E36-A18A6C518473}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Win.Common.WpfSpa", "Src\AppFramework\Win.Common.WpfSpa\VpnHood.AppFramework.Win.Common.WpfSpa.csproj", "{9C761B01-2DEC-42C0-A1BF-83930CD42E38}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Win.Common.WpfSpa", "Src\AppFramework\VpnHood.AppFramework.Win.Common.WpfSpa\VpnHood.AppFramework.Win.Common.WpfSpa.csproj", "{9C761B01-2DEC-42C0-A1BF-83930CD42E38}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Abstractions", "Src\AppFramework\Abstractions\VpnHood.AppFramework.Abstractions.csproj", "{8B43FFE3-A9C1-4C78-8AEF-D31B53094332}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework.Abstractions", "Src\AppFramework\VpnHood.AppFramework.Abstractions\VpnHood.AppFramework.Abstractions.csproj", "{8B43FFE3-A9C1-4C78-8AEF-D31B53094332}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Server.App.Net", "Src\Apps\Server.Net\VpnHood.Server.App.Net.csproj", "{3DBA63B3-C2C8-4708-AEC7-AC40EF0BF49C}"
 EndProject
@@ -110,7 +110,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Apps.Client.Android
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Src", "Src", "{E073E9E7-230C-4F99-A0F1-300FB450F4B1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework", "Src\AppFramework\AppFramework\VpnHood.AppFramework.csproj", "{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppFramework", "Src\AppFramework\VpnHood.AppFramework\VpnHood.AppFramework.csproj", "{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -766,26 +766,26 @@ Global
 		{E88F37AE-0672-464F-AF18-C29720054F3F}.Release|x86.ActiveCfg = Release|Any CPU
 		{E88F37AE-0672-464F-AF18-C29720054F3F}.Release|x86.Build.0 = Release|Any CPU
 		{E88F37AE-0672-464F-AF18-C29720054F3F}.Release|x86.Deploy.0 = Release|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Debug|ARM.ActiveCfg = Debug|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Debug|ARM.Build.0 = Debug|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Debug|ARM64.ActiveCfg = Debug|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Debug|ARM64.Build.0 = Debug|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Debug|x64.Build.0 = Debug|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Debug|x86.Build.0 = Debug|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Release|Any CPU.Build.0 = Release|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Release|ARM.ActiveCfg = Release|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Release|ARM.Build.0 = Release|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Release|ARM64.ActiveCfg = Release|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Release|ARM64.Build.0 = Release|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Release|x64.ActiveCfg = Release|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Release|x64.Build.0 = Release|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Release|x86.ActiveCfg = Release|Any CPU
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757}.Release|x86.Build.0 = Release|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Debug|ARM.Build.0 = Debug|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Debug|x64.Build.0 = Debug|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Debug|x86.Build.0 = Debug|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Release|Any CPU.Build.0 = Release|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Release|ARM.ActiveCfg = Release|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Release|ARM.Build.0 = Release|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Release|ARM64.Build.0 = Release|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Release|x64.ActiveCfg = Release|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Release|x64.Build.0 = Release|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Release|x86.ActiveCfg = Release|Any CPU
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -828,7 +828,7 @@ Global
 		{D8E79521-95FF-4AB4-87C9-3EC0531209B1} = {3DEEAA54-6191-41E5-AEE2-0B715D2D3F29}
 		{66A70D5B-0E5C-41AB-821D-A37F49FD76DE} = {3DEEAA54-6191-41E5-AEE2-0B715D2D3F29}
 		{E88F37AE-0672-464F-AF18-C29720054F3F} = {3DEEAA54-6191-41E5-AEE2-0B715D2D3F29}
-		{18AFA4E2-ED8D-4256-A021-BE65B4BD9757} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
+		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19BAEB35-FD38-4E41-9963-46313AF87C41}

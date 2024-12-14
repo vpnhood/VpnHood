@@ -387,8 +387,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             return;
 
         try {
-            lock
-                (_sendingPackets) // this method should not be called in multi-thread, if so we need to allocate the list per call
+            lock (_sendingPackets) // this method should not be called in multi-thread, if so we need to allocate the list per call
             {
                 _sendingPackets.Clear(); // prevent reallocation in this intensive event
                 var tunnelPackets = _sendingPackets.TunnelPackets;

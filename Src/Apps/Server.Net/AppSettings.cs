@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
-using VpnHood.Server.Access.Configurations;
-using VpnHood.Server.Access.Managers.FileAccessManagers;
-using VpnHood.Server.Access.Managers.HttpAccessManagers;
+using VpnHood.Core.Server.Access.Configurations;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
 
 namespace VpnHood.Apps.Server;
 

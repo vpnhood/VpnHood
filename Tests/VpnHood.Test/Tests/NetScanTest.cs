@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Common.Utils;
-using VpnHood.Server;
+using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Server;
 
 namespace VpnHood.Test.Tests;
 

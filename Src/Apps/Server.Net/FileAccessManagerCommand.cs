@@ -1,7 +1,7 @@
 ﻿using McMaster.Extensions.CommandLineUtils;
-using VpnHood.Common.Tokens;
-using VpnHood.Common.Utils;
-using VpnHood.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 
 namespace VpnHood.Apps.Server;
 

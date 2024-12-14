@@ -4,7 +4,7 @@ using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common.Logging;
+using VpnHood.Core.Common.Logging;
 using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Testers.QuicTesters;

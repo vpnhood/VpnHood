@@ -1,9 +1,9 @@
 ﻿using Android.Runtime;
-using VpnHood.AppFramework;
-using VpnHood.AppFramework.Droid.Common;
-using VpnHood.AppFramework.Droid.Common.Constants;
-using VpnHood.AppFramework.Droid.GooglePlay;
-using VpnHood.AppFramework.Resources;
+using VpnHood.AppLibs;
+using VpnHood.AppLibs.Droid.Common;
+using VpnHood.AppLibs.Droid.Common.Constants;
+using VpnHood.AppLibs.Droid.GooglePlay;
+using VpnHood.AppLibs.Resources;
 
 namespace VpnHood.Apps.Client.Droid.Google;
 

@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Client.Exceptions;
+using VpnHood.Core.Client.Exceptions;
 
 namespace VpnHood.Test.Tests;
 

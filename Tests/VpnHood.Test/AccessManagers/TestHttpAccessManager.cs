@@ -1,7 +1,7 @@
-﻿using VpnHood.Common.Logging;
-using VpnHood.Server.Access.Managers;
-using VpnHood.Server.Access.Managers.HttpAccessManagers;
-using VpnHood.Tunneling;
+﻿using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Server.Access.Managers;
+using VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
+using VpnHood.Core.Tunneling;
 
 namespace VpnHood.Test.AccessManagers;
 

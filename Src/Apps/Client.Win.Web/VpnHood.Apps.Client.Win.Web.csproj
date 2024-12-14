@@ -40,8 +40,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Win.Common.WpfSpa\VpnHood.AppFramework.Win.Common.WpfSpa.csproj" />
-		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Resources\VpnHood.AppFramework.Resources.csproj" />
+		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLibs.Win.Common.WpfSpa\VpnHood.AppLibs.Win.Common.WpfSpa.csproj" />
+		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLibs.Resources\VpnHood.AppLibs.Resources.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

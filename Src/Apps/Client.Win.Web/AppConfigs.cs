@@ -1,5 +1,5 @@
-using VpnHood.AppFramework.Utils;
-using VpnHood.Client;
+using VpnHood.AppLibs.Utils;
+using VpnHood.Core.Client;
 
 // ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo

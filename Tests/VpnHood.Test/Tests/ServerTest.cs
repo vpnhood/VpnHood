@@ -2,15 +2,15 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Client;
-using VpnHood.Common.Logging;
-using VpnHood.Common.Messaging;
-using VpnHood.Common.Net;
-using VpnHood.Common.Utils;
-using VpnHood.Server.Access.Configurations;
+using VpnHood.Core.Client;
+using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Net;
+using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Server.Access.Configurations;
+using VpnHood.Core.Tunneling;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
-using VpnHood.Tunneling;
 
 // ReSharper disable DisposeOnUsingVariable
 

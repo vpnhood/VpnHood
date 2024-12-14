@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "VpnHood.Server.App.Net": {
+    "VpnHood.Core.Server.App.Net": {
       "commandName": "Project",
       "commandLineArgs": "",
       "commandLineArgs2": "gen -ep 192.168.86.20:9393 -name LocalServer"

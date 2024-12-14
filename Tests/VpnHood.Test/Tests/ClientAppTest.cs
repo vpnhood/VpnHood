@@ -5,15 +5,15 @@ using System.Text.Json;
 using EmbedIO;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Client;
-using VpnHood.Client.App;
-using VpnHood.Client.App.ClientProfiles;
-using VpnHood.Common.Exceptions;
-using VpnHood.Common.IpLocations.Providers;
-using VpnHood.Common.Logging;
-using VpnHood.Common.Messaging;
-using VpnHood.Common.Net;
-using VpnHood.Common.Utils;
+using VpnHood.AppLibs;
+using VpnHood.AppLibs.ClientProfiles;
+using VpnHood.Core.Client;
+using VpnHood.Core.Common.Exceptions;
+using VpnHood.Core.Common.IpLocations.Providers;
+using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Net;
+using VpnHood.Core.Common.Utils;
 using VpnHood.Test.Device;
 
 // ReSharper disable DisposeOnUsingVariable
@@ -27,7 +27,7 @@ public class ClientAppTest : TestBase
     {
         // update current ipLocation in app project after a week
         var solutionFolder = TestHelper.GetParentDirectory(Directory.GetCurrentDirectory(), 5);
-        var ipLocationFile = Path.Combine(solutionFolder, "VpnHood.Client.App.Libs", "VpnHood.Client.App", "Resources", "IpLocations.zip");
+        var ipLocationFile = Path.Combine(solutionFolder, "Src", "AppLibs", "Resources", "IpLocations.zip");
 
         // find token
         var userSecretFile = Path.Combine(Path.GetDirectoryName(solutionFolder)!, ".user", "credentials.json");

@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Common.Messaging;
-using VpnHood.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 
 namespace VpnHood.Test.Tests;
 

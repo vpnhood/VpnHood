@@ -535,7 +535,7 @@
 * Update: Improve Session Management
 
 ### Developer
-* Update: Move VpnHood.Client.WebUI to a standalone repo
+* Update: Move VpnHood.Core.Client.WebUI to a standalone repo
 
 # v2.4.299
 ### Client
@@ -882,7 +882,7 @@
 
 ### Developer
 * Change: Update TcpDatagramHeader from binary to TcpDatagramChannelRequest json
-* Change: Move IDevice and IPacketCapture to VpnHood.Client.Device module
+* Change: Move IDevice and IPacketCapture to VpnHood.Core.Client.Device module
 * Developer: Add Simple Sample for Windows Client usage
 * Developer: Fix PublishApps.ps1 scripts to create publish folder when it does not exist
 
@@ -898,7 +898,7 @@
 ### Client
 * Update: Add client prefix to Bug Report File Name
 * Update: Close Bug Report bottom page after sending report
-* Update: Separate SPA from VpnHood.Client.App.UI. Make it easier for developers to use custom SPA
+* Update: Separate SPA from VpnHood.AppLibs.UI. Make it easier for developers to use custom SPA
 * Update: Change Anonymous IP masking from *.*.x.x to "*.x.x.*"
 * Update: Diagnose set Last error to "Diagnose has been finished" if there is not other error
 * Fix: Dark Icon

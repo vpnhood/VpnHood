@@ -2,10 +2,10 @@
 using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
-using VpnHood.Client;
+using VpnHood.Core.Client;
+using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Test.Providers;
-using VpnHood.Tunneling;
-using VpnHood.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 

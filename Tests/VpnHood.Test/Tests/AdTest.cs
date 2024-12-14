@@ -1,10 +1,10 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Client.App;
-using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.Device;
-using VpnHood.Common.Exceptions;
-using VpnHood.Common.Messaging;
-using VpnHood.Common.Tokens;
+using VpnHood.AppLibs;
+using VpnHood.AppLibs.Abstractions;
+using VpnHood.Core.Client.Device;
+using VpnHood.Core.Common.Exceptions;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Tokens;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
 

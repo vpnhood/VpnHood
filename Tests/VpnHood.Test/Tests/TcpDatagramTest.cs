@@ -2,12 +2,12 @@
 using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
-using VpnHood.Common.Utils;
-using VpnHood.Tunneling;
-using VpnHood.Tunneling.Channels;
-using VpnHood.Tunneling.ClientStreams;
-using VpnHood.Tunneling.DatagramMessaging;
-using VpnHood.Tunneling.Utils;
+using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Channels;
+using VpnHood.Core.Tunneling.ClientStreams;
+using VpnHood.Core.Tunneling.DatagramMessaging;
+using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Test.Tests;
 

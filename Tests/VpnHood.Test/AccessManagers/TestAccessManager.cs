@@ -1,10 +1,10 @@
 ﻿using System.Net;
-using VpnHood.Common.Collections;
-using VpnHood.Common.Messaging;
-using VpnHood.Server.Access;
-using VpnHood.Server.Access.Configurations;
-using VpnHood.Server.Access.Managers.FileAccessManagers;
-using VpnHood.Server.Access.Messaging;
+using VpnHood.Core.Common.Collections;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Server.Access;
+using VpnHood.Core.Server.Access.Configurations;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Core.Server.Access.Messaging;
 
 namespace VpnHood.Test.AccessManagers;
 

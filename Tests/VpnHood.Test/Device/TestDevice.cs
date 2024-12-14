@@ -1,5 +1,5 @@
-﻿using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.Device;
+﻿using VpnHood.AppLibs.Abstractions;
+using VpnHood.Core.Client.Device;
 
 namespace VpnHood.Test.Device;
 

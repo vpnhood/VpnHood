@@ -5,12 +5,12 @@ using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using PacketDotNet.Utils;
-using VpnHood.Client;
-using VpnHood.Common.Utils;
-using VpnHood.Tunneling;
-using VpnHood.Tunneling.Channels;
-using VpnHood.Tunneling.Channels.Streams;
-using VpnHood.Tunneling.Utils;
+using VpnHood.Core.Client;
+using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Channels;
+using VpnHood.Core.Tunneling.Channels.Streams;
+using VpnHood.Core.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test.Tests;

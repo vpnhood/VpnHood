@@ -6,14 +6,14 @@ using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using Microsoft.Extensions.Logging;
 using Swan.Logging;
-using VpnHood.Common.Logging;
-using VpnHood.Common.Messaging;
-using VpnHood.Common.Utils;
-using VpnHood.Server.Access;
-using VpnHood.Server.Access.Configurations;
-using VpnHood.Server.Access.Managers;
-using VpnHood.Server.Access.Messaging;
-using VpnHood.Tunneling;
+using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Server.Access;
+using VpnHood.Core.Server.Access.Configurations;
+using VpnHood.Core.Server.Access.Managers;
+using VpnHood.Core.Server.Access.Messaging;
+using VpnHood.Core.Tunneling;
 
 // ReSharper disable UnusedMember.Local
 

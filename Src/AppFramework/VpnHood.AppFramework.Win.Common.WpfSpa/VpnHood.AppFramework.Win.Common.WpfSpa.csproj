@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Readymade Vpn App skeleton for VpnHood clients. You just need to create an UI on it.</Description>
+		<Description>Shared library for VpnHood Windows WPF Clients using SPA.</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
-		<RootNamespace>VpnHood.AppFramework</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -25,27 +24,29 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Abstractions\VpnHood.AppFramework.Abstractions.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Client\VpnHood.Client.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
-			<Pack>True</Pack>
 			<PackagePath></PackagePath>
+			<Pack>True</Pack>
 		</None>
 	</ItemGroup>
 
+	<PropertyGroup>
+		<TargetFramework>net9.0-windows</TargetFramework>
+		<Nullable>enable</Nullable>
+		<UseWPF>true</UseWPF>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
 	<ItemGroup>
-		<Compile Update="Resource.Designer.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>Resource.resx</DependentUpon>
-		</Compile>
-		<EmbeddedResource Update="Resource.resx">
-			<Generator>ResXFileCodeGenerator</Generator>
-			<LastGenOutput>Resource.Designer.cs</LastGenOutput>
-		</EmbeddedResource>
+		<ProjectReference Include="..\VpnHood.AppFramework.WebServer\VpnHood.AppFramework.WebServer.csproj" />
+		<ProjectReference Include="..\VpnHood.AppFramework.Win.Common\VpnHood.AppFramework.Win.Common.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+	</ItemGroup>
+
+
 
 </Project>

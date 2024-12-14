@@ -59,12 +59,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\AppFramework\Android.Ads.AdMob\VpnHood.AppFramework.Android.Ads.AdMob.csproj" />
-		<ProjectReference Include="..\..\AppFramework\Android.GooglePlay.Core\VpnHood.AppFramework.Android.GooglePlay.Core.csproj" />
-		<ProjectReference Include="..\..\AppFramework\Android.GooglePlay\VpnHood.AppFramework.Android.GooglePlay.csproj" />
-		<ProjectReference Include="..\..\AppFramework\Android.Common\VpnHood.AppFramework.Android.Common.csproj" />
-		<ProjectReference Include="..\..\AppFramework\Resources\VpnHood.AppFramework.Resources.csproj" />
-		<ProjectReference Include="..\..\AppFramework\Store\VpnHood.AppFramework.Store.csproj" />
+		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Android.Ads.AdMob\VpnHood.AppFramework.Android.Ads.AdMob.csproj" />
+		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Android.GooglePlay.Core\VpnHood.AppFramework.Android.GooglePlay.Core.csproj" />
+		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Android.GooglePlay\VpnHood.AppFramework.Android.GooglePlay.csproj" />
+		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Android.Common\VpnHood.AppFramework.Android.Common.csproj" />
+		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Resources\VpnHood.AppFramework.Resources.csproj" />
+		<ProjectReference Include="..\..\AppFramework\VpnHood.AppFramework.Store\VpnHood.AppFramework.Store.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

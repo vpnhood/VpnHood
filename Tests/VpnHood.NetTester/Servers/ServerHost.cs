@@ -1,11 +1,11 @@
 ﻿using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common.Logging;
+using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Server.Access;
 using VpnHood.NetTester.Testers.HttpTesters;
 using VpnHood.NetTester.Testers.QuicTesters;
 using VpnHood.NetTester.Testers.TcpTesters;
-using VpnHood.Server.Access;
 
 namespace VpnHood.NetTester.Servers;
 

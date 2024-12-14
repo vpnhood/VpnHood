@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common.Jobs;
-using VpnHood.Common.Logging;
-using VpnHood.Common.Utils;
+using VpnHood.Core.Common.Jobs;
+using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.NetTester.Utils;
 

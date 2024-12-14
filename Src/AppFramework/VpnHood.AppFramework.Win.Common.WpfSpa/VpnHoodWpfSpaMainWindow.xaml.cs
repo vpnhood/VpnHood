@@ -6,7 +6,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
-using VpnHood.AppFramework;
 using VpnHood.AppFramework.WebServer;
 using VpnHood.Client.Device;
 

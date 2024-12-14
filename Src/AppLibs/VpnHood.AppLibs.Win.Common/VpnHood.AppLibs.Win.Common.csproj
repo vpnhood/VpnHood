@@ -37,7 +37,7 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\VpnHood.AppLibs.Abstractions\VpnHood.AppLibs.Abstractions.csproj" />
-	  <ProjectReference Include="..\VpnHood.AppLibs\VpnHood.AppLibs.csproj" />
+	  <ProjectReference Include="..\VpnHood.AppLibs.App\VpnHood.AppLibs.App.csproj" />
 	</ItemGroup>
 
 </Project>

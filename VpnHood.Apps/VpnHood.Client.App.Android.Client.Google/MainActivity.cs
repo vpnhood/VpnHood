@@ -21,11 +21,11 @@ namespace VpnHood.Client.App.Droid.Client.Google;
 public class MainActivity : AndroidAppMainActivity
 {
     // https://android.googlesource.com/platform/libcore/+/android-5.0.2_r1/luni/src/main/java/libcore/net/MimeUtils.java
-    public const string AccessKeyScheme1 = "vh";
-    public const string AccessKeyScheme2 = "vhkey";
-    public const string AccessKeyMime1 = "application/vhkey";
-    public const string AccessKeyMime2 = "application/pgp-keys"; //.key
-    public const string AccessKeyMime3 = "application/vnd.cinderella"; //.cdy
+    private const string AccessKeyScheme1 = "vh";
+    private const string AccessKeyScheme2 = "vhkey";
+    private const string AccessKeyMime1 = "application/vhkey";
+    private const string AccessKeyMime2 = "application/pgp-keys"; //.key
+    private const string AccessKeyMime3 = "application/vnd.cinderella"; //.cdy
 
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {

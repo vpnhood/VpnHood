@@ -1,3 +1,4 @@
+$SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot));
 $curDir = $PSScriptRoot;
 
 # variables
@@ -13,7 +14,7 @@ $variables="/variables:namespace=$namespace,apiBaseFile=$outBaseFile,projectFile
 & "$nswagExe" run $nswagFile $variables;
 
 #copy to UI project if exists
-$vhFolder = Split-Path (Split-Path -parent $curDir) -parent;
+$vhFolder = Split-Path -parent $SolutionDir;
 $uiProjectTarget = "$vhFolder\VpnHood.Core.Client.WebUI\src\services\VpnHood.Core.Client.Api.ts";
 if (Test-Path $uiProjectTarget) {
 	copy-item "$curDir/Api/$outBaseFile.ts" $uiProjectTarget -Force;

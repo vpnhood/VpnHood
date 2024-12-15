@@ -1,7 +1,9 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Client.Exceptions;
+using VpnHood.Test;
+using VpnHood.Test.Tests;
 
-namespace VpnHood.Test.Tests;
+namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
 public class DiagnoserTest : TestBase
@@ -15,9 +17,9 @@ public class DiagnoserTest : TestBase
         token.ServerToken.HostEndPoints = [TestConstants.InvalidEp];
 
         // create client
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.AutoDiagnose = true;
-        await using var clientApp = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var clientApp = TestAppHelper.CreateClientApp(appOptions: appOptions);
         var clientProfile = clientApp.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // ************

@@ -1,6 +1,4 @@
-﻿using VpnHood.Core.Client.Device;
-
-namespace VpnHood.Core.Client.Device.WinDivert;
+﻿namespace VpnHood.Core.Client.Device.WinDivert;
 
 public class WinDivertDevice : IDevice
 {

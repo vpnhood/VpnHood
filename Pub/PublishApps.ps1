@@ -72,10 +72,10 @@ if ($connectWin) {
 
 # publish server
 if ($server) {	
-	& "$solutionDir/Src/Apps/Server.App/Pub/publish_win.ps1";
-	& "$solutionDir/Src/Apps/Server.App/Pub/publish_linux_x64.ps1";
-	& "$solutionDir/Src/Apps/Server.App/Pub/publish_linux_arm64.ps1";
-	& "$solutionDir/Src/Apps/Server.App/Pub/publish_docker.ps1" -distribute $distribute;
+	& "$solutionDir/Src/Apps/Server.Net/Pub/publish_win.ps1";
+	& "$solutionDir/Src/Apps/Server.Net/Pub/publish_linux_x64.ps1";
+	& "$solutionDir/Src/Apps/Server.Net/Pub/publish_linux_arm64.ps1";
+	& "$solutionDir/Src/Apps/Server.Net/Pub/publish_docker.ps1" -distribute $distribute;
 }
 
 # publish android

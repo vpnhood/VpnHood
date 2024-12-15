@@ -1,8 +1,8 @@
 ﻿using System.Drawing;
-using VpnHood.AppLibs;
-using VpnHood.AppLibs.Resources;
-using VpnHood.AppLibs.Win.Common;
-using VpnHood.AppLibs.Win.Common.WpfSpa;
+using VpnHood.AppLib;
+using VpnHood.AppLib.Resources;
+using VpnHood.AppLib.Win.Common;
+using VpnHood.AppLib.Win.Common.WpfSpa;
 
 namespace VpnHood.Apps.Connect.Win.Web;
 

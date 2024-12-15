@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Shared library for VpnHood Windows WPF Clients using SPA.</Description>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<RootNamespace>VpnHood.AppLibs.Win.Common.WpfSpa</RootNamespace>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<Version>5.0.611</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
+			<PackagePath></PackagePath>
+			<Pack>True</Pack>
+		</None>
+	</ItemGroup>
+
+	<PropertyGroup>
+		<TargetFramework>net9.0-windows</TargetFramework>
+		<Nullable>enable</Nullable>
+		<UseWPF>true</UseWPF>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
+		<ProjectReference Include="..\VpnHood.AppLib.Win.Common\VpnHood.AppLib.Win.Common.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Device.WinDivert\VpnHood.Core.Client.Device.WinDivert.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+	</ItemGroup>
+
+
+
+</Project>

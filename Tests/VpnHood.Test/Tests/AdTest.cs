@@ -1,6 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AppLibs;
-using VpnHood.AppLibs.Abstractions;
+using VpnHood.AppLib;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;

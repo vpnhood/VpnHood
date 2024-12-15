@@ -1,14 +1,15 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Test;
 using VpnHood.Test.Device;
-using VpnHood.Test.Providers;
+using VpnHood.Test.Tests;
 
-namespace VpnHood.Test.Tests;
+namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
 public class AdTest : TestBase
@@ -24,11 +25,11 @@ public class AdTest : TestBase
         var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
 
         // create client app
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         var adProvider = new TestAdProvider(accessManager);
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd) };
         appOptions.AdProviderItems = [adProviderItem];
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         adProvider.FailLoad = true;
         adProvider.FailShow = true; // should not reach this state
 
@@ -45,10 +46,10 @@ public class AdTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd ) };
         appOptions.AdProviderItems = [adProviderItem];
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         ActiveUiContext.Context = null;
         //adProviderItem.FailShow = true;
 
@@ -56,7 +57,7 @@ public class AdTest : TestBase
         var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() => app.Connect(clientProfile.ClientProfileId));
-        await TestHelper.WaitForAppState(app, AppConnectionState.None);
+        await TestAppHelper.WaitForAppState(app, AppConnectionState.None);
     }
 
     [TestMethod]
@@ -67,8 +68,8 @@ public class AdTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
-        var appOptions = TestHelper.CreateAppOptions();
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        var appOptions = TestAppHelper.CreateAppOptions();
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         ActiveUiContext.Context = null;
         //adProviderItem.FailShow = true;
 
@@ -76,7 +77,7 @@ public class AdTest : TestBase
         var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId, planId: ConnectPlanId.PremiumByTrial);
-        await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
     }
 
     [TestMethod]
@@ -87,10 +88,10 @@ public class AdTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         ActiveUiContext.Context = null;
         //adProviderItem.FailShow = true;
 
@@ -100,7 +101,7 @@ public class AdTest : TestBase
         await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() => 
             app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd));
 
-        await TestHelper.WaitForAppState(app, AppConnectionState.None);
+        await TestAppHelper.WaitForAppState(app, AppConnectionState.None);
     }
 
     [TestMethod]
@@ -115,10 +116,10 @@ public class AdTest : TestBase
         accessManager.RejectAllAds = !acceptAd;
 
         // create client app
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
 
         // create access token
         var token = accessManager.CreateToken();
@@ -147,11 +148,11 @@ public class AdTest : TestBase
         accessManager.RejectAllAds = !acceptAd;
 
         // create client app
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
         var device = new TestDevice(() => new NullPacketCapture { CanDetectInProcessPacket = true });
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, device: device);
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
 
         // create access token
         var token = accessManager.CreateToken();
@@ -173,7 +174,7 @@ public class AdTest : TestBase
             var ex = await Assert.ThrowsExceptionAsync<SessionException>(() => app.ExtendByRewardedAd(CancellationToken.None));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
             await Task.Delay(500);
-            await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
+            await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
         }
     }
 
@@ -187,11 +188,11 @@ public class AdTest : TestBase
         accessManager.CanExtendPremiumByAd = true;
 
         // create client app
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
         var device = new TestDevice(() => new NullPacketCapture { CanDetectInProcessPacket = canDetectInProcessPacket });
-        await using var app = TestHelper.CreateClientApp(device: device, appOptions: appOptions);
+        await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
 
         // create token
         var token = accessManager.CreateToken();
@@ -217,11 +218,11 @@ public class AdTest : TestBase
         accessManager.CanExtendPremiumByAd = enable;
 
         // create client app
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
         var device = new TestDevice(() => new NullPacketCapture { CanDetectInProcessPacket = true });
-        await using var app = TestHelper.CreateClientApp(device: device, appOptions: appOptions);
+        await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
 
         // create token
         var token = accessManager.CreateToken();

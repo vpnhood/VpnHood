@@ -1,4 +1,6 @@
 param( [Parameter(Mandatory=$true)][object]$distribute );
+
+$SolutionDir = Split-Path -Parent (Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot)));
 $distribute = $distribute -eq "1";
 
 Write-Host;

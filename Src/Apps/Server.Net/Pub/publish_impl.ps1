@@ -1,3 +1,4 @@
+$SolutionDir = Split-Path -Parent (Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot)));
 if ("$moduleDir" -eq "") {throw "moduleDir has not been defined";}
 
 # Calcualted Path

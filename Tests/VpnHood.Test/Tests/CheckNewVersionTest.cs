@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AppLibs;
+using VpnHood.AppLib;
 using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.Test.Tests;

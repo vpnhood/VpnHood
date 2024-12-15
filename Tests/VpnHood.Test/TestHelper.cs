@@ -3,7 +3,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AppLibs;
+using VpnHood.AppLib;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Diagnosing;

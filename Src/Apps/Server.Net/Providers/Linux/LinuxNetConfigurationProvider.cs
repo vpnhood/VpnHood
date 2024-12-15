@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Server.Abstractions;
 
-namespace VpnHood.Apps.Server.Providers.Linux;
+namespace VpnHood.App.Server.Providers.Linux;
 
 
 // add & remove ip address for linux server

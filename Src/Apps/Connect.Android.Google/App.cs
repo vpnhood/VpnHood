@@ -3,18 +3,18 @@ using Android.Runtime;
 using Firebase.Analytics;
 using Firebase.Crashlytics;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLibs;
-using VpnHood.AppLibs.Droid.Ads.VhAdMob;
-using VpnHood.AppLibs.Droid.Common;
-using VpnHood.AppLibs.Droid.Common.Constants;
-using VpnHood.AppLibs.Droid.GooglePlay;
-using VpnHood.AppLibs.Resources;
-using VpnHood.AppLibs.Store;
+using VpnHood.AppLib;
+using VpnHood.AppLib.Droid.Ads.VhAdMob;
+using VpnHood.AppLib.Droid.Common;
+using VpnHood.AppLib.Droid.Common.Constants;
+using VpnHood.AppLib.Droid.GooglePlay;
+using VpnHood.AppLib.Resources;
+using VpnHood.AppLib.Store;
 using VpnHood.Core.Client.App.Droid.Ads.VhChartboost;
 using VpnHood.Core.Client.App.Droid.Ads.VhInMobi;
 using VpnHood.Core.Common.Logging;
 
-namespace VpnHood.Apps.Client.Droid.Google;
+namespace VpnHood.App.Client.Droid.Google;
 
 [Application(
     Label = AndroidAppConstants.Label,

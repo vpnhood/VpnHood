@@ -898,7 +898,7 @@
 ### Client
 * Update: Add client prefix to Bug Report File Name
 * Update: Close Bug Report bottom page after sending report
-* Update: Separate SPA from VpnHood.AppLibs.UI. Make it easier for developers to use custom SPA
+* Update: Separate SPA from VpnHood.AppLib.UI. Make it easier for developers to use custom SPA
 * Update: Change Anonymous IP masking from *.*.x.x to "*.x.x.*"
 * Update: Diagnose set Last error to "Diagnose has been finished" if there is not other error
 * Fix: Dark Icon

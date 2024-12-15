@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<Description>VpnHood Android Client App</Description>
 		<TargetFramework>net9.0-android35.0</TargetFramework>
-		<RootNamespace>VpnHood.Apps.Client.Droid.Google</RootNamespace>
+		<RootNamespace>VpnHood.App.Client.Droid.Google</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.client.android.web</ApplicationId>
 		<ApplicationVersion>610</ApplicationVersion>
@@ -45,9 +45,9 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
-		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLib.Resources\VpnHood.AppLib.Resources.csproj" />
-		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLib.Android.GooglePlay.Core\VpnHood.AppLib.Android.GooglePlay.Core.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Resources\VpnHood.AppLib.Resources.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.GooglePlay.Core\VpnHood.AppLib.Android.GooglePlay.Core.csproj" />
 	</ItemGroup>
 
 </Project>

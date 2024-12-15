@@ -4,7 +4,7 @@ using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
 
-namespace VpnHood.Apps.Server;
+namespace VpnHood.App.Server;
 
 public class AppSettings
 {

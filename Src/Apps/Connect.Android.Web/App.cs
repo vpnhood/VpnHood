@@ -6,7 +6,7 @@ using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Resources;
 using VpnHood.Core.Client.Device.Droid.Utils;
 
-namespace VpnHood.Apps.Connect.Droid.Web;
+namespace VpnHood.App.Connect.Droid.Web;
 
 [Application(
     Label = AndroidAppConstants.Label,

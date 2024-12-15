@@ -36,8 +36,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Src\AppLibs\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
-		<ProjectReference Include="..\..\Src\AppLibs\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<ProjectReference Include="..\..\Src\AppLib\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
+		<ProjectReference Include="..\..\Src\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
 		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Client.Device.WinDivert\VpnHood.Core.Client.Device.WinDivert.csproj" />
 		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Server.Access.FileAccessManager\VpnHood.Core.Server.Access.FileAccessManager.csproj" />
 		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />

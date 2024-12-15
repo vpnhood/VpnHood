@@ -3,7 +3,7 @@ using VpnHood.Core.Client;
 
 // ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo
-namespace VpnHood.Apps.Client.Win.Web;
+namespace VpnHood.App.Client.Win.Web;
 
 internal class AppConfigs : AppConfigsBase<AppConfigs>
 {

@@ -3,7 +3,7 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 
-namespace VpnHood.Apps.Server;
+namespace VpnHood.App.Server;
 
 public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
 {

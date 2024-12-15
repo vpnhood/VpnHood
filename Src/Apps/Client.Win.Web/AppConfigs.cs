@@ -1,4 +1,4 @@
-using VpnHood.AppLibs.Utils;
+using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client;
 
 // ReSharper disable StringLiteralTypo

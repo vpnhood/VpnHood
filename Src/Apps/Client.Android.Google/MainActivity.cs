@@ -1,7 +1,7 @@
 ﻿using Android.Content;
 using Android.Service.QuickSettings;
-using VpnHood.AppLibs.Droid.Common.Activities;
-using VpnHood.AppLibs.Droid.Common.Constants;
+using VpnHood.AppLib.Droid.Common.Activities;
+using VpnHood.AppLib.Droid.Common.Constants;
 
 namespace VpnHood.Apps.Client.Droid.Google;
 

@@ -61,6 +61,15 @@ namespace VpnHood.Core.Client.Device.WinDivert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to sss.
+        /// </summary>
+        internal static string String1 {
+            get {
+                return ResourceManager.GetString("String1", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
         internal static byte[] WinDivertLibZip {

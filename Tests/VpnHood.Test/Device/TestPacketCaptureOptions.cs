@@ -2,7 +2,7 @@
 
 namespace VpnHood.Test.Device;
 
-internal class TestPacketCaptureOptions
+public class TestPacketCaptureOptions
 {
     public bool CanSendPacketToOutbound { get; set; } = true;
     public bool IsDnsServerSupported { get; set; }

@@ -4,10 +4,10 @@ using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Tokens;
 
-namespace VpnHood.Test.Tests;
+namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
-public class ClientProfileTest : TestBase
+public class ClientProfileTest 
 {
     private int _lastSupportId;
     private Token CreateToken()
@@ -36,11 +36,13 @@ public class ClientProfileTest : TestBase
     [TestMethod]
     public async Task BuiltIn_AccessKeys_initialization()
     {
-        var appOptions = TestHelper.CreateAppOptions();
+        using var testApp = new TestAppHelper();
+
+        var appOptions = TestAppHelper.CreateAppOptions();
         var tokens = new[] { CreateToken(), CreateToken() };
         appOptions.AccessKeys = tokens.Select(x => x.ToAccessKey()).ToArray();
 
-        await using var app1 = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app1 = TestAppHelper.CreateClientApp(appOptions: appOptions);
         var clientProfiles = app1.ClientProfileService.List();
         Assert.AreEqual(tokens.Length, clientProfiles.Length);
         Assert.AreEqual(tokens[0].TokenId, clientProfiles[0].Token.TokenId);
@@ -60,17 +62,17 @@ public class ClientProfileTest : TestBase
     [TestMethod]
     public async Task BuiltIn_AccessKeys_RemoveOldKeys()
     {
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         var tokens1 = new[] { CreateToken(), CreateToken() };
         appOptions.AccessKeys = tokens1.Select(x => x.ToAccessKey()).ToArray();
 
-        await using var app1 = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app1 = TestAppHelper.CreateClientApp(appOptions: appOptions);
         await app1.DisposeAsync();
 
         // create app again
         var tokens2 = new[] { CreateToken(), CreateToken() };
         appOptions.AccessKeys = tokens2.Select(x => x.ToAccessKey()).ToArray();
-        await using var app2 = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app2 = TestAppHelper.CreateClientApp(appOptions: appOptions);
 
         var clientProfiles = app2.ClientProfileService.List();
         Assert.AreEqual(tokens2.Length, clientProfiles.Length);
@@ -83,7 +85,7 @@ public class ClientProfileTest : TestBase
     [TestMethod]
     public async Task ClientPolicy()
     {
-        await using var app = TestHelper.CreateClientApp();
+        await using var app = TestAppHelper.CreateClientApp();
 
         // test two region in a same country
         var token = CreateToken();
@@ -173,7 +175,7 @@ public class ClientProfileTest : TestBase
     [TestMethod]
     public async Task Crud()
     {
-        await using var app = TestHelper.CreateClientApp();
+        await using var app = TestAppHelper.CreateClientApp();
 
         // ************
         // *** TEST ***: AddAccessKey should add a clientProfile
@@ -237,7 +239,7 @@ public class ClientProfileTest : TestBase
     [TestMethod]
     public async Task Save_load()
     {
-        await using var app1 = TestHelper.CreateClientApp();
+        await using var app1 = TestAppHelper.CreateClientApp();
 
         var token1 = CreateToken();
         var clientProfile1 = app1.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
@@ -248,10 +250,10 @@ public class ClientProfileTest : TestBase
         var clientProfiles = app1.ClientProfileService.List();
         await app1.DisposeAsync();
 
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.StorageFolderPath = app1.StorageFolderPath;
 
-        await using var app2 = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app2 = TestAppHelper.CreateClientApp(appOptions: appOptions);
         Assert.AreEqual(clientProfiles.Length, app2.ClientProfileService.List().Length,
             "ClientProfiles count are not same!");
         Assert.IsNotNull(app2.ClientProfileService.FindById(clientProfile1.ClientProfileId));
@@ -263,7 +265,7 @@ public class ClientProfileTest : TestBase
     [TestMethod]
     public async Task Default_ServerLocation()
     {
-        await using var app = TestHelper.CreateClientApp();
+        await using var app = TestAppHelper.CreateClientApp();
 
         // test two region in a same country
         var token = CreateToken();
@@ -308,7 +310,7 @@ public class ClientProfileTest : TestBase
     [TestMethod]
     public async Task Calculate_server_location_tags()
     {
-        await using var app = TestHelper.CreateClientApp();
+        await using var app = TestAppHelper.CreateClientApp();
 
         // test two region in a same country
         var token = CreateToken();
@@ -343,7 +345,7 @@ public class ClientProfileTest : TestBase
     [TestMethod]
     public async Task Calculate_server_parent_location_tags_auto()
     {
-        await using var app = TestHelper.CreateClientApp();
+        await using var app = TestAppHelper.CreateClientApp();
         var token = CreateToken();
         token.ServerToken.ServerLocations = ["US/texas [#tag1]", "US/california [#tag1]", "CA/toronto [#tag1]"];
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
@@ -356,7 +358,7 @@ public class ClientProfileTest : TestBase
     [TestMethod]
     public async Task Create_parent_ServerLocations()
     {
-        await using var app1 = TestHelper.CreateClientApp();
+        await using var app1 = TestAppHelper.CreateClientApp();
 
         // test two region in a same country
         var token = CreateToken();
@@ -412,7 +414,7 @@ public class ClientProfileTest : TestBase
     [TestMethod]
     public async Task Filter_unblockable()
     {
-        await using var app = TestHelper.CreateClientApp();
+        await using var app = TestAppHelper.CreateClientApp();
 
         var defaultPolicy = new ClientPolicy {
             ClientCountries = ["*"],

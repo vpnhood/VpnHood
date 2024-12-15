@@ -2,7 +2,7 @@
 
 namespace VpnHood.Test.Providers;
 
-internal class TestTracker : ITracker
+public class TestTrackerProvider : ITracker
 {
     public bool IsEnabled { get; set; }
     public List<TrackEvent> TrackEvents { get; } = [];

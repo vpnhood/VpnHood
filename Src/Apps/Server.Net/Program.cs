@@ -1,6 +1,6 @@
 ﻿using VpnHood.Core.Common.Utils;
 
-namespace VpnHood.Apps.Server;
+namespace VpnHood.App.Server;
 
 internal class Program
 {

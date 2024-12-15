@@ -4,7 +4,7 @@ using VpnHood.AppLib.Resources;
 using VpnHood.AppLib.Win.Common;
 using VpnHood.AppLib.Win.Common.WpfSpa;
 
-namespace VpnHood.Apps.Client.Win.Web;
+namespace VpnHood.App.Client.Win.Web;
 
 public class App : VpnHoodWpfSpaApp
 {

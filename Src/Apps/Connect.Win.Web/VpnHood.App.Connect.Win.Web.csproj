@@ -10,7 +10,7 @@
 		<EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
 		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
 		<ApplicationManifest>Properties/app.manifest</ApplicationManifest>
-		<RootNamespace>VpnHood.Apps.Connect.Win.Web</RootNamespace>
+		<RootNamespace>VpnHood.App.Connect.Win.Web</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -48,10 +48,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLib.Resources\VpnHood.AppLib.Resources.csproj" />
-		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
-		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLib.Win.Common.WpfSpa\VpnHood.AppLib.Win.Common.WpfSpa.csproj" />
-		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLib.Win.Common\VpnHood.AppLib.Win.Common.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Resources\VpnHood.AppLib.Resources.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Win.Common.WpfSpa\VpnHood.AppLib.Win.Common.WpfSpa.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Win.Common\VpnHood.AppLib.Win.Common.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

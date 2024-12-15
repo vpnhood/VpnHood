@@ -6,6 +6,8 @@
 * Feature: Drop QUIC in protocol
 * Feature: Protocol Version 6
 * Feature: Add Portuguese (Brazil) language
+* Improve: Add a search box to the app filter page
+* Improve: Enhance support for legacy WebView
 * Improve: Improve initialization speed to exclude my country
 * Improve: Diagnostic wrongly reports your internet may not be stable
 * Improve: Check for the latest version after the connection is established

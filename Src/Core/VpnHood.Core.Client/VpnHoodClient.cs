@@ -269,6 +269,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         if (State != ClientState.None)
             throw new Exception("Connection is already in progress.");
 
+        // Connecting. Must before IsIpv6Supported
+        State = ClientState.Connecting;
+        _sessionStatus = new SessionStatus();
 
         // report config
         IsIpV6SupportedByClient = await IPAddressUtil.IsIpv6Supported();
@@ -287,10 +290,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             "ClientMinProtocolVersion: {ClientMinProtocolVersion}, ClientMinProtocolVersion: {ClientMaxProtocolVersion}, " +
             "ClientId: {ClientId}",
             Version, MinProtocolVersion, MaxProtocolVersion, VhLogger.FormatId(ClientId));
-
-        // Starting
-        State = ClientState.Connecting;
-        _sessionStatus = new SessionStatus();
 
         // Connect
         try {

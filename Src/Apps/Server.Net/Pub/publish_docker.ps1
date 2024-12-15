@@ -9,7 +9,7 @@ Write-Host "*** Creating Docker..." -BackgroundColor Blue -ForegroundColor White
 # Init script
 $projectDir = Split-Path $PSScriptRoot -Parent;
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
-. "$projectDir/../../Pub/Core/Common.ps1";
+. "$SolutionDir/Pub/Core/Common.ps1";
 
 #update project version
 UpdateProjectVersion $projectFile;

@@ -2,7 +2,7 @@ $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -P
 & "$SolutionDir/Pub/Core/PublishWinApp.ps1" `
 	-projectDir $PSScriptRoot  `
 	-packageFileTitle "VpnHoodConnect" `
-	-aipFileR "Src/Apps/VpnHood.AppLib.Win.Connect.Setup/VpnHood.AppLib.Win.Connect.Setup.aip" `
+	-aipFileR "Src/Apps/Connect.Win.Web.Setup/VpnHood.App.Connect.Win.Web.Setup.aip" `
 	-distribution "web" `
 	-repoBaseUrl "https://github.com/vpnhood/VpnHood.AppLib.Connect" `
 	-installationPageUrl "https://www.vpnhood.com"

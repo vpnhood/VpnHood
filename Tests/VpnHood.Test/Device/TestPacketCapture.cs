@@ -4,7 +4,7 @@ using VpnHood.Core.Client.Device.WinDivert;
 
 namespace VpnHood.Test.Device;
 
-internal class TestPacketCapture(TestPacketCaptureOptions packetCaptureOptions) : WinDivertPacketCapture
+public class TestPacketCapture(TestPacketCaptureOptions packetCaptureOptions) : WinDivertPacketCapture
 {
     private IPAddress[]? _dnsServers;
 

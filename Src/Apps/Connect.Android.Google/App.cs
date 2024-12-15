@@ -4,14 +4,15 @@ using Firebase.Analytics;
 using Firebase.Crashlytics;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Droid.Ads.VhAdMob;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
 using VpnHood.AppLib.Resources;
-using VpnHood.AppLib.Store;
-using VpnHood.Core.Client.App.Droid.Ads.VhChartboost;
-using VpnHood.Core.Client.App.Droid.Ads.VhInMobi;
+//using VpnHood.AppLib.Store;
+using VpnHood.AppLib.Droid.Ads.VhChartboost;
+using VpnHood.AppLib.Droid.Ads.VhInMobi;
 using VpnHood.Core.Common.Logging;
 
 namespace VpnHood.App.Client.Droid.Google;
@@ -107,19 +108,20 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         ];
     }
 
-    private static StoreAccountProvider? CreateAppAccountProvider(AppConfigs appConfigs, string storageFolderPath)
+    private static IAppAccountProvider? CreateAppAccountProvider(AppConfigs appConfigs, string storageFolderPath)
     {
-        try {
-            var authenticationExternalProvider = new GooglePlayAuthenticationProvider(appConfigs.GoogleSignInClientId);
-            var authenticationProvider = new StoreAuthenticationProvider(storageFolderPath, new Uri(appConfigs.StoreBaseUri),
-                appConfigs.StoreAppId, authenticationExternalProvider, ignoreSslVerification: appConfigs.StoreIgnoreSslVerification);
-            var googlePlayBillingProvider = new GooglePlayBillingProvider(authenticationProvider);
-            var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider, appConfigs.StoreAppId);
-            return accountProvider;
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not create AppAccountService.");
-            return null;
-        }
+        throw new NotImplementedException();
+        //try {
+        //    var authenticationExternalProvider = new GooglePlayAuthenticationProvider(appConfigs.GoogleSignInClientId);
+        //    var authenticationProvider = new StoreAuthenticationProvider(storageFolderPath, new Uri(appConfigs.StoreBaseUri),
+        //        appConfigs.StoreAppId, authenticationExternalProvider, ignoreSslVerification: appConfigs.StoreIgnoreSslVerification);
+        //    var googlePlayBillingProvider = new GooglePlayBillingProvider(authenticationProvider);
+        //    var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider, appConfigs.StoreAppId);
+        //    return accountProvider;
+        //}
+        //catch (Exception ex) {
+        //    VhLogger.Instance.LogError(ex, "Could not create AppAccountService.");
+        //    return null;
+        //}
     }
 }

@@ -14,7 +14,7 @@ using VpnHood.Core.Client.App.Droid.Ads.VhChartboost;
 using VpnHood.Core.Client.App.Droid.Ads.VhInMobi;
 using VpnHood.Core.Common.Logging;
 
-namespace VpnHood.Apps.Client.Droid.Google;
+namespace VpnHood.App.Client.Droid.Google;
 
 [Application(
     Label = AndroidAppConstants.Label,

@@ -5,7 +5,7 @@ using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
 using VpnHood.AppLib.Resources;
 
-namespace VpnHood.Apps.Client.Droid.Google;
+namespace VpnHood.App.Client.Droid.Google;
 
 [Application(
     Label = AndroidAppConstants.Label,

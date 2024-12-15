@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<Description>VpnHood Android Client Connect App with Ads and memebership</Description>
 		<TargetFramework>net9.0-android35.0</TargetFramework>
-		<RootNamespace>VpnHood.Apps.Connect.Droid.Web</RootNamespace>
+		<RootNamespace>VpnHood.App.Connect.Droid.Web</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
 		<ApplicationVersion>610</ApplicationVersion>
@@ -59,8 +59,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
-		<ProjectReference Include="..\..\AppLibs\VpnHood.AppLib.Resources\VpnHood.AppLib.Resources.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Resources\VpnHood.AppLib.Resources.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -31,7 +31,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>5.0.612</Version>
+		<Version>5.0.616</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseOutputPath></BaseOutputPath>
 		<BaseIntermediateOutputPath />
@@ -53,7 +53,6 @@
 	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0-android35.0'">
 		<ProjectReference Include="..\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Device.Android\VpnHood.Core.Client.Device.Android.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Device.Android\VpnHood.Core.Client.Device.Android.csproj" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0-windows10.0.22621.0'">
@@ -63,10 +62,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Device\VpnHood.Core.Client.Device.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
 	</ItemGroup>
 
 </Project>

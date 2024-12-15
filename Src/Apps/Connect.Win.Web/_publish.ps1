@@ -1,4 +1,5 @@
-& "$PSScriptRoot/../../Pub/Core/PublishWinApp.ps1" `
+$SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot));
+& "$SolutionDir/Pub/Core/PublishWinApp.ps1" `
 	-projectDir $PSScriptRoot  `
 	-packageFileTitle "VpnHoodConnect" `
 	-aipFileR "VpnHood.Apps/VpnHood.AppLibs.Win.Connect.Setup/VpnHood.AppLibs.Win.Connect.Setup.aip" `

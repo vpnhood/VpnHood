@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Tiny internal webserver to server your single-page application (SPA). You need this only if you want to create a UI for your VpnHood client by single-page application (SPA).</Description>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<RootNamespace>VpnHood.AppLib.WebServer</RootNamespace>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<Version>5.0.612</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\..\..\VpnHood.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="EmbedIO" Version="3.5.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+	</ItemGroup>
+
+</Project>

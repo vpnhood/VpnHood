@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Server.SystemInformation;
 
-namespace VpnHood.Apps.Server.Providers.Linux;
+namespace VpnHood.App.Server.Providers.Linux;
 
 public class LinuxSystemInfoProvider : ISystemInfoProvider
 {

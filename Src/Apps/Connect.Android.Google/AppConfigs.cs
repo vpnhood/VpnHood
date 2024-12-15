@@ -1,14 +1,14 @@
-using VpnHood.AppLibs.Utils;
+using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client;
 
 // ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo
-namespace VpnHood.Apps.Client.Droid.Google;
+namespace VpnHood.App.Client.Droid.Google;
 
 internal class AppConfigs : AppConfigsBase<AppConfigs>
 {
     public string AppName { get; init; } = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
-    public Uri? UpdateInfoUrl { get; init; } = new ("https://github.com/vpnhood/VpnHood.AppLibs.App.Connect/releases/latest/download/VpnHoodConnect-Android.json");
+    public Uri? UpdateInfoUrl { get; init; } = new ("https://github.com/vpnhood/VpnHood.AppLib.App.Connect/releases/latest/download/VpnHoodConnect-Android.json");
     public int? SpaDefaultPort { get; init; }= IsDebugMode ? 9571 : 9570;
     public bool SpaListenToAllIps { get; init; } = IsDebugMode;
 

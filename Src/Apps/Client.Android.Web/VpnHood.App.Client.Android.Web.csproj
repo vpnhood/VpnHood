@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>VpnHood Android Client App</Description>
+		<TargetFramework>net9.0-android35.0</TargetFramework>
+		<RootNamespace>VpnHood.App.Client.Droid.Web</RootNamespace>
+		<OutputType>Exe</OutputType>
+		<ApplicationId>com.vpnhood.client.android.web</ApplicationId>
+		<ApplicationVersion>610</ApplicationVersion>
+		<ApplicationDisplayVersion>5.0.610</ApplicationDisplayVersion>
+		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
+		<DebugSymbols>True</DebugSymbols>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<PublishTrimmed>True</PublishTrimmed>
+		<RunAOTCompilation>True</RunAOTCompilation>
+		<RuntimeIdentifiers>android-arm64;android-x64;android-arm</RuntimeIdentifiers>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<Version>5.0.610</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+		<BaseIntermediateOutputPath />
+	</PropertyGroup>
+
+	<ItemGroup>
+		<AndroidResource Update="Resources\xml\locales_config.xml">
+			<SubType>Designer</SubType>
+			<Generator>MSBuild:UpdateGeneratedFiles</Generator>
+		</AndroidResource>
+	</ItemGroup>
+	
+	<ItemGroup>
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Resources\VpnHood.AppLib.Resources.csproj" />
+	</ItemGroup>
+
+</Project>

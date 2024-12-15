@@ -4,7 +4,7 @@ using VpnHood.Core.Server.Abstractions;
 
 // ReSharper disable StringLiteralTypo
 
-namespace VpnHood.Apps.Server.Providers.Linux;
+namespace VpnHood.App.Server.Providers.Linux;
 
 public class LinuxSwapMemoryProvider(ILogger logger)
     : ISwapMemoryProvider

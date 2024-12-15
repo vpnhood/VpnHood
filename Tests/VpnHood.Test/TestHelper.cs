@@ -3,7 +3,6 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AppLib;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Diagnosing;
@@ -27,7 +26,7 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test;
 
-internal static class TestHelper
+public class TestHelper : IDisposable
 {
     public class TestAppUiContext : IUiContext
     {
@@ -36,7 +35,7 @@ internal static class TestHelper
 
     public static TestWebServer WebServer { get; private set; } = default!;
     public static TestNetFilter NetFilter { get; private set; } = default!;
-    private static bool LogVerbose => true;
+    public static bool LogVerbose => true;
     private static bool? _isIpV6Supported;
 
     public static async Task<bool> IsIpV6Supported()
@@ -49,7 +48,7 @@ internal static class TestHelper
 
     public static string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "_test_vpnhood");
 
-    internal static void Cleanup()
+    public static void Cleanup()
     {
         try {
             if (Directory.Exists(WorkingPath))
@@ -58,12 +57,6 @@ internal static class TestHelper
         catch {
             // ignored
         }
-    }
-
-    public static Task WaitForAppState(VpnHoodApp app, AppConnectionState connectionSate, int timeout = 5000)
-    {
-        return VhTestUtil.AssertEqualsWait(connectionSate, () => app.State.ConnectionState,
-            "App state didn't reach the expected value.", timeout);
     }
 
     public static Task WaitForClientState(VpnHoodClient client, ClientState clientState, int timeout = 6000,
@@ -369,7 +362,7 @@ internal static class TestHelper
             AllowEndPointTracker = true,
             MaxDatagramChannelCount = 1,
             UseUdpChannel = useUdp,
-            Tracker = new TestTracker()
+            Tracker = new TestTrackerProvider()
         };
     }
 
@@ -407,46 +400,7 @@ internal static class TestHelper
         return client;
     }
 
-    public static AppOptions CreateAppOptions()
-    {
-        var tracker = new TestTracker();
-        var appOptions = new AppOptions("com.vpnhood.client.test", isDebugMode: true) {
-            StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
-            SessionTimeout = TimeSpan.FromSeconds(2),
-            Ga4MeasurementId = null,
-            Tracker = tracker,
-            UseInternalLocationService = false,
-            UseExternalLocationService = false,
-            AllowEndPointTracker = true,
-            LogVerbose = LogVerbose,
-            ServerQueryTimeout = TimeSpan.FromSeconds(2),
-            AutoDiagnose = false,
-            SingleLineConsoleLog = false,
-            CanExtendByRewardedAdThreshold = TimeSpan.Zero,
-            AdOptions = new AppAdOptions {
-                ShowAdPostDelay = TimeSpan.Zero,
-                LoadAdPostDelay = TimeSpan.Zero
-            }
-        };
-        return appOptions;
-    }
-
-    public static VpnHoodApp CreateClientApp(AppOptions? appOptions = default, IDevice? device = default)
-    {
-        appOptions ??= CreateAppOptions();
-        device ??= new TestDevice(() => new TestNullPacketCapture());
-
-        //create app
-        var clientApp = VpnHoodApp.Init(device, appOptions);
-        clientApp.Diagnoser.HttpTimeout = 2000;
-        clientApp.Diagnoser.NsTimeout = 2000;
-        clientApp.UserSettings.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
-        clientApp.UserSettings.Logging.LogAnonymous = false;
-        clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
-        ActiveUiContext.Context = new TestAppUiContext();
-
-        return clientApp;
-    }
+    
 
     public static SessionRequestEx CreateSessionRequestEx(Token token, string? clientId = null)
     {
@@ -468,7 +422,7 @@ internal static class TestHelper
 
     private static bool _isInit;
 
-    internal static void Init()
+    public static void Init()
     {
         if (_isInit) return;
         _isInit = true;
@@ -506,5 +460,9 @@ internal static class TestHelper
             path = Path.GetDirectoryName(path) ?? throw new Exception("Invalid path");
 
         return path;
+    }
+
+    public virtual void Dispose()
+    {
     }
 }

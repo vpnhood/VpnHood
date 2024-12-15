@@ -3,7 +3,7 @@ using VpnHood.Core.Common.Converters;
 
 namespace VpnHood.Test;
 
-internal class TestConstants
+public class TestConstants
 {
     public const int DefaultTimeout = 30000;
     public static Uri HttpsUri1 => new("https://ipv4.jamieweb.net/"); //make sure always return same ips

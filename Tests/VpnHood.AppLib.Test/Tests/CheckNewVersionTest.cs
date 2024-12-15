@@ -1,9 +1,10 @@
 ﻿using System.Text.Json;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AppLib;
 using VpnHood.Core.Common.Utils;
+using VpnHood.Test;
+using VpnHood.Test.Tests;
 
-namespace VpnHood.Test.Tests;
+namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
 public class CheckNewVersionTest : TestBase
@@ -33,9 +34,9 @@ public class CheckNewVersionTest : TestBase
     [TestMethod]
     public async Task Remote_is_unknown_if_remote_is_unreachable()
     {
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdateInfoUrl = new Uri("https://localhost:39999");
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
 
         await Task.Delay(1000);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Unknown, () => app.State.VersionStatus);
@@ -47,10 +48,10 @@ public class CheckNewVersionTest : TestBase
     {
         SetNewRelease(CurrentAppVersion, DateTime.UtcNow, TimeSpan.Zero);
 
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1;
         appOptions.VersionCheckInterval = TimeSpan.FromMilliseconds(500);
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
 
         await VhTestUtil.AssertEqualsWait(VersionStatus.Latest, () => app.State.VersionStatus);
     }
@@ -62,10 +63,10 @@ public class CheckNewVersionTest : TestBase
             DateTime.UtcNow,
             TimeSpan.Zero, CurrentAppVersion);
 
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1;
         appOptions.VersionCheckInterval = TimeSpan.FromMilliseconds(500);
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
 
         await VhTestUtil.AssertEqualsWait(VersionStatus.Deprecated, () => app.State.VersionStatus);
     }
@@ -76,10 +77,10 @@ public class CheckNewVersionTest : TestBase
         SetNewRelease(CurrentAppVersion, DateTime.UtcNow, TimeSpan.Zero);
 
         // create client
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1;
         appOptions.VersionCheckInterval = TimeSpan.FromMilliseconds(500);
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
 
         // version should be latest
         await VhTestUtil.AssertEqualsWait(VersionStatus.Latest, () => app.State.VersionStatus);
@@ -96,10 +97,10 @@ public class CheckNewVersionTest : TestBase
         SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
             DateTime.UtcNow, TimeSpan.FromSeconds(2));
 
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1;
         appOptions.VersionCheckInterval = TimeSpan.FromMilliseconds(500);
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
 
         await VhTestUtil.AssertEqualsWait(VersionStatus.Latest, () => app.State.VersionStatus);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.State.VersionStatus);
@@ -111,10 +112,10 @@ public class CheckNewVersionTest : TestBase
         SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
             DateTime.UtcNow, TimeSpan.Zero);
 
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1;
         appOptions.VersionCheckInterval = TimeSpan.FromMilliseconds(500);
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
 
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.State.VersionStatus);
     }
@@ -130,9 +131,9 @@ public class CheckNewVersionTest : TestBase
         TestHelper.WebServer.FileContent1 = Guid.NewGuid().ToString();
 
         // create client app
-        var appOptions = TestHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1;
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         await Task.Delay(1000);
@@ -142,7 +143,7 @@ public class CheckNewVersionTest : TestBase
         SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
             DateTime.UtcNow, TimeSpan.Zero);
         await app.Connect(clientProfile.ClientProfileId);
-        await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.State.VersionStatus);
     }
 }

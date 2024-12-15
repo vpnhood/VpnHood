@@ -39,7 +39,7 @@ namespace VpnHood.AppLib.Resources {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("VpnHood.AppLib.App.Resources.EmbeddedResource", typeof(EmbeddedResource).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("VpnHood.AppLib.Resources.EmbeddedResource", typeof(EmbeddedResource).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -67,6 +67,15 @@ namespace VpnHood.AppLib.Resources {
             get {
                 object obj = ResourceManager.GetObject("SPA", resourceCulture);
                 return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ss.
+        /// </summary>
+        internal static string String1 {
+            get {
+                return ResourceManager.GetString("String1", resourceCulture);
             }
         }
         

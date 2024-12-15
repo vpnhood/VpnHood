@@ -62,32 +62,32 @@ if ($maui) {
 
 # publish win client
 if ($clientWin) {
-	& "$solutionDir/Src/Apps/VpnHood.AppLib.Win.Client/_publish.ps1";
+	& "$solutionDir/Src/Apps/Client.Win.Web/_publish.ps1";
 }
 
 # publish win client
 if ($connectWin) {
-	& "$solutionDir/Src/Apps/VpnHood.AppLib.Win.Connect/_publish.ps1";
+	& "$solutionDir/Src/Apps/Connect.Win.Web/_publish.ps1";
 }
 
 # publish server
 if ($server) {	
-	& "$solutionDir/Src/Apps/VpnHood.Core.Server.App.Net/Pub/publish_win.ps1";
-	& "$solutionDir/Src/Apps/VpnHood.Core.Server.App.Net/Pub/publish_linux_x64.ps1";
-	& "$solutionDir/Src/Apps/VpnHood.Core.Server.App.Net/Pub/publish_linux_arm64.ps1";
-	& "$solutionDir/Src/Apps/VpnHood.Core.Server.App.Net/Pub/publish_docker.ps1" -distribute $distribute;
+	& "$solutionDir/Src/Apps/Server.Net/Pub/publish_win.ps1";
+	& "$solutionDir/Src/Apps/Server.Net/Pub/publish_linux_x64.ps1";
+	& "$solutionDir/Src/Apps/Server.Net/Pub/publish_linux_arm64.ps1";
+	& "$solutionDir/Src/Apps/Server.Net/Pub/publish_docker.ps1" -distribute $distribute;
 }
 
 # publish android
 if ($clientAndroid) {	
-	& "$solutionDir/Src/Apps/VpnHood.AppLib.Android.Client.Google/_publish.ps1";
-	& "$solutionDir/Src/Apps/VpnHood.AppLib.Android.Client.Web/_publish.ps1";
+	& "$solutionDir/Src/Apps/Client.Android.Google/_publish.ps1";
+	& "$solutionDir/Src/Apps/Client.Android.Web/_publish.ps1";
 }
 
 # publish android
 if ($connectAndroid) {	
-	& "$solutionDir/Src/Apps/VpnHood.AppLib.Android.Connect.Google/_publish.ps1";
-	& "$solutionDir/Src/Apps/VpnHood.AppLib.Android.Connect.Web/_publish.ps1";
+	& "$solutionDir/Src/Apps/Connect.Android.Google/_publish.ps1";
+	& "$solutionDir/Src/Apps/Connect.Android.Web/_publish.ps1";
 }
 
 

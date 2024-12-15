@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace VpnHood.Apps.Server.Providers.Linux;
+namespace VpnHood.App.Server.Providers.Linux;
 
 internal class LinuxUtils
 {

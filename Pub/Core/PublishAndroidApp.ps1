@@ -92,7 +92,8 @@ if ($aab)
 		/p:OutputPath=$outputPath `
 		/p:ArchiveOnBuild=true `
 		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
+		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
+		/nodeReuse:false;
 }
 
 # copy to module

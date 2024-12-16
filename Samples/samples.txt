@@ -1,2 +1,2 @@
 To view examples of how to create a VPN application using the VpnHood engine, please visit the following repository:
-https://github.com/vpnhood/VpnHood.Client.Samples
+https://github.com/vpnhood/VpnHood.App.Samples

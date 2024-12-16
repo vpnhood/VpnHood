@@ -30,7 +30,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6D
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{5194E054-10CD-4832-B733-33B02A08E4B6}"
 	ProjectSection(SolutionItems) = preProject
-		samples.txt = samples.txt
+		Samples\samples.txt = Samples\samples.txt
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Core.Client.Device", "Src\Core\VpnHood.Core.Client.Device\VpnHood.Core.Client.Device.csproj", "{CA6D2E1D-BCC2-4F8E-B78D-D28EBD943831}"

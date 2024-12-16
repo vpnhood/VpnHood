@@ -8,6 +8,6 @@ public class AppConfigsBase<T> : Singleton<T> where T : Singleton<T>
     {
         var json = VhUtil.GetAssemblyMetadata(typeof(T).Assembly, configName, "");
         if (!string.IsNullOrEmpty(json))
-            JsonSerializerExt.PopulateObject(this, json);
+            JsonSerializerExt.PopulateObject(this, json, typeof(T));
     }
 }

@@ -24,6 +24,7 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
 
     public void Init(VpnHoodApp vpnHoodApp)
     {
+        VpnHoodWinApp.Init(vpnHoodApp.Features.AppId, vpnHoodApp.StorageFolderPath);
         VpnHoodWinApp.Instance.PreStart(Environment.GetCommandLineArgs());
         VpnHoodWinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
         VpnHoodWinApp.Instance.OpenMainWindowInBrowserRequested += OpenMainWindowInBrowserRequested;

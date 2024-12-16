@@ -173,6 +173,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsAlwaysOnSupported = device.IsAlwaysOnSupported,
             GaMeasurementId = options.Ga4MeasurementId,
             ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId),
+            AppId = options.AppId,
             IsDebugMode = options.IsDebugMode
         };
 

@@ -33,7 +33,7 @@ if ($isLatest) {
 # CLIENT REPO
 #-----------
 if ($mainRepo) {
-	Write-Host "*** Publish VpnHood! CONNECT releases" -BackgroundColor Blue
+	Write-Host "*** Publish the main releases" -BackgroundColor Blue
 
 	# Publishing to GitHub
 	Push-Location -Path "$solutionDir";
@@ -97,6 +97,7 @@ if ($connectRepo) {
 	# Publishing to GitHub
 	Push-Location -Path $connectRepoDir;
 
+	gh release delete "$versionTag" --cleanup-tag --yes;
 	gh release create "$versionTag" `
 		--title "$versionTag" `
 		(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `

@@ -32,8 +32,8 @@ if ($isLatest) {
 #-----------
 # CLIENT REPO
 #-----------
-if ($mainRepo -and $false) {
-	Write-Host "*** Publish MainRepo releases" -BackgroundColor Blue
+if ($mainRepo) {
+	Write-Host "*** Publish VpnHood! CONNECT releases" -BackgroundColor Blue
 
 	# Publishing to GitHub
 	Push-Location -Path "$solutionDir";
@@ -88,10 +88,10 @@ if ($mainRepo -and $false) {
 # CONNECT REPO
 #-----------
 if ($connectRepo) {
-	Write-Host "*** Publish MainRepo releases" -BackgroundColor Blue
+	Write-Host "*** Publish VpnHood! CONNECT releases" -BackgroundColor Blue
 
 	# set Connect Variables
-	$connectRepoDir = Join-Path $vhDir "VpnHood.AppLib.Connect";
+	$connectRepoDir = Join-Path $vhDir "VpnHood.App.Connect";
 	$androidGoogleLatestDir = Join-Path $connectRepoDir "pub/Android.GooglePlay/apk/latest";
 	
 	# Publishing to GitHub

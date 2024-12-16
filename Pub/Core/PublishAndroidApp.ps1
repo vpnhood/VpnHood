@@ -55,7 +55,10 @@ if ($apk)
 		/p:ArchiveOnBuild=true `
 		/p:AndroidPackageFormat="apk" `
 		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
+		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
+		/nodeReuse:false;
+	
+	if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
 	 
 	# publish info
 	$json = @{
@@ -94,6 +97,8 @@ if ($aab)
 		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
 		/nodeReuse:false;
+
+	if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
 }
 
 # copy to module

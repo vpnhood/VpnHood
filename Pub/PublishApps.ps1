@@ -61,13 +61,13 @@ if ($maui) {
 }
 
 # publish win client
-if ($clientWin) {
-	& "$solutionDir/Src/Apps/Client.Win.Web/_publish.ps1";
+if ($connectWin) {
+	& "$solutionDir/Src/Apps/Connect.Win.Web/_publish.ps1";
 }
 
 # publish win client
-if ($connectWin) {
-	& "$solutionDir/Src/Apps/Connect.Win.Web/_publish.ps1";
+if ($clientWin) {
+	& "$solutionDir/Src/Apps/Client.Win.Web/_publish.ps1";
 }
 
 # publish server
@@ -101,5 +101,5 @@ if ($distribute) {
 
 # update and push samples nugets
 if ($samples) {
-	& "$solutionDir/../VpnHood.Core.Client.Samples/UpdateAndPush.ps1";
+	& "$solutionDir/../VpnHood.App.Samples/UpdateAndPush.ps1";
 }

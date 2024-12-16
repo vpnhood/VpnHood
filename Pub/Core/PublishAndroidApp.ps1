@@ -46,7 +46,6 @@ if ($apk)
 {
 	$outputPath = Join-Path $projectDir "bin/Release-$distribution/";
 	$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
-	if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:SolutionDir=$solutionDir /p:OutputPath=$outputPath /verbosity:$msverbosity; }
 	dotnet build $projectFile /t:SignAndroidPackage /verbosity:$msverbosity `
 		/p:SolutionDir=$solutionDir `
 		/p:Configuration=Release `
@@ -85,7 +84,6 @@ if ($aab)
 	$module_packageFile = "$moduleDir/$packageFileTitle-android.aab";
 	$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
-	if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /p:SolutionDir=$solutionDir /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
 	dotnet build $projectFile /t:SignAndroidPackage /verbosity:$msverbosity `
 		/p:SolutionDir=$solutionDir `
 		/p:Configuration=Release `

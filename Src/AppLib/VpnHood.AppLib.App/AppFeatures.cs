@@ -2,6 +2,7 @@
 
 public class AppFeatures
 {
+    public required string AppId { get; init; }
     public required Version Version { get; init; }
     public required bool IsExcludeAppsSupported { get; init; }
     public required bool IsIncludeAppsSupported { get; init; }

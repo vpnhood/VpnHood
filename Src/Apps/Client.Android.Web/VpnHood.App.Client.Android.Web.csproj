@@ -4,7 +4,7 @@
 		<TargetFramework>net9.0-android35.0</TargetFramework>
 		<RootNamespace>VpnHood.App.Client.Droid.Web</RootNamespace>
 		<OutputType>Exe</OutputType>
-		<ApplicationId>com.vpnhood.client.android.web</ApplicationId>
+		<ApplicationId>com.vpnhood.connect.android.web.debug</ApplicationId>
 		<ApplicationVersion>621</ApplicationVersion>
 		<ApplicationDisplayVersion>5.0.621</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>

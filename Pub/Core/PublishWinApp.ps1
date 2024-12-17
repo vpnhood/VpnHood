@@ -39,7 +39,16 @@ $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 # publish 
 # NOTE: appSettings will not load from private files if p:SolutionDir=$solutionDir is not set
 Write-Host;
-dotnet publish "$projectDir" -c "Release" --output $publishDir --framework $targetFramework --self-contained --runtime "win-x64" /p:Version=$versionParam /p:SolutionDir=$solutionDir;
+dotnet publish $projectDir `
+	/p:SolutionDir=$solutionDir `
+	/p:Configuration=Release `
+	/p:Version=$versionParam `
+	/nodeReuse:false `
+	--output $publishDir `
+	--framework $targetFramework `
+	--self-contained `
+	--runtime "win-x64";
+
 if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $lastexitcode; }
 
 # Build Setup

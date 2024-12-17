@@ -7,7 +7,7 @@ namespace VpnHood.App.Connect.Droid.Web;
 
 [Activity(
     MainLauncher = true,
-    Label = AndroidMainActivityConstants.Label,
+    Label = AppConfigs.AppName,
     Theme = AndroidMainActivityConstants.Theme,
     LaunchMode = AndroidMainActivityConstants.LaunchMode,
     Exported = AndroidMainActivityConstants.Exported,

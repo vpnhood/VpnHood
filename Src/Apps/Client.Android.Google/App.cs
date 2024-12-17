@@ -8,7 +8,7 @@ using VpnHood.AppLib.Resources;
 namespace VpnHood.App.Client.Droid.Google;
 
 [Application(
-    Label = AndroidAppConstants.Label,
+    Label = AppConfigs.AppName,
     Icon = AndroidAppConstants.Icon,
     Banner = AndroidAppConstants.Banner,
     NetworkSecurityConfig = AndroidAppConstants.NetworkSecurityConfig,
@@ -22,7 +22,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         var appConfigs = AppConfigs.Load();
         
         var resources = DefaultAppResource.Resources;
-        resources.Strings.AppName = appConfigs.AppName;
+        resources.Strings.AppName = AppConfigs.AppName;
 
         return new AppOptions(PackageName!, AppConfigs.IsDebugMode) {
             StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHood"), // for compatibility with old versions

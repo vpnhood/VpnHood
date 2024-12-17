@@ -3,11 +3,12 @@ using VpnHood.Core.Client;
 
 // ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo
+// ReSharper disable HeuristicUnreachableCode
 namespace VpnHood.App.Connect.Droid.Web;
 
 internal class AppConfigs : AppConfigsBase<AppConfigs>
 {
-    public string AppName { get; init; } = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
+    public const string AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
     public Uri? UpdateInfoUrl { get; init; } = new("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android-web.json");
     public int? SpaDefaultPort { get; init; } = IsDebugMode ? 9571 : 9570;
     public bool SpaListenToAllIps { get; init; } = IsDebugMode;
@@ -26,8 +27,8 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
     }
 
 #if DEBUG
-    public static bool IsDebugMode => true;
+    public const bool IsDebugMode = true;
 #else
-    public static bool IsDebugMode => false;
+    public const bool IsDebugMode = false;
 #endif
 }

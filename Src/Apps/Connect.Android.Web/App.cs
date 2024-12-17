@@ -9,7 +9,7 @@ using VpnHood.Core.Client.Device.Droid.Utils;
 namespace VpnHood.App.Connect.Droid.Web;
 
 [Application(
-    Label = AndroidAppConstants.Label,
+    Label = AppConfigs.AppName,
     Icon = AndroidAppConstants.Icon,
     Banner = AndroidAppConstants.Banner,
     NetworkSecurityConfig = AndroidAppConstants.NetworkSecurityConfig,
@@ -24,7 +24,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         var appConfigs = AppConfigs.Load();
         
         var resources = DefaultAppResource.Resources;
-        resources.Strings.AppName = appConfigs.AppName;
+        resources.Strings.AppName = AppConfigs.AppName;
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);

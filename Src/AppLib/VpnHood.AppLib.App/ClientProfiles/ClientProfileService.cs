@@ -68,7 +68,7 @@ public class ClientProfileService
         return _clientProfiles.ToArray();
     }
 
-    public void Remove(Guid clientProfileId)
+    public void Delete(Guid clientProfileId)
     {
         var item =
             _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
@@ -318,7 +318,7 @@ public class ClientProfileService
             .ToArray();
 
         foreach (var clientProfileId in toRemoves)
-            Remove(clientProfileId);
+            Delete(clientProfileId);
 
         // Add or update access keys
         foreach (var accessKey in accessKeys)

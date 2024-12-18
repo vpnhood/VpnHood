@@ -40,6 +40,6 @@ internal class ClientProfileController : WebApiController, IClientProfileControl
         if (clientProfileId == App.CurrentClientProfileInfo?.ClientProfileId)
             await App.Disconnect(true).VhConfigureAwait();
 
-        App.ClientProfileService.Remove(clientProfileId);
+        App.ClientProfileService.Delete(clientProfileId);
     }
 }

@@ -54,7 +54,7 @@ public class ClientProfileTest
         foreach (var clientProfile in clientProfiles) {
             Assert.ThrowsException<UnauthorizedAccessException>(() => {
                 // ReSharper disable once AccessToDisposedClosure
-                app1.ClientProfileService.Remove(clientProfile.ClientProfileId);
+                app1.ClientProfileService.Delete(clientProfile.ClientProfileId);
             });
         }
     }
@@ -231,7 +231,7 @@ public class ClientProfileTest
 
         // ************
         // *** TEST ***: RemoveClientProfile
-        app.ClientProfileService.Remove(clientProfile.ClientProfileId);
+        app.ClientProfileService.Delete(clientProfile.ClientProfileId);
         Assert.IsNull(app.ClientProfileService.FindById(clientProfile.ClientProfileId),
             "ClientProfile has not been removed!");
     }

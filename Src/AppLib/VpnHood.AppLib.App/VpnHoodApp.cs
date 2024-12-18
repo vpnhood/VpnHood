@@ -497,6 +497,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // don't wait for disconnect, it may cause deadlock
             _ = Disconnect();
 
+            // remove client profile if access expired
+            if (clientProfile.IsForAccount && ex is SessionException { SessionResponse.ErrorCode: SessionErrorCode.AccessExpired }) {
+                ClientProfileService.Delete(clientProfile.ClientProfileId);
+                _ = Services.AccountService?.Refresh(true);
+            }
+
             if (throwException) {
                 if (_hasDisconnectedByUser)
                     throw new OperationCanceledException("Connection has been canceled by the user.", ex);

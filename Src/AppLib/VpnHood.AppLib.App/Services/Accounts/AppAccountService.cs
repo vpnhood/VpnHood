@@ -45,14 +45,14 @@ public class AppAccountService
 
     public async Task Refresh(bool updateCurrentClientProfile = false)
     {
-        // clear cache
-        ClearCache();
-
         // get access tokens from account
         var account = await GetAccount().VhConfigureAwait();
         var accessKeys = account?.SubscriptionId != null
             ? await GetAccessKeys(account.SubscriptionId).VhConfigureAwait()
             : [];
+
+        // clear cache
+        ClearCache();
 
         // update profiles
         await _vpnHoodApp.RefreshAccount(accessKeys, updateCurrentClientProfile);

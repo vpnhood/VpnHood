@@ -4,7 +4,7 @@
 		<TargetFramework>net9.0-android35.0</TargetFramework>
 		<RootNamespace>VpnHood.App.Client.Droid.Google</RootNamespace>
 		<OutputType>Exe</OutputType>
-		<ApplicationId>com.vpnhood.connect.android.google.debug</ApplicationId>
+		<ApplicationId>com.vpnhood.connect.android.google</ApplicationId>
 		<ApplicationVersion>622</ApplicationVersion>
 		<ApplicationDisplayVersion>5.0.622</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
@@ -12,7 +12,7 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
-		<RuntimeIdentifiers>android-x86;android-x64;android-arm64</RuntimeIdentifiers>
+		<RuntimeIdentifiers>android-x64;android-arm64</RuntimeIdentifiers>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">

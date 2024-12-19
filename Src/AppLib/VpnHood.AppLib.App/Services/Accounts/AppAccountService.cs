@@ -48,7 +48,7 @@ public class AppAccountService
         // get access tokens from account
         var account = await GetAccount().VhConfigureAwait();
         var accessKeys = account?.SubscriptionId != null
-            ? await GetAccessKeys(account.SubscriptionId).VhConfigureAwait()
+            ? await ListAccessKeys(account.SubscriptionId).VhConfigureAwait()
             : [];
 
         // clear cache
@@ -64,8 +64,8 @@ public class AppAccountService
         _appAccount = null;
     }
 
-    public Task<string[]> GetAccessKeys(string subscriptionId)
+    public Task<string[]> ListAccessKeys(string subscriptionId)
     {
-        return _accountProvider.GetAccessKeys(subscriptionId);
+        return _accountProvider.ListAccessKeys(subscriptionId);
     }
 }

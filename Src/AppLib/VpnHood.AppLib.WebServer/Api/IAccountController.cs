@@ -9,5 +9,5 @@ public interface IAccountController
     Task SignOut();
     Task Refresh();
     Task<AppAccount?> Get();
-    Task<string[]> GetAccessKeys(string subscriptionId);
+    Task<string[]> ListAccessKeys(string subscriptionId);
 }

@@ -49,8 +49,8 @@ internal class AccountController : WebApiController, IAccountController
     }
 
     [Route(HttpVerbs.Get, "/subscriptions/{subscriptionId}/access-keys")]
-    public Task<string[]> GetAccessKeys(string subscriptionId)
+    public Task<string[]> ListAccessKeys(string subscriptionId)
     {
-        return AccountService.GetAccessKeys(subscriptionId);
+        return AccountService.ListAccessKeys(subscriptionId);
     }
 }

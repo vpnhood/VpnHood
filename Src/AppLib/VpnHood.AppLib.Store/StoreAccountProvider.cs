@@ -75,7 +75,7 @@ public class StoreAccountProvider : IAppAccountProvider, IDisposable
         }
     }
 
-    public async Task<string[]> GetAccessKeys(string subscriptionId)
+    public async Task<string[]> ListAccessKeys(string subscriptionId)
     {
         var httpClient = AuthenticationProvider.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);

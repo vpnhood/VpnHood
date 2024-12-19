@@ -41,7 +41,7 @@ public class AccountController : ControllerBase, IAccountController
     }
 
     [HttpGet("subscriptions/{subscriptionId}/access-keys")]
-    public Task<string[]> GetAccessKeys(string subscriptionId)
+    public Task<string[]> ListAccessKeys(string subscriptionId)
     {
         throw new SwaggerOnlyException();
     }

@@ -25,15 +25,24 @@ public class AppAccountService
 
     public AppBillingService? BillingService { get; }
 
-    public async Task<AppAccount?> GetAccount()
+    public Task<AppAccount?> GetAccount()
     {
-        if (AuthenticationService.UserId == null)
+        return GetAccount(useCache: true);
+    }
+
+    private async Task<AppAccount?> GetAccount(bool useCache)
+    {
+        if (AuthenticationService.UserId == null) {
+            ClearCache();
             return null;
+        }
 
         // Get from local cache
-        _appAccount ??= VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
-        if (_appAccount != null)
-            return _appAccount;
+        if (useCache) {
+            _appAccount ??= VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
+            if (_appAccount != null)
+                return _appAccount;
+        }
 
         // Update cache from server and update local cache
         _appAccount = await _accountProvider.GetAccount().VhConfigureAwait();
@@ -46,16 +55,14 @@ public class AppAccountService
     public async Task Refresh(bool updateCurrentClientProfile = false)
     {
         // get access tokens from account
-        var account = await GetAccount().VhConfigureAwait();
+        var account = await GetAccount(false).VhConfigureAwait();
         var accessKeys = account?.SubscriptionId != null
             ? await ListAccessKeys(account.SubscriptionId).VhConfigureAwait()
             : [];
 
-        // clear cache
-        ClearCache();
-
         // update profiles
-        await _vpnHoodApp.RefreshAccount(accessKeys, updateCurrentClientProfile);
+        _vpnHoodApp.ClientProfileService.UpdateFromAccount(accessKeys);
+        _vpnHoodApp.ValidateAccountClientProfiles(updateCurrentClientProfile);
     }
 
     internal void ClearCache()

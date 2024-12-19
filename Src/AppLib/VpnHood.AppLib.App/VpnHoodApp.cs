@@ -958,10 +958,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return _client.ShowRewardedAd(cancellationToken);
     }
 
-    internal Task RefreshAccount(string[] accountAccessKeys, bool updateCurrentClientProfile)
+    // make sure the active profile is valid and exist
+    internal void ValidateAccountClientProfiles(bool updateCurrentClientProfile)
     {
-        ClientProfileService.UpdateFromAccount(accountAccessKeys);
-
         // Select the best client profile from their account.
         if (updateCurrentClientProfile) {
             var clientProfiles = ClientProfileService
@@ -981,8 +980,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             UserSettings.ClientProfileId = clientProfiles.Length == 1 ? clientProfiles.First().ClientProfileId : null;
             Settings.Save();
         }
-
-        return Task.CompletedTask;
     }
 
     private void ReportError(Exception ex, string message, [CallerMemberName] string action = "n/a")

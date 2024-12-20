@@ -20,7 +20,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6DD-442E-B434-2C44B6A717B1}"
 	ProjectSection(SolutionItems) = preProject
 		CHANGELOG.md = CHANGELOG.md
-		CHANGELOG.Server.md = CHANGELOG.Server.md
 		Pub\PublishApps.ps1 = Pub\PublishApps.ps1
 		Pub\PublishToGitHub.ps1 = Pub\PublishToGitHub.ps1
 		Pub\PubVersion.json = Pub\PubVersion.json
@@ -114,6 +113,13 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.App.Server.Net", "Src\Apps\Server.Net\VpnHood.App.Server.Net.csproj", "{FDCDD4D4-995F-4B48-A0D1-D9C92AAEE771}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppLib.Test", "Tests\VpnHood.AppLib.Test\VpnHood.AppLib.Test.csproj", "{BED966B7-514D-4823-BA14-62A5257D417B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Server", "Server", "{9FC06597-CB38-4914-89CC-B49905B0605A}"
+	ProjectSection(SolutionItems) = preProject
+		CHANGELOG.Server.md = CHANGELOG.Server.md
+		Pub\Publish.App.Server.ps1 = Pub\Publish.App.Server.ps1
+		Pub\PublishToGitHub.Server.ps1 = Pub\PublishToGitHub.Server.ps1
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -853,6 +859,7 @@ Global
 		{670BD4A2-EEEB-427E-9F83-47C3ED1DBA14} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 		{FDCDD4D4-995F-4B48-A0D1-D9C92AAEE771} = {3DEEAA54-6191-41E5-AEE2-0B715D2D3F29}
 		{BED966B7-514D-4823-BA14-62A5257D417B} = {B06C66A0-47AA-4894-A794-8FAE74DB271F}
+		{9FC06597-CB38-4914-89CC-B49905B0605A} = {AD60711B-C6DD-442E-B434-2C44B6A717B1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19BAEB35-FD38-4E41-9963-46313AF87C41}

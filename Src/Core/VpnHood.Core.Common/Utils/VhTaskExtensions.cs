@@ -24,11 +24,30 @@ public static class VhTaskExtensions
         return task.ConfigureAwait(false);
     }
 
-    public static async Task<T> VhWait<T>(this Task<T> task, CancellationToken cancellationToken)
+    public static Task<T> VhWait<T>(this Task<T> task, CancellationToken cancellationToken)
     {
-        await Task.WhenAny(task, Task.Delay(Timeout.Infinite, cancellationToken));
+        return VhWait(task, Timeout.InfiniteTimeSpan, cancellationToken);
+    }
+
+    public static async Task<T> VhWait<T>(this Task<T> task, int timeout, CancellationToken cancellationToken)
+    {
+        return await VhWait(task, TimeSpan.FromMilliseconds(timeout), cancellationToken);
+    }
+
+    public static async Task<T> VhWait<T>(this Task<T> task, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        var timeoutTask = Task.Delay(timeout, cancellationToken);
+        await Task.WhenAny(task, timeoutTask);
+
+        // check if the task is canceled
         cancellationToken.ThrowIfCancellationRequested();
+
+        // check if the task is timed out
+        if (timeoutTask.IsCompleted)
+            throw new TimeoutException();
+
         return await task;
     }
+
 }
 

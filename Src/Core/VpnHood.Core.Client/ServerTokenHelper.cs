@@ -25,6 +25,9 @@ public class ServerTokenHelper
                         .ToArray();
                 }
             }
+            catch (OperationCanceledException) {
+                throw;
+            }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Could not resolve IpAddress from hostname!");
             }

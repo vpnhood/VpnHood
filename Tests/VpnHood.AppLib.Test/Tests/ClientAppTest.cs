@@ -278,11 +278,11 @@ public class ClientAppTest : TestBase
         // DNS should always use tunnel regarding of any exclude or include option
         if (testDns) {
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint1);
+            await TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint1);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint2);
+            await TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint2);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
         }
     }
@@ -342,11 +342,11 @@ public class ClientAppTest : TestBase
         // DNS should always use tunnel regarding of any exclude or include option
         if (testDns) {
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint1);
+            await TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint1);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint2);
+            await TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint2);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
         }
     }

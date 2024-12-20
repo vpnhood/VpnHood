@@ -48,7 +48,7 @@ public class Diagnoser
         catch (Exception) {
             VhLogger.Instance.LogTrace("Checking the Internet connection...");
             IsWorking = true;
-            if (!await NetworkCheck(successOnAny: true).VhConfigureAwait())
+            if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true, cancellationToken: cancellationToken).VhConfigureAwait())
                 throw new NoInternetException();
 
             throw;
@@ -63,7 +63,7 @@ public class Diagnoser
         try {
             VhLogger.Instance.LogTrace("Checking the Internet connection...");
             IsWorking = true;
-            if (!await NetworkCheck(successOnAny: true).VhConfigureAwait())
+            if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true, cancellationToken).VhConfigureAwait())
                 throw new NoInternetException();
 
             // ping server
@@ -75,7 +75,7 @@ public class Diagnoser
             }
 
             var hostEndPoint = hostEndPoints.First() ?? throw new Exception("Could not resolve any host endpoint from AccessToken."); 
-            var pingRes = await DiagnoseUtil.CheckPing([hostEndPoint.Address], NsTimeout, true).VhConfigureAwait();
+            var pingRes = await DiagnoseUtil.CheckPing([hostEndPoint.Address], NsTimeout, cancellationToken).VhConfigureAwait();
             if (pingRes == null)
                 VhLogger.Instance.LogTrace("Pinging server is OK.");
             else
@@ -89,7 +89,7 @@ public class Diagnoser
             VhLogger.Instance.LogTrace("Checking the Vpn Connection...");
             IsWorking = true;
             await Task.Delay(2000, cancellationToken).VhConfigureAwait(); // connections can not be established on android immediately
-            if (!await NetworkCheck(successOnAny: false).VhConfigureAwait())
+            if (!await NetworkCheck(successOnAny: false, checkPing: true, checkUdp: true, cancellationToken).VhConfigureAwait())
                 throw new NoStableVpnException();
             VhLogger.Instance.LogTrace("VPN has been established and tested successfully.");
         }
@@ -98,24 +98,31 @@ public class Diagnoser
         }
     }
 
-    private async Task<bool> NetworkCheck(bool successOnAny, bool checkPing = true, bool checkUdp = true)
+    private async Task<bool> NetworkCheck(bool successOnAny, bool checkPing, bool checkUdp, CancellationToken cancellationToken)
     {
         var taskPing = checkPing
-            ? DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout)
+            ? DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout, cancellationToken)
             : Task.FromResult<Exception?>(null);
 
         var taskUdp = checkUdp
-            ? DiagnoseUtil.CheckUdp(TestNsIpEndPoints, NsTimeout)
+            ? DiagnoseUtil.CheckUdp(TestNsIpEndPoints, NsTimeout, cancellationToken)
             : Task.FromResult<Exception?>(null);
 
         using var httpClient = new HttpClient();
-        var taskHttps = DiagnoseUtil.CheckHttps(TestHttpUris, HttpTimeout);
+        var taskHttps = DiagnoseUtil.CheckHttps(TestHttpUris, HttpTimeout, cancellationToken);
 
-        await Task.WhenAll(taskPing, taskUdp, taskHttps).VhConfigureAwait();
-        var hasInternet = successOnAny
-            ? taskPing.Result == null || taskUdp.Result == null || taskHttps.Result == null
-            : taskPing.Result == null && taskUdp.Result == null && taskHttps.Result == null;
+        try {
+            await Task.WhenAll(taskPing, taskUdp, taskHttps).VhConfigureAwait();
+            var hasInternet = successOnAny
+                ? taskPing.Result == null || taskUdp.Result == null || taskHttps.Result == null
+                : taskPing.Result == null && taskUdp.Result == null && taskHttps.Result == null;
 
-        return hasInternet;
+            return hasInternet;
+        }
+        catch (Exception) {
+            cancellationToken.ThrowIfCancellationRequested(); // change aggregate exception to operation canceled exception
+            throw;
+        }
+
     }
 }

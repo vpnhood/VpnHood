@@ -1,13 +1,21 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.Core.Client.Diagnosing;
 
 public static class DnsResolver
 {
-    public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint,
-        UdpClient? udpClient = null, int timeout = 5000)
+    public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint, 
+        int timeout, CancellationToken cancellationToken)
+    {
+        using var udpClientTemp = new UdpClient();
+        return await GetHostEntry(host, dnsEndPoint, udpClientTemp, timeout, cancellationToken);
+    }
+
+    public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint, 
+        UdpClient udpClient, int timeout, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(host)) {
             throw new ArgumentException("Host cannot be null or empty", nameof(host));
@@ -17,8 +25,6 @@ public static class DnsResolver
             throw new ArgumentNullException(nameof(dnsEndPoint));
         }
 
-        using var udpClientTemp = new UdpClient();
-        udpClient ??= udpClientTemp;
         udpClient.Connect(dnsEndPoint);
 
         // Build DNS query
@@ -26,16 +32,14 @@ public static class DnsResolver
         var query = BuildDnsQuery(queryId, host);
 
         // Send the DNS query
-        await udpClient.SendAsync(query, query.Length);
+        await udpClient
+            .SendAsync(query, query.Length)
+            .VhWait(timeout, cancellationToken);
 
         // Wait for response with a timeout
-        using var cts = new CancellationTokenSource(timeout);
-        var task = udpClient.ReceiveAsync();
-        var completedTask = await Task.WhenAny(task, Task.Delay(timeout, cts.Token));
-
-        if (completedTask != task) {
-            throw new TimeoutException("DNS query timed out.");
-        }
+        var task = udpClient
+            .ReceiveAsync()
+            .VhWait(timeout, cancellationToken);
 
         var response = task.Result.Buffer;
 

@@ -821,10 +821,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public void VersionCheckPostpone()
     {
         // version status is unknown when app container can do it
-        if (Services.UpdaterProvider != null) {
-            _versionCheckResult = null;
+        _versionCheckResult = null;
+        if (File.Exists(VersionCheckFilePath))
             File.Delete(VersionCheckFilePath);
-        }
 
         // set latest ignore time
         _appPersistState.UpdateIgnoreTime = DateTime.Now;

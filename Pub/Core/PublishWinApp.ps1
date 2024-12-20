@@ -47,7 +47,8 @@ dotnet publish $projectDir `
 	--output $publishDir `
 	--framework $targetFramework `
 	--self-contained `
-	--runtime "win-x64";
+	--runtime "win-x64" `
+	/nodeReuse:false;
 
 if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $lastexitcode; }
 

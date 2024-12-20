@@ -1,7 +1,7 @@
 $SolutionDir = Split-Path -Parent (Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot)));
 
 Write-Host;
-Write-Host "*** Creating Linux Server Module..." -BackgroundColor Blue -ForegroundColor White;
+Write-Host "*** Creating Linux-arm64 Server Module ..." -BackgroundColor Blue -ForegroundColor White;
 
 # Init script
 $projectDir = Split-Path $PSScriptRoot -Parent;

@@ -616,7 +616,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // check version after first connection
             _ = VersionCheck();
         }
-        catch (Exception) when (client is not null) {
+        catch (Exception ex) when (client is not null) {
             UpdateStatusByCreatedClient(client);
 
             // dispose client
@@ -626,7 +626,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // try to update token from url after connection or error if ResponseAccessKey is not set
             // check _client is not null to make sure 
-            if (allowUpdateToken && !VhUtil.IsNullOrEmpty(token.ServerToken.Urls) &&
+            if (ex is not OperationCanceledException && 
+                allowUpdateToken && 
+                !VhUtil.IsNullOrEmpty(token.ServerToken.Urls) &&
                 await ClientProfileService.UpdateServerTokenByUrls(token).VhConfigureAwait()) {
                 token = ClientProfileService.GetToken(token.TokenId);
                 await ConnectInternal(token,

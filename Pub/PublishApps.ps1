@@ -25,7 +25,6 @@ $maui = $maui -eq "1";
 
 # clean all
 & $msbuild "$solutionDir" /p:Configuration=Release /t:Clean /verbosity:$msverbosity;
-$noclean = $true;
 $noPushNuget = !$nugets
 
 Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;

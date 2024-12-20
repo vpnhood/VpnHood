@@ -25,7 +25,7 @@ if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $laste
 # create installation script
 Write-Output "Creating Server installation script...";
 $linuxScript = Get-Content -Path "$template_installScriptFile" -Raw;
-$linuxScript = $linuxScript.Replace('$packageUrlParam', "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName");
+$linuxScript = $linuxScript.Replace('$packageUrlParam', "https://github.com/vpnhood/VpnHood.App.Server/releases/download/$versionTag/$module_packageFileName");
 $linuxScript = $linuxScript.Replace('$versionTagParam', "$versionTag");
 $linuxScript = $linuxScript -replace "`r`n", $lineEnding;
 $linuxScript  | Out-File -FilePath "$module_InstallerFile" -Encoding ASCII -Force -NoNewline;
@@ -46,8 +46,8 @@ $linuxScript  | Out-File -FilePath "$publish_updaterFile" -Encoding ASCII -Force
 $json = @{
     Version = $versionParam; 
     ExeFile = $launcher_exeFile; 
-    UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_infoFileName";
-    InstallScriptUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_InstallerFileName";
+    UpdateInfoUrl = "https://github.com/vpnhood/VpnHood.App.Server/releases/latest/download/$module_infoFileName";
+    InstallScriptUrl = "https://github.com/vpnhood/VpnHood.App.Server/releases/download/$versionTag/$module_InstallerFileName";
     UpdateCode = "5EE5047D-6E67-43D4-A90D-665813CA1E7F"
 };
     

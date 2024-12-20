@@ -61,3 +61,28 @@ function UpdateRepoVersionInFile()
 		Set-Content -Path $file.FullName -Value $fileContent -Encoding ASCII -Force -NoNewline;
 	}	
 }
+
+function PushMainRepo()
+{
+	Write-Host "*** Commit and push the main repo" -BackgroundColor Blue
+
+	Push-Location -Path "$solutionDir";
+
+	$gitDir = "$solutionDir/.git";
+	gh release delete "$versionTag" --cleanup-tag --yes;
+	git --git-dir=$gitDir --work-tree=$solutionDir tag --delete "$versionTag";
+	git --git-dir=$gitDir --work-tree=$solutionDir commit -a -m "Publish v$versionParam";
+	git --git-dir=$gitDir --work-tree=$solutionDir pull;
+	git --git-dir=$gitDir --work-tree=$solutionDir push;
+
+	# swtich to main branch
+	if (!$prerelease) {
+		git --git-dir=$gitDir --work-tree=$solutionDir checkout main
+		git --git-dir=$gitDir --work-tree=$solutionDir pull;
+		git --git-dir=$gitDir --work-tree=$solutionDir merge development;
+		git --git-dir=$gitDir --work-tree=$solutionDir push;
+		git --git-dir=$gitDir --work-tree=$solutionDir checkout development
+	}
+
+	Pop-Location	
+}

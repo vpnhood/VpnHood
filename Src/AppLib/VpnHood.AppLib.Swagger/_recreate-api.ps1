@@ -3,9 +3,9 @@ $curDir = $PSScriptRoot;
 
 # variables
 $projectFile="$curDir/VpnHood.AppLib.Swagger.csproj";
-$namespace = "VpnHood.Core.Client.Api";
+$namespace = "VpnHood.Client.Api";
 $nswagFile = "$curDir/Api/Api.nswag";
-$outBaseFile = "VpnHood.Core.Client.Api";
+$outBaseFile = "VpnHood.Client.Api";
 $noBuild = $false;
 
 # run
@@ -15,7 +15,7 @@ $variables="/variables:namespace=$namespace,apiBaseFile=$outBaseFile,projectFile
 
 #copy to UI project if exists
 $vhFolder = Split-Path -parent $SolutionDir;
-$uiProjectTarget = "$vhFolder\VpnHood.Core.Client.WebUI\src\services\VpnHood.Core.Client.Api.ts";
+$uiProjectTarget = "$vhFolder\VpnHood.Client.WebUI\src\services\VpnHood.Client.Api.ts";
 if (Test-Path $uiProjectTarget) {
 	copy-item "$curDir/Api/$outBaseFile.ts" $uiProjectTarget -Force;
     Write-Host "Output has been copied to UI project. $uiProjectTarget";

@@ -35,7 +35,7 @@ internal class StoreBillingProvider(
     }
 
     // Check order state 'isProcessed' for 6 time
-    public async Task WaitForProcessProviderOrder(string providerOrderId)
+    private async Task WaitForProcessProviderOrder(string providerOrderId)
     {
         var httpClient = appAuthenticationProvider.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);

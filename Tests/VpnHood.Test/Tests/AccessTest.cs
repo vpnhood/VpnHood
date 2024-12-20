@@ -18,6 +18,7 @@ public class AccessTest : TestBase
     public async Task AFoo()
     {
         await Task.Delay(0);
+
     }
 
     [TestMethod]

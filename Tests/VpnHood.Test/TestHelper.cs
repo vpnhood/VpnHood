@@ -120,9 +120,9 @@ public class TestHelper : IDisposable
             throw new PingException($"Ping failed. Status: {pingReply.Status}");
     }
 
-    public static void Test_Dns(UdpClient? udpClient = null, IPEndPoint? nsEndPoint = default, int timeout = 3000)
+    public static async Task Test_Dns(IPEndPoint? nsEndPoint = default, int timeout = 3000, CancellationToken cancellationToken = default)
     {
-        var hostEntry = DnsResolver.GetHostEntry("www.google.com", nsEndPoint ?? TestConstants.NsEndPoint1, udpClient, timeout).Result;
+        var hostEntry = await DnsResolver.GetHostEntry("www.google.com", nsEndPoint ?? TestConstants.NsEndPoint1, timeout, cancellationToken);
         Assert.IsNotNull(hostEntry);
         Assert.IsTrue(hostEntry.AddressList.Length > 0);
     }

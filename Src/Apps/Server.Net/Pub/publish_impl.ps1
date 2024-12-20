@@ -12,7 +12,14 @@ New-Item -ItemType Directory -Path $publish_infoDir -Force | Out-Null;
 
 # publish 
 Write-Output "Build Server...";
-dotnet publish "$projectDir" -c "Release" --output "$publishDir/$versionTag" --framework "net9.0" --self-contained --runtime "$runtime" /p:Version=$versionParam;
+dotnet publish $projectDir `
+    -c "Release" `
+    --output "$publishDir/$versionTag" `
+    --framework "net9.0" `
+    --self-contained `
+    --runtime "$runtime" `
+    /p:Version=$versionParam;
+
 if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $lastexitcode; }
 
 # create installation script

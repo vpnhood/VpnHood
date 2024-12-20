@@ -65,7 +65,7 @@ public class AppAccountService
         _vpnHoodApp.ValidateAccountClientProfiles(updateCurrentClientProfile);
     }
 
-    internal void ClearCache()
+    private void ClearCache()
     {
         File.Delete(AppAccountFilePath);
         _appAccount = null;

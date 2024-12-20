@@ -20,6 +20,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6DD-442E-B434-2C44B6A717B1}"
 	ProjectSection(SolutionItems) = preProject
 		CHANGELOG.md = CHANGELOG.md
+		CHANGELOG.Server.md = CHANGELOG.Server.md
 		Pub\PublishApps.ps1 = Pub\PublishApps.ps1
 		Pub\PublishToGitHub.ps1 = Pub\PublishToGitHub.ps1
 		Pub\PubVersion.json = Pub\PubVersion.json

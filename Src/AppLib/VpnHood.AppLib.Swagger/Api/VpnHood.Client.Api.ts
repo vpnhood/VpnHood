@@ -1581,6 +1581,7 @@ export interface IAppData {
 }
 
 export class AppFeatures implements IAppFeatures {
+    appId!: string;
     version!: string;
     isExcludeAppsSupported!: boolean;
     isIncludeAppsSupported!: boolean;
@@ -1595,6 +1596,7 @@ export class AppFeatures implements IAppFeatures {
     isAlwaysOnSupported!: boolean;
     gaMeasurementId?: string | null;
     clientId!: string;
+    isDebugMode!: boolean;
 
     constructor(data?: IAppFeatures) {
         if (data) {
@@ -1607,6 +1609,7 @@ export class AppFeatures implements IAppFeatures {
 
     init(_data?: any) {
         if (_data) {
+            this.appId = _data["appId"] !== undefined ? _data["appId"] : <any>null;
             this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
             this.isExcludeAppsSupported = _data["isExcludeAppsSupported"] !== undefined ? _data["isExcludeAppsSupported"] : <any>null;
             this.isIncludeAppsSupported = _data["isIncludeAppsSupported"] !== undefined ? _data["isIncludeAppsSupported"] : <any>null;
@@ -1621,6 +1624,7 @@ export class AppFeatures implements IAppFeatures {
             this.isAlwaysOnSupported = _data["isAlwaysOnSupported"] !== undefined ? _data["isAlwaysOnSupported"] : <any>null;
             this.gaMeasurementId = _data["gaMeasurementId"] !== undefined ? _data["gaMeasurementId"] : <any>null;
             this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
+            this.isDebugMode = _data["isDebugMode"] !== undefined ? _data["isDebugMode"] : <any>null;
         }
     }
 
@@ -1633,6 +1637,7 @@ export class AppFeatures implements IAppFeatures {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
+        data["appId"] = this.appId !== undefined ? this.appId : <any>null;
         data["version"] = this.version !== undefined ? this.version : <any>null;
         data["isExcludeAppsSupported"] = this.isExcludeAppsSupported !== undefined ? this.isExcludeAppsSupported : <any>null;
         data["isIncludeAppsSupported"] = this.isIncludeAppsSupported !== undefined ? this.isIncludeAppsSupported : <any>null;
@@ -1647,11 +1652,13 @@ export class AppFeatures implements IAppFeatures {
         data["isAlwaysOnSupported"] = this.isAlwaysOnSupported !== undefined ? this.isAlwaysOnSupported : <any>null;
         data["gaMeasurementId"] = this.gaMeasurementId !== undefined ? this.gaMeasurementId : <any>null;
         data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
+        data["isDebugMode"] = this.isDebugMode !== undefined ? this.isDebugMode : <any>null;
         return data;
     }
 }
 
 export interface IAppFeatures {
+    appId: string;
     version: string;
     isExcludeAppsSupported: boolean;
     isIncludeAppsSupported: boolean;
@@ -1666,6 +1673,7 @@ export interface IAppFeatures {
     isAlwaysOnSupported: boolean;
     gaMeasurementId?: string | null;
     clientId: string;
+    isDebugMode: boolean;
 }
 
 export class AppSettings implements IAppSettings {
@@ -2326,6 +2334,7 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
     isPremiumLocationSelected!: boolean;
     isPremiumAccount!: boolean;
     selectedLocationInfo?: ClientServerLocationInfo | null;
+    hasAccessCode!: boolean;
 
     constructor(data?: IClientProfileBaseInfo) {
         if (data) {
@@ -2345,6 +2354,7 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
             this.isPremiumLocationSelected = _data["isPremiumLocationSelected"] !== undefined ? _data["isPremiumLocationSelected"] : <any>null;
             this.isPremiumAccount = _data["isPremiumAccount"] !== undefined ? _data["isPremiumAccount"] : <any>null;
             this.selectedLocationInfo = _data["selectedLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["selectedLocationInfo"]) : <any>null;
+            this.hasAccessCode = _data["hasAccessCode"] !== undefined ? _data["hasAccessCode"] : <any>null;
         }
     }
 
@@ -2364,6 +2374,7 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
         data["isPremiumLocationSelected"] = this.isPremiumLocationSelected !== undefined ? this.isPremiumLocationSelected : <any>null;
         data["isPremiumAccount"] = this.isPremiumAccount !== undefined ? this.isPremiumAccount : <any>null;
         data["selectedLocationInfo"] = this.selectedLocationInfo ? this.selectedLocationInfo.toJSON() : <any>null;
+        data["hasAccessCode"] = this.hasAccessCode !== undefined ? this.hasAccessCode : <any>null;
         return data;
     }
 }
@@ -2376,6 +2387,7 @@ export interface IClientProfileBaseInfo {
     isPremiumLocationSelected: boolean;
     isPremiumAccount: boolean;
     selectedLocationInfo?: ClientServerLocationInfo | null;
+    hasAccessCode: boolean;
 }
 
 export class ServerLocationInfo implements IServerLocationInfo {
@@ -2873,6 +2885,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
     isValidHostName!: boolean;
     isBuiltIn!: boolean;
     isForAccount!: boolean;
+    accessCode?: string | null;
     locationInfos!: ClientServerLocationInfo[];
     selectedLocationInfo?: ClientServerLocationInfo | null;
 
@@ -2909,6 +2922,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
             this.isValidHostName = _data["isValidHostName"] !== undefined ? _data["isValidHostName"] : <any>null;
             this.isBuiltIn = _data["isBuiltIn"] !== undefined ? _data["isBuiltIn"] : <any>null;
             this.isForAccount = _data["isForAccount"] !== undefined ? _data["isForAccount"] : <any>null;
+            this.accessCode = _data["accessCode"] !== undefined ? _data["accessCode"] : <any>null;
             if (Array.isArray(_data["locationInfos"])) {
                 this.locationInfos = [] as any;
                 for (let item of _data["locationInfos"])
@@ -2945,6 +2959,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
         data["isValidHostName"] = this.isValidHostName !== undefined ? this.isValidHostName : <any>null;
         data["isBuiltIn"] = this.isBuiltIn !== undefined ? this.isBuiltIn : <any>null;
         data["isForAccount"] = this.isForAccount !== undefined ? this.isForAccount : <any>null;
+        data["accessCode"] = this.accessCode !== undefined ? this.accessCode : <any>null;
         if (Array.isArray(this.locationInfos)) {
             data["locationInfos"] = [];
             for (let item of this.locationInfos)
@@ -2967,6 +2982,7 @@ export interface IClientProfileInfo {
     isValidHostName: boolean;
     isBuiltIn: boolean;
     isForAccount: boolean;
+    accessCode?: string | null;
     locationInfos: ClientServerLocationInfo[];
     selectedLocationInfo?: ClientServerLocationInfo | null;
 }
@@ -3109,6 +3125,7 @@ export enum ConnectPlanId {
     Normal = "Normal",
     PremiumByTrial = "PremiumByTrial",
     PremiumByRewardedAd = "PremiumByRewardedAd",
+    Status = "Status",
 }
 
 export class DeviceAppInfo implements IDeviceAppInfo {
@@ -3201,6 +3218,7 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
     selectedLocation?: PatchOfString | null;
     customData?: PatchOfString | null;
     isPremiumLocationSelected?: PatchOfBoolean | null;
+    accessCode?: PatchOfString | null;
 
     constructor(data?: IClientProfileUpdateParams) {
         if (data) {
@@ -3218,6 +3236,7 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
             this.selectedLocation = _data["selectedLocation"] ? PatchOfString.fromJS(_data["selectedLocation"]) : <any>null;
             this.customData = _data["customData"] ? PatchOfString.fromJS(_data["customData"]) : <any>null;
             this.isPremiumLocationSelected = _data["isPremiumLocationSelected"] ? PatchOfBoolean.fromJS(_data["isPremiumLocationSelected"]) : <any>null;
+            this.accessCode = _data["accessCode"] ? PatchOfString.fromJS(_data["accessCode"]) : <any>null;
         }
     }
 
@@ -3235,6 +3254,7 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
         data["selectedLocation"] = this.selectedLocation ? this.selectedLocation.toJSON() : <any>null;
         data["customData"] = this.customData ? this.customData.toJSON() : <any>null;
         data["isPremiumLocationSelected"] = this.isPremiumLocationSelected ? this.isPremiumLocationSelected.toJSON() : <any>null;
+        data["accessCode"] = this.accessCode ? this.accessCode.toJSON() : <any>null;
         return data;
     }
 }
@@ -3245,6 +3265,7 @@ export interface IClientProfileUpdateParams {
     selectedLocation?: PatchOfString | null;
     customData?: PatchOfString | null;
     isPremiumLocationSelected?: PatchOfBoolean | null;
+    accessCode?: PatchOfString | null;
 }
 
 export class PatchOfString implements IPatchOfString {

@@ -15,7 +15,7 @@ public static class AndroidMainActivityConstants
 
     public const ScreenOrientation ScreenOrientation = Android.Content.PM.ScreenOrientation.Unspecified; // required for TV
 
-    public const LaunchMode LaunchMode = Android.Content.PM.LaunchMode.SingleInstance; //if SingleInstance, reopening the app after minimizing will not show the ad activity
+    public const LaunchMode LaunchMode = Android.Content.PM.LaunchMode.Multiple; //if SingleInstance, reopening the app after minimizing will not show the ad activity
 
     public const ConfigChanges ConfigChanges =
         Android.Content.PM.ConfigChanges.Orientation | Android.Content.PM.ConfigChanges.ScreenSize |

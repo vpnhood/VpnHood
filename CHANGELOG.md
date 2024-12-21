@@ -1,3 +1,11 @@
+# Upcoming
+### Client
+* Fix: Diagnostic could not be canceled
+* Fix: Could not postpone update on web distribution
+
+### Server
+* Update: Move server's releases repository to https://github.com/vpnhood/VpnHood.App.Server/releases
+
 # v5.0.622
 ### Client
 * Feature: Improve premium sessions

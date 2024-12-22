@@ -1,5 +1,6 @@
 # Upcoming
 ### Client
+* Fix: Startup crash on some devices
 * Fix: Diagnostic could not be canceled
 * Fix: Could not postpone update on web distribution
 

@@ -29,6 +29,7 @@ public class AnalyticsTracker(FirebaseAnalytics analytics) : ITracker
         var bundle = new Bundle();
         foreach (var parameter in trackEvent.Parameters)
             bundle.PutString(parameter.Key, parameter.Value.ToString());
+
         analytics.LogEvent(trackEvent.EventName, bundle);
     }
 }

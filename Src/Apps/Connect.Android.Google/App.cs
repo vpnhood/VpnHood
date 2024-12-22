@@ -41,7 +41,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         try { FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(Java.Lang.Boolean.True); } catch { /* ignored */ }
 
         // load app settings and resources
-        var storageFolderPath = AppOptions.BuildStorageFolderPath(PackageName!);
+        var storageFolderPath = AppOptions.BuildStorageFolderPath("VpnHoodConnect");
         var resources = DefaultAppResource.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);

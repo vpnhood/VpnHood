@@ -3,6 +3,7 @@
 * Fix: Startup crash on some devices
 * Fix: Diagnostic could not be canceled
 * Fix: Could not postpone update on web distribution
+* Fix: Chisese simplified auto detection
 
 ### Server
 * Update: Move server's releases repository to https://github.com/vpnhood/VpnHood.App.Server/releases

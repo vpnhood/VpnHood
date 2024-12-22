@@ -116,8 +116,7 @@ internal class ClientHost(
 
                 // redirect to inbound
                 if (Equals(ipPacket.DestinationAddress, loopbackAddress)) {
-                    var natItem = (NatItemEx?)vpnHoodClient.Nat.Resolve(ipPacket.Version, ipPacket.Protocol,
-                                      tcpPacket.DestinationPort)
+                    var natItem = (NatItemEx?)vpnHoodClient.Nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
                                   ?? throw new Exception("Could not find incoming tcp destination in NAT.");
 
                     ipPacket.SourceAddress = natItem.DestinationAddress;

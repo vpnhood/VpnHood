@@ -30,7 +30,7 @@ public class App : VpnHoodWpfSpaApp
 
         return new AppOptions("com.vpnhood.connect.windows", AppConfigs.IsDebugMode) {
             UiName = "VpnHoodConnect",
-            StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHoodConnect"),
+            StorageFolderPath = AppOptions.BuildStorageFolderPath("VpnHoodConnect"),
             Resource = resources,
             AccessKeys = [appConfigs.DefaultAccessKey],
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,

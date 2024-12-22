@@ -11,6 +11,7 @@ public class AppLogService : IDisposable
     private StreamLogger? _streamLogger;
     public string LogFilePath { get; }
     public string[] LogEvents { get; private set; } = [];
+    public bool Exists => File.Exists(LogFilePath);
 
     public AppLogService(string logFilePath, bool singleLineConsole)
     {
@@ -86,9 +87,12 @@ public class AppLogService : IDisposable
 
     public static string[] GetLogEventNames(bool verbose, string? debugCommand, string[] defaults)
     {
-        if (verbose) return ["*"];
+        if (verbose) 
+            return ["*"];
+
         debugCommand ??= "";
-        if (!defaults.Any()) defaults = [GeneralEventId.Session.Name!];
+        if (!defaults.Any()) 
+            defaults = [GeneralEventId.Session.Name!];
 
         // Extract all event names from debugData that contains "log:EventName1,EventName2"
         var names = new List<string>();

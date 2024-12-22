@@ -236,10 +236,10 @@ public class Tunnel : IJob, IAsyncDisposable
         EnqueuePackets(ipPackets);
     }
 
-    public void SendPackets(IList<IPPacket> ipPackets, CancellationToken cancellationToke)
+    public void SendPackets(IList<IPPacket> ipPackets, CancellationToken cancellationToken)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
-        WaitForQueue(cancellationToke);
+        WaitForQueue(cancellationToken);
         EnqueuePackets(ipPackets);
     }
 

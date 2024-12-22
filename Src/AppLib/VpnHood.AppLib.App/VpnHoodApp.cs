@@ -163,7 +163,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsExcludeAppsSupported = Device.IsExcludeAppsSupported,
             IsIncludeAppsSupported = Device.IsIncludeAppsSupported,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
-            UpdateInfoUrl = options.UpdateInfoUrl,
+            UpdateInfoUrl = options.UpdateInfoUrl !=null ? new Uri(options.UpdateInfoUrl) : null,
             UiName = options.UiName,
             BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId,
             IsAccountSupported = options.AccountProvider != null,
@@ -393,7 +393,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         bool throwException = true,
         CancellationToken cancellationToken = default)
     {
-        using var lockAsync = await _connectLock.LockAsync(cancellationToken);
+        using var lockAsync = await _connectLock.LockAsync(cancellationToken).VhConfigureAwait();
 
         // set use default clientProfile and serverLocation
         clientProfileId ??= UserSettings.ClientProfileId ?? throw new NotExistsException("ClientProfile is not set.");

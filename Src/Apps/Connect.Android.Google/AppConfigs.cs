@@ -9,7 +9,7 @@ namespace VpnHood.App.Client.Droid.Google;
 internal class AppConfigs : AppConfigsBase<AppConfigs>
 {
     public const string AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
-    public Uri? UpdateInfoUrl { get; init; } = new ("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android.json");
+    public string? UpdateInfoUrl { get; init; } = "https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android.json";
     public int? SpaDefaultPort { get; init; }= IsDebugMode ? 9571 : 9570;
     public bool SpaListenToAllIps { get; init; } = IsDebugMode;
 

@@ -28,6 +28,7 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Factory;
+using VpnHood.AppLib.Abstractions.Extensions;
 
 namespace VpnHood.AppLib;
 
@@ -132,16 +133,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ? TimeSpan.FromSeconds(2) // start immediately
                 : options.VersionCheckInterval,
             Name = "VersionCheck"
-        });
-
-        // create start up logger
-        LogService.Start(new AppLogSettings {
-            LogEventNames = AppLogService.GetLogEventNames(options.LogVerbose, UserSettings.DebugData1,
-                UserSettings.Logging.LogEventNames),
-            LogAnonymous = options.LogAnonymous ?? Settings.UserSettings.Logging.LogAnonymous,
-            LogToConsole = UserSettings.Logging.LogToConsole,
-            LogToFile = UserSettings.Logging.LogToFile,
-            LogLevel = options.LogVerbose ? LogLevel.Trace : LogLevel.Information
         });
 
         // add default test public server if not added yet
@@ -293,7 +284,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CanDisconnect = !_isDisconnecting && (connectionState
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
-                LogExists = IsIdle && File.Exists(LogService.LogFilePath),
+                LogExists = IsIdle && LogService.Exists,
                 LastError = _appPersistState.LastError,
                 HasDiagnoseStarted = _hasDiagnoseStarted,
                 HasDisconnectedByUser = _hasDisconnectedByUser,
@@ -430,11 +421,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // prepare logger
             LogService.Start(new AppLogSettings {
-                LogEventNames = AppLogService.GetLogEventNames(_logVerbose, UserSettings.DebugData1,
-                    UserSettings.Logging.LogEventNames),
+                LogEventNames = AppLogService.GetLogEventNames(_logVerbose, UserSettings.DebugData1, UserSettings.Logging.LogEventNames),
                 LogAnonymous = _logAnonymous ?? Settings.UserSettings.Logging.LogAnonymous,
                 LogToConsole = UserSettings.Logging.LogToConsole,
-                LogToFile = UserSettings.Logging.LogToFile | diagnose,
+                LogToFile = true,
                 LogLevel = _logVerbose || diagnose ? LogLevel.Trace : LogLevel.Information
             });
 
@@ -702,11 +692,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void InitCulture()
     {
-        // set system UI culture
-        var systemCulture = new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ?? CultureInfo.InstalledUICulture.Name);
-        var availableCultures = Services.CultureProvider.AvailableCultures;
-        _systemUiCulture = availableCultures.Contains(systemCulture.Name, StringComparer.CurrentCultureIgnoreCase)
-                ? systemCulture : systemCulture.Parent;
+        // find the first available culture that match with the system culture
+        _systemUiCulture = Services.CultureProvider.GetBestCultureInfo();
 
         // set default culture
         var firstSelected = Services.CultureProvider.SelectedCultures.FirstOrDefault();

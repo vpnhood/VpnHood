@@ -30,6 +30,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
 
         return new AppOptions(appId: PackageName!, AppConfigs.IsDebugMode) {
+            StorageFolderPath = AppOptions.BuildStorageFolderPath("VpnHoodConnect"),
             DeviceId = AndroidUtil.GetDeviceId(this), //this will be hashed using AppId
             AccessKeys = [appConfigs.DefaultAccessKey],
             Resource = resources,

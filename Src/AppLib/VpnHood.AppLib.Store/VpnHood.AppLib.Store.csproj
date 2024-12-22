@@ -32,7 +32,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.Store.Api" Version="1.0.58-prerelease" />
+		<PackageReference Include="VpnHood.Store.Api" Version="1.0.60" />
 	</ItemGroup>
 
 	<ItemGroup>

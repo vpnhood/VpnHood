@@ -14,7 +14,7 @@ public class AdMobUtil
 
     public static async Task Initialize(Context context, CancellationToken cancellationToken)
     {
-        using var lockAsync = await InitLock.LockAsync(cancellationToken);
+        using var lockAsync = await InitLock.LockAsync(cancellationToken).VhConfigureAwait();
         if (IsInitialized)
             return;
 

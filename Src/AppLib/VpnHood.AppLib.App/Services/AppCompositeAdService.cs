@@ -50,7 +50,7 @@ internal class AppCompositeAdService
         if (_adProviderItems.Length == 0)
             throw new Exception("There is no AdService registered in this app.");
 
-        using var lockAsync = await _loadAdLock.LockAsync(cancellationToken);
+        using var lockAsync = await _loadAdLock.LockAsync(cancellationToken).VhConfigureAwait();
         if (!forceReload && !ShouldLoadAd())
             return;
 

@@ -16,7 +16,7 @@ public class AppOptions(string appId, bool isDebugMode)
     public TimeSpan SessionTimeout { get; set; } = ClientOptions.Default.SessionTimeout;
     public SocketFactory? SocketFactory { get; set; }
     public TimeSpan VersionCheckInterval { get; set; } = TimeSpan.FromHours(24);
-    public Uri? UpdateInfoUrl { get; set; }
+    public string? UpdateInfoUrl { get; set; }
     public bool UseInternalLocationService { get; set; } = true;
     public bool UseExternalLocationService { get; set; } = true;
     public AppResource Resource { get; set; } = new();

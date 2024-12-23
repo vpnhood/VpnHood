@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Core.Common.Logging;
 
-public class StreamLogger(Stream stream, bool includeScopes = true, bool leaveOpen = false)
+public class StreamLogger(Stream stream, bool includeScopes = true, bool leaveOpen = false, bool autoFlush = false)
     : TextLogger(includeScopes)
 {
     private const int DefaultBufferSize = 1024;
@@ -14,8 +14,11 @@ public class StreamLogger(Stream stream, bool includeScopes = true, bool leaveOp
         Func<TState, Exception?, string> formatter)
     {
         var text = FormatLog(logLevel, eventId, state, exception, formatter);
-        lock (_lock)
+        lock (_lock) {
             _streamWriter?.WriteLine(text);
+            if (autoFlush || logLevel>= LogLevel.Error)
+                _streamWriter?.Flush();
+        }
     }
 
     public override void Dispose()

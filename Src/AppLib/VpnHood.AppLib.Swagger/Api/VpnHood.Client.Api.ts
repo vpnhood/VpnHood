@@ -253,7 +253,7 @@ export class AccountClient {
         return Promise.resolve<void>(null as any);
     }
 
-    getAccessKeys(subscriptionId: string, cancelToken?: CancelToken): Promise<string[]> {
+    listAccessKeys(subscriptionId: string, cancelToken?: CancelToken): Promise<string[]> {
         let url_ = this.baseUrl + "/api/account/subscriptions/{subscriptionId}/access-keys";
         if (subscriptionId === undefined || subscriptionId === null)
             throw new Error("The parameter 'subscriptionId' must be defined.");
@@ -276,11 +276,11 @@ export class AccountClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processGetAccessKeys(_response);
+            return this.processListAccessKeys(_response);
         });
     }
 
-    protected processGetAccessKeys(response: AxiosResponse): Promise<string[]> {
+    protected processListAccessKeys(response: AxiosResponse): Promise<string[]> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1736,7 +1736,6 @@ export interface IAppSettings {
 }
 
 export class UserSettings implements IUserSettings {
-    logging!: AppLogSettings;
     isLicenseAccepted!: boolean;
     cultureCode?: string | null;
     clientProfileId?: string | null;
@@ -1752,6 +1751,7 @@ export class UserSettings implements IUserSettings {
     domainFilter!: DomainFilter;
     debugData1?: string | null;
     debugData2?: string | null;
+    logAnonymous!: boolean;
     includeLocalNetwork!: boolean;
     includeIpRanges!: string[];
     excludeIpRanges!: string[];
@@ -1766,7 +1766,6 @@ export class UserSettings implements IUserSettings {
             }
         }
         if (!data) {
-            this.logging = new AppLogSettings();
             this.appFilters = [];
             this.domainFilter = new DomainFilter();
             this.includeIpRanges = [];
@@ -1778,7 +1777,6 @@ export class UserSettings implements IUserSettings {
 
     init(_data?: any) {
         if (_data) {
-            this.logging = _data["logging"] ? AppLogSettings.fromJS(_data["logging"]) : new AppLogSettings();
             this.isLicenseAccepted = _data["isLicenseAccepted"] !== undefined ? _data["isLicenseAccepted"] : <any>null;
             this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : <any>null;
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
@@ -1808,6 +1806,7 @@ export class UserSettings implements IUserSettings {
             this.domainFilter = _data["domainFilter"] ? DomainFilter.fromJS(_data["domainFilter"]) : new DomainFilter();
             this.debugData1 = _data["debugData1"] !== undefined ? _data["debugData1"] : <any>null;
             this.debugData2 = _data["debugData2"] !== undefined ? _data["debugData2"] : <any>null;
+            this.logAnonymous = _data["logAnonymous"] !== undefined ? _data["logAnonymous"] : <any>null;
             this.includeLocalNetwork = _data["includeLocalNetwork"] !== undefined ? _data["includeLocalNetwork"] : <any>null;
             if (Array.isArray(_data["includeIpRanges"])) {
                 this.includeIpRanges = [] as any;
@@ -1853,7 +1852,6 @@ export class UserSettings implements IUserSettings {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["logging"] = this.logging ? this.logging.toJSON() : <any>null;
         data["isLicenseAccepted"] = this.isLicenseAccepted !== undefined ? this.isLicenseAccepted : <any>null;
         data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : <any>null;
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
@@ -1877,6 +1875,7 @@ export class UserSettings implements IUserSettings {
         data["domainFilter"] = this.domainFilter ? this.domainFilter.toJSON() : <any>null;
         data["debugData1"] = this.debugData1 !== undefined ? this.debugData1 : <any>null;
         data["debugData2"] = this.debugData2 !== undefined ? this.debugData2 : <any>null;
+        data["logAnonymous"] = this.logAnonymous !== undefined ? this.logAnonymous : <any>null;
         data["includeLocalNetwork"] = this.includeLocalNetwork !== undefined ? this.includeLocalNetwork : <any>null;
         if (Array.isArray(this.includeIpRanges)) {
             data["includeIpRanges"] = [];
@@ -1903,7 +1902,6 @@ export class UserSettings implements IUserSettings {
 }
 
 export interface IUserSettings {
-    logging: AppLogSettings;
     isLicenseAccepted: boolean;
     cultureCode?: string | null;
     clientProfileId?: string | null;
@@ -1919,88 +1917,12 @@ export interface IUserSettings {
     domainFilter: DomainFilter;
     debugData1?: string | null;
     debugData2?: string | null;
+    logAnonymous: boolean;
     includeLocalNetwork: boolean;
     includeIpRanges: string[];
     excludeIpRanges: string[];
     packetCaptureIncludeIpRanges: string[];
     packetCaptureExcludeIpRanges: string[];
-}
-
-export class AppLogSettings implements IAppLogSettings {
-    logToConsole!: boolean;
-    logToFile!: boolean;
-    logAnonymous!: boolean;
-    logEventNames!: string[];
-    logLevel!: LogLevel;
-
-    constructor(data?: IAppLogSettings) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-        if (!data) {
-            this.logEventNames = [];
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.logToConsole = _data["logToConsole"] !== undefined ? _data["logToConsole"] : <any>null;
-            this.logToFile = _data["logToFile"] !== undefined ? _data["logToFile"] : <any>null;
-            this.logAnonymous = _data["logAnonymous"] !== undefined ? _data["logAnonymous"] : <any>null;
-            if (Array.isArray(_data["logEventNames"])) {
-                this.logEventNames = [] as any;
-                for (let item of _data["logEventNames"])
-                    this.logEventNames!.push(item);
-            }
-            else {
-                this.logEventNames = <any>null;
-            }
-            this.logLevel = _data["logLevel"] !== undefined ? _data["logLevel"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): AppLogSettings {
-        data = typeof data === 'object' ? data : {};
-        let result = new AppLogSettings();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["logToConsole"] = this.logToConsole !== undefined ? this.logToConsole : <any>null;
-        data["logToFile"] = this.logToFile !== undefined ? this.logToFile : <any>null;
-        data["logAnonymous"] = this.logAnonymous !== undefined ? this.logAnonymous : <any>null;
-        if (Array.isArray(this.logEventNames)) {
-            data["logEventNames"] = [];
-            for (let item of this.logEventNames)
-                data["logEventNames"].push(item);
-        }
-        data["logLevel"] = this.logLevel !== undefined ? this.logLevel : <any>null;
-        return data;
-    }
-}
-
-export interface IAppLogSettings {
-    logToConsole: boolean;
-    logToFile: boolean;
-    logAnonymous: boolean;
-    logEventNames: string[];
-    logLevel: LogLevel;
-}
-
-/** Defines logging severity levels. */
-export enum LogLevel {
-    Trace = "Trace",
-    Debug = "Debug",
-    Information = "Information",
-    Warning = "Warning",
-    Error = "Error",
-    Critical = "Critical",
-    None = "None",
 }
 
 export enum FilterMode {
@@ -2099,8 +2021,9 @@ export class AppState implements IAppState {
     clientProfile?: ClientProfileBaseInfo | null;
     serverLocationInfo?: ServerLocationInfo | null;
     isIdle!: boolean;
+    promptForLog!: boolean;
     logExists!: boolean;
-    hasDiagnoseStarted!: boolean;
+    hasDiagnoseRequested!: boolean;
     hasDisconnectedByUser!: boolean;
     hasProblemDetected!: boolean;
     sessionStatus?: SessionStatus | null;
@@ -2147,8 +2070,9 @@ export class AppState implements IAppState {
             this.clientProfile = _data["clientProfile"] ? ClientProfileBaseInfo.fromJS(_data["clientProfile"]) : <any>null;
             this.serverLocationInfo = _data["serverLocationInfo"] ? ServerLocationInfo.fromJS(_data["serverLocationInfo"]) : <any>null;
             this.isIdle = _data["isIdle"] !== undefined ? _data["isIdle"] : <any>null;
+            this.promptForLog = _data["promptForLog"] !== undefined ? _data["promptForLog"] : <any>null;
             this.logExists = _data["logExists"] !== undefined ? _data["logExists"] : <any>null;
-            this.hasDiagnoseStarted = _data["hasDiagnoseStarted"] !== undefined ? _data["hasDiagnoseStarted"] : <any>null;
+            this.hasDiagnoseRequested = _data["hasDiagnoseRequested"] !== undefined ? _data["hasDiagnoseRequested"] : <any>null;
             this.hasDisconnectedByUser = _data["hasDisconnectedByUser"] !== undefined ? _data["hasDisconnectedByUser"] : <any>null;
             this.hasProblemDetected = _data["hasProblemDetected"] !== undefined ? _data["hasProblemDetected"] : <any>null;
             this.sessionStatus = _data["sessionStatus"] ? SessionStatus.fromJS(_data["sessionStatus"]) : <any>null;
@@ -2188,8 +2112,9 @@ export class AppState implements IAppState {
         data["clientProfile"] = this.clientProfile ? this.clientProfile.toJSON() : <any>null;
         data["serverLocationInfo"] = this.serverLocationInfo ? this.serverLocationInfo.toJSON() : <any>null;
         data["isIdle"] = this.isIdle !== undefined ? this.isIdle : <any>null;
+        data["promptForLog"] = this.promptForLog !== undefined ? this.promptForLog : <any>null;
         data["logExists"] = this.logExists !== undefined ? this.logExists : <any>null;
-        data["hasDiagnoseStarted"] = this.hasDiagnoseStarted !== undefined ? this.hasDiagnoseStarted : <any>null;
+        data["hasDiagnoseRequested"] = this.hasDiagnoseRequested !== undefined ? this.hasDiagnoseRequested : <any>null;
         data["hasDisconnectedByUser"] = this.hasDisconnectedByUser !== undefined ? this.hasDisconnectedByUser : <any>null;
         data["hasProblemDetected"] = this.hasProblemDetected !== undefined ? this.hasProblemDetected : <any>null;
         data["sessionStatus"] = this.sessionStatus ? this.sessionStatus.toJSON() : <any>null;
@@ -2222,8 +2147,9 @@ export interface IAppState {
     clientProfile?: ClientProfileBaseInfo | null;
     serverLocationInfo?: ServerLocationInfo | null;
     isIdle: boolean;
+    promptForLog: boolean;
     logExists: boolean;
-    hasDiagnoseStarted: boolean;
+    hasDiagnoseRequested: boolean;
     hasDisconnectedByUser: boolean;
     hasProblemDetected: boolean;
     sessionStatus?: SessionStatus | null;

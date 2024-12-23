@@ -16,8 +16,9 @@ public class AppState
     public required ClientProfileBaseInfo? ClientProfile { get; init; }
     public required ServerLocationInfo? ServerLocationInfo { get; init; }
     public required bool IsIdle { get; init; }
+    public required bool PromptForLog { get; init; }
     public required bool LogExists { get; init; }
-    public required bool HasDiagnoseStarted { get; init; }
+    public required bool HasDiagnoseRequested { get; init; }
     public required bool HasDisconnectedByUser { get; init; }
     public required bool HasProblemDetected { get; init; }
     public required SessionStatus? SessionStatus { get; init; }

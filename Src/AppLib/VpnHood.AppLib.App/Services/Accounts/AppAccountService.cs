@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
@@ -67,7 +68,8 @@ public class AppAccountService
 
     private void ClearCache()
     {
-        File.Delete(AppAccountFilePath);
+        if (File.Exists(AppAccountFilePath))
+            File.Delete(AppAccountFilePath);
         _appAccount = null;
     }
 

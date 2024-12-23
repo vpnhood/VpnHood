@@ -11,7 +11,6 @@ public class UserSettings
 {
     private static readonly ClientOptions DefaultClientOptions = new();
 
-    public AppLogSettings Logging { get; set; } = new();
     public bool IsLicenseAccepted { get; set; }
     public string? CultureCode { get; set; }
     public Guid? ClientProfileId { get; set; }
@@ -29,6 +28,7 @@ public class UserSettings
     public DomainFilter DomainFilter { get; set; } = new();
     public string? DebugData1 { get; set; }
     public string? DebugData2 { get; set; }
+    public bool LogAnonymous { get; set; } = true;
     public bool IncludeLocalNetwork { get; set; } = DefaultClientOptions.IncludeLocalNetwork;
 
     [JsonConverter(typeof(NullToEmptyArrayConverter<IpRange>))] // todo: remove nullable after migration 4.5.533

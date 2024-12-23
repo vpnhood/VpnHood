@@ -422,10 +422,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 Services.Tracker = CreateBuildInTracker(userAgent);
 
             // prepare logger
-            LogService.Start(new AppLogSettings {
-                LogEventNames = AppLogService.GetLogEventNames(_logVerbose, UserSettings.DebugData1, UserSettings.Logging.LogEventNames),
-                LogAnonymous = _logAnonymous ?? Settings.UserSettings.Logging.LogAnonymous,
-                LogToConsole = UserSettings.Logging.LogToConsole,
+            LogService.Start(new AppLogOptions {
+                LogEventNames = AppLogService.GetLogEventNames(verbose: _logVerbose, diagnose: diagnose, debugCommand: UserSettings.DebugData1),
+                LogAnonymous = _logAnonymous ?? Settings.UserSettings.LogAnonymous,
+                LogToConsole = true,
                 LogToFile = true,
                 LogLevel = _logVerbose || diagnose ? LogLevel.Trace : LogLevel.Information
             });

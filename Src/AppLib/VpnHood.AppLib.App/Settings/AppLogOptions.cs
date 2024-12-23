@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.AppLib.Settings;
 
-public class AppLogSettings
+public class AppLogOptions
 {
     public bool LogToConsole { get; set; } = true;
     public bool LogToFile { get; set; }

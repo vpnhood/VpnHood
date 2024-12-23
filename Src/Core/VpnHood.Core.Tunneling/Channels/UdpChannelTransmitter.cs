@@ -129,7 +129,7 @@ public abstract class UdpChannelTransmitter : IDisposable
                     break;
                 }
 
-                // break only for the first call and means that the local endpoint can not bind
+                // break only for the first call and means that the local endpoint can not be bind
                 if (remoteEndPoint == null) {
                     VhLogger.LogError(GeneralEventId.Essential, ex, "UdpChannelTransmitter has stopped reading.");
                     break;

@@ -8,6 +8,7 @@ public class AppLogOptions
     public bool LogToConsole { get; set; } = true;
     public bool LogToFile { get; set; }
     public bool LogAnonymous { get; set; } = true;
+    public bool AutoFlush { get; set; }
     public string[] LogEventNames { get; set; } = [];
 
     [JsonConverter(typeof(JsonStringEnumConverter))]

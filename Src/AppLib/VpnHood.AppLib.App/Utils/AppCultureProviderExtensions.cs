@@ -5,8 +5,6 @@ namespace VpnHood.AppLib.Utils;
 
 public static class AppCultureProviderExtensions
 {
-    public static CultureInfo GetSystemUiCulture(this IAppCultureProvider cultureProvider)
-
     public static CultureInfo GetBestCultureInfo(this IAppCultureProvider cultureProvider)
     {
         var availableCultures = cultureProvider.AvailableCultures;

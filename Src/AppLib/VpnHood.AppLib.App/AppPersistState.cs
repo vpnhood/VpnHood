@@ -15,7 +15,6 @@ internal class AppPersistState
 
     // prop
     private ApiError? _lastError;
-
     public ApiError? LastError {
         get => _lastError;
         set {
@@ -26,7 +25,6 @@ internal class AppPersistState
 
     // prop
     private DateTime _updateIgnoreTime = DateTime.MinValue;
-
     public DateTime UpdateIgnoreTime {
         get => _updateIgnoreTime;
         set {
@@ -37,7 +35,6 @@ internal class AppPersistState
 
     // prop
     private string? _clientCountryCode;
-
     public string? ClientCountryCode {
         get => _clientCountryCode;
         set {

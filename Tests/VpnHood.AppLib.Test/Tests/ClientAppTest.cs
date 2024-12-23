@@ -75,7 +75,7 @@ public class ClientAppTest : TestBase
         await TestAppHelper.WaitForAppState(app, AppConnectionState.None);
 
         Assert.IsTrue(app.State.LogExists);
-        Assert.IsTrue(app.State.HasDiagnoseStarted);
+        Assert.IsTrue(app.State.HasDiagnoseRequested);
         Assert.IsTrue(app.State.HasDisconnectedByUser);
         Assert.IsTrue(app.State.HasProblemDetected);
         Assert.IsTrue(app.State.IsIdle);
@@ -92,9 +92,9 @@ public class ClientAppTest : TestBase
         await TestAppHelper.WaitForAppState(app, AppConnectionState.None);
 
         Assert.IsTrue(app.State.IsIdle);
-        Assert.IsFalse(app.State.HasDiagnoseStarted);
+        Assert.IsFalse(app.State.HasDiagnoseRequested);
         Assert.IsTrue(app.State.HasDisconnectedByUser);
-        Assert.IsFalse(app.State.LogExists);
+        Assert.IsTrue(app.State.LogExists);
     }
 
     [TestMethod]
@@ -111,8 +111,8 @@ public class ClientAppTest : TestBase
         await Assert.ThrowsExceptionAsync<TimeoutException>(() => app.Connect(clientProfile.ClientProfileId));
 
         await TestAppHelper.WaitForAppState(app, AppConnectionState.None);
-        Assert.IsFalse(app.State.LogExists);
-        Assert.IsFalse(app.State.HasDiagnoseStarted);
+        Assert.IsTrue(app.State.LogExists);
+        Assert.IsFalse(app.State.HasDiagnoseRequested);
         Assert.IsTrue(app.State.HasProblemDetected);
         Assert.IsNotNull(app.State.LastError);
     }
@@ -368,8 +368,8 @@ public class ClientAppTest : TestBase
         // get data through tunnel
         await TestHelper.Test_Https();
 
-        Assert.IsFalse(app.State.LogExists);
-        Assert.IsFalse(app.State.HasDiagnoseStarted);
+        Assert.IsTrue(app.State.LogExists);
+        Assert.IsFalse(app.State.HasDiagnoseRequested);
         Assert.IsFalse(app.State.HasProblemDetected);
         Assert.IsNull(app.State.LastError);
         Assert.IsFalse(app.State.IsIdle);

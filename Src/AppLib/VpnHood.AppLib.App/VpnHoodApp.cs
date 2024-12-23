@@ -12,6 +12,7 @@ using VpnHood.AppLib.Providers;
 using VpnHood.AppLib.Services;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Settings;
+using VpnHood.AppLib.Utils;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Device;
@@ -28,7 +29,6 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Factory;
-using VpnHood.AppLib.Abstractions.Extensions;
 
 namespace VpnHood.AppLib;
 
@@ -70,6 +70,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly AppAdService _appAppAdService;
     private readonly bool _allowEndPointTracker;
     private readonly TimeSpan _canExtendByRewardedAdThreshold;
+    private CultureInfo? _systemUiCulture;
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -686,7 +687,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private CultureInfo? _systemUiCulture;
     public CultureInfo SystemUiCulture =>
         _systemUiCulture ?? new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ?? CultureInfo.InstalledUICulture.Name);
 

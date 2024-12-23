@@ -1,9 +1,12 @@
 ﻿using System.Globalization;
+using VpnHood.AppLib.Abstractions;
 
-namespace VpnHood.AppLib.Abstractions.Extensions;
+namespace VpnHood.AppLib.Utils;
 
-public static class IAppCultureProviderExtensions
+public static class AppCultureProviderExtensions
 {
+    public static CultureInfo GetSystemUiCulture(this IAppCultureProvider cultureProvider)
+
     public static CultureInfo GetBestCultureInfo(this IAppCultureProvider cultureProvider)
     {
         var availableCultures = cultureProvider.AvailableCultures;

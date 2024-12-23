@@ -45,7 +45,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly string? _ga4MeasurementId;
     private bool _hasConnectRequested;
     private bool _hasDisconnectRequested;
-    private bool _hasDiagnoseStarted;
+    private bool _hasDiagnoseRequested;
     private bool _hasDisconnectedByUser;
     private Guid? _activeClientProfileId;
     private DateTime? _connectRequestTime;
@@ -155,7 +155,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsExcludeAppsSupported = Device.IsExcludeAppsSupported,
             IsIncludeAppsSupported = Device.IsIncludeAppsSupported,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
-            UpdateInfoUrl = options.UpdateInfoUrl !=null ? new Uri(options.UpdateInfoUrl) : null,
+            UpdateInfoUrl = options.UpdateInfoUrl != null ? new Uri(options.UpdateInfoUrl) : null,
             UiName = options.UiName,
             BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId,
             IsAccountSupported = options.AccountProvider != null,
@@ -280,17 +280,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ConnectionState = connectionState,
                 IsIdle = IsIdle,
                 CanConnect = connectionState is AppConnectionState.None,
-                CanDiagnose = !_hasDiagnoseStarted && (connectionState is AppConnectionState.None
-                    or AppConnectionState.Connected or AppConnectionState.Connecting),
+                CanDiagnose = connectionState is AppConnectionState.None ||
+                              (!_hasDiagnoseRequested && (connectionState is AppConnectionState.Connected or AppConnectionState.Connecting)),
                 CanDisconnect = !_isDisconnecting && (connectionState
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
-                LogExists = IsIdle && LogService.Exists,
+                PromptForLog = IsIdle && _hasDiagnoseRequested && LogService.Exists,
+                LogExists = LogService.Exists,
                 LastError = _appPersistState.LastError,
-                HasDiagnoseStarted = _hasDiagnoseStarted,
+                HasDiagnoseRequested = _hasDiagnoseRequested,
                 HasDisconnectedByUser = _hasDisconnectedByUser,
-                HasProblemDetected = _hasConnectRequested && IsIdle &&
-                                     (_hasDiagnoseStarted || _appPersistState.LastError != null),
+                HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseRequested || _appPersistState.LastError != null),
                 SessionStatus = LastSessionStatus,
                 Speed = client?.Stat.Speed ?? new Traffic(),
                 AccountTraffic = client?.Stat.AccountTraffic ?? new Traffic(),
@@ -372,7 +372,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public void ClearLastError()
     {
         _appPersistState.LastError = null;
-        _hasDiagnoseStarted = false;
+        _hasDiagnoseRequested = false;
+
     }
 
     private readonly AsyncLock _connectLock = new();
@@ -396,7 +397,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // protect double call
         if (!IsIdle) {
             if (_activeClientProfileId == clientProfileId &&
-                diagnose == _hasDiagnoseStarted && // client may request diagnose the current connection
+                diagnose == _hasDiagnoseRequested && // client may request diagnose the current connection
                 string.Equals(clientProfileInfo.SelectedLocationInfo?.ServerLocation, serverLocation, StringComparison.OrdinalIgnoreCase))
                 throw new Exception("Connection is already in progress.");
 
@@ -410,7 +411,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _hasDisconnectedByUser = false;
             _hasConnectRequested = true;
             _hasDisconnectRequested = false;
-            _hasDiagnoseStarted = diagnose;
+            _hasDiagnoseRequested = diagnose;
             _connectRequestTime = DateTime.Now;
             _appPersistState.LastError = null;
             FireConnectionStateChanged();
@@ -590,10 +591,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _client = client;
 
             VhLogger.Instance.LogTrace(
-                "Engine is connecting... HasDiagnoseStarted: {HasDiagnoseStarted}, AutoDiagnose: {AutoDiagnose}",
-                _hasDiagnoseStarted, _autoDiagnose);
+                "Engine is connecting... DiagnoseMode: {DiagnoseMode}, AutoDiagnose: {AutoDiagnose}",
+                _hasDiagnoseRequested, _autoDiagnose);
 
-            if (_hasDiagnoseStarted)
+            if (_hasDiagnoseRequested)
                 await Diagnoser.Diagnose(client, cancellationToken).VhConfigureAwait();
             else if (_autoDiagnose)
                 await Diagnoser.Connect(client, cancellationToken).VhConfigureAwait();
@@ -617,8 +618,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // try to update token from url after connection or error if ResponseAccessKey is not set
             // check _client is not null to make sure 
-            if (ex is not OperationCanceledException && 
-                allowUpdateToken && 
+            if (ex is not OperationCanceledException &&
+                allowUpdateToken &&
                 !VhUtil.IsNullOrEmpty(token.ServerToken.Urls) &&
                 await ClientProfileService.UpdateServerTokenByUrls(token).VhConfigureAwait()) {
                 token = ClientProfileService.GetToken(token.TokenId);
@@ -776,7 +777,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             FireConnectionStateChanged();
 
             // check diagnose
-            if (_hasDiagnoseStarted && _appPersistState.LastError == null)
+            if (_hasDiagnoseRequested && _appPersistState.LastError == null)
                 _appPersistState.LastError =
                     new ApiError(new Exception("Diagnoser has finished and no issue has been detected."));
 

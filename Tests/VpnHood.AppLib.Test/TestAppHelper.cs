@@ -49,7 +49,7 @@ public class TestAppHelper : TestHelper
         clientApp.Diagnoser.HttpTimeout = 2000;
         clientApp.Diagnoser.NsTimeout = 2000;
         clientApp.UserSettings.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
-        clientApp.UserSettings.Logging.LogAnonymous = false;
+        clientApp.UserSettings.LogAnonymous = false;
         clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
         ActiveUiContext.Context = new TestAppUiContext();
 

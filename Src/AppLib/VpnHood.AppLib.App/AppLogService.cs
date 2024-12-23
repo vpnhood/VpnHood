@@ -25,12 +25,12 @@ public class AppLogService : IDisposable
         return File.ReadAllTextAsync(LogFilePath);
     }
 
-    public void Start(AppLogSettings logSettings)
+    public void Start(AppLogOptions logOptions)
     {
-        VhLogger.IsAnonymousMode = logSettings.LogAnonymous;
-        VhLogger.IsDiagnoseMode = logSettings.LogEventNames.Contains("*");
-        VhLogger.Instance = CreateLogger(logSettings, removeLastFile: true);
-        LogEvents = logSettings.LogEventNames;
+        VhLogger.IsAnonymousMode = logOptions.LogAnonymous;
+        VhLogger.IsDiagnoseMode = logOptions.LogEventNames.Contains("*");
+        VhLogger.Instance = CreateLogger(logOptions, removeLastFile: true);
+        LogEvents = logOptions.LogEventNames;
     }
 
     public void Stop()
@@ -39,20 +39,20 @@ public class AppLogService : IDisposable
         LogEvents = [];
     }
 
-    private ILogger CreateLogger(AppLogSettings logSettings, bool removeLastFile)
+    private ILogger CreateLogger(AppLogOptions logOptions, bool removeLastFile)
     {
         var logger = CreateLoggerInternal(
-            logToConsole: logSettings.LogToConsole,
-            logToFile: logSettings.LogToFile,
-            logLevel: logSettings.LogLevel,
+            logToConsole: logOptions.LogToConsole,
+            logToFile: logOptions.LogToFile,
+            logLevel: logOptions.LogLevel,
             removeLastFile: removeLastFile);
 
         logger = new SyncLogger(logger);
         logger = new FilterLogger(logger, eventId => {
-            if (logSettings.LogEventNames.Contains(eventId.Name, StringComparer.OrdinalIgnoreCase))
+            if (logOptions.LogEventNames.Contains(eventId.Name, StringComparer.OrdinalIgnoreCase))
                 return true;
 
-            return eventId.Id == 0 || logSettings.LogEventNames.Contains("*");
+            return eventId.Id == 0 || logOptions.LogEventNames.Contains("*");
         });
 
         return logger;
@@ -85,23 +85,38 @@ public class AppLogService : IDisposable
         return new SyncLogger(logger);
     }
 
-    public static string[] GetLogEventNames(bool verbose, string? debugCommand, string[] defaults)
+    public static string[] GetLogEventNames(bool verbose, bool diagnose, string? debugCommand)
     {
-        if (verbose) 
+        debugCommand ??= "";
+
+        // log verbose
+        if (verbose || debugCommand.Contains("/verbose", StringComparison.OrdinalIgnoreCase)) 
             return ["*"];
 
-        debugCommand ??= "";
-        if (!defaults.Any()) 
-            defaults = [GeneralEventId.Session.Name!];
-
         // Extract all event names from debugData that contains "log:EventName1,EventName2"
-        var names = new List<string>();
+        var names = new List<string?> { GeneralEventId.Session.Name };
+        if (diagnose)
+            names.AddRange([
+                GeneralEventId.Essential.Name, 
+                GeneralEventId.Nat.Name,
+                GeneralEventId.Ping.Name,
+                GeneralEventId.Dns.Name,
+                GeneralEventId.Tcp.Name,
+                GeneralEventId.Tls.Name,
+                GeneralEventId.StreamProxyChannel.Name,
+                GeneralEventId.DatagramChannel.Name,
+                GeneralEventId.Request.Name,
+                GeneralEventId.TcpLife.Name,
+                GeneralEventId.Test.Name,
+                GeneralEventId.UdpSign.Name,
+            ]);
+
         var parts = debugCommand.Split(' ').Where(x => x.Contains("/log:", StringComparison.OrdinalIgnoreCase));
         foreach (var part in parts)
             names.AddRange(part[5..].Split(','));
 
         // use user settings
-        return names.Count > 0 ? names.ToArray() : defaults;
+        return names.Distinct().ToArray()!;
     }
 
     public void Dispose()

@@ -45,7 +45,8 @@ public class AppLogService : IDisposable
             logToConsole: logOptions.LogToConsole,
             logToFile: logOptions.LogToFile,
             logLevel: logOptions.LogLevel,
-            removeLastFile: removeLastFile);
+            removeLastFile: removeLastFile,
+            autoFlush: logOptions.AutoFlush);
 
         logger = new SyncLogger(logger);
         logger = new FilterLogger(logger, eventId => {
@@ -58,7 +59,8 @@ public class AppLogService : IDisposable
         return logger;
     }
 
-    private ILogger CreateLoggerInternal(bool logToConsole, bool logToFile, LogLevel logLevel, bool removeLastFile)
+    private ILogger CreateLoggerInternal(bool logToConsole, bool logToFile, LogLevel logLevel, 
+        bool removeLastFile, bool autoFlush)
     {
         // file logger, close old stream
         _streamLogger?.Dispose();
@@ -74,7 +76,7 @@ public class AppLogService : IDisposable
 
             if (logToFile) {
                 var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                _streamLogger = new StreamLogger(fileStream);
+                _streamLogger = new StreamLogger(fileStream, autoFlush: autoFlush);
                 builder.AddProvider(_streamLogger);
             }
 
@@ -94,7 +96,11 @@ public class AppLogService : IDisposable
             return ["*"];
 
         // Extract all event names from debugData that contains "log:EventName1,EventName2"
-        var names = new List<string?> { GeneralEventId.Session.Name };
+        var names = new List<string?> {
+            GeneralEventId.Session.Name, 
+            GeneralEventId.Essential.Name
+        };
+
         if (diagnose)
             names.AddRange([
                 GeneralEventId.Essential.Name, 

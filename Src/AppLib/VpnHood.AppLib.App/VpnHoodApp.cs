@@ -427,7 +427,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LogAnonymous = _logAnonymous ?? Settings.UserSettings.LogAnonymous,
                 LogToConsole = true,
                 LogToFile = true,
-                AutoFlush = diagnose,
+                AutoFlush = true,
                 LogLevel = _logVerbose || diagnose ? LogLevel.Trace : LogLevel.Information
             });
 

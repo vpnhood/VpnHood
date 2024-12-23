@@ -20,9 +20,12 @@ public class AppLogService : IDisposable
         VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
     }
 
-    public Task<string> GetLog()
+    public async Task<string> GetLog()
     {
-        return File.ReadAllTextAsync(LogFilePath);
+        // read text file use shared access none
+        await using var stream = new FileStream(LogFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var reader = new StreamReader(stream);
+        return await reader.ReadToEndAsync();
     }
 
     public void Start(AppLogOptions logOptions)

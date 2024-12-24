@@ -7,6 +7,7 @@ public interface IDevice : IDisposable
     bool IsIncludeAppsSupported { get; }
     bool IsAlwaysOnSupported { get; }
     string OsInfo { get; }
+    DeviceMemInfo? MemInfo { get; }
     DeviceAppInfo[] InstalledApps { get; }
     Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext);
 }

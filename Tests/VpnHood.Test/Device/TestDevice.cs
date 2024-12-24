@@ -11,6 +11,7 @@ public class TestDevice(Func<IPacketCapture> packetCaptureFactory) : IDevice
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
     public bool IsAlwaysOnSupported => false;
+    public DeviceMemInfo? MemInfo => null;
 
     public DeviceAppInfo[] InstalledApps => throw new NotSupportedException();
 

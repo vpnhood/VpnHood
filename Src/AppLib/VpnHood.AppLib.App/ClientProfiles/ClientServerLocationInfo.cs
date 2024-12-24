@@ -57,6 +57,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
         Options.PremiumByTrial = Options.HasPremium ? policy.PremiumByTrial : null;
         Options.PremiumByRewardedAd = Options.HasPremium ? policy.PremiumByRewardedAd : null;
         Options.PremiumByPurchase = Options.HasPremium && policy.PremiumByPurchase;
+        Options.PremiumByCode = Options.HasPremium && policy.PremiumByCode && false; // not implemented yet
         Options.Prompt = Options.PremiumByTrial != null || Options.PremiumByRewardedAd != null || Options.PremiumByPurchase;
     }
 

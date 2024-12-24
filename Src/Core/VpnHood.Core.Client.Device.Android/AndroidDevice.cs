@@ -218,6 +218,25 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
             _grantPermissionTaskSource.TrySetResult(e.ResultCode == Result.Ok);
     }
 
+    public DeviceMemInfo? MemInfo {
+        get {
+            var activityManager = (ActivityManager?)Application.Context.GetSystemService(Context.ActivityService);
+            if (activityManager == null)
+                return null;
+
+            // Get memory info
+            var memoryInfo = new ActivityManager.MemoryInfo();
+            activityManager.GetMemoryInfo(memoryInfo);
+
+            var totalMemory = memoryInfo.TotalMem; // Total memory in bytes
+            var availableMemory = memoryInfo.AvailMem; // Available memory in bytes
+            return new DeviceMemInfo {
+                AvailableMemory = availableMemory,
+                TotalMemory = totalMemory
+            };
+        }
+    }
+
     public void Dispose()
     {
         _deviceNotification?.Notification.Dispose();

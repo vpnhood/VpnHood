@@ -10,6 +10,7 @@ public class WinDivertDevice : IDevice
     public bool IsExcludeAppsSupported => IsDebugMode;
     public bool IsAlwaysOnSupported => false;
     public bool IsIncludeAppsSupported => IsDebugMode;
+    public DeviceMemInfo? MemInfo => null;
 
     public DeviceAppInfo[] InstalledApps {
         get {

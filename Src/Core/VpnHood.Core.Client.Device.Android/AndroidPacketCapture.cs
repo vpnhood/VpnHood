@@ -295,12 +295,15 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
 
         // close streams
         try {
+            _inStream?.Close();
+            _outStream?.Close();
             _inStream?.Dispose();
             _outStream?.Dispose();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error while closing the VpnService streams.");
         }
+
 
         // close VpnService
         try {

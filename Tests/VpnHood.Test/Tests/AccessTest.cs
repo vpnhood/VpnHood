@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Client;
 using VpnHood.Core.Common.Exceptions;
@@ -18,7 +19,6 @@ public class AccessTest : TestBase
     public async Task AFoo()
     {
         await Task.Delay(0);
-
     }
 
     [TestMethod]

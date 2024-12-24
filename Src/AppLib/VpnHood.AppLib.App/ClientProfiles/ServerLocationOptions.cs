@@ -7,6 +7,7 @@ public class ServerLocationOptions
     public int? PremiumByRewardedAd { get; set; }
     public bool PremiumByPurchase { get; set; }
     public bool PremiumByCode { get; set; }
+    public bool CanGoPremium { get; set; }
     public bool HasFree { get; set; }
     public bool HasPremium { get; set; }
     public bool HasUnblockable { get; set; }

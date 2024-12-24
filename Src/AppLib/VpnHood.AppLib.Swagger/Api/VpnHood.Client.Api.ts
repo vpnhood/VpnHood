@@ -2432,6 +2432,8 @@ export class ServerLocationOptions implements IServerLocationOptions {
     premiumByTrial?: number | null;
     premiumByRewardedAd?: number | null;
     premiumByPurchase!: boolean;
+    premiumByCode!: boolean;
+    canGoPremium!: boolean;
     hasFree!: boolean;
     hasPremium!: boolean;
     hasUnblockable!: boolean;
@@ -2452,6 +2454,8 @@ export class ServerLocationOptions implements IServerLocationOptions {
             this.premiumByTrial = _data["premiumByTrial"] !== undefined ? _data["premiumByTrial"] : <any>null;
             this.premiumByRewardedAd = _data["premiumByRewardedAd"] !== undefined ? _data["premiumByRewardedAd"] : <any>null;
             this.premiumByPurchase = _data["premiumByPurchase"] !== undefined ? _data["premiumByPurchase"] : <any>null;
+            this.premiumByCode = _data["premiumByCode"] !== undefined ? _data["premiumByCode"] : <any>null;
+            this.canGoPremium = _data["canGoPremium"] !== undefined ? _data["canGoPremium"] : <any>null;
             this.hasFree = _data["hasFree"] !== undefined ? _data["hasFree"] : <any>null;
             this.hasPremium = _data["hasPremium"] !== undefined ? _data["hasPremium"] : <any>null;
             this.hasUnblockable = _data["hasUnblockable"] !== undefined ? _data["hasUnblockable"] : <any>null;
@@ -2472,6 +2476,8 @@ export class ServerLocationOptions implements IServerLocationOptions {
         data["premiumByTrial"] = this.premiumByTrial !== undefined ? this.premiumByTrial : <any>null;
         data["premiumByRewardedAd"] = this.premiumByRewardedAd !== undefined ? this.premiumByRewardedAd : <any>null;
         data["premiumByPurchase"] = this.premiumByPurchase !== undefined ? this.premiumByPurchase : <any>null;
+        data["premiumByCode"] = this.premiumByCode !== undefined ? this.premiumByCode : <any>null;
+        data["canGoPremium"] = this.canGoPremium !== undefined ? this.canGoPremium : <any>null;
         data["hasFree"] = this.hasFree !== undefined ? this.hasFree : <any>null;
         data["hasPremium"] = this.hasPremium !== undefined ? this.hasPremium : <any>null;
         data["hasUnblockable"] = this.hasUnblockable !== undefined ? this.hasUnblockable : <any>null;
@@ -2485,6 +2491,8 @@ export interface IServerLocationOptions {
     premiumByTrial?: number | null;
     premiumByRewardedAd?: number | null;
     premiumByPurchase: boolean;
+    premiumByCode: boolean;
+    canGoPremium: boolean;
     hasFree: boolean;
     hasPremium: boolean;
     hasUnblockable: boolean;

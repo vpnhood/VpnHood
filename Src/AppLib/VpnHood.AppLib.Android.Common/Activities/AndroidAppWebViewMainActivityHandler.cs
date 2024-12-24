@@ -37,6 +37,23 @@ public class AndroidAppWebViewMainActivityHandler(
         InitWebUi();
     }
 
+    protected override void OnPause()
+    {
+        base.OnPause();
+
+        // temporarily stop the server to find is the crash belong to embed-io
+        if (VpnHoodAppWebServer.IsInit)
+            VpnHoodAppWebServer.Instance.Stop();
+    }
+
+    protected override void OnResume()
+    {
+        if (VpnHoodAppWebServer.IsInit)
+            VpnHoodAppWebServer.Instance.Start();
+
+        base.OnResume();
+    }
+
     private void InitLoadingPage()
     {
         ActivityEvent.Activity.SetContentView(_Microsoft.Android.Resource.Designer.Resource.Layout.progressbar);

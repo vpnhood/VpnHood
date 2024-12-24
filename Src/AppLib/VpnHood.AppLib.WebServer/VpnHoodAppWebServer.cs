@@ -47,8 +47,11 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         return ret;
     }
 
-    private void Start()
+    public void Start()
     {
+        if (_server!=null)
+            return;
+
         _server = CreateWebServer();
         try {
             Logger.UnregisterLogger<ConsoleLogger>();
@@ -63,10 +66,15 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     public void Stop()
     {
         _server?.Dispose();
+        _server = null;
     }
 
+    private string? _spaPath;
     private string GetSpaPath()
     {
+        if (_spaPath != null)
+            return _spaPath; // do not extract in same instance
+
         using var memZipStream = new MemoryStream();
         _spaZipStream.CopyTo(memZipStream);
 
@@ -93,6 +101,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         }
 
         _spaZipStream.Dispose();
+        _spaPath = spaPath;
         return spaPath;
     }
 

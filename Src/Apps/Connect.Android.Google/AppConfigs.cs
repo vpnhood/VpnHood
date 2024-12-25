@@ -12,6 +12,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
     public string? UpdateInfoUrl { get; init; } = "https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android.json";
     public int? SpaDefaultPort { get; init; }= IsDebugMode ? 9571 : 9570;
     public bool SpaListenToAllIps { get; init; } = IsDebugMode;
+    public bool AllowEndPointTracker { get; init; }
 
     // This is a test access key, you should replace it with your own access key.
     // It is limited and can not be used in production.

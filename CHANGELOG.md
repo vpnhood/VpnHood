@@ -4,7 +4,7 @@
 * Fix: Startup crash on some devices
 * Fix: Diagnostic could not be canceled
 * Fix: Could not postpone update on web distribution
-* Fix: Chisese simplified auto detection
+* Fix: Default device language auto-detection
 * Fix: Could not select some token
 
 ### Server

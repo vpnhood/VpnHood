@@ -68,7 +68,7 @@ internal class AppCompositeAdService
                 using var timeoutCts = new CancellationTokenSource(_adOptions.LoadAdTimeout);
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
                 await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).VhConfigureAwait();
-                await Task.Delay(_adOptions.LoadAdPostDelay, cancellationToken);
+                await Task.Delay(_adOptions.LoadAdPostDelay, cancellationToken).VhConfigureAwait();
                 _loadedAdProviderItem = adProviderItem;
                 return;
             }
@@ -78,7 +78,7 @@ internal class AppCompositeAdService
 
             // do not catch if parent cancel the operation
             catch (Exception ex) {
-                await VerifyActiveUi();
+                await VerifyActiveUi().VhConfigureAwait();
                 VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.", adProviderItem.Name);
             }
         }
@@ -97,7 +97,7 @@ internal class AppCompositeAdService
 
         // wait for the UI to be active
         for (var i = 0; i < 3; i++) {
-            await Task.Delay(250);
+            await Task.Delay(250).VhConfigureAwait();
             if (ActiveUiContext.Context?.IsActive == true)
                 return;
         }

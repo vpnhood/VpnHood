@@ -2,6 +2,7 @@
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.IpLocations;
+using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.AppLib.Services;
 
@@ -22,9 +23,10 @@ public class AppAdService(
 
     public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        var countryCode = await regionProvider.GetCurrentCountryAsync(cancellationToken);
-        await _compositeInterstitialAdService.LoadAd(uiContext, countryCode: countryCode, forceReload: false,
-            cancellationToken);
+        var countryCode = await regionProvider.GetCurrentCountryAsync(cancellationToken).VhConfigureAwait();
+        await _compositeInterstitialAdService
+            .LoadAd(uiContext, countryCode: countryCode, forceReload: false, cancellationToken)
+            .VhConfigureAwait();
     }
 
     public Task<ShowedAdResult> ShowInterstitial(IUiContext uiContext, string sessionId,

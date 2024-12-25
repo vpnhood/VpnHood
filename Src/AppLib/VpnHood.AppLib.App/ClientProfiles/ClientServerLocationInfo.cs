@@ -19,7 +19,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
         var items = AddCategoryGaps(token.ServerToken.ServerLocations ?? [], policy?.FreeLocations);
 
         // check is any items has premium tag
-        var isManaged = items.Any(x => x.Tags?.Contains(ServerRegisteredTags.Premium) == true);
+        var isManaged = items.Any(x => x.Tags?.Contains(ServerRegisteredTags.Premium) == true) || policy != null;
         if (isManaged) {
             foreach (var item in items)
                 item.RecalculateOptions(policy, !token.IsPublic); // treat non-public as premium

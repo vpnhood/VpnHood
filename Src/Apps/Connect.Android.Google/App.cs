@@ -58,7 +58,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             UpdaterProvider = new GooglePlayAppUpdaterProvider(),
             AccountProvider = CreateAppAccountProvider(appConfigs, storageFolderPath),
             AdProviderItems = CreateAppAdProviderItems(appConfigs),
-            AllowEndPointTracker = _analytics != null,
+            AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Tracker = _analytics != null ? new AnalyticsTracker(_analytics) : null,
             AdOptions = new AppAdOptions {
                 PreloadAd = true

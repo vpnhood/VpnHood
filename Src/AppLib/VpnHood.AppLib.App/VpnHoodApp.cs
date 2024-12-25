@@ -714,11 +714,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public string GetClientCountry() => _appPersistState.ClientCountryCode ?? RegionInfo.CurrentRegion.Name;
     public string GetClientCountryByServer() => _appPersistState.ClientCountryCodeByServer ?? GetClientCountry();
 
-    public async Task<string> GetCurrentCountryAsync(CancellationToken cancellationToken)
+    public Task<string> GetCurrentCountryAsync(CancellationToken cancellationToken)
+    {
+        return GetCurrentCountryAsync(false, cancellationToken);
+    }
+
+    public async Task<string> GetCurrentCountryAsync(bool ignoreCache, CancellationToken cancellationToken)
     {
         _isFindingCountryCode = true;
 
-        if (_appPersistState.ClientCountryCode == null && _useExternalLocationService) {
+        if ((_appPersistState.ClientCountryCode == null || ignoreCache) && _useExternalLocationService) {
 
             try {
                 using var httpClient = new HttpClient();
@@ -917,7 +922,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (!_useInternalLocationService)
                 throw new InvalidOperationException("Could not use internal location service because it is disabled.");
 
-            var countryCode = await GetCurrentCountryAsync(cancellationToken).VhConfigureAwait();
+            var countryCode = await GetCurrentCountryAsync(true, cancellationToken).VhConfigureAwait();
             var countryIpRanges = await IpRangeLocationProvider.GetIpRanges(countryCode).VhConfigureAwait();
             VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}", VhUtil.TryGetCountryName(_appPersistState.ClientCountryCode));
             ipRanges = ipRanges.Exclude(countryIpRanges);

@@ -1,4 +1,6 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using Ga4.Trackers;
+using VpnHood.AppLib.Abstractions;
+using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.IpLocations;
@@ -9,7 +11,8 @@ namespace VpnHood.AppLib.Services;
 public class AppAdService(
     IRegionProvider regionProvider,
     AppAdProviderItem[] adProviderItems,
-    AppAdOptions adOptions) :
+    AppAdOptions adOptions,
+    ITracker? tracker) :
     IAdService
 {
     private readonly AppCompositeAdService _compositeInterstitialAdService =
@@ -48,15 +51,28 @@ public class AppAdService(
     private async Task<ShowedAdResult> ShowAd(AppCompositeAdService appCompositeAdService,
         IUiContext uiContext, string sessionId, CancellationToken cancellationToken)
     {
-        var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
-        var countryCode = await regionProvider.GetCurrentCountryAsync(cancellationToken);
-        await appCompositeAdService.LoadAd(uiContext, countryCode: countryCode, forceReload: false, cancellationToken);
-        var networkName = await appCompositeAdService.ShowLoadedAd(uiContext, adData, cancellationToken);
-        var showAdResult = new ShowedAdResult {
-            AdData = adData,
-            NetworkName = networkName
-        };
-        return showAdResult;
+        try {
+            var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
+            var countryCode = await regionProvider.GetCurrentCountryAsync(cancellationToken);
+            await appCompositeAdService.LoadAd(uiContext, countryCode: countryCode, forceReload: false, cancellationToken);
+            var networkName = await appCompositeAdService.ShowLoadedAd(uiContext, adData, cancellationToken);
+            var showAdResult = new ShowedAdResult {
+                AdData = adData,
+                NetworkName = networkName
+            };
+
+            var trackEvent = ClientTrackerBuilder.BuildShowAdStatus(networkName);
+            _ = tracker?.Track(trackEvent);
+            return showAdResult;
+        }
+        catch (Exception ex) {
+            var trackEvent = ClientTrackerBuilder.BuildShowAdStatus("all", ex.Message);
+            _ = tracker?.Track(trackEvent);
+
+            throw;
+        }
+
+
 
     }
 }

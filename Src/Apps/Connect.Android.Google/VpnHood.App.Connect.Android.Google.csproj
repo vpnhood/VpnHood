@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.App.Client.Droid.Google</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
-		<ApplicationVersion>626</ApplicationVersion>
-		<ApplicationDisplayVersion>5.0.626</ApplicationDisplayVersion>
+		<ApplicationVersion>624</ApplicationVersion>
+		<ApplicationDisplayVersion>5.0.624</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
 		<DebugSymbols>True</DebugSymbols>
 	</PropertyGroup>
@@ -36,7 +36,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>5.0.626</Version>
+		<Version>5.0.624</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
@@ -72,9 +72,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.AppLib.Android.Ads.Chartboost" Version="5.0.562" />
+		<PackageReference Include="VpnHood.AppLib.Android.Ads.Chartboost" Version="5.0.563" />
 		<PackageReference Include="VpnHood.AppLib.Android.Ads.InMobi" Version="5.0.572" />
-		<PackageReference Include="Xam.Plugins.Android.ExoPlayer.Core" Version="2.19.1" />
 		<PackageReference Include="Xamarin.Firebase.Analytics" Version="122.1.2.1" />
 		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="119.3.0" />
 	</ItemGroup>

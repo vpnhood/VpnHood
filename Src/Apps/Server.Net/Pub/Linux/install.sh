@@ -67,7 +67,7 @@ fi;
 
 # point to latest version if $packageUrl is not set
 if [ "$packageUrl" = "" ]; then
-	packageUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer-linux.tar.gz";
+	packageUrl="https://github.com/vpnhood/VpnHood.App.Server/releases/latest/download/VpnHoodServer-linux.tar.gz";
 fi
 
 # download & install VpnHoodServer

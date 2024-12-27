@@ -10,7 +10,15 @@ public class WinDivertDevice : IDevice
     public bool IsExcludeAppsSupported => IsDebugMode;
     public bool IsAlwaysOnSupported => false;
     public bool IsIncludeAppsSupported => IsDebugMode;
-    public DeviceMemInfo? MemInfo => null;
+    public DeviceMemInfo MemInfo {
+        get {
+            var gcMemoryInfo = GC.GetGCMemoryInfo();
+            return new DeviceMemInfo {
+                TotalMemory = gcMemoryInfo.TotalAvailableMemoryBytes,
+                AvailableMemory = gcMemoryInfo.TotalAvailableMemoryBytes - gcMemoryInfo.MemoryLoadBytes
+            };
+        }
+    }
 
     public DeviceAppInfo[] InstalledApps {
         get {

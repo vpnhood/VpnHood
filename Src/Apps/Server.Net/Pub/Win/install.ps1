@@ -64,7 +64,7 @@ $binDir = "$destinationPath/$versionTag";
 
 # point to latest version if $packageUrl is not set
 if ( "$packageUrl" -eq "" ) {
-	$packageUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer.zip";
+	$packageUrl = "https://github.com/vpnhood/VpnHood.App.Server/releases/latest/download/VpnHoodServer.zip";
 }
 
 # download & install VpnHoodServer

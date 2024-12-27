@@ -117,9 +117,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _logAnonymous = options.LogAnonymous;
         _autoDiagnose = options.AutoDiagnose;
         _serverQueryTimeout = options.ServerQueryTimeout;
-        _appAppAdService = new AppAdService(this, options.AdProviderItems, options.AdOptions);
         _allowEndPointTracker = options.AllowEndPointTracker;
         _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
+        _appAppAdService = new AppAdService(regionProvider: this, 
+            adProviderItems: options.AdProviderItems, 
+            adOptions: options.AdOptions, 
+            tracker: options.Tracker);
+
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), options.SingleLineConsoleLog);
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));

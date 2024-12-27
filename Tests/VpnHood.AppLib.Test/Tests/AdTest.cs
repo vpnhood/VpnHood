@@ -15,6 +15,16 @@ namespace VpnHood.AppLib.Test.Tests;
 public class AdTest : TestBase
 {
     [TestMethod]
+    public async Task AFoo()
+    {
+        await Task.Delay(0);
+        var str = "\n21:19:04.6300 | Info | ";
+        str = str.TrimEnd(' ', '|') + " | Mem";
+        Console.WriteLine(str);
+
+    }
+
+    [TestMethod]
     public async Task flexible_ad_should_not_close_session_if_load_ad_failed()
     {
         // create server

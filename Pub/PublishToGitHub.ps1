@@ -69,17 +69,9 @@ if ($mainRepo) {
 		$releaseRootDir/$packageClientDirName/windows-web/VpnHoodClient-win-x64.msi  `
 		$releaseRootDir/$packageClientDirName/windows-web/VpnHoodClient-win-x64.txt  `
 		$releaseRootDir/$packageClientDirName/windows-web/VpnHoodClient-win-x64.json `
-		$releaseRootDir/$packageServerDirName/linux-x64/VpnHoodServer-linux-x64.json `
-		$releaseRootDir/$packageServerDirName/linux-x64/VpnHoodServer-linux-x64.sh `
-		$releaseRootDir/$packageServerDirName/linux-x64/VpnHoodServer-linux-x64.tar.gz `
-		$releaseRootDir/$packageServerDirName/linux-arm64/VpnHoodServer-linux-arm64.json `
-		$releaseRootDir/$packageServerDirName/linux-arm64/VpnHoodServer-linux-arm64.sh `
-		$releaseRootDir/$packageServerDirName/linux-arm64/VpnHoodServer-linux-arm64.tar.gz `
-		$releaseRootDir/$packageServerDirName/win-x64/VpnHoodServer-win-x64.json `
-		$releaseRootDir/$packageServerDirName/win-x64/VpnHoodServer-win-x64.ps1 `
-		$releaseRootDir/$packageServerDirName/win-x64/VpnHoodServer-win-x64.zip `
-		$releaseRootDir/$packageServerDirName/docker/VpnHoodServer.docker.yml `
-		$releaseRootDir/$packageServerDirName/docker/VpnHoodServer.docker.sh;
+		$packagesRootDirLatest/$packageServerDirName/linux-x64/VpnHoodServer-linux-x64.json `
+		$packagesRootDirLatest/$packageServerDirName/linux-arm64/VpnHoodServer-linux-arm64.json `
+		$packagesRootDirLatest/$packageServerDirName/win-x64/VpnHoodServer-win-x64.json;
 
 	Pop-Location
 }

@@ -8,7 +8,7 @@ namespace VpnHood.AppLib;
 public class AppLogService : IDisposable
 {
     private readonly bool _singleLineConsole;
-    private StreamLogger? _streamLogger;
+    private ILoggerProvider? _streamLogger;
     public string LogFilePath { get; }
     public string[] LogEvents { get; private set; } = [];
     public bool Exists => File.Exists(LogFilePath);
@@ -79,7 +79,7 @@ public class AppLogService : IDisposable
 
             if (logToFile) {
                 var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                _streamLogger = new AppStreamLogger(fileStream, autoFlush: autoFlush);
+                _streamLogger = new StreamLogger(fileStream, autoFlush: autoFlush);
                 builder.AddProvider(_streamLogger);
             }
 
@@ -87,7 +87,8 @@ public class AppLogService : IDisposable
         });
 
         var logger = loggerFactory.CreateLogger("");
-        return new SyncLogger(logger);
+        var interceptingLogger = new InterceptingLogger(logger);
+        return new SyncLogger(interceptingLogger);
     }
 
     public static string[] GetLogEventNames(bool verbose, bool diagnose, string? debugCommand)
@@ -133,28 +134,42 @@ public class AppLogService : IDisposable
         Stop();
     }
 
-    private class AppStreamLogger(Stream stream, bool includeScopes = true, bool leaveOpen = false, bool autoFlush = false)
-        : StreamLogger(stream, includeScopes, leaveOpen, autoFlush)
+    private class InterceptingLogger(ILogger innerLogger) : ILogger
     {
-        protected override string FormatLog<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        private static string UpdateMessage(string message)
         {
-            var ret = base.FormatLog(logLevel, eventId, state, exception, formatter);
             if (!VpnHoodApp.IsInit)
-                return ret;
+                return message;
 
             var memInfo = VpnHoodApp.Instance.Device.MemInfo;
-            if (memInfo != null) {
+            if (memInfo is { TotalMemory: > 0 }) {
                 var used = (memInfo.TotalMemory - memInfo.AvailableMemory) / 1_000_000;
                 var total = memInfo.TotalMemory / 1_000_000;
                 var mem = $"Mem: {used}/{total} ({used * 100 / total}%)";
-                
-                // find first \n
-                var index = ret.IndexOf('\n', 2);
-                if (index<0) index = ret.Length;
-                    ret = ret.Insert(index, mem);
+
+                // find first linefeed and split into two parts
+                message = message.Replace("\r\n", "\n");
+                var index = message.IndexOf('\n', 4);
+                var part1 = index > 0 ? message[..index] : message;
+                var part2 = index > 0 ? message[(index + 1)..] : "";
+
+                // append memory info
+                part1 = part1.TrimEnd().TrimEnd('|').TrimEnd();
+                message = part1 + " | " + mem;
+                if (part2.Length > 0)
+                    message += "\n" + part2;
+
+                message = message.Replace("\n", Environment.NewLine);
             }
 
-            return ret;
+            return message;
         }
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            innerLogger.Log(logLevel, eventId, state, exception, (_, _) => UpdateMessage(formatter(state, exception)));
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => innerLogger.BeginScope(state);
+        public bool IsEnabled(LogLevel logLevel) => innerLogger.IsEnabled(logLevel);
     }
 }
+
+

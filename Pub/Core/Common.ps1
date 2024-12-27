@@ -21,7 +21,7 @@ $packageClientDirName = "VpnHoodClient";
 $packageConnectDirName = "VpnHoodConnect";
 
 # Prepare the latest folder
-$packagesRootDirLatest = "$pubDir/bin/latest" + (&{if($isLatest) {""} else {"/????"}});
+$packagesRootDirLatest = "$pubDir/bin/latest";
 $moduleGooglePlayLastestDir = "$solutionDir/pub/Android.GooglePlay/apk/latest";
 
 # Release root such as latet or pre-release folder

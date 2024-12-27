@@ -1,7 +1,7 @@
 . "$PSScriptRoot/Core/Common.ps1"
 
 $changeLogFileName = "CHANGELOG.Server.md";
-$changeLogReleaseFileName = "ReleaseNote.Server.txt";
+$changeLogReleaseFileName = "$packageServerDirName/ReleaseNote.txt";
 
 # update CHANGELOG
 $text = Get-Content "$solutionDir/$changeLogFileName" -Raw;

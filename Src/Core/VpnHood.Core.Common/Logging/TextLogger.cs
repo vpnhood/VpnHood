@@ -39,7 +39,7 @@ public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
         }, (stringBuilder, initialLength));
     }
 
-    protected string FormatLog<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+    protected virtual string FormatLog<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
     {
         var logBuilder = new StringBuilder();

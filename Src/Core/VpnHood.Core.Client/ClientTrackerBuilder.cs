@@ -10,10 +10,10 @@ public static class ClientTrackerBuilder
     public static TrackEvent BuildConnectionSucceeded(string? serverLocation,
         bool isIpV6Supported, bool hasRedirected, IPEndPoint endPoint, string? adNetworkName)
     {
-        return BuildConnectionAttempt(connected: true, 
-            serverLocation: serverLocation, 
+        return BuildConnectionAttempt(connected: true,
+            serverLocation: serverLocation,
             isIpV6Supported: isIpV6Supported,
-            hasRedirected: hasRedirected, 
+            hasRedirected: hasRedirected,
             endPoint: endPoint,
             adNetwork: adNetworkName);
     }
@@ -29,7 +29,7 @@ public static class ClientTrackerBuilder
             adNetwork: null);
     }
 
-    private static TrackEvent BuildConnectionAttempt(bool connected, string? serverLocation, 
+    private static TrackEvent BuildConnectionAttempt(bool connected, string? serverLocation,
         bool isIpV6Supported, bool hasRedirected, IPEndPoint? endPoint, string? adNetwork)
     {
         return new TrackEvent {
@@ -56,13 +56,15 @@ public static class ClientTrackerBuilder
             }
         };
     }
-public static TrackEvent BuildShowAdStatus(string adNetwork, bool isShow)
+
+    public static TrackEvent BuildShowAdStatus(string adNetwork, string? errorMessage = null)
     {
         return new TrackEvent {
             EventName = "vh_ad_status",
             Parameters = new Dictionary<string, object> {
                 { "ad_network", adNetwork },
-                { "is_show", isShow },
+                { "is_show", errorMessage != null },
+                { "error", errorMessage ?? string.Empty }
             }
         };
     }

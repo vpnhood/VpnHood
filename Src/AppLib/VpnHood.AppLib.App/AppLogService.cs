@@ -62,7 +62,7 @@ public class AppLogService : IDisposable
         return logger;
     }
 
-    private ILogger CreateLoggerInternal(bool logToConsole, bool logToFile, LogLevel logLevel, 
+    private ILogger CreateLoggerInternal(bool logToConsole, bool logToFile, LogLevel logLevel,
         bool removeLastFile, bool autoFlush)
     {
         // file logger, close old stream
@@ -79,7 +79,7 @@ public class AppLogService : IDisposable
 
             if (logToFile) {
                 var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                _streamLogger = new StreamLogger(fileStream, autoFlush: autoFlush);
+                _streamLogger = new AppStreamLogger(fileStream, autoFlush: autoFlush);
                 builder.AddProvider(_streamLogger);
             }
 
@@ -95,18 +95,18 @@ public class AppLogService : IDisposable
         debugCommand ??= "";
 
         // log verbose
-        if (verbose || debugCommand.Contains("/verbose", StringComparison.OrdinalIgnoreCase)) 
+        if (verbose || debugCommand.Contains("/verbose", StringComparison.OrdinalIgnoreCase))
             return ["*"];
 
         // Extract all event names from debugData that contains "log:EventName1,EventName2"
         var names = new List<string?> {
-            GeneralEventId.Session.Name, 
+            GeneralEventId.Session.Name,
             GeneralEventId.Essential.Name
         };
 
         if (diagnose)
             names.AddRange([
-                GeneralEventId.Essential.Name, 
+                GeneralEventId.Essential.Name,
                 GeneralEventId.Nat.Name,
                 GeneralEventId.Ping.Name,
                 GeneralEventId.Dns.Name,
@@ -131,5 +131,30 @@ public class AppLogService : IDisposable
     public void Dispose()
     {
         Stop();
+    }
+
+    private class AppStreamLogger(Stream stream, bool includeScopes = true, bool leaveOpen = false, bool autoFlush = false)
+        : StreamLogger(stream, includeScopes, leaveOpen, autoFlush)
+    {
+        protected override string FormatLog<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            var ret = base.FormatLog(logLevel, eventId, state, exception, formatter);
+            if (!VpnHoodApp.IsInit)
+                return ret;
+
+            var memInfo = VpnHoodApp.Instance.Device.MemInfo;
+            if (memInfo != null) {
+                var used = (memInfo.TotalMemory - memInfo.AvailableMemory) / 1_000_000;
+                var total = memInfo.TotalMemory / 1_000_000;
+                var mem = $"Mem: {used}/{total} ({used * 100 / total}%)";
+                
+                // find first \n
+                var index = ret.IndexOf('\n', 2);
+                if (index<0) index = ret.Length;
+                    ret = ret.Insert(index, mem);
+            }
+
+            return ret;
+        }
     }
 }

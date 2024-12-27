@@ -74,7 +74,6 @@
 	<ItemGroup>
 		<PackageReference Include="VpnHood.AppLib.Android.Ads.Chartboost" Version="5.0.562" />
 		<PackageReference Include="VpnHood.AppLib.Android.Ads.InMobi" Version="5.0.572" />
-		<PackageReference Include="Xam.Plugins.Android.ExoPlayer.Core" Version="2.19.1" />
 		<PackageReference Include="Xamarin.Firebase.Analytics" Version="122.1.2.1" />
 		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="119.3.0" />
 	</ItemGroup>

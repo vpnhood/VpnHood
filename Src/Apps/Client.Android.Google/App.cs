@@ -25,7 +25,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         resources.Strings.AppName = AppConfigs.AppName;
 
         return new AppOptions(PackageName!, AppConfigs.IsDebugMode) {
-            StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHood"), // for compatibility with old versions
+            StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHood", subFolder: ""), // for compatibility with old versions
             Resource = resources,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,

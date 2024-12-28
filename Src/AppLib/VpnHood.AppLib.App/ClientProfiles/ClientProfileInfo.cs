@@ -10,7 +10,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public string? SupportId => clientProfile.Token.SupportId;
     public string? CustomData => clientProfile.CustomData;
     public bool IsPremiumLocationSelected => clientProfile.IsPremiumLocationSelected;
-    public bool IsPremiumAccount => clientProfile.IsPremium && VpnHoodApp.Instance.Features.IsPremiumFlagSupported; //todo move to UI
+    public bool IsPremiumAccount => clientProfile.IsPremium;
     public string TokenId => clientProfile.Token.TokenId;
     public string[] HostNames => GetEndPoints(clientProfile.Token.ServerToken);
     public bool IsValidHostName => clientProfile.Token.ServerToken.IsValidHostName;

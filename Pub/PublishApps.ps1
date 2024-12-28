@@ -6,7 +6,6 @@ param(
 	[Parameter(Mandatory=$true)][object]$connectWin,
 	[Parameter(Mandatory=$true)][object]$connectAndroid,
 	[Parameter(Mandatory=$true)][object]$maui,
-	[Parameter(Mandatory=$true)][object]$server,
 	[Parameter(Mandatory=$true)][object]$distribute,
 	[Parameter(Mandatory=$true)][object]$samples
 	);
@@ -17,7 +16,6 @@ $connectAndroid = $connectAndroid -eq "1";
 $clientWin = $clientWin -eq "1";
 $clientAndroid = $clientAndroid -eq "1";
 $distribute = $distribute -eq "1";
-$server = $server -eq "1";
 $samples = $samples -eq "1";
 $maui = $maui -eq "1";
 
@@ -69,14 +67,6 @@ if ($clientWin) {
 	& "$solutionDir/Src/Apps/Client.Win.Web/_publish.ps1";
 }
 
-# publish server
-if ($server) {	
-	& "$solutionDir/Src/Apps/Server.Net/Pub/publish_win.ps1";
-	& "$solutionDir/Src/Apps/Server.Net/Pub/publish_linux_x64.ps1";
-	& "$solutionDir/Src/Apps/Server.Net/Pub/publish_linux_arm64.ps1";
-	& "$solutionDir/Src/Apps/Server.Net/Pub/publish_docker.ps1" -distribute $distribute;
-}
-
 # publish android
 if ($clientAndroid) {	
 	& "$solutionDir/Src/Apps/Client.Android.Google/_publish.ps1";
@@ -93,7 +83,7 @@ if ($connectAndroid) {
 # distribute
 if ($distribute) {
     & "$PSScriptRoot/PublishToGitHub.ps1" `
-		-mainRepo ($clientWin -or $clientAndroid -or $server) `
+		-mainRepo ($clientWin -or $clientAndroid) `
 		-connectRepo ($connectWin -or $connectAndroid);
 }
 

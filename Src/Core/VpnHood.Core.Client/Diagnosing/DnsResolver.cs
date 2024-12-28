@@ -34,14 +34,16 @@ public static class DnsResolver
         // Send the DNS query
         await udpClient
             .SendAsync(query, query.Length)
-            .VhWait(timeout, cancellationToken);
+            .VhWait(timeout, cancellationToken)
+            .VhConfigureAwait();
 
         // Wait for response with a timeout
-        var task = udpClient
+        var task = await udpClient
             .ReceiveAsync()
-            .VhWait(timeout, cancellationToken);
+            .VhWait(timeout, cancellationToken)
+            .VhConfigureAwait();
 
-        var response = task.Result.Buffer;
+        var response = task.Buffer;
 
         // Parse the DNS response
         var hostEntry = ParseDnsResponse(response, queryId);

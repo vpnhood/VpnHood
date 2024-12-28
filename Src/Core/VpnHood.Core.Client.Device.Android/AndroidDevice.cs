@@ -133,7 +133,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
             if (!_grantPermissionTaskSource.Task.IsCompletedSuccessfully)
                 throw new Exception("Could not grant VPN permission in the given time.");
 
-            if (!_grantPermissionTaskSource.Task.Result)
+            if (!await _grantPermissionTaskSource.Task)
                 throw new Exception("VPN permission has been rejected.");
         }
         finally {

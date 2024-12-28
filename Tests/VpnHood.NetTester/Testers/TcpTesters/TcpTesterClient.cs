@@ -30,15 +30,16 @@ public class TcpTesterClient(IPEndPoint serverEp) : IStreamTesterClient
         using (var speedometer = new Speedometer("Down")) {
             var downloadTasks = new Task[connectionCount];
             for (var i = 0; i < connectionCount; i++)
-                if (uploadTasks[i].Result.Connected)
-                    downloadTasks[i] = StartDownload(uploadTasks[i].Result.GetStream(), downSize / connectionCount, speedometer,
+                if ((await uploadTasks[i]).Connected)
+                    downloadTasks[i] = StartDownload((await uploadTasks[i]).GetStream(), downSize / connectionCount, speedometer,
                     cancellationToken);
 
             await Task.WhenAll(downloadTasks);
         }
 
         // dispose streams
-        foreach (var uploadTask in uploadTasks.Where(x => x.IsCompletedSuccessfully)) uploadTask.Result.Dispose();
+        foreach (var uploadTask in uploadTasks.Where(x => x.IsCompletedSuccessfully)) 
+            (await uploadTask).Dispose();
     }
 
     private static async Task<TcpClient> StartUpload(IPEndPoint serverEp, long upSize, long downSize,

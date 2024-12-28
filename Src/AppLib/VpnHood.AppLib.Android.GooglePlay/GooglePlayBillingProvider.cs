@@ -85,7 +85,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
         // Get products list from GooglePlay.
         try {
-            var response = await _billingClient.QueryProductDetailsAsync(productDetailsParams).VhConfigureAwait();
+            var response = await _billingClient.QueryProductDetailsAsync(productDetailsParams).ConfigureAwait(false);
             if (response.Result.ResponseCode != BillingResponseCode.Ok)
                 throw GoogleBillingException.Create(response.Result);
 
@@ -112,7 +112,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
     public async Task<string> Purchase(IUiContext uiContext, string planId)
     {
         var appUiContext = (AndroidUiContext)uiContext;
-        await EnsureConnected().VhConfigureAwait();
+        await EnsureConnected().ConfigureAwait(false);
 
         if (_authenticationProvider.UserId == null)
             throw new AuthenticationException();
@@ -142,7 +142,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw GoogleBillingException.Create(billingResult);
 
-            var orderId = await _taskCompletionSource.Task.VhConfigureAwait();
+            var orderId = await _taskCompletionSource.Task.ConfigureAwait(false);
             return orderId;
         }
         catch (TaskCanceledException ex) {
@@ -164,7 +164,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             return;
 
         try {
-            var billingResult = await _billingClient.StartConnectionAsync().VhConfigureAwait();
+            var billingResult = await _billingClient.StartConnectionAsync().ConfigureAwait(false);
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw GoogleBillingException.Create(billingResult);
         }

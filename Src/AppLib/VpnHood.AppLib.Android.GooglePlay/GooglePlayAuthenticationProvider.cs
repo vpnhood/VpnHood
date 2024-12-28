@@ -21,7 +21,7 @@ public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAp
         
         using var credentialRequest = new GetCredentialRequest.Builder().AddCredentialOption(googleSignInOptions).Build();
         using var credentialManager = GoogleCredentialManager.Create(appUiContext.Activity);
-        using var credentialResponse = await credentialManager.GetCredentialAsync(appUiContext.Activity, credentialRequest);
+        using var credentialResponse = await credentialManager.GetCredentialAsync(appUiContext.Activity, credentialRequest).ConfigureAwait(false);
         return GetIdTokenFromCredentialResponse(credentialResponse);
     }
     
@@ -29,7 +29,7 @@ public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAp
     {
         var appUiContext = (AndroidUiContext)uiContext;
         using var credentialManager = GoogleCredentialManager.Create(appUiContext.Activity);
-        await credentialManager.ClearCredentialStateAsync(appUiContext.Activity);
+        await credentialManager.ClearCredentialStateAsync(appUiContext.Activity).ConfigureAwait(false);
     }
 
     private static string GetIdTokenFromCredentialResponse(GetCredentialResponse credentialResponse)

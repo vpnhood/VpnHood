@@ -28,7 +28,8 @@ public class AndroidUiProvider : IAppUiProvider
         var res = await QuickLaunchTileService
             .RequestAddTile(appUiContext.Activity)
             .WaitAsync(cancellationToken)
-            .VhConfigureAwait();
+            .ConfigureAwait(false);
+
         return res != 0;
     }
 

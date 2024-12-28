@@ -17,7 +17,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
         try {
             var appUiContext = (AndroidUiContext)uiContext;
             using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
-            using var appUpdateInfo = await appUpdateManager.AppUpdateInfo.AsTask<AppUpdateInfo>().VhConfigureAwait() ??
+            using var appUpdateInfo = await appUpdateManager.AppUpdateInfo.AsTask<AppUpdateInfo>().ConfigureAwait(false) ??
                                       throw new Exception("Could not retrieve AppUpdateInfo");
 
             // play set UpdateAvailability.UpdateNotAvailable even when there is no connection to google
@@ -31,7 +31,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
             using var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
                 AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
             if (updateFlowPlayTask!=null)
-                await updateFlowPlayTask.AsTask().VhConfigureAwait();
+                await updateFlowPlayTask.AsTask().ConfigureAwait(false);
 
             return true;
         }

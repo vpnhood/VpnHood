@@ -7,8 +7,8 @@ namespace VpnHood.AppLib;
 
 public class AppOptions(string appId, bool isDebugMode)
 {
-    public static string BuildStorageFolderPath(string appId) =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appId, "storage");
+    public static string BuildStorageFolderPath(string appId, string subFolder = "storage") =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appId, subFolder);
 
     public string AppId => appId;
     public bool IsDebugMode => isDebugMode;

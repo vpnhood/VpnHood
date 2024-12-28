@@ -27,7 +27,7 @@ public class App : VpnHoodWpfSpaApp
 
         return new AppOptions("com.vpnhood.client.windows", AppConfigs.IsDebugMode) {
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
-            StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHood"),
+            StorageFolderPath = AppOptions.BuildStorageFolderPath(appId: "VpnHood", subFolder: ""),
             Resource = resources,
             AccessKeys = AppConfigs.IsDebugMode ? [appConfigs.DefaultAccessKey] : [],
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,

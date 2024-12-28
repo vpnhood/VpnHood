@@ -1,3 +1,6 @@
+# v5.0.630
+* Fix: Show old tokens
+* 
 # v5.0.629
 ### Client
 * Update: Improve logging by showing memory usage

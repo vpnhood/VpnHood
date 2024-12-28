@@ -25,7 +25,6 @@ namespace VpnHood.Core.Client.Device.Droid;
 [IntentFilter(["android.net.VpnService"])]
 public class AndroidPacketCapture : VpnService, IPacketCapture
 {
-    public const string VpnServiceName = "VhSession";
     private IPAddress[]? _dnsServers;
     private FileInputStream? _inStream; // Packets to be sent are queued in this input stream.
     private ParcelFileDescriptor? _mInterface;
@@ -44,6 +43,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     public bool CanIncludeApps => true;
     public string[]? ExcludeApps { get; set; }
     public string[]? IncludeApps { get; set; }
+    public string VpnServiceName { get; set; } = "VhSession";
     public bool IsMtuSupported => true;
 
     public int Mtu {

@@ -25,8 +25,8 @@ public class GooglePlayInAppReviewService
             var appUiContext = (AndroidUiContext)uiContext;
             //var reviewManager = ReviewManagerFactory.Create(appUiContext.Activity);
             using var reviewManager = new FakeReviewManager(appUiContext.Activity);
-            using var reviewInfo = await reviewManager.RequestReviewFlow().AsTask<ReviewInfo>().VhConfigureAwait();
-            await reviewManager.LaunchReviewFlow(appUiContext.Activity, reviewInfo!).AsTask().VhConfigureAwait();
+            using var reviewInfo = await reviewManager.RequestReviewFlow().AsTask<ReviewInfo>().ConfigureAwait(false);
+            await reviewManager.LaunchReviewFlow(appUiContext.Activity, reviewInfo!).AsTask().ConfigureAwait(false);
         }
         catch (Exception e) {
             Console.WriteLine(e);

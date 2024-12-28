@@ -16,7 +16,7 @@ public class GoogleCredentialManager(ICredentialManager credentialManager) : IDi
         using var credentialManagerCallback = new CredentialManagerCallback();
         credentialManager.GetCredentialAsync(activity, credentialRequest, null, 
             activity.MainExecutor!, credentialManagerCallback);
-        var credentialResponse = await credentialManagerCallback.GetResultAsync().VhConfigureAwait();
+        var credentialResponse = await credentialManagerCallback.GetResultAsync().ConfigureAwait(false);
         return credentialResponse;
     }
     public async Task ClearCredentialStateAsync(Activity activity)
@@ -25,7 +25,7 @@ public class GoogleCredentialManager(ICredentialManager credentialManager) : IDi
         using var credentialManagerCallback = new CredentialManagerCallback();
         credentialManager.ClearCredentialStateAsync(request, null, 
             activity.MainExecutor!, credentialManagerCallback);
-        await credentialManagerCallback.GetResultAsync().VhConfigureAwait();
+        await credentialManagerCallback.GetResultAsync().ConfigureAwait(false);
     }
 
     public void Dispose()

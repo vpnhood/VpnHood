@@ -42,8 +42,11 @@ public class QuicTesterClient(IPEndPoint serverEp, string domain, TimeSpan? time
         }
 
         // dispose streams
-        foreach (var uploadTask in uploadTasks.Where(x => x.IsCompletedSuccessfully))
-            uploadTask.Result?.DisposeAsync();
+        foreach (var uploadTask in uploadTasks.Where(x => x.IsCompletedSuccessfully)) {
+            var connectionStream = await uploadTask;
+            if (connectionStream != null)
+                await connectionStream.DisposeAsync();
+        }
     }
 
     private async Task<ConnectionStream?> StartUpload(long upSize, long downSize,

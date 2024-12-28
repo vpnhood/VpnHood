@@ -37,7 +37,7 @@ public static class VhTaskExtensions
     public static async Task<T> VhWait<T>(this Task<T> task, TimeSpan timeout, CancellationToken cancellationToken)
     {
         var timeoutTask = Task.Delay(timeout, cancellationToken);
-        await Task.WhenAny(task, timeoutTask);
+        await Task.WhenAny(task, timeoutTask).VhConfigureAwait();
 
         // check if the task is canceled
         cancellationToken.ThrowIfCancellationRequested();

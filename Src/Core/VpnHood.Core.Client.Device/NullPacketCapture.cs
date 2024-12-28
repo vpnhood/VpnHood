@@ -11,6 +11,7 @@ public class NullPacketCapture : IPacketCapture
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Stopped;
     public virtual bool Started { get; set; }
+    public virtual string? SessionName { get; set; }
     public virtual bool IsDnsServersSupported { get; set; } = true;
     public virtual IPAddress[]? DnsServers { get; set; }
     public virtual bool CanExcludeApps { get; set; } = true;

@@ -1,3 +1,6 @@
+# Upcoming
+* Update: Add Profile Name as session name in android VpnService
+
 # v5.0.630
 * Fix: Show old tokens
 

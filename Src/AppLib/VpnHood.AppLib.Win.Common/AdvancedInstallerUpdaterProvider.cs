@@ -26,14 +26,14 @@ public class AdvancedInstallerUpdaterProvider : IAppUpdaterProvider
         var process = Process.Start(updaterFilePath, "/justcheck");
         if (process == null) return false;
         while (process is { HasExited: false })
-            await Task.Delay(500).VhConfigureAwait();
+            await Task.Delay(500).ConfigureAwait(false);
 
         // install update
         if (process.ExitCode == 0) {
             process = Process.Start(updaterFilePath);
             if (process == null) return false;
             while (process is { HasExited: false })
-                await Task.Delay(500).VhConfigureAwait();
+                await Task.Delay(500).ConfigureAwait(false);
         }
 
         // https://www.advancedinstaller.com/user-guide/updater.html#updater-return-codes

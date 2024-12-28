@@ -72,7 +72,7 @@ public class FileAccessManagerTest : TestBase
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token2.TokenId));
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token3.TokenId));
         Assert.AreEqual(2, accessTokenDatas.Length);
-        Assert.AreEqual(accessManager1.Session_Create(sessionRequestEx1).Result.ErrorCode,
+        Assert.AreEqual((await accessManager1.Session_Create(sessionRequestEx1)).ErrorCode,
             SessionErrorCode.AccessError);
 
         // ************
@@ -86,7 +86,7 @@ public class FileAccessManagerTest : TestBase
 
         // ************
         // *** TEST ***: token must be retrieved with TokenId
-        Assert.AreEqual(SessionErrorCode.Ok, accessManager2.Session_Create(sessionRequestEx2).Result.ErrorCode,
+        Assert.AreEqual(SessionErrorCode.Ok, (await accessManager2.Session_Create(sessionRequestEx2)).ErrorCode,
             "Access has not been retrieved");
 
         // ************
@@ -95,7 +95,7 @@ public class FileAccessManagerTest : TestBase
         var accessManager3 = new FileAccessManager(storagePath, fileAccessManagerOptions);
         accessTokenDatas = await accessManager3.AccessTokenService.List();
         Assert.AreEqual(3, accessTokenDatas.Length);
-        Assert.AreEqual(SessionErrorCode.Ok, accessManager3.Session_Create(sessionRequestEx2).Result.ErrorCode,
+        Assert.AreEqual(SessionErrorCode.Ok, (await accessManager3.Session_Create(sessionRequestEx2)).ErrorCode,
             "access has not been retrieved");
     }
 

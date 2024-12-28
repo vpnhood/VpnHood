@@ -62,7 +62,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         const bool useBuffer = true;
         var binaryStreamType = ProtocolVersion switch {
             <= 5 => string.IsNullOrEmpty(_apiKey) || !_allowTcpReuse ? BinaryStreamType.None : BinaryStreamType.Standard,
-            >= 6 => BinaryStreamType.Standard,
+            >= 6 => _allowTcpReuse ? BinaryStreamType.Standard : BinaryStreamType.None,
         };
 
         // write HTTP request

@@ -6,7 +6,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 
-namespace VpnHood.AppLib.Services;
+namespace VpnHood.AppLib.Services.Ads;
 
 internal class AppCompositeAdService
 {
@@ -30,7 +30,7 @@ internal class AppCompositeAdService
     private bool ShouldLoadAd()
     {
         return _loadedAdProviderItem?.AdProvider.AdLoadedTime == null ||
-               (_loadedAdProviderItem.AdProvider.AdLoadedTime + _loadedAdProviderItem.AdProvider.AdLifeSpan) < DateTime.UtcNow;
+               _loadedAdProviderItem.AdProvider.AdLoadedTime + _loadedAdProviderItem.AdProvider.AdLifeSpan < DateTime.UtcNow;
     }
 
     private static bool IsCountrySupported(AppAdProviderItem adProviderItem, string countryCode)
@@ -72,7 +72,7 @@ internal class AppCompositeAdService
                 _loadedAdProviderItem = adProviderItem;
                 return;
             }
-            catch (UiContextNotAvailableException){
+            catch (UiContextNotAvailableException) {
                 throw new ShowAdNoUiException();
             }
 
@@ -120,7 +120,7 @@ internal class AppCompositeAdService
 
             return _loadedAdProviderItem.Name;
         }
-        catch (UiContextNotAvailableException){
+        catch (UiContextNotAvailableException) {
             throw new ShowAdNoUiException();
         }
         catch (ShowAdNoUiException) {

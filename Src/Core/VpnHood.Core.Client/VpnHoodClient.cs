@@ -103,6 +103,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public byte[]? ServerSecret { get; private set; }
     public string? ResponseAccessKey { get; private set; }
     public DomainFilterService DomainFilterService { get; }
+    public bool AllowTcpReuse { get; }
+
 
     public VpnHoodClient(IPacketCapture packetCapture, string clientId, Token token, ClientOptions options)
     {
@@ -138,6 +140,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             serverQueryTimeout: options.ServerQueryTimeout,
             tracker: options.AllowEndPointTracker ? options.Tracker : null);
 
+        AllowTcpReuse = options.AllowTcpReuse;
         ReconnectTimeout = options.ReconnectTimeout;
         AutoWaitTimeout = options.AutoWaitTimeout;
         Token = token;
@@ -299,7 +302,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 TcpEndPoint = await _serverFinder.FindBestServerAsync(cancellationToken).VhConfigureAwait(),
                 CertificateHash = Token.ServerToken.CertificateHash
             };
-            _connectorService = new ConnectorService(endPointInfo, SocketFactory, _tcpConnectTimeout);
+            _connectorService = new ConnectorService(endPointInfo, SocketFactory, _tcpConnectTimeout, allowTcpReuse: AllowTcpReuse);
 
             // Establish first connection and create a session
             using var linkedCancellationTokenSource =
@@ -331,7 +334,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             throw;
         }
     }
-
     private void ConfigPacketFilter(IPAddress hostIpAddress)
     {
         // DnsServer

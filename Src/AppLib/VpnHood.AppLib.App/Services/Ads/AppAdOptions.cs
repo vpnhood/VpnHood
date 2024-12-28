@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AppLib;
+﻿namespace VpnHood.AppLib.Services.Ads;
 
 public class AppAdOptions
 {

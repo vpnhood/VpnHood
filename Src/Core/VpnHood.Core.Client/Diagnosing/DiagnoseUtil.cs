@@ -33,8 +33,9 @@ public class DiagnoseUtil
         while (tasks.Length > 0) {
             var task = await Task.WhenAny(tasks).VhConfigureAwait();
             exception = task.Result;
-            if (task.Result == null)
+            if (exception == null)
                 return null; //at least one task is success
+
             tasks = tasks.Where(x => x != task).ToArray();
         }
 

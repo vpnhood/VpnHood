@@ -1,4 +1,4 @@
-# Upcoming
+# v5.0.629
 ### Client
 * Update: Improve logging by showing memory usage
 * Fix: Startup crash on some devices

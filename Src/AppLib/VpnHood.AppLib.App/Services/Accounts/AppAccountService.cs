@@ -40,7 +40,7 @@ public class AppAccountService
         // Get from local cache
         if (useCache) {
             _appAccount ??= VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
-            if (_appAccount != null)
+            if (_appAccount?.ExpirationTime == null || _appAccount.ExpirationTime > DateTime.UtcNow)
                 return _appAccount;
         }
 

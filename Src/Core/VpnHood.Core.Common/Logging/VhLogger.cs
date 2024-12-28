@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using VpnHood.Core.Common.Converters;
 using VpnHood.Core.Common.Jobs;
+using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.Core.Common.Logging;
@@ -67,6 +68,13 @@ public static class VhLogger
         if (ipAddress == null) return "<null>";
         return IsAnonymousMode ? VhUtil.RedactIpAddress(ipAddress) : ipAddress.ToString();
     }
+
+    public static string Format(IpNetwork? ipNetwork)
+    {
+        if (ipNetwork == null) return "<null>";
+        return $"{Format(ipNetwork.Prefix)}/{ipNetwork.PrefixLength}";
+    }
+
 
     public static string FormatType(object? obj)
     {

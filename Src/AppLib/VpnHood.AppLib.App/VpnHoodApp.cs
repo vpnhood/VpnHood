@@ -220,11 +220,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
                 // check is disconnect required
                 disconnectRequired =
-                    (_oldUserSettings.TunnelClientCountry != UserSettings.TunnelClientCountry) ||
-                    (_activeClientProfileId != UserSettings.ClientProfileId) || //ClientProfileId has been changed
-                    (UserSettings.IncludeLocalNetwork !=
-                     client.IncludeLocalNetwork); // IncludeLocalNetwork has been changed
+                    (UserSettings.TunnelClientCountry != _oldUserSettings.TunnelClientCountry) ||
+                    (UserSettings.ClientProfileId != _activeClientProfileId) || //ClientProfileId has been changed
+                    (UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork) || // IncludeLocalNetwork has been changed
+                    (UserSettings.AppFiltersMode != _oldUserSettings.AppFiltersMode) || // AppFiltersMode has been changed
+                    (!UserSettings.AppFilters.SequenceEqual(_oldUserSettings.AppFilters)); // AppFilters has been changed
             }
+
+            // set default ContinueOnCapturedContext
+            VhTaskExtensions.DefaultContinueOnCapturedContext = HasDebugCommand(DebugCommands.CaptureContext);
 
             // Enable trackers
             if (Services.Tracker != null)

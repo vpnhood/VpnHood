@@ -7,11 +7,14 @@ public static class DebugCommands
     public const string KillSpaServer = "/kill-spa-server";
     public const string Verbose = "/verbose";
     public const string NullCapture = "/null-capture";
+    public const string CaptureContext = "/capture-context";
 
     public static string[] All => [
+        CaptureContext,
         DropUdp, 
-        NoTcpReuse, 
         KillSpaServer, 
+        NoTcpReuse, 
+        NullCapture,
         Verbose
     ];
 }

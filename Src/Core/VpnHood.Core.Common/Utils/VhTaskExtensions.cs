@@ -4,24 +4,26 @@ namespace VpnHood.Core.Common.Utils;
 
 public static class VhTaskExtensions
 {
+    public static bool DefaultContinueOnCapturedContext { get; set; }
+
     public static ConfiguredTaskAwaitable VhConfigureAwait(this Task task)
     {
-        return task.ConfigureAwait(false);
+        return task.ConfigureAwait(DefaultContinueOnCapturedContext);
     }
 
     public static ConfiguredTaskAwaitable<T> VhConfigureAwait<T>(this Task<T> task)
     {
-        return task.ConfigureAwait(false);
+        return task.ConfigureAwait(DefaultContinueOnCapturedContext);
     }
 
     public static ConfiguredValueTaskAwaitable VhConfigureAwait(this ValueTask task)
     {
-        return task.ConfigureAwait(false);
+        return task.ConfigureAwait(DefaultContinueOnCapturedContext);
     }
 
     public static ConfiguredValueTaskAwaitable<T> VhConfigureAwait<T>(this ValueTask<T> task)
     {
-        return task.ConfigureAwait(false);
+        return task.ConfigureAwait(DefaultContinueOnCapturedContext);
     }
 
     public static Task<T> VhWait<T>(this Task<T> task, CancellationToken cancellationToken)
@@ -50,4 +52,3 @@ public static class VhTaskExtensions
     }
 
 }
-

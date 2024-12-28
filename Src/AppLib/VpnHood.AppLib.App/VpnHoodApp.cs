@@ -447,6 +447,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // log general info
             VhLogger.Instance.LogInformation("AppVersion: {AppVersion}", GetType().Assembly.GetName().Version);
+            VhLogger.Instance.LogInformation("AppId: {AppId}", Features.AppId);
             VhLogger.Instance.LogInformation("Time: {Time}", DateTime.UtcNow.ToString("u", new CultureInfo("en-US")));
             VhLogger.Instance.LogInformation("OS: {OsInfo}", Device.OsInfo);
             VhLogger.Instance.LogInformation("UserAgent: {userAgent}", userAgent);
@@ -588,6 +589,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // Create Client with a new PacketCapture
         VhLogger.Instance.LogInformation("Creating PacketCapture ...");
         var packetCapture = await CreatePacketCapture().VhConfigureAwait();
+        packetCapture.SessionName = CurrentClientProfileInfo?.ClientProfileName;
         VpnHoodClient? client = null;
 
         try {

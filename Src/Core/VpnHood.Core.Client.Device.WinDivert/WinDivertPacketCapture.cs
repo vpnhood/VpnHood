@@ -26,6 +26,7 @@ public class WinDivertPacketCapture : IPacketCapture
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Stopped;
     public bool Started => _device.Started;
+    public string? SessionName { get; set; }
     public virtual bool CanSendPacketToOutbound => true;
     public virtual bool IsDnsServersSupported => false;
 

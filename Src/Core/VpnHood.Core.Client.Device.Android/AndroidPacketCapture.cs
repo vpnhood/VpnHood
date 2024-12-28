@@ -43,7 +43,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     public bool CanIncludeApps => true;
     public string[]? ExcludeApps { get; set; }
     public string[]? IncludeApps { get; set; }
-    public string VpnServiceName { get; set; } = "VhSession";
+    public string? SessionName { get; set; }
     public bool IsMtuSupported => true;
 
     public int Mtu {
@@ -75,8 +75,10 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     {
         var builder = new Builder(this)
             .SetBlocking(true)
-            .SetSession(VpnServiceName)
             .AddAddress("192.168.199.188", 24);
+
+        if (SessionName!=null)
+            builder.SetSession(SessionName);
 
         if (OperatingSystem.IsAndroidVersionAtLeast(29))
             builder.SetMetered(false);

@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Text.Json;
+﻿using System.Text.Json;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;

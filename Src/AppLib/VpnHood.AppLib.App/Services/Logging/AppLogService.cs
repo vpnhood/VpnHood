@@ -1,9 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Settings;
+using VpnHood.AppLib.Utils;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Tunneling;
 
-namespace VpnHood.AppLib;
+namespace VpnHood.AppLib.Services.Logging;
 
 public class AppLogService : IDisposable
 {
@@ -96,7 +96,7 @@ public class AppLogService : IDisposable
         debugCommand ??= "";
 
         // log verbose
-        if (verbose || debugCommand.Contains("/verbose", StringComparison.OrdinalIgnoreCase))
+        if (verbose || debugCommand.Contains(DebugCommands.Verbose, StringComparison.OrdinalIgnoreCase))
             return ["*"];
 
         // Extract all event names from debugData that contains "log:EventName1,EventName2"

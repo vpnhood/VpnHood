@@ -22,9 +22,7 @@ public class BinaryStreamStandard : ChunkStream
     public override int PreserveWriteBufferLength => ChunkHeaderLength;
 
     public BinaryStreamStandard(Stream sourceStream, string streamId, bool useBuffer)
-        : base(
-            useBuffer ? new ReadCacheStream(sourceStream, false, TunnelDefaults.StreamProxyBufferSize) : sourceStream,
-            streamId)
+        : base(useBuffer ? new ReadCacheStream(sourceStream, false, TunnelDefaults.StreamProxyBufferSize) : sourceStream, streamId)
     {
     }
 

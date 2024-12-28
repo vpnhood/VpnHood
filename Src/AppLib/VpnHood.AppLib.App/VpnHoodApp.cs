@@ -9,7 +9,6 @@ using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Providers;
-using VpnHood.AppLib.Services;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
@@ -29,6 +28,8 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Factory;
+using VpnHood.AppLib.Services.Logging;
+using VpnHood.AppLib.Services.Ads;
 
 namespace VpnHood.AppLib;
 
@@ -119,9 +120,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _serverQueryTimeout = options.ServerQueryTimeout;
         _allowEndPointTracker = options.AllowEndPointTracker;
         _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
-        _appAppAdService = new AppAdService(regionProvider: this, 
-            adProviderItems: options.AdProviderItems, 
-            adOptions: options.AdOptions, 
+        _appAppAdService = new AppAdService(regionProvider: this,
+            adProviderItems: options.AdProviderItems,
+            adOptions: options.AdOptions,
             tracker: options.Tracker);
 
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
@@ -171,6 +172,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             GaMeasurementId = options.Ga4MeasurementId,
             ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId),
             AppId = options.AppId,
+            DebugCommands = DebugCommands.All,
             IsDebugMode = options.IsDebugMode
         };
 
@@ -213,8 +215,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var disconnectRequired = false;
             if (client != null) {
                 client.UseUdpChannel = UserSettings.UseUdpChannel;
-                client.DropUdp = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdp;
-                client.DropQuic = UserSettings.DebugData1?.Contains("/drop-quic") == true || UserSettings.DropQuic;
+                client.DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp;
+                client.DropQuic = UserSettings.DropQuic;
 
                 // check is disconnect required
                 disconnectRequired =
@@ -517,7 +519,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async Task<IPacketCapture> CreatePacketCapture()
     {
-        if (UserSettings.DebugData1?.Contains("/null-capture") is true) {
+        if (HasDebugCommand(DebugCommands.NullCapture)) {
             VhLogger.Instance.LogWarning("Using NullPacketCapture. No packet will go through the VPN.");
             return new NullPacketCapture();
         }
@@ -537,6 +539,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             packetCapture.IncludeApps = UserSettings.AppFilters;
 
         return packetCapture;
+    }
+
+
+    public bool HasDebugCommand(string command)
+    {
+        if (string.IsNullOrEmpty(UserSettings.DebugData1))
+            return false;
+
+        var commands = UserSettings.DebugData1.Split(' ');
+        return commands.Contains(command, StringComparer.OrdinalIgnoreCase);
     }
 
     private async Task ConnectInternal(Token token, string? serverLocation, string? userAgent, ConnectPlanId planId,
@@ -566,8 +578,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
             ServerQueryTimeout = _serverQueryTimeout,
-            DropUdp = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdp,
-            DropQuic = UserSettings.DebugData1?.Contains("/drop-quic") == true || UserSettings.DropQuic,
+            DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
+            DropQuic = UserSettings.DropQuic,
             ServerLocation = ServerLocationInfo.IsAutoLocation(serverLocation) ? null : serverLocation,
             PlanId = planId,
             UseUdpChannel = UserSettings.UseUdpChannel,
@@ -575,6 +587,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ForceLogSni = LogService.LogEvents.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase),
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
             AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
+            AllowTcpReuse = !HasDebugCommand(DebugCommands.NoTcpReuse),
             Tracker = Services.Tracker,
             CanExtendByRewardedAdThreshold = _canExtendByRewardedAdThreshold
         };

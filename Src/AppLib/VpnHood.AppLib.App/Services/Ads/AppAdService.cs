@@ -6,7 +6,7 @@ using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.IpLocations;
 using VpnHood.Core.Common.Utils;
 
-namespace VpnHood.AppLib.Services;
+namespace VpnHood.AppLib.Services.Ads;
 
 public class AppAdService(
     IRegionProvider regionProvider,

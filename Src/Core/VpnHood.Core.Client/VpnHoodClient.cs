@@ -363,7 +363,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         _packetCapture.IncludeNetworks = includeIpRanges.ToIpNetworks().ToArray(); //sort and unify
         VhLogger.Instance.LogInformation(
-            $"PacketCapture Include Networks: {string.Join(", ", _packetCapture.IncludeNetworks.Select(x => x.ToString()))}");
+            $"PacketCapture Include Networks: {string.Join(", ", _packetCapture.IncludeNetworks.Select(VhLogger.Format))}");
     }
 
     // WARNING: Performance Critical!
@@ -781,7 +781,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 throw new Exception("Could not specify any DNS server. The server is not configured properly.");
 
             VhLogger.Instance.LogInformation("DnsServers: {DnsServers}",
-                string.Join(", ", DnsServers.Select(x => x.ToString())));
+                string.Join(", ", DnsServers.Select(VhLogger.Format)));
 
             // report Suppressed
             if (sessionResponse.SuppressedTo == SessionSuppressType.YourSelf)
@@ -891,8 +891,10 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 SessionStatus.AccessUsage = requestResult.Response.AccessUsage;
 
             // client is disposed meanwhile
-            if (_disposed)
+            if (_disposed) {
+                _ = requestResult.DisposeAsync();
                 throw new ObjectDisposedException(VhLogger.FormatType(this));
+            }
 
             _lastConnectionErrorTime = null;
             State = ClientState.Connected;
@@ -939,7 +941,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             else if (now - _lastConnectionErrorTime.Value > ReconnectTimeout) {
                 _autoWaitTime = now;
                 State = ClientState.Waiting;
-                VhLogger.Instance.LogWarning("Client is paused because of too many connection errors.");
+                VhLogger.Instance.LogWarning(ex, "Client is paused because of too many connection errors.");
             }
 
             // set connecting state if it could not establish any connection

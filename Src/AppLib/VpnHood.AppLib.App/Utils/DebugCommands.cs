@@ -5,7 +5,7 @@ public static class DebugCommands
     public const string DropUdp = "/drop-udp";
     public const string NoTcpReuse = "/no-tcp-reuse";
     public const string KillSpaServer = "/kill-spa-server";
-    public const string Verbose = "/kill-spa-server";
+    public const string Verbose = "/verbose";
     public const string NullCapture = "/null-capture";
 
     public static string[] All => [

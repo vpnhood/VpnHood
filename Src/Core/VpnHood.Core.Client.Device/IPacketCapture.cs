@@ -9,6 +9,7 @@ public interface IPacketCapture : IDisposable
     event EventHandler<PacketReceivedEventArgs> PacketReceivedFromInbound;
     event EventHandler Stopped;
     bool Started { get; }
+    string? SessionName { get; set; }
     bool IsDnsServersSupported { get; }
     IPAddress[]? DnsServers { get; set; }
     bool CanExcludeApps { get; }

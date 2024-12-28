@@ -160,8 +160,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 
         // check is service started
         try {
-            var packetCapture =
-                await AndroidPacketCapture.StartServiceTaskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            var packetCapture = await AndroidPacketCapture.StartServiceTaskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(10));
             return packetCapture;
         }
         catch (Exception ex) {

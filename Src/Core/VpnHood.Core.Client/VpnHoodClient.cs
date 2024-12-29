@@ -1123,7 +1123,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _disposed = true;
 
         // shutdown
-        VhLogger.Instance.LogTrace("Shutting down...");
+        VhLogger.Instance.LogInformation("Shutting down...");
 
         _cancellationTokenSource.Cancel();
         var wasConnected = State is ClientState.Connecting or ClientState.Connected;

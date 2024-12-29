@@ -1598,6 +1598,7 @@ export class AppFeatures implements IAppFeatures {
     gaMeasurementId?: string | null;
     clientId!: string;
     isDebugMode!: boolean;
+    debugCommands!: string[];
 
     constructor(data?: IAppFeatures) {
         if (data) {
@@ -1605,6 +1606,9 @@ export class AppFeatures implements IAppFeatures {
                 if (data.hasOwnProperty(property))
                     (<any>this)[property] = (<any>data)[property];
             }
+        }
+        if (!data) {
+            this.debugCommands = [];
         }
     }
 
@@ -1627,6 +1631,14 @@ export class AppFeatures implements IAppFeatures {
             this.gaMeasurementId = _data["gaMeasurementId"] !== undefined ? _data["gaMeasurementId"] : <any>null;
             this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
             this.isDebugMode = _data["isDebugMode"] !== undefined ? _data["isDebugMode"] : <any>null;
+            if (Array.isArray(_data["debugCommands"])) {
+                this.debugCommands = [] as any;
+                for (let item of _data["debugCommands"])
+                    this.debugCommands!.push(item);
+            }
+            else {
+                this.debugCommands = <any>null;
+            }
         }
     }
 
@@ -1656,6 +1668,11 @@ export class AppFeatures implements IAppFeatures {
         data["gaMeasurementId"] = this.gaMeasurementId !== undefined ? this.gaMeasurementId : <any>null;
         data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
         data["isDebugMode"] = this.isDebugMode !== undefined ? this.isDebugMode : <any>null;
+        if (Array.isArray(this.debugCommands)) {
+            data["debugCommands"] = [];
+            for (let item of this.debugCommands)
+                data["debugCommands"].push(item);
+        }
         return data;
     }
 }
@@ -1678,6 +1695,7 @@ export interface IAppFeatures {
     gaMeasurementId?: string | null;
     clientId: string;
     isDebugMode: boolean;
+    debugCommands: string[];
 }
 
 export class AppSettings implements IAppSettings {

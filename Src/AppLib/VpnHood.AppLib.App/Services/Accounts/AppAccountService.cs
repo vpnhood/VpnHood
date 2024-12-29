@@ -33,31 +33,32 @@ public class AppAccountService
     private async Task<AppAccount?> GetAccount(bool useCache)
     {
         if (AuthenticationService.UserId == null) {
-            ClearCache();
+            ClearAccount();
             return null;
         }
 
         // Get from local cache
         if (useCache) {
             _appAccount ??= VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
-            if (_appAccount != null && (_appAccount.ExpirationTime == null || _appAccount.ExpirationTime > DateTime.UtcNow))
+            if (_appAccount != null)
                 return _appAccount;
         }
 
         // Update cache from server and update local cache
+        await Refresh(true);
+        return _appAccount;
+    }
+
+
+    public async Task Refresh(bool updateCurrentClientProfile = false)
+    {
         _appAccount = await _accountProvider.GetAccount().VhConfigureAwait();
         Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
         await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount)).VhConfigureAwait();
 
-        return _appAccount;
-    }
-
-    public async Task Refresh(bool updateCurrentClientProfile = false)
-    {
-        // get access tokens from account
-        var account = await GetAccount(false).VhConfigureAwait();
-        var accessKeys = account?.SubscriptionId != null
-            ? await ListAccessKeys(account.SubscriptionId).VhConfigureAwait()
+        // update profiles
+        var accessKeys = _appAccount?.SubscriptionId != null
+            ? await ListAccessKeys(_appAccount.SubscriptionId).VhConfigureAwait()
             : [];
 
         // update profiles
@@ -65,11 +66,14 @@ public class AppAccountService
         _vpnHoodApp.ValidateAccountClientProfiles(updateCurrentClientProfile);
     }
 
-    private void ClearCache()
+    private void ClearAccount()
     {
         if (File.Exists(AppAccountFilePath))
             File.Delete(AppAccountFilePath);
+
         _appAccount = null;
+        _vpnHoodApp.ClientProfileService.UpdateFromAccount([]);
+        _vpnHoodApp.ValidateAccountClientProfiles(false);
     }
 
     public Task<string[]> ListAccessKeys(string subscriptionId)

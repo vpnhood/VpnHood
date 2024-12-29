@@ -20,7 +20,7 @@ public class AppAccountService
     }
 
     private string AppAccountFilePath => Path.Combine(_vpnHoodApp.StorageFolderPath, "account", "account.json");
-    
+
     public AppAuthenticationService AuthenticationService { get; }
 
     public AppBillingService? BillingService { get; }
@@ -40,7 +40,7 @@ public class AppAccountService
         // Get from local cache
         if (useCache) {
             _appAccount ??= VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
-            if (_appAccount?.ExpirationTime == null || _appAccount.ExpirationTime > DateTime.UtcNow)
+            if (_appAccount != null && (_appAccount.ExpirationTime == null || _appAccount.ExpirationTime > DateTime.UtcNow))
                 return _appAccount;
         }
 

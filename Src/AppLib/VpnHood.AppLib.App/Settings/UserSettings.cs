@@ -30,6 +30,7 @@ public class UserSettings
     public string? DebugData2 { get; set; }
     public bool LogAnonymous { get; set; } = true;
     public bool IncludeLocalNetwork { get; set; } = DefaultClientOptions.IncludeLocalNetwork;
+    public bool IsPacketCaptureIpFilterAvailable { get; set; } = false;
 
     [JsonConverter(typeof(NullToEmptyArrayConverter<IpRange>))] // todo: remove nullable after migration 4.5.533
     public IpRange[] IncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();

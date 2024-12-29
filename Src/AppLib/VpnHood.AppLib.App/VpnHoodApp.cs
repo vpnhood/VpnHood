@@ -434,7 +434,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // prepare logger
             LogService.Start(new AppLogOptions {
-                LogEventNames = AppLogService.GetLogEventNames(verbose: _logVerbose, diagnose: diagnose, debugCommand: UserSettings.DebugData1),
+                LogEventNames = AppLogService.GetLogEventNames(
+                    verbose: _logVerbose || HasDebugCommand(DebugCommands.Verbose), 
+                    diagnose: diagnose || HasDebugCommand(DebugCommands.FullLog), 
+                    debugCommand: UserSettings.DebugData1),
                 LogAnonymous = _logAnonymous ?? Settings.UserSettings.LogAnonymous,
                 LogToConsole = true,
                 LogToFile = true,
@@ -452,8 +455,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _activeClientProfileId = UserSettings.ClientProfileId;
 
             // log general info
-            VhLogger.Instance.LogInformation("AppVersion: {AppVersion}", GetType().Assembly.GetName().Version);
-            VhLogger.Instance.LogInformation("AppId: {AppId}", Features.AppId);
+            VhLogger.Instance.LogInformation("AppVersion: {AppVersion}, AppId: {Features.AppId}", 
+                GetType().Assembly.GetName().Version, Features.AppId);
             VhLogger.Instance.LogInformation("Time: {Time}", DateTime.UtcNow.ToString("u", new CultureInfo("en-US")));
             VhLogger.Instance.LogInformation("OS: {OsInfo}", Device.OsInfo);
             VhLogger.Instance.LogInformation("UserAgent: {userAgent}", userAgent);
@@ -463,7 +466,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 VhLogger.Instance.LogInformation("CountryCode: {CountryCode}",
                     VhUtil.TryGetCountryName(await GetCurrentCountryAsync(cancellationToken).VhConfigureAwait()));
 
-            VhLogger.Instance.LogInformation("VpnHood Client is Connecting ...");
+            VhLogger.Instance.LogInformation("Client is Connecting ...");
 
             // create cancellationToken
             _connectCts = new CancellationTokenSource();
@@ -778,7 +781,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // do not disconnect by this event when _isConnecting is set. More than one client may create, and they may fire dispose state
         // during operation, so we should not disconnect the app connection before they finish their job
         if (_client?.State == ClientState.Disposed && !_isConnecting) {
-            VhLogger.Instance.LogTrace("Disconnecting due to the client disposal.");
+            VhLogger.Instance.LogInformation("Disconnecting due to the client disposal.");
             _ = Disconnect();
             return;
         }
@@ -800,8 +803,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // set disconnect reason by user
             _hasDisconnectedByUser = byUser;
             VhLogger.Instance.LogInformation(byUser
-                ? "User has requested disconnection."
-                : "App has requested disconnection.");
+                ? "User has requested a disconnection."
+                : "App has requested a disconnection.");
 
             // change state to disconnecting
             _isDisconnecting = true;

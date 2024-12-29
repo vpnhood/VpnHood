@@ -799,8 +799,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         try {
             // set disconnect reason by user
             _hasDisconnectedByUser = byUser;
-            if (byUser)
-                VhLogger.Instance.LogInformation("User has requested disconnection.");
+            VhLogger.Instance.LogInformation(byUser
+                ? "User has requested disconnection."
+                : "App has requested disconnection.");
 
             // change state to disconnecting
             _isDisconnecting = true;

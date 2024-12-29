@@ -38,8 +38,10 @@ public class AppAccountService
         }
 
         // Get from local cache
+        var localAppAccount = VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
+
         if (useCache) {
-            _appAccount ??= VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
+            _appAccount ??= localAppAccount;
             if (_appAccount != null && (_appAccount.ExpirationTime == null || _appAccount.ExpirationTime > DateTime.UtcNow))
                 return _appAccount;
         }
@@ -49,6 +51,15 @@ public class AppAccountService
         Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
         await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount)).VhConfigureAwait();
 
+        // Account does not have an expired subscription
+        if (!(localAppAccount?.ExpirationTime <= DateTime.UtcNow))
+            return _appAccount;
+
+        // Account has an expired subscription and client profiles must be updating
+        var accessKeys = _appAccount?.SubscriptionId != null
+            ? await ListAccessKeys(_appAccount.SubscriptionId).VhConfigureAwait()
+            : [];
+        UpdateProfiles(accessKeys, true);
         return _appAccount;
     }
 
@@ -61,6 +72,11 @@ public class AppAccountService
             : [];
 
         // update profiles
+        UpdateProfiles(accessKeys, updateCurrentClientProfile);
+    }
+
+    private void UpdateProfiles(string[] accessKeys, bool updateCurrentClientProfile)
+    {
         _vpnHoodApp.ClientProfileService.UpdateFromAccount(accessKeys);
         _vpnHoodApp.ValidateAccountClientProfiles(updateCurrentClientProfile);
     }

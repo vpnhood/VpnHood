@@ -1775,6 +1775,7 @@ export class UserSettings implements IUserSettings {
     debugData2?: string | null;
     logAnonymous!: boolean;
     includeLocalNetwork!: boolean;
+    isPacketCaptureIpFilterAvailable!: boolean;
     includeIpRanges!: string[];
     excludeIpRanges!: string[];
     packetCaptureIncludeIpRanges!: string[];
@@ -1830,6 +1831,7 @@ export class UserSettings implements IUserSettings {
             this.debugData2 = _data["debugData2"] !== undefined ? _data["debugData2"] : <any>null;
             this.logAnonymous = _data["logAnonymous"] !== undefined ? _data["logAnonymous"] : <any>null;
             this.includeLocalNetwork = _data["includeLocalNetwork"] !== undefined ? _data["includeLocalNetwork"] : <any>null;
+            this.isPacketCaptureIpFilterAvailable = _data["isPacketCaptureIpFilterAvailable"] !== undefined ? _data["isPacketCaptureIpFilterAvailable"] : <any>null;
             if (Array.isArray(_data["includeIpRanges"])) {
                 this.includeIpRanges = [] as any;
                 for (let item of _data["includeIpRanges"])
@@ -1899,6 +1901,7 @@ export class UserSettings implements IUserSettings {
         data["debugData2"] = this.debugData2 !== undefined ? this.debugData2 : <any>null;
         data["logAnonymous"] = this.logAnonymous !== undefined ? this.logAnonymous : <any>null;
         data["includeLocalNetwork"] = this.includeLocalNetwork !== undefined ? this.includeLocalNetwork : <any>null;
+        data["isPacketCaptureIpFilterAvailable"] = this.isPacketCaptureIpFilterAvailable !== undefined ? this.isPacketCaptureIpFilterAvailable : <any>null;
         if (Array.isArray(this.includeIpRanges)) {
             data["includeIpRanges"] = [];
             for (let item of this.includeIpRanges)
@@ -1941,6 +1944,7 @@ export interface IUserSettings {
     debugData2?: string | null;
     logAnonymous: boolean;
     includeLocalNetwork: boolean;
+    isPacketCaptureIpFilterAvailable: boolean;
     includeIpRanges: string[];
     excludeIpRanges: string[];
     packetCaptureIncludeIpRanges: string[];

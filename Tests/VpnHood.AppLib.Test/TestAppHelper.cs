@@ -49,7 +49,9 @@ public class TestAppHelper : TestHelper
         var clientApp = VpnHoodApp.Init(device, appOptions);
         clientApp.Diagnoser.HttpTimeout = 2000;
         clientApp.Diagnoser.NsTimeout = 2000;
-        clientApp.UserSettings.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
+        clientApp.UserSettings.UseDeviceIpFilter = true;
+        clientApp.UserSettings.UseAppIpFilter = true;
+        clientApp.SettingsService.IpFilterSettings.DeviceIpFilterIncludes = TestIpAddresses.Select(x => new IpRange(x)).ToText();
         clientApp.UserSettings.LogAnonymous = false;
         clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
         ActiveUiContext.Context = new TestAppUiContext();

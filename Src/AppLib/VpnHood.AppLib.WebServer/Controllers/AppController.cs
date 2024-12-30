@@ -42,6 +42,29 @@ internal class AppController : WebApiController, IAppController
         return Task.FromResult(ret);
     }
 
+    [Route(HttpVerbs.Get, "/ip-filters")]
+    public Task<IpFilters> GetIpFilters()
+    {
+        var appIpFilters = new IpFilters {
+            DeviceIpFilterInclude = App.SettingsService.IpFilterSettings.DeviceIpFilterIncludes,
+            DeviceIpFilterExclude = App.SettingsService.IpFilterSettings.DeviceIpFilterExcludes,
+            AppIpFilterInclude = App.SettingsService.IpFilterSettings.AppIpFilterIncludes,
+            AppIpFilterExclude = App.SettingsService.IpFilterSettings.AppIpFilterExcludes,
+        };
+
+        return Task.FromResult(appIpFilters);
+    }
+
+    [Route(HttpVerbs.Put, "/ip-filters")]
+    public async Task SetIpFilters(IpFilters ipFilters)
+    {
+        ipFilters = await HttpContext.GetRequestDataAsync<IpFilters>().VhConfigureAwait();
+        App.SettingsService.IpFilterSettings.DeviceIpFilterExcludes = ipFilters.DeviceIpFilterExclude;
+        App.SettingsService.IpFilterSettings.DeviceIpFilterIncludes = ipFilters.DeviceIpFilterInclude;
+        App.SettingsService.IpFilterSettings.AppIpFilterExcludes = ipFilters.AppIpFilterExclude;
+        App.SettingsService.IpFilterSettings.AppIpFilterIncludes = ipFilters.AppIpFilterInclude;
+    }
+
     [Route(HttpVerbs.Get, "/state")]
     public Task<AppState> GetState()
     {
@@ -108,8 +131,8 @@ internal class AppController : WebApiController, IAppController
     public async Task SetUserSettings(UserSettings userSettings)
     {
         userSettings = await HttpContext.GetRequestDataAsync<UserSettings>().VhConfigureAwait();
-        App.Settings.UserSettings = userSettings;
-        App.Settings.Save();
+        App.SettingsService.AppSettings.UserSettings = userSettings;
+        App.SettingsService.Save();
     }
 
     [Route(HttpVerbs.Get, "/log.txt")]

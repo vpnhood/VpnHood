@@ -8,7 +8,7 @@ internal static class WebServerExtensions
 {
     public static async Task<T> GetRequestDataAsync<T>(this IHttpContext httpContext)
     {
-        var json = await httpContext.GetRequestBodyAsByteArrayAsync().VhConfigureAwait();
+        var json = await httpContext.GetRequestBodyAsStringAsync().VhConfigureAwait();
         var res = JsonSerializer.Deserialize<T>(json,
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 

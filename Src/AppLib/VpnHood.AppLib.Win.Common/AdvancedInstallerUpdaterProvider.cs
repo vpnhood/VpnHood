@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.AppLib.Win.Common;
 

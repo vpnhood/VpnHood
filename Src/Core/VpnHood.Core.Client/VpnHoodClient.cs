@@ -319,8 +319,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             ConfigPacketFilter(ConnectorService.EndPointInfo.TcpEndPoint.Address);
             _packetCapture.StartCapture();
 
-            _ = Foo();
-
             // disable IncludeIpRanges if it contains all networks
             if (IncludeIpRanges.IsAll())
                 IncludeIpRanges = [];
@@ -336,7 +334,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             throw;
         }
     }
-
     private void ConfigPacketFilter(IPAddress hostIpAddress)
     {
         // DnsServer
@@ -383,39 +380,12 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _packetCapture.SendPacketToInbound(e.IpPackets);
     }
 
-    private async Task Foo()
-    {
-        using UdpClient udpClient = new(new IPEndPoint(IPAddress.Parse("192.168.199.188"), 6060));
-        while (!_disposed) {
-            var z = await udpClient.ReceiveAsync();
-            Console.WriteLine("ssss");
-            await udpClient.SendAsync([1, 2, 3, 4], 4, new IPEndPoint(IPAddress.Parse("192.168.199.188"), z.RemoteEndPoint.Port));
-        }
-    }
-
-
     // WARNING: Performance Critical!
     private void PacketCapture_OnPacketReceivedFromInbound(object sender, PacketReceivedEventArgs e)
     {
         // stop traffic if the client has been disposed
         if (_disposed || _initConnectedTime is null)
             return;
-
-
-        var first = e.IpPackets[0];
-        if (first.Protocol == ProtocolType.Udp) {
-            var u = PacketUtil.ExtractUdp(first);
-            if (u.DestinationPort == 9741) {
-                Console.WriteLine("catch");
-            }
-        }
-
-        var uspPacket = PacketUtil.CreateUdpPacket(
-            new IPEndPoint(IPAddress.Parse("125.2.2.1"), 9741),
-            new IPEndPoint(IPAddress.Parse("192.168.199.188"), 6060),
-            [0x01, 0x02, 0x03, 0x04]);
-            _packetCapture.SendPacketToInbound(uspPacket);
-
 
         try {
             lock (_sendingPackets) // this method should not be called in multi-thread, if so we need to allocate the list per call

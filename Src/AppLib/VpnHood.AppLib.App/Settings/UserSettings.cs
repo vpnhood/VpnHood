@@ -2,7 +2,6 @@
 using System.Text.Json.Serialization;
 using VpnHood.Core.Client;
 using VpnHood.Core.Common.Converters;
-using VpnHood.Core.Common.Net;
 using VpnHood.Core.Tunneling.DomainFiltering;
 
 namespace VpnHood.AppLib.Settings;
@@ -16,7 +15,7 @@ public class UserSettings
     public Guid? ClientProfileId { get; set; }
     public int MaxDatagramChannelCount { get; set; } = DefaultClientOptions.MaxDatagramChannelCount;
     public bool TunnelClientCountry { get; set; } = true;
-    
+
     [JsonConverter(typeof(NullToEmptyArrayConverter<string>))] //todo: remove nullable after migration 4.5.533
     public string[] AppFilters { get; set; } = [];
     public FilterMode AppFiltersMode { get; set; } = FilterMode.All;
@@ -30,17 +29,6 @@ public class UserSettings
     public string? DebugData2 { get; set; }
     public bool LogAnonymous { get; set; } = true;
     public bool IncludeLocalNetwork { get; set; } = DefaultClientOptions.IncludeLocalNetwork;
-
-    [JsonConverter(typeof(NullToEmptyArrayConverter<IpRange>))] // todo: remove nullable after migration 4.5.533
-    public IpRange[] IncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
-
-    [JsonConverter(typeof(NullToEmptyArrayConverter<IpRange>))] // todo: remove nullable after migration 4.5.533
-    public IpRange[] ExcludeIpRanges { get; set; } = IpNetwork.None.ToIpRanges().ToArray();
-
-    [JsonConverter(typeof(NullToEmptyArrayConverter<IpRange>))] // todo: remove nullable after migration 4.5.533
-    public IpRange[] PacketCaptureIncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
-
-    [JsonConverter(typeof(NullToEmptyArrayConverter<IpRange>))] // todo: remove nullable after migration 4.5.533
-    public IpRange[] PacketCaptureExcludeIpRanges { get; set; } = IpNetwork.None.ToIpRanges().ToArray();
-
+    public bool UseAppIpFilter { get; set; }
+    public bool UseDeviceIpFilter { get; set; }
 }

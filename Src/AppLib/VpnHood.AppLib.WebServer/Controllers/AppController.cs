@@ -46,8 +46,8 @@ internal class AppController : WebApiController, IAppController
     public Task<IpFilters> GetIpFilters()
     {
         var appIpFilters = new IpFilters {
-            DeviceIpFilterInclude = App.SettingsService.IpFilterSettings.DeviceIpFilterIncludes,
-            DeviceIpFilterExclude = App.SettingsService.IpFilterSettings.DeviceIpFilterExcludes,
+            PacketCaptureIpFilterInclude = App.SettingsService.IpFilterSettings.PacketCaptureIpFilterIncludes,
+            PacketCaptureIpFilterExclude = App.SettingsService.IpFilterSettings.PacketCaptureIpFilterExcludes,
             AppIpFilterInclude = App.SettingsService.IpFilterSettings.AppIpFilterIncludes,
             AppIpFilterExclude = App.SettingsService.IpFilterSettings.AppIpFilterExcludes,
         };
@@ -59,8 +59,8 @@ internal class AppController : WebApiController, IAppController
     public async Task SetIpFilters(IpFilters ipFilters)
     {
         ipFilters = await HttpContext.GetRequestDataAsync<IpFilters>().VhConfigureAwait();
-        App.SettingsService.IpFilterSettings.DeviceIpFilterExcludes = ipFilters.DeviceIpFilterExclude;
-        App.SettingsService.IpFilterSettings.DeviceIpFilterIncludes = ipFilters.DeviceIpFilterInclude;
+        App.SettingsService.IpFilterSettings.PacketCaptureIpFilterExcludes = ipFilters.PacketCaptureIpFilterExclude;
+        App.SettingsService.IpFilterSettings.PacketCaptureIpFilterIncludes = ipFilters.PacketCaptureIpFilterInclude;
         App.SettingsService.IpFilterSettings.AppIpFilterExcludes = ipFilters.AppIpFilterExclude;
         App.SettingsService.IpFilterSettings.AppIpFilterIncludes = ipFilters.AppIpFilterInclude;
     }

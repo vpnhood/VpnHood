@@ -30,5 +30,5 @@ public class UserSettings
     public bool LogAnonymous { get; set; } = true;
     public bool IncludeLocalNetwork { get; set; } = DefaultClientOptions.IncludeLocalNetwork;
     public bool UseAppIpFilter { get; set; }
-    public bool UseDeviceIpFilter { get; set; }
+    public bool UsePacketCaptureIpFilter { get; set; }
 }

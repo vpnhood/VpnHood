@@ -23,14 +23,14 @@ public class IpFilterSettings(string folderPath)
         set => Write("app_ip_filter_excludes", value);
     }
 
-    public string DeviceIpFilterIncludes {
-        get => Read("device_ip_filter_includes");
-        set => Write("device_ip_filter_includes", value);
+    public string PacketCaptureIpFilterIncludes {
+        get => Read("packetcapture_ip_filter_includes");
+        set => Write("packetcapture_ip_filter_includes", value);
     }
 
-    public string DeviceIpFilterExcludes {
-        get => Read("device_ip_filter_excludes");
-        set => Write("device_ip_filter_excludes", value);
+    public string PacketCaptureIpFilterExcludes {
+        get => Read("packetcapture_ip_filter_excludes");
+        set => Write("packetcapture_ip_filter_excludes", value);
     }
 
 

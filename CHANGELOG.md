@@ -1,4 +1,4 @@
-# Upcoming
+# v5.0.631
 * Feature: Add AppIpFilters to settings page
 * Feature: Add PacketCaptureIpFilters to settings page
 * Update: Add Profile Name as session name in android VpnService

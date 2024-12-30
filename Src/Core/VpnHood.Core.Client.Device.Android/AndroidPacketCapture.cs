@@ -221,10 +221,6 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
                     VhLogger.Instance.LogError(ex, "Could not add a disallowed app. App: {app}", app);
                 }
         }
-
-        var z = ApplicationContext?.PackageName;
-        builder.AddDisallowedApplication(z);
-
     }
 
     private Task ReadingPacketTask()

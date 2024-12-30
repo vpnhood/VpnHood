@@ -5,7 +5,6 @@ param(
 	[Parameter(Mandatory=$true)][object]$clientAndroid,
 	[Parameter(Mandatory=$true)][object]$connectWin,
 	[Parameter(Mandatory=$true)][object]$connectAndroid,
-	[Parameter(Mandatory=$true)][object]$maui,
 	[Parameter(Mandatory=$true)][object]$distribute,
 	[Parameter(Mandatory=$true)][object]$samples
 	);
@@ -17,7 +16,6 @@ $clientWin = $clientWin -eq "1";
 $clientAndroid = $clientAndroid -eq "1";
 $distribute = $distribute -eq "1";
 $samples = $samples -eq "1";
-$maui = $maui -eq "1";
 
 . "$PSScriptRoot/Core/Common.ps1" -bump $bump
 
@@ -50,10 +48,6 @@ if ($nugets) {
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Android.Ads.AdMob/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Win.Common/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Win.Common.WpfSpa/_publish.ps1";
-}
-
-# publish MAUI nugets
-if ($maui) {
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Maui.Common/_publish.ps1";
 }
 

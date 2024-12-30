@@ -568,9 +568,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // calculate packetCaptureIpRanges
         var packetCaptureIpRanges = new IpRangeOrderedList(IpNetwork.All.ToIpRanges());
-        if (UserSettings.UseDeviceIpFilter) {
-            packetCaptureIpRanges = packetCaptureIpRanges.Intersect(IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.DeviceIpFilterIncludes));
-            packetCaptureIpRanges = packetCaptureIpRanges.Exclude(IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.DeviceIpFilterExcludes));
+        if (UserSettings.UsePacketCaptureIpFilter) {
+            packetCaptureIpRanges = packetCaptureIpRanges.Intersect(IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.PacketCaptureIpFilterIncludes));
+            packetCaptureIpRanges = packetCaptureIpRanges.Exclude(IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.PacketCaptureIpFilterExcludes));
         }
 
         // create clientOptions

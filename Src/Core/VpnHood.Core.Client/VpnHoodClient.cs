@@ -617,16 +617,22 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         return false;
     }
 
-    private bool ShouldManageDatagramChannels =>
-        UseUdpChannel != Tunnel.IsUdpMode ||
-        (!UseUdpChannel && Tunnel.DatagramChannelCount < _maxDatagramChannelCount);
+    private bool ShouldManageDatagramChannels{
+        get {
+            if (_disposed) return false;
+            if (_datagramChannelsSemaphore.CurrentCount == 0) return false;
+            if (UseUdpChannel != Tunnel.IsUdpMode) return true;
+            return !UseUdpChannel && Tunnel.DatagramChannelCount < _maxDatagramChannelCount;
+        }
+    }
 
     private async Task ManageDatagramChannels(CancellationToken cancellationToken)
     {
-        if (_disposed || !await _datagramChannelsSemaphore.WaitAsync(0, cancellationToken).VhConfigureAwait())
+        // ShouldManageDatagramChannels checks the semaphore count so it must be called before WaitAsync
+        if (!ShouldManageDatagramChannels)
             return;
 
-        if (!ShouldManageDatagramChannels)
+        if (!await _datagramChannelsSemaphore.WaitAsync(0, cancellationToken).VhConfigureAwait())
             return;
 
         try {

@@ -1,3 +1,6 @@
+# v5.0.632
+* Update: Improve ping performance
+
 # v5.0.629
 * Update: Move releases repo from https://github.com/vpnhood/VpnHood/releases
 

@@ -2,6 +2,7 @@
 * Feature: Add AppIpFilters to settings page
 * Feature: Add PacketCaptureIpFilters to settings page
 * Update: Add Profile Name as session name in android VpnService
+* Update: Improve ping performance
 
 # v5.0.630
 * Fix: Show old tokens

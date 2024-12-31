@@ -148,7 +148,7 @@ public class AppLogService : IDisposable
 
                 // find first linefeed and split into two parts
                 message = message.Replace("\r\n", "\n");
-                var index = message.IndexOf('\n', 4);
+                var index = message.Length > 2 ?  message.TrimStart().IndexOf('\n') : 0;
                 var part1 = index > 0 ? message[..index] : message;
                 var part2 = index > 0 ? message[(index + 1)..] : "";
 

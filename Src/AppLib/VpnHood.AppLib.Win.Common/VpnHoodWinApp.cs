@@ -206,9 +206,9 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
 
     private void ConnectClicked()
     {
-        if (VpnHoodApp.Instance.Settings.UserSettings.ClientProfileId != null) {
+        if (VpnHoodApp.Instance.UserSettings.ClientProfileId != null) {
             try {
-                _ = VpnHoodApp.Instance.Connect(VpnHoodApp.Instance.Settings.UserSettings.ClientProfileId.Value);
+                _ = VpnHoodApp.Instance.Connect(VpnHoodApp.Instance.UserSettings.ClientProfileId.Value);
             }
             catch {
                 OpenMainWindow();

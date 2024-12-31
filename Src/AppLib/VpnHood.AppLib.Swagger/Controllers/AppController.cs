@@ -24,6 +24,18 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
+    [HttpGet("ip-filters")]
+    public Task<IpFilters> GetIpFilters()
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPut("ip-filters")]
+    public Task SetIpFilters(IpFilters ipFilters)
+    {
+        throw new SwaggerOnlyException();
+    }
+
     [HttpGet("state")]
     public Task<AppState> GetState()
     {

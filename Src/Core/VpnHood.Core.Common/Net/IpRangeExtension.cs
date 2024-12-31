@@ -12,4 +12,10 @@ public static class IpRangeExtension
         // prevent use Linq.Intersect in mistake. it is bug prone.
         throw new NotSupportedException($"Use {nameof(IpRangeOrderedList)}.Intersect.");
     }
+
+    public static string ToText(this IEnumerable<IpRange> ipRanges)
+    {
+        return string.Join(Environment.NewLine, ipRanges.Select(x => x.ToString()));
+    }
+
 }

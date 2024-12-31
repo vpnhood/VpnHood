@@ -19,10 +19,6 @@ public class AdTest : TestBase
     public async Task AFoo()
     {
         await Task.Delay(0);
-        var str = "\n21:19:04.6300 | Info | ";
-        str = str.TrimEnd(' ', '|') + " | Mem";
-        Console.WriteLine(str);
-
     }
 
     [TestMethod]

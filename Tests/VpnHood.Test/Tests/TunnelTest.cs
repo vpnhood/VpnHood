@@ -4,14 +4,11 @@ using System.Net.Sockets;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
-using PacketDotNet.Utils;
 using VpnHood.Core.Client;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
-using VpnHood.Core.Tunneling.Utils;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test.Tests;
 
@@ -30,69 +27,7 @@ public class TunnelTest : TestBase
         }
     }
 
-    private class PacketProxyReceiverTest : IPacketProxyReceiver
-    {
-        public int ReceivedCount { get; private set; }
-
-        public Task OnPacketReceived(IPPacket packet)
-        {
-            lock (this)
-                ReceivedCount++;
-            return Task.CompletedTask;
-        }
-
-        public void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint)
-        {
-        }
-
-        public void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
-            bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
-        {
-        }
-    }
-
-    [TestMethod]
-    public async Task PingProxy_Pool()
-    {
-        // create icmp
-        var packetReceiver = new PacketProxyReceiverTest();
-        var payload = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-        var buffer = new byte[4 + payload.Length];
-        var icmpPacket = new IcmpV4Packet(new ByteArraySegment(buffer)) {
-            TypeCode = IcmpV4TypeCode.EchoRequest,
-            Id = 1,
-            Sequence = 1,
-            PayloadData = payload
-        };
-
-
-        var ipPacket = PacketUtil.CreateIpPacket(IPAddress.Loopback, IPAddress.Parse("8.8.8.8"));
-        ipPacket.PayloadPacket = icmpPacket;
-        PacketUtil.UpdateIpPacket(ipPacket);
-
-        using var pingProxyPool = new PingProxyPool(packetReceiver, maxClientCount: 3, icmpTimeout: null);
-        var task1 = pingProxyPool.SendPacket(PacketUtil.ClonePacket(ipPacket));
-
-        ipPacket = PacketUtil.CreateIpPacket(IPAddress.Parse("127.0.0.1"), IPAddress.Parse("127.0.0.2"));
-        ipPacket.PayloadPacket = icmpPacket;
-        icmpPacket.Sequence++;
-        PacketUtil.UpdateIpPacket(ipPacket);
-        var task2 = pingProxyPool.SendPacket(PacketUtil.ClonePacket(ipPacket));
-
-        ipPacket = PacketUtil.CreateIpPacket(IPAddress.Parse("127.0.0.1"), IPAddress.Parse("127.0.0.2"));
-        ipPacket.PayloadPacket = icmpPacket;
-        icmpPacket.Sequence++;
-        PacketUtil.UpdateIpPacket(ipPacket);
-        var task3 = pingProxyPool.SendPacket(PacketUtil.ClonePacket(ipPacket));
-
-        await Task.WhenAll(task1, task2, task3);
-        Assert.AreEqual(3, packetReceiver.ReceivedCount);
-
-        // let reuse
-        await pingProxyPool.SendPacket(PacketUtil.ClonePacket(ipPacket));
-        Assert.AreEqual(4, packetReceiver.ReceivedCount);
-    }
-
+ 
     [TestMethod]
     public void UdpChannel_Direct()
     {

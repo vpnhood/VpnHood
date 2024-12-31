@@ -8,10 +8,12 @@ public static class DebugCommands
     public const string Verbose = "/verbose";
     public const string NullCapture = "/null-capture";
     public const string CaptureContext = "/capture-context";
+    public const string FullLog = "/full-log";
 
     public static string[] All => [
         CaptureContext,
         DropUdp, 
+        FullLog,
         KillSpaServer, 
         NoTcpReuse, 
         NullCapture,

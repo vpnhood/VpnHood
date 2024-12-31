@@ -51,11 +51,11 @@ public class IpRange
             return IpNetwork.Parse(value).ToIpRange();
 
         var items = value.Replace("to", "-").Split('-');
-        if (items.Length == 1)
-            return new IpRange(IPAddress.Parse(items[0].Trim()));
-        if (items.Length == 2)
-            return new IpRange(IPAddress.Parse(items[0].Trim()), IPAddress.Parse(items[1].Trim()));
-        throw new FormatException($"Could not parse {nameof(IpRange)} from: {value}!");
+        return items.Length switch {
+            1 => new IpRange(IPAddress.Parse(items[0].Trim())),
+            2 => new IpRange(IPAddress.Parse(items[0].Trim()), IPAddress.Parse(items[1].Trim())),
+            _ => throw new FormatException($"Could not parse the IpRange from: {value}")
+        };
     }
 
     public override string ToString()

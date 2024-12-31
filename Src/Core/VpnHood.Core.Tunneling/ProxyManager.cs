@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Net;
+﻿using System.Net;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Core.Common.Logging;
@@ -19,11 +18,9 @@ public abstract class ProxyManager : IPacketProxyReceiver
 
     private bool _disposed;
     private readonly HashSet<IChannel> _channels = [];
-    private readonly IPacketProxyPool _pingProxyPool;
+    private readonly PingV4Proxy _pingV4Proxy;
+    private readonly PingV6Proxy _pingV6Proxy;
     private readonly IPacketProxyPool _udpProxyPool;
-
-    [SuppressMessage("ReSharper", "UnusedMember.Global")]
-    public int PingClientCount => _pingProxyPool.ClientCount;
 
     public int UdpClientCount => _udpProxyPool.ClientCount;
 
@@ -48,9 +45,8 @@ public abstract class ProxyManager : IPacketProxyReceiver
 
     protected ProxyManager(ISocketFactory socketFactory, ProxyManagerOptions options)
     {
-        _pingProxyPool = new PingProxyPool(this, options.IcmpTimeout, options.MaxIcmpClientCount,
-            logScope: options.LogScope);
-
+        _pingV4Proxy = new PingV4Proxy(this, options.IcmpTimeout);
+        _pingV6Proxy = new PingV6Proxy(this, options.IcmpTimeout);
         _udpProxyPool = options.UseUdpProxy2
             ? new UdpProxyPoolEx(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount, logScope: options.LogScope,
                 sendBufferSize: options.UdpSendBufferSize, receiveBufferSize: options.UdpReceiveBufferSize)
@@ -86,11 +82,18 @@ public abstract class ProxyManager : IPacketProxyReceiver
                     await _udpProxyPool.SendPacket(ipPacket).VhConfigureAwait();
                     break;
 
-                case ProtocolType.Icmp or ProtocolType.IcmpV6:
+                case ProtocolType.Icmp:
                     if (!IsPingSupported)
                         throw new NotSupportedException("Ping is not supported by this proxy.");
 
-                    await _pingProxyPool.SendPacket(ipPacket).VhConfigureAwait();
+                    _pingV4Proxy.Send(ipPacket);
+                    break;
+
+                case ProtocolType.IcmpV6:
+                    if (!IsPingSupported)
+                        throw new NotSupportedException("Ping is not supported by this proxy.");
+
+                    _pingV6Proxy.Send(ipPacket);
                     break;
 
                 default:
@@ -119,7 +122,8 @@ public abstract class ProxyManager : IPacketProxyReceiver
         _disposed = true;
 
         _udpProxyPool.Dispose();
-        _pingProxyPool.Dispose();
+        _pingV4Proxy.Dispose();
+        _pingV6Proxy.Dispose();
 
         // dispose channels
         var disposeTasks = new List<Task>();

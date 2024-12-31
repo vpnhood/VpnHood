@@ -1,5 +1,4 @@
 ﻿using AndroidX.Credentials;
-using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.AppLib.Droid.GooglePlay;
 

@@ -33,59 +33,47 @@ public class AppAccountService
     private async Task<AppAccount?> GetAccount(bool useCache)
     {
         if (AuthenticationService.UserId == null) {
-            ClearCache();
+            ClearAccount();
             return null;
         }
 
         // Get from local cache
-        var localAppAccount = VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
-
         if (useCache) {
-            _appAccount ??= localAppAccount;
-            if (_appAccount != null && (_appAccount.ExpirationTime == null || _appAccount.ExpirationTime > DateTime.UtcNow))
+            _appAccount ??= VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
+            if (_appAccount != null)
                 return _appAccount;
         }
 
         // Update cache from server and update local cache
+        await Refresh(true);
+        return _appAccount;
+    }
+
+
+    public async Task Refresh(bool updateCurrentClientProfile = false)
+    {
         _appAccount = await _accountProvider.GetAccount().VhConfigureAwait();
         Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
         await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount)).VhConfigureAwait();
 
-        // Account does not have an expired subscription
-        if (!(localAppAccount?.ExpirationTime <= DateTime.UtcNow))
-            return _appAccount;
-
-        // Account has an expired subscription and client profiles must be updating
+        // update profiles
         var accessKeys = _appAccount?.SubscriptionId != null
             ? await ListAccessKeys(_appAccount.SubscriptionId).VhConfigureAwait()
             : [];
-        UpdateProfiles(accessKeys, true);
-        return _appAccount;
-    }
-
-    public async Task Refresh(bool updateCurrentClientProfile = false)
-    {
-        // get access tokens from account
-        var account = await GetAccount(false).VhConfigureAwait();
-        var accessKeys = account?.SubscriptionId != null
-            ? await ListAccessKeys(account.SubscriptionId).VhConfigureAwait()
-            : [];
 
         // update profiles
-        UpdateProfiles(accessKeys, updateCurrentClientProfile);
-    }
-
-    private void UpdateProfiles(string[] accessKeys, bool updateCurrentClientProfile)
-    {
         _vpnHoodApp.ClientProfileService.UpdateFromAccount(accessKeys);
         _vpnHoodApp.ValidateAccountClientProfiles(updateCurrentClientProfile);
     }
 
-    private void ClearCache()
+    private void ClearAccount()
     {
         if (File.Exists(AppAccountFilePath))
             File.Delete(AppAccountFilePath);
+
         _appAccount = null;
+        _vpnHoodApp.ClientProfileService.UpdateFromAccount([]);
+        _vpnHoodApp.ValidateAccountClientProfiles(false);
     }
 
     public Task<string[]> ListAccessKeys(string subscriptionId)

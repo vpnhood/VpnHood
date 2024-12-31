@@ -8,6 +8,8 @@ public interface IAppController
 {
     Task<AppData> Configure(ConfigParams configParams);
     Task<AppData> GetConfig();
+    Task<IpFilters> GetIpFilters();
+    Task SetIpFilters(IpFilters ipFilters);
     Task<AppState> GetState();
     Task Connect(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId);
     Task Diagnose(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId);

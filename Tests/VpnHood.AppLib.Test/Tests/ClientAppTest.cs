@@ -205,8 +205,8 @@ public class ClientAppTest : TestBase
 
         // ************
         // *** TEST ***: Test Include ip filter
-        app.UserSettings.IncludeIpRanges = customIps;
-        app.UserSettings.ExcludeIpRanges = [];
+        app.SettingsService.IpFilterSettings.AppIpFilterIncludes = customIps.ToText();
+        app.SettingsService.IpFilterSettings.AppIpFilterExcludes = "";
         await app.Connect(clientProfile.ClientProfileId);
         await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
         await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
@@ -216,8 +216,8 @@ public class ClientAppTest : TestBase
 
         // ************
         // *** TEST ***: Test Exclude ip filters
-        app.UserSettings.IncludeIpRanges = [];
-        app.UserSettings.ExcludeIpRanges = customIps;
+        app.SettingsService.IpFilterSettings.AppIpFilterIncludes = "";
+        app.SettingsService.IpFilterSettings.AppIpFilterExcludes = customIps.ToText();
         await app.Connect(clientProfile.ClientProfileId);
         await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
 

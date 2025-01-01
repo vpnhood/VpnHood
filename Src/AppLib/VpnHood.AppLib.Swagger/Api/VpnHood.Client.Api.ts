@@ -425,6 +425,102 @@ export class AppClient {
         return Promise.resolve<AppData>(null as any);
     }
 
+    getIpFilters( cancelToken?: CancelToken): Promise<IpFilters> {
+        let url_ = this.baseUrl + "/api/app/ip-filters";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetIpFilters(_response);
+        });
+    }
+
+    protected processGetIpFilters(response: AxiosResponse): Promise<IpFilters> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = IpFilters.fromJS(resultData200);
+            return Promise.resolve<IpFilters>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<IpFilters>(null as any);
+    }
+
+    setIpFilters(ipFilters: IpFilters, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/ip-filters";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(ipFilters);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processSetIpFilters(_response);
+        });
+    }
+
+    protected processSetIpFilters(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
     getState( cancelToken?: CancelToken): Promise<AppState> {
         let url_ = this.baseUrl + "/api/app/state";
         url_ = url_.replace(/[?&]$/, "");
@@ -1700,11 +1796,12 @@ export interface IAppFeatures {
 
 export class AppSettings implements IAppSettings {
     version!: number;
+    clientId!: string;
     isQuickLaunchEnabled?: boolean | null;
     isNotificationEnabled?: boolean | null;
     configTime!: Date;
     userSettings!: UserSettings;
-    clientId!: string;
+    appSettingsService?: AppSettingsService | null;
 
     constructor(data?: IAppSettings) {
         if (data) {
@@ -1721,11 +1818,12 @@ export class AppSettings implements IAppSettings {
     init(_data?: any) {
         if (_data) {
             this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
+            this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
             this.isQuickLaunchEnabled = _data["isQuickLaunchEnabled"] !== undefined ? _data["isQuickLaunchEnabled"] : <any>null;
             this.isNotificationEnabled = _data["isNotificationEnabled"] !== undefined ? _data["isNotificationEnabled"] : <any>null;
             this.configTime = _data["configTime"] ? new Date(_data["configTime"].toString()) : <any>null;
             this.userSettings = _data["userSettings"] ? UserSettings.fromJS(_data["userSettings"]) : new UserSettings();
-            this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
+            this.appSettingsService = _data["appSettingsService"] ? AppSettingsService.fromJS(_data["appSettingsService"]) : <any>null;
         }
     }
 
@@ -1739,22 +1837,24 @@ export class AppSettings implements IAppSettings {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["version"] = this.version !== undefined ? this.version : <any>null;
+        data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
         data["isQuickLaunchEnabled"] = this.isQuickLaunchEnabled !== undefined ? this.isQuickLaunchEnabled : <any>null;
         data["isNotificationEnabled"] = this.isNotificationEnabled !== undefined ? this.isNotificationEnabled : <any>null;
         data["configTime"] = this.configTime ? this.configTime.toISOString() : <any>null;
         data["userSettings"] = this.userSettings ? this.userSettings.toJSON() : <any>null;
-        data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
+        data["appSettingsService"] = this.appSettingsService ? this.appSettingsService.toJSON() : <any>null;
         return data;
     }
 }
 
 export interface IAppSettings {
     version: number;
+    clientId: string;
     isQuickLaunchEnabled?: boolean | null;
     isNotificationEnabled?: boolean | null;
     configTime: Date;
     userSettings: UserSettings;
-    clientId: string;
+    appSettingsService?: AppSettingsService | null;
 }
 
 export class UserSettings implements IUserSettings {
@@ -1775,11 +1875,8 @@ export class UserSettings implements IUserSettings {
     debugData2?: string | null;
     logAnonymous!: boolean;
     includeLocalNetwork!: boolean;
-    isPacketCaptureIpFilterAvailable!: boolean;
-    includeIpRanges!: string[];
-    excludeIpRanges!: string[];
-    packetCaptureIncludeIpRanges!: string[];
-    packetCaptureExcludeIpRanges!: string[];
+    useAppIpFilter!: boolean;
+    usePacketCaptureIpFilter!: boolean;
 
     constructor(data?: IUserSettings) {
         if (data) {
@@ -1791,10 +1888,6 @@ export class UserSettings implements IUserSettings {
         if (!data) {
             this.appFilters = [];
             this.domainFilter = new DomainFilter();
-            this.includeIpRanges = [];
-            this.excludeIpRanges = [];
-            this.packetCaptureIncludeIpRanges = [];
-            this.packetCaptureExcludeIpRanges = [];
         }
     }
 
@@ -1831,39 +1924,8 @@ export class UserSettings implements IUserSettings {
             this.debugData2 = _data["debugData2"] !== undefined ? _data["debugData2"] : <any>null;
             this.logAnonymous = _data["logAnonymous"] !== undefined ? _data["logAnonymous"] : <any>null;
             this.includeLocalNetwork = _data["includeLocalNetwork"] !== undefined ? _data["includeLocalNetwork"] : <any>null;
-            this.isPacketCaptureIpFilterAvailable = _data["isPacketCaptureIpFilterAvailable"] !== undefined ? _data["isPacketCaptureIpFilterAvailable"] : <any>null;
-            if (Array.isArray(_data["includeIpRanges"])) {
-                this.includeIpRanges = [] as any;
-                for (let item of _data["includeIpRanges"])
-                    this.includeIpRanges!.push(item);
-            }
-            else {
-                this.includeIpRanges = <any>null;
-            }
-            if (Array.isArray(_data["excludeIpRanges"])) {
-                this.excludeIpRanges = [] as any;
-                for (let item of _data["excludeIpRanges"])
-                    this.excludeIpRanges!.push(item);
-            }
-            else {
-                this.excludeIpRanges = <any>null;
-            }
-            if (Array.isArray(_data["packetCaptureIncludeIpRanges"])) {
-                this.packetCaptureIncludeIpRanges = [] as any;
-                for (let item of _data["packetCaptureIncludeIpRanges"])
-                    this.packetCaptureIncludeIpRanges!.push(item);
-            }
-            else {
-                this.packetCaptureIncludeIpRanges = <any>null;
-            }
-            if (Array.isArray(_data["packetCaptureExcludeIpRanges"])) {
-                this.packetCaptureExcludeIpRanges = [] as any;
-                for (let item of _data["packetCaptureExcludeIpRanges"])
-                    this.packetCaptureExcludeIpRanges!.push(item);
-            }
-            else {
-                this.packetCaptureExcludeIpRanges = <any>null;
-            }
+            this.useAppIpFilter = _data["useAppIpFilter"] !== undefined ? _data["useAppIpFilter"] : <any>null;
+            this.usePacketCaptureIpFilter = _data["usePacketCaptureIpFilter"] !== undefined ? _data["usePacketCaptureIpFilter"] : <any>null;
         }
     }
 
@@ -1901,27 +1963,8 @@ export class UserSettings implements IUserSettings {
         data["debugData2"] = this.debugData2 !== undefined ? this.debugData2 : <any>null;
         data["logAnonymous"] = this.logAnonymous !== undefined ? this.logAnonymous : <any>null;
         data["includeLocalNetwork"] = this.includeLocalNetwork !== undefined ? this.includeLocalNetwork : <any>null;
-        data["isPacketCaptureIpFilterAvailable"] = this.isPacketCaptureIpFilterAvailable !== undefined ? this.isPacketCaptureIpFilterAvailable : <any>null;
-        if (Array.isArray(this.includeIpRanges)) {
-            data["includeIpRanges"] = [];
-            for (let item of this.includeIpRanges)
-                data["includeIpRanges"].push(item);
-        }
-        if (Array.isArray(this.excludeIpRanges)) {
-            data["excludeIpRanges"] = [];
-            for (let item of this.excludeIpRanges)
-                data["excludeIpRanges"].push(item);
-        }
-        if (Array.isArray(this.packetCaptureIncludeIpRanges)) {
-            data["packetCaptureIncludeIpRanges"] = [];
-            for (let item of this.packetCaptureIncludeIpRanges)
-                data["packetCaptureIncludeIpRanges"].push(item);
-        }
-        if (Array.isArray(this.packetCaptureExcludeIpRanges)) {
-            data["packetCaptureExcludeIpRanges"] = [];
-            for (let item of this.packetCaptureExcludeIpRanges)
-                data["packetCaptureExcludeIpRanges"].push(item);
-        }
+        data["useAppIpFilter"] = this.useAppIpFilter !== undefined ? this.useAppIpFilter : <any>null;
+        data["usePacketCaptureIpFilter"] = this.usePacketCaptureIpFilter !== undefined ? this.usePacketCaptureIpFilter : <any>null;
         return data;
     }
 }
@@ -1944,11 +1987,8 @@ export interface IUserSettings {
     debugData2?: string | null;
     logAnonymous: boolean;
     includeLocalNetwork: boolean;
-    isPacketCaptureIpFilterAvailable: boolean;
-    includeIpRanges: string[];
-    excludeIpRanges: string[];
-    packetCaptureIncludeIpRanges: string[];
-    packetCaptureExcludeIpRanges: string[];
+    useAppIpFilter: boolean;
+    usePacketCaptureIpFilter: boolean;
 }
 
 export enum FilterMode {
@@ -2037,6 +2077,98 @@ export interface IDomainFilter {
     blocks: string[];
     excludes: string[];
     includes: string[];
+}
+
+export class AppSettingsService implements IAppSettingsService {
+    appSettings!: AppSettings;
+    ipFilterSettings!: IpFilterSettings;
+
+    constructor(data?: IAppSettingsService) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.appSettings = new AppSettings();
+            this.ipFilterSettings = new IpFilterSettings();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.appSettings = _data["appSettings"] ? AppSettings.fromJS(_data["appSettings"]) : new AppSettings();
+            this.ipFilterSettings = _data["ipFilterSettings"] ? IpFilterSettings.fromJS(_data["ipFilterSettings"]) : new IpFilterSettings();
+        }
+    }
+
+    static fromJS(data: any): AppSettingsService {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppSettingsService();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["appSettings"] = this.appSettings ? this.appSettings.toJSON() : <any>null;
+        data["ipFilterSettings"] = this.ipFilterSettings ? this.ipFilterSettings.toJSON() : <any>null;
+        return data;
+    }
+}
+
+export interface IAppSettingsService {
+    appSettings: AppSettings;
+    ipFilterSettings: IpFilterSettings;
+}
+
+export class IpFilterSettings implements IIpFilterSettings {
+    appIpFilterIncludes!: string;
+    appIpFilterExcludes!: string;
+    packetCaptureIpFilterIncludes!: string;
+    packetCaptureIpFilterExcludes!: string;
+
+    constructor(data?: IIpFilterSettings) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.appIpFilterIncludes = _data["appIpFilterIncludes"] !== undefined ? _data["appIpFilterIncludes"] : <any>null;
+            this.appIpFilterExcludes = _data["appIpFilterExcludes"] !== undefined ? _data["appIpFilterExcludes"] : <any>null;
+            this.packetCaptureIpFilterIncludes = _data["packetCaptureIpFilterIncludes"] !== undefined ? _data["packetCaptureIpFilterIncludes"] : <any>null;
+            this.packetCaptureIpFilterExcludes = _data["packetCaptureIpFilterExcludes"] !== undefined ? _data["packetCaptureIpFilterExcludes"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): IpFilterSettings {
+        data = typeof data === 'object' ? data : {};
+        let result = new IpFilterSettings();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["appIpFilterIncludes"] = this.appIpFilterIncludes !== undefined ? this.appIpFilterIncludes : <any>null;
+        data["appIpFilterExcludes"] = this.appIpFilterExcludes !== undefined ? this.appIpFilterExcludes : <any>null;
+        data["packetCaptureIpFilterIncludes"] = this.packetCaptureIpFilterIncludes !== undefined ? this.packetCaptureIpFilterIncludes : <any>null;
+        data["packetCaptureIpFilterExcludes"] = this.packetCaptureIpFilterExcludes !== undefined ? this.packetCaptureIpFilterExcludes : <any>null;
+        return data;
+    }
+}
+
+export interface IIpFilterSettings {
+    appIpFilterIncludes: string;
+    appIpFilterExcludes: string;
+    packetCaptureIpFilterIncludes: string;
+    packetCaptureIpFilterExcludes: string;
 }
 
 export class AppState implements IAppState {
@@ -3079,6 +3211,54 @@ export interface IAppStrings {
     msgUnsupportedContent: string;
     open: string;
     openInBrowser: string;
+}
+
+export class IpFilters implements IIpFilters {
+    packetCaptureIpFilterInclude!: string;
+    packetCaptureIpFilterExclude!: string;
+    appIpFilterInclude!: string;
+    appIpFilterExclude!: string;
+
+    constructor(data?: IIpFilters) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.packetCaptureIpFilterInclude = _data["packetCaptureIpFilterInclude"] !== undefined ? _data["packetCaptureIpFilterInclude"] : <any>null;
+            this.packetCaptureIpFilterExclude = _data["packetCaptureIpFilterExclude"] !== undefined ? _data["packetCaptureIpFilterExclude"] : <any>null;
+            this.appIpFilterInclude = _data["appIpFilterInclude"] !== undefined ? _data["appIpFilterInclude"] : <any>null;
+            this.appIpFilterExclude = _data["appIpFilterExclude"] !== undefined ? _data["appIpFilterExclude"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): IpFilters {
+        data = typeof data === 'object' ? data : {};
+        let result = new IpFilters();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["packetCaptureIpFilterInclude"] = this.packetCaptureIpFilterInclude !== undefined ? this.packetCaptureIpFilterInclude : <any>null;
+        data["packetCaptureIpFilterExclude"] = this.packetCaptureIpFilterExclude !== undefined ? this.packetCaptureIpFilterExclude : <any>null;
+        data["appIpFilterInclude"] = this.appIpFilterInclude !== undefined ? this.appIpFilterInclude : <any>null;
+        data["appIpFilterExclude"] = this.appIpFilterExclude !== undefined ? this.appIpFilterExclude : <any>null;
+        return data;
+    }
+}
+
+export interface IIpFilters {
+    packetCaptureIpFilterInclude: string;
+    packetCaptureIpFilterExclude: string;
+    appIpFilterInclude: string;
+    appIpFilterExclude: string;
 }
 
 export enum ConnectPlanId {

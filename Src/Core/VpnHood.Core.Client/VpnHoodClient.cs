@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Net.Sockets;
 using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
@@ -617,7 +618,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         return false;
     }
 
-    private bool ShouldManageDatagramChannels{
+    private bool ShouldManageDatagramChannels {
         get {
             if (_disposed) return false;
             if (_datagramChannelsSemaphore.CurrentCount == 0) return false;
@@ -1231,5 +1232,4 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             _client = vpnHoodClient;
         }
     }
-
 }

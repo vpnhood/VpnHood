@@ -50,7 +50,8 @@ internal class UdpProxy : ITimeoutItem
 
             if (VhLogger.IsDiagnoseMode)
                 VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
-                    $"Sending all udp bytes to host. Requested: {datagram.Length}, From: {VhLogger.Format(LocalEndPoint)}, To: {VhLogger.Format(ipEndPoint)}");
+                    "Sending all udp bytes to host. Requested: DataLength: {DataLength}, Source: {Source}, Destination: {Destination}",
+                    datagram.Length, VhLogger.Format(LocalEndPoint), VhLogger.Format(ipEndPoint));
 
             // IpV4 fragmentation
             if (noFragment != null && ipEndPoint.AddressFamily == AddressFamily.InterNetwork)

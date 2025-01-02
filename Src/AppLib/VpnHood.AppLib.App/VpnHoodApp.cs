@@ -225,7 +225,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     (UserSettings.ClientProfileId != _activeClientProfileId) || //ClientProfileId has been changed
                     (UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork) || // IncludeLocalNetwork has been changed
                     (UserSettings.AppFiltersMode != _oldUserSettings.AppFiltersMode) || // AppFiltersMode has been changed
-                    (!UserSettings.AppFilters.SequenceEqual(_oldUserSettings.AppFilters)); // AppFilters has been changed
+                    (!UserSettings.AppFilters.SequenceEqual(_oldUserSettings
+                        .AppFilters)); // AppFilters has been changed
             }
 
             // set default ContinueOnCapturedContext

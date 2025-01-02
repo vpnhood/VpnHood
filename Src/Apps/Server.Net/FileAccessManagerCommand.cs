@@ -80,7 +80,7 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
 
             Console.WriteLine("The following token has been generated: ");
             await PrintToken(accessToken.TokenId).VhConfigureAwait();
-            Console.WriteLine($"Store Token Count: {accessManager.AccessTokenService.GetTotalCount()}");
+            Console.WriteLine($"Store Token Count: {await accessManager.AccessTokenService.GetTotalCount()}");
             return 0;
         });
     }

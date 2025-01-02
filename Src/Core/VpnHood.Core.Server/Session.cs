@@ -140,14 +140,13 @@ public class Session : IAsyncDisposable
         }
     }
 
-    private bool _syncRequired;
-    public void SetSyncRequired() => _syncRequired = true;
-    public bool IsSyncRequired => _syncRequired;
+    public void SetSyncRequired() => IsSyncRequired = true;
+    public bool IsSyncRequired { get; private set; }
 
     public bool ResetSyncRequired()
     {
-        var oldValue = _syncRequired;
-        _syncRequired = false;
+        var oldValue = IsSyncRequired;
+        IsSyncRequired = false;
         return oldValue;
     }
 

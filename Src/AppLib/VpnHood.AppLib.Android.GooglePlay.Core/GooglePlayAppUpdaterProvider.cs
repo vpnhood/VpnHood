@@ -16,8 +16,9 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
         try {
             var appUiContext = (AndroidUiContext)uiContext;
             using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
-            using var appUpdateInfo = await appUpdateManager.AppUpdateInfo.AsTask<AppUpdateInfo>().ConfigureAwait(false) ??
-                                      throw new Exception("Could not retrieve AppUpdateInfo");
+            using var appUpdateInfo = 
+                await appUpdateManager.AppUpdateInfo.AsTask<AppUpdateInfo>().ConfigureAwait(false) ??
+                throw new Exception("Could not retrieve AppUpdateInfo");
 
             // play set UpdateAvailability.UpdateNotAvailable even when there is no connection to google
             // So we return false if there is UpdateNotAvailable to let the alternative way works

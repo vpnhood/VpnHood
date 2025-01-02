@@ -52,10 +52,21 @@ public class IpRange
 
         var items = value.Replace("to", "-").Split('-');
         return items.Length switch {
-            1 => new IpRange(IPAddress.Parse(items[0].Trim())),
-            2 => new IpRange(IPAddress.Parse(items[0].Trim()), IPAddress.Parse(items[1].Trim())),
+            1 => new IpRange(ParseIpAddress(items[0].Trim())),
+            2 => new IpRange(ParseIpAddress(items[0].Trim()), IPAddress.Parse(items[1].Trim())),
             _ => throw new FormatException($"Could not parse the IpRange from: {value}")
         };
+    }
+
+    private static IPAddress ParseIpAddress(string value)
+    {
+        if (IPAddress.TryParse(value, out var ipAddress)) 
+            return ipAddress;
+
+        var ex = new FormatException($"Could not parse the IpAddress from: {value}");
+        ex.Data.Add("IpAddress", value);
+        throw ex;
+
     }
 
     public override string ToString()

@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
@@ -239,8 +238,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     {
         // set timeout
         using var cancellationTokenSource = new CancellationTokenSource(ConnectorService.RequestTimeout);
-        using var linkedCancellationTokenSource =
-            CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
+        using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
         cancellationToken = linkedCancellationTokenSource.Token;
 
         // connect to host
@@ -253,7 +251,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"));
 
         // flush initBuffer
-        await tcpClient.GetStream().WriteAsync(initBuffer, linkedCancellationTokenSource.Token);
+        await tcpClient.GetStream().WriteAsync(initBuffer, cancellationToken);
 
         try {
             _proxyManager.AddChannel(bypassChannel);
@@ -269,6 +267,11 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         if (_disposed)
             throw new ObjectDisposedException(VhLogger.FormatType(this));
 
+        // merge cancellation tokens
+        using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
+        cancellationToken = linkedCancellationTokenSource.Token;
+
+        // create connection log scope
         using var scope = VhLogger.Instance.BeginScope("Client");
         if (State != ClientState.None)
             throw new Exception("Connection is already in progress.");
@@ -306,9 +309,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             _connectorService = new ConnectorService(endPointInfo, SocketFactory, _tcpConnectTimeout, allowTcpReuse: AllowTcpReuse);
 
             // Establish first connection and create a session
-            using var linkedCancellationTokenSource =
-                CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
-            await ConnectInternal(linkedCancellationTokenSource.Token).VhConfigureAwait();
+            await ConnectInternal(cancellationToken).VhConfigureAwait();
 
             // Create Tcp Proxy Host
             _clientHost.Start();
@@ -961,8 +962,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
     public async Task UpdateSessionStatus(CancellationToken cancellationToken = default)
     {
-        using var linkedCancellationTokenSource =
-            CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
+        using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
+        cancellationToken = linkedCancellationTokenSource.Token;
 
         // don't use SendRequest because it can be disposed
         await using var requestResult = await SendRequest<SessionResponse>(
@@ -971,7 +972,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     SessionId = SessionId,
                     SessionKey = SessionKey
                 },
-                linkedCancellationTokenSource.Token)
+                cancellationToken)
             .VhConfigureAwait();
     }
 

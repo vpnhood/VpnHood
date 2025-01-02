@@ -88,7 +88,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public bool IncludeLocalNetwork { get; }
     public IpRangeOrderedList IncludeIpRanges { get; private set; }
     public IpRangeOrderedList PacketCaptureIncludeIpRanges { get; private set; }
-    public bool IsPacketCaptureIpFilterAvailable { get; set; }
     public string UserAgent { get; }
     public IPEndPoint? HostTcpEndPoint => _connectorService?.EndPointInfo.TcpEndPoint;
     public IPEndPoint? HostUdpEndPoint { get; private set; }

@@ -34,6 +34,8 @@ public class SessionService : IDisposable, IJob
 
         // load all previous sessions to dictionary
         Sessions = LoadAllSessions(sessionsFolderPath);
+        if (Sessions.Any())
+            _lastSessionId = Sessions.Max(x => (long)x.Key);
     }
 
     private static ConcurrentDictionary<ulong, Session> LoadAllSessions(string sessionsFolderPath)
@@ -100,7 +102,6 @@ public class SessionService : IDisposable, IJob
                 ErrorCode = SessionErrorCode.AccessError,
                 ErrorMessage = "Could not validate the request."
             };
-
 
         //increment session id using atomic operation
         Interlocked.Increment(ref _lastSessionId);

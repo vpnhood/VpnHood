@@ -567,7 +567,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.FormatId(token.TokenId), VhLogger.FormatId(token.SupportId));
 
         // calculate packetCaptureIpRanges
-        var packetCaptureIpRanges = new IpRangeOrderedList(IpNetwork.All.ToIpRanges());
+        var packetCaptureIpRanges = IpNetwork.All.ToIpRanges();
         if (UserSettings.UsePacketCaptureIpFilter) {
             packetCaptureIpRanges = packetCaptureIpRanges.Intersect(IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.PacketCaptureIpFilterIncludes));
             packetCaptureIpRanges = packetCaptureIpRanges.Exclude(IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.PacketCaptureIpFilterExcludes));

@@ -76,37 +76,41 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
     private static AppAdProviderItem[] CreateAppAdProviderItems(AppConfigs appConfigs)
     {
-        return [
-            new AppAdProviderItem {
-                AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialAdUnitId),
-                ExcludeCountryCodes = ["IR", "CN"],
-                ProviderName = "AdMob",
-            },
+        var items = new List<AppAdProviderItem>();
+        var initializeTimeout = TimeSpan.FromSeconds(5);
 
-            new AppAdProviderItem {
-                AdProvider = InMobiAdProvider.Create(appConfigs.InmobiAccountId, appConfigs.InmobiPlacementId, appConfigs.InmobiIsDebugMode),
+        items.Add(new AppAdProviderItem {
+            AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialAdUnitId),
+            ExcludeCountryCodes = ["IR", "CN"],
+            ProviderName = "AdMob",
+        });
+
+        if (InMobiAdProvider.IsAndroidVersionSupported)
+            items.Add(new AppAdProviderItem {
+                AdProvider = InMobiAdProvider.Create(appConfigs.InmobiAccountId, appConfigs.InmobiPlacementId, initializeTimeout, appConfigs.InmobiIsDebugMode),
                 ProviderName = "InMobi",
-            },
+            });
 
-            new AppAdProviderItem {
-                AdProvider = ChartboostAdProvider.Create(appConfigs.ChartboostAppId, appConfigs.ChartboostAppSignature, appConfigs.ChartboostAdLocation),
+        if (ChartboostAdProvider.IsAndroidVersionSupported)
+            items.Add(new AppAdProviderItem {
+                AdProvider = ChartboostAdProvider.Create(appConfigs.ChartboostAppId, appConfigs.ChartboostAppSignature, appConfigs.ChartboostAdLocation, initializeTimeout),
                 ExcludeCountryCodes = ["IR", "CN"],
                 ProviderName = "Chartboost",
-            },
+            });
 
-            new AppAdProviderItem {
-                AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialNoVideoAdUnitId),
-                ExcludeCountryCodes = ["CN"],
-                ProviderName = "AdMob-NoVideo",
-            },
+        items.Add(new AppAdProviderItem {
+            AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialNoVideoAdUnitId),
+            ExcludeCountryCodes = ["CN"],
+            ProviderName = "AdMob-NoVideo",
+        });
 
-            new AppAdProviderItem {
-                AdProvider = AdMobRewardedAdProvider.Create(appConfigs.AdMobRewardedAdUnitId),
-                ExcludeCountryCodes = ["IR", "CN"],
-                ProviderName = "AdMob-Rewarded",
-            },
+        items.Add(new AppAdProviderItem {
+            AdProvider = AdMobRewardedAdProvider.Create(appConfigs.AdMobRewardedAdUnitId),
+            ExcludeCountryCodes = ["IR", "CN"],
+            ProviderName = "AdMob-Rewarded",
+        });
 
-        ];
+        return items.ToArray();
     }
 
     private static IAppAccountProvider? CreateAppAccountProvider(AppConfigs appConfigs, string storageFolderPath)

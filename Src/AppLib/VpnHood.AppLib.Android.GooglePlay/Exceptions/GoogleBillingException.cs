@@ -1,4 +1,5 @@
 ﻿using Android.BillingClient.Api;
+using Android.Gms.Common;
 
 namespace VpnHood.AppLib.Droid.GooglePlay;
 

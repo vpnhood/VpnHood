@@ -6,14 +6,14 @@ using VpnHood.Core.Tunneling.Factory;
 
 namespace VpnHood.AppLib;
 
-public class AppOptions(string appId, bool isDebugMode)
+public class AppOptions(string appId, string storageFolderName, bool isDebugMode)
 {
     public static string BuildStorageFolderPath(string subFolder) =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), subFolder);
 
     public string AppId => appId;
     public bool IsDebugMode => isDebugMode;
-    public required string StorageFolderPath { get; set; }
+    public string StorageFolderPath { get; set; } = BuildStorageFolderPath(storageFolderName);
     public TimeSpan SessionTimeout { get; set; } = ClientOptions.Default.SessionTimeout;
     public SocketFactory? SocketFactory { get; set; }
     public TimeSpan VersionCheckInterval { get; set; } = TimeSpan.FromHours(24);

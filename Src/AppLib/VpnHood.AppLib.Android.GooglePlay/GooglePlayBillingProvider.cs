@@ -1,4 +1,6 @@
 using Android.BillingClient.Api;
+using Android.Gms.Common;
+using Android.Gms.Common.Apis;
 using Microsoft.Extensions.Logging;
 using Org.Apache.Http.Authentication;
 using VpnHood.AppLib.Abstractions;
@@ -164,6 +166,11 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             return;
 
         try {
+            var googleApiAvailability = GoogleApiAvailability.Instance;
+            var result = googleApiAvailability.IsGooglePlayServicesAvailable(Application.Context);
+            if (result != ConnectionResult.Success)
+                throw new GooglePlayUnavailableException();
+
             var billingResult = await _billingClient.StartConnectionAsync().ConfigureAwait(false);
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw GoogleBillingException.Create(billingResult);

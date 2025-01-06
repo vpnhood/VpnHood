@@ -28,9 +28,8 @@ public class App : VpnHoodWpfSpaApp
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
 
-        return new AppOptions("com.vpnhood.connect.windows", AppConfigs.IsDebugMode) {
+        return new AppOptions("com.vpnhood.connect.windows", "VpnHoodConnect", AppConfigs.IsDebugMode) {
             UiName = "VpnHoodConnect",
-            StorageFolderPath = AppOptions.BuildStorageFolderPath("VpnHoodConnect"),
             Resource = resources,
             AccessKeys = [appConfigs.DefaultAccessKey],
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,

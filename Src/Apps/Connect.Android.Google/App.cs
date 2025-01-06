@@ -49,7 +49,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
 
-        return new AppOptions(appId: PackageName!, AppConfigs.IsDebugMode) {
+        return new AppOptions(appId: PackageName!, "VpnHoodConnect", AppConfigs.IsDebugMode) {
             StorageFolderPath = storageFolderPath,
             AccessKeys = [appConfigs.DefaultAccessKey],
             Resource = resources,

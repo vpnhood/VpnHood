@@ -29,6 +29,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             IsAddAccessKeySupported = true,
+            IsLocalNetworkSupported = true,
             UpdaterProvider = new GooglePlayAppUpdaterProvider()
         };
     }

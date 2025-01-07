@@ -174,6 +174,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId),
             AppId = options.AppId,
             DebugCommands = DebugCommands.All,
+            IsLocalNetworkSupported = options.IsLocalNetworkSupported,
             IsDebugMode = options.IsDebugMode
         };
 
@@ -579,7 +580,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             SessionTimeout = SessionTimeout,
             ReconnectTimeout = _reconnectTimeout,
             AutoWaitTimeout = _autoWaitTimeout,
-            IncludeLocalNetwork = UserSettings.IncludeLocalNetwork,
+            IncludeLocalNetwork = UserSettings.IncludeLocalNetwork && Features.IsLocalNetworkSupported,
             IncludeIpRanges = await GetIncludeIpRanges(cancellationToken),
             AdService = Services.AdService,
             PacketCaptureIncludeIpRanges = packetCaptureIpRanges,

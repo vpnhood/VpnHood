@@ -27,7 +27,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             Resource = resources,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,
-            IsAddAccessKeySupported = true
+            IsAddAccessKeySupported = true,
+            IsLocalNetworkSupported = true,
         };
     }
 }

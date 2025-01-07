@@ -20,4 +20,5 @@ public class AppFeatures
     public required string ClientId { get; init; }
     public required bool IsDebugMode { get; init; }
     public required string[] DebugCommands { get; init; }
+    public required bool IsLocalNetworkSupported { get; init; }
 }

@@ -32,6 +32,7 @@ public class App : VpnHoodWpfSpaApp
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             UpdaterProvider = new AdvancedInstallerUpdaterProvider(),
             IsAddAccessKeySupported = true,
+            IsLocalNetworkSupported = true,
             SingleLineConsoleLog = false,
             LocalSpaHostName = "my-vpnhood"
         };

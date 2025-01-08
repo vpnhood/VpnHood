@@ -34,8 +34,10 @@ public class ServerFinder(
     public string? ServerLocation => serverLocation;
 
     // There are much work to be done here
-    public async Task<IPEndPoint> FindBestServerAsync(CancellationToken cancellationToken)
+    public async Task<IPEndPoint> FindReachableServerAsync(CancellationToken cancellationToken)
     {
+        VhLogger.Instance.LogInformation(GeneralEventId.Session, "Finding a reachable server...");
+
         // get all endpoints from serverToken
         var hostEndPoints = await ServerTokenHelper.ResolveHostEndPoints(serverToken, cancellationToken);
 
@@ -56,6 +58,10 @@ public class ServerFinder(
         _hostEndPointStatuses = await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
         var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
+        VhLogger.Instance.LogInformation(GeneralEventId.Session,
+            "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}",
+            _hostEndPointStatuses.Count(x => x.Available == true), _hostEndPointStatuses.Count(x => x.Available == false), _hostEndPointStatuses.Count(x => x.Available == null));
+
         _ = TrackEndPointsAvailability([], _hostEndPointStatuses).VhConfigureAwait();
         if (res != null)
             return res;
@@ -66,6 +72,8 @@ public class ServerFinder(
 
     public async Task<IPEndPoint> FindBestRedirectedServerAsync(IPEndPoint[] hostEndPoints, CancellationToken cancellationToken)
     {
+        VhLogger.Instance.LogInformation(GeneralEventId.Session, "Finding best server from redirected endpoints...");
+
         if (!hostEndPoints.Any())
             throw new Exception("There is no server endpoint. Please check server configuration.");
 
@@ -83,11 +91,15 @@ public class ServerFinder(
             hostStatus.Available = _hostEndPointStatuses
                 .FirstOrDefault(x => x.TcpEndPoint.Equals(hostStatus.TcpEndPoint))?.Available;
 
-        var results = await VerifyServersStatus(hostEndPoints, byOrder: true, cancellationToken: cancellationToken);
-        var res = results.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
+        var endpointStatuses = await VerifyServersStatus(hostEndPoints, byOrder: true, cancellationToken: cancellationToken);
+        var res = endpointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
+
+        VhLogger.Instance.LogInformation(GeneralEventId.Session,
+            "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}",
+            endpointStatuses.Count(x => x.Available == true), endpointStatuses.Count(x => x.Available == false), endpointStatuses.Count(x => x.Available == null));
 
         // track new endpoints availability 
-        _ = TrackEndPointsAvailability(_hostEndPointStatuses, results).VhConfigureAwait();
+        _ = TrackEndPointsAvailability(_hostEndPointStatuses, endpointStatuses).VhConfigureAwait();
         if (res != null)
             return res;
 
@@ -125,9 +137,9 @@ public class ServerFinder(
             .Select(x => new HostStatus { TcpEndPoint = x })
             .ToArray();
 
+        using var cancellationTokenSource = new CancellationTokenSource();
         try {
             // check all servers
-            using var cancellationTokenSource = new CancellationTokenSource();
             using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
             await VhUtil.ParallelForEachAsync(hostStatuses, async hostStatus => {
                 var connector = CreateConnector(hostStatus.TcpEndPoint);
@@ -138,7 +150,7 @@ public class ServerFinder(
 
                 // ReSharper disable once AccessToDisposedClosure
                 if (hostStatus.Available == true && !byOrder)
-                    linkedCancellationTokenSource.Cancel(); // no need to continue, we find a server
+                    cancellationTokenSource.Cancel(); // no need to continue, we find a server
 
                 // search by order
                 if (byOrder) {
@@ -149,14 +161,14 @@ public class ServerFinder(
 
                         if (item.Available.Value) {
                             // ReSharper disable once AccessToDisposedClosure
-                            linkedCancellationTokenSource.Cancel();
+                            cancellationTokenSource.Cancel();
                             break;
                         }
                     }
                 }
             }, maxDegreeOfParallelism, linkedCancellationTokenSource.Token).VhConfigureAwait();
         }
-        catch (OperationCanceledException) {
+        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested) {
             // it means a server has been found
         }
 

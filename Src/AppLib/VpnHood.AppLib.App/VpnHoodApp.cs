@@ -226,8 +226,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     (UserSettings.ClientProfileId != _activeClientProfileId) || //ClientProfileId has been changed
                     (UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork) || // IncludeLocalNetwork has been changed
                     (UserSettings.AppFiltersMode != _oldUserSettings.AppFiltersMode) || // AppFiltersMode has been changed
-                    (!UserSettings.AppFilters.SequenceEqual(_oldUserSettings
-                        .AppFilters)); // AppFilters has been changed
+                    (!UserSettings.AppFilters.SequenceEqual(_oldUserSettings.AppFilters)); // AppFilters has been changed
             }
 
             // set default ContinueOnCapturedContext
@@ -245,8 +244,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _oldUserSettings = VhUtil.JsonClone(UserSettings);
 
             // disconnect
-            if (state.CanDisconnect && disconnectRequired)
+            if (state.CanDisconnect && disconnectRequired) {
+                VhLogger.Instance.LogInformation("Disconnecting due to the settings change...");
                 _ = Disconnect(true);
+            }
         }
         catch (Exception ex) {
             ReportError(ex, "Could not apply settings.");
@@ -416,6 +417,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 throw new Exception("Connection is already in progress.");
 
             // make sure current session has been disconnected and packet-capture has been released
+            VhLogger.Instance.LogInformation("Disconnecting due to user request to connect via another profile...");
             await Disconnect(true).VhConfigureAwait();
         }
 

@@ -303,7 +303,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             // Init hostEndPoint
             var endPointInfo = new ConnectorEndPointInfo {
                 HostName = Token.ServerToken.HostName,
-                TcpEndPoint = await _serverFinder.FindBestServerAsync(cancellationToken).VhConfigureAwait(),
+                TcpEndPoint = await _serverFinder.FindReachableServerAsync(cancellationToken).VhConfigureAwait(),
                 CertificateHash = Token.ServerToken.CertificateHash
             };
             _connectorService = new ConnectorService(endPointInfo, SocketFactory, _tcpConnectTimeout, allowTcpReuse: AllowTcpReuse);
@@ -701,7 +701,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 IsIpV6Supported = IsIpV6SupportedByClient
             };
 
-            await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();
+            await using var requestResult =
+                await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();
             var sessionResponse = requestResult.Response;
             ClientPublicIpAddress = sessionResponse.ClientPublicAddress;
 
@@ -843,7 +844,13 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             // manage datagram channels
             await ManageDatagramChannels(cancellationToken).VhConfigureAwait();
         }
-        catch (RedirectHostException ex) when (allowRedirect) {
+        catch (RedirectHostException ex) {
+            if (allowRedirect) {
+                VhLogger.Instance.LogError(ex, 
+                    "The server replies with a redirect to another server again. We already redirected earlier. This is unexpected.");
+                throw;
+            }
+
             // todo: init new connector
             ConnectorService.EndPointInfo.TcpEndPoint =
                 await _serverFinder.FindBestRedirectedServerAsync(ex.RedirectHostEndPoints, cancellationToken);

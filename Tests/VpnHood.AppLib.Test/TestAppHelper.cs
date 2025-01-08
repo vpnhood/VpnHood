@@ -19,7 +19,7 @@ public class TestAppHelper : TestHelper
     public static AppOptions CreateAppOptions()
     {
         var tracker = new TestTrackerProvider();
-        var appOptions = new AppOptions("com.vpnhood.client.test", isDebugMode: true) {
+        var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode: true) {
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
             SessionTimeout = TimeSpan.FromSeconds(2),
             Ga4MeasurementId = null,

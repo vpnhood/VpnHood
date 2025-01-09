@@ -682,6 +682,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private async Task ConnectInternal(CancellationToken cancellationToken, bool allowRedirect = true)
     {
         try {
+            VhLogger.Instance.LogInformation("Connecting to the server...");
+
             // send hello request
             var clientInfo = new ClientInfo {
                 ClientId = ClientId,

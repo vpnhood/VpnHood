@@ -114,12 +114,16 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         if (_listenOnAllIps)
             urlPrefixes.AddRange(GetAllPublicIp4().Select(x => $"http://{x}:{Url.Port}"));
 
+        // cors
+        var cors = VpnHoodApp.Instance.Features.IsDebugMode
+            ? "*"
+            : "https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081, http://localhost:30080";
+
         // create the server
         var server = new EmbedIO.WebServer(o => o
                 .WithUrlPrefixes(urlPrefixes.Distinct())
                 .WithMode(HttpListenerMode.EmbedIO))
-            .WithCors(
-                "https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081, http://localhost:30080") // must be first
+            .WithCors(cors) // must be first
             .WithWebApi("/api/app", ResponseSerializerCallback, c => c
                 .WithController<AppController>()
                 .HandleUnhandledException(ExceptionHandler.DataResponseForException))

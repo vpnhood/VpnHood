@@ -845,7 +845,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             await ManageDatagramChannels(cancellationToken).VhConfigureAwait();
         }
         catch (RedirectHostException ex) {
-            if (allowRedirect) {
+            if (!allowRedirect) {
                 VhLogger.Instance.LogError(ex, 
                     "The server replies with a redirect to another server again. We already redirected earlier. This is unexpected.");
                 throw;

@@ -89,8 +89,7 @@ public class ServerFinderTest
 
             // connect
             var clientOptions = TestHelper.CreateClientOptions();
-            var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture(),
-                clientOptions: clientOptions);
+            var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture(), clientOptions: clientOptions);
             await TestHelper.WaitForClientState(client, ClientState.Connected);
 
             Assert.AreEqual(servers[5].ServerHost.TcpEndPoints.First(), client.HostTcpEndPoint);
@@ -98,26 +97,14 @@ public class ServerFinderTest
             // tracker should report unreachable servers
             var testTracker = (TestTrackerProvider?)clientOptions.Tracker;
             Assert.IsNotNull(testTracker);
-            Assert.IsTrue(
-                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[0])?.Parameters["available"] is null
-                    or false);
-            Assert.IsTrue(
-                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[1])?.Parameters["available"] is null
-                    or false);
-            Assert.IsTrue(
-                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[2])?.Parameters["available"] is true);
+            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[0])?.Parameters["available"] is null or false);
+            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[1])?.Parameters["available"] is null or false);
+            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[2])?.Parameters["available"] is true);
             Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[3]) is null);
-            Assert.IsTrue(
-                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[4])
-                    ?.Parameters["available"] is false);
-            Assert.IsTrue(
-                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[5])?.Parameters["available"] is true);
-            Assert.IsTrue(
-                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[6])?.Parameters["available"] is null
-                    or false);
-            Assert.IsTrue(
-                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[7])?.Parameters["available"] is null
-                    or true);
+            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[4])?.Parameters["available"] is false);
+            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[5])?.Parameters["available"] is true);
+            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[6])?.Parameters["available"] is null or false);
+            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[7])?.Parameters["available"] is null or true);
             Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[8]) is null);
             Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[9]) is null);
         }

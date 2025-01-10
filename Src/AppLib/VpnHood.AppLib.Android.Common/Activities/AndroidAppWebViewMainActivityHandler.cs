@@ -154,10 +154,9 @@ public class AndroidAppWebViewMainActivityHandler(
             webViewClient.PageLoaded += WebViewClient_PageLoaded;
             WebView.SetWebViewClient(webViewClient);
             WebView.SetWebChromeClient(new AndroidAppWebChromeClient());
+            if (VpnHoodApp.Instance.Features.IsDebugMode)
+                WebView.SetWebContentsDebuggingEnabled(true);
 
-#if DEBUG
-            WebView.SetWebContentsDebuggingEnabled(true);
-#endif
             WebView.LoadUrl(GetLaunchUrl(WebView));
         }
         catch (Exception ex) {

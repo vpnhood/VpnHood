@@ -65,6 +65,7 @@ internal class AppCompositeAdService
 
             // find first successful ad network
             try {
+                VhLogger.Instance.LogInformation("Trying to load ad. ItemName: {ItemName}", adProviderItem.Name);
                 using var timeoutCts = new CancellationTokenSource(_adOptions.LoadAdTimeout);
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
                 await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).VhConfigureAwait();
@@ -114,7 +115,9 @@ internal class AppCompositeAdService
 
         // show the ad
         try {
+            VhLogger.Instance.LogInformation("Trying to show ad. ItemName: {ItemName}", _loadedAdProviderItem.Name);
             await _loadedAdProviderItem.AdProvider.ShowAd(uiContext, customData, cancellationToken).VhConfigureAwait();
+            VhLogger.Instance.LogTrace("Showing ad has been completed. {ItemName}", _loadedAdProviderItem.Name);
             await VerifyActiveUi(false); // some ad provider may not raise exception on minimize
             await Task.Delay(_adOptions.ShowAdPostDelay, cancellationToken); //wait for finishing trackers
 

@@ -145,7 +145,7 @@ public class AndroidAppWebViewMainActivityHandler(
             WebView.Settings.DomStorageEnabled = true;
             WebView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
             WebView.Settings.SetSupportMultipleWindows(true);
-            WebView.SetLayerType(LayerType.Hardware, null);
+            // WebView.SetLayerType(LayerType.Hardware, null); // it may cause poor performance if forced
             if (VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor != null)
                 WebView.SetBackgroundColor(VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor.Value
                     .ToAndroidColor());

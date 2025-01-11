@@ -71,8 +71,5 @@ public class AppAdService(
 
             throw;
         }
-
-
-
     }
 }

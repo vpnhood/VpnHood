@@ -41,7 +41,7 @@ public class AndroidAppWebViewMainActivityHandler(
     protected override void OnPause()
     {
         base.OnPause();
-
+        WebView?.OnPause();
         // temporarily stop the server to find is the crash belong to embed-io
         if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.KillSpaServer)  && VpnHoodAppWebServer.IsInit)
             VpnHoodAppWebServer.Instance.Stop();
@@ -52,6 +52,7 @@ public class AndroidAppWebViewMainActivityHandler(
         if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.KillSpaServer) && VpnHoodAppWebServer.IsInit)
             VpnHoodAppWebServer.Instance.Start();
 
+        WebView?.OnResume();
         base.OnResume();
     }
 

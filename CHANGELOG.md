@@ -1,9 +1,12 @@
+# v5.0.635
+### Client
+* Improve: Optimizing CPU and GPU usage during the playback of Ads and animations
+
 # v5.0.634
 * Feature: Add AppIpFilters to settings page
 * Feature: Add PacketCaptureIpFilters to settings page
 * Update: Add Profile Name as session name in android VpnService
 * Update: Improve ping performance
-* Improve: Optimizing CPU and GPU usage during the playback of Ads and animations
 
 # v5.0.630
 * Fix: Show old tokens

@@ -81,7 +81,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         items.Add(new AppAdProviderItem {
             AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialAdUnitId),
-            ExcludeCountryCodes = ["IR", "CN"],
+            ExcludeCountryCodes = ["CN"],
             ProviderName = "AdMob",
         });
 
@@ -106,7 +106,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         items.Add(new AppAdProviderItem {
             AdProvider = AdMobRewardedAdProvider.Create(appConfigs.AdMobRewardedAdUnitId),
-            ExcludeCountryCodes = ["IR", "CN"],
+            ExcludeCountryCodes = ["CN"],
             ProviderName = "AdMob-Rewarded",
         });
 

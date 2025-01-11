@@ -1695,6 +1695,7 @@ export class AppFeatures implements IAppFeatures {
     clientId!: string;
     isDebugMode!: boolean;
     debugCommands!: string[];
+    isLocalNetworkSupported!: boolean;
 
     constructor(data?: IAppFeatures) {
         if (data) {
@@ -1735,6 +1736,7 @@ export class AppFeatures implements IAppFeatures {
             else {
                 this.debugCommands = <any>null;
             }
+            this.isLocalNetworkSupported = _data["isLocalNetworkSupported"] !== undefined ? _data["isLocalNetworkSupported"] : <any>null;
         }
     }
 
@@ -1769,6 +1771,7 @@ export class AppFeatures implements IAppFeatures {
             for (let item of this.debugCommands)
                 data["debugCommands"].push(item);
         }
+        data["isLocalNetworkSupported"] = this.isLocalNetworkSupported !== undefined ? this.isLocalNetworkSupported : <any>null;
         return data;
     }
 }
@@ -1792,6 +1795,7 @@ export interface IAppFeatures {
     clientId: string;
     isDebugMode: boolean;
     debugCommands: string[];
+    isLocalNetworkSupported: boolean;
 }
 
 export class AppSettings implements IAppSettings {

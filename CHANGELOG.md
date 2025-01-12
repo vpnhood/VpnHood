@@ -1,3 +1,7 @@
+# v5.0.635
+### Client
+* Improve: Optimizing CPU and GPU usage during the playback of Ads and animations
+
 # v5.0.634
 * Feature: Add AppIpFilters to settings page
 * Feature: Add PacketCaptureIpFilters to settings page

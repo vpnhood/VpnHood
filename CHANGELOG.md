@@ -1,6 +1,7 @@
 # v5.0.635
 ### Client
 * Improve: Optimizing CPU and GPU usage during the playback of Ads and animations
+* Fix: Sign-out from account
 
 # v5.0.634
 * Feature: Add AppIpFilters to settings page

@@ -27,7 +27,7 @@ if (!$noPushNuget)
 	Write-Host
 	Write-Host "*** $packageId > Publishing..."
 	$packageFile = (Join-Path $publishDir "$packageId.$nugetVersion.nupkg")
-	dotnet nuget push $packageFile --api-key $nugetApiKey --source https://api.nuget.org/v3/index.json
+	dotnet nuget push $packageFile --source "https://api.nuget.org/v3/index.json" --api-key $nugetApiKey
 	if ($LASTEXITCODE -gt 0) { Write-Host ("The publish exited with error code: " + $lastexitcode) -ForegroundColor Red;  }
 }
 

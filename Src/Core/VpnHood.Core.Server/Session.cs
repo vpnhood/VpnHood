@@ -67,7 +67,7 @@ public class Session : IAsyncDisposable
     public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (Tunnel.IsUdpMode ? 0 : Tunnel.DatagramChannelCount);
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
-    private IPAddress VirtualIp { get; }
+    public IPAddress VirtualIp { get; }
 
     internal Session(IAccessManager accessManager, SessionResponseEx sessionResponse,
         INetFilter netFilter,

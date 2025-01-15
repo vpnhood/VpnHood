@@ -92,13 +92,13 @@ public class SessionManager : IAsyncDisposable, IJob
         throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponse, requestId);
     }
 
-    private readonly ConcurrentDictionary<IPAddress, Session> _virtualIps = new();
+    private readonly ConcurrentDictionary<IPAddress, Session> _tunIps = new();
     private IPAddress AllocateTunIp()
     {
         // find the max virtual IP
         var ipAddress = _tunIpRange.FirstIpAddress;
         while (!ipAddress.Equals(_tunIpRange.LastIpAddress)) {
-            if (!_virtualIps.ContainsKey(ipAddress))
+            if (!_tunIps.ContainsKey(ipAddress))
                 return ipAddress;
 
             ipAddress = IPAddressUtil.Increment(ipAddress);
@@ -129,7 +129,7 @@ public class SessionManager : IAsyncDisposable, IJob
                 tunProvider: _tunProvider,
                 virtualIp: virtualIp);
 
-            _virtualIps.TryAdd(virtualIp, session);
+            _tunIps.TryAdd(virtualIp, session);
             return session;
         }
     }
@@ -370,6 +370,7 @@ public class SessionManager : IAsyncDisposable, IJob
             else {
                 _ = session.Value.DisposeAsync().VhConfigureAwait();
                 Sessions.TryRemove(session.Key, out _); // we should not have disposed session without error code
+                _tunIps.TryRemove(session.Value.VirtualIp, out _);
             }
         }
     }
@@ -385,8 +386,10 @@ public class SessionManager : IAsyncDisposable, IJob
                 utcNow - x.DisposedTime > _deadSessionTimeout)
             .ToArray();
 
-        foreach (var session in deadSessions)
+        foreach (var session in deadSessions) {
             Sessions.TryRemove(session.SessionId, out _);
+            _tunIps.TryRemove(session.VirtualIp, out _);
+        }
     }
 
     public Session? GetSessionById(ulong sessionId)
@@ -487,7 +490,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
     public Session? GetSessionByVirtualIp(IPAddress virtualIpAddress)
     {
-        return _virtualIps.GetValueOrDefault(virtualIpAddress);
+        return _tunIps.GetValueOrDefault(virtualIpAddress);
     }
 
     private bool _disposed;

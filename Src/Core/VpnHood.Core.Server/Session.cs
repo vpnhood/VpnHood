@@ -67,6 +67,7 @@ public class Session : IAsyncDisposable
     public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (Tunnel.IsUdpMode ? 0 : Tunnel.DatagramChannelCount);
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
+    private IPAddress VirtualIp { get; }
 
     internal Session(IAccessManager accessManager, SessionResponseEx sessionResponse,
         INetFilter netFilter,
@@ -74,7 +75,9 @@ public class Session : IAsyncDisposable
         SessionOptions options,
         TrackingOptions trackingOptions,
         SessionExtraData sessionExtraData,
-        int protocolVersion)
+        int protocolVersion, 
+        ITunProvider? tunProvider,
+        IPAddress virtualIp)
     {
         var sessionTuple = Tuple.Create("SessionId", (object?)sessionResponse.SessionId);
         var logScope = new LogScope();
@@ -82,7 +85,7 @@ public class Session : IAsyncDisposable
 
         _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
-        _proxyManager = new SessionProxyManager(this, socketFactory, new ProxyManagerOptions {
+        _proxyManager = new SessionProxyManager(this, socketFactory, tunProvider, new ProxyManagerOptions {
             UdpTimeout = options.UdpTimeoutValue,
             IcmpTimeout = options.IcmpTimeoutValue,
             MaxUdpClientCount = options.MaxUdpClientCountValue,
@@ -107,6 +110,7 @@ public class Session : IAsyncDisposable
         SessionExtraData = sessionExtraData;
         ProtocolVersion = protocolVersion;
         SessionResponse = sessionResponse;
+        VirtualIp = virtualIp;
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException(
             $"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
@@ -171,6 +175,15 @@ public class Session : IAsyncDisposable
         }
     }
 
+    public Task ProcessInboundPacket(IPPacket ipPacket)
+    {
+        if (VhLogger.IsDiagnoseMode)
+            PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
+
+        ipPacket = _netFilter.ProcessReply(ipPacket);
+        return Tunnel.SendPacketAsync(ipPacket, CancellationToken.None);
+    }
+
     private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
     {
         if (IsDisposed)
@@ -187,6 +200,7 @@ public class Session : IAsyncDisposable
                 _filterReporter.Raise();
                 continue;
             }
+
 
             _ = _proxyManager.SendPacket(ipPacket2);
         }
@@ -413,19 +427,30 @@ public class Session : IAsyncDisposable
             SessionId, "Close", reason, SessionResponse.SuppressedBy, SessionResponse.ErrorCode,
             SessionResponse.ErrorMessage ?? "None");
     }
-
-    private class SessionProxyManager(Session session, ISocketFactory socketFactory, ProxyManagerOptions options)
+    
+    private class SessionProxyManager(
+        Session session,
+        ISocketFactory socketFactory,
+        ITunProvider? tunProvider,
+        ProxyManagerOptions options)
         : ProxyManager(socketFactory, options)
     {
         protected override bool IsPingSupported => true;
 
         public override Task OnPacketReceived(IPPacket ipPacket)
         {
-            if (VhLogger.IsDiagnoseMode)
-                PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
+            return session.ProcessInboundPacket(ipPacket);
+        }
 
-            ipPacket = session._netFilter.ProcessReply(ipPacket);
-            return session.Tunnel.SendPacketAsync(ipPacket, CancellationToken.None);
+        public override Task SendPacket(IPPacket ipPacket)
+        {
+            if (tunProvider != null) {
+                ipPacket.SourceAddress = session.VirtualIp;
+                tunProvider.SendPacket(ipPacket);
+                return Task.CompletedTask;
+            }
+             
+            return base.SendPacket(ipPacket);
         }
 
         public override void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint,

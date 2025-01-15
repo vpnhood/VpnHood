@@ -1,9 +1,9 @@
 using Android.BillingClient.Api;
 using Android.Gms.Common;
-using Android.Gms.Common.Apis;
 using Microsoft.Extensions.Logging;
 using Org.Apache.Http.Authentication;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Droid.GooglePlay.Exceptions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Common.Logging;

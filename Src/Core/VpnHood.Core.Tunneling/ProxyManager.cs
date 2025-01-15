@@ -67,7 +67,7 @@ public abstract class ProxyManager : IPacketProxyReceiver
         }
     }
 
-    public async Task SendPacket(IPPacket ipPacket)
+    public virtual async Task SendPacket(IPPacket ipPacket)
     {
         if (ipPacket is null)
             throw new ArgumentNullException(nameof(ipPacket));

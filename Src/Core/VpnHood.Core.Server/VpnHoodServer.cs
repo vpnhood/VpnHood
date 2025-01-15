@@ -60,10 +60,12 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             options.NetFilter,
             options.SocketFactory,
             options.Tracker,
-            ServerVersion,
+            tunProvider: options.TunProvider,
+            serverVersion: ServerVersion,
             new SessionManagerOptions {
                 DeadSessionTimeout = options.DeadSessionTimeout,
                 HeartbeatInterval = options.HeartbeatInterval,
+                TunIpRange = options.TunIpNetwork.ToIpRange()
             });
 
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;

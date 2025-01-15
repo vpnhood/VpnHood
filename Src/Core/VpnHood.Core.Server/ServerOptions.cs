@@ -1,4 +1,6 @@
-﻿using Ga4.Trackers;
+﻿using System.Net;
+using Ga4.Trackers;
+using VpnHood.Core.Common.Net;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.SystemInformation;
@@ -14,6 +16,7 @@ public class ServerOptions
     public INetFilter NetFilter { get; init; } = new NetFilter();
     public INetConfigurationProvider? NetConfigurationProvider { get; init; }
     public ISwapMemoryProvider? SwapMemoryProvider { get; init; }
+    public ITunProvider? TunProvider { get; init; }
     public bool AutoDisposeAccessManager { get; init; } = true;
     public TimeSpan ConfigureInterval { get; init; } = TimeSpan.FromSeconds(60);
     public string StoragePath { get; init; } = Directory.GetCurrentDirectory();
@@ -21,4 +24,5 @@ public class ServerOptions
     public ServerConfig? Config { get; init; }
     public TimeSpan DeadSessionTimeout { get; init; } = TimeSpan.FromMinutes(5);
     public TimeSpan HeartbeatInterval { get; init; } = TimeSpan.FromMinutes(1);
+    public IpNetwork TunIpNetwork { get; init; } = new(IPAddress.Parse("10.0.0.0"), 8);
 }

@@ -1,7 +1,6 @@
 ﻿using Android.BillingClient.Api;
-using Android.Gms.Common;
 
-namespace VpnHood.AppLib.Droid.GooglePlay;
+namespace VpnHood.AppLib.Droid.GooglePlay.Exceptions;
 
 public class GoogleBillingException : Exception
 {

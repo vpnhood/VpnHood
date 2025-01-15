@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Net;
 using System.Text.Json;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
@@ -17,16 +18,19 @@ using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Factory;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
+using PacketDotNet;
 
 namespace VpnHood.Core.Server;
 
 public class SessionManager : IAsyncDisposable, IJob
 {
     private readonly IAccessManager _accessManager;
-    private readonly SocketFactory _socketFactory;
+    private readonly ISocketFactory _socketFactory;
+    private readonly ITunProvider? _tunProvider;
     private byte[] _serverSecret;
     private readonly TimeSpan _deadSessionTimeout;
     private readonly JobSection _heartbeatSection;
+    private readonly IpRange _tunIpRange;
 
     public string ApiKey { get; private set; }
     public INetFilter NetFilter { get; }
@@ -45,15 +49,19 @@ public class SessionManager : IAsyncDisposable, IJob
         }
     }
 
-    internal SessionManager(IAccessManager accessManager,
+    internal SessionManager(
+        IAccessManager accessManager,
         INetFilter netFilter,
-        SocketFactory socketFactory,
+        ISocketFactory socketFactory,
         ITracker? tracker,
+        ITunProvider? tunProvider,
         Version serverVersion,
-        SessionManagerOptions options)
+        SessionManagerOptions options
+        )
     {
         _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
+        _tunProvider = tunProvider;
         _serverSecret = VhUtil.GenerateKey(128);
         _deadSessionTimeout = options.DeadSessionTimeout;
         _heartbeatSection = new JobSection(options.HeartbeatInterval);
@@ -61,6 +69,10 @@ public class SessionManager : IAsyncDisposable, IJob
         ApiKey = HttpUtil.GetApiKey(_serverSecret, TunnelDefaults.HttpPassCheck);
         NetFilter = netFilter;
         ServerVersion = serverVersion;
+        _tunIpRange = options.TunIpRange;
+        if (_tunProvider != null)
+            _tunProvider.OnPacketReceived += TunProvider_OnPacketReceived;
+
         JobRunner.Default.Add(this);
     }
 
@@ -80,17 +92,46 @@ public class SessionManager : IAsyncDisposable, IJob
         throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponse, requestId);
     }
 
+    private readonly ConcurrentDictionary<IPAddress, Session> _virtualIps = new();
+    private IPAddress AllocateTunIp()
+    {
+        // find the max virtual IP
+        var ipAddress = _tunIpRange.FirstIpAddress;
+        while (!ipAddress.Equals(_tunIpRange.LastIpAddress)) {
+            if (!_virtualIps.ContainsKey(ipAddress))
+                return ipAddress;
+
+            ipAddress = IPAddressUtil.Increment(ipAddress);
+        }
+
+        throw new Exception("Could not allocate a new virtual IP.");
+    }
+
+    private readonly object _virtualIpLock = new();
     private Session BuildSessionFromResponseEx(SessionResponseEx sessionResponseEx)
     {
         var extraData = sessionResponseEx.ExtraData != null
             ? VhUtil.JsonDeserialize<SessionExtraData>(sessionResponseEx.ExtraData)
             : new SessionExtraData();
 
-        var session = new Session(
-            _accessManager, sessionResponseEx, NetFilter, _socketFactory,
-            SessionOptions, TrackingOptions, extraData, protocolVersion: sessionResponseEx.ProtocolVersion);
+        // make sure that not to give same IP to multiple sessions
+        lock (_virtualIpLock) {
 
-        return session;
+            // allocate a new IP
+            // todo: try to use virtual ip returned by sessionResponseEx
+            var virtualIp = AllocateTunIp();
+
+            // create the session
+            var session = new Session(
+                _accessManager, sessionResponseEx, NetFilter, _socketFactory,
+                SessionOptions, TrackingOptions, extraData,
+                protocolVersion: sessionResponseEx.ProtocolVersion,
+                tunProvider: _tunProvider,
+                virtualIp: virtualIp);
+
+            _virtualIps.TryAdd(virtualIp, session);
+            return session;
+        }
     }
 
     public async Task<SessionResponseEx> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair)
@@ -432,6 +473,22 @@ public class SessionManager : IAsyncDisposable, IJob
         await Sync();
     }
 
+    private void TunProvider_OnPacketReceived(object sender, IPPacket ipPacket)
+    {
+        var session = GetSessionByVirtualIp(ipPacket.DestinationAddress);
+        if (session == null) {
+            // log dropped packet
+            PacketUtil.LogPacket(ipPacket, "Could not find session for packet destination.");
+            return;
+        }
+
+        session.ProcessInboundPacket(ipPacket);
+    }
+
+    public Session? GetSessionByVirtualIp(IPAddress virtualIpAddress)
+    {
+        return _virtualIps.GetValueOrDefault(virtualIpAddress);
+    }
 
     private bool _disposed;
     private readonly AsyncLock _disposeLock = new();
@@ -444,4 +501,6 @@ public class SessionManager : IAsyncDisposable, IJob
         await Sync(force: true);
         await Task.WhenAll(Sessions.Values.Select(x => x.DisposeAsync().AsTask())).VhConfigureAwait();
     }
+
+
 }

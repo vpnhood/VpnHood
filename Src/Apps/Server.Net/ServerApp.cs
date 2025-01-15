@@ -244,6 +244,7 @@ public class ServerApp : IDisposable
             // run server
             _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions {
                 Tracker = _tracker,
+                TunProvider = CreateTunProvider(),
                 SystemInfoProvider = systemInfoProvider,
                 NetConfigurationProvider = configurationProvider,
                 SwapMemoryProvider = swapMemoryProvider,
@@ -260,6 +261,19 @@ public class ServerApp : IDisposable
                 await Task.Delay(1000, cancellationToken).VhConfigureAwait();
             return 0;
         });
+    }
+
+    private ITunProvider? CreateTunProvider()
+    {
+        try {
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+                ? new LinuxTunProvider()
+                : null;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not create TunProvider!");
+            return null;
+        }
     }
 
     public void Dispose()

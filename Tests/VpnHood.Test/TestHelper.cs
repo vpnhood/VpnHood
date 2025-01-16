@@ -88,19 +88,19 @@ public class TestHelper : IDisposable
         return ping.SendPingAsync(ipAddress ?? TestConstants.PingV4Address1, timeout, buffer);
     }
 
-    private static async Task<bool> SendHttpGet(HttpClient? httpClient = default, Uri? uri = default,
-        int timeout = TestConstants.DefaultTimeout)
+    private static async Task<bool> SendHttpGet(Uri uri, int timeout = TestConstants.DefaultTimeout)
     {
-        uri ??= TestConstants.HttpsUri1;
-
-        using var httpClientT = new HttpClient(new HttpClientHandler {
+        using var httpClient = new HttpClient(new HttpClientHandler {
             CheckCertificateRevocationList = false,
             ServerCertificateCustomValidationCallback = (_, _, _, _) => true
         });
 
-        httpClient ??= httpClientT;
-        var cancellationTokenSource = new CancellationTokenSource(timeout);
+        return await SendHttpGet(httpClient, uri, timeout);
+    }
 
+    private static async Task<bool> SendHttpGet(HttpClient httpClient, Uri uri, int timeout = TestConstants.DefaultTimeout)
+    {
+        var cancellationTokenSource = new CancellationTokenSource(timeout);
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
 
         // fix TLS host; it may map by NetFilter.ProcessRequest
@@ -157,17 +157,19 @@ public class TestHelper : IDisposable
         CollectionAssert.AreEquivalent(buffer, res.Buffer);
     }
 
-    public static async Task<bool> Test_Https(HttpClient? httpClient = default, Uri? uri = default,
+    public static async Task<bool> Test_Https(Uri? uri = default,
         int timeout = TestConstants.DefaultTimeout, bool throwError = true)
     {
+        uri ??= TestConstants.HttpsUri1;
+
         if (throwError) {
-            VhLogger.Instance.LogInformation(GeneralEventId.Test, $"Fetching a test uri. {uri}", uri);
-            Assert.IsTrue(await SendHttpGet(httpClient, uri, timeout), $"Could not fetch the test uri: {uri}");
+            VhLogger.Instance.LogInformation(GeneralEventId.Test, "Fetching a test uri. Url: {uri}", uri);
+            Assert.IsTrue(await SendHttpGet(uri, timeout), $"Could not fetch the test uri: {uri}");
             return true;
         }
 
         try {
-            return await SendHttpGet(httpClient, uri, timeout);
+            return await SendHttpGet(uri, timeout);
         }
         catch {
             return false;

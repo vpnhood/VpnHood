@@ -325,7 +325,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
     private void DisposeExpiredSessions()
     {
-        VhLogger.Instance.LogTrace("Dispose expired sessions.");
+        VhLogger.Instance.LogTrace("Disposing expired sessions...");
         var utcNow = DateTime.UtcNow;
         var timeoutSessions = Sessions.Values
             .Where(x => !x.IsDisposed && x.SessionResponse.AccessUsage?.ExpirationTime < utcNow);
@@ -340,7 +340,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
     private void DisposeFailedSessions()
     {
-        VhLogger.Instance.LogTrace("Process failed sessions.");
+        VhLogger.Instance.LogTrace("Process failed sessions...");
         var failedSessions = Sessions
             .Where(x =>
                 !x.Value.IsDisposed &&
@@ -354,7 +354,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
     private void DisposeAndRemoveIdleSessions()
     {
-        VhLogger.Instance.LogTrace("Dispose idle sessions.");
+        VhLogger.Instance.LogTrace("Disposing idle sessions...");
         var minSessionActivityTime = FastDateTime.Now - SessionOptions.TimeoutValue;
         var timeoutSessions = Sessions
             .Where(x =>
@@ -377,7 +377,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
     private void ProcessDeadSessions()
     {
-        VhLogger.Instance.LogTrace("Dispose disposed sessions.");
+        VhLogger.Instance.LogTrace("Disposing disposed sessions...");
         var utcNow = DateTime.UtcNow;
         var deadSessions = Sessions.Values
             .Where(x =>

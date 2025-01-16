@@ -1,13 +1,11 @@
 # v5.0.635
-### Client
-* Improve: Optimizing CPU and GPU usage during the playback of Ads and animations
 * Fix: Sign-out from account
-
-# v5.0.634
-* Feature: Add AppIpFilters to settings page
-* Feature: Add PacketCaptureIpFilters to settings page
-* Update: Add Profile Name as session name in android VpnService
+* Improve: Optimizing CPU and GPU usage during the playback of Ads and animations
+* Feature: Add AppIpFilters to the settings page
+* Feature: Add PacketCaptureIpFilters to the settings page
 * Update: Improve ping performance
+* Update: Add Profile Name as session name in android VpnService
+* Update: Automatically disconnect when a change in settings requires reconnection
 
 # v5.0.630
 * Fix: Show old tokens

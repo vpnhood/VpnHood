@@ -18,7 +18,8 @@ public class AdTest : TestBase
     [TestMethod]
     public async Task AFoo()
     {
-        await Task.Delay(0);
+        await Task.Delay(1);
+
     }
 
     [TestMethod]

@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<OutputType>Exe</OutputType>
 		<TargetFramework>net9.0</TargetFramework>
-		<AssemblyName>nettester</AssemblyName>
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -20,8 +20,6 @@
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
-		<AssemblyName>nettester</AssemblyName>
-		<AssemblyVersion>1.0.5</AssemblyVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -30,7 +28,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="MSTest.TestFramework" Version="3.7.0" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+		<PackageReference Include="MSTest.TestAdapter" Version="3.7.1" />
+		<PackageReference Include="MSTest.TestFramework" Version="3.7.1" />
+		<PackageReference Include="coverlet.collector" Version="6.0.3">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 	</ItemGroup>
 
 </Project>

@@ -1,4 +1,6 @@
 # v5.0.635
+
+# v5.0.635
 * Fix: Sign-out from account
 * Improve: Optimizing CPU and GPU usage during the playback of Ads and animations
 * Feature: Add AppIpFilters to the settings page

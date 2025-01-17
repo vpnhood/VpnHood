@@ -1,4 +1,5 @@
-# v5.0.635
+# Upcoming
+* Improve performance by reducing of memory allocation
 
 # v5.0.635
 * Fix: Sign-out from account

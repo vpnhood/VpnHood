@@ -9,6 +9,8 @@ param(
 . "$PSScriptRoot/Common.ps1"
 
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
+$productName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.Product[0];
+$assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.AssemblyName[0];
 
 Write-Host;
 Write-Host "*** Building $packageFileTitle ..." -BackgroundColor Blue -ForegroundColor White;
@@ -76,7 +78,7 @@ $json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
 $str=";aiu;
 
 [Update]
-Name = VpnHood $versionParam
+Name = $productName $versionParam
 ProductVersion = $versionParam
 URL = $repoBaseUrl/releases/download/$versionTag/$module_packageFileName
 Size = $((Get-Item $module_packageFile).length)
@@ -84,9 +86,9 @@ SHA256 = $((Get-FileHash $module_packageFile -Algorithm SHA256).Hash)
 MD5 = $((Get-FileHash $module_packageFile -Algorithm MD5).Hash)
 ServerFileName = $module_packageFileName
 Flags = NoRedetect
-RegistryKey = HKUD\Software\VpnHood\$packageFileTitle\Version
+RegistryKey = HKUD\Software\$assemblyName\$packageFileTitle\Version
 Version = $versionParam
-UpdatedApplications = VpnHood(1.0-$versionParam)
+UpdatedApplications = $productName(1.0-$versionParam)
 Description = <a href=""https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md"">Release note</a>
 ";
 $str | Out-File -FilePath $module_updaterConfigFile;

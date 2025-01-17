@@ -267,11 +267,15 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         return uid == Process.MyUid();
     }
 
+    private PacketReceivedEventArgs? _packetReceivedEventArgs;
     protected virtual void ProcessPacket(IPPacket ipPacket)
     {
+        // create the event args. for performance, we will reuse the same instance
+        _packetReceivedEventArgs ??= new PacketReceivedEventArgs(new IPPacket[1], this);
+
         try {
-            PacketReceivedFromInbound?.Invoke(this,
-                new PacketReceivedEventArgs([ipPacket], this));
+            _packetReceivedEventArgs.IpPackets[0] = ipPacket;
+            PacketReceivedFromInbound?.Invoke(this, _packetReceivedEventArgs);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error in processing packet. Packet: {Packet}",

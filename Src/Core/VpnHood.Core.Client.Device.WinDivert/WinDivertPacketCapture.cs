@@ -186,11 +186,15 @@ public class WinDivertPacketCapture : IPacketCapture
         ProcessPacketReceivedFromInbound(ipPacket);
     }
 
+    private PacketReceivedEventArgs? _packetReceivedEventArgs;
     protected virtual void ProcessPacketReceivedFromInbound(IPPacket ipPacket)
     {
+        // create the event args. for performance, we will reuse the same instance
+        _packetReceivedEventArgs ??= new PacketReceivedEventArgs(new IPPacket[1], this);
+
         try {
-            var eventArgs = new PacketReceivedEventArgs([ipPacket], this);
-            PacketReceivedFromInbound?.Invoke(this, eventArgs);
+            _packetReceivedEventArgs.IpPackets[0] = ipPacket;
+            PacketReceivedFromInbound?.Invoke(this, _packetReceivedEventArgs);
         }
         catch (Exception ex) {
             VhLogger.Instance.Log(LogLevel.Error, ex,

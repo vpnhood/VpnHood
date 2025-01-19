@@ -35,4 +35,5 @@ public class HelloResponse : SessionResponse
     public AdRequirement AdRequirement { get; set; } = AdRequirement.None;
     public string? ServerLocation { get; set; }
     public string[] ServerTags { get; set; } = [];
+    public AccessInfo? AccessInfo { get; set; }
 }

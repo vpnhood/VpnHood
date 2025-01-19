@@ -4,7 +4,7 @@ namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
 
 public class AccessTokenUsage
 {
-    [Obsolete("Use SentTraffic instead.")]
+    [Obsolete("Use Sent instead.")]
     public long SentTraffic {
         set => Sent = value;
     }
@@ -14,6 +14,9 @@ public class AccessTokenUsage
         set => Received = value;
     }
 
+    public int Version { get; set; }
+    public DateTime CreatedTime { get; set; } = DateTime.UtcNow;
+    public DateTime LastUsedTime { get; set; } = DateTime.UtcNow;
     public long Sent { get; set; }
     public long Received { get; set; }
 

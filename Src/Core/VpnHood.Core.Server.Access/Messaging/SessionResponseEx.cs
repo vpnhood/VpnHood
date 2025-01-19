@@ -13,6 +13,7 @@ public class SessionResponseEx : SessionResponse
     public byte[] SessionKey { get; set; } = [];
     public string? ServerLocation { get; set; }
     public string[] ServerTags { get; set; } = [];
+    public AccessInfo? AccessInfo { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public AdRequirement AdRequirement { get; set; } = AdRequirement.None;

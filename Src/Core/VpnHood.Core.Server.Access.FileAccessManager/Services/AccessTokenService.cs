@@ -103,12 +103,19 @@ public class AccessTokenService
             throw new KeyNotFoundException($"Could not find tokenId. TokenId: {tokenId}");
 
         // try read token
-        var tokenJson = await File.ReadAllTextAsync(tokenFileName);
+        var tokenJson = await File.ReadAllTextAsync(tokenFileName).VhConfigureAwait();
         var accessToken = VhUtil.JsonDeserialize<AccessToken>(tokenJson);
 
         // try read usage
         var usageFileName = GetAccessTokenUsageFileName(tokenId);
-        var usage = VhUtil.JsonDeserializeFile<AccessTokenUsage>(usageFileName) ?? new AccessTokenUsage();
+        var usage = VhUtil.JsonDeserializeFile<AccessTokenUsage>(usageFileName) ??
+                    new AccessTokenUsage { Version = 2 };
+
+        // for backward compatibility
+        if (File.Exists(usageFileName) &&  usage.Version < 2) {
+            usage.CreatedTime = File.GetCreationTimeUtc(usageFileName);
+            usage.LastUsedTime = File.GetLastWriteTime(usageFileName);
+        }
 
         // create access token data
         accessTokenData = new AccessTokenData {
@@ -157,6 +164,8 @@ public class AccessTokenService
         using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId)).VhConfigureAwait();
         accessTokenData.Usage.Sent += traffic.Sent;
         accessTokenData.Usage.Received += traffic.Received;
+        accessTokenData.Usage.Version = 2;
+        accessTokenData.Usage.LastUsedTime = DateTime.UtcNow;
 
         // save to file
         await File

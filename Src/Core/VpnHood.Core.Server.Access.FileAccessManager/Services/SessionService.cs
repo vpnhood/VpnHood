@@ -126,7 +126,20 @@ public class SessionService : IDisposable, IJob
 
         //create response
         var responseEx = BuildSessionResponse(session, accessTokenData);
+
+        // add session creation data
         responseEx.AdRequirement = adRequirement;
+        responseEx.AccessInfo = new AccessInfo {
+            ExpirationTime = accessTokenData.AccessToken.ExpirationTime,
+            LastUsedTime = accessTokenData.Usage.LastUsedTime,
+            CreatedTime = accessTokenData.Usage.CreatedTime,
+            IsPremium = true, // token is always premium in File Access Manager
+            MaxDeviceCount = accessTokenData.AccessToken.MaxClientCount,
+            MaxTotalTraffic = accessTokenData.AccessToken.MaxTraffic,
+            DeviceCount = null, // not supported
+            Devices = null // not supported
+        };
+
         if (responseEx.ErrorCode != SessionErrorCode.Ok)
             return responseEx;
 
@@ -194,7 +207,9 @@ public class SessionService : IDisposable, IJob
         var accessUsage = new AccessUsage {
             ActiveClientCount = 0,
             ExpirationTime = session.ExpirationTime,
+#pragma warning disable CS0618 // Type or member is obsolete
             MaxClientCount = accessToken.MaxClientCount,
+#pragma warning restore CS0618 // Type or member is obsolete
             MaxTraffic = accessToken.MaxTraffic,
             Traffic = new Traffic(accessTokenData.Usage.Sent, accessTokenData.Usage.Received),
             IsPremium = true, // token is always premium in File Access Manager
@@ -255,7 +270,7 @@ public class SessionService : IDisposable, IJob
                 }
             }
 
-            if (accessUsage.MaxClientCount != 0) {
+            if (accessTokenData.AccessToken.MaxClientCount != 0) {
                 // suppressedTo others by MaxClientCount
                 var otherSessions2 = otherSessions
                     .Where(x => 
@@ -263,7 +278,7 @@ public class SessionService : IDisposable, IJob
                         x.SessionId != session.SessionId)
                     .OrderBy(x => x.CreatedTime).ToArray();
 
-                for (var i = 0; i <= otherSessions2.Length - accessUsage.MaxClientCount; i++) {
+                for (var i = 0; i <= otherSessions2.Length - accessTokenData.AccessToken.MaxClientCount; i++) {
                     var otherSession = otherSessions2[i];
                     otherSession.SuppressedBy = SessionSuppressType.Other;
                     otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;

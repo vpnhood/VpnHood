@@ -608,6 +608,8 @@ public class ServerHost : IAsyncDisposable, IJob
             AdRequirement = sessionResponseEx.AdRequirement,
             ServerLocation = sessionResponseEx.ServerLocation,
             ServerTags = sessionResponseEx.ServerTags,
+            AccessInfo = sessionResponseEx.AccessInfo,
+            ClientCountry = sessionResponseEx.ClientCountry
         };
 
         await clientStream.WriteFinalResponse(helloResponse, cancellationToken).VhConfigureAwait();

@@ -96,7 +96,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public ClientStat Stat { get; }
     public IPAddress? ClientPublicIpAddress { get; private set; }
     public string? ClientCountry { get; private set; }
-
     public byte[] SessionKey =>
         _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
 
@@ -121,6 +120,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         SocketFactory = new ClientSocketFactory(packetCapture,
             options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory)));
         DnsServers = options.DnsServers ?? [];
+        IncludeIpRanges = options.IncludeIpRanges;
         _allowAnonymousTracker = options.AllowAnonymousTracker;
         _minTcpDatagramLifespan = options.MinTcpDatagramTimespan;
         _maxTcpDatagramLifespan = options.MaxTcpDatagramTimespan;
@@ -128,7 +128,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _autoDisposePacketCapture = options.AutoDisposePacketCapture;
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _proxyManager = new ClientProxyManager(packetCapture, SocketFactory, new ProxyManagerOptions());
-        IncludeIpRanges = options.IncludeIpRanges;
         _usageTracker = options.Tracker;
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
@@ -750,12 +749,14 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             ServerSecret = sessionResponse.ServerSecret;
             ResponseAccessKey = sessionResponse.AccessKey;
             SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
+            SessionStatus.AccessInfo = sessionResponse.AccessInfo;
             PublicAddress = sessionResponse.ClientPublicAddress;
             ServerVersion = Version.Parse(sessionResponse.ServerVersion);
             IsIpV6SupportedByServer = sessionResponse.IsIpV6Supported;
             Stat.ServerLocationInfo = sessionResponse.ServerLocation != null
                 ? ServerLocationInfo.Parse(sessionResponse.ServerLocation)
                 : null;
+
             if (sessionResponse.UdpPort > 0)
                 HostUdpEndPoint = new IPEndPoint(ConnectorService.EndPointInfo.TcpEndPoint.Address,
                     sessionResponse.UdpPort.Value);

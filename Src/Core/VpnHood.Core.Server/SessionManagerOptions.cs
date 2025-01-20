@@ -6,5 +6,5 @@ internal class SessionManagerOptions
 {
     public required TimeSpan DeadSessionTimeout { get; init; }
     public required TimeSpan HeartbeatInterval { get; init; }
-    public required IpRange TunIpRange { get; init; }
+    public required IpRange VirtualIpRange { get; init; }
 }

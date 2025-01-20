@@ -30,7 +30,7 @@ public class SessionManager : IAsyncDisposable, IJob
     private byte[] _serverSecret;
     private readonly TimeSpan _deadSessionTimeout;
     private readonly JobSection _heartbeatSection;
-    private readonly IpRange _tunIpRange;
+    private readonly IpRange _virtualIpRange;
 
     public string ApiKey { get; private set; }
     public INetFilter NetFilter { get; }
@@ -69,7 +69,7 @@ public class SessionManager : IAsyncDisposable, IJob
         ApiKey = HttpUtil.GetApiKey(_serverSecret, TunnelDefaults.HttpPassCheck);
         NetFilter = netFilter;
         ServerVersion = serverVersion;
-        _tunIpRange = options.TunIpRange;
+        _virtualIpRange = options.VirtualIpRange;
         if (_tunProvider != null)
             _tunProvider.OnPacketReceived += TunProvider_OnPacketReceived;
 
@@ -92,13 +92,13 @@ public class SessionManager : IAsyncDisposable, IJob
         throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponse, requestId);
     }
 
-    private readonly ConcurrentDictionary<IPAddress, Session> _tunIps = new();
-    private IPAddress AllocateTunIp()
+    private readonly ConcurrentDictionary<IPAddress, Session> _virtualIps = new();
+    private IPAddress AllocateVirtualIp()
     {
         // find the max virtual IP
-        var ipAddress = _tunIpRange.FirstIpAddress;
-        while (!ipAddress.Equals(_tunIpRange.LastIpAddress)) {
-            if (!_tunIps.ContainsKey(ipAddress))
+        var ipAddress = _virtualIpRange.FirstIpAddress;
+        while (!ipAddress.Equals(_virtualIpRange.LastIpAddress)) {
+            if (!_virtualIps.ContainsKey(ipAddress))
                 return ipAddress;
 
             ipAddress = IPAddressUtil.Increment(ipAddress);
@@ -119,7 +119,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
             // allocate a new IP
             // todo: try to use virtual ip returned by sessionResponseEx
-            var virtualIp = AllocateTunIp();
+            var virtualIp = AllocateVirtualIp();
 
             // create the session
             var session = new Session(
@@ -129,7 +129,7 @@ public class SessionManager : IAsyncDisposable, IJob
                 tunProvider: _tunProvider,
                 virtualIp: virtualIp);
 
-            _tunIps.TryAdd(virtualIp, session);
+            _virtualIps.TryAdd(virtualIp, session);
             return session;
         }
     }
@@ -370,7 +370,7 @@ public class SessionManager : IAsyncDisposable, IJob
             else {
                 _ = session.Value.DisposeAsync().VhConfigureAwait();
                 Sessions.TryRemove(session.Key, out _); // we should not have disposed session without error code
-                _tunIps.TryRemove(session.Value.VirtualIp, out _);
+                _virtualIps.TryRemove(session.Value.VirtualIp, out _);
             }
         }
     }
@@ -388,7 +388,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
         foreach (var session in deadSessions) {
             Sessions.TryRemove(session.SessionId, out _);
-            _tunIps.TryRemove(session.VirtualIp, out _);
+            _virtualIps.TryRemove(session.VirtualIp, out _);
         }
     }
 
@@ -490,7 +490,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
     public Session? GetSessionByVirtualIp(IPAddress virtualIpAddress)
     {
-        return _tunIps.GetValueOrDefault(virtualIpAddress);
+        return _virtualIps.GetValueOrDefault(virtualIpAddress);
     }
 
     private bool _disposed;

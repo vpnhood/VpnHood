@@ -65,7 +65,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             new SessionManagerOptions {
                 DeadSessionTimeout = options.DeadSessionTimeout,
                 HeartbeatInterval = options.HeartbeatInterval,
-                TunIpRange = options.TunIpNetwork.ToIpRange()
+                VirtualIpRange = options.VirtualIpNetwork.ToIpRange()
             });
 
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;

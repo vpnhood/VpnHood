@@ -24,5 +24,5 @@ public class ServerOptions
     public ServerConfig? Config { get; init; }
     public TimeSpan DeadSessionTimeout { get; init; } = TimeSpan.FromMinutes(5);
     public TimeSpan HeartbeatInterval { get; init; } = TimeSpan.FromMinutes(1);
-    public IpNetwork TunIpNetwork { get; init; } = new(IPAddress.Parse("10.0.0.0"), 8);
+    public IpNetwork VirtualIpNetwork { get; init; } = new(IPAddress.Parse("10.0.0.0"), 8);
 }

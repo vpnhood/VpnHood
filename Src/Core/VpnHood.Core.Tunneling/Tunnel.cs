@@ -212,7 +212,7 @@ public class Tunnel : IJob, IAsyncDisposable
         // check datagram message
         // performance critical; don't create another array by linq
         if (e.IpPackets.Any(DatagramMessageHandler.IsDatagramMessage))
-            e = new ChannelPacketReceivedEventArgs(
+            e = new ChannelPacketReceivedEventArgs( //todo: use shard memory
                 e.IpPackets.Where(x => !DatagramMessageHandler.IsDatagramMessage(x)).ToArray(), e.Channel);
 
         try {

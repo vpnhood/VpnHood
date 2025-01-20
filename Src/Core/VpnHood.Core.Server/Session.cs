@@ -181,9 +181,6 @@ public class Session : IAsyncDisposable
             PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
 
         ipPacket = _netFilter.ProcessReply(ipPacket);
-        ipPacket.SourceAddress = VirtualIp; //todo: must be done in client
-        PacketUtil.UpdateIpChecksum(ipPacket); //todo: must be done in client
-
         return Tunnel.SendPacketAsync(ipPacket, CancellationToken.None);
     }
 
@@ -196,6 +193,7 @@ public class Session : IAsyncDisposable
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < e.IpPackets.Length; i++) {
             var ipPacket = e.IpPackets[i];
+            ipPacket.SourceAddress = VirtualIp;
             var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
             if (ipPacket2 == null) {
                 var ipeEndPointPair = PacketUtil.GetPacketEndPoints(ipPacket);
@@ -203,7 +201,6 @@ public class Session : IAsyncDisposable
                 _filterReporter.Raise();
                 continue;
             }
-
 
             _ = _proxyManager.SendPacket(ipPacket2);
         }
@@ -448,7 +445,7 @@ public class Session : IAsyncDisposable
         public override Task SendPacket(IPPacket ipPacket)
         {
             if (tunProvider != null) {
-                ipPacket.SourceAddress = session.VirtualIp;
+                PacketUtil.UpdateIpChecksum(ipPacket);
                 tunProvider.SendPacket(ipPacket);
                 return Task.CompletedTask;
             }

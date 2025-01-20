@@ -66,6 +66,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private readonly ConnectPlanId _planId;
     private SessionStatus _sessionStatus = new();
     private readonly TimeSpan _canExtendByRewardedAdThreshold;
+    private bool _isTunProviderSupported;
 
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
     internal Nat Nat { get; }
@@ -428,8 +429,12 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                         else if (isIpV6 && !IsIpV6SupportedByServer)
                             droppedPackets.Add(ipPacket);
 
-                        else if (ipPacket.Protocol == ProtocolType.Tcp)
-                            tcpHostPackets.Add(ipPacket);
+                        else if (ipPacket.Protocol == ProtocolType.Tcp) {
+                            if (_isTunProviderSupported)
+                                tunnelPackets.Add(ipPacket);
+                            else
+                                tcpHostPackets.Add(ipPacket);
+                        }
 
                         else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6) {
                             if (IsIcmpControlMessage(ipPacket))
@@ -446,8 +451,12 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     }
                     else {
                         // tcp already check for InInRange and IpV6 and Proxy
-                        if (ipPacket.Protocol == ProtocolType.Tcp)
-                            tcpHostPackets.Add(ipPacket);
+                        if (ipPacket.Protocol == ProtocolType.Tcp) {
+                            if (_isTunProviderSupported && IsInIpRange(ipPacket.DestinationAddress))
+                                tunnelPackets.Add(ipPacket);
+                            else
+                                tcpHostPackets.Add(ipPacket);
+                        }
 
                         // Drop IPv6 if not support
                         else if (isIpV6 && !IsIpV6SupportedByServer) {
@@ -738,6 +747,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 $"ServerMaxProtocolVersion: {sessionResponse.MaxProtocolVersion}, " +
                 $"CurrentProtocolVersion: {ConnectorService.ProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}",
+                $"IsTunProviderSupported: {sessionResponse.IsTunProviderSupported}",
                 $"ClientCountry: {sessionResponse.ClientCountry}");
 
             // get session id
@@ -745,6 +755,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 ? sessionResponse.SessionId
                 : throw new Exception("Invalid SessionId!");
             _sessionKey = sessionResponse.SessionKey;
+            _isTunProviderSupported = sessionResponse.IsTunProviderSupported;
             _helloTraffic = sessionResponse.AccessUsage?.Traffic ?? new Traffic();
             ServerSecret = sessionResponse.ServerSecret;
             ResponseAccessKey = sessionResponse.AccessKey;
@@ -1133,7 +1144,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     }
 
     private readonly AsyncLock _disposeLock = new();
-
     public async ValueTask DisposeAsync(bool waitForBye)
     {
         using var lockResult = await _disposeLock.LockAsync(TimeSpan.Zero).VhConfigureAwait();

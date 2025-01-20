@@ -374,7 +374,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         // manually manage DNS reply if DNS does not supported by _packetCapture
         if (!_packetCapture.IsDnsServersSupported)
             // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < e.IpPackets.Length; i++) {
+            for (var i = 0; i < e.IpPackets.Count; i++) {
                 var ipPacket = e.IpPackets[i];
                 UpdateDnsRequest(ipPacket, false);
             }

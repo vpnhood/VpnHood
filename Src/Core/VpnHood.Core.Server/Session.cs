@@ -36,6 +36,7 @@ public class Session : IAsyncDisposable
     private readonly int? _tcpKernelReceiveBufferSize;
     private readonly TimeSpan _tcpConnectTimeout;
     private readonly TrackingOptions _trackingOptions;
+    private IPAddress? _clientInternalIp;
 
     private readonly EventReporter _netScanExceptionReporter = new(VhLogger.Instance,
         "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
@@ -181,6 +182,13 @@ public class Session : IAsyncDisposable
             PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
 
         ipPacket = _netFilter.ProcessReply(ipPacket);
+
+        // fix client internal ip
+        if (!ipPacket.DestinationAddress.Equals(_clientInternalIp)){
+            ipPacket.DestinationAddress = _clientInternalIp;
+            PacketUtil.UpdateIpChecksum(ipPacket);
+        }
+
         return Tunnel.SendPacketAsync(ipPacket, CancellationToken.None);
     }
 
@@ -193,6 +201,7 @@ public class Session : IAsyncDisposable
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < e.IpPackets.Length; i++) {
             var ipPacket = e.IpPackets[i];
+            _clientInternalIp ??= ipPacket.SourceAddress;
             ipPacket.SourceAddress = VirtualIp;
             var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
             if (ipPacket2 == null) {

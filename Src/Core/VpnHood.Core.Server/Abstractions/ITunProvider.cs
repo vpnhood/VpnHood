@@ -2,8 +2,8 @@
 
 namespace VpnHood.Core.Server.Abstractions;
 
-public interface ITunProvider
+public interface ITunProvider : IDisposable
 {
     event EventHandler<IPPacket> OnPacketReceived;
-    void SendPacket(IPPacket ipPacket);
+    Task SendPacket(IPPacket ipPacket);
 }

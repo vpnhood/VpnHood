@@ -40,6 +40,7 @@ public class SessionManager : IAsyncDisposable, IJob
     public SessionOptions SessionOptions { get; set; } = new();
     public IpRange VirtualIpRange { get; }
     public ITracker? Tracker { get; }
+    public bool IsTunProviderSupported => _tunProvider != null;
 
     public byte[] ServerSecret {
         get => _serverSecret;

@@ -12,7 +12,12 @@ internal class LinuxTunProvider : ITunProvider
     }
 
     public event EventHandler<IPPacket>? OnPacketReceived;
-    public void SendPacket(IPPacket ipPacket)
+    public Task SendPacket(IPPacket ipPacket)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Dispose()
     {
         throw new NotImplementedException();
     }

@@ -14,6 +14,9 @@ public class HelloResponse : SessionResponse
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public IPAddress[]? DnsServers { get; set; }
 
+    [JsonConverter(typeof(IPAddressConverter))]
+    public IPAddress? VirtualIp { get; set; }
+
     public int? UdpPort { get; set; }
     public string ServerVersion { get; set; } = default!;
     [Obsolete("Use MaxProtocolVersion and MinProtocolVersion")]
@@ -35,7 +38,6 @@ public class HelloResponse : SessionResponse
     public AdRequirement AdRequirement { get; set; } = AdRequirement.None;
     public string? ServerLocation { get; set; }
     public string[] ServerTags { get; set; } = [];
-    public IPAddress? VirtualIp { get; set; }
     public AccessInfo? AccessInfo { get; set; }
     public bool IsTunProviderSupported { get; set; }
 }

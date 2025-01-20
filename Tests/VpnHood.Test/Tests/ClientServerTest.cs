@@ -13,6 +13,7 @@ using VpnHood.Core.Server;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
+using VpnHood.Test.Providers;
 
 // ReSharper disable DisposeOnUsingVariable
 
@@ -743,5 +744,24 @@ public class ClientServerTest : TestBase
             clientOptions: TestHelper.CreateClientOptions(useUdp: true));
 
         Assert.IsFalse(client.Stat.IsUdpChannelSupported);
+    }
+
+    [TestMethod]
+    public async Task TunProvider_by_udp()
+    {
+        using var tunProvider = new TestUdpTunProvider();
+
+        // create access server
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.MaxTcpChannelCount = 2;
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, tunProvider: tunProvider);
+
+        // create client
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(token);
+
+        // test udp
+        await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint1);
+        await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint2);
     }
 }

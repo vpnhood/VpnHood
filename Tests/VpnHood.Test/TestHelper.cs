@@ -285,19 +285,22 @@ public class TestHelper : IDisposable
     }
 
     public static Task<VpnHoodServer> CreateServer(FileAccessManagerOptions? options, bool autoStart = true,
-        TimeSpan? configureInterval = null, bool useHttpAccessManager = true)
+        TimeSpan? configureInterval = null, bool useHttpAccessManager = true, 
+        ITunProvider? tunProvider = null)
     {
         return CreateServer(null, options,
             autoStart: autoStart,
             configureInterval: configureInterval,
-            useHttpAccessManager: useHttpAccessManager);
+            useHttpAccessManager: useHttpAccessManager,
+            tunProvider: tunProvider);
     }
 
     private static async Task<VpnHoodServer> CreateServer(IAccessManager? accessManager,
         FileAccessManagerOptions? fileAccessManagerOptions,
         bool autoStart, TimeSpan? configureInterval = null, bool useHttpAccessManager = true,
         INetConfigurationProvider? netConfigurationProvider = null,
-        ISwapMemoryProvider? swapMemoryProvider = null)
+        ISwapMemoryProvider? swapMemoryProvider = null,
+        ITunProvider? tunProvider = null)
     {
         if (accessManager != null && fileAccessManagerOptions != null)
             throw new InvalidOperationException(
@@ -325,6 +328,7 @@ public class TestHelper : IDisposable
             NetFilter = NetFilter,
             NetConfigurationProvider = netConfigurationProvider,
             SwapMemoryProvider = swapMemoryProvider,
+            TunProvider = tunProvider,
             PublicIpDiscovery = false //it slows down our tests
         };
 

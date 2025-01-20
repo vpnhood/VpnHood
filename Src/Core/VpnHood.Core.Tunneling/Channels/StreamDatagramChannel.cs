@@ -119,6 +119,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     private async Task ReadTask(CancellationToken cancellationToken)
     {
         var stream = _clientStream.Stream;
+        var eventArgs = new ChannelPacketReceivedEventArgs([], this);
 
         try {
             await using var streamPacketReader = new StreamPacketReader(stream);
@@ -133,7 +134,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                 // check datagram message
                 List<IPPacket>? processedPackets = null;
                 // ReSharper disable once ForCanBeConvertedToForeach
-                for (var i = 0; i < ipPackets.Length; i++) {
+                for (var i = 0; i < ipPackets.Count; i++) {
                     var ipPacket = ipPackets[i];
                     if (ProcessMessage(ipPacket)) {
                         processedPackets ??= [];
@@ -146,8 +147,10 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                     ipPackets = ipPackets.Except(processedPackets).ToArray();
 
                 // fire new packets
-                if (ipPackets.Length > 0)
-                    PacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(ipPackets, this));
+                if (ipPackets.Count > 0) {
+                    eventArgs.IpPackets = ipPackets;
+                    PacketReceived?.Invoke(this, eventArgs);
+                }
             }
         }
         catch (Exception ex) {

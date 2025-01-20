@@ -2,8 +2,8 @@
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class ChannelPacketReceivedEventArgs(IPPacket[] ipPackets, IChannel channel) : EventArgs
+public class ChannelPacketReceivedEventArgs(IList<IPPacket> ipPackets, IChannel channel) : EventArgs
 {
-    public IPPacket[] IpPackets { get; } = ipPackets;
+    public IList<IPPacket> IpPackets { get; set; } = ipPackets;
     public IChannel Channel { get; } = channel;
 }

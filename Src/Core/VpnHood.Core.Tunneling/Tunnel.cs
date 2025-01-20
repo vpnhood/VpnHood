@@ -211,9 +211,16 @@ public class Tunnel : IJob, IAsyncDisposable
 
         // check datagram message
         // performance critical; don't create another array by linq
-        if (e.IpPackets.Any(DatagramMessageHandler.IsDatagramMessage))
-            e = new ChannelPacketReceivedEventArgs( //todo: use shard memory
-                e.IpPackets.Where(x => !DatagramMessageHandler.IsDatagramMessage(x)).ToArray(), e.Channel);
+        // performance critical; don't use Linq to check the message
+        // ReSharper disable once LoopCanBeConvertedToQuery
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < e.IpPackets.Count; i++) {
+            if (DatagramMessageHandler.IsDatagramMessage(e.IpPackets[i])) {
+                e = new ChannelPacketReceivedEventArgs(
+                    e.IpPackets.Where(x => !DatagramMessageHandler.IsDatagramMessage(x)).ToArray(), e.Channel);
+                break;
+            }
+        }
 
         try {
             PacketReceived?.Invoke(sender, e);

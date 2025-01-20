@@ -199,7 +199,7 @@ public class Session : IAsyncDisposable
 
         // filter requests
         // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < e.IpPackets.Length; i++) {
+        for (var i = 0; i < e.IpPackets.Count; i++) {
             var ipPacket = e.IpPackets[i];
             _clientInternalIp ??= ipPacket.SourceAddress;
             ipPacket.SourceAddress = VirtualIp;

@@ -194,7 +194,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             ConfigNetFilter(SessionManager.NetFilter, ServerHost, serverConfig.NetFilterOptions,
                 privateAddresses: allServerIps, 
                 isIpV6Supported: serverInfo.PublicIpAddresses.Any(x => x.IsV6()), 
-                dnsServers: serverConfig.DnsServersValue);
+                dnsServers: serverConfig.DnsServersValue,
+                virtualIpRange: SessionManager.VirtualIpRange);
 
             // Add listener ip addresses to the ip address manager if requested
             if (_netConfigurationService != null) {
@@ -305,17 +306,27 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     }
 
     private static void ConfigNetFilter(INetFilter netFilter, ServerHost serverHost, NetFilterOptions netFilterOptions,
-        IEnumerable<IPAddress> privateAddresses, bool isIpV6Supported, IEnumerable<IPAddress> dnsServers)
+        IEnumerable<IPAddress> privateAddresses, bool isIpV6Supported, IEnumerable<IPAddress> dnsServers, IpRange virtualIpRange)
     {
         var dnsServerIpRanges = dnsServers.Select(x => new IpRange(x)).ToOrderedList();
 
         // assign to workers
-        serverHost.NetFilterIncludeIpRanges =
-            netFilterOptions.GetFinalIncludeIpRanges().Union(dnsServerIpRanges).ToArray();
-        serverHost.NetFilterPacketCaptureIncludeIpRanges = netFilterOptions.GetFinalPacketCaptureIncludeIpRanges()
-            .Union(dnsServerIpRanges).ToArray();
+        serverHost.NetFilterIncludeIpRanges = netFilterOptions
+            .GetFinalIncludeIpRanges()
+            .Union(dnsServerIpRanges)
+            .ToArray();
+        
+        serverHost.NetFilterPacketCaptureIncludeIpRanges = netFilterOptions
+            .GetFinalPacketCaptureIncludeIpRanges()
+            .Union(dnsServerIpRanges)
+            .ToArray();
+
         serverHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
         netFilter.BlockedIpRanges = netFilterOptions.GetBlockedIpRanges().Exclude(dnsServerIpRanges);
+
+        // exclude virtual ip if network isolation is enabled
+        if (netFilterOptions.NetworkIsolationValue)
+            netFilter.BlockedIpRanges = netFilter.BlockedIpRanges.Exclude(virtualIpRange);
 
         // exclude listening ip
         if (!netFilterOptions.IncludeLocalNetworkValue)

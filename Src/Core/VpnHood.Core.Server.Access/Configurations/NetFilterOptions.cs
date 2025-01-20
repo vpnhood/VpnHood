@@ -6,6 +6,7 @@ namespace VpnHood.Core.Server.Access.Configurations;
 
 public class NetFilterOptions
 {
+    public bool? NetworkIsolation { get; set; }
     public bool? IncludeLocalNetwork { get; set; }
     public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
     public IpRange[]? PacketCaptureExcludeIpRanges { get; set; }
@@ -13,11 +14,13 @@ public class NetFilterOptions
     public IpRange[]? ExcludeIpRanges { get; set; }
     public bool? BlockIpV6 { get; set; }
 
+    [JsonIgnore] public bool NetworkIsolationValue => NetworkIsolation ?? true;
     [JsonIgnore] public bool IncludeLocalNetworkValue => IncludeLocalNetwork ?? false;
     [JsonIgnore] public bool BlockIpV6Value => BlockIpV6 ?? false;
 
     public void Merge(NetFilterOptions obj)
     {
+        if (obj.NetworkIsolation != null) NetworkIsolation = obj.NetworkIsolation;
         if (obj.IncludeLocalNetwork != null) IncludeLocalNetwork = obj.IncludeLocalNetwork;
         if (obj.PacketCaptureIncludeIpRanges != null) PacketCaptureIncludeIpRanges = obj.PacketCaptureIncludeIpRanges;
         if (obj.PacketCaptureExcludeIpRanges != null) PacketCaptureExcludeIpRanges = obj.PacketCaptureExcludeIpRanges;
@@ -28,6 +31,7 @@ public class NetFilterOptions
 
     public void ApplyDefaults()
     {
+        NetworkIsolation = NetworkIsolationValue;
         IncludeLocalNetwork = IncludeLocalNetworkValue;
         BlockIpV6 = BlockIpV6Value;
     }

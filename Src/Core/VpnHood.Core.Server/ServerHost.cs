@@ -609,6 +609,8 @@ public class ServerHost : IAsyncDisposable, IJob
             ServerLocation = sessionResponseEx.ServerLocation,
             ServerTags = sessionResponseEx.ServerTags,
             AccessInfo = sessionResponseEx.AccessInfo,
+            IsTunProviderSupported = IsIpV6Supported,
+            VirtualIp = session.VirtualIp,
             ClientCountry = sessionResponseEx.ClientCountry
         };
 

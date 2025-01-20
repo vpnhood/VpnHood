@@ -37,4 +37,5 @@ public class HelloResponse : SessionResponse
     public string[] ServerTags { get; set; } = [];
     public IPAddress? VirtualIp { get; set; }
     public AccessInfo? AccessInfo { get; set; }
+    public bool IsTunProviderSupported { get; set; }
 }

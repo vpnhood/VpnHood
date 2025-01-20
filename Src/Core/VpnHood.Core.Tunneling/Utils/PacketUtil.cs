@@ -12,6 +12,14 @@ namespace VpnHood.Core.Tunneling.Utils;
 
 public static class PacketUtil
 {
+    public static void UpdateIpChecksum(IPPacket ipPacket)
+    {
+        if (ipPacket is IPv6Packet ipV6Packet)
+            ipV6Packet.UpdateCalculatedValues();
+
+        ipPacket.UpdateCalculatedValues();
+    }
+
     public static void UpdateIpPacket(IPPacket ipPacket, bool throwIfNotSupported = true)
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));

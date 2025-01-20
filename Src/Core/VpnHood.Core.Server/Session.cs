@@ -181,6 +181,9 @@ public class Session : IAsyncDisposable
             PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
 
         ipPacket = _netFilter.ProcessReply(ipPacket);
+        ipPacket.SourceAddress = VirtualIp; //todo: must be done in client
+        PacketUtil.UpdateIpChecksum(ipPacket); //todo: must be done in client
+
         return Tunnel.SendPacketAsync(ipPacket, CancellationToken.None);
     }
 

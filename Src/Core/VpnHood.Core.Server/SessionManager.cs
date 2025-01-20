@@ -30,7 +30,6 @@ public class SessionManager : IAsyncDisposable, IJob
     private byte[] _serverSecret;
     private readonly TimeSpan _deadSessionTimeout;
     private readonly JobSection _heartbeatSection;
-    private readonly IpRange _virtualIpRange;
 
     public string ApiKey { get; private set; }
     public INetFilter NetFilter { get; }
@@ -39,6 +38,7 @@ public class SessionManager : IAsyncDisposable, IJob
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();
     public SessionOptions SessionOptions { get; set; } = new();
+    public IpRange VirtualIpRange { get; }
     public ITracker? Tracker { get; }
 
     public byte[] ServerSecret {
@@ -69,7 +69,7 @@ public class SessionManager : IAsyncDisposable, IJob
         ApiKey = HttpUtil.GetApiKey(_serverSecret, TunnelDefaults.HttpPassCheck);
         NetFilter = netFilter;
         ServerVersion = serverVersion;
-        _virtualIpRange = options.VirtualIpRange;
+        VirtualIpRange = options.VirtualIpRange;
         if (_tunProvider != null)
             _tunProvider.OnPacketReceived += TunProvider_OnPacketReceived;
 
@@ -96,8 +96,8 @@ public class SessionManager : IAsyncDisposable, IJob
     private IPAddress AllocateVirtualIp()
     {
         // find the max virtual IP
-        var ipAddress = _virtualIpRange.FirstIpAddress;
-        while (!ipAddress.Equals(_virtualIpRange.LastIpAddress)) {
+        var ipAddress = VirtualIpRange.FirstIpAddress;
+        while (!ipAddress.Equals(VirtualIpRange.LastIpAddress)) {
             if (!_virtualIps.ContainsKey(ipAddress))
                 return ipAddress;
 

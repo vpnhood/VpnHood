@@ -15,7 +15,7 @@ public class StreamPacketReader(Stream stream) : IAsyncDisposable
 
 
     /// <returns>null if read nothing</returns>
-    public async Task<IPPacket[]?> ReadAsync(CancellationToken cancellationToken)
+    public async Task<IList<IPPacket>?> ReadAsync(CancellationToken cancellationToken)
     {
         _ipPackets.Clear();
 
@@ -78,7 +78,7 @@ public class StreamPacketReader(Stream stream) : IAsyncDisposable
                 break;
         }
 
-        return _ipPackets.ToArray();
+        return _ipPackets;
     }
 
     public ValueTask DisposeAsync()

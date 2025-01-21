@@ -97,6 +97,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public ClientStat Stat { get; }
     public IPAddress? ClientPublicIpAddress { get; private set; }
     public string? ClientCountry { get; private set; }
+    public bool UseTcpOverTun { get; set; }
     public byte[] SessionKey =>
         _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
 
@@ -151,6 +152,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         IncludeLocalNetwork = options.IncludeLocalNetwork;
         DropUdp = options.DropUdp;
         DropQuic = options.DropQuic;
+        UseTcpOverTun = options.UseTcpOverTun;
         DomainFilterService = new DomainFilterService(options.DomainFilter, options.ForceLogSni);
         var dnsRange = DnsServers.Select(x => new IpRange(x)).ToArray();
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges.Union(dnsRange);
@@ -217,6 +219,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                _adService is { CanShowRewarded: true } &&
                Token.IsPublic;
     }
+
 
     public bool UseUdpChannel {
         get => _useUdpChannel;
@@ -285,10 +288,10 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _serverFinder.IncludeIpV6 = IsIpV6SupportedByClient;
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
         VhLogger.Instance.LogInformation(
-            "UseUdpChannel: {UseUdpChannel}, DropUdp: {DropUdp}, DropQuic: {DropQuic}, " +
+            "UseUdpChannel: {UseUdpChannel}, DropUdp: {DropUdp}, DropQuic: {DropQuic}, UseTcpOverTun: {UseTcpOverTun}" +
             "IncludeLocalNetwork: {IncludeLocalNetwork}, MinWorkerThreads: {WorkerThreads}, " +
             "CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}",
-            UseUdpChannel, DropUdp, DropQuic, IncludeLocalNetwork, workerThreads,
+            UseUdpChannel, DropUdp, DropQuic, UseTcpOverTun, IncludeLocalNetwork, workerThreads,
             completionPortThreads, IsIpV6SupportedByClient);
 
         // report version
@@ -430,7 +433,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                             droppedPackets.Add(ipPacket);
 
                         else if (ipPacket.Protocol == ProtocolType.Tcp) {
-                            if (_isTunProviderSupported)
+                            if (_isTunProviderSupported && UseTcpOverTun)
                                 tunnelPackets.Add(ipPacket);
                             else
                                 tcpHostPackets.Add(ipPacket);
@@ -452,7 +455,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     else {
                         // tcp already check for InInRange and IpV6 and Proxy
                         if (ipPacket.Protocol == ProtocolType.Tcp) {
-                            if (_isTunProviderSupported && IsInIpRange(ipPacket.DestinationAddress))
+                            if (_isTunProviderSupported && UseTcpOverTun && IsInIpRange(ipPacket.DestinationAddress))
                                 tunnelPackets.Add(ipPacket);
                             else
                                 tcpHostPackets.Add(ipPacket);

@@ -216,6 +216,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var client = _client; // it may be null
             var disconnectRequired = false;
             if (client != null) {
+                client.UseTcpOverTun = HasDebugCommand(DebugCommands.UseTcpOverTun);
                 client.UseUdpChannel = UserSettings.UseUdpChannel;
                 client.DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp;
                 client.DropQuic = UserSettings.DropQuic;
@@ -593,6 +594,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             DropQuic = UserSettings.DropQuic,
             ServerLocation = ServerLocationInfo.IsAutoLocation(serverLocation) ? null : serverLocation,
             PlanId = planId,
+            UseTcpOverTun = HasDebugCommand(DebugCommands.UseTcpOverTun),
             UseUdpChannel = UserSettings.UseUdpChannel,
             DomainFilter = UserSettings.DomainFilter,
             ForceLogSni = LogService.LogEvents.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase),

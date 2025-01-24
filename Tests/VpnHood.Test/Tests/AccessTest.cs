@@ -93,7 +93,7 @@ public class AccessTest : TestBase
         // check: client must disconnect at runtime on traffic overflow
         // ----------
         await using var client1 = await TestHelper.CreateClient(accessToken);
-        Assert.AreEqual(50, client1.SessionStatus.AccessUsage?.MaxTraffic);
+        Assert.AreEqual(50, client1.SessionStatus.AccessUsage.MaxTraffic);
 
         VhLogger.Instance.LogTrace("Test: second try should get the AccessTrafficOverflow status.");
         await VhTestUtil.AssertEqualsWait(SessionErrorCode.AccessTrafficOverflow, async () => {
@@ -136,14 +136,14 @@ public class AccessTest : TestBase
         await using var client2 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
             token: token, clientId: client1.ClientId);
 
-        Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionStatus.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.YourSelf, client2.Stat?.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.None, client2.SessionStatus.SuppressedBy);
 
         // wait for finishing client1
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for client1 disposal.");
         await TestHelper.WaitForClientState(client1, ClientState.Disposed, useUpdateStatus: true);
-        Assert.AreEqual(SessionSuppressType.None, client1.SessionStatus.SuppressedTo);
-        Assert.AreEqual(SessionSuppressType.YourSelf, client1.SessionStatus.SuppressedBy);
+        Assert.AreEqual(SessionSuppressType.None, client1.Stat?.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.YourSelf, client1.Stat?.SuppressedBy);
 
         // suppress by other (MaxTokenClient is 2)
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Creating client3.");
@@ -162,14 +162,14 @@ public class AccessTest : TestBase
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for client2 disposal.");
         await TestHelper.WaitForClientState(client2, ClientState.Disposed, useUpdateStatus: true);
 
-        Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionStatus.SuppressedTo);
-        Assert.AreEqual(SessionSuppressType.Other, client2.SessionStatus.SuppressedBy);
-        Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedBy);
-        Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedTo);
-        Assert.AreEqual(SessionSuppressType.Other, client4.SessionStatus.SuppressedTo);
-        Assert.AreEqual(SessionSuppressType.None, client4.SessionStatus.SuppressedBy);
-        Assert.AreEqual(SessionSuppressType.None, clientX.SessionStatus.SuppressedBy);
-        Assert.AreEqual(SessionSuppressType.None, clientX.SessionStatus.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.YourSelf, client2.Stat?.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.Other, client2.Stat?.SuppressedBy);
+        Assert.AreEqual(SessionSuppressType.None, client3.Stat?.SuppressedBy);
+        Assert.AreEqual(SessionSuppressType.None, client3.Stat?.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.Other, client4.Stat?.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.None, client4.Stat?.SuppressedBy);
+        Assert.AreEqual(SessionSuppressType.None, clientX.Stat?.SuppressedBy);
+        Assert.AreEqual(SessionSuppressType.None, clientX.Stat?.SuppressedTo);
     }
 
     [TestMethod]
@@ -189,8 +189,8 @@ public class AccessTest : TestBase
         await using var client3 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
             token: token);
 
-        Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedTo);
-        Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedBy);
+        Assert.AreEqual(SessionSuppressType.None, client3.Stat?.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.None, client3.Stat?.SuppressedBy);
     }
 
     [TestMethod]
@@ -211,8 +211,8 @@ public class AccessTest : TestBase
         await using var client2 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(),
             token: token, clientId: client1.ClientId);
 
-        Assert.AreEqual(SessionSuppressType.None, client1.SessionStatus.SuppressedBy);
-        Assert.AreEqual(SessionSuppressType.None, client2.SessionStatus.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.None, client1.Stat?.SuppressedBy);
+        Assert.AreEqual(SessionSuppressType.None, client2.Stat?.SuppressedTo);
     }
 
     [TestMethod]
@@ -235,24 +235,27 @@ public class AccessTest : TestBase
         var time = DateTime.UtcNow;
         // suppress by yourself
         await using var client2 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(), token: token);
+        var accessInfo = client2.Stat?.AccessInfo;
+        Assert.IsNotNull(accessInfo);
         Assert.AreEqual(SessionSuppressType.None, client1.SessionStatus.SuppressedBy);
-        Assert.AreEqual(SessionSuppressType.None, client2.SessionStatus.SuppressedTo);
-        Assert.IsNotNull(client2.SessionStatus.AccessInfo);
-        Assert.AreEqual(2, client2.SessionStatus.AccessInfo.MaxDeviceCount);
-        Assert.AreEqual(2_000_000, client2.SessionStatus.AccessInfo.MaxTotalTraffic);
-        Assert.AreEqual(true, client2.SessionStatus.AccessInfo.IsPremium);
-        Assert.AreEqual(expired, client2.SessionStatus.AccessInfo.ExpirationTime);
-        Assert.IsTrue(client2.SessionStatus.AccessInfo.CreatedTime < time);
-        Assert.IsTrue(client2.SessionStatus.AccessInfo.LastUsedTime < time);
+        Assert.AreEqual(SessionSuppressType.None, client2.Stat?.SuppressedTo);
+        Assert.AreEqual(2, accessInfo.MaxDeviceCount);
+        Assert.AreEqual(2_000_000, accessInfo.MaxTotalTraffic);
+        Assert.AreEqual(true, accessInfo.IsPremium);
+        Assert.AreEqual(expired, accessInfo.ExpirationTime);
+        Assert.IsTrue(accessInfo.CreatedTime < time);
+        Assert.IsTrue(accessInfo.LastUsedTime < time);
         await client2.DisposeAsync(waitForBye: true);
         await TestHelper.WaitForClientState(client2, ClientState.Disposed);
         await server.SessionManager.Sync(true);
 
         await Task.Delay(1000);
         await using var client3 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(), token: token);
-        Assert.IsNotNull(client3.SessionStatus.AccessInfo);
-        Assert.IsTrue(client3.SessionStatus.AccessInfo.CreatedTime < time);
-        Assert.IsTrue(client3.SessionStatus.AccessInfo.LastUsedTime > time);
+        accessInfo = client3.Stat?.AccessInfo;
+        Assert.IsNotNull(accessInfo);
+        Assert.IsNotNull(accessInfo);
+        Assert.IsTrue(accessInfo.CreatedTime < time);
+        Assert.IsTrue(accessInfo.LastUsedTime > time);
     }
 
 }

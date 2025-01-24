@@ -22,7 +22,7 @@ public class DnsConfigurationTest
         await using var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
 
         CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.DnsServers);
-        Assert.IsTrue(client.Stat.IsDnsServersAccepted);
+        Assert.IsTrue(client.Stat?.IsDnsServersAccepted);
     }
 
     [TestMethod]
@@ -41,7 +41,7 @@ public class DnsConfigurationTest
             packetCapture: new TestNullPacketCapture());
 
         CollectionAssert.AreEqual(clientOptions.DnsServers, client.DnsServers);
-        Assert.IsTrue(client.Stat.IsDnsServersAccepted);
+        Assert.IsTrue(client.Stat?.IsDnsServersAccepted);
     }
 
     [TestMethod]
@@ -66,7 +66,7 @@ public class DnsConfigurationTest
             packetCapture: new TestNullPacketCapture());
 
         CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.DnsServers);
-        Assert.IsFalse(client.Stat.IsDnsServersAccepted);
+        Assert.IsFalse(client.Stat?.IsDnsServersAccepted);
     }
 
     [TestMethod]

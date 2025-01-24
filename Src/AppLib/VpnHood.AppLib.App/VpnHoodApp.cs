@@ -289,10 +289,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppState State {
         get {
             var client = _client;
+            var stat = client?.Stat;
             var clientProfileInfo = CurrentClientProfileInfo;
             var connectionState = ConnectionState;
+
             var appState = new AppState {
                 ConfigTime = Settings.ConfigTime,
+                Stat = stat,
                 ConnectionState = connectionState,
                 IsIdle = IsIdle,
                 CanConnect = connectionState is AppConnectionState.None,
@@ -308,16 +311,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 HasDisconnectedByUser = _hasDisconnectedByUser,
                 HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseRequested || _appPersistState.LastError != null),
                 SessionStatus = LastSessionStatus,
-                Speed = client?.Stat.Speed ?? new Traffic(),
-                AccountTraffic = client?.Stat.AccountTraffic ?? new Traffic(),
-                SessionTraffic = client?.Stat.SessionTraffic ?? new Traffic(),
-                TcpTunnelledCount = client?.Stat.TcpTunnelledCount,
-                TcpPassthruCount = client?.Stat.TcpPassthruCount,
                 ClientCountryCode = _appPersistState.ClientCountryCode,
                 ClientCountryName = VhUtil.TryGetCountryName(_appPersistState.ClientCountryCode),
-                IsWaitingForAd = client?.Stat.IsWaitingForAd is true,
                 ConnectRequestTime = _connectRequestTime,
-                IsUdpChannelSupported = client?.Stat.IsUdpChannelSupported,
                 CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture ?? SystemUiCulture),
                 SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),
                 VersionStatus = _versionCheckResult?.VersionStatus ?? VersionStatus.Unknown,
@@ -325,7 +321,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LastPublishInfo = _versionCheckResult?.VersionStatus is VersionStatus.Deprecated or VersionStatus.Old
                     ? _versionCheckResult.PublishInfo
                     : null,
-                ServerLocationInfo = client?.Stat.ServerLocationInfo,
                 ClientProfile = clientProfileInfo?.ToBaseInfo()
             };
 

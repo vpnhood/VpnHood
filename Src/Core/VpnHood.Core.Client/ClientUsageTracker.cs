@@ -8,7 +8,7 @@ namespace VpnHood.Core.Client;
 internal class ClientUsageTracker : IJob, IAsyncDisposable
 {
     private readonly AsyncLock _reportLock = new();
-    private readonly VpnHoodClient.ClientStat _clientStat;
+    private readonly VpnHoodClient _vpnHoodClient;
     private readonly ITracker _tracker;
     private Traffic _lastTraffic = new();
     private int _lastRequestCount;
@@ -16,13 +16,13 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
     private bool _disposed;
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(25));
 
-    public ClientUsageTracker(VpnHoodClient.ClientStat clientStat, ITracker tracker)
+    public ClientUsageTracker(VpnHoodClient vpnHoodClient, ITracker tracker)
     {
-        _clientStat = clientStat;
+        _vpnHoodClient = vpnHoodClient;
         _tracker = tracker;
         JobRunner.Default.Add(this);
     }
-
+    
     public Task RunJob()
     {
         return Report();
@@ -35,10 +35,14 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
 
-        var traffic = _clientStat.SessionTraffic;
+        var clientStat = _vpnHoodClient.Stat;
+        if (clientStat == null)
+            return;
+
+        var traffic = clientStat.SessionTraffic;
         var usage = traffic - _lastTraffic;
-        var requestCount = _clientStat.ConnectorStat.RequestCount;
-        var connectionCount = _clientStat.ConnectorStat.CreatedConnectionCount;
+        var requestCount = clientStat.ConnectorStat.RequestCount;
+        var connectionCount = clientStat.ConnectorStat.CreatedConnectionCount;
 
         var trackEvent = ClientTrackerBuilder.BuildUsage(usage, requestCount - _lastRequestCount,
             connectionCount - _lastConnectionCount);
@@ -53,7 +57,8 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
     {
         try {
             // Make sure no exception in dispose
-            if (_clientStat.SessionTraffic - _lastTraffic != new Traffic())
+            var clientStat = _vpnHoodClient.Stat;
+            if (clientStat!=null && clientStat.SessionTraffic - _lastTraffic != new Traffic())
                 await Report().VhConfigureAwait();
         }
         catch {

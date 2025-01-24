@@ -118,40 +118,40 @@ public class FileAccessManagerTest : TestBase
         var response = await accessManager1.Session_AddUsage(sessionResponse.SessionId,
             new Traffic { Sent = 20, Received = 10 }, null);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
-        Assert.AreEqual(20, response.AccessUsage?.Traffic.Sent);
-        Assert.AreEqual(10, response.AccessUsage?.Traffic.Received);
+        Assert.AreEqual(20, response.AccessUsage?.CycleTraffic.Sent);
+        Assert.AreEqual(10, response.AccessUsage?.CycleTraffic.Received);
 
         response = await accessManager1.Session_AddUsage(sessionResponse.SessionId,
             new Traffic { Sent = 20, Received = 10 }, null);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
-        Assert.AreEqual(40, response.AccessUsage?.Traffic.Sent);
-        Assert.AreEqual(20, response.AccessUsage?.Traffic.Received);
+        Assert.AreEqual(40, response.AccessUsage?.CycleTraffic.Sent);
+        Assert.AreEqual(20, response.AccessUsage?.CycleTraffic.Received);
 
         response = await accessManager1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint,
             sessionRequestEx1.ClientIp);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
-        Assert.AreEqual(40, response.AccessUsage?.Traffic.Sent);
-        Assert.AreEqual(20, response.AccessUsage?.Traffic.Received);
+        Assert.AreEqual(40, response.AccessUsage?.CycleTraffic.Sent);
+        Assert.AreEqual(20, response.AccessUsage?.CycleTraffic.Received);
 
         // close session
         response = await accessManager1.Session_Close(sessionResponse.SessionId,
             new Traffic { Sent = 20, Received = 10 });
         Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode, response.ErrorMessage);
-        Assert.AreEqual(60, response.AccessUsage?.Traffic.Sent);
-        Assert.AreEqual(30, response.AccessUsage?.Traffic.Received);
+        Assert.AreEqual(60, response.AccessUsage?.CycleTraffic.Sent);
+        Assert.AreEqual(30, response.AccessUsage?.CycleTraffic.Received);
 
         // check is session closed
         response = await accessManager1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint,
             sessionRequestEx1.ClientIp);
         Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode);
-        Assert.AreEqual(60, response.AccessUsage?.Traffic.Sent);
-        Assert.AreEqual(30, response.AccessUsage?.Traffic.Received);
+        Assert.AreEqual(60, response.AccessUsage?.CycleTraffic.Sent);
+        Assert.AreEqual(30, response.AccessUsage?.CycleTraffic.Received);
 
         // check restore
         var accessManager2 = TestHelper.CreateAccessManager(storagePath: storagePath);
         response = await accessManager2.Session_Create(sessionRequestEx1);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
-        Assert.AreEqual(60, response.AccessUsage?.Traffic.Sent);
-        Assert.AreEqual(30, response.AccessUsage?.Traffic.Received);
+        Assert.AreEqual(60, response.AccessUsage?.CycleTraffic.Sent);
+        Assert.AreEqual(30, response.AccessUsage?.CycleTraffic.Received);
     }
 }

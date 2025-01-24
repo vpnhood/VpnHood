@@ -136,7 +136,7 @@ public class AdTest : TestBase
         // connect
         if (acceptAd) {
             await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd);
-            Assert.IsNull(app.State.SessionStatus?.AccessUsage?.ExpirationTime);
+            Assert.IsNull(app.State.SessionStatus?.AccessUsage.ExpirationTime);
         }
         else {
             var ex = await Assert.ThrowsExceptionAsync<SessionException>(()=>app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd));
@@ -171,12 +171,12 @@ public class AdTest : TestBase
         await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByTrial);
 
         // assert
-        Assert.IsNotNull(app.State.SessionStatus?.AccessUsage?.ExpirationTime);
+        Assert.IsNotNull(app.State.SessionStatus?.AccessUsage.ExpirationTime);
 
         // show ad
         if (acceptAd) {
             await app.ExtendByRewardedAd(CancellationToken.None);
-            Assert.IsNull(app.State.SessionStatus?.AccessUsage?.ExpirationTime);
+            Assert.IsNull(app.State.SessionStatus?.AccessUsage.ExpirationTime);
         }
         else {
             var ex = await Assert.ThrowsExceptionAsync<SessionException>(() => app.ExtendByRewardedAd(CancellationToken.None));
@@ -211,7 +211,7 @@ public class AdTest : TestBase
         await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByTrial);
 
         // asserts
-        Assert.AreEqual(canDetectInProcessPacket, app.State.SessionStatus?.AccessUsage?.CanExtendByRewardedAd);
+        Assert.AreEqual(canDetectInProcessPacket, app.State.Stat?.CanExtendByRewardedAd);
     }
 
 
@@ -241,6 +241,6 @@ public class AdTest : TestBase
         await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByTrial);
 
         // asserts
-        Assert.AreEqual(enable, app.State.SessionStatus?.AccessUsage?.CanExtendByRewardedAd);
+        Assert.AreEqual(enable, app.State.SessionStatus?.AccessUsage.CanExtendByRewardedAd);
     }
 }

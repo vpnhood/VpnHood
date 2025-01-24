@@ -591,7 +591,7 @@ public class ClientAppTest : TestBase
 
 
         Assert.IsTrue(app.State.ClientProfile?.IsPremiumAccount);
-        Assert.IsTrue(app.State.SessionStatus?.AccessUsage?.IsPremium);
+        Assert.IsTrue(app.State.SessionStatus?.AccessUsage.IsPremium);
     }
 
     [TestMethod]

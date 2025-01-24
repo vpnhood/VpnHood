@@ -675,11 +675,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private void UpdateStatusByCreatedClient(VpnHoodClient client)
     {
         // update access token if ResponseAccessKey is set
-        if (!string.IsNullOrWhiteSpace(client.ResponseAccessKey))
-            ClientProfileService.UpdateTokenByAccessKey(client.Token.TokenId, client.ResponseAccessKey);
+        if (!string.IsNullOrWhiteSpace(client.SessionStatus.AccessKey))
+            ClientProfileService.UpdateTokenByAccessKey(client.Token.TokenId, client.SessionStatus.AccessKey);
 
-        if (client.ClientCountry != null)
-            _appPersistState.ClientCountryCodeByServer = client.ClientCountry;
+        if (client.SessionStatus.ClientCountry != null)
+            _appPersistState.ClientCountryCodeByServer = client.SessionStatus.AccessKey;
     }
 
     private async Task RequestFeatures(CancellationToken cancellationToken)
@@ -978,7 +978,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (_client?.State != ClientState.Connected)
             throw new InvalidOperationException("Could not show ad. The VPN is not connected.");
 
-        if (State.SessionStatus?.AccessUsage?.CanExtendByRewardedAd != true)
+        if (_client.Stat?.CanExtendByRewardedAd != true)
             throw new InvalidOperationException("Can not extend session by a rewarded ad at this time.");
 
         return _client.ShowRewardedAd(cancellationToken);

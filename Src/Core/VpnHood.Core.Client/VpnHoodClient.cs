@@ -10,7 +10,6 @@ using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Exceptions;
 using VpnHood.Core.Client.Exceptions;
-using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Logging;
@@ -63,7 +62,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private DateTime? _autoWaitTime;
     private readonly ServerFinder _serverFinder;
     private readonly ConnectPlanId _planId;
-    private SessionStatus _sessionStatus = new();
     private readonly TimeSpan _canExtendByRewardedAdThreshold;
     private bool _isTunProviderSupported;
     private bool _isDnsServersAccepted;
@@ -93,14 +91,13 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public IPEndPoint? HostUdpEndPoint { get; private set; }
     public bool DropUdp { get; set; }
     public bool DropQuic { get; set; }
-    public string? ClientCountry { get; private set; }
     public bool UseTcpOverTun { get; set; }
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public byte[]? ServerSecret { get; private set; }
-    public string? ResponseAccessKey { get; private set; }
     public DomainFilterService DomainFilterService { get; }
     public bool AllowTcpReuse { get; }
     public IClientStat? Stat => _clientStat;
+    public SessionStatus SessionStatus { get; private set; } = new();
 
 
     public VpnHoodClient(IPacketCapture packetCapture, string clientId, Token token, ClientOptions options)
@@ -173,14 +170,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         JobRunner.Default.Add(this);
     }
 
-    public SessionStatus SessionStatus {
-        get {
-            if (_sessionStatus.AccessUsage != null)
-                _sessionStatus.AccessUsage.CanExtendByRewardedAd = CanExtendByRewardedAd(_sessionStatus.AccessUsage);
-            return _sessionStatus;
-        }
-    }
-
 
     public IPAddress[] DnsServers {
         get => _dnsServers;
@@ -206,7 +195,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
     }
 
-    private bool CanExtendByRewardedAd(AccessUsage accessUsage)
+    private bool CanExtendByRewardedAd(AccessUsage? accessUsage)
     {
         return
             accessUsage is { CanExtendByRewardedAd: true, ExpirationTime: not null } &&
@@ -277,7 +266,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         // Connecting. Must before IsIpv6Supported
         State = ClientState.Connecting;
-        _sessionStatus = new SessionStatus();
+        SessionStatus = new SessionStatus();
 
         // report config
         IsIpV6SupportedByClient = await IPAddressUtil.IsIpv6Supported();
@@ -713,6 +702,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();
             var helloResponse = requestResult.Response;
             _clientStat = new ClientStat(this, helloResponse);
+            SessionStatus.Update(helloResponse);
 
 #pragma warning disable CS0618 // Type or member is obsolete
             if (helloResponse is { MinProtocolVersion: 0, ServerProtocolVersion: 5 }) {
@@ -755,9 +745,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             _sessionKey = helloResponse.SessionKey;
             _isTunProviderSupported = helloResponse.IsTunProviderSupported;
             ServerSecret = helloResponse.ServerSecret;
-            ResponseAccessKey = helloResponse.AccessKey;
-            SessionStatus.SuppressedTo = helloResponse.SuppressedTo;
-            SessionStatus.AccessInfo = helloResponse.AccessInfo;
             IsIpV6SupportedByServer = helloResponse.IsIpV6Supported;
 
             if (helloResponse.UdpPort > 0)
@@ -904,12 +891,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         try {
             // create a connection and send the request 
             var requestResult = await ConnectorService.SendRequest<T>(request, cancellationToken).VhConfigureAwait();
-            if (requestResult.Response.AccessUsage != null)
-                requestResult.Response.AccessUsage.CanExtendByRewardedAd = CanExtendByRewardedAd(requestResult.Response.AccessUsage);
-
-            // set SessionStatus
-            if (requestResult.Response.AccessUsage != null)
-                SessionStatus.AccessUsage = requestResult.Response.AccessUsage;
+            SessionStatus.Update(requestResult.Response);
 
             // client is disposed meanwhile
             if (_disposed) {
@@ -922,15 +904,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             return requestResult;
         }
         catch (SessionException ex) {
-            // set SessionStatus
-            if (ex.SessionResponse.AccessUsage != null)
-                SessionStatus.AccessUsage = ex.SessionResponse.AccessUsage;
-
-            if (!string.IsNullOrEmpty(ex.SessionResponse.AccessKey))
-                ResponseAccessKey = ex.SessionResponse.AccessKey;
-
-            if (!string.IsNullOrEmpty(ex.SessionResponse.ClientCountry))
-                ClientCountry = ex.SessionResponse.ClientCountry;
+            SessionStatus.Update(ex.SessionResponse);
 
             // SessionException means that the request accepted by server but there is an error for that request
             _lastConnectionErrorTime = null;
@@ -938,8 +912,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             // close session if server has ended the session
             if (ex.SessionResponse.ErrorCode != SessionErrorCode.GeneralError &&
                 ex.SessionResponse.ErrorCode != SessionErrorCode.RedirectHost &&
-                ex.SessionResponse.ErrorCode != SessionErrorCode.RewardedAdRejected)
+                ex.SessionResponse.ErrorCode != SessionErrorCode.RewardedAdRejected) {
                 _ = DisposeAsync(ex);
+            }
 
             throw;
         }
@@ -1074,7 +1049,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         if (_disposed)
             return Task.CompletedTask;
 
-        if (FastDateTime.UtcNow > SessionStatus.AccessUsage?.ExpirationTime)
+        if (FastDateTime.UtcNow > SessionStatus.AccessUsage.ExpirationTime)
             _ = DisposeAsync(new SessionException(SessionErrorCode.AccessExpired));
 
         return Task.CompletedTask;
@@ -1100,35 +1075,15 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
     }
 
-    private readonly AsyncLock _disposeLockEx = new();
-    private async ValueTask DisposeAsync(Exception ex)
-    {
-        using var lockResult = await _disposeLockEx.LockAsync().VhConfigureAwait();
-        if (_disposed || !lockResult.Succeeded) return;
-
-        VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Disposing...");
-
-        // set SessionStatus error code if not set yet
-        if (SessionStatus.ErrorCode == SessionErrorCode.Ok) {
-            if (ex is SessionException sessionException) {
-                SessionStatus.ErrorCode = sessionException.SessionResponse.ErrorCode;
-                SessionStatus.SuppressedBy = sessionException.SessionResponse.SuppressedBy;
-                SessionStatus.Error = sessionException.ToApiError();
-                if (sessionException.SessionResponse.AccessUsage != null) //update AccessUsage if exists
-                    SessionStatus.AccessUsage = sessionException.SessionResponse.AccessUsage;
-            }
-            else {
-                SessionStatus.ErrorCode = SessionErrorCode.GeneralError;
-                SessionStatus.Error = new ApiError(ex);
-            }
-        }
-
-        await DisposeAsync(false);
-    }
-
     public ValueTask DisposeAsync()
     {
         return DisposeAsync(false);
+    }
+
+    private async ValueTask DisposeAsync(Exception ex)
+    {
+        SessionStatus.SetException(ex);
+        await DisposeAsync(false);
     }
 
     private readonly AsyncLock _disposeLock = new();
@@ -1226,7 +1181,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         public ConnectorStat ConnectorStat => client.ConnectorService.Stat;
         public Traffic Speed => client.Tunnel.Speed;
         public Traffic SessionTraffic => client.Tunnel.Traffic;
-        public Traffic CycleTraffic => (helloResponse.AccessUsage?.Traffic ?? new Traffic()) + client.Tunnel.Traffic;
+        public Traffic CycleTraffic => (helloResponse.AccessUsage?.CycleTraffic ?? new Traffic()) + client.Tunnel.Traffic;
         public Traffic TotalTraffic => (helloResponse.AccessUsage?.TotalTraffic ?? new Traffic()) + client.Tunnel.Traffic;
         public int TcpTunnelledCount => client._clientHost.TcpTunnelledCount;
         public int TcpPassthruCount => client._clientHost.TcpPassthruCount;
@@ -1236,6 +1191,14 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         public bool IsWaitingForAd => client._isWaitingForAd;
         public bool IsDnsServersAccepted => client._isDnsServersAccepted;
         public Version ServerVersion => Version.Parse(helloResponse.ServerVersion);
+        public SessionSuppressType SuppressedTo => helloResponse.SuppressedTo;
+        public SessionSuppressType SuppressedBy => client.SessionStatus.SuppressedBy;
+        public string? ClientCountry => helloResponse.ClientCountry;
+        public bool CanExtendByRewardedAd => client.CanExtendByRewardedAd(client.SessionStatus.AccessUsage);
+        public bool IsPremiumSession => client.SessionStatus.AccessUsage.IsPremium;
+        public long SessionMaxTraffic => client.SessionStatus.AccessUsage.MaxTraffic;
+        public DateTime? SessionExpirationTime => client.SessionStatus.AccessUsage.ExpirationTime;
+        public int? ActiveClientCount => client.SessionStatus.AccessUsage.ActiveClientCount;
         public IPAddress ClientPublicIpAddress => helloResponse.ClientPublicAddress;
         public ServerLocationInfo? ServerLocationInfo => helloResponse.ServerLocation != null
             ? ServerLocationInfo.Parse(helloResponse.ServerLocation)

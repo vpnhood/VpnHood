@@ -211,7 +211,7 @@ public class SessionService : IDisposable, IJob
             MaxClientCount = accessToken.MaxClientCount,
 #pragma warning restore CS0618 // Type or member is obsolete
             MaxTraffic = accessToken.MaxTraffic,
-            Traffic = new Traffic(accessTokenData.Usage.Sent, accessTokenData.Usage.Received),
+            CycleTraffic = new Traffic(accessTokenData.Usage.Sent, accessTokenData.Usage.Received),
             IsPremium = true, // token is always premium in File Access Manager
         };
 
@@ -244,7 +244,7 @@ public class SessionService : IDisposable, IJob
 
             // check traffic
             if (accessUsage.MaxTraffic != 0 &&
-                accessUsage.Traffic.Total > accessUsage.MaxTraffic)
+                accessUsage.CycleTraffic.Total > accessUsage.MaxTraffic)
                 return new SessionResponseEx {
                     ErrorCode = SessionErrorCode.AccessTrafficOverflow,
                     ErrorMessage = "All traffic quota has been consumed.",

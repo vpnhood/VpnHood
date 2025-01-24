@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Client;
+﻿using VpnHood.Core.Client.Abstractions;
 
 namespace VpnHood.AppLib.Test;
 

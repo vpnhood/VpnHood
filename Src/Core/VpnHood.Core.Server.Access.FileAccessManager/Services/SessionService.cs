@@ -136,8 +136,7 @@ public class SessionService : IDisposable, IJob
             IsPremium = true, // token is always premium in File Access Manager
             MaxDeviceCount = accessTokenData.AccessToken.MaxClientCount,
             MaxTotalTraffic = accessTokenData.AccessToken.MaxTraffic,
-            DeviceCount = null, // not supported
-            Devices = null // not supported
+            DevicesSummary = null // not supported
         };
 
         if (responseEx.ErrorCode != SessionErrorCode.Ok)

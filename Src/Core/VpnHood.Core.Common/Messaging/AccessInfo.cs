@@ -11,7 +11,5 @@ public class AccessInfo
     public long MaxTotalTraffic { get; set; }
     public int MaxDeviceCount { get; init; }
     public int DeviceLifeSpan { get; init; } // In days
-    public int? DeviceCount { get; init; } // The count of devices
-    public bool? HasMoreDevices { get; init; } // If true, there are more devices than the count
-    public AccessDevice[]? Devices { get; init; } // Recent devices
+    public AccessDevicesSummary? DevicesSummary{ get; init; } 
 }

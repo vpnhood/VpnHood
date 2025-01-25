@@ -228,23 +228,23 @@ public class ClientAppTest : TestBase
     public static async Task IpFilters_TestInclude(VpnHoodApp app, bool testUdp, bool testPing, bool testDns)
     {
         // TCP
-        var oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+        var oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
-        Assert.AreNotEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+        Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
         // TCP
-        oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+        oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
-        Assert.AreEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+        Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
         if (testPing) {
             // ping
-            oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
             await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
             // ping
-            oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
             try {
                 await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address2, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
@@ -253,17 +253,17 @@ public class ClientAppTest : TestBase
                 Assert.AreEqual(nameof(PingException), ex.GetType().Name);
             }
 
-            Assert.AreEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+            Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
         }
 
         if (testUdp) {
             // UDP
-            oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
             await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint1);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
             // UDP
-            oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
             try {
                 await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint2, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
@@ -272,36 +272,36 @@ public class ClientAppTest : TestBase
                 Assert.AreEqual(nameof(OperationCanceledException), ex.GetType().Name);
             }
 
-            Assert.AreEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+            Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
         }
 
         // DNS should always use tunnel regarding of any exclude or include option
         if (testDns) {
-            oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
             await TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint1);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
-            oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
             await TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint2);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
         }
     }
 
     public static async Task IpFilters_TestExclude(VpnHoodApp app, bool testUdp, bool testPing, bool testDns)
     {
         // TCP
-        var oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+        var oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
-        Assert.AreEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+        Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
         // TCP
-        oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+        oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
-        Assert.AreNotEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+        Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
         if (testPing) {
             // ping
-            oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
             try {
                 await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
@@ -310,18 +310,18 @@ public class ClientAppTest : TestBase
                 Assert.AreEqual(nameof(PingException), ex.GetType().Name);
             }
 
-            Assert.AreEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+            Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
             // ping
-            oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
             await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address2);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
         }
 
         if (testUdp) {
             // UDP
             VhLogger.Instance.LogTrace("Testing UDP include...");
-            oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
             try {
                 await TestHelper.Test_Udp(udpEndPoint: TestConstants.UdpV4EndPoint1, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
@@ -330,24 +330,24 @@ public class ClientAppTest : TestBase
                 Assert.AreEqual(nameof(OperationCanceledException), ex.GetType().Name);
             }
 
-            Assert.AreEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+            Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
             // UDP
             VhLogger.Instance.LogTrace("Testing UDP exclude...");
-            oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
             await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint2);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
         }
 
         // DNS should always use tunnel regarding of any exclude or include option
         if (testDns) {
-            oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
             await TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint1);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
-            oldReceivedByteCount = app.GetRequiredStat().SessionTraffic.Received;
+            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
             await TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint2);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetRequiredStat().SessionTraffic.Received);
+            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
         }
     }
 
@@ -532,18 +532,18 @@ public class ClientAppTest : TestBase
         await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
 
         // text include
-        var oldTcpTunnelledCount = app.GetRequiredStat().TcpTunnelledCount;
-        var oldTcpPassthruCount = app.GetRequiredStat().TcpPassthruCount;
+        var oldTcpTunnelledCount = app.GetSessionStatus().TcpTunnelledCount;
+        var oldTcpPassthruCount = app.GetSessionStatus().TcpPassthruCount;
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
-        Assert.AreEqual(oldTcpTunnelledCount, app.GetRequiredStat().TcpTunnelledCount);
-        Assert.AreEqual(oldTcpPassthruCount + 1, app.GetRequiredStat().TcpPassthruCount);
+        Assert.AreEqual(oldTcpTunnelledCount, app.GetSessionStatus().TcpTunnelledCount);
+        Assert.AreEqual(oldTcpPassthruCount + 1, app.GetSessionStatus().TcpPassthruCount);
 
         // text exclude
-        oldTcpTunnelledCount = app.GetRequiredStat().TcpTunnelledCount;
-        oldTcpPassthruCount = app.GetRequiredStat().TcpPassthruCount;
+        oldTcpTunnelledCount = app.GetSessionStatus().TcpTunnelledCount;
+        oldTcpPassthruCount = app.GetSessionStatus().TcpPassthruCount;
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
-        Assert.AreEqual(oldTcpTunnelledCount + 1, app.GetRequiredStat().TcpTunnelledCount);
-        Assert.AreEqual(oldTcpPassthruCount, app.GetRequiredStat().TcpPassthruCount);
+        Assert.AreEqual(oldTcpTunnelledCount + 1, app.GetSessionStatus().TcpTunnelledCount);
+        Assert.AreEqual(oldTcpPassthruCount, app.GetSessionStatus().TcpPassthruCount);
     }
 
     [TestMethod]
@@ -565,18 +565,18 @@ public class ClientAppTest : TestBase
         await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
 
         // text include
-        var oldTcpTunnelledCount = app.GetRequiredStat().TcpTunnelledCount;
-        var oldTcpPassthruCount = app.GetRequiredStat().TcpPassthruCount;
+        var oldTcpTunnelledCount = app.GetSessionStatus().TcpTunnelledCount;
+        var oldTcpPassthruCount = app.GetSessionStatus().TcpPassthruCount;
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
-        Assert.AreEqual(oldTcpTunnelledCount + 1, app.GetRequiredStat().TcpTunnelledCount);
-        Assert.AreEqual(oldTcpPassthruCount, app.GetRequiredStat().TcpPassthruCount);
+        Assert.AreEqual(oldTcpTunnelledCount + 1, app.GetSessionStatus().TcpTunnelledCount);
+        Assert.AreEqual(oldTcpPassthruCount, app.GetSessionStatus().TcpPassthruCount);
 
         // text exclude
-        oldTcpTunnelledCount = app.GetRequiredStat().TcpTunnelledCount;
-        oldTcpPassthruCount = app.GetRequiredStat().TcpPassthruCount;
+        oldTcpTunnelledCount = app.GetSessionStatus().TcpTunnelledCount;
+        oldTcpPassthruCount = app.GetSessionStatus().TcpPassthruCount;
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
-        Assert.AreEqual(oldTcpTunnelledCount, app.GetRequiredStat().TcpTunnelledCount);
-        Assert.AreEqual(oldTcpPassthruCount + 1, app.GetRequiredStat().TcpPassthruCount);
+        Assert.AreEqual(oldTcpTunnelledCount, app.GetSessionStatus().TcpTunnelledCount);
+        Assert.AreEqual(oldTcpPassthruCount + 1, app.GetSessionStatus().TcpPassthruCount);
     }
 
     [TestMethod]
@@ -591,7 +591,7 @@ public class ClientAppTest : TestBase
 
 
         Assert.IsTrue(app.State.ClientProfile?.IsPremiumAccount);
-        Assert.IsTrue(app.State.SessionStatus?.AccessUsage.IsPremium);
+        Assert.IsTrue(app.State.SessionInfo?.IsPremiumSession);
     }
 
     [TestMethod]

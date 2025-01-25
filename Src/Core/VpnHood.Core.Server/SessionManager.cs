@@ -98,6 +98,8 @@ public class SessionManager : IAsyncDisposable, IJob
     {
         // find the max virtual IP
         var ipAddress = VirtualIpRange.FirstIpAddress;
+        ipAddress = IPAddressUtil.Increment(ipAddress); // skip the first IP (10.0.0.0)
+        ipAddress = IPAddressUtil.Increment(ipAddress); // skip the second IP (10.0.0.1)
         while (!ipAddress.Equals(VirtualIpRange.LastIpAddress)) {
             if (!_virtualIps.ContainsKey(ipAddress))
                 return ipAddress;

@@ -53,6 +53,7 @@ public class SessionException : Exception
         var apiError = new ApiError(this);
         apiError.Data.Add(nameof(SessionResponse.ErrorCode), SessionResponse.ErrorCode.ToString());
         apiError.Data.Add(nameof(SessionResponse.SuppressedBy), SessionResponse.SuppressedBy.ToString());
+        apiError.Data.Add(nameof(SessionResponse.AccessKey), SessionResponse.AccessKey);
         return apiError;
     }
 }

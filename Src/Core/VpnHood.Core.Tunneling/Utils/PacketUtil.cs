@@ -126,6 +126,30 @@ public static class PacketUtil
         return ipPacket;
     }
 
+    public static IPPacket CreateIcmpV4Packet(IPAddress sourceAddress, IPAddress destinationAddress,
+        byte[] payloadData, bool calculateCheckSum = true)
+    {
+        // todo: not tested
+        // create packet for audience
+        var buffer = new byte[8 + payloadData.Length];
+        var icmpPacket = new IcmpV4Packet(new ByteArraySegment(buffer)) {
+            TypeCode = IcmpV4TypeCode.EchoRequest,
+            Data = payloadData
+        };
+
+        var ipPacket = new IPv4Packet(sourceAddress, destinationAddress) {
+            Protocol = ProtocolType.Icmp,
+            PayloadPacket = icmpPacket
+        };
+
+        if (calculateCheckSum) {
+            icmpPacket.UpdateIcmpChecksum();
+            ipPacket.UpdateIPChecksum();
+            ipPacket.UpdateCalculatedValues();
+        }
+
+        return ipPacket;
+    }
 
     public static IcmpV4Packet ExtractIcmp(IPPacket ipPacket)
     {

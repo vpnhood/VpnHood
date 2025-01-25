@@ -283,7 +283,7 @@ public class ServerTest : TestBase
             return client.State;
         });
         Assert.AreEqual(ClientState.Disposed, client.State);
-        Assert.AreEqual(SessionErrorCode.AccessError, client.SessionStatus.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.AccessError, client.ConnectionInfo.ErrorCode);
     }
 
     [TestMethod]

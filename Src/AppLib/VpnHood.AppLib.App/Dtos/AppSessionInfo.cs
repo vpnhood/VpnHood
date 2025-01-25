@@ -5,7 +5,7 @@ using VpnHood.Core.Common.Converters;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 
-namespace VpnHood.AppLib;
+namespace VpnHood.AppLib.Dtos;
 
 public class AppSessionInfo
 {
@@ -15,7 +15,7 @@ public class AppSessionInfo
     public required ServerLocationInfo? ServerLocationInfo { get; init; }
     public required bool IsPremiumSession { get; init; }
     public required SessionSuppressType SuppressedTo { get; init; }
-    
+
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public required IPAddress[] DnsServers { get; init; }
 

@@ -144,7 +144,7 @@ public class AccessTest : TestBase
         await TestHelper.WaitForClientState(client1, ClientState.Disposed, useUpdateStatus: true);
         Assert.AreEqual(SessionSuppressType.None, client1.ConnectionInfo.SessionInfo?.SuppressedTo);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, client1.ConnectionInfo.ErrorCode);
-        Assert.AreEqual(nameof(SessionSuppressType.YourSelf), client1.ConnectionInfo.Error.Data[nameof(SessionResponse.SuppressedBy)]);
+        Assert.AreEqual(nameof(SessionSuppressType.YourSelf), client1.ConnectionInfo.Error?.Data[nameof(SessionResponse.SuppressedBy)]);
 
         // suppress by other (MaxTokenClient is 2)
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Creating client3.");

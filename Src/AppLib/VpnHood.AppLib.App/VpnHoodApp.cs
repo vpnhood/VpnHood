@@ -31,6 +31,7 @@ using VpnHood.Core.Tunneling.Factory;
 using VpnHood.AppLib.Services.Logging;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.AppLib.Dtos;
 
 namespace VpnHood.AppLib;
 
@@ -295,7 +296,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             var appState = new AppState {
                 ConfigTime = Settings.ConfigTime,
-                SessionStatus = connectionInfo?.SessionStatus,
+                SessionStatus = connectionInfo?.SessionStatus != null ? AppSessionStatus.Create(connectionInfo.SessionStatus) : null,
                 SessionInfo = connectionInfo?.SessionInfo != null ? AppSessionInfo.Create(connectionInfo.SessionInfo) : null,
                 ConnectionState = connectionState,
                 IsIdle = IsIdle,

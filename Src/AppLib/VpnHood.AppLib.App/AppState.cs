@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
-using VpnHood.Core.Client.Abstractions;
+using VpnHood.AppLib.Dtos;
 using VpnHood.Core.Common.ApiClients;
 
 namespace VpnHood.AppLib;
@@ -10,7 +10,7 @@ public class AppState
     public required DateTime ConfigTime { get; init; }
     public required AppConnectionState ConnectionState { get; init; }
     public required AppSessionInfo? SessionInfo { get; init; }
-    public required ISessionStatus? SessionStatus { get; init; }
+    public required AppSessionStatus? SessionStatus { get; init; }
     public required DateTime? ConnectRequestTime { get; init; }
     public required ApiError? LastError { get; init; }
     public required ClientProfileBaseInfo? ClientProfile { get; init; }

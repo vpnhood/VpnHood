@@ -30,6 +30,7 @@ using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Factory;
 using VpnHood.AppLib.Services.Logging;
 using VpnHood.AppLib.Services.Ads;
+using VpnHood.Core.Client.Abstractions;
 
 namespace VpnHood.AppLib;
 
@@ -51,7 +52,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private DateTime? _connectRequestTime;
     private bool _isConnecting;
     private bool _isDisconnecting;
-    private SessionStatus? _lastSessionStatus;
+    private IConnectionInfo? _lastConnectionInfo;
     private AppConnectionState _lastConnectionState;
     private bool _isLoadingCountryIpRange;
     private bool _isFindingCountryCode;
@@ -72,7 +73,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly TimeSpan _canExtendByRewardedAdThreshold;
     private CultureInfo? _systemUiCulture;
 
-    private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
+    private IConnectionInfo? LastConnectionInfo => _client?.ConnectionInfo ?? _lastConnectionInfo;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
     public event EventHandler? ConnectionStateChanged;
@@ -288,14 +289,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public AppState State {
         get {
-            var client = _client;
-            var stat = client?.Stat;
+            var connectionInfo = LastConnectionInfo;
             var clientProfileInfo = CurrentClientProfileInfo;
             var connectionState = ConnectionState;
 
             var appState = new AppState {
                 ConfigTime = Settings.ConfigTime,
-                Stat = stat,
+                SessionStatus = connectionInfo?.SessionStatus,
+                SessionInfo = connectionInfo?.SessionInfo != null ? AppSessionInfo.Create(connectionInfo.SessionInfo) : null,
                 ConnectionState = connectionState,
                 IsIdle = IsIdle,
                 CanConnect = connectionState is AppConnectionState.None,
@@ -310,7 +311,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 HasDiagnoseRequested = _hasDiagnoseRequested,
                 HasDisconnectedByUser = _hasDisconnectedByUser,
                 HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseRequested || _appPersistState.LastError != null),
-                SessionStatus = LastSessionStatus,
                 ClientCountryCode = _appPersistState.ClientCountryCode,
                 ClientCountryName = VhUtil.TryGetCountryName(_appPersistState.ClientCountryCode),
                 ConnectRequestTime = _connectRequestTime,
@@ -663,7 +663,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
             // save lastSessionStatus before destroying the client
-            _lastSessionStatus = client.SessionStatus;
+            _lastConnectionInfo = client.ConnectionInfo;
             throw;
         }
         catch (Exception) {
@@ -674,12 +674,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void UpdateStatusByCreatedClient(VpnHoodClient client)
     {
-        // update access token if ResponseAccessKey is set
-        if (!string.IsNullOrWhiteSpace(client.SessionStatus.AccessKey))
-            ClientProfileService.UpdateTokenByAccessKey(client.Token.TokenId, client.SessionStatus.AccessKey);
+        // update access token if AccessKey is set
+        var accessKey = client.ConnectionInfo.SessionInfo?.AccessKey;
+        if (accessKey == null && client.ConnectionInfo.Error?.Data.ContainsKey("AccessKey") == true)
+            accessKey = client.ConnectionInfo.Error?.Data["AccessKey"];
 
-        if (client.SessionStatus.ClientCountry != null)
-            _appPersistState.ClientCountryCodeByServer = client.SessionStatus.AccessKey;
+        if (!string.IsNullOrWhiteSpace(accessKey))
+            ClientProfileService.UpdateTokenByAccessKey(client.Token.TokenId, accessKey);
+
+        var clientCountry = client.ConnectionInfo.SessionInfo?.ClientCountry;
+        if (!string.IsNullOrWhiteSpace(clientCountry))
+            _appPersistState.ClientCountryCodeByServer = clientCountry;
     }
 
     private async Task RequestFeatures(CancellationToken cancellationToken)
@@ -832,9 +837,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ReportError(ex, "Error in disconnecting.");
         }
         finally {
-            _appPersistState.LastError ??= LastSessionStatus?.Error;
+            _appPersistState.LastError ??= LastConnectionInfo?.Error;
             _activeClientProfileId = null;
-            _lastSessionStatus = _client?.SessionStatus;
+            _lastConnectionInfo = _client?.ConnectionInfo;
             _isConnecting = false;
             _isDisconnecting = false;
             _client = null;
@@ -975,10 +980,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public Task ExtendByRewardedAd(CancellationToken cancellationToken)
     {
-        if (_client?.State != ClientState.Connected)
+        if (_client?.ConnectionInfo.ClientState != ClientState.Connected)
             throw new InvalidOperationException("Could not show ad. The VPN is not connected.");
 
-        if (_client.Stat?.CanExtendByRewardedAd != true)
+        if (_client.ConnectionInfo.SessionStatus?.CanExtendByRewardedAd != true)
             throw new InvalidOperationException("Can not extend session by a rewarded ad at this time.");
 
         return _client.ShowRewardedAd(cancellationToken);

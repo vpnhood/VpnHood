@@ -78,7 +78,7 @@ public class ClientServerTest : TestBase
             packetCapture: new TestNullPacketCapture());
 
         Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
-        Assert.AreEqual("UK/london", client.GetRequiredStat().ServerLocationInfo?.ServerLocation);
+        Assert.AreEqual("UK/london", client.ConnectionInfo.SessionInfo?.ServerLocationInfo?.ServerLocation);
     }
 
     [TestMethod]
@@ -93,7 +93,7 @@ public class ClientServerTest : TestBase
         // create client
         var token1 = TestHelper.CreateAccessToken(accessManager1);
         await using var client = await TestHelper.CreateClient(token1, packetCapture: new TestNullPacketCapture());
-        Assert.AreEqual("US/california", client.GetRequiredStat().ServerLocationInfo?.ServerLocation);
+        Assert.AreEqual("US/california", client.ConnectionInfo.SessionInfo?.ServerLocationInfo?.ServerLocation);
     }
 
     [TestMethod]
@@ -123,7 +123,7 @@ public class ClientServerTest : TestBase
         Assert.AreEqual(client.UserAgent, session?.ClientInfo.UserAgent);
 
         // check ClientPublicAddress in server
-        Assert.AreEqual(serverEp.Address, client.GetRequiredStat().ClientPublicIpAddress);
+        Assert.AreEqual(serverEp.Address, client.ConnectionInfo.SessionInfo?.ClientPublicIpAddress);
     }
 
     [TestMethod]
@@ -175,7 +175,7 @@ public class ClientServerTest : TestBase
         }
 
         Thread.Sleep(100);
-        Assert.AreEqual(3, client.GetRequiredStat().DatagramChannelCount);
+        Assert.AreEqual(3, client.GetSessionStatus().DatagramChannelCount);
         await client.DisposeAsync();
 
         // --------
@@ -193,7 +193,7 @@ public class ClientServerTest : TestBase
         }
 
         Thread.Sleep(200);
-        Assert.AreEqual(1, client2.GetRequiredStat().DatagramChannelCount);
+        Assert.AreEqual(1, client2.GetSessionStatus().DatagramChannelCount);
         await client.DisposeAsync();
     }
 
@@ -263,14 +263,14 @@ public class ClientServerTest : TestBase
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch to DatagramChannel.");
         client.UseUdpChannel = false;
         await TestTunnel(server, client);
-        await VhTestUtil.AssertEqualsWait(false, () => client.GetRequiredStat().IsUdpMode);
+        await VhTestUtil.AssertEqualsWait(false, () => client.GetSessionStatus().IsUdpMode);
         Assert.IsFalse(client.UseUdpChannel);
 
         // switch back to udp
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch back to UdpChannel.");
         client.UseUdpChannel = true;
         await TestTunnel(server, client);
-        await VhTestUtil.AssertEqualsWait(true, () => client.GetRequiredStat().IsUdpMode);
+        await VhTestUtil.AssertEqualsWait(true, () => client.GetSessionStatus().IsUdpMode);
         Assert.IsTrue(client.UseUdpChannel);
     }
 
@@ -304,8 +304,8 @@ public class ClientServerTest : TestBase
 
         // ************
         // *** TEST ***: TCP invalid request should not close the vpn connection
-        var oldClientSentByteCount = client.GetRequiredStat().SessionTraffic.Sent;
-        var oldClientReceivedByteCount = client.GetRequiredStat().SessionTraffic.Received;
+        var oldClientSentByteCount = client.GetSessionStatus().SessionTraffic.Sent;
+        var oldClientReceivedByteCount = client.GetSessionStatus().SessionTraffic.Received;
         var oldServerSentByteCount = serverSession.Tunnel.Traffic.Sent;
         var oldServerReceivedByteCount = serverSession.Tunnel.Traffic.Received;
 
@@ -326,9 +326,9 @@ public class ClientServerTest : TestBase
         await TestHelper.Test_Https();
 
         // check some data has been sent
-        Assert.AreNotEqual(oldClientSentByteCount, client.GetRequiredStat().SessionTraffic.Sent, delta: 100,
+        Assert.AreNotEqual(oldClientSentByteCount, client.GetSessionStatus().SessionTraffic.Sent, delta: 100,
             "Not enough data has been sent through the client.");
-        Assert.AreNotEqual(oldClientReceivedByteCount, client.GetRequiredStat().SessionTraffic.Received, delta: 2000,
+        Assert.AreNotEqual(oldClientReceivedByteCount, client.GetSessionStatus().SessionTraffic.Received, delta: 2000,
             "Not enough data has been received through the client.");
         Assert.AreNotEqual(oldServerSentByteCount, serverSession.Tunnel.Traffic.Sent, delta: 2000,
             "Not enough data has been sent through the server.");
@@ -337,16 +337,16 @@ public class ClientServerTest : TestBase
 
         // ************
         // *** TEST ***: UDP v4
-        oldClientSentByteCount = client.GetRequiredStat().SessionTraffic.Sent;
-        oldClientReceivedByteCount = client.GetRequiredStat().SessionTraffic.Received;
+        oldClientSentByteCount = client.GetSessionStatus().SessionTraffic.Sent;
+        oldClientReceivedByteCount = client.GetSessionStatus().SessionTraffic.Received;
         oldServerSentByteCount = serverSession.Tunnel.Traffic.Sent;
         oldServerReceivedByteCount = serverSession.Tunnel.Traffic.Received;
 
         await TestHelper.Test_Udp();
 
-        Assert.AreNotEqual(oldClientSentByteCount, client.GetRequiredStat().SessionTraffic.Sent, 500,
+        Assert.AreNotEqual(oldClientSentByteCount, client.GetSessionStatus().SessionTraffic.Sent, 500,
             "Not enough data has been sent through the client.");
-        Assert.AreNotEqual(oldClientReceivedByteCount, client.GetRequiredStat().SessionTraffic.Received, 500,
+        Assert.AreNotEqual(oldClientReceivedByteCount, client.GetSessionStatus().SessionTraffic.Received, 500,
             "Not enough data has been received through the client.");
         Assert.AreNotEqual(oldServerSentByteCount, serverSession.Tunnel.Traffic.Sent, 500,
             "Not enough data has been sent through the server.");
@@ -355,16 +355,16 @@ public class ClientServerTest : TestBase
 
         // ************
         // *** TEST ***: IcmpV4
-        oldClientSentByteCount = client.GetRequiredStat().SessionTraffic.Sent;
-        oldClientReceivedByteCount = client.GetRequiredStat().SessionTraffic.Received;
+        oldClientSentByteCount = client.GetSessionStatus().SessionTraffic.Sent;
+        oldClientReceivedByteCount = client.GetSessionStatus().SessionTraffic.Received;
         oldServerSentByteCount = serverSession.Tunnel.Traffic.Sent;
         oldServerReceivedByteCount = serverSession.Tunnel.Traffic.Received;
 
         await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
 
-        Assert.AreNotEqual(oldClientSentByteCount, client.GetRequiredStat().SessionTraffic.Sent, 500,
+        Assert.AreNotEqual(oldClientSentByteCount, client.GetSessionStatus().SessionTraffic.Sent, 500,
             "Not enough data has been sent through the client.");
-        Assert.AreNotEqual(oldClientReceivedByteCount, client.GetRequiredStat().SessionTraffic.Received, 500,
+        Assert.AreNotEqual(oldClientReceivedByteCount, client.GetSessionStatus().SessionTraffic.Received, 500,
             "Not enough data has been received through the client.");
         Assert.AreNotEqual(oldServerSentByteCount, serverSession.Tunnel.Traffic.Sent, 500,
             "Not enough data has been sent through the server.");
@@ -374,9 +374,9 @@ public class ClientServerTest : TestBase
         if (await TestHelper.IsIpV6Supported()) {
             await TestHelper.Test_Ping(ipAddress: TestConstants.PingV6Address1);
 
-            Assert.AreNotEqual(oldClientSentByteCount, client.GetRequiredStat().SessionTraffic.Sent, 500,
+            Assert.AreNotEqual(oldClientSentByteCount, client.GetSessionStatus().SessionTraffic.Sent, 500,
                 "Not enough data has been sent through the client.");
-            Assert.AreNotEqual(oldClientReceivedByteCount, client.GetRequiredStat().SessionTraffic.Received, 500,
+            Assert.AreNotEqual(oldClientReceivedByteCount, client.GetSessionStatus().SessionTraffic.Received, 500,
                 "Not enough data has been received through the client.");
             Assert.AreNotEqual(oldServerSentByteCount, serverSession.Tunnel.Traffic.Sent, 500,
                 "Not enough data has been sent through the server.");
@@ -541,7 +541,7 @@ public class ClientServerTest : TestBase
             await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client.Connect());
 
-        Assert.AreEqual(SessionErrorCode.Maintenance, client.SessionStatus.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.Maintenance, client.ConnectionInfo.ErrorCode);
         Assert.AreEqual(ClientState.Disposed, client.State);
 
         // ----------
@@ -560,7 +560,7 @@ public class ClientServerTest : TestBase
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client3.Connect());
 
         await TestHelper.WaitForClientState(client3, ClientState.Disposed);
-        Assert.AreEqual(SessionErrorCode.Maintenance, client3.SessionStatus.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.Maintenance, client3.ConnectionInfo.ErrorCode);
 
         // ----------
         // Check: Connect after Maintenance is done
@@ -577,7 +577,7 @@ public class ClientServerTest : TestBase
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client5.Connect());
 
         await TestHelper.WaitForClientState(client5, ClientState.Disposed);
-        Assert.AreEqual(SessionErrorCode.Maintenance, client5.SessionStatus.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.Maintenance, client5.ConnectionInfo.ErrorCode);
 
         // ----------
         // Check: Connect after Maintenance is done
@@ -600,7 +600,7 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(token, autoConnect: false);
 
         await Assert.ThrowsExceptionAsync<SessionException>(() => client.Connect());
-        Assert.AreEqual(SessionErrorCode.UnsupportedClient, client.SessionStatus.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.UnsupportedClient, client.ConnectionInfo.ErrorCode);
     }
 
     [TestMethod]
@@ -665,34 +665,34 @@ public class ClientServerTest : TestBase
 
         // Create Client
         await using var client = await TestHelper.CreateClient(token, clientOptions: TestHelper.CreateClientOptions(useUdp: true));
-        var lasCreatedConnectionCount = client.GetRequiredStat().ConnectorStat.CreatedConnectionCount;
-        var lasReusedConnectionSucceededCount = client.GetRequiredStat().ConnectorStat.ReusedConnectionSucceededCount;
+        var lasCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
+        var lasReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
 
         // create one connection
         await TestHelper.Test_Https();
-        Assert.AreEqual(lasReusedConnectionSucceededCount, client.GetRequiredStat().ConnectorStat.ReusedConnectionSucceededCount);
-        Assert.AreEqual(lasCreatedConnectionCount + 1, client.GetRequiredStat().ConnectorStat.CreatedConnectionCount);
-        lasCreatedConnectionCount = client.GetRequiredStat().ConnectorStat.CreatedConnectionCount;
-        lasReusedConnectionSucceededCount = client.GetRequiredStat().ConnectorStat.ReusedConnectionSucceededCount;
-        await VhTestUtil.AssertEqualsWait(1, () => client.GetRequiredStat().ConnectorStat.FreeConnectionCount);
+        Assert.AreEqual(lasReusedConnectionSucceededCount, client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
+        Assert.AreEqual(lasCreatedConnectionCount + 1, client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
+        lasCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
+        lasReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
+        await VhTestUtil.AssertEqualsWait(1, () => client.GetSessionStatus().ConnectorStat.FreeConnectionCount);
 
         // this connection must reuse the old one
         await TestHelper.Test_Https();
-        Assert.AreEqual(lasCreatedConnectionCount, client.GetRequiredStat().ConnectorStat.CreatedConnectionCount);
+        Assert.AreEqual(lasCreatedConnectionCount, client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
         Assert.AreEqual(lasReusedConnectionSucceededCount + 1,
-            client.GetRequiredStat().ConnectorStat.ReusedConnectionSucceededCount);
-        lasCreatedConnectionCount = client.GetRequiredStat().ConnectorStat.CreatedConnectionCount;
-        lasReusedConnectionSucceededCount = client.GetRequiredStat().ConnectorStat.ReusedConnectionSucceededCount;
-        await VhTestUtil.AssertEqualsWait(1, () => client.GetRequiredStat().ConnectorStat.FreeConnectionCount);
+            client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
+        lasCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
+        lasReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
+        await VhTestUtil.AssertEqualsWait(1, () => client.GetSessionStatus().ConnectorStat.FreeConnectionCount);
 
         // this connection must reuse the old one again
         await TestHelper.Test_Https();
-        Assert.AreEqual(lasCreatedConnectionCount, client.GetRequiredStat().ConnectorStat.CreatedConnectionCount);
+        Assert.AreEqual(lasCreatedConnectionCount, client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
         Assert.AreEqual(lasReusedConnectionSucceededCount + 1,
-            client.GetRequiredStat().ConnectorStat.ReusedConnectionSucceededCount);
-        lasCreatedConnectionCount = client.GetRequiredStat().ConnectorStat.CreatedConnectionCount;
-        lasReusedConnectionSucceededCount = client.GetRequiredStat().ConnectorStat.ReusedConnectionSucceededCount;
-        await VhTestUtil.AssertEqualsWait(1, () => client.GetRequiredStat().ConnectorStat.FreeConnectionCount);
+            client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
+        lasCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
+        lasReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
+        await VhTestUtil.AssertEqualsWait(1, () => client.GetSessionStatus().ConnectorStat.FreeConnectionCount);
 
         // open 3 connections simultaneously
         VhLogger.Instance.LogTrace("Test: Open 3 connections simultaneously.");
@@ -704,15 +704,15 @@ public class ClientServerTest : TestBase
             await tcpClient3.ConnectAsync(TestConstants.HttpsEndPoint1);
 
             await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount + 2,
-                () => client.GetRequiredStat().ConnectorStat.CreatedConnectionCount);
+                () => client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
             await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 1,
-                () => client.GetRequiredStat().ConnectorStat.ReusedConnectionSucceededCount);
-            lasCreatedConnectionCount = client.GetRequiredStat().ConnectorStat.CreatedConnectionCount;
-            lasReusedConnectionSucceededCount = client.GetRequiredStat().ConnectorStat.ReusedConnectionSucceededCount;
+                () => client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
+            lasCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
+            lasReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
         }
 
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for free connections...");
-        await VhTestUtil.AssertEqualsWait(3, () => client.GetRequiredStat().ConnectorStat.FreeConnectionCount);
+        await VhTestUtil.AssertEqualsWait(3, () => client.GetSessionStatus().ConnectorStat.FreeConnectionCount);
 
         // net two connection should use shared connection
         using (var tcpClient4 = new TcpClient())
@@ -720,13 +720,13 @@ public class ClientServerTest : TestBase
             await tcpClient4.ConnectAsync(TestConstants.HttpsEndPoint1);
             await tcpClient5.ConnectAsync(TestConstants.HttpsEndPoint2);
             await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount,
-                () => client.GetRequiredStat().ConnectorStat.CreatedConnectionCount);
+                () => client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
             await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 2,
-                () => client.GetRequiredStat().ConnectorStat.ReusedConnectionSucceededCount);
+                () => client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
         }
 
         // wait for free the used connections 
-        await VhTestUtil.AssertEqualsWait(3, () => client.GetRequiredStat().ConnectorStat.FreeConnectionCount);
+        await VhTestUtil.AssertEqualsWait(3, () => client.GetSessionStatus().ConnectorStat.FreeConnectionCount);
     }
 
     [TestMethod]
@@ -743,7 +743,7 @@ public class ClientServerTest : TestBase
             packetCapture: new TestNullPacketCapture(),
             clientOptions: TestHelper.CreateClientOptions(useUdp: true));
 
-        Assert.IsFalse(client.GetRequiredStat().IsUdpChannelSupported);
+        Assert.IsFalse(client.ConnectionInfo.SessionInfo?.IsUdpChannelSupported);
     }
 
     [TestMethod]

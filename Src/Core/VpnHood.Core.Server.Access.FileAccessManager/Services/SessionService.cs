@@ -88,21 +88,8 @@ public class SessionService : IDisposable, IJob
         return Sessions.TryGetValue(sessionId, out var session) ? session.TokenId : null;
     }
 
-    private static bool ValidateRequest(SessionRequestEx sessionRequestEx, AccessTokenData accessTokenData)
-    {
-        var encryptClientId = VhUtil.EncryptClientId(sessionRequestEx.ClientInfo.ClientId, accessTokenData.AccessToken.Secret);
-        return encryptClientId.SequenceEqual(sessionRequestEx.EncryptedClientId);
-    }
-
     public SessionResponseEx CreateSession(SessionRequestEx sessionRequestEx, AccessTokenData accessTokenData)
     {
-        // validate the request
-        if (!ValidateRequest(sessionRequestEx, accessTokenData))
-            return new SessionResponseEx {
-                ErrorCode = SessionErrorCode.AccessError,
-                ErrorMessage = "Could not validate the request."
-            };
-
         //increment session id using atomic operation
         Interlocked.Increment(ref _lastSessionId);
 

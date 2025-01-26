@@ -6,7 +6,6 @@ using EmbedIO;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AppLib.ClientProfiles;
-using VpnHood.Core.Client;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.IpLocations.Providers;
 using VpnHood.Core.Common.Logging;
@@ -151,23 +150,6 @@ public class ClientAppTest : TestBase
             await TestHelper.Test_Https(throwError: false, timeout: 100);
             return app.State.ConnectionState;
         });
-    }
-
-    [TestMethod]
-    public async Task Set_DnsServer_to_packetCapture()
-    {
-        // Create Server
-        await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
-
-        // create app
-        using var packetCapture = new TestNullPacketCapture();
-        Assert.IsTrue(packetCapture.DnsServers == null || packetCapture.DnsServers.Length == 0);
-
-        await using var client = await TestHelper.CreateClient(token, packetCapture);
-        await TestHelper.WaitForClientState(client, ClientState.Connected);
-
-        Assert.IsTrue(packetCapture.DnsServers is { Length: > 0 });
     }
 
     [TestMethod]

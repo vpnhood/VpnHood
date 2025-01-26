@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using VpnHood.Core.Common.Collections;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
@@ -23,6 +24,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public Dictionary<string, IPEndPoint?> ServerLocations { get; set; } = new();
     public bool RejectAllAds { get; set; }
     public bool CanExtendPremiumByAd { get; set; }
+    public Dictionary<string, string> AccessCodes { get; set; } = new();
 
     public void AddAdData(string adData)
     {
@@ -99,5 +101,10 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         }
 
         return ret;
+    }
+
+    protected override string? GetAccessTokenIdFromAccessCode(string accessCode)
+    {
+        return AccessCodes.GetValueOrDefault(accessCode);
     }
 }

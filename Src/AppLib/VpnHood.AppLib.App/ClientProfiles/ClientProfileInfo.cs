@@ -17,7 +17,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public bool IsBuiltIn => clientProfile.IsBuiltIn;
     public bool IsForAccount => clientProfile.IsForAccount;
     public string? AccessCode => AccessCodeUtils.Redact(clientProfile.AccessCode);
-    public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile.Token);
+    public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile);
 
     public ClientServerLocationInfo? SelectedLocationInfo {
         get {

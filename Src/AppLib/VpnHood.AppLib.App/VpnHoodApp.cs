@@ -486,6 +486,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     serverLocation: serverLocation,
                     userAgent: userAgent,
                     planId: planId,
+                    accessCode: clientProfile.AccessCode,
                     allowUpdateToken: true,
                     cancellationToken: cancellationToken)
                 .VhConfigureAwait();
@@ -561,7 +562,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private async Task ConnectInternal(Token token, string? serverLocation, string? userAgent, ConnectPlanId planId,
-        bool allowUpdateToken, CancellationToken cancellationToken)
+        string? accessCode, bool allowUpdateToken, CancellationToken cancellationToken)
     {
         // show token info
         VhLogger.Instance.LogInformation("TokenId: {TokenId}, SupportId: {SupportId}",
@@ -590,6 +591,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             DropQuic = UserSettings.DropQuic,
             ServerLocation = ServerLocationInfo.IsAutoLocation(serverLocation) ? null : serverLocation,
             PlanId = planId,
+            AccessCode = accessCode,
             UseTcpOverTun = HasDebugCommand(DebugCommands.UseTcpOverTun),
             UseUdpChannel = UserSettings.UseUdpChannel,
             DomainFilter = UserSettings.DomainFilter,
@@ -598,7 +600,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
             AllowTcpReuse = !HasDebugCommand(DebugCommands.NoTcpReuse),
             Tracker = Services.Tracker,
-            CanExtendByRewardedAdThreshold = _canExtendByRewardedAdThreshold
+            CanExtendByRewardedAdThreshold = _canExtendByRewardedAdThreshold,
         };
 
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
@@ -657,6 +659,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                         serverLocation: serverLocation,
                         userAgent: userAgent,
                         planId: planId,
+                        accessCode: accessCode,
                         allowUpdateToken: false,
                         cancellationToken: cancellationToken)
                     .VhConfigureAwait();

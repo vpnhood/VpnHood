@@ -1,4 +1,6 @@
-﻿using VpnHood.AppLib.Services.Ads;
+﻿using System.Security.Cryptography;
+using System.Text;
+using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Utils;
@@ -57,5 +59,24 @@ public class TestAppHelper : TestHelper
         ActiveUiContext.Context = new TestAppUiContext();
 
         return clientApp;
+    }
+
+    private static string GenerateSecureRandomString(int length)
+    {
+        var result = new StringBuilder(length);
+        using var rng = RandomNumberGenerator.Create();
+        var buffer = new byte[1];
+        while (result.Length < length) {
+            rng.GetBytes(buffer);
+            var digit = buffer[0] % 10;
+            result.Append(digit);
+        }
+
+        return result.ToString();
+    }
+
+    public static string BuildAccessCode()
+    {
+        return AccessCodeUtils.Build(GenerateSecureRandomString(18));
     }
 }

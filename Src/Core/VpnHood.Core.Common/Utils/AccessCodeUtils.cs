@@ -80,4 +80,17 @@ public static class AccessCodeUtils
 
         return formattedValue.ToString();
     }
+
+    public static string? Redact(string? accessCode)
+    {
+        accessCode = TryValidate(accessCode ?? "");
+        if (accessCode == null)
+            return null;
+
+        if (accessCode.Length <= 4)
+            return "***";
+
+        // replace all but last 4 characters with '*'
+        return new string('*', accessCode.Length - 4) + accessCode[^4..];
+    }
 }

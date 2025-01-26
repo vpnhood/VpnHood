@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
@@ -215,14 +216,39 @@ public class FileAccessManager : IAccessManager
         };
     }
 
+    public static bool ValidateRequest(SessionRequestEx sessionRequestEx,
+        [NotNullWhen(true)] AccessTokenData? accessTokenData)
+    {
+        if (accessTokenData == null)
+            return false;
+
+        var encryptClientId = VhUtil.EncryptClientId(sessionRequestEx.ClientInfo.ClientId, accessTokenData.AccessToken.Secret);
+        return encryptClientId.SequenceEqual(sessionRequestEx.EncryptedClientId);
+    }
+
     public virtual async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
-        var accessTokenData = await AccessTokenService.Find(sessionRequestEx.TokenId).VhConfigureAwait();
-        if (accessTokenData == null)
+        // validate token
+        var accessTokenDataOrg = await AccessTokenService.Find(sessionRequestEx.TokenId).VhConfigureAwait();
+        if (!ValidateRequest(sessionRequestEx, accessTokenDataOrg))
             return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
                 ErrorMessage = "Token does not exist."
             };
+
+        // use original accessTokenData
+        var accessTokenData = accessTokenDataOrg;
+
+        // find token for AccessCode 
+        if (!string.IsNullOrWhiteSpace(sessionRequestEx.AccessCode)) {
+            var accessTokenId = GetAccessTokenIdFromAccessCode(sessionRequestEx.AccessCode);
+            accessTokenData = accessTokenId != null ? await AccessTokenService.Find(accessTokenId).VhConfigureAwait() : null;
+            if (accessTokenData == null)
+                return new SessionResponseEx {
+                    ErrorCode = SessionErrorCode.AccessCodeRejected,
+                    ErrorMessage = "The given AccessCode has been rejected."
+                };
+        }
 
         var ret = SessionService.CreateSession(sessionRequestEx, accessTokenData);
         if (ret.ErrorCode is SessionErrorCode.AccessError or SessionErrorCode.AccessLocked)
@@ -236,9 +262,14 @@ public class FileAccessManager : IAccessManager
 
         // update accesskey
         if (ServerConfig.ReplyAccessKey)
-            ret.AccessKey = GetToken(accessTokenData.AccessToken).ToAccessKey();
+            ret.AccessKey = GetToken(accessTokenDataOrg.AccessToken).ToAccessKey();
 
         return ret;
+    }
+
+    protected virtual string? GetAccessTokenIdFromAccessCode(string accessCode)
+    {
+        return null;
     }
 
     public virtual async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint,

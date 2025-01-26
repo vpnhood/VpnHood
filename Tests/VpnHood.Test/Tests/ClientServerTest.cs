@@ -764,4 +764,21 @@ public class ClientServerTest : TestBase
         await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint1);
         await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint2);
     }
+
+    [TestMethod]
+    public async Task Set_DnsServer_to_packetCapture()
+    {
+        // Create Server
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        // create app
+        using var packetCapture = new TestNullPacketCapture();
+        Assert.IsTrue(packetCapture.DnsServers == null || packetCapture.DnsServers.Length == 0);
+
+        await using var client = await TestHelper.CreateClient(token, packetCapture);
+        await TestHelper.WaitForClientState(client, ClientState.Connected);
+
+        Assert.IsTrue(packetCapture.DnsServers is { Length: > 0 });
+    }
 }

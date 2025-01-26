@@ -2177,35 +2177,28 @@ export interface IIpFilterSettings {
 
 export class AppState implements IAppState {
     configTime!: Date;
-    connectRequestTime?: Date | null;
     connectionState!: AppConnectionState;
+    sessionInfo?: AppSessionInfo | null;
+    sessionStatus?: AppSessionStatus | null;
+    connectRequestTime?: Date | null;
     lastError?: ApiError | null;
     clientProfile?: ClientProfileBaseInfo | null;
-    serverLocationInfo?: ServerLocationInfo | null;
     isIdle!: boolean;
     promptForLog!: boolean;
     logExists!: boolean;
     hasDiagnoseRequested!: boolean;
     hasDisconnectedByUser!: boolean;
     hasProblemDetected!: boolean;
-    sessionStatus?: SessionStatus | null;
-    speed!: Traffic;
-    sessionTraffic!: Traffic;
-    accountTraffic!: Traffic;
     clientCountryCode?: string | null;
     clientCountryName?: string | null;
-    isWaitingForAd!: boolean;
     versionStatus!: VersionStatus;
     lastPublishInfo?: PublishInfo | null;
-    isUdpChannelSupported?: boolean | null;
     canDisconnect!: boolean;
     canConnect!: boolean;
     canDiagnose!: boolean;
     currentUiCultureInfo!: UiCultureInfo;
     systemUiCultureInfo!: UiCultureInfo;
     purchaseState?: BillingPurchaseState | null;
-    tcpTunnelledCount?: number | null;
-    tcpPassthruCount?: number | null;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -2215,9 +2208,6 @@ export class AppState implements IAppState {
             }
         }
         if (!data) {
-            this.speed = new Traffic();
-            this.sessionTraffic = new Traffic();
-            this.accountTraffic = new Traffic();
             this.currentUiCultureInfo = new UiCultureInfo();
             this.systemUiCultureInfo = new UiCultureInfo();
         }
@@ -2226,35 +2216,28 @@ export class AppState implements IAppState {
     init(_data?: any) {
         if (_data) {
             this.configTime = _data["configTime"] ? new Date(_data["configTime"].toString()) : <any>null;
-            this.connectRequestTime = _data["connectRequestTime"] ? new Date(_data["connectRequestTime"].toString()) : <any>null;
             this.connectionState = _data["connectionState"] !== undefined ? _data["connectionState"] : <any>null;
+            this.sessionInfo = _data["sessionInfo"] ? AppSessionInfo.fromJS(_data["sessionInfo"]) : <any>null;
+            this.sessionStatus = _data["sessionStatus"] ? AppSessionStatus.fromJS(_data["sessionStatus"]) : <any>null;
+            this.connectRequestTime = _data["connectRequestTime"] ? new Date(_data["connectRequestTime"].toString()) : <any>null;
             this.lastError = _data["lastError"] ? ApiError.fromJS(_data["lastError"]) : <any>null;
             this.clientProfile = _data["clientProfile"] ? ClientProfileBaseInfo.fromJS(_data["clientProfile"]) : <any>null;
-            this.serverLocationInfo = _data["serverLocationInfo"] ? ServerLocationInfo.fromJS(_data["serverLocationInfo"]) : <any>null;
             this.isIdle = _data["isIdle"] !== undefined ? _data["isIdle"] : <any>null;
             this.promptForLog = _data["promptForLog"] !== undefined ? _data["promptForLog"] : <any>null;
             this.logExists = _data["logExists"] !== undefined ? _data["logExists"] : <any>null;
             this.hasDiagnoseRequested = _data["hasDiagnoseRequested"] !== undefined ? _data["hasDiagnoseRequested"] : <any>null;
             this.hasDisconnectedByUser = _data["hasDisconnectedByUser"] !== undefined ? _data["hasDisconnectedByUser"] : <any>null;
             this.hasProblemDetected = _data["hasProblemDetected"] !== undefined ? _data["hasProblemDetected"] : <any>null;
-            this.sessionStatus = _data["sessionStatus"] ? SessionStatus.fromJS(_data["sessionStatus"]) : <any>null;
-            this.speed = _data["speed"] ? Traffic.fromJS(_data["speed"]) : new Traffic();
-            this.sessionTraffic = _data["sessionTraffic"] ? Traffic.fromJS(_data["sessionTraffic"]) : new Traffic();
-            this.accountTraffic = _data["accountTraffic"] ? Traffic.fromJS(_data["accountTraffic"]) : new Traffic();
             this.clientCountryCode = _data["clientCountryCode"] !== undefined ? _data["clientCountryCode"] : <any>null;
             this.clientCountryName = _data["clientCountryName"] !== undefined ? _data["clientCountryName"] : <any>null;
-            this.isWaitingForAd = _data["isWaitingForAd"] !== undefined ? _data["isWaitingForAd"] : <any>null;
             this.versionStatus = _data["versionStatus"] !== undefined ? _data["versionStatus"] : <any>null;
             this.lastPublishInfo = _data["lastPublishInfo"] ? PublishInfo.fromJS(_data["lastPublishInfo"]) : <any>null;
-            this.isUdpChannelSupported = _data["isUdpChannelSupported"] !== undefined ? _data["isUdpChannelSupported"] : <any>null;
             this.canDisconnect = _data["canDisconnect"] !== undefined ? _data["canDisconnect"] : <any>null;
             this.canConnect = _data["canConnect"] !== undefined ? _data["canConnect"] : <any>null;
             this.canDiagnose = _data["canDiagnose"] !== undefined ? _data["canDiagnose"] : <any>null;
             this.currentUiCultureInfo = _data["currentUiCultureInfo"] ? UiCultureInfo.fromJS(_data["currentUiCultureInfo"]) : new UiCultureInfo();
             this.systemUiCultureInfo = _data["systemUiCultureInfo"] ? UiCultureInfo.fromJS(_data["systemUiCultureInfo"]) : new UiCultureInfo();
             this.purchaseState = _data["purchaseState"] !== undefined ? _data["purchaseState"] : <any>null;
-            this.tcpTunnelledCount = _data["tcpTunnelledCount"] !== undefined ? _data["tcpTunnelledCount"] : <any>null;
-            this.tcpPassthruCount = _data["tcpPassthruCount"] !== undefined ? _data["tcpPassthruCount"] : <any>null;
         }
     }
 
@@ -2268,70 +2251,56 @@ export class AppState implements IAppState {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["configTime"] = this.configTime ? this.configTime.toISOString() : <any>null;
-        data["connectRequestTime"] = this.connectRequestTime ? this.connectRequestTime.toISOString() : <any>null;
         data["connectionState"] = this.connectionState !== undefined ? this.connectionState : <any>null;
+        data["sessionInfo"] = this.sessionInfo ? this.sessionInfo.toJSON() : <any>null;
+        data["sessionStatus"] = this.sessionStatus ? this.sessionStatus.toJSON() : <any>null;
+        data["connectRequestTime"] = this.connectRequestTime ? this.connectRequestTime.toISOString() : <any>null;
         data["lastError"] = this.lastError ? this.lastError.toJSON() : <any>null;
         data["clientProfile"] = this.clientProfile ? this.clientProfile.toJSON() : <any>null;
-        data["serverLocationInfo"] = this.serverLocationInfo ? this.serverLocationInfo.toJSON() : <any>null;
         data["isIdle"] = this.isIdle !== undefined ? this.isIdle : <any>null;
         data["promptForLog"] = this.promptForLog !== undefined ? this.promptForLog : <any>null;
         data["logExists"] = this.logExists !== undefined ? this.logExists : <any>null;
         data["hasDiagnoseRequested"] = this.hasDiagnoseRequested !== undefined ? this.hasDiagnoseRequested : <any>null;
         data["hasDisconnectedByUser"] = this.hasDisconnectedByUser !== undefined ? this.hasDisconnectedByUser : <any>null;
         data["hasProblemDetected"] = this.hasProblemDetected !== undefined ? this.hasProblemDetected : <any>null;
-        data["sessionStatus"] = this.sessionStatus ? this.sessionStatus.toJSON() : <any>null;
-        data["speed"] = this.speed ? this.speed.toJSON() : <any>null;
-        data["sessionTraffic"] = this.sessionTraffic ? this.sessionTraffic.toJSON() : <any>null;
-        data["accountTraffic"] = this.accountTraffic ? this.accountTraffic.toJSON() : <any>null;
         data["clientCountryCode"] = this.clientCountryCode !== undefined ? this.clientCountryCode : <any>null;
         data["clientCountryName"] = this.clientCountryName !== undefined ? this.clientCountryName : <any>null;
-        data["isWaitingForAd"] = this.isWaitingForAd !== undefined ? this.isWaitingForAd : <any>null;
         data["versionStatus"] = this.versionStatus !== undefined ? this.versionStatus : <any>null;
         data["lastPublishInfo"] = this.lastPublishInfo ? this.lastPublishInfo.toJSON() : <any>null;
-        data["isUdpChannelSupported"] = this.isUdpChannelSupported !== undefined ? this.isUdpChannelSupported : <any>null;
         data["canDisconnect"] = this.canDisconnect !== undefined ? this.canDisconnect : <any>null;
         data["canConnect"] = this.canConnect !== undefined ? this.canConnect : <any>null;
         data["canDiagnose"] = this.canDiagnose !== undefined ? this.canDiagnose : <any>null;
         data["currentUiCultureInfo"] = this.currentUiCultureInfo ? this.currentUiCultureInfo.toJSON() : <any>null;
         data["systemUiCultureInfo"] = this.systemUiCultureInfo ? this.systemUiCultureInfo.toJSON() : <any>null;
         data["purchaseState"] = this.purchaseState !== undefined ? this.purchaseState : <any>null;
-        data["tcpTunnelledCount"] = this.tcpTunnelledCount !== undefined ? this.tcpTunnelledCount : <any>null;
-        data["tcpPassthruCount"] = this.tcpPassthruCount !== undefined ? this.tcpPassthruCount : <any>null;
         return data;
     }
 }
 
 export interface IAppState {
     configTime: Date;
-    connectRequestTime?: Date | null;
     connectionState: AppConnectionState;
+    sessionInfo?: AppSessionInfo | null;
+    sessionStatus?: AppSessionStatus | null;
+    connectRequestTime?: Date | null;
     lastError?: ApiError | null;
     clientProfile?: ClientProfileBaseInfo | null;
-    serverLocationInfo?: ServerLocationInfo | null;
     isIdle: boolean;
     promptForLog: boolean;
     logExists: boolean;
     hasDiagnoseRequested: boolean;
     hasDisconnectedByUser: boolean;
     hasProblemDetected: boolean;
-    sessionStatus?: SessionStatus | null;
-    speed: Traffic;
-    sessionTraffic: Traffic;
-    accountTraffic: Traffic;
     clientCountryCode?: string | null;
     clientCountryName?: string | null;
-    isWaitingForAd: boolean;
     versionStatus: VersionStatus;
     lastPublishInfo?: PublishInfo | null;
-    isUdpChannelSupported?: boolean | null;
     canDisconnect: boolean;
     canConnect: boolean;
     canDiagnose: boolean;
     currentUiCultureInfo: UiCultureInfo;
     systemUiCultureInfo: UiCultureInfo;
     purchaseState?: BillingPurchaseState | null;
-    tcpTunnelledCount?: number | null;
-    tcpPassthruCount?: number | null;
 }
 
 export enum AppConnectionState {
@@ -2342,6 +2311,527 @@ export enum AppConnectionState {
     Connecting = "Connecting",
     Connected = "Connected",
     Disconnecting = "Disconnecting",
+}
+
+export class AppSessionInfo implements IAppSessionInfo {
+    accessInfo?: AccessInfo | null;
+    isUdpChannelSupported!: boolean;
+    isDnsServersAccepted!: boolean;
+    serverLocationInfo?: ServerLocationInfo | null;
+    isPremiumSession!: boolean;
+    suppressedTo!: SessionSuppressType;
+    dnsServers!: string[];
+    serverVersion!: string;
+    clientPublicIpAddress!: string;
+
+    constructor(data?: IAppSessionInfo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.dnsServers = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.accessInfo = _data["accessInfo"] ? AccessInfo.fromJS(_data["accessInfo"]) : <any>null;
+            this.isUdpChannelSupported = _data["isUdpChannelSupported"] !== undefined ? _data["isUdpChannelSupported"] : <any>null;
+            this.isDnsServersAccepted = _data["isDnsServersAccepted"] !== undefined ? _data["isDnsServersAccepted"] : <any>null;
+            this.serverLocationInfo = _data["serverLocationInfo"] ? ServerLocationInfo.fromJS(_data["serverLocationInfo"]) : <any>null;
+            this.isPremiumSession = _data["isPremiumSession"] !== undefined ? _data["isPremiumSession"] : <any>null;
+            this.suppressedTo = _data["suppressedTo"] !== undefined ? _data["suppressedTo"] : <any>null;
+            if (Array.isArray(_data["dnsServers"])) {
+                this.dnsServers = [] as any;
+                for (let item of _data["dnsServers"])
+                    this.dnsServers!.push(item);
+            }
+            else {
+                this.dnsServers = <any>null;
+            }
+            this.serverVersion = _data["serverVersion"] !== undefined ? _data["serverVersion"] : <any>null;
+            this.clientPublicIpAddress = _data["clientPublicIpAddress"] !== undefined ? _data["clientPublicIpAddress"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AppSessionInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppSessionInfo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["accessInfo"] = this.accessInfo ? this.accessInfo.toJSON() : <any>null;
+        data["isUdpChannelSupported"] = this.isUdpChannelSupported !== undefined ? this.isUdpChannelSupported : <any>null;
+        data["isDnsServersAccepted"] = this.isDnsServersAccepted !== undefined ? this.isDnsServersAccepted : <any>null;
+        data["serverLocationInfo"] = this.serverLocationInfo ? this.serverLocationInfo.toJSON() : <any>null;
+        data["isPremiumSession"] = this.isPremiumSession !== undefined ? this.isPremiumSession : <any>null;
+        data["suppressedTo"] = this.suppressedTo !== undefined ? this.suppressedTo : <any>null;
+        if (Array.isArray(this.dnsServers)) {
+            data["dnsServers"] = [];
+            for (let item of this.dnsServers)
+                data["dnsServers"].push(item);
+        }
+        data["serverVersion"] = this.serverVersion !== undefined ? this.serverVersion : <any>null;
+        data["clientPublicIpAddress"] = this.clientPublicIpAddress !== undefined ? this.clientPublicIpAddress : <any>null;
+        return data;
+    }
+}
+
+export interface IAppSessionInfo {
+    accessInfo?: AccessInfo | null;
+    isUdpChannelSupported: boolean;
+    isDnsServersAccepted: boolean;
+    serverLocationInfo?: ServerLocationInfo | null;
+    isPremiumSession: boolean;
+    suppressedTo: SessionSuppressType;
+    dnsServers: string[];
+    serverVersion: string;
+    clientPublicIpAddress: string;
+}
+
+export class AccessInfo implements IAccessInfo {
+    isNew!: boolean;
+    createdTime!: Date;
+    lastUsedTime!: Date;
+    expirationTime?: Date | null;
+    isPremium!: boolean;
+    maxCycleTraffic!: number;
+    maxTotalTraffic!: number;
+    maxDeviceCount!: number;
+    deviceLifeSpan!: number;
+    devicesSummary?: AccessDevicesSummary | null;
+
+    constructor(data?: IAccessInfo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.isNew = _data["isNew"] !== undefined ? _data["isNew"] : <any>null;
+            this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
+            this.lastUsedTime = _data["lastUsedTime"] ? new Date(_data["lastUsedTime"].toString()) : <any>null;
+            this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>null;
+            this.isPremium = _data["isPremium"] !== undefined ? _data["isPremium"] : <any>null;
+            this.maxCycleTraffic = _data["maxCycleTraffic"] !== undefined ? _data["maxCycleTraffic"] : <any>null;
+            this.maxTotalTraffic = _data["maxTotalTraffic"] !== undefined ? _data["maxTotalTraffic"] : <any>null;
+            this.maxDeviceCount = _data["maxDeviceCount"] !== undefined ? _data["maxDeviceCount"] : <any>null;
+            this.deviceLifeSpan = _data["deviceLifeSpan"] !== undefined ? _data["deviceLifeSpan"] : <any>null;
+            this.devicesSummary = _data["devicesSummary"] ? AccessDevicesSummary.fromJS(_data["devicesSummary"]) : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AccessInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new AccessInfo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["isNew"] = this.isNew !== undefined ? this.isNew : <any>null;
+        data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
+        data["lastUsedTime"] = this.lastUsedTime ? this.lastUsedTime.toISOString() : <any>null;
+        data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>null;
+        data["isPremium"] = this.isPremium !== undefined ? this.isPremium : <any>null;
+        data["maxCycleTraffic"] = this.maxCycleTraffic !== undefined ? this.maxCycleTraffic : <any>null;
+        data["maxTotalTraffic"] = this.maxTotalTraffic !== undefined ? this.maxTotalTraffic : <any>null;
+        data["maxDeviceCount"] = this.maxDeviceCount !== undefined ? this.maxDeviceCount : <any>null;
+        data["deviceLifeSpan"] = this.deviceLifeSpan !== undefined ? this.deviceLifeSpan : <any>null;
+        data["devicesSummary"] = this.devicesSummary ? this.devicesSummary.toJSON() : <any>null;
+        return data;
+    }
+}
+
+export interface IAccessInfo {
+    isNew: boolean;
+    createdTime: Date;
+    lastUsedTime: Date;
+    expirationTime?: Date | null;
+    isPremium: boolean;
+    maxCycleTraffic: number;
+    maxTotalTraffic: number;
+    maxDeviceCount: number;
+    deviceLifeSpan: number;
+    devicesSummary?: AccessDevicesSummary | null;
+}
+
+export class AccessDevicesSummary implements IAccessDevicesSummary {
+    deviceCount!: number;
+    hasMoreDevices!: boolean;
+    devices?: AccessDevice[] | null;
+
+    constructor(data?: IAccessDevicesSummary) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.deviceCount = _data["deviceCount"] !== undefined ? _data["deviceCount"] : <any>null;
+            this.hasMoreDevices = _data["hasMoreDevices"] !== undefined ? _data["hasMoreDevices"] : <any>null;
+            if (Array.isArray(_data["devices"])) {
+                this.devices = [] as any;
+                for (let item of _data["devices"])
+                    this.devices!.push(AccessDevice.fromJS(item));
+            }
+            else {
+                this.devices = <any>null;
+            }
+        }
+    }
+
+    static fromJS(data: any): AccessDevicesSummary {
+        data = typeof data === 'object' ? data : {};
+        let result = new AccessDevicesSummary();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["deviceCount"] = this.deviceCount !== undefined ? this.deviceCount : <any>null;
+        data["hasMoreDevices"] = this.hasMoreDevices !== undefined ? this.hasMoreDevices : <any>null;
+        if (Array.isArray(this.devices)) {
+            data["devices"] = [];
+            for (let item of this.devices)
+                data["devices"].push(item.toJSON());
+        }
+        return data;
+    }
+}
+
+export interface IAccessDevicesSummary {
+    deviceCount: number;
+    hasMoreDevices: boolean;
+    devices?: AccessDevice[] | null;
+}
+
+export class AccessDevice implements IAccessDevice {
+    lastUsedTime!: Date;
+    operatingSystem?: string | null;
+    ipAddress?: string | null;
+
+    constructor(data?: IAccessDevice) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.lastUsedTime = _data["lastUsedTime"] ? new Date(_data["lastUsedTime"].toString()) : <any>null;
+            this.operatingSystem = _data["operatingSystem"] !== undefined ? _data["operatingSystem"] : <any>null;
+            this.ipAddress = _data["ipAddress"] !== undefined ? _data["ipAddress"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AccessDevice {
+        data = typeof data === 'object' ? data : {};
+        let result = new AccessDevice();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["lastUsedTime"] = this.lastUsedTime ? this.lastUsedTime.toISOString() : <any>null;
+        data["operatingSystem"] = this.operatingSystem !== undefined ? this.operatingSystem : <any>null;
+        data["ipAddress"] = this.ipAddress !== undefined ? this.ipAddress : <any>null;
+        return data;
+    }
+}
+
+export interface IAccessDevice {
+    lastUsedTime: Date;
+    operatingSystem?: string | null;
+    ipAddress?: string | null;
+}
+
+export class ServerLocationInfo implements IServerLocationInfo {
+    countryCode!: string;
+    regionName!: string;
+    tags?: string[] | null;
+    serverLocation!: string;
+    countryName!: string;
+    isAuto!: boolean;
+
+    constructor(data?: IServerLocationInfo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
+            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
+            if (Array.isArray(_data["tags"])) {
+                this.tags = [] as any;
+                for (let item of _data["tags"])
+                    this.tags!.push(item);
+            }
+            else {
+                this.tags = <any>null;
+            }
+            this.serverLocation = _data["serverLocation"] !== undefined ? _data["serverLocation"] : <any>null;
+            this.countryName = _data["countryName"] !== undefined ? _data["countryName"] : <any>null;
+            this.isAuto = _data["isAuto"] !== undefined ? _data["isAuto"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): ServerLocationInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new ServerLocationInfo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
+        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
+        if (Array.isArray(this.tags)) {
+            data["tags"] = [];
+            for (let item of this.tags)
+                data["tags"].push(item);
+        }
+        data["serverLocation"] = this.serverLocation !== undefined ? this.serverLocation : <any>null;
+        data["countryName"] = this.countryName !== undefined ? this.countryName : <any>null;
+        data["isAuto"] = this.isAuto !== undefined ? this.isAuto : <any>null;
+        return data;
+    }
+}
+
+export interface IServerLocationInfo {
+    countryCode: string;
+    regionName: string;
+    tags?: string[] | null;
+    serverLocation: string;
+    countryName: string;
+    isAuto: boolean;
+}
+
+export enum SessionSuppressType {
+    None = "None",
+    YourSelf = "YourSelf",
+    Other = "Other",
+}
+
+export class AppSessionStatus implements IAppSessionStatus {
+    connectorStat!: AppConnectorStat;
+    speed!: Traffic;
+    sessionTraffic!: Traffic;
+    cycleTraffic!: Traffic;
+    totalTraffic!: Traffic;
+    tcpTunnelledCount!: number;
+    tcpPassthruCount!: number;
+    datagramChannelCount!: number;
+    isUdpMode!: boolean;
+    isWaitingForAd!: boolean;
+    canExtendByRewardedAd!: boolean;
+    sessionMaxTraffic!: number;
+    sessionExpirationTime?: Date | null;
+    activeClientCount?: number | null;
+
+    constructor(data?: IAppSessionStatus) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.connectorStat = new AppConnectorStat();
+            this.speed = new Traffic();
+            this.sessionTraffic = new Traffic();
+            this.cycleTraffic = new Traffic();
+            this.totalTraffic = new Traffic();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.connectorStat = _data["connectorStat"] ? AppConnectorStat.fromJS(_data["connectorStat"]) : new AppConnectorStat();
+            this.speed = _data["speed"] ? Traffic.fromJS(_data["speed"]) : new Traffic();
+            this.sessionTraffic = _data["sessionTraffic"] ? Traffic.fromJS(_data["sessionTraffic"]) : new Traffic();
+            this.cycleTraffic = _data["cycleTraffic"] ? Traffic.fromJS(_data["cycleTraffic"]) : new Traffic();
+            this.totalTraffic = _data["totalTraffic"] ? Traffic.fromJS(_data["totalTraffic"]) : new Traffic();
+            this.tcpTunnelledCount = _data["tcpTunnelledCount"] !== undefined ? _data["tcpTunnelledCount"] : <any>null;
+            this.tcpPassthruCount = _data["tcpPassthruCount"] !== undefined ? _data["tcpPassthruCount"] : <any>null;
+            this.datagramChannelCount = _data["datagramChannelCount"] !== undefined ? _data["datagramChannelCount"] : <any>null;
+            this.isUdpMode = _data["isUdpMode"] !== undefined ? _data["isUdpMode"] : <any>null;
+            this.isWaitingForAd = _data["isWaitingForAd"] !== undefined ? _data["isWaitingForAd"] : <any>null;
+            this.canExtendByRewardedAd = _data["canExtendByRewardedAd"] !== undefined ? _data["canExtendByRewardedAd"] : <any>null;
+            this.sessionMaxTraffic = _data["sessionMaxTraffic"] !== undefined ? _data["sessionMaxTraffic"] : <any>null;
+            this.sessionExpirationTime = _data["sessionExpirationTime"] ? new Date(_data["sessionExpirationTime"].toString()) : <any>null;
+            this.activeClientCount = _data["activeClientCount"] !== undefined ? _data["activeClientCount"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AppSessionStatus {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppSessionStatus();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["connectorStat"] = this.connectorStat ? this.connectorStat.toJSON() : <any>null;
+        data["speed"] = this.speed ? this.speed.toJSON() : <any>null;
+        data["sessionTraffic"] = this.sessionTraffic ? this.sessionTraffic.toJSON() : <any>null;
+        data["cycleTraffic"] = this.cycleTraffic ? this.cycleTraffic.toJSON() : <any>null;
+        data["totalTraffic"] = this.totalTraffic ? this.totalTraffic.toJSON() : <any>null;
+        data["tcpTunnelledCount"] = this.tcpTunnelledCount !== undefined ? this.tcpTunnelledCount : <any>null;
+        data["tcpPassthruCount"] = this.tcpPassthruCount !== undefined ? this.tcpPassthruCount : <any>null;
+        data["datagramChannelCount"] = this.datagramChannelCount !== undefined ? this.datagramChannelCount : <any>null;
+        data["isUdpMode"] = this.isUdpMode !== undefined ? this.isUdpMode : <any>null;
+        data["isWaitingForAd"] = this.isWaitingForAd !== undefined ? this.isWaitingForAd : <any>null;
+        data["canExtendByRewardedAd"] = this.canExtendByRewardedAd !== undefined ? this.canExtendByRewardedAd : <any>null;
+        data["sessionMaxTraffic"] = this.sessionMaxTraffic !== undefined ? this.sessionMaxTraffic : <any>null;
+        data["sessionExpirationTime"] = this.sessionExpirationTime ? this.sessionExpirationTime.toISOString() : <any>null;
+        data["activeClientCount"] = this.activeClientCount !== undefined ? this.activeClientCount : <any>null;
+        return data;
+    }
+}
+
+export interface IAppSessionStatus {
+    connectorStat: AppConnectorStat;
+    speed: Traffic;
+    sessionTraffic: Traffic;
+    cycleTraffic: Traffic;
+    totalTraffic: Traffic;
+    tcpTunnelledCount: number;
+    tcpPassthruCount: number;
+    datagramChannelCount: number;
+    isUdpMode: boolean;
+    isWaitingForAd: boolean;
+    canExtendByRewardedAd: boolean;
+    sessionMaxTraffic: number;
+    sessionExpirationTime?: Date | null;
+    activeClientCount?: number | null;
+}
+
+export class AppConnectorStat implements IAppConnectorStat {
+    freeConnectionCount!: number;
+    reusedConnectionFailedCount!: number;
+    reusedConnectionSucceededCount!: number;
+    createdConnectionCount!: number;
+    requestCount!: number;
+
+    constructor(data?: IAppConnectorStat) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.freeConnectionCount = _data["freeConnectionCount"] !== undefined ? _data["freeConnectionCount"] : <any>null;
+            this.reusedConnectionFailedCount = _data["reusedConnectionFailedCount"] !== undefined ? _data["reusedConnectionFailedCount"] : <any>null;
+            this.reusedConnectionSucceededCount = _data["reusedConnectionSucceededCount"] !== undefined ? _data["reusedConnectionSucceededCount"] : <any>null;
+            this.createdConnectionCount = _data["createdConnectionCount"] !== undefined ? _data["createdConnectionCount"] : <any>null;
+            this.requestCount = _data["requestCount"] !== undefined ? _data["requestCount"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AppConnectorStat {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppConnectorStat();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["freeConnectionCount"] = this.freeConnectionCount !== undefined ? this.freeConnectionCount : <any>null;
+        data["reusedConnectionFailedCount"] = this.reusedConnectionFailedCount !== undefined ? this.reusedConnectionFailedCount : <any>null;
+        data["reusedConnectionSucceededCount"] = this.reusedConnectionSucceededCount !== undefined ? this.reusedConnectionSucceededCount : <any>null;
+        data["createdConnectionCount"] = this.createdConnectionCount !== undefined ? this.createdConnectionCount : <any>null;
+        data["requestCount"] = this.requestCount !== undefined ? this.requestCount : <any>null;
+        return data;
+    }
+}
+
+export interface IAppConnectorStat {
+    freeConnectionCount: number;
+    reusedConnectionFailedCount: number;
+    reusedConnectionSucceededCount: number;
+    createdConnectionCount: number;
+    requestCount: number;
+}
+
+export class Traffic implements ITraffic {
+    sentTraffic!: number;
+    receivedTraffic!: number;
+    sent!: number;
+    received!: number;
+
+    constructor(data?: ITraffic) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.sentTraffic = _data["sentTraffic"] !== undefined ? _data["sentTraffic"] : <any>null;
+            this.receivedTraffic = _data["receivedTraffic"] !== undefined ? _data["receivedTraffic"] : <any>null;
+            this.sent = _data["sent"] !== undefined ? _data["sent"] : <any>null;
+            this.received = _data["received"] !== undefined ? _data["received"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): Traffic {
+        data = typeof data === 'object' ? data : {};
+        let result = new Traffic();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["sentTraffic"] = this.sentTraffic !== undefined ? this.sentTraffic : <any>null;
+        data["receivedTraffic"] = this.receivedTraffic !== undefined ? this.receivedTraffic : <any>null;
+        data["sent"] = this.sent !== undefined ? this.sent : <any>null;
+        data["received"] = this.received !== undefined ? this.received : <any>null;
+        return data;
+    }
+}
+
+export interface ITraffic {
+    sentTraffic: number;
+    receivedTraffic: number;
+    sent: number;
+    received: number;
 }
 
 export class ApiError implements IApiError {
@@ -2478,73 +2968,6 @@ export interface IClientProfileBaseInfo {
     hasAccessCode: boolean;
 }
 
-export class ServerLocationInfo implements IServerLocationInfo {
-    countryCode!: string;
-    regionName!: string;
-    tags?: string[] | null;
-    serverLocation!: string;
-    countryName!: string;
-    isAuto!: boolean;
-
-    constructor(data?: IServerLocationInfo) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
-            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
-            if (Array.isArray(_data["tags"])) {
-                this.tags = [] as any;
-                for (let item of _data["tags"])
-                    this.tags!.push(item);
-            }
-            else {
-                this.tags = <any>null;
-            }
-            this.serverLocation = _data["serverLocation"] !== undefined ? _data["serverLocation"] : <any>null;
-            this.countryName = _data["countryName"] !== undefined ? _data["countryName"] : <any>null;
-            this.isAuto = _data["isAuto"] !== undefined ? _data["isAuto"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): ServerLocationInfo {
-        data = typeof data === 'object' ? data : {};
-        let result = new ServerLocationInfo();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
-        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
-        if (Array.isArray(this.tags)) {
-            data["tags"] = [];
-            for (let item of this.tags)
-                data["tags"].push(item);
-        }
-        data["serverLocation"] = this.serverLocation !== undefined ? this.serverLocation : <any>null;
-        data["countryName"] = this.countryName !== undefined ? this.countryName : <any>null;
-        data["isAuto"] = this.isAuto !== undefined ? this.isAuto : <any>null;
-        return data;
-    }
-}
-
-export interface IServerLocationInfo {
-    countryCode: string;
-    regionName: string;
-    tags?: string[] | null;
-    serverLocation: string;
-    countryName: string;
-    isAuto: boolean;
-}
-
 export class ClientServerLocationInfo extends ServerLocationInfo implements IClientServerLocationInfo {
     isNestedCountry!: boolean;
     isDefault!: boolean;
@@ -2659,197 +3082,6 @@ export interface IServerLocationOptions {
     hasPremium: boolean;
     hasUnblockable: boolean;
     prompt: boolean;
-}
-
-export class SessionStatus implements ISessionStatus {
-    errorCode!: SessionErrorCode;
-    accessUsage?: AccessUsage | null;
-    suppressedTo!: SessionSuppressType;
-    suppressedBy!: SessionSuppressType;
-    error?: ApiError | null;
-
-    constructor(data?: ISessionStatus) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.errorCode = _data["errorCode"] !== undefined ? _data["errorCode"] : <any>null;
-            this.accessUsage = _data["accessUsage"] ? AccessUsage.fromJS(_data["accessUsage"]) : <any>null;
-            this.suppressedTo = _data["suppressedTo"] !== undefined ? _data["suppressedTo"] : <any>null;
-            this.suppressedBy = _data["suppressedBy"] !== undefined ? _data["suppressedBy"] : <any>null;
-            this.error = _data["error"] ? ApiError.fromJS(_data["error"]) : <any>null;
-        }
-    }
-
-    static fromJS(data: any): SessionStatus {
-        data = typeof data === 'object' ? data : {};
-        let result = new SessionStatus();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["errorCode"] = this.errorCode !== undefined ? this.errorCode : <any>null;
-        data["accessUsage"] = this.accessUsage ? this.accessUsage.toJSON() : <any>null;
-        data["suppressedTo"] = this.suppressedTo !== undefined ? this.suppressedTo : <any>null;
-        data["suppressedBy"] = this.suppressedBy !== undefined ? this.suppressedBy : <any>null;
-        data["error"] = this.error ? this.error.toJSON() : <any>null;
-        return data;
-    }
-}
-
-export interface ISessionStatus {
-    errorCode: SessionErrorCode;
-    accessUsage?: AccessUsage | null;
-    suppressedTo: SessionSuppressType;
-    suppressedBy: SessionSuppressType;
-    error?: ApiError | null;
-}
-
-export enum SessionErrorCode {
-    Ok = "Ok",
-    AccessError = "AccessError",
-    PlanRejected = "PlanRejected",
-    GeneralError = "GeneralError",
-    SessionClosed = "SessionClosed",
-    SessionSuppressedBy = "SessionSuppressedBy",
-    SessionError = "SessionError",
-    SessionExpired = "SessionExpired",
-    AccessExpired = "AccessExpired",
-    AccessCodeRejected = "AccessCodeRejected",
-    AccessLocked = "AccessLocked",
-    AccessTrafficOverflow = "AccessTrafficOverflow",
-    NoServerAvailable = "NoServerAvailable",
-    AdError = "AdError",
-    RewardedAdRejected = "RewardedAdRejected",
-    Maintenance = "Maintenance",
-    RedirectHost = "RedirectHost",
-    UnsupportedClient = "UnsupportedClient",
-    UnsupportedServer = "UnsupportedServer",
-}
-
-export class AccessUsage implements IAccessUsage {
-    canExtendByRewardedAd!: boolean;
-    isPremium!: boolean;
-    traffic!: Traffic;
-    maxTraffic!: number;
-    expirationTime?: Date | null;
-    maxClientCount!: number;
-    activeClientCount?: number | null;
-
-    constructor(data?: IAccessUsage) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-        if (!data) {
-            this.traffic = new Traffic();
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.canExtendByRewardedAd = _data["canExtendByRewardedAd"] !== undefined ? _data["canExtendByRewardedAd"] : <any>null;
-            this.isPremium = _data["isPremium"] !== undefined ? _data["isPremium"] : <any>null;
-            this.traffic = _data["traffic"] ? Traffic.fromJS(_data["traffic"]) : new Traffic();
-            this.maxTraffic = _data["maxTraffic"] !== undefined ? _data["maxTraffic"] : <any>null;
-            this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>null;
-            this.maxClientCount = _data["maxClientCount"] !== undefined ? _data["maxClientCount"] : <any>null;
-            this.activeClientCount = _data["activeClientCount"] !== undefined ? _data["activeClientCount"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): AccessUsage {
-        data = typeof data === 'object' ? data : {};
-        let result = new AccessUsage();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["canExtendByRewardedAd"] = this.canExtendByRewardedAd !== undefined ? this.canExtendByRewardedAd : <any>null;
-        data["isPremium"] = this.isPremium !== undefined ? this.isPremium : <any>null;
-        data["traffic"] = this.traffic ? this.traffic.toJSON() : <any>null;
-        data["maxTraffic"] = this.maxTraffic !== undefined ? this.maxTraffic : <any>null;
-        data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>null;
-        data["maxClientCount"] = this.maxClientCount !== undefined ? this.maxClientCount : <any>null;
-        data["activeClientCount"] = this.activeClientCount !== undefined ? this.activeClientCount : <any>null;
-        return data;
-    }
-}
-
-export interface IAccessUsage {
-    canExtendByRewardedAd: boolean;
-    isPremium: boolean;
-    traffic: Traffic;
-    maxTraffic: number;
-    expirationTime?: Date | null;
-    maxClientCount: number;
-    activeClientCount?: number | null;
-}
-
-export class Traffic implements ITraffic {
-    sentTraffic!: number;
-    receivedTraffic!: number;
-    sent!: number;
-    received!: number;
-
-    constructor(data?: ITraffic) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.sentTraffic = _data["sentTraffic"] !== undefined ? _data["sentTraffic"] : <any>null;
-            this.receivedTraffic = _data["receivedTraffic"] !== undefined ? _data["receivedTraffic"] : <any>null;
-            this.sent = _data["sent"] !== undefined ? _data["sent"] : <any>null;
-            this.received = _data["received"] !== undefined ? _data["received"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): Traffic {
-        data = typeof data === 'object' ? data : {};
-        let result = new Traffic();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["sentTraffic"] = this.sentTraffic !== undefined ? this.sentTraffic : <any>null;
-        data["receivedTraffic"] = this.receivedTraffic !== undefined ? this.receivedTraffic : <any>null;
-        data["sent"] = this.sent !== undefined ? this.sent : <any>null;
-        data["received"] = this.received !== undefined ? this.received : <any>null;
-        return data;
-    }
-}
-
-export interface ITraffic {
-    sentTraffic: number;
-    receivedTraffic: number;
-    sent: number;
-    received: number;
-}
-
-export enum SessionSuppressType {
-    None = "None",
-    YourSelf = "YourSelf",
-    Other = "Other",
 }
 
 export enum VersionStatus {

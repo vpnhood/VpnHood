@@ -1,5 +1,9 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System.Text;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AppLib.ClientProfiles;
+using VpnHood.Core.Common.Exceptions;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Utils;
 using VpnHood.Test;
 using VpnHood.Test.Tests;
 
@@ -32,11 +36,57 @@ public class AccessCodeTest : TestBase
         await using var app = TestAppHelper.CreateClientApp();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
         app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
-            AccessCode = accessCode
+            AccessCode = AccessCodeUtils.Format(accessCode) // make sure it accept format
         });
 
         // connect
         await app.Connect(clientProfile.ClientProfileId);
         Assert.AreEqual(6, app.State.SessionInfo?.AccessInfo?.MaxDeviceCount, "token2 must be used instead of token1 due the access code.");
     }
+
+    [TestMethod]
+    public async Task AccessCode_Reject()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // create client app
+        var token1 = TestHelper.CreateAccessToken(server);
+
+        // create access code and add it to test manager
+        var accessCode = TestAppHelper.BuildAccessCode();
+
+        // create access code
+        await using var app = TestAppHelper.CreateClientApp();
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
+        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
+            AccessCode = accessCode
+        });
+
+        // connect
+        var ex = await Assert.ThrowsExceptionAsync<SessionException>(() => app.Connect(clientProfile.ClientProfileId));
+        Assert.AreEqual(SessionErrorCode.AccessCodeRejected, ex.SessionResponse.ErrorCode);
+    }
+
+    [TestMethod]
+    public async Task AccessCode_FailedByCheckSum()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // create client app
+        var token1 = TestHelper.CreateAccessToken(server);
+        var str = new StringBuilder(TestAppHelper.BuildAccessCode());
+        str[5] = str[5] == '0' ? '1' : '0'; // destroy checksum
+        var accessCode = str.ToString();
+
+        // create access code
+        await using var app = TestAppHelper.CreateClientApp();
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
+
+        // ReSharper disable once AccessToDisposedClosure
+        Assert.ThrowsException<FormatException>(() => app.ClientProfileService.Update(
+            clientProfile.ClientProfileId, new ClientProfileUpdateParams { AccessCode = accessCode }));
+    }
+
 }

@@ -61,7 +61,7 @@ public class TestAppHelper : TestHelper
         return clientApp;
     }
 
-    private static string GenerateSecureRandomString(int length)
+    private static string GenerateSecureRandomDigits(int length)
     {
         var result = new StringBuilder(length);
         using var rng = RandomNumberGenerator.Create();
@@ -77,6 +77,6 @@ public class TestAppHelper : TestHelper
 
     public static string BuildAccessCode()
     {
-        return AccessCodeUtils.Build(GenerateSecureRandomString(18));
+        return AccessCodeUtils.Build(GenerateSecureRandomDigits(18));
     }
 }

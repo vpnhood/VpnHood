@@ -118,9 +118,8 @@ public class ClientProfileService
             item.SelectedLocation = updateParams.SelectedLocation;
 
         if (updateParams.AccessCode != null)
-            item.AccessCode = updateParams.AccessCode;
-
-
+            item.AccessCode = string.IsNullOrEmpty(updateParams.AccessCode.Value) 
+            ? null : AccessCodeUtils.Validate(updateParams.AccessCode.Value);
 
         Save();
         return item;

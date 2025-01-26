@@ -486,6 +486,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     serverLocation: serverLocation,
                     userAgent: userAgent,
                     planId: planId,
+                    accessCode: clientProfile.AccessCode,
                     allowUpdateToken: true,
                     cancellationToken: cancellationToken)
                 .VhConfigureAwait();
@@ -494,8 +495,23 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ReportError(ex, "Could not connect.");
 
             // Reset server location if no server is available
-            if (ex is SessionException { SessionResponse.ErrorCode: SessionErrorCode.NoServerAvailable }) {
-                ClientProfileService.Update(clientProfileId.Value, new ClientProfileUpdateParams { SelectedLocation = new Patch<string?>(null) });
+            if (ex is SessionException sessionException) {
+                switch (sessionException.SessionResponse.ErrorCode)
+                {
+                    case SessionErrorCode.NoServerAvailable:
+                        ClientProfileService.Update(clientProfileId.Value, new ClientProfileUpdateParams { SelectedLocation = new Patch<string?>(null) });
+                        break;
+
+                    case SessionErrorCode.AccessCodeRejected:
+                        ClientProfileService.Update(clientProfileId.Value, new ClientProfileUpdateParams { AccessCode = new Patch<string?>(null) });
+                        break;
+
+                    // remove client profile if access expired
+                    case SessionErrorCode.AccessExpired when clientProfile.IsForAccount:
+                        ClientProfileService.Delete(clientProfile.ClientProfileId);
+                        _ = Services.AccountService?.Refresh(true);
+                        break;
+                }
             }
 
             //user may disconnect before connection closed
@@ -506,12 +522,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // don't wait for disconnect, it may cause deadlock
             _ = Disconnect();
-
-            // remove client profile if access expired
-            if (clientProfile.IsForAccount && ex is SessionException { SessionResponse.ErrorCode: SessionErrorCode.AccessExpired }) {
-                ClientProfileService.Delete(clientProfile.ClientProfileId);
-                _ = Services.AccountService?.Refresh(true);
-            }
 
             if (throwException) {
                 if (_hasDisconnectedByUser)
@@ -561,7 +571,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private async Task ConnectInternal(Token token, string? serverLocation, string? userAgent, ConnectPlanId planId,
-        bool allowUpdateToken, CancellationToken cancellationToken)
+        string? accessCode, bool allowUpdateToken, CancellationToken cancellationToken)
     {
         // show token info
         VhLogger.Instance.LogInformation("TokenId: {TokenId}, SupportId: {SupportId}",
@@ -581,8 +591,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AutoWaitTimeout = _autoWaitTimeout,
             IncludeLocalNetwork = UserSettings.IncludeLocalNetwork && Features.IsLocalNetworkSupported,
             IncludeIpRanges = await GetIncludeIpRanges(cancellationToken),
-            AdService = Services.AdService,
             PacketCaptureIncludeIpRanges = packetCaptureIpRanges,
+            AdService = Services.AdService,
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
             ServerQueryTimeout = _serverQueryTimeout,
@@ -590,6 +600,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             DropQuic = UserSettings.DropQuic,
             ServerLocation = ServerLocationInfo.IsAutoLocation(serverLocation) ? null : serverLocation,
             PlanId = planId,
+            AccessCode = accessCode,
             UseTcpOverTun = HasDebugCommand(DebugCommands.UseTcpOverTun),
             UseUdpChannel = UserSettings.UseUdpChannel,
             DomainFilter = UserSettings.DomainFilter,
@@ -598,7 +609,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
             AllowTcpReuse = !HasDebugCommand(DebugCommands.NoTcpReuse),
             Tracker = Services.Tracker,
-            CanExtendByRewardedAdThreshold = _canExtendByRewardedAdThreshold
+            CanExtendByRewardedAdThreshold = _canExtendByRewardedAdThreshold,
         };
 
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
@@ -657,6 +668,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                         serverLocation: serverLocation,
                         userAgent: userAgent,
                         planId: planId,
+                        accessCode: accessCode,
                         allowUpdateToken: false,
                         cancellationToken: cancellationToken)
                     .VhConfigureAwait();

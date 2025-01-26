@@ -45,7 +45,7 @@ public class AccessCodeTest : TestBase
     }
 
     [TestMethod]
-    public async Task AccessCode_Reject()
+    public async Task AccessCode_reject_and_remove_from_profile()
     {
         using var accessManager = TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
@@ -66,6 +66,10 @@ public class AccessCodeTest : TestBase
         // connect
         var ex = await Assert.ThrowsExceptionAsync<SessionException>(() => app.Connect(clientProfile.ClientProfileId));
         Assert.AreEqual(SessionErrorCode.AccessCodeRejected, ex.SessionResponse.ErrorCode);
+
+        // code must be removed
+        clientProfile =  app.ClientProfileService.Get(clientProfile.ClientProfileId);
+        Assert.IsNull(clientProfile.AccessCode, "Access code must be removed from profile.");
     }
 
     [TestMethod]

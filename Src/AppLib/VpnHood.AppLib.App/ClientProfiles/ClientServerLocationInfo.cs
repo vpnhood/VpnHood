@@ -8,9 +8,10 @@ public class ClientServerLocationInfo : ServerLocationInfo
     public required bool IsDefault { get; init; }
     public ServerLocationOptions Options { get; set; } = new() { Normal = 0 };
 
-    public static ClientServerLocationInfo[] CreateFromToken(Token token)
+    public static ClientServerLocationInfo[] CreateFromToken(ClientProfile clientProfile)
     {
         var clientCountry = VpnHoodApp.Instance.GetClientCountryByServer();
+        var token = clientProfile.Token;
 
         // get country policy
         var policy = token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y.Equals(clientCountry, StringComparison.OrdinalIgnoreCase))) ??
@@ -22,7 +23,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
         var isManaged = items.Any(x => x.Tags?.Contains(ServerRegisteredTags.Premium) == true) || policy != null;
         if (isManaged) {
             foreach (var item in items)
-                item.RecalculateOptions(policy, !token.IsPublic); // treat non-public as premium
+                item.RecalculateOptions(policy, clientProfile.IsPremium); // treat non-public as premium
         }
 
         // show unblockable only if the policy is set
@@ -58,7 +59,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
         Options.PremiumByTrial = Options.HasPremium ? policy.PremiumByTrial : null;
         Options.PremiumByRewardedAd = Options.HasPremium ? policy.PremiumByRewardedAd : null;
         Options.PremiumByPurchase = policy.PremiumByPurchase && isBillingSupported;
-        Options.PremiumByCode = policy.PremiumByCode && false; // not implemented yet
+        Options.PremiumByCode = policy.PremiumByCode;
 
         Options.Prompt = Options.PremiumByTrial != null || Options.PremiumByRewardedAd != null;
         Options.CanGoPremium = policy.PremiumByCode || (policy.PremiumByPurchase && isBillingSupported); // can go premium and remove ad

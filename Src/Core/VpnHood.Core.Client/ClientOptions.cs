@@ -52,6 +52,7 @@ public class ClientOptions
     public TimeSpan ServerQueryTimeout { get; set; } = TimeSpan.FromSeconds(10);
     public ITracker? Tracker { get; set; }
     public TimeSpan CanExtendByRewardedAdThreshold { get; set; } = TimeSpan.FromMinutes(5);
+    public string? AccessCode { get; set; }
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

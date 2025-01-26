@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -217,7 +218,7 @@ public class ClientProfileTest
             CustomData = Guid.NewGuid().ToString(),
             IsPremiumLocationSelected = true,
             SelectedLocation = "us/california",
-            AccessCode = "12345678"
+            AccessCode = TestAppHelper.BuildAccessCode()
         };
         app.ClientProfileService.Update(clientProfile.ClientProfileId, updateParams);
         clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
@@ -227,7 +228,7 @@ public class ClientProfileTest
         Assert.AreEqual(updateParams.IsPremiumLocationSelected.Value, clientProfile.IsPremiumLocationSelected);
         Assert.AreEqual(updateParams.SelectedLocation.Value, clientProfile.SelectedLocation);
         Assert.AreEqual(updateParams.AccessCode.Value, clientProfile.AccessCode);
-        Assert.AreEqual("****5678", clientProfile.ToInfo().AccessCode);
+        Assert.AreEqual(AccessCodeUtils.Redact(updateParams.AccessCode.Value), clientProfile.ToInfo().AccessCode);
 
         // ************
         // *** TEST ***: RemoveClientProfile

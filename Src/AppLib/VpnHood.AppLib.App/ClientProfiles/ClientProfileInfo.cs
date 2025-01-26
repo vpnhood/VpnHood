@@ -16,7 +16,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public bool IsValidHostName => clientProfile.Token.ServerToken.IsValidHostName;
     public bool IsBuiltIn => clientProfile.IsBuiltIn;
     public bool IsForAccount => clientProfile.IsForAccount;
-    public string? AccessCode => FormantAccessCode(clientProfile.AccessCode);
+    public string? AccessCode => AccessCodeUtils.Redact(clientProfile.AccessCode);
     public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile.Token);
 
     public ClientServerLocationInfo? SelectedLocationInfo {
@@ -28,18 +28,6 @@ public class ClientProfileInfo(ClientProfile clientProfile)
 
             return ret;
         }
-    }
-
-    private static string? FormantAccessCode(string? accessCode)
-    {
-        if (string.IsNullOrWhiteSpace(accessCode))
-            return null;
-        
-        if (accessCode.Length <= 4)
-            return "***";
-
-        // replace all but last 4 characters with '*'
-        return new string('*', accessCode.Length - 4) + accessCode[^4..];
     }
 
     private string GetTitle()

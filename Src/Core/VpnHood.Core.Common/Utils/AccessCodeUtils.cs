@@ -29,14 +29,14 @@ public static class AccessCodeUtils
         accessCode = Regex.Replace(accessCode, "[^a-zA-Z0-9]", "").Trim();
 
         if (string.IsNullOrEmpty(accessCode))
-            throw new FormatException("Access Code is empty.");
+            throw new ArgumentException("Access Code is empty.");
 
         if (!int.TryParse(accessCode[0].ToString(), out var version) || version != 1)
-            throw new FormatException("Unrecognized Access Code. First digit should be 1.");
+            throw new ArgumentException("Unrecognized Access Code. First digit should be 1.");
 
         // version detected. Version 1 has 20 digits
         if (accessCode.Length != 20)
-            throw new FormatException("Access code must have 20 digit.");
+            throw new ArgumentException("Access code must have 20 digit.");
 
         // get checksum
         if (!int.TryParse(accessCode[1].ToString(), out var checksum))

@@ -2,6 +2,7 @@
 using VpnHood.Core.Common.Collections;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
@@ -105,6 +106,10 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
 
     protected override string? GetAccessTokenIdFromAccessCode(string accessCode)
     {
-        return AccessCodes.GetValueOrDefault(accessCode);
+        var validatedAccessCode = AccessCodeUtils.TryValidate(accessCode);
+        if (validatedAccessCode == null)
+            return null;
+
+        return AccessCodes.GetValueOrDefault(validatedAccessCode);
     }
 }

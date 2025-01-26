@@ -62,6 +62,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private DateTime? _autoWaitTime;
     private readonly ServerFinder _serverFinder;
     private readonly ConnectPlanId _planId;
+    private readonly string? _accessCode;
     private readonly TimeSpan _canExtendByRewardedAdThreshold;
     private bool _isTunProviderSupported;
     private bool _isDnsServersAccepted;
@@ -129,6 +130,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _useUdpChannel = options.UseUdpChannel;
         _adService = options.AdService;
         _planId = options.PlanId;
+        _accessCode = options.AccessCode;
         _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
         _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken,
             serverLocation: options.ServerLocation,
@@ -703,6 +705,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 TokenId = Token.TokenId,
                 ServerLocation = _serverFinder.ServerLocation,
                 PlanId = _planId,
+                AccessCode = _accessCode,
                 AllowRedirect = allowRedirect,
                 IsIpV6Supported = IsIpV6SupportedByClient
             };

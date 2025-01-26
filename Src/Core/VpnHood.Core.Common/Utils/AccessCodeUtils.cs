@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.RegularExpressions;
 
 namespace VpnHood.Core.Common.Utils;
 
@@ -12,7 +13,17 @@ public static class AccessCodeUtils
         var accessCode = $"{version}{checksum}{random}";
         return accessCode;
     }
-    
+
+    public static string? TryValidate(string accessCode)
+    {
+        try {
+            return Validate(accessCode);
+        }
+        catch (Exception) {
+            return null;
+        }
+    }
+
     public static string Validate(string accessCode)
     {
         accessCode = Regex.Replace(accessCode, "[^a-zA-Z0-9]", "").Trim();
@@ -29,13 +40,13 @@ public static class AccessCodeUtils
 
         // get checksum
         if (!int.TryParse(accessCode[1].ToString(), out var checksum))
-            throw new FormatException("Invalid Access Code.");
+            throw new ArgumentException("Invalid Access Code.", nameof(accessCode));
 
         // calculate checksum
         var random = accessCode[2..20];
         var calculatedChecksum = CalculateChecksum(random);
         if (calculatedChecksum != checksum)
-            throw new FormatException("Invalid Access Code.");
+            throw new ArgumentException("Invalid Access Code.", nameof(accessCode));
 
         return accessCode;
     }
@@ -52,5 +63,21 @@ public static class AccessCodeUtils
         }
 
         return asciiSum;
+    }
+
+    public static string Format(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+
+        // for all digits, add a dash after every 4 digits
+        var formattedValue = new StringBuilder();
+        for (var i = 0; i < value.Length; i++) {
+            if (i > 0 && i % 4 == 0)
+                formattedValue.Append('-');
+            formattedValue.Append(value[i]);
+        }
+
+        return formattedValue.ToString();
     }
 }

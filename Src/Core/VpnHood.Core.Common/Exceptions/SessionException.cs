@@ -36,6 +36,7 @@ public class SessionException : Exception
             SessionErrorCode.AccessLocked => "Access is locked.",
             SessionErrorCode.AccessTrafficOverflow => "Access traffic overflow occurred.",
             SessionErrorCode.NoServerAvailable => "No server is available.",
+            SessionErrorCode.PremiumLocation=> "The location is only available for premium accounts.",
             SessionErrorCode.AdError => "An advertisement error occurred.",
             SessionErrorCode.RewardedAdRejected => "The rewarded advertisement was rejected.",
             SessionErrorCode.Maintenance => "The system is under maintenance.",

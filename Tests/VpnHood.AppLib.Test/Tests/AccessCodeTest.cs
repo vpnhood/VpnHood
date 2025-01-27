@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Test;
 using VpnHood.Test.Tests;
@@ -42,6 +43,7 @@ public class AccessCodeTest : TestBase
         // connect
         await app.Connect(clientProfile.ClientProfileId);
         Assert.AreEqual(6, app.State.SessionInfo?.AccessInfo?.MaxDeviceCount, "token2 must be used instead of token1 due the access code.");
+
     }
 
     [TestMethod]
@@ -79,17 +81,54 @@ public class AccessCodeTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
-        var token1 = TestHelper.CreateAccessToken(server);
+        var token = TestHelper.CreateAccessToken(server);
         var str = new StringBuilder(TestAppHelper.BuildAccessCode());
         str[5] = str[5] == '0' ? '1' : '0'; // destroy checksum
         var accessCode = str.ToString();
 
         // create access code
         await using var app = TestAppHelper.CreateClientApp();
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // ReSharper disable once AccessToDisposedClosure
         Assert.ThrowsException<ArgumentException>(() => app.ClientProfileService.Update(
             clientProfile.ClientProfileId, new ClientProfileUpdateParams { AccessCode = accessCode }));
+    }
+
+    [TestMethod]
+    public async Task ClientProfile_with_access_code_must_be_premium()
+    {
+        await using var server = await TestHelper.CreateServer();
+        
+        // create token
+        var defaultPolicy = new ClientPolicy {
+            ClientCountries = ["*"],
+            FreeLocations = ["US", "CA"],
+            Normal = 10,
+            PremiumByPurchase = true,
+            PremiumByRewardedAd = 20,
+            PremiumByTrial = 30
+        };
+        var token = TestHelper.CreateAccessToken(server);
+        token.ServerToken.ServerLocations = ["US/California"];
+        token.ClientPolicies = [defaultPolicy];
+
+        // create access code
+        var accessCode = TestAppHelper.BuildAccessCode();
+        await using var app = TestAppHelper.CreateClientApp();
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
+            AccessCode = accessCode
+        });
+
+        // check account is 
+        var clientProfileInfo = clientProfile.ToInfo();
+        Assert.IsTrue(clientProfileInfo.IsPremiumAccount);
+        Assert.IsFalse(clientProfileInfo.SelectedLocationInfo?.Options.CanGoPremium);
+        Assert.IsFalse(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByCode);
+        Assert.IsFalse(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByPurchase);
+        Assert.IsNull(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByRewardedAd);
+        Assert.IsNull(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByTrial);
+
     }
 }

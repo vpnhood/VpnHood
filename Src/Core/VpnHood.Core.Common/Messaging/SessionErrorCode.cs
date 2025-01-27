@@ -18,6 +18,7 @@ public enum SessionErrorCode
     AccessLocked,
     AccessTrafficOverflow,
     NoServerAvailable,
+    PremiumLocation,
     AdError,
     RewardedAdRejected,
     Maintenance,

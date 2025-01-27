@@ -499,6 +499,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 switch (sessionException.SessionResponse.ErrorCode)
                 {
                     case SessionErrorCode.NoServerAvailable:
+                    case SessionErrorCode.PremiumLocation:
                         ClientProfileService.Update(clientProfileId.Value, new ClientProfileUpdateParams { SelectedLocation = new Patch<string?>(null) });
                         break;
 

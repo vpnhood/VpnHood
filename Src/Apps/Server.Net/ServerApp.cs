@@ -266,9 +266,10 @@ public class ServerApp : IDisposable
     private ITunProvider? CreateTunProvider()
     {
         try {
-            return RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-                ? new LinuxTunProvider()
-                : null;
+            //return RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+            //    ? LinuxTunProvider.Create()
+            //    : null;
+            return null;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not create TunProvider!");

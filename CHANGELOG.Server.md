@@ -1,4 +1,4 @@
-# v5.1.641
+# v5.1.642
 * Update: Improve ping performance
 
 # v5.0.629

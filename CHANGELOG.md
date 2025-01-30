@@ -1,5 +1,7 @@
-# Upcoming
-* Improve performance by reducing of memory allocation
+# v5.0.645
+* Improve: Improve performance by reducing memory allocation.
+* Improve: Improve UI.
+* Feature: Add statistics page.
 
 # v5.0.635
 * Fix: Sign-out from account

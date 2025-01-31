@@ -11,6 +11,7 @@ using VpnHood.Core.Common.IpLocations.Providers;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Net;
+using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Test;
 using VpnHood.Test.Device;
@@ -407,7 +408,7 @@ public class ClientAppTest : TestBase
         var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // wait for connect error
-        var ex = await Assert.ThrowsExceptionAsync<SessionException>(()=>app.Connect(clientProfile1.ClientProfileId));
+        var ex = await Assert.ThrowsExceptionAsync<SessionException>(() => app.Connect(clientProfile1.ClientProfileId));
         Assert.AreEqual(SessionErrorCode.AccessExpired, ex.SessionResponse.ErrorCode);
 
         // token name must be updated
@@ -604,7 +605,42 @@ public class ClientAppTest : TestBase
         }
 
         // reload clientProfile
-        clientProfile =  clientApp.ClientProfileService.Get(clientProfile.ClientProfileId);
+        clientProfile = clientApp.ClientProfileService.Get(clientProfile.ClientProfileId);
         Assert.IsTrue(clientProfile.ToInfo().SelectedLocationInfo?.IsAuto);
+    }
+
+    [TestMethod]
+    public async Task Connect_success_to_new_location_fail_current()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        accessManager.ServerLocations.Add(ServerLocationInfo.Parse("US").ServerLocation, null);
+        accessManager.ServerLocations.Add(ServerLocationInfo.Parse("UK").ServerLocation, null);
+
+        // create Access Manager and token
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var token = TestHelper.CreateAccessToken(server);
+        token.ServerToken.ServerLocations = ["US", "UK"];
+
+        // create server and app
+        await using var app = TestAppHelper.CreateClientApp();
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
+            SelectedLocation = "UK"
+        });
+
+        // no exception expected
+        await app.Connect(clientProfile.ClientProfileId); 
+
+        // check location
+        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
+            SelectedLocation = "US"
+        });
+
+        // no exception expected (new location)
+        await app.Connect(clientProfile.ClientProfileId); // no exception expected
+
+        // fail to connect (same location)
+        var ex = await Assert.ThrowsExceptionAsync<Exception>(() => app.Connect(clientProfile.ClientProfileId));
+        Assert.IsTrue(ex.Message.Contains("already"));
     }
 }

@@ -86,6 +86,10 @@ public class PingProxy : ITimeoutItem
             .SendPingAsync(ipPacket.DestinationAddress, (int)IcmpTimeout.TotalMilliseconds, pingData, pingOptions)
             .VhConfigureAwait();
 
+        // set ip addresses
+        ipPacket.DestinationAddress = ipPacket.SourceAddress;
+        ipPacket.SourceAddress = pingReply.Address;
+
         // IcmpV6 packet generation is not fully implemented by packetNet
         // So create all packet in buffer
         icmpPacket.Type = IcmpV6Type.EchoReply;
@@ -93,13 +97,13 @@ public class PingProxy : ITimeoutItem
         var buffer = new byte[pingReply.Buffer.Length + 8];
         Array.Copy(icmpPacket.Bytes, 0, buffer, 0, 8);
         Array.Copy(pingReply.Buffer, 0, buffer, 8, pingReply.Buffer.Length);
-        icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer));
+        icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer), ipPacket);
 
-        ipPacket.DestinationAddress = ipPacket.SourceAddress;
-        ipPacket.SourceAddress = pingReply.Address;
-        ipPacket.PayloadPacket = icmpPacket;
-        PacketUtil.UpdateIpPacket(ipPacket);
-
+        // PacketDotNet: 1.4.7
+        // NOTE: this will not work and cause bad checksum. We need to call ipPacket.Extract 
+        // Also add ipPacket to IcmpV6Packet constructor instead setting ParentPacket or PayloadPacket
+        // icmpPacket.UpdateIcmpChecksum(); 
+        icmpPacket.UpdateCalculatedValues();
         return ipPacket;
     }
 

@@ -67,7 +67,7 @@ public class StreamPacketReader(Stream stream) : IAsyncDisposable
             }
 
             // WARNING: we shouldn't use shared memory for packet
-            var packetBuffer = _packetBuffer[.. +packetLength]; //
+            var packetBuffer = _packetBuffer[..packetLength]; //
             var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer).Extract<IPPacket>();
 
             _ipPackets.Add(ipPacket);

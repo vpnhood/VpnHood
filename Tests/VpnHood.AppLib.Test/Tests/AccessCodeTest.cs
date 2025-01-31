@@ -85,7 +85,7 @@ public class AccessCodeTest : TestBase
         // create client app
         var token = TestHelper.CreateAccessToken(server);
         var str = new StringBuilder(TestAppHelper.BuildAccessCode());
-        str[5] = str[5] == '0' ? '1' : '0'; // destroy checksum
+        str[1] = str[1] == '0' ? '1' : '0'; // destroy checksum
         var accessCode = str.ToString();
 
         // create access code

@@ -394,7 +394,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         ConnectPlanId planId = ConnectPlanId.Normal,
         string? serverLocation = null,
         bool diagnose = false,
-        string? userAgent = default,
+        string? userAgent = null,
         bool throwException = true,
         CancellationToken cancellationToken = default)
     {

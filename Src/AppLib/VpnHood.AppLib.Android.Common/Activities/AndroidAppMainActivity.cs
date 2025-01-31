@@ -4,7 +4,7 @@ namespace VpnHood.AppLib.Droid.Common.Activities;
 
 public abstract class AndroidAppMainActivity : ActivityEvent
 {
-    protected AndroidAppMainActivityHandler MainActivityHandler = default!;
+    protected AndroidAppMainActivityHandler MainActivityHandler = null!;
     protected abstract AndroidAppMainActivityHandler CreateMainActivityHandler();
 
     protected override void OnCreate(Bundle? savedInstanceState)

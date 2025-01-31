@@ -9,8 +9,8 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class CheckNewVersionTest : TestBase
 {
-    private static void SetNewRelease(Version version, DateTime releaseDate, TimeSpan? notificationDelay = default,
-        Version? deprecatedVersion = default)
+    private static void SetNewRelease(Version version, DateTime releaseDate, TimeSpan? notificationDelay = null,
+        Version? deprecatedVersion = null)
     {
         deprecatedVersion ??= new Version(1, 0, 0);
         notificationDelay ??= TimeSpan.Zero;

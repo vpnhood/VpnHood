@@ -18,12 +18,12 @@ public class HelloResponse : SessionResponse
     public IPAddress? VirtualIp { get; set; }
 
     public int? UdpPort { get; set; }
-    public string ServerVersion { get; set; } = default!;
+    public string ServerVersion { get; set; } = null!;
     [Obsolete("Use MaxProtocolVersion and MinProtocolVersion")]
     public int ServerProtocolVersion { get; set; }
     public int MaxProtocolVersion { get; set; }
     public int MinProtocolVersion { get; set; }
-    public byte[] ServerSecret { get; set; } = default!;
+    public byte[] ServerSecret { get; set; } = null!;
     public ulong SessionId { get; set; }
     public byte[] SessionKey { get; set; } = [];
     public SessionSuppressType SuppressedTo { get; set; }

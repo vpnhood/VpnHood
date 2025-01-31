@@ -17,6 +17,9 @@ public class HelloResponse : SessionResponse
     [JsonConverter(typeof(IPAddressConverter))]
     public IPAddress? VirtualIp { get; set; }
 
+    [JsonConverter(typeof(ArrayConverter<IpNetwork, IpNetworkConverter>))]
+    public IpNetwork[] PrivateIpNetworks { get; init; } = [];
+
     public int? UdpPort { get; set; }
     public string ServerVersion { get; set; } = null!;
     [Obsolete("Use MaxProtocolVersion and MinProtocolVersion")]
@@ -40,4 +43,5 @@ public class HelloResponse : SessionResponse
     public string[] ServerTags { get; set; } = [];
     public AccessInfo? AccessInfo { get; set; }
     public bool IsTunProviderSupported { get; set; }
+   
 }

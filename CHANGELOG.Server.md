@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: Ping IPv6 
+
 # v5.1.642
 * Update: Improve ping performance
 

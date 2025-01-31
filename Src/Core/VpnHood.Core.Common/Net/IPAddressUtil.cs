@@ -2,6 +2,7 @@
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Numerics;
+using System.Security.Cryptography;
 using System.Text.Json;
 using VpnHood.Core.Common.Utils;
 
@@ -31,6 +32,27 @@ public static class IPAddressUtil
         KidsSafeCloudflareDnsServers.First(x => x.IsV6())
     ];
 
+    public static IPAddress GenerateUlaAddress(ushort lastValue)
+    {
+        var randomBytes = new byte[5]; // 40-bit random part
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(randomBytes);
+
+        // Construct the ULA prefix
+        var ulaBytes = new byte[16]; // Full IPv6 address size
+        ulaBytes[0] = 0xfd; // ULA always starts with fd00::/8
+        ulaBytes[1] = randomBytes[0]; // Next 40 bits (5 bytes) are randomly generated
+        ulaBytes[2] = randomBytes[1];
+        ulaBytes[3] = randomBytes[2];
+        ulaBytes[4] = randomBytes[3];
+        ulaBytes[5] = randomBytes[4];
+
+        // Set the last 2 bytes to the provided lastValue (big-endian)
+        ulaBytes[14] = (byte)(lastValue >> 8);
+        ulaBytes[15] = (byte)(lastValue & 0xFF);
+
+        return new IPAddress(ulaBytes);
+    }
 
     public static async Task<IPAddress[]> GetPrivateIpAddresses()
     {

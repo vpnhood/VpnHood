@@ -1,5 +1,6 @@
 # Upcoming
-* Fix IPv6 ping
+* Fix: IPv6 ping
+* Fix: Playing animation while login with google
 
 # v5.0.645
 * Improve: Improve performance by reducing memory allocation.

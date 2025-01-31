@@ -1,3 +1,6 @@
+# Upcoming
+* Fix IPv6 ping
+
 # v5.0.645
 * Improve: Improve performance by reducing memory allocation.
 * Improve: Improve UI.

@@ -33,8 +33,8 @@ public class TestHelper : IDisposable
         public bool IsActive => true;
     }
 
-    public static TestWebServer WebServer { get; private set; } = default!;
-    public static TestNetFilter NetFilter { get; private set; } = default!;
+    public static TestWebServer WebServer { get; private set; } = null!;
+    public static TestNetFilter NetFilter { get; private set; } = null!;
     public static bool LogVerbose => true;
     private static bool? _isIpV6Supported;
 
@@ -112,7 +112,7 @@ public class TestHelper : IDisposable
         return res.Length > 100;
     }
 
-    public static async Task Test_Ping(Ping? ping = default, IPAddress? ipAddress = default,
+    public static async Task Test_Ping(Ping? ping = null, IPAddress? ipAddress = null,
         int timeout = TestConstants.DefaultTimeout)
     {
         var pingReply = await SendPing(ping, ipAddress, timeout);
@@ -120,7 +120,7 @@ public class TestHelper : IDisposable
             throw new PingException($"Ping failed. Status: {pingReply.Status}");
     }
 
-    public static async Task Test_Dns(IPEndPoint? nsEndPoint = default, int timeout = 3000, CancellationToken cancellationToken = default)
+    public static async Task Test_Dns(IPEndPoint? nsEndPoint = null, int timeout = 3000, CancellationToken cancellationToken = default)
     {
         var hostEntry = await DnsResolver.GetHostEntry("www.google.com", nsEndPoint ?? TestConstants.NsEndPoint1, timeout, cancellationToken);
         Assert.IsNotNull(hostEntry);
@@ -157,7 +157,7 @@ public class TestHelper : IDisposable
         CollectionAssert.AreEquivalent(buffer, res.Buffer);
     }
 
-    public static async Task<bool> Test_Https(Uri? uri = default,
+    public static async Task<bool> Test_Https(Uri? uri = null,
         int timeout = TestConstants.DefaultTimeout, bool throwError = true)
     {
         uri ??= TestConstants.HttpsUri1;
@@ -354,7 +354,7 @@ public class TestHelper : IDisposable
     }
 
 
-    public static TestDevice CreateDevice(TestPacketCaptureOptions? options = default)
+    public static TestDevice CreateDevice(TestPacketCaptureOptions? options = null)
     {
         options ??= CreateTestPacketCaptureOptions();
         return new TestDevice(()=>new TestPacketCapture(options));
@@ -373,10 +373,10 @@ public class TestHelper : IDisposable
     }
 
     public static async Task<VpnHoodClient> CreateClient(Token token,
-        IPacketCapture? packetCapture = default,
-        string? clientId = default,
+        IPacketCapture? packetCapture = null,
+        string? clientId = null,
         bool autoConnect = true,
-        ClientOptions? clientOptions = default,
+        ClientOptions? clientOptions = null,
         bool throwConnectException = true)
     {
         packetCapture ??= new TestPacketCapture(new TestPacketCaptureOptions());

@@ -244,6 +244,13 @@ public static class VhUtil
         return cryptor.TransformFinalBlock(buffer, 0, buffer.Length);
     }
 
+    public static string GetBufferMd5(byte[] value)
+    {
+        using var md5 = MD5.Create();
+        var hash = md5.ComputeHash(value);
+        return BitConverter.ToString(hash).Replace("-", "");
+    }
+
     public static string GetStringMd5(string value)
     {
         using var md5 = MD5.Create();

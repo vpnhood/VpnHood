@@ -48,7 +48,7 @@ public static class HttpUtil
     {
         using var headerStream = await ReadHeadersAsync(stream, cancellationToken, maxLength);
         using var reader = new StreamReader(headerStream, Encoding.UTF8);
-        var firstLine = await reader.ReadLineAsync();
+        var firstLine = await reader.ReadLineAsync() ?? string.Empty; // it may return null
         
         // Check if the first line starts with "HTTP/" (basic HTTP format validation).
         if (firstLine.StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase) != true)

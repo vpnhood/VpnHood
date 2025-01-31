@@ -42,7 +42,7 @@ public class TestAppHelper : TestHelper
         return appOptions;
     }
 
-    public static VpnHoodApp CreateClientApp(AppOptions? appOptions = default, IDevice? device = default)
+    public static VpnHoodApp CreateClientApp(AppOptions? appOptions = null, IDevice? device = null)
     {
         appOptions ??= CreateAppOptions();
         device ??= new TestDevice(() => new TestNullPacketCapture());

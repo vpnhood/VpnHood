@@ -36,7 +36,8 @@ public class Session : IAsyncDisposable
     private readonly int? _tcpKernelReceiveBufferSize;
     private readonly TimeSpan _tcpConnectTimeout;
     private readonly TrackingOptions _trackingOptions;
-    private IPAddress? _clientInternalIp;
+    private IPAddress? _clientInternalIpV6;
+    private IPAddress? _clientInternalIpV4;
 
     private readonly EventReporter _netScanExceptionReporter = new(VhLogger.Instance,
         "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
@@ -76,7 +77,7 @@ public class Session : IAsyncDisposable
         SessionOptions options,
         TrackingOptions trackingOptions,
         SessionExtraData sessionExtraData,
-        int protocolVersion, 
+        int protocolVersion,
         ITunProvider? tunProvider,
         IPAddress virtualIp)
     {
@@ -176,6 +177,11 @@ public class Session : IAsyncDisposable
         }
     }
 
+    private IPAddress? GetClientInternalIp(IPVersion ipVersion)
+    {
+        return ipVersion == IPVersion.IPv4 ? _clientInternalIpV4 : _clientInternalIpV6;
+    }
+
     public Task ProcessInboundPacket(IPPacket ipPacket)
     {
         if (VhLogger.IsDiagnoseMode)
@@ -184,9 +190,14 @@ public class Session : IAsyncDisposable
         ipPacket = _netFilter.ProcessReply(ipPacket);
 
         // fix client internal ip
-        if (!ipPacket.DestinationAddress.Equals(_clientInternalIp)){
-            ipPacket.DestinationAddress = _clientInternalIp;
-            PacketUtil.UpdateIpChecksum(ipPacket);
+        // todo: consider using allocated private ip and prevent recalculate checksum
+        var clientInternalIp = GetClientInternalIp(ipPacket.Version);
+        if (clientInternalIp != null && !ipPacket.DestinationAddress.Equals(clientInternalIp)) {
+            ipPacket.DestinationAddress = clientInternalIp;
+            if (ipPacket.Protocol == ProtocolType.IcmpV6)
+                PacketUtil.UpdateIpPacket(ipPacket); //IPv6 ICMP checksum need to be recalculated if destination address changed
+            else
+                PacketUtil.UpdateIpChecksum(ipPacket); //IPv4 header checksum need to be recalculated if destination address changed
         }
 
         return Tunnel.SendPacketAsync(ipPacket, CancellationToken.None);
@@ -201,7 +212,8 @@ public class Session : IAsyncDisposable
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < e.IpPackets.Count; i++) {
             var ipPacket = e.IpPackets[i];
-            _clientInternalIp ??= ipPacket.SourceAddress;
+            if (ipPacket.Version == IPVersion.IPv4) _clientInternalIpV4 ??= ipPacket.SourceAddress;
+            if (ipPacket.Version == IPVersion.IPv6) _clientInternalIpV6 ??= ipPacket.SourceAddress;
             ipPacket.SourceAddress = VirtualIp;
             var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
             if (ipPacket2 == null) {
@@ -230,7 +242,7 @@ public class Session : IAsyncDisposable
             !_trackingOptions.TrackUdpValue && protocol.Equals("icmp", StringComparison.OrdinalIgnoreCase))
             return;
 
-        var mode = (isNewLocal ? "L" : "") + ((isNewRemote ? "R" : ""));
+        var mode = (isNewLocal ? "L" : "") + (isNewRemote ? "R" : "");
         var localPortStr = "-";
         var destinationIpStr = "-";
         var destinationPortStr = "-";
@@ -291,7 +303,7 @@ public class Session : IAsyncDisposable
     public async Task ProcessSessionStatusRequest(SessionStatusRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
-        await clientStream .WriteFinalResponse(SessionResponse, cancellationToken).VhConfigureAwait();
+        await clientStream.WriteFinalResponse(SessionResponse, cancellationToken).VhConfigureAwait();
     }
 
     public async Task ProcessRewardedAdRequest(RewardedAdRequest request, IClientStream clientStream,
@@ -436,7 +448,7 @@ public class Session : IAsyncDisposable
             SessionId, "Close", reason, SessionResponse.SuppressedBy, SessionResponse.ErrorCode,
             SessionResponse.ErrorMessage ?? "None");
     }
-    
+
     private class SessionProxyManager(
         Session session,
         ISocketFactory socketFactory,
@@ -458,7 +470,7 @@ public class Session : IAsyncDisposable
                 tunProvider.SendPacket(ipPacket);
                 return Task.CompletedTask;
             }
-             
+
             return base.SendPacket(ipPacket);
         }
 

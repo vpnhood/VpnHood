@@ -14,8 +14,8 @@ public static class PacketUtil
 {
     public static void UpdateIpChecksum(IPPacket ipPacket)
     {
-        if (ipPacket is IPv6Packet ipV6Packet)
-            ipV6Packet.UpdateCalculatedValues();
+        if (ipPacket is IPv4Packet ipV4Packet)
+            ipV4Packet.UpdateIPChecksum();
 
         ipPacket.UpdateCalculatedValues();
     }
@@ -49,8 +49,8 @@ public static class PacketUtil
         if (ipPacket is IPv4Packet ipV4Packet) {
             ipV4Packet.UpdateIPChecksum();
         }
-        else if (ipPacket is IPv6Packet ipV6Packet) {
-            ipV6Packet.UpdateCalculatedValues();
+        else if (ipPacket is IPv6Packet) {
+            // do nothing
         }
         else {
             if (throwIfNotSupported)

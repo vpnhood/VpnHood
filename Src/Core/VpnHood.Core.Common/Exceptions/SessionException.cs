@@ -10,6 +10,12 @@ public class SessionException : Exception
     {
         SessionResponse = sessionResponse;
         SessionResponse.ErrorMessage ??= MessageFromErrorCode(sessionResponse.ErrorCode);
+        
+        // ReSharper disable VirtualMemberCallInConstructor
+        Data.Add(nameof(SessionResponse.ErrorCode), SessionResponse.ErrorCode.ToString());
+        Data.Add(nameof(SessionResponse.SuppressedBy), SessionResponse.SuppressedBy.ToString());
+        Data.Add(nameof(SessionResponse.AccessKey), SessionResponse.AccessKey);
+        // ReSharper restore VirtualMemberCallInConstructor
     }
 
     public SessionException(SessionErrorCode errorCode, string? message = null)
@@ -48,13 +54,4 @@ public class SessionException : Exception
     }
 
     public SessionResponse SessionResponse { get; }
-
-    public virtual ApiError ToApiError()
-    {
-        var apiError = new ApiError(this);
-        apiError.Data.Add(nameof(SessionResponse.ErrorCode), SessionResponse.ErrorCode.ToString());
-        apiError.Data.Add(nameof(SessionResponse.SuppressedBy), SessionResponse.SuppressedBy.ToString());
-        apiError.Data.Add(nameof(SessionResponse.AccessKey), SessionResponse.AccessKey);
-        return apiError;
-    }
 }

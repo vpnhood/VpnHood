@@ -114,6 +114,8 @@ public class GooglePlayBillingProvider : IAppBillingProvider
     public async Task<string> Purchase(IUiContext uiContext, string planId)
     {
         var appUiContext = (AndroidUiContext)uiContext;
+        using var partialActivityScope = ActiveUiContext.CreatePartialIntentScope();
+
         await EnsureConnected().ConfigureAwait(false);
 
         if (_authenticationProvider.UserId == null)

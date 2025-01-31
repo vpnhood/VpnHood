@@ -20,14 +20,12 @@ internal class ConnectionInfo : IConnectionInfo
             if (ErrorCode != SessionErrorCode.Ok)
                 return; // already set
 
-            if (ex is SessionException sessionException) {
-                ErrorCode = sessionException.SessionResponse.ErrorCode;
-                Error = sessionException.ToApiError();
-            }
-            else {
-                ErrorCode = SessionErrorCode.GeneralError;
-                Error = new ApiError(ex);
-            }
+            ErrorCode = ex is SessionException sessionException
+                ? sessionException.SessionResponse.ErrorCode
+                : SessionErrorCode.GeneralError;
+
+            Error = new ApiError(ex);
+
         }
     }
 }

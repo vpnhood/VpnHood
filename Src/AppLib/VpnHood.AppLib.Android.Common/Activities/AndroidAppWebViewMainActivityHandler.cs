@@ -4,6 +4,7 @@ using Android.Views;
 using Android.Webkit;
 using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.WebServer;
+using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;
@@ -41,9 +42,12 @@ public class AndroidAppWebViewMainActivityHandler(
     protected override void OnPause()
     {
         base.OnPause();
-        WebView?.OnPause();
+
+        if (!ActiveUiContext.IsPartialIntentRunning)
+            WebView?.OnPause();
+
         // temporarily stop the server to find is the crash belong to embed-io
-        if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.KillSpaServer)  && VpnHoodAppWebServer.IsInit)
+        if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.KillSpaServer) && VpnHoodAppWebServer.IsInit)
             VpnHoodAppWebServer.Instance.Stop();
     }
 
@@ -62,8 +66,8 @@ public class AndroidAppWebViewMainActivityHandler(
 
         // set window background color
         var linearLayout =
-            ActivityEvent.Activity.FindViewById<LinearLayout>(_Microsoft.Android.Resource.Designer.Resource.Id
-                .myLayout);
+            ActivityEvent.Activity.FindViewById<LinearLayout>(_Microsoft.Android.Resource.Designer.Resource.Id.myLayout);
+
         var backgroundColor = VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor?.ToAndroidColor();
         if (linearLayout != null && backgroundColor != null) {
             try {

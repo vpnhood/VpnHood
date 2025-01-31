@@ -13,12 +13,15 @@ public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAp
     public async Task<string> SignIn(IUiContext uiContext, bool isSilentLogin)
     {
         var appUiContext = (AndroidUiContext)uiContext;
+        using var partialActivityScope = ActiveUiContext.CreatePartialIntentScope();
+
+        // GetGoogleIdOption is used to specify the options for the Google
         using var googleSignInOptions = new GetGoogleIdOption.Builder()
                 .SetFilterByAuthorizedAccounts(false)
                 .SetServerClientId(googleSignInClientId)
                 .SetAutoSelectEnabled(isSilentLogin)
                 .Build();
-        
+
         using var credentialRequest = new GetCredentialRequest.Builder().AddCredentialOption(googleSignInOptions).Build();
         using var credentialManager = GoogleCredentialManager.Create(appUiContext.Activity);
         using var credentialResponse = await credentialManager.GetCredentialAsync(appUiContext.Activity, credentialRequest).ConfigureAwait(false);

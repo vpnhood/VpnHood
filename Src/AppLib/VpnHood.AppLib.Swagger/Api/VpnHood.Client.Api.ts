@@ -1684,6 +1684,7 @@ export class AppFeatures implements IAppFeatures {
     updateInfoUrl?: string | null;
     uiName?: string | null;
     isPremiumFlagSupported!: boolean;
+    isPremiumFeaturesForced!: boolean;
     isAddAccessKeySupported!: boolean;
     builtInClientProfileId?: string | null;
     isAccountSupported!: boolean;
@@ -1718,6 +1719,7 @@ export class AppFeatures implements IAppFeatures {
             this.updateInfoUrl = _data["updateInfoUrl"] !== undefined ? _data["updateInfoUrl"] : <any>null;
             this.uiName = _data["uiName"] !== undefined ? _data["uiName"] : <any>null;
             this.isPremiumFlagSupported = _data["isPremiumFlagSupported"] !== undefined ? _data["isPremiumFlagSupported"] : <any>null;
+            this.isPremiumFeaturesForced = _data["isPremiumFeaturesForced"] !== undefined ? _data["isPremiumFeaturesForced"] : <any>null;
             this.isAddAccessKeySupported = _data["isAddAccessKeySupported"] !== undefined ? _data["isAddAccessKeySupported"] : <any>null;
             this.builtInClientProfileId = _data["builtInClientProfileId"] !== undefined ? _data["builtInClientProfileId"] : <any>null;
             this.isAccountSupported = _data["isAccountSupported"] !== undefined ? _data["isAccountSupported"] : <any>null;
@@ -1756,6 +1758,7 @@ export class AppFeatures implements IAppFeatures {
         data["updateInfoUrl"] = this.updateInfoUrl !== undefined ? this.updateInfoUrl : <any>null;
         data["uiName"] = this.uiName !== undefined ? this.uiName : <any>null;
         data["isPremiumFlagSupported"] = this.isPremiumFlagSupported !== undefined ? this.isPremiumFlagSupported : <any>null;
+        data["isPremiumFeaturesForced"] = this.isPremiumFeaturesForced !== undefined ? this.isPremiumFeaturesForced : <any>null;
         data["isAddAccessKeySupported"] = this.isAddAccessKeySupported !== undefined ? this.isAddAccessKeySupported : <any>null;
         data["builtInClientProfileId"] = this.builtInClientProfileId !== undefined ? this.builtInClientProfileId : <any>null;
         data["isAccountSupported"] = this.isAccountSupported !== undefined ? this.isAccountSupported : <any>null;
@@ -1784,6 +1787,7 @@ export interface IAppFeatures {
     updateInfoUrl?: string | null;
     uiName?: string | null;
     isPremiumFlagSupported: boolean;
+    isPremiumFeaturesForced: boolean;
     isAddAccessKeySupported: boolean;
     builtInClientProfileId?: string | null;
     isAccountSupported: boolean;

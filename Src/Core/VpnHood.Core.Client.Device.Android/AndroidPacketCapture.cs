@@ -55,8 +55,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         }
     }
 
-    public bool IsAddIpV6AddressSupported => true;
-    public bool AddIpV6Address { get; set; }
+    public IpNetwork[] PrivateIpNetworks { get; set; } = [];
 
     public bool IsDnsServersSupported => true;
 
@@ -83,12 +82,12 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         if (OperatingSystem.IsAndroidVersionAtLeast(29))
             builder.SetMetered(false);
 
-        if (AddIpV6Address)
-            builder.AddAddress("fd00::1000", 64);
-
         // MTU
         if (Mtu != 0)
             builder.SetMtu(Mtu);
+
+        foreach (var ipNetwork in PrivateIpNetworks)
+            builder.AddAddress(ipNetwork.Prefix.ToString(), ipNetwork.PrefixLength);
 
         // DNS Servers
         AddDnsServers(builder);
@@ -184,8 +183,8 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     private void AddDnsServers(Builder builder)
     {
         var dnsServers = VhUtil.IsNullOrEmpty(DnsServers) ? IPAddressUtil.GoogleDnsServers : DnsServers;
-        if (!AddIpV6Address)
-            dnsServers = dnsServers.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
+        if (!PrivateIpNetworks.Any(x=>x.IsIpV6))
+            dnsServers = dnsServers.Where(x => x.IsV4()).ToArray();
 
         foreach (var dnsServer in dnsServers)
             builder.AddDnsServer(dnsServer.ToString());

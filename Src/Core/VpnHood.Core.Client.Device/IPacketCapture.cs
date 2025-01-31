@@ -19,8 +19,7 @@ public interface IPacketCapture : IDisposable
     IpNetwork[]? IncludeNetworks { get; set; }
     bool IsMtuSupported { get; }
     int Mtu { get; set; }
-    bool IsAddIpV6AddressSupported { get; }
-    bool AddIpV6Address { get; set; }
+    IpNetwork[] PrivateIpNetworks { get; set; }
     bool CanProtectSocket { get; }
     bool CanSendPacketToOutbound { get; }
     bool CanDetectInProcessPacket { get; }

@@ -55,12 +55,7 @@ public class WinDivertPacketCapture : IPacketCapture
         set => throw new NotSupportedException();
     }
 
-    public bool IsAddIpV6AddressSupported => false;
-
-    public bool AddIpV6Address {
-        get => throw new NotSupportedException();
-        set => throw new NotSupportedException();
-    }
+    public IpNetwork[] PrivateIpNetworks { get; set; } = [];
 
     public bool CanDetectInProcessPacket => false;
     public bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)

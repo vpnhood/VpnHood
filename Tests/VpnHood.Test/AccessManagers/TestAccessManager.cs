@@ -94,6 +94,13 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
                 return ret;
             }
 
+            // just accepted if it is null 
+            if (redirectEndPoint== null) {
+                sessionRequestEx.ServerLocation = null;
+                return ret;
+            }
+
+            // check if location is different
             if (!sessionRequestEx.HostEndPoint.Equals(redirectEndPoint)) {
                 ret.RedirectHostEndPoint = ServerLocations[sessionRequestEx.ServerLocation];
                 ret.ErrorCode = SessionErrorCode.RedirectHost;

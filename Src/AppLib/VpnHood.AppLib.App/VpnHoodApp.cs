@@ -73,6 +73,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly bool _allowEndPointTracker;
     private readonly TimeSpan _canExtendByRewardedAdThreshold;
     private CultureInfo? _systemUiCulture;
+    private string? _requestedServerLocation;
+
 
     private IConnectionInfo? LastConnectionInfo => _client?.ConnectionInfo ?? _lastConnectionInfo;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
@@ -412,7 +414,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (!IsIdle) {
             if (_activeClientProfileId == clientProfileId &&
                 diagnose == _hasDiagnoseRequested && // client may request diagnose the current connection
-                string.Equals(clientProfileInfo.SelectedLocationInfo?.ServerLocation, serverLocation, StringComparison.OrdinalIgnoreCase))
+                string.Equals(_requestedServerLocation, serverLocation, StringComparison.OrdinalIgnoreCase))
                 throw new Exception("Connection is already in progress.");
 
             // make sure current session has been disconnected and packet-capture has been released
@@ -423,6 +425,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // reset connection state
         try {
             _isConnecting = true;
+            _requestedServerLocation = serverLocation; // used to prevent double request
             _hasDisconnectedByUser = false;
             _hasConnectRequested = true;
             _hasDisconnectRequested = false;
@@ -858,6 +861,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _lastConnectionInfo = _client?.ConnectionInfo;
             _isConnecting = false;
             _isDisconnecting = false;
+            _requestedServerLocation = null;
             _client = null;
             ConnectedTime = null;
             FireConnectionStateChanged();

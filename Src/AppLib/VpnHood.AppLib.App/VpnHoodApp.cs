@@ -226,11 +226,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
                 // check is disconnect required
                 disconnectRequired =
+                    (UserSettings.UsePacketCaptureIpFilter != _oldUserSettings.UsePacketCaptureIpFilter) || 
+                    (UserSettings.UseAppIpFilter != _oldUserSettings.UseAppIpFilter) || 
                     (UserSettings.TunnelClientCountry != _oldUserSettings.TunnelClientCountry) ||
-                    (UserSettings.ClientProfileId != _activeClientProfileId) || //ClientProfileId has been changed
-                    (UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork) || // IncludeLocalNetwork has been changed
-                    (UserSettings.AppFiltersMode != _oldUserSettings.AppFiltersMode) || // AppFiltersMode has been changed
-                    (!UserSettings.AppFilters.SequenceEqual(_oldUserSettings.AppFilters)); // AppFilters has been changed
+                    (UserSettings.ClientProfileId != _activeClientProfileId) || 
+                    (UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork) ||
+                    (UserSettings.AppFiltersMode != _oldUserSettings.AppFiltersMode) || 
+                    (!UserSettings.AppFilters.SequenceEqual(_oldUserSettings.AppFilters));
             }
 
             // set default ContinueOnCapturedContext

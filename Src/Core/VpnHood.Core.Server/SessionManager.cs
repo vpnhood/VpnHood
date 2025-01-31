@@ -94,7 +94,7 @@ public class SessionManager : IAsyncDisposable, IJob
     }
 
     private readonly ConcurrentDictionary<IPAddress, Session> _virtualIps = new();
-    private IPAddress AllocateVirtualIp()
+    private IPAddress GetFreeVirtualIp()
     {
         // find the max virtual IP
         var ipAddress = VirtualIpRange.FirstIpAddress;
@@ -122,7 +122,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
             // allocate a new IP
             // todo: try to use virtual ip returned by sessionResponseEx
-            var virtualIp = AllocateVirtualIp();
+            var virtualIp = GetFreeVirtualIp();
 
             // create the session
             var session = new Session(

@@ -101,7 +101,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public byte[]? ServerSecret { get; private set; }
     public DomainFilterService DomainFilterService { get; }
     public bool AllowTcpReuse { get; }
-    
+
     public VpnHoodClient(IPacketCapture packetCapture, string clientId, Token token, ClientOptions options)
     {
         if (options.TcpProxyCatcherAddressIpV4 == null)
@@ -187,7 +187,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         get => _state;
         private set {
             if (_state == value) return;
-            _connectionInfo.ClientState = value; 
+            _connectionInfo.ClientState = value;
             _state = value; //must set before raising the event; 
             VhLogger.Instance.LogInformation("Client state is changed. NewState: {NewState}", State);
             try {
@@ -336,10 +336,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         // DnsServer
         if (_packetCapture.IsDnsServersSupported)
             _packetCapture.DnsServers = DnsServers;
-
-        // Built-in IpV6 support
-        if (_packetCapture.IsAddIpV6AddressSupported)
-            _packetCapture.AddIpV6Address = true; //lets block ipV6 if not supported
 
         // Start with user PacketCaptureIncludeIpRanges
         var includeIpRanges = PacketCaptureIncludeIpRanges;
@@ -710,8 +706,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 IsIpV6Supported = IsIpV6SupportedByClient
             };
 
-            await using var requestResult =
-                await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();
+            await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();
             var helloResponse = requestResult.Response;
 
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -864,6 +859,16 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 ? Tunnel.MaxDatagramChannelCount =
                     Math.Min(_maxDatagramChannelCount, helloResponse.MaxDatagramChannelCount)
                 : _maxDatagramChannelCount;
+
+            // prepare packet capture
+            _packetCapture.PrivateIpNetworks = helloResponse.PrivateIpNetworks;
+            if (VhUtil.IsNullOrEmpty(helloResponse.PrivateIpNetworks)) {
+                var ipNetworkV4 = new IpNetwork(IPAddress.Parse("10.8.0.2"), 32);
+                var ipNetworkV6 = new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
+                _packetCapture.PrivateIpNetworks = helloResponse.IsIpV6Supported
+                    ? [ipNetworkV4, ipNetworkV6] 
+                    : [ipNetworkV4];
+            }
 
             // manage datagram channels
             await ManageDatagramChannels(cancellationToken).VhConfigureAwait();

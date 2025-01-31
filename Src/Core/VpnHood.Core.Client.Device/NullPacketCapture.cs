@@ -21,8 +21,7 @@ public class NullPacketCapture : IPacketCapture
     public virtual IpNetwork[]? IncludeNetworks { get; set; }
     public virtual bool IsMtuSupported { get; set; } = true;
     public virtual int Mtu { get; set; }
-    public virtual bool IsAddIpV6AddressSupported { get; set; } = true;
-    public virtual bool AddIpV6Address { get; set; } = true;
+    public IpNetwork[] PrivateIpNetworks { get; set; } = [];
     public virtual bool CanProtectSocket { get; set; } = true;
     public virtual bool CanSendPacketToOutbound { get; set; }
     public bool CanDetectInProcessPacket { get; set; } = true;

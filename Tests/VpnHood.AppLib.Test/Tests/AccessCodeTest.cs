@@ -1,9 +1,10 @@
-﻿using System.Net;
+﻿using System.Security.Cryptography;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Test;
@@ -14,11 +15,13 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class AccessCodeTest : TestBase
 {
+
+
     [TestMethod]
     public async Task AaFoo()
     {
         await Task.Delay(1);
-        Console.WriteLine(IPAddress.Parse("1.1.1.1").Equals(null));
+        Console.WriteLine(IPAddressUtil.GenerateUlaAddress(0x1001));
     }
 
     [TestMethod]

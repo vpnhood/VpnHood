@@ -164,6 +164,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsIncludeAppsSupported = Device.IsIncludeAppsSupported,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
             IsPremiumFlagSupported = !options.IsAddAccessKeySupported,
+            IsPremiumFeaturesForced = options.IsAddAccessKeySupported,
             UpdateInfoUrl = options.UpdateInfoUrl != null ? new Uri(options.UpdateInfoUrl) : null,
             UiName = options.UiName,
             BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId,
@@ -395,7 +396,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         string? serverLocation = null,
         bool diagnose = false,
         string? userAgent = null,
-        bool throwException = true,
         CancellationToken cancellationToken = default)
     {
         using var lockAsync = await _connectLock.LockAsync(cancellationToken).VhConfigureAwait();
@@ -496,8 +496,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // Reset server location if no server is available
             if (ex is SessionException sessionException) {
-                switch (sessionException.SessionResponse.ErrorCode)
-                {
+                switch (sessionException.SessionResponse.ErrorCode) {
                     case SessionErrorCode.NoServerAvailable:
                     case SessionErrorCode.PremiumLocation:
                         ClientProfileService.Update(clientProfileId.Value, new ClientProfileUpdateParams { SelectedLocation = new Patch<string?>(null) });
@@ -515,21 +514,22 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 }
             }
 
-            //user may disconnect before connection closed
-            if (!_hasDisconnectedByUser)
+            // user may disconnect before connection closed
+            // don't set any error message if user has disconnected manually
+            if (!_hasDisconnectedByUser) {
                 _appPersistState.LastError = ex is OperationCanceledException
                     ? new ApiError(new Exception("Could not connect to any server.", ex))
                     : new ApiError(ex);
+            }
 
             // don't wait for disconnect, it may cause deadlock
             _ = Disconnect();
 
-            if (throwException) {
-                if (_hasDisconnectedByUser)
-                    throw new OperationCanceledException("Connection has been canceled by the user.", ex);
+            // throw OperationCanceledException if user has canceled the connection
+            if (_hasDisconnectedByUser)
+                throw new OperationCanceledException("Connection has been canceled by the user.", ex);
 
-                throw;
-            }
+            throw;
         }
         finally {
             _isConnecting = false;

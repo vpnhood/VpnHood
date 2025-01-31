@@ -9,6 +9,7 @@ public class AppFeatures
     public required Uri? UpdateInfoUrl { get; init; }
     public required string? UiName { get; init; }
     public required bool IsPremiumFlagSupported { get; init; }
+    public required bool IsPremiumFeaturesForced { get; init; }
     public required bool IsAddAccessKeySupported { get; init; }
     public required Guid? BuiltInClientProfileId { get; init; }
     public required bool IsAccountSupported { get; init; }

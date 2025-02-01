@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using VpnHood.Core.Common.Converters;
 
 namespace VpnHood.Core.Common.Tokens;
 
@@ -21,6 +22,11 @@ public class ClientPolicy
 
     [JsonPropertyName("pbt")]
     public int? PremiumByTrial { get; init; }
+
+    // ReSharper disable once StringLiteralTypo
+    [JsonPropertyName("pbtdl")]
+    [JsonConverter(typeof(TimeSpanConverter))]
+    public TimeSpan? PremiumByTrialDailyLimit { get; init; }
 
     [JsonPropertyName("pbr")]
     public int? PremiumByRewardedAd { get; init; }

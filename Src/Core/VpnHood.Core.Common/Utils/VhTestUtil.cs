@@ -23,8 +23,9 @@ public static class VhTestUtil
         int timeout = 5000)
     {
         const int waitTime = 100;
+        var maxTime = FastDateTime.Now.AddMilliseconds(timeout);
         var actualValue = valueFactory();
-        for (var elapsed = 0; elapsed < timeout; elapsed += waitTime) {
+        while (FastDateTime.Now <= maxTime) {
             if (Equals(expectedValue, actualValue))
                 return actualValue;
 

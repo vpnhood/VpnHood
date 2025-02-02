@@ -55,14 +55,15 @@ public class ClientServerLocationInfo : ServerLocationInfo
         }
 
         var isBillingSupported = VpnHoodApp.Instance.Features.IsBillingSupported;
+        var isRewardedAdSupported = VpnHoodApp.Instance.Services.AdService.CanShowRewarded;
         Options.Normal = Options.HasFree ? policy.Normal : null;
         Options.PremiumByTrial = Options.HasPremium ? policy.PremiumByTrial : null;
-        Options.PremiumByRewardedAd = Options.HasPremium ? policy.PremiumByRewardedAd : null;
+        Options.PremiumByRewardedAd = Options.HasPremium && isRewardedAdSupported ? policy.PremiumByRewardedAd : null;
         Options.PremiumByPurchase = policy.PremiumByPurchase && isBillingSupported;
         Options.PremiumByCode = policy.PremiumByCode;
 
         Options.Prompt = Options.PremiumByTrial != null || Options.PremiumByRewardedAd != null;
-        Options.CanGoPremium = policy.PremiumByCode || (policy.PremiumByPurchase && isBillingSupported); // can go premium and remove ad
+        Options.CanGoPremium = policy.PremiumByCode || policy.PremiumByPurchase; // can go premium and remove ad
     }
 
     private static ClientServerLocationInfo[] AddCategoryGaps(string[] serverLocations, string[]? freeLocations)

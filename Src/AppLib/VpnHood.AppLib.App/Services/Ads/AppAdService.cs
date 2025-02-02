@@ -21,6 +21,7 @@ public class AppAdService(
     private readonly AppCompositeAdService _compositeRewardedAdService =
         new(adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.RewardedAd).ToArray(), adOptions);
 
+    public bool CanShowInterstitial => adProviderItems.Any(x => x.AdProvider.AdType == AppAdType.InterstitialAd);
     public bool CanShowRewarded => adProviderItems.Any(x => x.AdProvider.AdType == AppAdType.RewardedAd);
     public bool IsPreloadAdEnabled => adOptions.PreloadAd;
 

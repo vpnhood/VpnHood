@@ -33,21 +33,19 @@ public class TestHelper : IDisposable
         public bool IsActive => true;
     }
 
+    public static string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "_test_vpnhood");
     public static TestWebServer WebServer { get; private set; } = null!;
     public static TestNetFilter NetFilter { get; private set; } = null!;
     public static bool LogVerbose => true;
     private static bool? _isIpV6Supported;
+    private static int _accessTokenIndex;
 
     public static async Task<bool> IsIpV6Supported()
     {
         _isIpV6Supported ??= await IPAddressUtil.IsIpv6Supported();
         return _isIpV6Supported.Value;
     }
-
-    private static int _accessTokenIndex;
-
-    public static string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "_test_vpnhood");
-
+    
     public static void Cleanup()
     {
         try {

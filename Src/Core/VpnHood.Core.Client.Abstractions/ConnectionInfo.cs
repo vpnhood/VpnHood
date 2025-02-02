@@ -3,7 +3,7 @@ using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.Core.Client.Abstractions;
 
-public class IConnectionInfo
+public class ConnectionInfo
 {
     public required ClientState ClientState { get; init; }
     public required SessionErrorCode ErrorCode { get; init; }

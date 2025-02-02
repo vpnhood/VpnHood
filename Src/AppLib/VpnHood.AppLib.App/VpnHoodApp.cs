@@ -8,6 +8,7 @@ using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.DtoConverters;
 using VpnHood.AppLib.Providers;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Settings;
@@ -31,7 +32,6 @@ using VpnHood.Core.Tunneling.Factory;
 using VpnHood.AppLib.Services.Logging;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.AppLib.Dtos;
 
 namespace VpnHood.AppLib;
 
@@ -295,14 +295,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public AppState State {
         get {
-            var connectionInfo = LastConnectionInfo;
             var clientProfileInfo = CurrentClientProfileInfo;
+            var connectionInfo = _client?.ConnectionInfo;
             var connectionState = ConnectionState;
 
             var appState = new AppState {
                 ConfigTime = Settings.ConfigTime,
-                SessionStatus = connectionInfo?.SessionStatus != null ? AppSessionStatus.Create(connectionInfo.SessionStatus) : null,
-                SessionInfo = connectionInfo?.SessionInfo != null ? AppSessionInfo.Create(connectionInfo.SessionInfo) : null,
+                SessionStatus = connectionInfo?.SessionStatus?.ToAppDto(),
+                SessionInfo = connectionInfo?.SessionInfo?.ToAppDto(),
                 ConnectionState = connectionState,
                 IsIdle = IsIdle,
                 CanConnect = connectionState is AppConnectionState.None,

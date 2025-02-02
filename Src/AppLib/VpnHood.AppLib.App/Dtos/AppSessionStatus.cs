@@ -19,24 +19,4 @@ public class AppSessionStatus
     public required long SessionMaxTraffic { get; init; }
     public required DateTime? SessionExpirationTime { get; init; }
     public required int? ActiveClientCount { get; init; }
-
-    public static AppSessionStatus Create(ISessionStatus sessionStatus)
-    {
-        return new AppSessionStatus {
-            ConnectorStat = AppConnectorStat.Create(sessionStatus.ConnectorStat),
-            Speed = sessionStatus.Speed,
-            SessionTraffic = sessionStatus.SessionTraffic,
-            CycleTraffic = sessionStatus.CycleTraffic,
-            TotalTraffic = sessionStatus.TotalTraffic,
-            TcpTunnelledCount = sessionStatus.TcpTunnelledCount,
-            TcpPassthruCount = sessionStatus.TcpPassthruCount,
-            DatagramChannelCount = sessionStatus.DatagramChannelCount,
-            IsUdpMode = sessionStatus.IsUdpMode,
-            IsWaitingForAd = sessionStatus.IsWaitingForAd,
-            CanExtendByRewardedAd = sessionStatus.CanExtendByRewardedAd,
-            SessionMaxTraffic = sessionStatus.SessionMaxTraffic,
-            SessionExpirationTime = sessionStatus.SessionExpirationTime,
-            ActiveClientCount = sessionStatus.ActiveClientCount
-        };
-    }
 }

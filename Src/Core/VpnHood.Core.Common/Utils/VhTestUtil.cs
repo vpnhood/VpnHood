@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Diagnostics;
+using System.Net;
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Exceptions;
 
@@ -20,16 +21,17 @@ public static class VhTestUtil
     }
 
     private static async Task<TValue> WaitForValue<TValue>(TValue expectedValue, Func<TValue> valueFactory,
-        int timeout = 5000)
+        int timeout, bool noTimeoutOnDebugger)
     {
+        noTimeoutOnDebugger &= Debugger.IsAttached;
         const int waitTime = 100;
         var maxTime = FastDateTime.Now.AddMilliseconds(timeout);
         var actualValue = valueFactory();
-        while (FastDateTime.Now <= maxTime) {
+        while (FastDateTime.Now <= maxTime || noTimeoutOnDebugger) {
             if (Equals(expectedValue, actualValue))
                 return actualValue;
 
-            await Task.Delay(waitTime).VhConfigureAwait();
+            await Task.Delay(waitTime);
             actualValue = valueFactory();
         }
 
@@ -37,16 +39,18 @@ public static class VhTestUtil
     }
 
     private static async Task<TValue> WaitForValue<TValue>(TValue expectedValue, Func<Task<TValue>> valueFactory,
-        int timeout = 5000)
+        int timeout, bool noTimeoutOnDebugger)
     {
+        noTimeoutOnDebugger &= Debugger.IsAttached;
         const int waitTime = 100;
-        var actualValue = await valueFactory().VhConfigureAwait();
-        for (var elapsed = 0; elapsed < timeout; elapsed += waitTime) {
+        var maxTime = FastDateTime.Now.AddMilliseconds(timeout);
+        var actualValue = await valueFactory();
+        while (FastDateTime.Now <= maxTime || noTimeoutOnDebugger) {
             if (Equals(expectedValue, actualValue))
                 return actualValue;
 
-            await Task.Delay(waitTime).VhConfigureAwait();
-            actualValue = await valueFactory().VhConfigureAwait();
+            await Task.Delay(waitTime);
+            actualValue = await valueFactory();
         }
 
         return actualValue;
@@ -61,23 +65,23 @@ public static class VhTestUtil
     }
 
     public static async Task AssertEqualsWait<TValue>(TValue expectedValue, Func<TValue> valueFactory,
-        string? message = null, int timeout = 5000)
+        string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true)
     {
-        var actualValue = await WaitForValue(expectedValue, valueFactory, timeout).VhConfigureAwait();
+        var actualValue = await WaitForValue(expectedValue, valueFactory, timeout, noTimeoutOnDebugger);
         AssertEquals(expectedValue, actualValue, message);
     }
 
     public static async Task AssertEqualsWait<TValue>(TValue expectedValue, Func<Task<TValue>> valueFactory,
-        string? message = null, int timeout = 5000)
+        string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true)
     {
-        var actualValue = await WaitForValue(expectedValue, valueFactory, timeout).VhConfigureAwait();
+        var actualValue = await WaitForValue(expectedValue, valueFactory, timeout, noTimeoutOnDebugger);
         AssertEquals(expectedValue, actualValue, message);
     }
 
     public static async Task AssertEqualsWait<TValue>(TValue expectedValue, Task<TValue> task,
-        string? message = null, int timeout = 5000)
+        string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true)
     {
-        var actualValue = await WaitForValue(expectedValue, () => task, timeout).VhConfigureAwait();
+        var actualValue = await WaitForValue(expectedValue, () => task, timeout, noTimeoutOnDebugger);
         AssertEquals(expectedValue, actualValue, message);
     }
 
@@ -96,7 +100,7 @@ public static class VhTestUtil
         string? message = null, string? contains = null)
     {
         try {
-            await task.VhConfigureAwait();
+            await task;
             throw new AssertException($"Expected {expectedStatusCode} but the actual was OK. {message}");
         }
         catch (ApiException ex) {
@@ -116,7 +120,7 @@ public static class VhTestUtil
         string? message = null, string? contains = null)
     {
         try {
-            await task.VhConfigureAwait();
+            await task;
             throw new AssertException($"Expected {expectedExceptionType} exception but was OK. {message}");
         }
         catch (ApiException ex) {
@@ -138,7 +142,7 @@ public static class VhTestUtil
     public static async Task AssertNotExistsException(Task task, string? message = null, string? contains = null)
     {
         try {
-            await task.VhConfigureAwait();
+            await task;
             throw new AssertException($"Expected kind of {nameof(NotExistsException)} but was OK. {message}");
         }
         catch (ApiException ex) {
@@ -160,7 +164,7 @@ public static class VhTestUtil
     public static async Task AssertAlreadyExistsException(Task task, string? message = null, string? contains = null)
     {
         try {
-            await task.VhConfigureAwait();
+            await task;
             throw new AssertException($"Expected kind of {nameof(AlreadyExistsException)} but was OK. {message}");
         }
         catch (ApiException ex) {

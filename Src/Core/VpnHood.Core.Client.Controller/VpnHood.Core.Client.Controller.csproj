@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Client Abstractions.</Description>
+		<Description>Control VpnHood Client from another process.</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
 		<RootNamespace>VpnHood.Core.Client.Abstractions</RootNamespace>
 	</PropertyGroup>
@@ -30,10 +30,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
 			<PackagePath></PackagePath>
@@ -42,6 +38,11 @@
 
 	<ItemGroup>
 		<Folder Include="Resources\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\VpnHood.Core.Client.Abstractions\VpnHood.Core.Client.Abstractions.csproj" />
+	  <ProjectReference Include="..\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
 	</ItemGroup>
 
 </Project>

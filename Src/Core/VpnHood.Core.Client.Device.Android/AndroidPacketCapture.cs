@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Net.Sockets;
 using Android;
 using Android.Content;
 using Android.Content.PM;
@@ -20,7 +19,8 @@ namespace VpnHood.Core.Client.Device.Droid;
 
 [Service(
     Permission = Manifest.Permission.BindVpnService,
-    Exported = true,
+    Exported = false,
+    //Process = ":vpnhood_process",
     ForegroundServiceType = ForegroundService.TypeSystemExempted)]
 [IntentFilter(["android.net.VpnService"])]
 public class AndroidPacketCapture : VpnService, IPacketCapture

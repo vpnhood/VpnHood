@@ -24,19 +24,4 @@ public class AppSessionInfo
 
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress ClientPublicIpAddress { get; init; }
-
-    public static AppSessionInfo Create(SessionInfo sessionInfo)
-    {
-        return new AppSessionInfo {
-            AccessInfo = sessionInfo.AccessInfo,
-            IsUdpChannelSupported = sessionInfo.IsUdpChannelSupported,
-            IsDnsServersAccepted = sessionInfo.IsDnsServersAccepted,
-            ServerLocationInfo = sessionInfo.ServerLocationInfo,
-            ServerVersion = sessionInfo.ServerVersion,
-            IsPremiumSession = sessionInfo.IsPremiumSession,
-            SuppressedTo = sessionInfo.SuppressedTo,
-            DnsServers = sessionInfo.DnsServers,
-            ClientPublicIpAddress = sessionInfo.ClientPublicIpAddress
-        };
-    }
 }

@@ -1,5 +1,4 @@
-﻿using VpnHood.Core.Common.ApiClients;
-using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.Core.Common.Exceptions;
 
@@ -38,6 +37,7 @@ public class SessionException : Exception
             SessionErrorCode.SessionError => "An error occurred in the session.",
             SessionErrorCode.SessionExpired => "The session has expired.",
             SessionErrorCode.AccessExpired => "Access has expired.",
+            SessionErrorCode.DailyLimitExceeded => "The daily limit has been exceeded.",
             SessionErrorCode.AccessCodeRejected => "The access code was rejected.",
             SessionErrorCode.AccessLocked => "Access is locked.",
             SessionErrorCode.AccessTrafficOverflow => "Access traffic overflow occurred.",

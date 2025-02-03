@@ -1,10 +1,7 @@
 ﻿using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Core.Client;
 using VpnHood.Core.Common.Net;
-using VpnHood.Core.Tunneling.Factory;
 using VpnHood.Test.Device;
-using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
 

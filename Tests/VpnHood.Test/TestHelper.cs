@@ -19,7 +19,6 @@ using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.Factory;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
@@ -386,7 +385,7 @@ public class TestHelper : IDisposable
         clientOptions ??= CreateClientOptions();
 
         var client = new VpnHoodClient(
-            packetCapture, new TestSocketFactory(), clientId,
+            packetCapture, new TestSocketFactory(), adService: null, clientId,
             token, clientOptions);
 
         // test starting the client

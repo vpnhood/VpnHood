@@ -596,7 +596,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IncludeLocalNetwork = UserSettings.IncludeLocalNetwork && Features.IsLocalNetworkSupported,
             IncludeIpRanges = await GetIncludeIpRanges(cancellationToken),
             PacketCaptureIncludeIpRanges = packetCaptureIpRanges,
-            AdService = Services.AdService,
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
             ServerQueryTimeout = _serverQueryTimeout,
@@ -630,7 +629,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         try {
             VhLogger.Instance.LogTrace("Creating VpnHood Client engine ...");
-            client = new VpnHoodClient(packetCapture, new SocketFactory(), Features.ClientId, token, clientOptions);
+            client = new VpnHoodClient(packetCapture, new SocketFactory(), Services.AdService, Features.ClientId, token, clientOptions);
             client.StateChanged += Client_StateChanged;
             _client = client;
 

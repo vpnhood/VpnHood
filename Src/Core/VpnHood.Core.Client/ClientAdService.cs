@@ -1,6 +1,4 @@
-﻿using VpnHood.Core.Client.Abstractions;
-
-namespace VpnHood.Core.Client;
+﻿namespace VpnHood.Core.Client;
 
 public class ClientAdService(bool isRewardedAdSupported)
 {

@@ -1,5 +1,4 @@
-﻿using System.Net.Sockets;
-using VpnHood.Core.Client.Abstractions;
+﻿using VpnHood.Core.Client.Abstractions;
 
 namespace VpnHood.Core.Client.Controllers;
 

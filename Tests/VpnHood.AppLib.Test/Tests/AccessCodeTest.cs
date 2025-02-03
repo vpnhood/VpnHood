@@ -1,5 +1,4 @@
-﻿using System.Security.Cryptography;
-using System.Text;
+﻿using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
@@ -75,8 +74,13 @@ public class AccessCodeTest : TestBase
         Assert.AreEqual(SessionErrorCode.AccessCodeRejected, ex.SessionResponse.ErrorCode);
 
         // code must be removed
-        clientProfile =  app.ClientProfileService.Get(clientProfile.ClientProfileId);
+        clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
+
         Assert.IsNull(clientProfile.AccessCode, "Access code must be removed from profile.");
+        
+        // code should not exist any return objects
+        Assert.IsFalse(ex.Data.Contains("AccessCode"));
+        Assert.IsFalse(app.State.LastError?.Data.ContainsKey("AccessCode") == true);
     }
 
     [TestMethod]

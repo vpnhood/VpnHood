@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Client;
+using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Common.Converters;
-using VpnHood.Core.Tunneling.DomainFiltering;
 
 namespace VpnHood.AppLib.Settings;
 

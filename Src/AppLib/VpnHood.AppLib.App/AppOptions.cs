@@ -15,7 +15,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public bool IsDebugMode => isDebugMode;
     public string StorageFolderPath { get; set; } = BuildStorageFolderPath(storageFolderName);
     public TimeSpan SessionTimeout { get; set; } = ClientOptions.Default.SessionTimeout;
-    public SocketFactory? SocketFactory { get; set; }
+    public ISocketFactory? SocketFactory { get; set; }
     public TimeSpan VersionCheckInterval { get; set; } = TimeSpan.FromHours(24);
     public string? UpdateInfoUrl { get; set; }
     public bool UseInternalLocationService { get; set; } = true;

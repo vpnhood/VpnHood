@@ -9,6 +9,7 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Exceptions;
+using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Jobs;
@@ -20,7 +21,7 @@ using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.ClientStreams;
-using VpnHood.Core.Tunneling.DomainFiltering;
+using VpnHood.Core.Tunneling.Factory;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
 using PacketReceivedEventArgs = VpnHood.Core.Client.Device.PacketReceivedEventArgs;
@@ -72,7 +73,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     internal Nat Nat { get; }
     internal Tunnel Tunnel { get; }
     internal ClientSocketFactory SocketFactory { get; }
-
     public JobSection JobSection { get; } = new();
     public event EventHandler? StateChanged;
     public bool IsIpV6SupportedByServer { get; private set; }
@@ -102,7 +102,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public DomainFilterService DomainFilterService { get; }
     public bool AllowTcpReuse { get; }
 
-    public VpnHoodClient(IPacketCapture packetCapture, string clientId, Token token, ClientOptions options)
+    public VpnHoodClient(IPacketCapture packetCapture, ISocketFactory socketFactory, 
+        string clientId, Token token, ClientOptions options)
     {
         if (options.TcpProxyCatcherAddressIpV4 == null)
             throw new ArgumentNullException(nameof(options.TcpProxyCatcherAddressIpV4));
@@ -114,8 +115,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             throw new ArgumentNullException(nameof(options.MaxTcpDatagramTimespan),
                 $"{nameof(options.MaxTcpDatagramTimespan)} must be bigger or equal than {nameof(options.MinTcpDatagramTimespan)}.");
 
-        SocketFactory = new ClientSocketFactory(packetCapture,
-            options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory)));
+        SocketFactory = new ClientSocketFactory(packetCapture, socketFactory);
+        socketFactory = SocketFactory;
         DnsServers = options.DnsServers ?? [];
         IncludeIpRanges = options.IncludeIpRanges;
         _allowAnonymousTracker = options.AllowAnonymousTracker;
@@ -124,7 +125,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _packetCapture = packetCapture;
         _autoDisposePacketCapture = options.AutoDisposePacketCapture;
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
-        _proxyManager = new ClientProxyManager(packetCapture, SocketFactory, new ProxyManagerOptions());
+        _proxyManager = new ClientProxyManager(packetCapture, socketFactory, new ProxyManagerOptions());
         _usageTracker = options.Tracker;
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
@@ -132,7 +133,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _planId = options.PlanId;
         _accessCode = options.AccessCode;
         _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
-        _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken,
+        _serverFinder = new ServerFinder(socketFactory, token.ServerToken,
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
             tracker: options.AllowEndPointTracker ? options.Tracker : null);

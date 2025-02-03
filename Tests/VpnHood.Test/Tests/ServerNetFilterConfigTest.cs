@@ -2,7 +2,9 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Client;
 using VpnHood.Core.Common.Net;
+using VpnHood.Core.Tunneling.Factory;
 using VpnHood.Test.Device;
+using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
 
@@ -20,12 +22,9 @@ public class ServerNetFilterConfigTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using var client =
-            new VpnHoodClient(new TestNullPacketCapture(), Guid.NewGuid().ToString(), token, new ClientOptions {
-                PacketCaptureIncludeIpRanges = new IpRangeOrderedList([IpRange.Parse("230.0.0.0-230.0.0.200")])
-            });
-
-        await client.Connect();
+        var clientOptions = TestHelper.CreateClientOptions();
+        clientOptions.PacketCaptureIncludeIpRanges = new IpRangeOrderedList([IpRange.Parse("230.0.0.0-230.0.0.200")]);
+        await using var client = await TestHelper.CreateClient(token: token, packetCapture: new TestNullPacketCapture(), clientOptions: clientOptions);
 
         Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.0")));
         Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.10")));
@@ -48,12 +47,9 @@ public class ServerNetFilterConfigTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using var client =
-            new VpnHoodClient(new TestNullPacketCapture(), Guid.NewGuid().ToString(), token, new ClientOptions {
-                PacketCaptureIncludeIpRanges = new IpRangeOrderedList([IpRange.Parse("230.0.0.0-230.0.0.200")])
-            });
-
-        await client.Connect();
+        var clientOptions = TestHelper.CreateClientOptions();
+        clientOptions.PacketCaptureIncludeIpRanges = new IpRangeOrderedList([IpRange.Parse("230.0.0.0-230.0.0.200")]);
+        await using var client = await TestHelper.CreateClient(token: token, clientOptions: clientOptions, packetCapture: new TestNullPacketCapture());
 
         Assert.IsTrue(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.0")));
         Assert.IsTrue(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.10")));
@@ -79,10 +75,11 @@ public class ServerNetFilterConfigTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using var client =
-            new VpnHoodClient(new TestNullPacketCapture(), Guid.NewGuid().ToString(), token, new ClientOptions());
-        await client.Connect();
-
+        var clientOptions = TestHelper.CreateClientOptions();
+        clientOptions.PacketCaptureIncludeIpRanges = IpNetwork.All.ToIpRanges();
+        clientOptions.IncludeLocalNetwork = false;
+        await using var client = await TestHelper.CreateClient(token: token, clientOptions: clientOptions, packetCapture: new TestNullPacketCapture());
+        
         Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("192.168.0.100")),
             "LocalNetWorks failed");
         Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.110")),
@@ -111,9 +108,9 @@ public class ServerNetFilterConfigTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using var client =
-            new VpnHoodClient(new TestNullPacketCapture(), clientId: Guid.NewGuid().ToString(), token: token, options: new ClientOptions());
-        await client.Connect();
+        var clientOptions = TestHelper.CreateClientOptions();
+        clientOptions.PacketCaptureIncludeIpRanges = IpNetwork.All.ToIpRanges();
+        await using var client = await TestHelper.CreateClient(token: token, clientOptions: clientOptions, packetCapture: new TestNullPacketCapture());
 
         Assert.IsFalse(client.IncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.110")), "Excludes failed");
         Assert.IsTrue(client.IncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.50")), "Includes failed");

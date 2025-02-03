@@ -33,13 +33,13 @@ public class AppAdService(
             .VhConfigureAwait();
     }
 
-    public Task<ShowedAdResult> ShowInterstitial(IUiContext uiContext, string sessionId,
+    public Task<ShowAdResult> ShowInterstitial(IUiContext uiContext, string sessionId,
         CancellationToken cancellationToken)
     {
         return ShowAd(_compositeInterstitialAdService, uiContext, sessionId, cancellationToken);
     }
 
-    public Task<ShowedAdResult> ShowRewarded(IUiContext uiContext, string sessionId,
+    public Task<ShowAdResult> ShowRewarded(IUiContext uiContext, string sessionId,
         CancellationToken cancellationToken)
     {
         if (!CanShowRewarded)
@@ -49,7 +49,7 @@ public class AppAdService(
     }
 
 
-    private async Task<ShowedAdResult> ShowAd(AppCompositeAdService appCompositeAdService,
+    private async Task<ShowAdResult> ShowAd(AppCompositeAdService appCompositeAdService,
         IUiContext uiContext, string sessionId, CancellationToken cancellationToken)
     {
         try {
@@ -57,9 +57,10 @@ public class AppAdService(
             var countryCode = await regionProvider.GetCurrentCountryAsync(cancellationToken);
             await appCompositeAdService.LoadAd(uiContext, countryCode: countryCode, forceReload: false, cancellationToken);
             var networkName = await appCompositeAdService.ShowLoadedAd(uiContext, adData, cancellationToken);
-            var showAdResult = new ShowedAdResult {
+            var showAdResult = new ShowAdResult {
                 AdData = adData,
-                NetworkName = networkName
+                NetworkName = networkName,
+                ApiError = null, //todo: move into dto only
             };
 
             var trackEvent = ClientTrackerBuilder.BuildShowAdStatus(networkName);

@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Client;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Diagnosing;
 using VpnHood.Core.Common.Jobs;
@@ -359,13 +360,13 @@ public class TestHelper : IDisposable
     }
 
 
-    public static ClientOptions CreateClientOptions(bool useUdp = false)
+    public static ClientOptions CreateClientOptions(bool useUdpChannel = false)
     {
         return new ClientOptions {
             AllowAnonymousTracker = true,
             AllowEndPointTracker = true,
             MaxDatagramChannelCount = 1,
-            UseUdpChannel = useUdp,
+            UseUdpChannel = useUdpChannel,
             Tracker = new TestTrackerProvider(),
             PacketCaptureIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToOrderedList(),
             IncludeLocalNetwork = true,

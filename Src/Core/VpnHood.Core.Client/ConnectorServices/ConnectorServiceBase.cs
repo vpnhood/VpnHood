@@ -28,7 +28,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
     public TimeSpan TcpConnectTimeout { get; set; }
     public ConnectorEndPointInfo EndPointInfo { get; }
     public JobSection JobSection { get; }
-    public ConnectorStat Stat { get; }
+    public ClientConnectorStat Stat { get; }
     public TimeSpan RequestTimeout { get; private set; }
     public TimeSpan TcpReuseTimeout { get; private set; }
     public int ProtocolVersion { get; private set; } = 5; // 5 is initial connection version
@@ -38,7 +38,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
     {
         _socketFactory = socketFactory;
         _allowTcpReuse = allowTcpReuse;
-        Stat = new ConnectorStatImpl(this);
+        Stat = new ClientConnectorStatImpl(this);
         TcpConnectTimeout = tcpConnectTimeout;
         JobSection = new JobSection(tcpConnectTimeout);
         RequestTimeout = TimeSpan.FromSeconds(30);
@@ -175,8 +175,8 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         public DateTime EnqueueTime { get; } = FastDateTime.Now;
     }
 
-    internal class ConnectorStatImpl(ConnectorServiceBase connectorServiceBase)
-        : ConnectorStat
+    internal class ClientConnectorStatImpl(ConnectorServiceBase connectorServiceBase)
+        : ClientConnectorStat
     {
         public override int FreeConnectionCount => connectorServiceBase._freeClientStreams.Count;
     }

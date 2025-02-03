@@ -102,7 +102,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public DomainFilterService DomainFilterService { get; }
     public bool AllowTcpReuse { get; }
 
-    public VpnHoodClient(IPacketCapture packetCapture, ISocketFactory socketFactory, 
+    public VpnHoodClient(IPacketCapture packetCapture, ISocketFactory socketFactory, IAdService? adService,
         string clientId, Token token, ClientOptions options)
     {
         if (options.TcpProxyCatcherAddressIpV4 == null)
@@ -129,7 +129,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _usageTracker = options.Tracker;
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
-        _adService = options.AdService;
+        _adService = adService;
         _planId = options.PlanId;
         _accessCode = options.AccessCode;
         _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;

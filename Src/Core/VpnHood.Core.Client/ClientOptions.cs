@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using Ga4.Trackers;
-using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Tokens;
@@ -30,7 +29,6 @@ public class ClientOptions
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
     public bool UseUdpChannel { get; set; }
     public bool IncludeLocalNetwork { get; set; }
-    public IAdService? AdService { get; set; }
     public IpRangeOrderedList IncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges();
     public IpRangeOrderedList PacketCaptureIncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges();
     public int MaxDatagramChannelCount { get; set; } = 4;

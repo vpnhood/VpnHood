@@ -2,7 +2,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Core.Client;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Net;
@@ -69,7 +69,7 @@ public class ServerTest : TestBase
         // Create client
         var token = TestHelper.CreateAccessToken(server);
         await using var client =
-            await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
+            await TestHelper.CreateClient(token, clientOptions: TestHelper.CreateClientOptions(useUdpChannel: true));
 
         // check usage when usage should be 0
         var sessionResponseEx = await accessManager.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);

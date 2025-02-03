@@ -59,8 +59,7 @@ public class AppAdService(
             var networkName = await appCompositeAdService.ShowLoadedAd(uiContext, adData, cancellationToken);
             var showAdResult = new ShowAdResult {
                 AdData = adData,
-                NetworkName = networkName,
-                ApiError = null, //todo: move into dto only
+                NetworkName = networkName
             };
 
             var trackEvent = ClientTrackerBuilder.BuildShowAdStatus(networkName);

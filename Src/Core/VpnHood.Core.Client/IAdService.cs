@@ -1,6 +1,7 @@
-﻿using VpnHood.Core.Client.Device;
+﻿using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Device;
 
-namespace VpnHood.Core.Client.Abstractions;
+namespace VpnHood.Core.Client;
 
 public interface IAdService
 {

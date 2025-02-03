@@ -5,7 +5,7 @@ namespace VpnHood.Core.Client.Abstractions;
 
 public interface ISessionStatus
 {
-    ConnectorStat ConnectorStat { get; }
+    ClientConnectorStat ConnectorStat { get; }
     Traffic Speed { get; }
     Traffic SessionTraffic { get; }
     Traffic CycleTraffic { get; }

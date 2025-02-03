@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Client;
-using VpnHood.Core.Client.DomainFiltering;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Converters;
 
 namespace VpnHood.AppLib.Settings;
@@ -9,7 +8,6 @@ namespace VpnHood.AppLib.Settings;
 public class UserSettings
 {
     private static readonly ClientOptions DefaultClientOptions = new();
-
     public bool IsLicenseAccepted { get; set; }
     public string? CultureCode { get; set; }
     public Guid? ClientProfileId { get; set; }

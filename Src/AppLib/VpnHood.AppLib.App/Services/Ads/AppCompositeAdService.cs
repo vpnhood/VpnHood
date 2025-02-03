@@ -84,7 +84,7 @@ internal class AppCompositeAdService
             }
         }
 
-        throw new LoadAdException($"Could not load any AD. CountryCode: {GetCountryName(countryCode)}");
+        throw new LoadAdException($"Could not load any Ad. CountryCode: {GetCountryName(countryCode)}");
     }
 
     private static async Task VerifyActiveUi(bool immediately = true)

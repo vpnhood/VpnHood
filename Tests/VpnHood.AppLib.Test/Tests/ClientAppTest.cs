@@ -389,6 +389,10 @@ public class ClientAppTest : TestBase
 
         CollectionAssert.AreEqual(accessManager.ServerConfig.ServerSecret,
             app.ClientProfileService.GetToken(token.TokenId).ServerToken.Secret);
+
+        // code should not exist any return objects
+        Assert.IsFalse(app.State.LastError?.Data.ContainsKey("AccessCode") == true);
+
     }
 
     [TestMethod]

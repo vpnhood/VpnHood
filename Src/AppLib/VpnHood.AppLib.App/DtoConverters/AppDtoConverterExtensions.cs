@@ -6,7 +6,7 @@ namespace VpnHood.AppLib.DtoConverters;
 
 public static class AppDtoConverterExtensions
 {
-    public static AppConnectorStat ToAppDto(this ConnectorStat connectorStat)
+    public static AppConnectorStat ToAppDto(this ClientConnectorStat connectorStat)
     {
         return new AppConnectorStat {
             FreeConnectionCount = connectorStat.FreeConnectionCount,

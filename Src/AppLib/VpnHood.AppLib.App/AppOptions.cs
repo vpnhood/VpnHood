@@ -1,7 +1,7 @@
 ﻿using Ga4.Trackers;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services.Ads;
-using VpnHood.Core.Client;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Tunneling.Factory;
 
 namespace VpnHood.AppLib;

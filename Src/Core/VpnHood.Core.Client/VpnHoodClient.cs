@@ -1208,14 +1208,14 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
     }
 
-    private class SessionStatus(VpnHoodClient client, AccessUsage accessUsage) : ISessionStatus
+    public class SessionStatus(VpnHoodClient client, AccessUsage accessUsage) : ISessionStatus
     {
         private AccessUsage _accessUsage = accessUsage;
         private readonly Traffic _cycleTraffic = accessUsage.CycleTraffic;
         private readonly Traffic _totalTraffic = accessUsage.TotalTraffic;
 
         public void Update(AccessUsage? value) => _accessUsage = value ?? _accessUsage;
-        public ConnectorStat ConnectorStat => client.ConnectorService.Stat;
+        public ClientConnectorStat ConnectorStat => client.ConnectorService.Stat;
         public Traffic Speed => client.Tunnel.Speed;
         public Traffic SessionTraffic => client.Tunnel.Traffic;
         public Traffic CycleTraffic => _cycleTraffic + client.Tunnel.Traffic;

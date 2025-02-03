@@ -2,7 +2,7 @@
 using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
-using VpnHood.Core.Client;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Test.Providers;
@@ -184,7 +184,7 @@ public class UdpProxyTest : TestBase
 
         // Create Client
         await using var client =
-            await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
+            await TestHelper.CreateClient(token, clientOptions: TestHelper.CreateClientOptions(useUdpChannel: true));
 
         // create udpClients and send packets
         var udpClients = new List<UdpClient>();

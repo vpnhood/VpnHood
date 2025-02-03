@@ -2,9 +2,10 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Utils;
 
-namespace VpnHood.Core.Tunneling.DomainFiltering;
+namespace VpnHood.Core.Client.DomainFiltering;
 
 public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni)
 {

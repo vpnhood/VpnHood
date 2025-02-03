@@ -1,5 +1,6 @@
 ﻿using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Tunneling.Factory;
 
 namespace VpnHood.Core.Client.Abstractions;
 
@@ -11,11 +12,12 @@ public class ClientController
         _client = client;
     }
 
-    public static ClientController Create(IPacketCapture packetCapture, string clientId, 
+    public static ClientController Create(IPacketCapture packetCapture, ISocketFactory socketFactory, string clientId, 
         Token token, ClientOptions clientOptions)
     {
-        var client = new VpnHoodClient(packetCapture, clientId, token, clientOptions);
-        return new ClientController(client);
+        throw new NotImplementedException();
+        //var client = new VpnHoodClient(packetCapture, socketFactory, clientId, token, clientOptions);
+        //return new ClientController(client);
     }
 
     public Task Start(ClientOptions clientOptions, CancellationToken cancellationToken)

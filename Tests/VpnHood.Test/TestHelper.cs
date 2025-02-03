@@ -19,6 +19,7 @@ using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Factory;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
@@ -366,7 +367,10 @@ public class TestHelper : IDisposable
             AllowEndPointTracker = true,
             MaxDatagramChannelCount = 1,
             UseUdpChannel = useUdp,
-            Tracker = new TestTrackerProvider()
+            Tracker = new TestTrackerProvider(),
+            PacketCaptureIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToOrderedList(),
+            IncludeLocalNetwork = true,
+            ConnectTimeout = TimeSpan.FromSeconds(3)
         };
     }
 
@@ -380,16 +384,10 @@ public class TestHelper : IDisposable
         packetCapture ??= new TestPacketCapture(new TestPacketCaptureOptions());
         clientId ??= Guid.NewGuid().ToString();
         clientOptions ??= CreateClientOptions();
-        if (clientOptions.ConnectTimeout == new ClientOptions().ConnectTimeout)
-            clientOptions.ConnectTimeout = TimeSpan.FromSeconds(3);
-        clientOptions.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToOrderedList();
-        clientOptions.IncludeLocalNetwork = true;
 
         var client = new VpnHoodClient(
-            packetCapture,
-            clientId,
-            token,
-            clientOptions);
+            packetCapture, new TestSocketFactory(), clientId,
+            token, clientOptions);
 
         // test starting the client
         try {

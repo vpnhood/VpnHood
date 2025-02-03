@@ -28,10 +28,10 @@ using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.Factory;
 using VpnHood.AppLib.Services.Logging;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Tunneling.Factory;
 
 namespace VpnHood.AppLib;
 
@@ -41,7 +41,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private const string FileNameLog = "log.txt";
     private const string FileNamePersistState = "state.json";
     private const string FolderNameProfiles = "profiles";
-    private readonly SocketFactory? _socketFactory;
     private readonly bool _useInternalLocationService;
     private readonly bool _useExternalLocationService;
     private readonly string? _ga4MeasurementId;
@@ -110,7 +109,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         SettingsService.BeforeSave += SettingsBeforeSave;
         _oldUserSettings = VhUtil.JsonClone(UserSettings);
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
-        _socketFactory = options.SocketFactory;
         _useInternalLocationService = options.UseInternalLocationService;
         _useExternalLocationService = options.UseExternalLocationService;
         _ga4MeasurementId = options.Ga4MeasurementId;
@@ -618,7 +616,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             CanExtendByRewardedAdThreshold = _canExtendByRewardedAdThreshold,
         };
 
-        if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;
 
         // make sure the previous client has been released
@@ -633,7 +630,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         try {
             VhLogger.Instance.LogTrace("Creating VpnHood Client engine ...");
-            client = new VpnHoodClient(packetCapture, Features.ClientId, token, clientOptions);
+            client = new VpnHoodClient(packetCapture, new SocketFactory(), Features.ClientId, token, clientOptions);
             client.StateChanged += Client_StateChanged;
             _client = client;
 

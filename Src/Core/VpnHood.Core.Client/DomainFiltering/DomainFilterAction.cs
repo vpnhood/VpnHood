@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Tunneling.DomainFiltering;
+﻿namespace VpnHood.Core.Client.DomainFiltering;
 
 public enum DomainFilterAction
 {

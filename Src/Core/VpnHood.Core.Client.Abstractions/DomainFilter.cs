@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Tunneling.DomainFiltering;
+﻿namespace VpnHood.Core.Client.Abstractions;
 
 public class DomainFilter
 {

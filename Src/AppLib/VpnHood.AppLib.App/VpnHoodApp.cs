@@ -650,13 +650,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // set connected time
             ConnectedTime = DateTime.Now;
-            UpdateStatusByCreatedClient(client);
+            UpdateStatusByCreatedClient(client, null);
 
             // check version after first connection
             _ = VersionCheck();
         }
         catch (Exception ex) when (client is not null) {
-            UpdateStatusByCreatedClient(client);
+            UpdateStatusByCreatedClient(client, ex);
 
             // dispose client
             client.StateChanged -= Client_StateChanged;
@@ -691,19 +691,36 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private void UpdateStatusByCreatedClient(VpnHoodClient client)
+    private void UpdateStatusByCreatedClient(VpnHoodClient client, Exception? ex)
     {
         // update access token if AccessKey is set
         var accessKey = client.ConnectionInfo.SessionInfo?.AccessKey;
-        if (accessKey == null && client.ConnectionInfo.Error?.Data.ContainsKey("AccessKey") == true)
-            accessKey = client.ConnectionInfo.Error?.Data["AccessKey"];
 
-        if (!string.IsNullOrWhiteSpace(accessKey))
+        // update token by access key
+        if (accessKey == null && client.ConnectionInfo.Error?.Data.ContainsKey("AccessKey") == true) {
+            accessKey = client.ConnectionInfo.Error?.Data["AccessKey"];
+        }
+
+        if (!string.IsNullOrWhiteSpace(accessKey)) {
             ClientProfileService.UpdateTokenByAccessKey(client.Token.TokenId, accessKey);
+        }
 
         var clientCountry = client.ConnectionInfo.SessionInfo?.ClientCountry;
         if (!string.IsNullOrWhiteSpace(clientCountry))
             _appPersistState.ClientCountryCodeByServer = clientCountry;
+
+        // make sure AccessKey is deleted
+        if (client.ConnectionInfo.SessionInfo?.AccessKey != null) 
+            client.ConnectionInfo.SessionInfo.AccessKey = null;
+
+        if (client.ConnectionInfo.Error?.Data.ContainsKey("AccessKey") == true) 
+            client.ConnectionInfo.Error?.Data.Remove("AccessKey");
+
+        if (ex?.Data.Contains("AccessKey") == true) 
+            ex.Data.Remove("AccessKey");
+
+        if (ex is SessionException sessionException) 
+            sessionException.SessionResponse.AccessKey = null;
     }
 
     private async Task RequestFeatures(CancellationToken cancellationToken)

@@ -27,8 +27,8 @@ public class AdTest : TestBase
 
         // create client app
         var appOptions = TestAppHelper.CreateAppOptions();
-        var adProvider = new TestAdProvider(accessManager);
-        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd) };
+        var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
+        var adProviderItem = new AppAdProviderItem { AdProvider = adProvider };
         appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         adProvider.FailLoad = true;

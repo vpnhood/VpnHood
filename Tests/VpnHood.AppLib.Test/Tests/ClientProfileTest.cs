@@ -1,9 +1,12 @@
 ﻿using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
+using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -86,7 +89,12 @@ public class ClientProfileTest
     [TestMethod]
     public async Task ClientPolicy()
     {
-        await using var app = TestAppHelper.CreateClientApp();
+        using var accessManager = TestHelper.CreateAccessManager();
+
+        var appOptions = TestAppHelper.CreateAppOptions();
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
+        appOptions.AdProviderItems = [adProviderItem];
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
 
         // test two region in a same country
         var token = CreateToken();

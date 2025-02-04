@@ -1,4 +1,4 @@
-# Upcoming
+# v5.1.654
 * Fix: IPv6 ping
 * Fix: Playing animation while login with Google
 * Fix: Connection is already in progress by changing the location

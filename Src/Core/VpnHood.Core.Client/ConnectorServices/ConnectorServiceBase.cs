@@ -100,8 +100,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
 
         // Client.SessionTimeout does not affect in ConnectAsync
         VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
-        await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpConnectTimeout,
-            cancellationToken).VhConfigureAwait();
+        await tcpClient.VhConnectAsync(tcpEndPoint, TcpConnectTimeout, cancellationToken).VhConfigureAwait();
 
         // Establish a TLS connection
         var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);

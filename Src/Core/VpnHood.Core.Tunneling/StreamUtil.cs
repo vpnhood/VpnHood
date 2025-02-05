@@ -6,22 +6,22 @@ namespace VpnHood.Core.Tunneling;
 
 public static class StreamUtil
 {
-    public static byte[]? ReadWaitForFill(Stream stream, int count)
+    public static byte[]? ReadExact(Stream stream, int count)
     {
         var buffer = new byte[count];
-        return ReadWaitForFill(stream, buffer, 0, buffer.Length) ? buffer : null;
+        return ReadExact(stream, buffer, 0, buffer.Length) ? buffer : null;
     }
 
-    public static async Task<byte[]?> ReadWaitForFillAsync(Stream stream, int count,
+    public static async Task<byte[]?> ReadExactAsync(Stream stream, int count,
         CancellationToken cancellationToken)
     {
         var buffer = new byte[count];
-        if (!await ReadWaitForFillAsync(stream, buffer, 0, buffer.Length, cancellationToken).VhConfigureAwait())
+        if (!await ReadExactAsync(stream, buffer, 0, buffer.Length, cancellationToken).VhConfigureAwait())
             return null;
         return buffer;
     }
 
-    public static bool ReadWaitForFill(Stream stream, byte[] buffer, int startIndex, int count)
+    public static bool ReadExact(Stream stream, byte[] buffer, int startIndex, int count)
     {
         var totalRead = 0;
         while (totalRead != count) {
@@ -34,7 +34,7 @@ public static class StreamUtil
         return true;
     }
 
-    public static async Task<bool> ReadWaitForFillAsync(Stream stream, byte[] buffer, int startIndex, int count,
+    public static async Task<bool> ReadExactAsync(Stream stream, byte[] buffer, int startIndex, int count,
         CancellationToken cancellationToken)
     {
         var totalRead = 0;
@@ -52,7 +52,7 @@ public static class StreamUtil
     public static T ReadJson<T>(Stream stream, int maxLength = 0xFFFF)
     {
         // read length
-        var buffer = ReadWaitForFill(stream, 4) ?? throw new Exception($"Could not read {typeof(T).Name}");
+        var buffer = ReadExact(stream, 4) ?? throw new Exception($"Could not read {typeof(T).Name}");
 
         // check json size
         var jsonSize = BitConverter.ToInt32(buffer);
@@ -63,7 +63,7 @@ public static class StreamUtil
                 $"json length is too big! It should be less than {maxLength} bytes but it was {jsonSize} bytes");
 
         // read json body...
-        buffer = ReadWaitForFill(stream, jsonSize);
+        buffer = ReadExact(stream, jsonSize);
         if (buffer == null)
             throw new Exception("Could not read Message Length!");
 
@@ -85,7 +85,7 @@ public static class StreamUtil
         int maxLength = 0xFFFF)
     {
         // read length
-        var buffer = await ReadWaitForFillAsync(stream, 4, cancellationToken).VhConfigureAwait()
+        var buffer = await ReadExactAsync(stream, 4, cancellationToken).VhConfigureAwait()
                      ?? throw new Exception("Could not read message.");
 
         // check unauthorized exception
@@ -102,7 +102,7 @@ public static class StreamUtil
                 $"json length is too big! It should be less than {maxLength} bytes but it was {messageSize} bytes");
 
         // read json body...
-        buffer = await ReadWaitForFillAsync(stream, messageSize, cancellationToken).VhConfigureAwait();
+        buffer = await ReadExactAsync(stream, messageSize, cancellationToken).VhConfigureAwait();
         if (buffer == null)
             throw new Exception("Could not read Message Length!");
 

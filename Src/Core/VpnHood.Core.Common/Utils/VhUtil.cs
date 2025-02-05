@@ -113,15 +113,23 @@ public static class VhUtil
             return collection.ToArray();
     }
 
-    public static async Task<T> RunTask<T>(Task<T> task, TimeSpan timeout = default,
-        CancellationToken cancellationToken = default)
+    public static Task<T> RunTask<T>(Task<T> task, CancellationToken cancellationToken = default)
+    {
+        return RunTask(task, TimeSpan.Zero, cancellationToken);
+    }
+
+    public static async Task<T> RunTask<T>(Task<T> task, TimeSpan timeout, CancellationToken cancellationToken = default)
     {
         await RunTask((Task)task, timeout, cancellationToken).VhConfigureAwait();
         return await task.VhConfigureAwait();
     }
 
-    public static async Task RunTask(Task task, TimeSpan timeout = default,
-        CancellationToken cancellationToken = default)
+    public static Task RunTask(Task task, CancellationToken cancellationToken = default)
+    {
+        return RunTask(task, TimeSpan.Zero, cancellationToken);
+    }
+
+    public static async Task RunTask(Task task, TimeSpan timeout, CancellationToken cancellationToken = default)
     {
         if (timeout == TimeSpan.Zero)
             timeout = Timeout.InfiniteTimeSpan;
@@ -140,7 +148,6 @@ public static class VhUtil
     {
         return array == null || !array.Any();
     }
-
 
     public static bool IsNullOrEmpty<T>([NotNullWhen(false)] T[]? array)
     {

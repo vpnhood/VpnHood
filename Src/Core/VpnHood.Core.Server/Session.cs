@@ -341,10 +341,7 @@ public class Session : IAsyncDisposable
 
             // connect to requested destination
             isRequestedEpException = true;
-            await VhUtil.RunTask(
-                    tcpClientHost.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
-                    _tcpConnectTimeout, cancellationToken)
-                .VhConfigureAwait();
+            await tcpClientHost.VhConnectAsync(request.DestinationEndPoint, _tcpConnectTimeout, cancellationToken).VhConfigureAwait();
             isRequestedEpException = false;
 
             //tracking

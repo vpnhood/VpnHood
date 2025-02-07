@@ -1,11 +1,12 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client;
 using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Utils;
 
-namespace VpnHood.Core.Client.Diagnosing;
+namespace VpnHood.AppLib.Diagnosing;
 
 public class Diagnoser
 {
@@ -46,7 +47,7 @@ public class Diagnoser
             throw;
         }
         catch (Exception) {
-            VhLogger.Instance.LogTrace("Checking the Internet connection...");
+            VhLogger.Instance.LogInformation("Checking the Internet connection...");
             IsWorking = true;
             if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true, cancellationToken: cancellationToken).VhConfigureAwait())
                 throw new NoInternetException();
@@ -58,40 +59,53 @@ public class Diagnoser
         }
     }
 
-    public async Task Diagnose(VpnHoodClient vpnHoodClient, CancellationToken cancellationToken)
+    public async Task CheckEndPoints(IPEndPoint[] ipEndPoints, CancellationToken cancellationToken)
+    {
+        // check if there is any endpoint
+        if (ipEndPoints.Length == 0)
+            throw new ArgumentException("There are no endpoints.", nameof(ipEndPoints));
+
+        // ping server
+        VhLogger.Instance.LogInformation("Checking the endpoints via ping...");
+        if (!await IPAddressUtil.IsIpv6Supported() && ipEndPoints.Any(x => x.IsV6())) {
+            VhLogger.Instance.LogInformation("IpV6 is not supported. Excluding IpV6 addresses");
+            ipEndPoints = ipEndPoints.Where(x => !x.Address.IsV6()).ToArray();
+        }
+
+        // check ping
+        var pingRes = await DiagnoseUtil
+            .CheckPing(ipEndPoints.Select(x => x.Address).ToArray(), NsTimeout, cancellationToken)
+            .VhConfigureAwait();
+
+        if (pingRes == null)
+            VhLogger.Instance.LogInformation("At least an endpoint has been pinged successfully.");
+        else
+            VhLogger.Instance.LogWarning(
+                $"Could not ping any endpoints. EndPointCount: {ipEndPoints.Length}, Error: {pingRes.Message}");
+    }
+
+    public async Task CheckPureNetwork(CancellationToken cancellationToken)
     {
         try {
-            VhLogger.Instance.LogTrace("Checking the Internet connection...");
+            VhLogger.Instance.LogInformation("Checking the Internet connection...");
             IsWorking = true;
             if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true, cancellationToken).VhConfigureAwait())
                 throw new NoInternetException();
-
-            // ping server
-            VhLogger.Instance.LogTrace("Checking the VpnServer ping...");
-            var hostEndPoints = await ServerTokenHelper.ResolveHostEndPoints(vpnHoodClient.Token.ServerToken, cancellationToken).VhConfigureAwait();
-            if (!await IPAddressUtil.IsIpv6Supported() && hostEndPoints.Any(x => x.IsV6())) {
-                VhLogger.Instance.LogTrace("IpV6 is not supported. Excluding IpV6 addresses");
-                hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6()).ToArray();
-            }
-
-            var hostEndPoint = hostEndPoints.First() ?? throw new Exception("Could not resolve any host endpoint from AccessToken."); 
-            var pingRes = await DiagnoseUtil.CheckPing([hostEndPoint.Address], NsTimeout, cancellationToken).VhConfigureAwait();
-            if (pingRes == null)
-                VhLogger.Instance.LogTrace("Pinging server is OK.");
-            else
-                VhLogger.Instance.LogWarning(
-                    $"Could not ping server! EndPoint: {VhLogger.Format(hostEndPoint.Address)}, Error: {pingRes.Message}");
-
-            // VpnConnect
+        }
+        finally {
             IsWorking = false;
-            await vpnHoodClient.Connect(cancellationToken).VhConfigureAwait();
+        }
+    }
 
-            VhLogger.Instance.LogTrace("Checking the Vpn Connection...");
+    public async Task CheckVpnNetwork(CancellationToken cancellationToken)
+    {
+        try {
+            VhLogger.Instance.LogInformation("Checking the Vpn Connection...");
             IsWorking = true;
             await Task.Delay(2000, cancellationToken).VhConfigureAwait(); // connections can not be established on android immediately
             if (!await NetworkCheck(successOnAny: false, checkPing: true, checkUdp: true, cancellationToken).VhConfigureAwait())
                 throw new NoStableVpnException();
-            VhLogger.Instance.LogTrace("VPN has been established and tested successfully.");
+            VhLogger.Instance.LogInformation("VPN has been established and tested successfully.");
         }
         finally {
             IsWorking = false;

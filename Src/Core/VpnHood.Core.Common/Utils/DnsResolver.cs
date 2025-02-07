@@ -1,9 +1,8 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using VpnHood.Core.Common.Utils;
 
-namespace VpnHood.Core.Client.Diagnosing;
+namespace VpnHood.Core.Common.Utils;
 
 public static class DnsResolver
 {

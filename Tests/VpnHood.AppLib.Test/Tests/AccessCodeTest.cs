@@ -15,7 +15,6 @@ namespace VpnHood.AppLib.Test.Tests;
 public class AccessCodeTest : TestBase
 {
 
-
     [TestMethod]
     public async Task AaFoo()
     {

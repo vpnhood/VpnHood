@@ -14,7 +14,6 @@ using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Common.Trackers;
-using VpnHood.Core.Client;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Diagnosing;
 using VpnHood.Core.Common.ApiClients;
@@ -666,13 +665,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // set connected time
             ConnectedTime = DateTime.Now;
-            UpdateStatusByCreatedClient(clientManager.Client, null);
+            UpdateStatusByCreatedClient(clientManager, token, null);
 
             // check version after first connection
             _ = VersionCheck();
         }
         catch (Exception ex) when (clientManager is not null) {
-            UpdateStatusByCreatedClient(clientManager.Client, ex);
+            UpdateStatusByCreatedClient(clientManager, token, ex);
 
             // dispose client
             clientManager.StateChanged -= Client_StateChanged;
@@ -707,30 +706,31 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private void UpdateStatusByCreatedClient(VpnHoodClient client, Exception? ex)
+    private void UpdateStatusByCreatedClient(VpnHoodClientManager clientManager, Token token, Exception? ex)
     {
         // update access token if AccessKey is set
-        var accessKey = client.ConnectionInfo.SessionInfo?.AccessKey;
+        var connectionInfo = clientManager.ConnectionInfo;
+        var accessKey = connectionInfo?.SessionInfo?.AccessKey;
 
         // update token by access key
-        if (accessKey == null && client.ConnectionInfo.Error?.Data.ContainsKey("AccessKey") == true) {
-            accessKey = client.ConnectionInfo.Error?.Data["AccessKey"];
+        if (accessKey == null && connectionInfo?.Error?.Data.ContainsKey("AccessKey") == true) {
+            accessKey = connectionInfo.Error?.Data["AccessKey"];
         }
 
         if (!string.IsNullOrWhiteSpace(accessKey)) {
-            ClientProfileService.UpdateTokenByAccessKey(client.Token.TokenId, accessKey);
+            ClientProfileService.UpdateTokenByAccessKey(token.TokenId, accessKey);
         }
 
-        var clientCountry = client.ConnectionInfo.SessionInfo?.ClientCountry;
+        var clientCountry = connectionInfo?.SessionInfo?.ClientCountry;
         if (!string.IsNullOrWhiteSpace(clientCountry))
             _appPersistState.ClientCountryCodeByServer = clientCountry;
 
         // make sure AccessKey is deleted
-        if (client.ConnectionInfo.SessionInfo?.AccessKey != null)
-            client.ConnectionInfo.SessionInfo.AccessKey = null;
+        if (connectionInfo?.SessionInfo?.AccessKey != null)
+            connectionInfo.SessionInfo.AccessKey = null;
 
-        if (client.ConnectionInfo.Error?.Data.ContainsKey("AccessKey") == true)
-            client.ConnectionInfo.Error?.Data.Remove("AccessKey");
+        if (connectionInfo?.Error?.Data.ContainsKey("AccessKey") == true)
+            connectionInfo.Error?.Data.Remove("AccessKey");
 
         if (ex?.Data.Contains("AccessKey") == true)
             ex.Data.Remove("AccessKey");

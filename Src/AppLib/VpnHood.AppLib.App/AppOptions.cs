@@ -44,4 +44,5 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public string? DeviceId { get; set; }
     public string? LocalSpaHostName { get; set; }
     public TimeSpan CanExtendByRewardedAdThreshold { get; set; } = TimeSpan.FromMinutes(5);
+    public TimeSpan? EventWatcherInterval { get; set; } // set if you don't call State periodically
 }

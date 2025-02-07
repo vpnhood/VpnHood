@@ -14,9 +14,9 @@ public interface ISessionStatus
     int TcpPassthruCount { get; }
     int DatagramChannelCount { get; }
     bool IsUdpMode { get; }
-    bool IsWaitingForAd { get; }
     bool CanExtendByRewardedAd { get; }
     long SessionMaxTraffic { get; }
     DateTime? SessionExpirationTime { get; }
     int? ActiveClientCount { get; }
+    AdRequest? AdRequest { get; }
 }

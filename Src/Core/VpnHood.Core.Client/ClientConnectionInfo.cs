@@ -5,7 +5,7 @@ using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.Core.Client;
 
-internal class ConnectionInfo : IConnectionInfo
+internal class ClientConnectionInfo : IConnectionInfo
 {
     public ClientState ClientState { get; set; } = ClientState.None;
     public SessionErrorCode ErrorCode { get; set; } = SessionErrorCode.Ok;
@@ -25,7 +25,6 @@ internal class ConnectionInfo : IConnectionInfo
                 : SessionErrorCode.GeneralError;
 
             Error = new ApiError(ex);
-
         }
     }
 }

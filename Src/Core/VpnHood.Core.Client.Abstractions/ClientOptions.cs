@@ -46,6 +46,7 @@ public class ClientOptions
     public bool ForceLogSni { get; set; }
     public TimeSpan ServerQueryTimeout { get; set; } = TimeSpan.FromSeconds(10);
     public ITracker? Tracker { get; set; }
+    public bool AllowRewardedAd { get; set; }
     public TimeSpan CanExtendByRewardedAdThreshold { get; set; } = TimeSpan.FromMinutes(5);
     public string? AccessCode { get; set; }
 

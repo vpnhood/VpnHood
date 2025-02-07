@@ -250,6 +250,7 @@ public class TestHelper : IDisposable
     public static FileAccessManagerOptions CreateFileAccessManagerOptions(IPEndPoint[]? tcpEndPoints = null)
     {
         var options = new FileAccessManagerOptions {
+            IsUnitTest = true,
             PublicEndPoints = null, // use TcpEndPoints
             TcpEndPoints = tcpEndPoints ?? [VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)],
             UdpEndPoints = [new IPEndPoint(IPAddress.Loopback, 0)],
@@ -385,9 +386,8 @@ public class TestHelper : IDisposable
         clientId ??= Guid.NewGuid().ToString();
         clientOptions ??= CreateClientOptions();
 
-        var client = new VpnHoodClient(
-            packetCapture, new TestSocketFactory(), adService: null, clientId,
-            token, clientOptions);
+        var client = new VpnHoodClient(packetCapture, new TestSocketFactory(), 
+            clientId, token, clientOptions);
 
         // test starting the client
         try {

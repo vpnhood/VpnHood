@@ -6,9 +6,9 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.ApiControllers;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.Device;
-using VpnHood.Core.Client.Device.Exceptions;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Exceptions;
@@ -43,7 +43,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private readonly SendingPackets _sendingPackets = new();
     private readonly ClientHost _clientHost;
     private readonly SemaphoreSlim _datagramChannelsSemaphore = new(1, 1);
-    private readonly IAdService? _adService;
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private readonly bool _allowAnonymousTracker;
@@ -57,7 +56,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private byte[]? _sessionKey;
     private bool _useUdpChannel;
     private ClientState _state = ClientState.None;
-    private bool _isWaitingForAd;
     private ConnectorService? _connectorService;
     private readonly TimeSpan _tcpConnectTimeout;
     private DateTime? _autoWaitTime;
@@ -67,9 +65,12 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private readonly TimeSpan _canExtendByRewardedAdThreshold;
     private bool _isTunProviderSupported;
     private bool _isDnsServersAccepted;
-    private readonly ConnectionInfo _connectionInfo = new();
+    private readonly bool _allowRewardedAd;
+    private readonly ClientConnectionInfo _connectionInfo = new();
+    private ulong? _sessionId;
 
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
+    public ulong SessionId => _sessionId ?? throw new InvalidOperationException("SessionId has not been initialized.");
     internal Nat Nat { get; }
     internal Tunnel Tunnel { get; }
     internal ClientSocketFactory SocketFactory { get; }
@@ -82,7 +83,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public TimeSpan ReconnectTimeout { get; set; }
     public Token Token { get; }
     public string ClientId { get; }
-    public ulong SessionId { get; private set; }
     public Version Version { get; }
     public bool IncludeLocalNetwork { get; }
     public IpRangeOrderedList IncludeIpRanges { get; private set; }
@@ -94,6 +94,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public bool DropQuic { get; set; }
     public bool UseTcpOverTun { get; set; }
     public IConnectionInfo ConnectionInfo => _connectionInfo;
+    public ApiController ApiController { get; }
 
     public byte[] SessionKey =>
         _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
@@ -101,8 +102,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public byte[]? ServerSecret { get; private set; }
     public DomainFilterService DomainFilterService { get; }
     public bool AllowTcpReuse { get; }
+    public ClientAdService AdService { get; init; }
 
-    public VpnHoodClient(IPacketCapture packetCapture, ISocketFactory socketFactory, IAdService? adService,
+    public VpnHoodClient(IPacketCapture packetCapture, ISocketFactory socketFactory,
         string clientId, Token token, ClientOptions options)
     {
         if (options.TcpProxyCatcherAddressIpV4 == null)
@@ -129,9 +131,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _usageTracker = options.Tracker;
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
-        _adService = adService;
         _planId = options.PlanId;
         _accessCode = options.AccessCode;
+        _allowRewardedAd = options.AllowRewardedAd;
         _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
         _serverFinder = new ServerFinder(socketFactory, token.ServerToken,
             serverLocation: options.ServerLocation,
@@ -154,6 +156,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         var dnsRange = DnsServers.Select(x => new IpRange(x)).ToArray();
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges.Union(dnsRange);
         IncludeIpRanges = options.IncludeIpRanges.Union(dnsRange);
+        AdService = new ClientAdService(this);
+        ApiController = new ApiController(this);
 
         // NAT
         Nat = new Nat(true);
@@ -205,8 +209,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         return
             accessUsage is { CanExtendByRewardedAd: true, ExpirationTime: not null } &&
             accessUsage.ExpirationTime > FastDateTime.UtcNow + _canExtendByRewardedAdThreshold &&
+            _allowRewardedAd &&
             _packetCapture.CanDetectInProcessPacket &&
-            _adService is { CanShowRewarded: true } &&
             Token.IsPublic;
     }
 
@@ -223,7 +227,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private void PacketCapture_OnStopped(object sender, EventArgs e)
     {
         VhLogger.Instance.LogTrace("Device has been stopped.");
-        _ = DisposeAsync(false);
+        _ = DisposeAsync();
     }
 
     internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint,
@@ -327,7 +331,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             // ReSharper disable once DisposeOnUsingVariable
             // clear before start new async task
             scope?.Dispose();
-            _ = DisposeAsync(ex);
+            await DisposeAsync(ex);
             throw;
         }
     }
@@ -631,6 +635,11 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
     }
 
+    internal void EnablePassthruInProcessPackets(bool value)
+    {
+        _clientHost.EnablePassthruInProcessPackets(value);
+    }
+
     private async Task ManageDatagramChannels(CancellationToken cancellationToken)
     {
         // ShouldManageDatagramChannels checks the semaphore count so it must be called before WaitAsync
@@ -745,9 +754,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 $"ClientCountry: {helloResponse.ClientCountry}");
 
             // get session id
-            SessionId = helloResponse.SessionId != 0
-                ? helloResponse.SessionId
-                : throw new Exception("Invalid SessionId!");
+            _sessionId = helloResponse.SessionId;
             _sessionKey = helloResponse.SessionKey;
             _isTunProviderSupported = helloResponse.IsTunProviderSupported;
             ServerSecret = helloResponse.ServerSecret;
@@ -800,6 +807,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             // set the session info
             _connectionInfo.SessionInfo = new SessionInfo {
+                SessionId = helloResponse.SessionId.ToString(),
                 ClientPublicIpAddress = helloResponse.ClientPublicAddress,
                 ClientCountry = helloResponse.ClientCountry,
                 AccessInfo = helloResponse.AccessInfo ?? new AccessInfo(),
@@ -819,11 +827,11 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             _connectionInfo.SessionStatus = new SessionStatus(this, helloResponse.AccessUsage ?? new AccessUsage());
 
             // show ad
-            string? adNetworkName = null;
-            if (helloResponse.AdRequirement is AdRequirement.Flexible)
-                adNetworkName = await ShowNormalAd(cancellationToken).VhConfigureAwait();
-            if (helloResponse.AdRequirement is AdRequirement.Rewarded)
-                adNetworkName = await ShowRewardedAd(cancellationToken).VhConfigureAwait();
+            var adResult = helloResponse.AdRequirement switch {
+                AdRequirement.Flexible => await AdService.TryShowInterstitial(helloResponse.SessionId.ToString(), cancellationToken).VhConfigureAwait(),
+                AdRequirement.Rewarded => await AdService.ShowRewarded(helloResponse.SessionId.ToString(), cancellationToken).VhConfigureAwait(),
+                _ => null
+            };
 
             // usage trackers
             if (_allowAnonymousTracker) {
@@ -833,7 +841,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                         SessionCount = 1,
                         MeasurementId = helloResponse.GaMeasurementId,
                         ClientId = ClientId,
-                        SessionId = SessionId.ToString(),
+                        SessionId = helloResponse.SessionId.ToString(),
                         UserAgent = UserAgent,
                         UserProperties = new Dictionary<string, object> { { "client_version", Version.ToString(3) } }
                     };
@@ -848,7 +856,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                         isIpV6Supported: IsIpV6SupportedByClient,
                         hasRedirected: !allowRedirect,
                         endPoint: ConnectorService.EndPointInfo.TcpEndPoint,
-                        adNetworkName: adNetworkName));
+                        adNetworkName: adResult?.NetworkName));
 
                     _clientUsageTracker = new ClientUsageTracker(_connectionInfo.SessionStatus, _usageTracker);
                 }
@@ -867,7 +875,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 var ipNetworkV4 = new IpNetwork(IPAddress.Parse("10.8.0.2"), 32);
                 var ipNetworkV6 = new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
                 _packetCapture.PrivateIpNetworks = helloResponse.IsIpV6Supported
-                    ? [ipNetworkV4, ipNetworkV6] 
+                    ? [ipNetworkV4, ipNetworkV6]
                     : [ipNetworkV4];
             }
 
@@ -932,7 +940,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             // client is disposed meanwhile
             if (_disposed) {
-                _ = requestResult.DisposeAsync();
+                await requestResult.DisposeAsync();
                 throw new ObjectDisposedException(VhLogger.FormatType(this));
             }
 
@@ -950,13 +958,13 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             if (ex.SessionResponse.ErrorCode != SessionErrorCode.GeneralError &&
                 ex.SessionResponse.ErrorCode != SessionErrorCode.RedirectHost &&
                 ex.SessionResponse.ErrorCode != SessionErrorCode.RewardedAdRejected) {
-                _ = DisposeAsync(ex);
+                await DisposeAsync(ex);
             }
 
             throw;
         }
         catch (UnauthorizedAccessException ex) {
-            _ = DisposeAsync(ex);
+            await DisposeAsync(ex);
             throw;
         }
         catch (Exception ex) {
@@ -968,7 +976,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             // dispose by session timeout and must before pause because SessionTimeout is bigger than ReconnectTimeout
             if (now - _lastConnectionErrorTime.Value > SessionTimeout)
-                _ = DisposeAsync(ex);
+                await DisposeAsync(ex);
 
             // pause after retry limit
             else if (now - _lastConnectionErrorTime.Value > ReconnectTimeout) {
@@ -993,7 +1001,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         // don't use SendRequest because it can be disposed
         await using var requestResult = await SendRequest<SessionResponse>(
-                new SessionStatusRequest() {
+                new SessionStatusRequest {
                     RequestId = Guid.NewGuid() + ":client",
                     SessionId = SessionId,
                     SessionKey = SessionKey
@@ -1004,143 +1012,48 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
     private async Task SendByeRequest(CancellationToken cancellationToken)
     {
-        try {
-            // don't use SendRequest because it can be disposed
-            await using var requestResult = await ConnectorService.SendRequest<SessionResponse>(
-                    new ByeRequest {
-                        RequestId = Guid.NewGuid() + ":client",
-                        SessionId = SessionId,
-                        SessionKey = SessionKey
-                    },
-                    cancellationToken)
-                .VhConfigureAwait();
-        }
-        catch (Exception ex) {
-            VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the bye request.");
-        }
+        // don't use SendRequest because it can be disposed
+        await using var requestResult = await ConnectorService.SendRequest<SessionResponse>(
+                new ByeRequest {
+                    RequestId = Guid.NewGuid() + ":client",
+                    SessionId = SessionId,
+                    SessionKey = SessionKey
+                },
+                cancellationToken)
+            .VhConfigureAwait();
     }
 
-    public async Task<string?> ShowRewardedAd(CancellationToken cancellationToken)
+    public async Task RunJob()
     {
-        try {
-            if (_adService == null)
-                throw new InvalidOperationException("Client's AdService has not been initialized.");
-
-            if (SessionId == 0)
-                throw new InvalidOperationException("Session has not been established.");
-
-            _isWaitingForAd = true;
-            _clientHost.PassthruInProcessPackets = true;
-            var adResult = await _adService
-                .ShowRewarded(ActiveUiContext.RequiredContext, SessionId.ToString(), cancellationToken)
-                .VhConfigureAwait();
-
-            if (!string.IsNullOrEmpty(adResult.AdData))
-                await SendRewardedAd(adResult.AdData, cancellationToken);
-
-            return adResult.NetworkName;
-        }
-        catch (UiContextNotAvailableException) {
-            throw new ShowAdNoUiException();
-        }
-        finally {
-            _isWaitingForAd = false;
-            _clientHost.PassthruInProcessPackets = false;
-        }
-    }
-
-    /// <returns>NetworkName</returns>
-    public async Task<string?> ShowNormalAd(CancellationToken cancellationToken)
-    {
-        try {
-            if (_adService == null)
-                throw new InvalidOperationException("Client's AdService has not been initialized.");
-
-            if (SessionId == 0)
-                throw new InvalidOperationException("Session has not been established.");
-
-            _isWaitingForAd = true;
-            _clientHost.PassthruInProcessPackets = true;
-            var adResult = await _adService
-                .ShowInterstitial(ActiveUiContext.RequiredContext, SessionId.ToString(), cancellationToken)
-                .VhConfigureAwait();
-
-            return adResult.NetworkName;
-        }
-        catch (UiContextNotAvailableException) {
-            throw new ShowAdNoUiException();
-        }
-        catch (LoadAdException ex) {
-
-            VhLogger.Instance.LogInformation(ex, "Could not load any ad.");
-            // ignore exception for flexible ad if load failed
-            return null;
-        }
-        finally {
-            _isWaitingForAd = false;
-            _clientHost.PassthruInProcessPackets = false;
-
-        }
-    }
-
-    public Task RunJob()
-    {
-        if (_disposed)
-            return Task.CompletedTask;
-
         if (FastDateTime.UtcNow > _connectionInfo.SessionStatus?.SessionExpirationTime)
-            _ = DisposeAsync(new SessionException(SessionErrorCode.AccessExpired));
-
-        return Task.CompletedTask;
+            await DisposeAsync(new SessionException(SessionErrorCode.AccessExpired));
     }
 
-    private async Task SendRewardedAd(string adData, CancellationToken cancellationToken)
-    {
-        try {
-            // request reward from server
-            await using var requestResult = await SendRequest<SessionResponse>(
-                    new RewardedAdRequest {
-                        RequestId = Guid.NewGuid() + ":client",
-                        SessionId = SessionId,
-                        SessionKey = SessionKey,
-                        AdData = adData
-                    },
-                    cancellationToken)
-                .VhConfigureAwait();
-        }
-        catch (Exception ex) {
-            VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the RewardedAd request.");
-            throw;
-        }
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        return DisposeAsync(false);
-    }
 
     private async ValueTask DisposeAsync(Exception ex)
     {
+        // DisposeAsync will try SendByte, and it may cause calling this dispose method again and go to deadlock
+        if (_disposed)
+            return;
+
         _connectionInfo.SetException(ex);
-        await DisposeAsync(false);
+        await DisposeAsync().VhConfigureAwait();
     }
 
     private readonly AsyncLock _disposeLock = new();
 
-    public async ValueTask DisposeAsync(bool waitForBye)
+    public async ValueTask DisposeAsync()
     {
-        using var lockResult = await _disposeLock.LockAsync(TimeSpan.Zero).VhConfigureAwait();
-        if (_disposed || !lockResult.Succeeded) return;
+        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
+        if (_disposed) return;
         _disposed = true;
 
         // shutdown
         VhLogger.Instance.LogInformation("Shutting down...");
-
         _cancellationTokenSource.Cancel();
-        var wasConnected = State is ClientState.Connecting or ClientState.Connected;
         State = ClientState.Disconnecting;
 
-        // disposing PacketCapture. Must be at end for graceful shutdown
+        // disposing PacketCapture
         _packetCapture.Stopped -= PacketCapture_OnStopped;
         _packetCapture.PacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
         if (_autoDisposePacketCapture) {
@@ -1148,13 +1061,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             _packetCapture.Dispose();
         }
 
-        var finalizeTask = Finalize(wasConnected);
-        if (waitForBye)
-            await finalizeTask.VhConfigureAwait();
-    }
-
-    private async Task Finalize(bool wasConnected)
-    {
         // dispose job runner (not required)
         JobRunner.Default.Remove(this);
 
@@ -1177,9 +1083,14 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         Nat.Dispose();
 
         // Sending Bye
-        if (wasConnected && SessionId != 0 && _connectionInfo.ErrorCode == SessionErrorCode.Ok) {
+        if (_connectionInfo is { SessionInfo: not null, ErrorCode: SessionErrorCode.Ok }) {
             using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
-            await SendByeRequest(cancellationTokenSource.Token).VhConfigureAwait();
+            try {
+                await SendByeRequest(cancellationTokenSource.Token).VhConfigureAwait();
+            }
+            catch (Exception ex) {
+                VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the bye request.");
+            }
         }
 
         // dispose ConnectorService
@@ -1224,11 +1135,11 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         public int TcpPassthruCount => client._clientHost.Stat.TcpPassthruCount;
         public int DatagramChannelCount => client.Tunnel.DatagramChannelCount;
         public bool IsUdpMode => client.Tunnel.IsUdpMode;
-        public bool IsWaitingForAd => client._isWaitingForAd;
         public bool CanExtendByRewardedAd => client.CanExtendByRewardedAd(_accessUsage);
         public long SessionMaxTraffic => _accessUsage.MaxTraffic;
         public DateTime? SessionExpirationTime => _accessUsage.ExpirationTime;
         public int? ActiveClientCount => _accessUsage.ActiveClientCount;
+        public AdRequest? AdRequest => client.AdService.AdRequest;
     }
 
 }

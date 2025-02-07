@@ -31,6 +31,7 @@ using VpnHood.Core.Tunneling;
 using VpnHood.AppLib.Services.Logging;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Manager;
 using VpnHood.Core.Tunneling.Factory;
 
 namespace VpnHood.AppLib;
@@ -52,7 +53,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private DateTime? _connectRequestTime;
     private bool _isConnecting;
     private bool _isDisconnecting;
-    private IConnectionInfo? _lastConnectionInfo;
+    private ConnectionInfo? _lastConnectionInfo;
     private AppConnectionState _lastConnectionState;
     private bool _isLoadingCountryIpRange;
     private bool _isFindingCountryCode;
@@ -63,19 +64,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly TimeSpan _serverQueryTimeout;
     private CancellationTokenSource? _connectCts;
     private VersionCheckResult? _versionCheckResult;
-    private VpnHoodClient? _client;
+    private VpnHoodClientManager? _clientManager;
     private readonly bool _logVerbose;
     private readonly bool? _logAnonymous;
     private UserSettings _oldUserSettings;
     private readonly bool _autoDiagnose;
-    private readonly AppAdService _appAppAdService;
     private readonly bool _allowEndPointTracker;
     private readonly TimeSpan _canExtendByRewardedAdThreshold;
     private CultureInfo? _systemUiCulture;
     private string? _requestedServerLocation;
+    private readonly TimeSpan? _eventWatcherInterval;
 
-
-    private IConnectionInfo? LastConnectionInfo => _client?.ConnectionInfo ?? _lastConnectionInfo;
+    private ConnectionInfo? LastConnectionInfo => _clientManager?.ConnectionInfo ?? _lastConnectionInfo;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
     public event EventHandler? ConnectionStateChanged;
@@ -122,10 +122,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _serverQueryTimeout = options.ServerQueryTimeout;
         _allowEndPointTracker = options.AllowEndPointTracker;
         _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
-        _appAppAdService = new AppAdService(regionProvider: this,
-            adProviderItems: options.AdProviderItems,
-            adOptions: options.AdOptions,
-            tracker: options.Tracker);
+        _eventWatcherInterval = options.EventWatcherInterval;
 
         SessionTimeout = options.SessionTimeout;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
@@ -181,10 +178,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsDebugMode = options.IsDebugMode
         };
 
+        // create ad service
+        var appAdService = new AppAdService(regionProvider: this,
+            adProviderItems: options.AdProviderItems,
+            adOptions: options.AdOptions,
+            tracker: options.Tracker);
+
         // initialize services
         Services = new AppServices {
             CultureProvider = options.CultureProvider ?? new AppCultureProvider(this),
-            AdService = _appAppAdService,
+            AdService = appAdService,
             AccountService = options.AccountProvider != null ? new AppAccountService(this, options.AccountProvider) : null,
             UpdaterProvider = options.UpdaterProvider,
             UiProvider = uiProvider,
@@ -216,22 +219,25 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         try {
             var state = State;
-            var client = _client; // it may be null
             var disconnectRequired = false;
-            if (client != null) {
-                client.UseTcpOverTun = HasDebugCommand(DebugCommands.UseTcpOverTun);
-                client.UseUdpChannel = UserSettings.UseUdpChannel;
-                client.DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp;
-                client.DropQuic = UserSettings.DropQuic;
+            if (_clientManager != null) {
+                var updateParams = new ClientUpdateParams {
+                    UseTcpOverTun = HasDebugCommand(DebugCommands.UseTcpOverTun),
+                    UseUdpChannel = UserSettings.UseUdpChannel,
+                    DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
+                    DropQuic = UserSettings.DropQuic
+                };
+                // it is not important to take effect immediately
+                _ = _clientManager.Reconfigure(updateParams);
 
                 // check is disconnect required
                 disconnectRequired =
-                    (UserSettings.UsePacketCaptureIpFilter != _oldUserSettings.UsePacketCaptureIpFilter) || 
-                    (UserSettings.UseAppIpFilter != _oldUserSettings.UseAppIpFilter) || 
+                    (UserSettings.UsePacketCaptureIpFilter != _oldUserSettings.UsePacketCaptureIpFilter) ||
+                    (UserSettings.UseAppIpFilter != _oldUserSettings.UseAppIpFilter) ||
                     (UserSettings.TunnelClientCountry != _oldUserSettings.TunnelClientCountry) ||
-                    (UserSettings.ClientProfileId != _activeClientProfileId) || 
-                    (UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork) ||
-                    (UserSettings.AppFiltersMode != _oldUserSettings.AppFiltersMode) || 
+                    (UserSettings.ClientProfileId != _activeClientProfileId) ||
+                    (UserSettings.IncludeLocalNetwork != _oldUserSettings.IncludeLocalNetwork) ||
+                    (UserSettings.AppFiltersMode != _oldUserSettings.AppFiltersMode) ||
                     (!UserSettings.AppFilters.SequenceEqual(_oldUserSettings.AppFilters));
             }
 
@@ -285,7 +291,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         var uiContext = ActiveUiContext.Context;
         if (IsIdle && Services.AdService.IsPreloadAdEnabled && uiContext != null)
-            _ = _appAppAdService.LoadAd(uiContext, CancellationToken.None);
+            _ = Services.AdService.LoadAd(uiContext, CancellationToken.None);
     }
 
     public ClientProfileInfo? CurrentClientProfileInfo =>
@@ -294,7 +300,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppState State {
         get {
             var clientProfileInfo = CurrentClientProfileInfo;
-            var connectionInfo = _client?.ConnectionInfo;
+            var connectionInfo = _clientManager?.ConnectionInfo;
             var connectionState = ConnectionState;
 
             var appState = new AppState {
@@ -332,15 +338,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
+    public Task ForceUpdateState()
+    {
+        var clientManager = _clientManager;
+        return clientManager != null ? clientManager.ForceUpdateState() : Task.CompletedTask;
+    }
+
     public AppConnectionState ConnectionState {
         get {
-            var client = _client;
+            var clientState = _clientManager?.ConnectionInfo?.ClientState;
             if (_isLoadingCountryIpRange || _isFindingCountryCode) return AppConnectionState.Initializing;
             if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
-            if (_isDisconnecting || client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
-            if (_isConnecting || client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
-            if (client?.State == ClientState.Waiting) return AppConnectionState.Waiting;
-            if (client?.State == ClientState.Connected) return AppConnectionState.Connected;
+            if (_isDisconnecting || clientState == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
+            if (_isConnecting || clientState == ClientState.Connecting) return AppConnectionState.Connecting;
+            if (clientState == ClientState.Waiting) return AppConnectionState.Waiting;
+            if (clientState == ClientState.Connected) return AppConnectionState.Connected;
             return AppConnectionState.None;
         }
     }
@@ -613,51 +625,59 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowTcpReuse = !HasDebugCommand(DebugCommands.NoTcpReuse),
             Tracker = Services.Tracker,
             CanExtendByRewardedAdThreshold = _canExtendByRewardedAdThreshold,
+            AllowRewardedAd = Services.AdService.CanShowRewarded
         };
 
         if (userAgent != null) clientOptions.UserAgent = userAgent;
 
         // make sure the previous client has been released
-        if (_client != null)
+        if (_clientManager != null)
             throw new Exception("Last client has not been disposed properly.");
 
         // Create Client with a new PacketCapture
         VhLogger.Instance.LogInformation("Creating PacketCapture ...");
         var packetCapture = await CreatePacketCapture().VhConfigureAwait();
         packetCapture.SessionName = CurrentClientProfileInfo?.ClientProfileName;
-        VpnHoodClient? client = null;
+        VpnHoodClientManager? clientManager = null;
 
         try {
             VhLogger.Instance.LogTrace("Creating VpnHood Client engine ...");
-            client = new VpnHoodClient(packetCapture, new SocketFactory(), Services.AdService, Features.ClientId, token, clientOptions);
-            client.StateChanged += Client_StateChanged;
-            _client = client;
+
+            // set eventWatcherInterval
+            var eventWatcherInterval = _eventWatcherInterval == null && ConnectionStateChanged != null ?
+                TimeSpan.FromSeconds(1) : _eventWatcherInterval;
+
+            // create client controller
+            clientManager = VpnHoodClientManager.Create(packetCapture, new SocketFactory(),
+                Services.AdService, Features.ClientId, token, clientOptions, eventWatcherInterval);
+            clientManager.StateChanged += Client_StateChanged;
+            _clientManager = clientManager;
 
             VhLogger.Instance.LogTrace(
                 "Engine is connecting... DiagnoseMode: {DiagnoseMode}, AutoDiagnose: {AutoDiagnose}",
                 _hasDiagnoseRequested, _autoDiagnose);
 
             if (_hasDiagnoseRequested)
-                await Diagnoser.Diagnose(client, cancellationToken).VhConfigureAwait();
+                await Diagnoser.Diagnose(clientManager.Client, cancellationToken).VhConfigureAwait();
             else if (_autoDiagnose)
-                await Diagnoser.Connect(client, cancellationToken).VhConfigureAwait();
+                await Diagnoser.Connect(clientManager.Client, cancellationToken).VhConfigureAwait();
             else
-                await client.Connect(cancellationToken).VhConfigureAwait();
+                await clientManager.Start(cancellationToken).VhConfigureAwait();
 
             // set connected time
             ConnectedTime = DateTime.Now;
-            UpdateStatusByCreatedClient(client, null);
+            UpdateStatusByCreatedClient(clientManager.Client, null);
 
             // check version after first connection
             _ = VersionCheck();
         }
-        catch (Exception ex) when (client is not null) {
-            UpdateStatusByCreatedClient(client, ex);
+        catch (Exception ex) when (clientManager is not null) {
+            UpdateStatusByCreatedClient(clientManager.Client, ex);
 
             // dispose client
-            client.StateChanged -= Client_StateChanged;
-            await client.DisposeAsync().VhConfigureAwait();
-            _client = null;
+            clientManager.StateChanged -= Client_StateChanged;
+            await clientManager.DisposeAsync().VhConfigureAwait();
+            _clientManager = null;
 
             // try to update token from url after connection or error if ResponseAccessKey is not set
             // check _client is not null to make sure 
@@ -678,7 +698,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
             // save lastSessionStatus before destroying the client
-            _lastConnectionInfo = client.ConnectionInfo;
+            _lastConnectionInfo = clientManager.ConnectionInfo;
             throw;
         }
         catch (Exception) {
@@ -706,16 +726,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _appPersistState.ClientCountryCodeByServer = clientCountry;
 
         // make sure AccessKey is deleted
-        if (client.ConnectionInfo.SessionInfo?.AccessKey != null) 
+        if (client.ConnectionInfo.SessionInfo?.AccessKey != null)
             client.ConnectionInfo.SessionInfo.AccessKey = null;
 
-        if (client.ConnectionInfo.Error?.Data.ContainsKey("AccessKey") == true) 
+        if (client.ConnectionInfo.Error?.Data.ContainsKey("AccessKey") == true)
             client.ConnectionInfo.Error?.Data.Remove("AccessKey");
 
-        if (ex?.Data.Contains("AccessKey") == true) 
+        if (ex?.Data.Contains("AccessKey") == true)
             ex.Data.Remove("AccessKey");
 
-        if (ex is SessionException sessionException) 
+        if (ex is SessionException sessionException)
             sessionException.SessionResponse.AccessKey = null;
     }
 
@@ -818,7 +838,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // do not disconnect by this event when _isConnecting is set. More than one client may create, and they may fire dispose state
         // during operation, so we should not disconnect the app connection before they finish their job
-        if (_client?.State == ClientState.Disposed && !_isConnecting) {
+        if (_clientManager?.ConnectionInfo?.ClientState == ClientState.Disposed && !_isConnecting) {
             VhLogger.Instance.LogInformation("Disconnecting due to the client disposal.");
             _ = Disconnect();
             return;
@@ -858,9 +878,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // close client
             // do not wait for bye if user request disconnection
-            if (_client != null) {
-                _client.StateChanged -= Client_StateChanged;
-                await _client.DisposeAsync(waitForBye: !byUser).VhConfigureAwait();
+            if (_clientManager != null) {
+                _clientManager.StateChanged -= Client_StateChanged;
+                _ = _clientManager.DisposeAsync().VhConfigureAwait();
             }
 
             LogService.Stop();
@@ -871,11 +891,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         finally {
             _appPersistState.LastError ??= LastConnectionInfo?.Error;
             _activeClientProfileId = null;
-            _lastConnectionInfo = _client?.ConnectionInfo;
+            _lastConnectionInfo = _clientManager?.ConnectionInfo;
             _isConnecting = false;
             _isDisconnecting = false;
             _requestedServerLocation = null;
-            _client = null;
+            _clientManager = null;
             ConnectedTime = null;
             FireConnectionStateChanged();
         }
@@ -1011,15 +1031,29 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return ipRanges;
     }
 
-    public Task ExtendByRewardedAd(CancellationToken cancellationToken)
+    public async Task ExtendByRewardedAd(CancellationToken cancellationToken)
     {
-        if (_client?.ConnectionInfo.ClientState != ClientState.Connected)
+        // save variable to prevent null reference exception
+        var clientManager = _clientManager;
+        var connectionInfo = clientManager?.ConnectionInfo;
+
+        if (Services.AdService.CanShowRewarded != true)
+            throw new InvalidOperationException("Rewarded ad is not supported in this app.");
+
+        if (clientManager == null || connectionInfo?.SessionInfo == null ||
+            connectionInfo is not { ClientState: ClientState.Connected })
             throw new InvalidOperationException("Could not show ad. The VPN is not connected.");
 
-        if (_client.ConnectionInfo.SessionStatus?.CanExtendByRewardedAd != true)
-            throw new InvalidOperationException("Can not extend session by a rewarded ad at this time.");
+        if (connectionInfo.SessionStatus?.CanExtendByRewardedAd != true)
+            throw new InvalidOperationException("Could not extend this session by a rewarded ad at this time.");
 
-        return _client.ShowRewardedAd(cancellationToken);
+        // use client manager so it can exclude ad data from the session
+        var adRequest = new AdRequest {
+            AdRequestType = AdRequestType.Rewarded,
+            SessionId = connectionInfo.SessionInfo.SessionId,
+            RequestId = Guid.NewGuid()
+        };
+        await clientManager.SendAdRequest(adRequest, cancellationToken);
     }
 
     // make sure the active profile is valid and exist

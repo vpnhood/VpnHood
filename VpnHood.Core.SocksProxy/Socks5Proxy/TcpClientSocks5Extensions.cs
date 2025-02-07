@@ -1,14 +1,14 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace VpnHood.Core.Tunneling.Socks5Proxy;
+namespace VpnHood.Core.SocksProxy.Socks5Proxy;
 
 public static class TcpClientSocks5Extensions
 {
     public static Task ConnectViaSocks5ProxyAsync(this TcpClient tcpClient, IPEndPoint remoteEp,
         Socks5Options options, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        var socks5Proxy = new Socks5Proxy(options);
+        var socks5Proxy = new Socks5Client(options);
         return socks5Proxy.ConnectAsync(tcpClient, remoteEp, timeout, cancellationToken);
     }
 }

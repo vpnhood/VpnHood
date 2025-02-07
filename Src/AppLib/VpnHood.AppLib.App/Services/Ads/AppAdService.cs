@@ -3,6 +3,9 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.Exceptions;
+using VpnHood.Core.Client.Manager;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.IpLocations;
 using VpnHood.Core.Common.Utils;
 
@@ -33,13 +36,13 @@ public class AppAdService(
             .VhConfigureAwait();
     }
 
-    public Task<ShowAdResult> ShowInterstitial(IUiContext uiContext, string sessionId,
+    public Task<AdResult> ShowInterstitial(IUiContext uiContext, string sessionId,
         CancellationToken cancellationToken)
     {
         return ShowAd(_compositeInterstitialAdService, uiContext, sessionId, cancellationToken);
     }
 
-    public Task<ShowAdResult> ShowRewarded(IUiContext uiContext, string sessionId,
+    public Task<AdResult> ShowRewarded(IUiContext uiContext, string sessionId,
         CancellationToken cancellationToken)
     {
         if (!CanShowRewarded)
@@ -49,7 +52,7 @@ public class AppAdService(
     }
 
 
-    private async Task<ShowAdResult> ShowAd(AppCompositeAdService appCompositeAdService,
+    private async Task<AdResult> ShowAd(AppCompositeAdService appCompositeAdService,
         IUiContext uiContext, string sessionId, CancellationToken cancellationToken)
     {
         try {
@@ -57,7 +60,7 @@ public class AppAdService(
             var countryCode = await regionProvider.GetCurrentCountryAsync(cancellationToken);
             await appCompositeAdService.LoadAd(uiContext, countryCode: countryCode, forceReload: false, cancellationToken);
             var networkName = await appCompositeAdService.ShowLoadedAd(uiContext, adData, cancellationToken);
-            var showAdResult = new ShowAdResult {
+            var showAdResult = new AdResult {
                 AdData = adData,
                 NetworkName = networkName
             };
@@ -69,6 +72,9 @@ public class AppAdService(
         catch (Exception ex) {
             var trackEvent = ClientTrackerBuilder.BuildShowAdStatus("all", ex.Message);
             _ = tracker?.Track(trackEvent);
+
+            if (ex is UiContextNotAvailableException)
+                throw new ShowAdNoUiException();
 
             throw;
         }

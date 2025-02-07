@@ -1,12 +1,11 @@
 ﻿using VpnHood.AppLib.Dtos;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.ConnectorServices;
 
 namespace VpnHood.AppLib.DtoConverters;
 
 public static class AppDtoConverterExtensions
 {
-    public static AppConnectorStat ToAppDto(this ClientConnectorStat connectorStat)
+    public static AppConnectorStat ToAppDto(this ConnectorStat connectorStat)
     {
         return new AppConnectorStat {
             FreeConnectionCount = connectorStat.FreeConnectionCount,
@@ -32,7 +31,7 @@ public static class AppDtoConverterExtensions
         };
     }
 
-    public static AppSessionStatus ToAppDto(this ISessionStatus sessionStatus)
+    public static AppSessionStatus ToAppDto(this SessionStatus sessionStatus)
     {
         return new AppSessionStatus {
             ConnectorStat = sessionStatus.ConnectorStat.ToAppDto(),
@@ -44,7 +43,7 @@ public static class AppDtoConverterExtensions
             TcpPassthruCount = sessionStatus.TcpPassthruCount,
             DatagramChannelCount = sessionStatus.DatagramChannelCount,
             IsUdpMode = sessionStatus.IsUdpMode,
-            IsWaitingForAd = sessionStatus.IsWaitingForAd,
+            IsWaitingForAd = sessionStatus.AdRequest != null,
             CanExtendByRewardedAd = sessionStatus.CanExtendByRewardedAd,
             SessionMaxTraffic = sessionStatus.SessionMaxTraffic,
             SessionExpirationTime = sessionStatus.SessionExpirationTime,

@@ -107,7 +107,7 @@ public class JobRunner
             }
         }
         catch (Exception ex) {
-            Logger.LogError(ex, "Could not run a job. JobName: {JobName}", job.JobSection.Name ?? "NoName");
+            Logger.LogError(ex, "Could not run a job. JobName: {JobName}", job.JobSection.Name ?? job.GetType().Name);
         }
         finally {
             job.JobSection.Leave();

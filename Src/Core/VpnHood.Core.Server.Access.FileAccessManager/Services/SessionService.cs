@@ -14,6 +14,7 @@ namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
 
 public class SessionService : IDisposable, IJob
 {
+    public bool IsUnitTest { get; }
     private const string SessionFileExtension = "session";
     private readonly TimeSpan _sessionPermanentlyTimeout = TimeSpan.FromHours(48);
     private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
@@ -26,8 +27,9 @@ public class SessionService : IDisposable, IJob
     public JobSection JobSection { get; } = new();
 
 
-    public SessionService(string sessionsFolderPath)
+    public SessionService(string sessionsFolderPath, bool isUnitTest)
     {
+        IsUnitTest = isUnitTest;
         JobRunner.Default.Add(this);
         _sessionsFolderPath = sessionsFolderPath;
         Directory.CreateDirectory(sessionsFolderPath);
@@ -109,7 +111,14 @@ public class SessionService : IDisposable, IJob
         };
 
         // process plan id
-        var adRequirement = ProcessPlanId(session, accessTokenData, sessionRequestEx.PlanId); 
+        if (!IsUnitTest && sessionRequestEx.PlanId != ConnectPlanId.Normal) {
+            return new SessionResponseEx {
+                ErrorCode = SessionErrorCode.PlanRejected,
+                ErrorMessage = "PlanId is not supported."
+            };
+        }
+
+        var adRequirement = IsUnitTest ? ProcessPlanId(session, accessTokenData, sessionRequestEx.PlanId) : AdRequirement.None;
 
         //create response
         var responseEx = BuildSessionResponse(session, accessTokenData);

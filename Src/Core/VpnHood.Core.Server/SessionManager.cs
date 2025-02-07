@@ -504,7 +504,16 @@ public class SessionManager : IAsyncDisposable, IJob
         if (_disposed) return;
         _disposed = true;
 
-        await Sync(force: true);
+        // sync sessions
+        try {
+            await Sync(force: true);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not sync sessions in disposing.");
+            // Dispose should not throw any error
+        }
+
+        // dispose all sessions
         await Task.WhenAll(Sessions.Values.Select(x => x.DisposeAsync().AsTask())).VhConfigureAwait();
     }
 

@@ -8,6 +8,7 @@ namespace VpnHood.Core.Client.Abstractions;
 
 public class SessionInfo
 {
+    public required string SessionId { get; init; }
     public required AccessInfo? AccessInfo { get; init;}
     public required bool IsUdpChannelSupported { get; init;}
     public required bool IsDnsServersAccepted { get; init;}
@@ -25,4 +26,5 @@ public class SessionInfo
 
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress ClientPublicIpAddress { get; init;}
+
 }

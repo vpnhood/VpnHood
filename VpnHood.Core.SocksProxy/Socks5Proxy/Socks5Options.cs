@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace VpnHood.Core.Tunneling.Socks5Proxy;
+namespace VpnHood.Core.SocksProxy.Socks5Proxy;
 
 public class Socks5Options
 {

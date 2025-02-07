@@ -37,7 +37,7 @@ public class FileAccessManager : IAccessManager
         StoragePath = storagePath ?? throw new ArgumentNullException(nameof(storagePath));
         ServerConfig = options;
         AccessTokenService = new AccessTokenService(storagePath);
-        SessionService = new SessionService(SessionsFolderPath);
+        SessionService = new SessionService(SessionsFolderPath, options.IsUnitTest);
         Directory.CreateDirectory(StoragePath);
 
         var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");

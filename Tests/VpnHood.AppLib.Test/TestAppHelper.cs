@@ -24,6 +24,7 @@ public class TestAppHelper : TestHelper
         var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode: true) {
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
             SessionTimeout = TimeSpan.FromSeconds(2),
+            EventWatcherInterval = TimeSpan.FromMilliseconds(100), // no SPA in test, so we need to use event watcher
             Ga4MeasurementId = null,
             Tracker = tracker,
             UseInternalLocationService = false,
@@ -37,7 +38,7 @@ public class TestAppHelper : TestHelper
             AdOptions = new AppAdOptions {
                 ShowAdPostDelay = TimeSpan.Zero,
                 LoadAdPostDelay = TimeSpan.Zero
-            }
+            },
         };
         return appOptions;
     }

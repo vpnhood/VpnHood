@@ -229,7 +229,7 @@ public class AccessTest : TestBase
 
         // create default token with 2 client count
         var client1 = await TestHelper.CreateClient(packetCapture: new TestNullPacketCapture(), token: token);
-        await client1.DisposeAsync(waitForBye: true);
+        await client1.DisposeAsync();
         await TestHelper.WaitForClientState(client1, ClientState.Disposed);
         await server.SessionManager.Sync(true);
 
@@ -247,7 +247,7 @@ public class AccessTest : TestBase
         Assert.AreEqual(expired, accessInfo.ExpirationTime);
         Assert.IsTrue(accessInfo.CreatedTime < time);
         Assert.IsTrue(accessInfo.LastUsedTime < time);
-        await client2.DisposeAsync(waitForBye: true);
+        await client2.DisposeAsync();
         await TestHelper.WaitForClientState(client2, ClientState.Disposed);
         await server.SessionManager.Sync(true);
 

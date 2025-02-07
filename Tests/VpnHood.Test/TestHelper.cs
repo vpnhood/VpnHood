@@ -6,7 +6,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
-using VpnHood.Core.Client.Diagnosing;
 using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;

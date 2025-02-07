@@ -8,6 +8,7 @@ using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.Diagnosing;
 using VpnHood.AppLib.DtoConverters;
 using VpnHood.AppLib.Providers;
 using VpnHood.AppLib.Services.Accounts;
@@ -15,7 +16,6 @@ using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Client.Device;
-using VpnHood.Core.Client.Diagnosing;
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.IpLocations;
@@ -32,6 +32,7 @@ using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Manager;
 using VpnHood.Core.Tunneling.Factory;
+using VpnHood.Core.Client;
 
 namespace VpnHood.AppLib;
 
@@ -656,12 +657,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 "Engine is connecting... DiagnoseMode: {DiagnoseMode}, AutoDiagnose: {AutoDiagnose}",
                 _hasDiagnoseRequested, _autoDiagnose);
 
-            if (_hasDiagnoseRequested)
-                await Diagnoser.Diagnose(clientManager.Client, cancellationToken).VhConfigureAwait();
-            else if (_autoDiagnose)
-                await Diagnoser.Connect(clientManager.Client, cancellationToken).VhConfigureAwait();
-            else
-                await clientManager.Start(cancellationToken).VhConfigureAwait();
+            // start diagnose if requested
+            if (_hasDiagnoseRequested) {
+                var hostEndPoints = await ServerTokenHelper.ResolveHostEndPoints(token.ServerToken, cancellationToken).VhConfigureAwait();
+                await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).VhConfigureAwait();
+                await Diagnoser.CheckPureNetwork(cancellationToken).VhConfigureAwait();
+                await _clientManager.Start(cancellationToken).VhConfigureAwait();
+                await Diagnoser.CheckVpnNetwork(cancellationToken).VhConfigureAwait();
+            }
+            // start client
+            else {
+                await _clientManager.Start(cancellationToken).VhConfigureAwait();
+            }
 
             // set connected time
             ConnectedTime = DateTime.Now;
@@ -698,6 +705,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // save lastSessionStatus before destroying the client
             _lastConnectionInfo = clientManager.ConnectionInfo;
+
+            // check no internet connection
+            if (!_hasDisconnectedByUser && _autoDiagnose)
+                await Diagnoser.CheckPureNetwork(cancellationToken).VhConfigureAwait();
+
             throw;
         }
         catch (Exception) {

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 
-namespace VpnHood.Core.Client.Diagnosing;
+namespace VpnHood.AppLib.Diagnosing;
 
 public class DiagnoseUtil
 {

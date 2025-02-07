@@ -3,9 +3,9 @@ using System.Net.Sockets;
 using System.Text;
 using VpnHood.Core.Common.Utils;
 
-namespace VpnHood.Core.Tunneling.Socks5Proxy;
+namespace VpnHood.Core.SocksProxy.Socks5Proxy;
 
-public class Socks5Proxy(Socks5Options options)
+public class Socks5Client(Socks5Options options)
 {
     public IPEndPoint ProxyEndPoint { get; } = options.ProxyEndPoint;
     private readonly string? _username = options.Username;

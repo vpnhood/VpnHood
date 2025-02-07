@@ -1,8 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Readymade Vpn App skeleton for VpnHood clients. You just need to create an UI on it.</Description>
+        <Description>VpnHood ToolKit Library can be used in any project.</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
-		<RootNamespace>VpnHood.AppLib</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -25,9 +24,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Manager\VpnHood.Core.Client.Manager.csproj" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.1" />
+		<PackageReference Include="System.Text.Json" Version="9.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -38,15 +36,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Update="Resource.Designer.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>Resource.resx</DependentUpon>
-		</Compile>
-		<EmbeddedResource Update="Resource.resx">
-			<Generator>ResXFileCodeGenerator</Generator>
-			<LastGenOutput>Resource.Designer.cs</LastGenOutput>
-		</EmbeddedResource>
+		<Folder Include="Resources\" />
 	</ItemGroup>
 
 </Project>

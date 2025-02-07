@@ -2,7 +2,6 @@
 using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
-using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Test.Providers;

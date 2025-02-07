@@ -31,12 +31,21 @@ internal class ClientHost(
     private IPEndPoint? _localEndpointIpV6;
     private int _processingCount;
     private  readonly ClientHostStat _stat = new();
+    private int _passthruInProcessPacketsCounter;
 
 
     public IPAddress CatcherAddressIpV4 { get; } = catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 { get; } = catcherAddressIpV6;
-    public bool PassthruInProcessPackets { get; set; }
+    public bool IsPassthruInProcessPacketsEnabled => _passthruInProcessPacketsCounter > 0;
     public IClientHostStat Stat => _stat;
+
+    public void EnablePassthruInProcessPackets(bool value)
+    {
+        if (value)
+            Interlocked.Increment(ref _passthruInProcessPacketsCounter);
+        else
+            Interlocked.Decrement(ref _passthruInProcessPacketsCounter);
+    }
 
     public void Start()
     {
@@ -168,7 +177,7 @@ internal class ClientHost(
     public bool ShouldPassthru(IPPacket ipPacket, int sourcePort, int destinationPort)
     {
         return
-            PassthruInProcessPackets &&
+            IsPassthruInProcessPacketsEnabled &&
             vpnHoodClient.SocketFactory.CanDetectInProcessPacket &&
             vpnHoodClient.SocketFactory.IsInProcessPacket(ipPacket.Protocol,
                 new IPEndPoint(ipPacket.SourceAddress, sourcePort),

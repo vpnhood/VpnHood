@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using PacketDotNet;
-using VpnHood.Core.Common.Net;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Client.Device;
@@ -11,22 +10,15 @@ public class NullPacketCapture : IPacketCapture
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Stopped;
     public virtual bool Started { get; set; }
-    public virtual string? SessionName { get; set; }
     public virtual bool IsDnsServersSupported { get; set; } = true;
-    public virtual IPAddress[]? DnsServers { get; set; }
     public virtual bool CanExcludeApps { get; set; } = true;
     public virtual bool CanIncludeApps { get; set; } = true;
-    public virtual string[]? ExcludeApps { get; set; }
-    public virtual string[]? IncludeApps { get; set; }
-    public virtual IpNetwork[]? IncludeNetworks { get; set; }
     public virtual bool IsMtuSupported { get; set; } = true;
-    public virtual int Mtu { get; set; }
-    public IpNetwork[] PrivateIpNetworks { get; set; } = [];
     public virtual bool CanProtectSocket { get; set; } = true;
     public virtual bool CanSendPacketToOutbound { get; set; }
     public bool CanDetectInProcessPacket { get; set; } = true;
 
-    public virtual void StartCapture()
+    public virtual void StartCapture(VpnAdapterOptions options)
     {
         Started = true;
         _ = PacketReceivedFromInbound; //prevent not used warning

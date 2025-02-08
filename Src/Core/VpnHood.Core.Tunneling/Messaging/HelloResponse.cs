@@ -14,11 +14,11 @@ public class HelloResponse : SessionResponse
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public IPAddress[]? DnsServers { get; set; }
 
-    [JsonConverter(typeof(IPAddressConverter))]
-    public IPAddress? VirtualIp { get; set; }
+    [JsonConverter(typeof(IpNetworkConverter))]
+    public IpNetwork? VirtualIpNetworkV4 { get; init; }
 
-    [JsonConverter(typeof(ArrayConverter<IpNetwork, IpNetworkConverter>))]
-    public IpNetwork[] PrivateIpNetworks { get; init; } = [];
+    [JsonConverter(typeof(IpNetworkConverter))]
+    public IpNetwork? VirtualIpNetworkV6 { get; init; }
 
     public int? UdpPort { get; set; }
     public string ServerVersion { get; set; } = null!;

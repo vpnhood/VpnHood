@@ -68,6 +68,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private readonly bool _allowRewardedAd;
     private readonly ClientConnectionInfo _connectionInfo = new();
     private ulong? _sessionId;
+    private readonly string[]? _includeApps;
+    private readonly string[]? _excludeApps;
+    private readonly string? _sessionName;
 
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
     public ulong SessionId => _sessionId ?? throw new InvalidOperationException("SessionId has not been initialized.");
@@ -133,6 +136,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _useUdpChannel = options.UseUdpChannel;
         _planId = options.PlanId;
         _accessCode = options.AccessCode;
+        _sessionName = options.SessionName;
+        _excludeApps = options.ExcludeApps;
+        _includeApps = options.IncludeApps;
         _allowRewardedAd = options.AllowRewardedAd;
         _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
         _serverFinder = new ServerFinder(socketFactory, token.ServerToken,
@@ -265,39 +271,44 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         if (_disposed)
             throw new ObjectDisposedException(VhLogger.FormatType(this));
 
-        // merge cancellation tokens
-        using var linkedCancellationTokenSource =
-            CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
-        cancellationToken = linkedCancellationTokenSource.Token;
-
-        // create connection log scope
-        using var scope = VhLogger.Instance.BeginScope("Client");
-        if (State != ClientState.None)
-            throw new Exception("Connection is already in progress.");
-
-        // Connecting. Must before IsIpv6Supported
-        State = ClientState.Connecting;
-
-        // report config
-        IsIpV6SupportedByClient = await IPAddressUtil.IsIpv6Supported();
-        _serverFinder.IncludeIpV6 = IsIpV6SupportedByClient;
-        ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
-        VhLogger.Instance.LogInformation(
-            "UseUdpChannel: {UseUdpChannel}, DropUdp: {DropUdp}, DropQuic: {DropQuic}, UseTcpOverTun: {UseTcpOverTun}" +
-            "IncludeLocalNetwork: {IncludeLocalNetwork}, MinWorkerThreads: {WorkerThreads}, " +
-            "CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}",
-            UseUdpChannel, DropUdp, DropQuic, UseTcpOverTun, IncludeLocalNetwork, workerThreads,
-            completionPortThreads, IsIpV6SupportedByClient);
-
-        // report version
-        VhLogger.Instance.LogInformation(
-            "ClientVersion: {ClientVersion}, " +
-            "ClientMinProtocolVersion: {ClientMinProtocolVersion}, ClientMinProtocolVersion: {ClientMaxProtocolVersion}, " +
-            "ClientId: {ClientId}",
-            Version, MinProtocolVersion, MaxProtocolVersion, VhLogger.FormatId(ClientId));
-
         // Connect
         try {
+            // merge cancellation tokens
+            using var linkedCancellationTokenSource =
+            CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
+            cancellationToken = linkedCancellationTokenSource.Token;
+
+            // create connection log scope
+            using var scope = VhLogger.Instance.BeginScope("Client");
+            if (State != ClientState.None)
+                throw new Exception("Connection is already in progress.");
+
+            // Preparing device;
+            if (_packetCapture.Started) //make sure it is not a shared packet capture
+                throw new InvalidOperationException("PacketCapture should not be started before connect.");
+
+            // Connecting. Must before IsIpv6Supported
+            State = ClientState.Connecting;
+
+            // report config
+            IsIpV6SupportedByClient = await IPAddressUtil.IsIpv6Supported();
+            _serverFinder.IncludeIpV6 = IsIpV6SupportedByClient;
+            ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
+            VhLogger.Instance.LogInformation(
+                "UseUdpChannel: {UseUdpChannel}, DropUdp: {DropUdp}, DropQuic: {DropQuic}, UseTcpOverTun: {UseTcpOverTun}" +
+                "IncludeLocalNetwork: {IncludeLocalNetwork}, MinWorkerThreads: {WorkerThreads}, " +
+                "CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}",
+                UseUdpChannel, DropUdp, DropQuic, UseTcpOverTun, IncludeLocalNetwork, workerThreads,
+                completionPortThreads, IsIpV6SupportedByClient);
+
+            // report version
+            VhLogger.Instance.LogInformation(
+                "ClientVersion: {ClientVersion}, " +
+                "ClientMinProtocolVersion: {ClientMinProtocolVersion}, ClientMinProtocolVersion: {ClientMaxProtocolVersion}, " +
+                "ClientId: {ClientId}",
+                Version, MinProtocolVersion, MaxProtocolVersion, VhLogger.FormatId(ClientId));
+
+
             // Init hostEndPoint
             var endPointInfo = new ConnectorEndPointInfo {
                 HostName = Token.ServerToken.HostName,
@@ -313,35 +324,18 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             // Create Tcp Proxy Host
             _clientHost.Start();
 
-            // Preparing device;
-            if (_packetCapture.Started) //make sure it is not a shared packet capture
-                throw new InvalidOperationException("PacketCapture should not be started before connect.");
-
-            ConfigPacketFilter(ConnectorService.EndPointInfo.TcpEndPoint.Address);
-            _packetCapture.StartCapture();
-
-            // disable IncludeIpRanges if it contains all networks
-            if (IncludeIpRanges.IsAll())
-                IncludeIpRanges = [];
-
             State = ClientState.Connected;
             _initConnectedTime = DateTime.UtcNow;
         }
         catch (Exception ex) {
-            // ReSharper disable once DisposeOnUsingVariable
             // clear before start new async task
-            scope?.Dispose();
             await DisposeAsync(ex);
             throw;
         }
     }
 
-    private void ConfigPacketFilter(IPAddress hostIpAddress)
+    private IpNetwork[] BuildPacketCaptureIncludeNetworks(IPAddress hostIpAddress)
     {
-        // DnsServer
-        if (_packetCapture.IsDnsServersSupported)
-            _packetCapture.DnsServers = DnsServers;
-
         // Start with user PacketCaptureIncludeIpRanges
         var includeIpRanges = PacketCaptureIncludeIpRanges;
 
@@ -359,9 +353,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             new IpRange(_clientHost.CatcherAddressIpV6)
         ]);
 
-        _packetCapture.IncludeNetworks = includeIpRanges.ToIpNetworks().ToArray(); //sort and unify
-        VhLogger.Instance.LogInformation(
-            $"PacketCapture Include Networks: {string.Join(", ", _packetCapture.IncludeNetworks.Select(VhLogger.Format))}");
+        return includeIpRanges.ToIpNetworks().ToArray(); //sort and unify
     }
 
     // WARNING: Performance Critical!
@@ -862,22 +854,39 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 }
             }
 
+            // disable IncludeIpRanges if it contains all networks
+            if (IncludeIpRanges.IsAll())
+                IncludeIpRanges = [];
+
+            // prepare packet capture
+            var networkV4 = helloResponse.VirtualIpNetworkV4 ?? new IpNetwork(IPAddress.Parse("10.8.0.2"), 32);
+            var networkV6 = helloResponse.VirtualIpNetworkV6;
+            if (networkV6 == null && helloResponse.IsIpV6Supported) // legacy
+                networkV6 = new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
+
+            var longIncludeNetworks = string.Join(", ", PacketCaptureIncludeIpRanges.ToIpNetworks().Select(VhLogger.Format));
+            VhLogger.Instance.LogInformation(
+                "Starting PacketCapture... DnsServers: {DnsServers}, IncludeNetworks: {longIncludeNetworks}",
+                _connectionInfo.SessionInfo.DnsServers, longIncludeNetworks);
+
+            // Start the PacketCapture
+            var adapterOptions = new VpnAdapterOptions {
+                DnsServers = _connectionInfo.SessionInfo.DnsServers,
+                VirtualIpNetworkV4 = networkV4,
+                VirtualIpNetworkV6 = networkV6,
+                Mtu = TunnelDefaults.MtuWithoutFragmentation,
+                IncludeNetworks = BuildPacketCaptureIncludeNetworks(ConnectorService.EndPointInfo.TcpEndPoint.Address),
+                SessionName = _sessionName,
+                ExcludeApps = _excludeApps,
+                IncludeApps = _includeApps
+            };
+            _packetCapture.StartCapture(adapterOptions);
+
             // Preparing tunnel
             VhLogger.Instance.LogInformation("Configuring Datagram Channels...");
             Tunnel.MaxDatagramChannelCount = helloResponse.MaxDatagramChannelCount != 0
-                ? Tunnel.MaxDatagramChannelCount =
-                    Math.Min(_maxDatagramChannelCount, helloResponse.MaxDatagramChannelCount)
+                ? Tunnel.MaxDatagramChannelCount = Math.Min(_maxDatagramChannelCount, helloResponse.MaxDatagramChannelCount)
                 : _maxDatagramChannelCount;
-
-            // prepare packet capture
-            _packetCapture.PrivateIpNetworks = helloResponse.PrivateIpNetworks;
-            if (VhUtil.IsNullOrEmpty(helloResponse.PrivateIpNetworks)) {
-                var ipNetworkV4 = new IpNetwork(IPAddress.Parse("10.8.0.2"), 32);
-                var ipNetworkV6 = new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
-                _packetCapture.PrivateIpNetworks = helloResponse.IsIpV6Supported
-                    ? [ipNetworkV4, ipNetworkV6]
-                    : [ipNetworkV4];
-            }
 
             // manage datagram channels
             await ManageDatagramChannels(cancellationToken).VhConfigureAwait();
@@ -1041,7 +1050,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     }
 
     private readonly AsyncLock _disposeLock = new();
-
     public async ValueTask DisposeAsync()
     {
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();

@@ -751,7 +751,6 @@ public class ClientServerTest : TestBase
 
         // create access server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        fileAccessManagerOptions.SessionOptions.MaxTcpChannelCount = 2;
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, tunProvider: tunProvider);
 
         // create client
@@ -771,12 +770,9 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
-        using var packetCapture = new TestNullPacketCapture();
-        Assert.IsTrue(packetCapture.DnsServers == null || packetCapture.DnsServers.Length == 0);
-
-        await using var client = await TestHelper.CreateClient(token, packetCapture);
+        await using var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
         await TestHelper.WaitForClientState(client, ClientState.Connected);
 
-        Assert.IsTrue(packetCapture.DnsServers is { Length: > 0 });
+        Assert.IsTrue(client.DnsServers is { Length: > 0 });
     }
 }

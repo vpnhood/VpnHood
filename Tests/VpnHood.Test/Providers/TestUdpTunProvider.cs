@@ -12,6 +12,7 @@ public class TestUdpTunProvider : ITunProvider, IPacketProxyReceiver
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     public event EventHandler<IPPacket>? OnPacketReceived;
     private readonly UdpProxyPool _proxyPool;
+    public IPAddress? VirtualIp { get; set; }
 
     public TestUdpTunProvider()
     {
@@ -31,6 +32,7 @@ public class TestUdpTunProvider : ITunProvider, IPacketProxyReceiver
     Task IPacketReceiver.OnPacketReceived(IPPacket packet)
     {
         OnPacketReceived?.Invoke(this, packet);
+
         return Task.CompletedTask;
     }
 

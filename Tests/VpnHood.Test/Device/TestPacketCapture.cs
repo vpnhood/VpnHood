@@ -1,24 +1,11 @@
-﻿using System.Net;
-using PacketDotNet;
+﻿using PacketDotNet;
 using VpnHood.Core.Client.Device.WinDivert;
 
 namespace VpnHood.Test.Device;
 
 public class TestPacketCapture(TestPacketCaptureOptions packetCaptureOptions) : WinDivertPacketCapture
 {
-    private IPAddress[]? _dnsServers;
-
     public override bool IsDnsServersSupported => packetCaptureOptions.IsDnsServerSupported;
-
-    public override IPAddress[]? DnsServers {
-        get => IsDnsServersSupported ? _dnsServers : base.DnsServers;
-        set {
-            if (IsDnsServersSupported)
-                _dnsServers = value;
-            else
-                base.DnsServers = value;
-        }
-    }
 
     public override bool CanSendPacketToOutbound => packetCaptureOptions.CanSendPacketToOutbound;
 

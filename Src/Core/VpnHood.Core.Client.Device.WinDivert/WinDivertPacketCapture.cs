@@ -173,7 +173,14 @@ public class WinDivertPacketCapture : IPacketCapture
 
         // try to simulate tun
         SetInternalIp(ipPacket.SourceAddress);
-        ipPacket.SourceAddress = GetVirtualIp(ipPacket.Version);
+        var virtualIp = GetVirtualIp(ipPacket.Version);
+        if (virtualIp == null) {
+            VhLogger.Instance.Log(LogLevel.Error, "The device arrival packet is not supported: {Packet}", 
+                VhLogger.FormatIpPacket(ipPacket.ToString()!));
+            return;
+        }
+
+        ipPacket.SourceAddress = virtualIp;
         if (ipPacket is IPv4Packet ipV4Packet)
             ipV4Packet.UpdateIPChecksum();
 

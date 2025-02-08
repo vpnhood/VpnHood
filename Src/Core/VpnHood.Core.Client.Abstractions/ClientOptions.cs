@@ -49,6 +49,9 @@ public class ClientOptions
     public bool AllowRewardedAd { get; set; }
     public TimeSpan CanExtendByRewardedAdThreshold { get; set; } = TimeSpan.FromMinutes(5);
     public string? AccessCode { get; set; }
+    public string? SessionName { get; set; }
+    public string[]? ExcludeApps { get; set; }
+    public string[]? IncludeApps { get; set; }
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

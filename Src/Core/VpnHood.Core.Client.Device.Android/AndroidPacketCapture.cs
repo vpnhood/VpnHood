@@ -25,10 +25,8 @@ namespace VpnHood.Core.Client.Device.Droid;
 [IntentFilter(["android.net.VpnService"])]
 public class AndroidPacketCapture : VpnService, IPacketCapture
 {
-    private IPAddress[]? _dnsServers;
     private FileInputStream? _inStream; // Packets to be sent are queued in this input stream.
     private ParcelFileDescriptor? _mInterface;
-    private int _mtu;
     private FileOutputStream? _outStream; // Packets received need to be written to this output stream.
     private readonly ConnectivityManager? _connectivityManager = ConnectivityManager.FromContext(Application.Context);
     internal static TaskCompletionSource<AndroidPacketCapture>? StartServiceTaskCompletionSource { get; set; }
@@ -37,66 +35,56 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     public event EventHandler? Stopped;
     public bool Started => _mInterface != null;
     private bool _isServiceStarted;
-    public IpNetwork[]? IncludeNetworks { get; set; }
     public bool CanSendPacketToOutbound => false;
     public bool CanExcludeApps => true;
     public bool CanIncludeApps => true;
-    public string[]? ExcludeApps { get; set; }
-    public string[]? IncludeApps { get; set; }
-    public string? SessionName { get; set; }
     public bool IsMtuSupported => true;
-
-    public int Mtu {
-        get => _mtu;
-        set {
-            if (Started)
-                throw new InvalidOperationException("Could not set MTU while PacketCapture is started.");
-            _mtu = value;
-        }
-    }
 
     public IpNetwork[] PrivateIpNetworks { get; set; } = [];
 
     public bool IsDnsServersSupported => true;
 
-    public IPAddress[]? DnsServers {
-        get => _dnsServers;
-        set {
-            if (Started)
-                throw new InvalidOperationException(
-                    $"Could not set {nameof(DnsServers)} while {nameof(IPacketCapture)} is started.");
+    public void Init()
+    {
 
-            _dnsServers = value;
-        }
     }
 
-    public void StartCapture()
+    public void StartCapture(VpnAdapterOptions options)
     {
+        CloseVpn();
+
         var builder = new Builder(this)
-            .SetBlocking(true)
-            .AddAddress("192.168.199.188", 24);
+            .SetBlocking(true);
 
-        if (SessionName!=null)
-            builder.SetSession(SessionName);
+        // Private IP Networks
+        if (options.VirtualIpNetworkV4!=null)
+            builder.AddAddress(options.VirtualIpNetworkV4.Prefix.ToString(), options.VirtualIpNetworkV4.PrefixLength);
 
+        if (options.VirtualIpNetworkV6 != null)
+            builder.AddAddress(options.VirtualIpNetworkV6.Prefix.ToString(), options.VirtualIpNetworkV6.PrefixLength);
+
+        // Android 10 and above
         if (OperatingSystem.IsAndroidVersionAtLeast(29))
             builder.SetMetered(false);
 
+        // Session Name
+        if (!string.IsNullOrWhiteSpace(options.SessionName))
+            builder.SetSession(options.SessionName.Trim());
+
         // MTU
-        if (Mtu != 0)
-            builder.SetMtu(Mtu);
+        if (options.Mtu != null)
+            builder.SetMtu(options.Mtu.Value);
 
-        foreach (var ipNetwork in PrivateIpNetworks)
-            builder.AddAddress(ipNetwork.Prefix.ToString(), ipNetwork.PrefixLength);
-
-        // DNS Servers
-        AddDnsServers(builder);
-
-        // Routes
-        AddRoutes(builder);
+        // Add Routes
+        foreach (var network in options.IncludeNetworks)
+            builder.AddRoute(network.Prefix.ToString(), network.PrefixLength);
 
         // AppFilter
-        AddAppFilter(builder);
+        var appPackageName = ApplicationContext?.PackageName ?? throw new Exception("Could not get the app PackageName!");
+        AddAppFilter(builder, includeApps: options.IncludeApps, excludeApps: options.ExcludeApps, appPackageName: appPackageName);
+
+        // DNS Servers
+        AddDnsServers(builder, options.DnsServers, PrivateIpNetworks.Any(x => x.IsIpV6));
 
         // try to establish the connection
         _mInterface = builder.Establish() ?? throw new Exception("Could not establish VpnService.");
@@ -108,6 +96,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         _outStream = new FileOutputStream(_mInterface.FileDescriptor);
 
         Task.Run(ReadingPacketTask);
+
     }
 
     public void SendPacketToInbound(IPPacket ipPacket)
@@ -173,34 +162,25 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         return StartCommandResult.Sticky;
     }
 
-    private void AddRoutes(Builder builder)
+    private static void AddDnsServers(Builder builder, IPAddress[] dnsServers, bool isIpV6Supported)
     {
-        var includeNetworks = IncludeNetworks ?? IpNetwork.All;
-        foreach (var network in includeNetworks)
-            builder.AddRoute(network.Prefix.ToString(), network.PrefixLength);
-    }
-
-    private void AddDnsServers(Builder builder)
-    {
-        var dnsServers = VhUtil.IsNullOrEmpty(DnsServers) ? IPAddressUtil.GoogleDnsServers : DnsServers;
-        if (!PrivateIpNetworks.Any(x=>x.IsIpV6))
+        if (!isIpV6Supported)
             dnsServers = dnsServers.Where(x => x.IsV4()).ToArray();
 
         foreach (var dnsServer in dnsServers)
             builder.AddDnsServer(dnsServer.ToString());
     }
 
-    private void AddAppFilter(Builder builder)
+    private static void AddAppFilter(Builder builder, string appPackageName, 
+        string[]? includeApps, string[]? excludeApps)
     {
-        // Applications Filter
-        if (IncludeApps != null) {
-            // make sure to add current app if an allowed app exists
-            var packageName = ApplicationContext?.PackageName ??
-                              throw new Exception("Could not get the app PackageName!");
-            builder.AddAllowedApplication(packageName);
 
-            // add user apps
-            foreach (var app in IncludeApps.Where(x => x != packageName))
+        // Applications Filter
+        if (includeApps != null) {
+            builder.AddAllowedApplication(appPackageName);
+
+            // make sure not to add current app to allowed apps
+            foreach (var app in includeApps.Where(x => x != appPackageName))
                 try {
                     builder.AddAllowedApplication(app);
                 }
@@ -209,10 +189,9 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
                 }
         }
 
-        if (ExcludeApps != null) {
-            var packageName = ApplicationContext?.PackageName ??
-                              throw new Exception("Could not get the app PackageName!");
-            foreach (var app in ExcludeApps.Where(x => x != packageName))
+        if (excludeApps != null) {
+            // make sure not to add current app to disallowed apps
+            foreach (var app in excludeApps.Where(x => x != appPackageName))
                 try {
                     builder.AddDisallowedApplication(app);
                 }

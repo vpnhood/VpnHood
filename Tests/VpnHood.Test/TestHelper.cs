@@ -187,7 +187,7 @@ public class TestHelper : IDisposable
                 TestConstants.InvalidIp,
                 TestConstants.UdpV4EndPoint1.Address,
                 TestConstants.UdpV4EndPoint2.Address,
-                new ClientOptions().TcpProxyCatcherAddressIpV4
+                ClientOptions.Default.TcpProxyCatcherAddressIpV4
             };
             addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsUri1.Host));
             addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsUri2.Host));
@@ -370,7 +370,8 @@ public class TestHelper : IDisposable
             Tracker = new TestTrackerProvider(),
             PacketCaptureIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToOrderedList(),
             IncludeLocalNetwork = true,
-            ConnectTimeout = TimeSpan.FromSeconds(3)
+            ConnectTimeout = TimeSpan.FromSeconds(3),
+            SessionName = "UnitTestSession"
         };
     }
 

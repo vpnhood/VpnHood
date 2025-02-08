@@ -554,6 +554,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async Task<IPacketCapture> CreatePacketCapture()
     {
+        VhLogger.Instance.LogInformation("Creating PacketCapture ...");
+
         if (HasDebugCommand(DebugCommands.NullCapture)) {
             VhLogger.Instance.LogWarning("Using NullPacketCapture. No packet will go through the VPN.");
             return new NullPacketCapture();
@@ -561,18 +563,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // create packet capture
         var packetCapture = await Device.CreatePacketCapture(ActiveUiContext.Context).VhConfigureAwait();
-
-        // init packet capture
-        if (packetCapture.IsMtuSupported)
-            packetCapture.Mtu = TunnelDefaults.MtuWithoutFragmentation;
-
-        // App filters
-        if (packetCapture.CanExcludeApps && UserSettings.AppFiltersMode == FilterMode.Exclude)
-            packetCapture.ExcludeApps = UserSettings.AppFilters;
-
-        if (packetCapture.CanIncludeApps && UserSettings.AppFiltersMode == FilterMode.Include)
-            packetCapture.IncludeApps = UserSettings.AppFilters;
-
         return packetCapture;
     }
 
@@ -625,7 +615,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowTcpReuse = !HasDebugCommand(DebugCommands.NoTcpReuse),
             Tracker = Services.Tracker,
             CanExtendByRewardedAdThreshold = _canExtendByRewardedAdThreshold,
-            AllowRewardedAd = Services.AdService.CanShowRewarded
+            AllowRewardedAd = Services.AdService.CanShowRewarded,
+            ExcludeApps = UserSettings.AppFiltersMode == FilterMode.Exclude ? UserSettings.AppFilters : null,
+            IncludeApps = UserSettings.AppFiltersMode == FilterMode.Include ? UserSettings.AppFilters : null,
+            SessionName = CurrentClientProfileInfo?.ClientProfileName,
         };
 
         if (userAgent != null) clientOptions.UserAgent = userAgent;
@@ -635,9 +628,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             throw new Exception("Last client has not been disposed properly.");
 
         // Create Client with a new PacketCapture
-        VhLogger.Instance.LogInformation("Creating PacketCapture ...");
         var packetCapture = await CreatePacketCapture().VhConfigureAwait();
-        packetCapture.SessionName = CurrentClientProfileInfo?.ClientProfileName;
         VpnHoodClientManager? clientManager = null;
 
         try {

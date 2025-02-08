@@ -38,7 +38,8 @@ public class SessionManager : IAsyncDisposable, IJob
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();
     public SessionOptions SessionOptions { get; set; } = new();
-    public IpRange VirtualIpRange { get; }
+    public IpNetwork VirtualIpNetworkV4 { get; }
+    public IpNetwork VirtualIpNetworkV6 { get; }
     public ITracker? Tracker { get; }
     public bool IsTunProviderSupported => _tunProvider != null;
 
@@ -70,7 +71,8 @@ public class SessionManager : IAsyncDisposable, IJob
         ApiKey = HttpUtil.GetApiKey(_serverSecret, TunnelDefaults.HttpPassCheck);
         NetFilter = netFilter;
         ServerVersion = serverVersion;
-        VirtualIpRange = options.VirtualIpRange;
+        VirtualIpNetworkV4 = options.VirtualIpNetworkV4;
+        VirtualIpNetworkV6 = options.VirtualIpNetworkV6;
         if (_tunProvider != null)
             _tunProvider.OnPacketReceived += TunProvider_OnPacketReceived;
 
@@ -94,13 +96,13 @@ public class SessionManager : IAsyncDisposable, IJob
     }
 
     private readonly ConcurrentDictionary<IPAddress, Session> _virtualIps = new();
-    private IPAddress GetFreeVirtualIp()
+    private IPAddress GetFreeVirtualIp(IpNetwork ipNetwork)
     {
         // find the max virtual IP
-        var ipAddress = VirtualIpRange.FirstIpAddress;
+        var ipAddress = ipNetwork.FirstIpAddress;
         ipAddress = IPAddressUtil.Increment(ipAddress); // skip the first IP (10.0.0.0)
         ipAddress = IPAddressUtil.Increment(ipAddress); // skip the second IP (10.0.0.1)
-        while (!ipAddress.Equals(VirtualIpRange.LastIpAddress)) {
+        while (!ipAddress.Equals(ipNetwork.LastIpAddress)) {
             if (!_virtualIps.ContainsKey(ipAddress))
                 return ipAddress;
 
@@ -121,8 +123,9 @@ public class SessionManager : IAsyncDisposable, IJob
         lock (_virtualIpLock) {
 
             // allocate a new IP
-            // todo: try to use virtual ip returned by sessionResponseEx
-            var virtualIp = GetFreeVirtualIp();
+            // todo: try to use virtual ip returned by sessionResponseEx or local disk
+            var virtualIpV4 = GetFreeVirtualIp(VirtualIpNetworkV4);
+            var virtualIpV6 = GetFreeVirtualIp(VirtualIpNetworkV6);
 
             // create the session
             var session = new Session(
@@ -130,9 +133,12 @@ public class SessionManager : IAsyncDisposable, IJob
                 SessionOptions, TrackingOptions, extraData,
                 protocolVersion: sessionResponseEx.ProtocolVersion,
                 tunProvider: _tunProvider,
-                virtualIp: virtualIp);
+                virtualIpV4: virtualIpV4,
+                virtualIpV6: virtualIpV6);
 
-            _virtualIps.TryAdd(virtualIp, session);
+            // add to virtual IPs
+            _virtualIps.TryAdd(virtualIpV4, session);
+            _virtualIps.TryAdd(virtualIpV6, session);
             return session;
         }
     }
@@ -364,7 +370,7 @@ public class SessionManager : IAsyncDisposable, IJob
                 !x.Value.IsDisposed &&
                 !x.Value.IsSyncRequired &&
                 x.Value.LastActivityTime < minSessionActivityTime)
-            .ToArray();
+            .ToArray(); // make sure make a copy to avoid modification in the loop
 
         foreach (var session in timeoutSessions) {
             if (session.Value.Traffic.Total > 0) {
@@ -372,8 +378,8 @@ public class SessionManager : IAsyncDisposable, IJob
             }
             else {
                 _ = session.Value.DisposeAsync().VhConfigureAwait();
-                Sessions.TryRemove(session.Key, out _); // we should not have disposed session without error code
-                _virtualIps.TryRemove(session.Value.VirtualIp, out _);
+                // we should not have disposed session without error code, so remove it
+                RemoveSession(session.Value);
             }
         }
     }
@@ -387,12 +393,18 @@ public class SessionManager : IAsyncDisposable, IJob
                 x.IsDisposed &&
                 !x.IsSyncRequired &&
                 utcNow - x.DisposedTime > _deadSessionTimeout)
-            .ToArray();
+            .ToArray(); // make sure make a copy to avoid modification in the loop
 
-        foreach (var session in deadSessions) {
-            Sessions.TryRemove(session.SessionId, out _);
-            _virtualIps.TryRemove(session.VirtualIp, out _);
-        }
+        // remove dead sessions
+        foreach (var session in deadSessions)
+            RemoveSession(session);
+    }
+
+    private void RemoveSession(Session session)
+    {
+        Sessions.TryRemove(session.SessionId, out _);
+        _virtualIps.TryRemove(session.VirtualIpV4, out _);
+        _virtualIps.TryRemove(session.VirtualIpV6, out _);
     }
 
     public Session? GetSessionById(ulong sessionId)

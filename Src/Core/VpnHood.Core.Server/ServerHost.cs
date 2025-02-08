@@ -616,9 +616,7 @@ public class ServerHost : IAsyncDisposable, IJob
             IsTunProviderSupported = _sessionManager.IsTunProviderSupported,
             ClientCountry = sessionResponseEx.ClientCountry,
             VirtualIpNetworkV4 = new IpNetwork(session.VirtualIpV4, _sessionManager.VirtualIpNetworkV4.PrefixLength),
-            VirtualIpNetworkV6 = IsIpV6Supported
-                ? new IpNetwork(session.VirtualIpV6, _sessionManager.VirtualIpNetworkV6.PrefixLength)
-                : null
+            VirtualIpNetworkV6 = new IpNetwork(session.VirtualIpV6, _sessionManager.VirtualIpNetworkV6.PrefixLength)
         };
 
         await clientStream.WriteFinalResponse(helloResponse, cancellationToken).VhConfigureAwait();

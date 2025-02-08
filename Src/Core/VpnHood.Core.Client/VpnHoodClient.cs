@@ -862,10 +862,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 IncludeIpRanges = [];
 
             // prepare packet capture
-            var networkV4 = helloResponse.VirtualIpNetworkV4 ?? new IpNetwork(IPAddress.Parse("10.8.0.2"), 32);
-            var networkV6 = helloResponse.VirtualIpNetworkV6;
-            if (networkV6 == null && helloResponse.IsIpV6Supported) // legacy
-                networkV6 = new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
+            var networkV4 = helloResponse.VirtualIpNetworkV4 ?? new IpNetwork(IPAddress.Parse("10.255.0.2"), 32);
+            var networkV6 = helloResponse.VirtualIpNetworkV6 ?? new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
 
             var longIncludeNetworks =
                 string.Join(", ", VpnAdapterIncludeIpRanges.ToIpNetworks().Select(VhLogger.Format));

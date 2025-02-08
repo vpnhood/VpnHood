@@ -31,9 +31,9 @@ public class ServerHost : IAsyncDisposable, IJob
     private readonly List<Task> _tcpListenerTasks = [];
     private bool _disposed;
 
-    public const int MaxProtocolVersion =  6;
-    public const int MinProtocolVersion =  4;
-    public int MinClientProtocolVersion { get; set; }  = MinProtocolVersion; // used for tests
+    public const int MaxProtocolVersion = 6;
+    public const int MinProtocolVersion = 4;
+    public int MinClientProtocolVersion { get; set; } = MinProtocolVersion; // used for tests
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
     public bool IsIpV6Supported { get; set; }
     public IpRange[]? NetFilterPacketCaptureIncludeIpRanges { get; set; }
@@ -265,7 +265,7 @@ public class ServerHost : IAsyncDisposable, IJob
                 throw new UnauthorizedAccessException();
 
             // read api key
-            if (protocolVersion <= 5 ) {
+            if (protocolVersion <= 5) {
                 if (!CheckApiKeyAuthorization(authorization)) {
                     // process hello without api key
                     if (authorization != "ApiKey")
@@ -285,7 +285,7 @@ public class ServerHost : IAsyncDisposable, IJob
                         streamId, ReuseClientStream) {
                         RequireHttpResponse = false
                     };
-                
+
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 case BinaryStreamType.Standard when protocolVersion == 6:
                     return new TcpClientStream(tcpClient,
@@ -610,8 +610,11 @@ public class ServerHost : IAsyncDisposable, IJob
             ServerTags = sessionResponseEx.ServerTags,
             AccessInfo = sessionResponseEx.AccessInfo,
             IsTunProviderSupported = _sessionManager.IsTunProviderSupported,
-            VirtualIp = session.VirtualIp,
-            ClientCountry = sessionResponseEx.ClientCountry
+            ClientCountry = sessionResponseEx.ClientCountry,
+            VirtualIpNetworkV4 = new IpNetwork(session.VirtualIpV4, _sessionManager.VirtualIpNetworkV4.PrefixLength),
+            VirtualIpNetworkV6 = IsIpV6Supported
+                ? new IpNetwork(session.VirtualIpV6, _sessionManager.VirtualIpNetworkV6.PrefixLength)
+                : null
         };
 
         await clientStream.WriteFinalResponse(helloResponse, cancellationToken).VhConfigureAwait();

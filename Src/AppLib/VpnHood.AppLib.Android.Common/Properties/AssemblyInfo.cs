@@ -11,3 +11,4 @@ using Android;
 [assembly: UsesPermission(Name = Manifest.Permission.ForegroundService)] // required for VPN
 [assembly: UsesPermission(Name = Manifest.Permission.ForegroundServiceSystemExempted)] // required for VPN
 [assembly: UsesPermission(Name = Manifest.Permission.StartForegroundServicesFromBackground)] // required for VPN
+[assembly: UsesPermission(Name = Manifest.Permission.AccessNetworkState)] // for finding network to exclude VPN for own process

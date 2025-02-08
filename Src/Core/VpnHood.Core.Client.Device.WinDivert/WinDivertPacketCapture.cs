@@ -19,43 +19,16 @@ public class WinDivertPacketCapture : IPacketCapture
 
     private readonly SharpPcap.WinDivert.WinDivertDevice _device;
     private bool _disposed;
-    private IpNetwork[]? _includeNetworks;
     private WinDivertHeader? _lastCaptureHeader;
-
     public const short ProtectedTtl = 111;
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Stopped;
     public bool Started => _device.Started;
-    public string? SessionName { get; set; }
     public virtual bool CanSendPacketToOutbound => true;
     public virtual bool IsDnsServersSupported => false;
-
-    public virtual IPAddress[]? DnsServers {
-        get => throw new NotSupportedException();
-        set => throw new NotSupportedException();
-    }
-
     public bool CanExcludeApps => false;
     public bool CanIncludeApps => false;
-
-    public string[]? ExcludeApps {
-        get => throw new NotSupportedException();
-        set => throw new NotSupportedException();
-    }
-
-    public string[]? IncludeApps {
-        get => throw new NotSupportedException();
-        set => throw new NotSupportedException();
-    }
-
     public bool IsMtuSupported => false;
-
-    public int Mtu {
-        get => throw new NotSupportedException();
-        set => throw new NotSupportedException();
-    }
-
-    public IpNetwork[] PrivateIpNetworks { get; set; } = [];
 
     public bool CanDetectInProcessPacket => false;
     public bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
@@ -108,22 +81,12 @@ public class WinDivertPacketCapture : IPacketCapture
         }
     }
 
-    public IpNetwork[]? IncludeNetworks {
-        get => _includeNetworks;
-        set {
-            if (Started)
-                throw new InvalidOperationException(
-                    $"Can't set {nameof(IncludeNetworks)} when {nameof(WinDivertPacketCapture)} is started!");
-            _includeNetworks = value;
-        }
-    }
-
     private static string Ip(IpRange ipRange)
     {
         return ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
     }
 
-    public void StartCapture()
+    public void StartCapture(VpnAdapterOptions options)
     {
         if (_disposed)
             throw new ObjectDisposedException(VhLogger.FormatType(this));
@@ -133,8 +96,8 @@ public class WinDivertPacketCapture : IPacketCapture
 
         // create include and exclude phrases
         var phraseX = "true";
-        if (IncludeNetworks != null) {
-            var ipRanges = IncludeNetworks.ToIpRanges();
+        var ipRanges = options.IncludeNetworks.ToIpRanges();
+        if (!ipRanges.IsAll()) {
             var phrases = ipRanges.Select(x => x.FirstIpAddress.Equals(x.LastIpAddress)
                 ? $"{Ip(x)}.DstAddr=={x.FirstIpAddress}"
                 : $"({Ip(x)}.DstAddr>={x.FirstIpAddress} and {Ip(x)}.DstAddr<={x.LastIpAddress})");

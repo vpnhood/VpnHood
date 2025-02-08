@@ -69,8 +69,9 @@ public class Session : IAsyncDisposable
     public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (Tunnel.IsUdpMode ? 0 : Tunnel.DatagramChannelCount);
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
-    public IPAddress VirtualIp { get; }
-
+    public IPAddress VirtualIpV4 { get; }
+    public IPAddress VirtualIpV6 { get; }
+    
     internal Session(IAccessManager accessManager, SessionResponseEx sessionResponse,
         INetFilter netFilter,
         ISocketFactory socketFactory,
@@ -79,7 +80,8 @@ public class Session : IAsyncDisposable
         SessionExtraData sessionExtraData,
         int protocolVersion,
         ITunProvider? tunProvider,
-        IPAddress virtualIp)
+        IPAddress virtualIpV4,
+        IPAddress virtualIpV6)
     {
         var sessionTuple = Tuple.Create("SessionId", (object?)sessionResponse.SessionId);
         var logScope = new LogScope();
@@ -112,7 +114,8 @@ public class Session : IAsyncDisposable
         SessionExtraData = sessionExtraData;
         ProtocolVersion = protocolVersion;
         SessionResponse = sessionResponse;
-        VirtualIp = virtualIp;
+        VirtualIpV4 = virtualIpV4;
+        VirtualIpV6 = virtualIpV6;
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException(
             $"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
@@ -177,6 +180,12 @@ public class Session : IAsyncDisposable
         }
     }
 
+    private IPAddress GetClientVirtualIp(IPVersion ipVersion)
+    {
+        return ipVersion == IPVersion.IPv4 ? VirtualIpV4 : VirtualIpV6;
+    }
+
+    // todo: legacy version. remove in future
     private IPAddress? GetClientInternalIp(IPVersion ipVersion)
     {
         return ipVersion == IPVersion.IPv4 ? _clientInternalIpV4 : _clientInternalIpV6;
@@ -212,9 +221,24 @@ public class Session : IAsyncDisposable
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < e.IpPackets.Count; i++) {
             var ipPacket = e.IpPackets[i];
-            if (ipPacket.Version == IPVersion.IPv4) _clientInternalIpV4 ??= ipPacket.SourceAddress;
-            if (ipPacket.Version == IPVersion.IPv6) _clientInternalIpV6 ??= ipPacket.SourceAddress;
-            ipPacket.SourceAddress = VirtualIp;
+
+            // todo: legacy save caller internal ip at first call
+            if (ipPacket.Version == IPVersion.IPv4) 
+                _clientInternalIpV4 ??= ipPacket.SourceAddress;
+            else if (ipPacket.Version == IPVersion.IPv6) 
+                _clientInternalIpV6 ??= ipPacket.SourceAddress;
+
+            // update source client virtual ip. will be obsolete in future if client set correct ip
+            var virtualIp = GetClientVirtualIp(ipPacket.Version);
+            if (!virtualIp.Equals(ipPacket.SourceAddress)) {
+                // todo: legacy version. Packet must be dropped if it does not have correct source address
+                // PacketUtil.LogPacket(ipPacket, $"Invalid tunnel packet source ip.");
+                ipPacket.SourceAddress = virtualIp; 
+                PacketUtil.UpdateIpChecksum(ipPacket);
+
+            }
+
+            // filter
             var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
             if (ipPacket2 == null) {
                 var ipeEndPointPair = PacketUtil.GetPacketEndPoints(ipPacket);
@@ -463,7 +487,6 @@ public class Session : IAsyncDisposable
         public override Task SendPacket(IPPacket ipPacket)
         {
             if (tunProvider != null) {
-                PacketUtil.UpdateIpChecksum(ipPacket);
                 tunProvider.SendPacket(ipPacket);
                 return Task.CompletedTask;
             }

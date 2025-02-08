@@ -9,5 +9,5 @@ public interface IDevice : IDisposable
     string OsInfo { get; }
     DeviceMemInfo? MemInfo { get; }
     DeviceAppInfo[] InstalledApps { get; }
-    Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext);
+    Task<IVpnAdapter> CreateVpnAdapter(IUiContext? uiContext);
 }

@@ -8,9 +8,15 @@ namespace VpnHood.App.Client.Win.Web;
 internal class AppConfigs : AppConfigsBase<AppConfigs>
 {
     public string AppName { get; init; } = IsDebugMode ? "VpnHOOD! CLIENT (DEBUG)" : "VpnHood! CLIENT";
-    public string AppId { get; init; } = IsDebugMode ? "com.vpnhood.client.windows.debug" : "com.vpnhood.client.windows";
+
+    public string AppId { get; init; } =
+        IsDebugMode ? "com.vpnhood.client.windows.debug" : "com.vpnhood.client.windows";
+
     public string StorageFolderName { get; init; } = IsDebugMode ? "VpnHoodClient.debug" : "VpnHood";
-    public string? UpdateInfoUrl { get; init; } = "https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json";
+
+    public string? UpdateInfoUrl { get; init; } =
+        "https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json";
+
     public int? SpaDefaultPort { get; init; } = IsDebugMode ? 9571 : 80;
     public bool SpaListenToAllIps { get; init; } = IsDebugMode;
     public string? Ga4MeasurementId { get; init; }

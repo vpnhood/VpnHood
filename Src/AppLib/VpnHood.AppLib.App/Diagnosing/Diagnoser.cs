@@ -13,13 +13,13 @@ public class Diagnoser
     private bool _isWorking;
 
     public IPAddress[] TestPingIpAddresses { get; set; } = [
-        IPAddressUtil.KidsSafeCloudflareDnsServers.First(x=>x.IsV4()),
-        IPAddressUtil.GoogleDnsServers.First(x=>x.IsV4())
+        IPAddressUtil.KidsSafeCloudflareDnsServers.First(x => x.IsV4()),
+        IPAddressUtil.GoogleDnsServers.First(x => x.IsV4())
     ];
 
     public IPEndPoint[] TestNsIpEndPoints { get; set; } = [
-        new(IPAddressUtil.KidsSafeCloudflareDnsServers.First(x=>x.IsV4()), 53),
-        new(IPAddressUtil.GoogleDnsServers.First(x=>x.IsV4()), 53)
+        new(IPAddressUtil.KidsSafeCloudflareDnsServers.First(x => x.IsV4()), 53),
+        new(IPAddressUtil.GoogleDnsServers.First(x => x.IsV4()), 53)
     ];
 
     public Uri[] TestHttpUris { get; set; } =
@@ -49,7 +49,8 @@ public class Diagnoser
         catch (Exception) {
             VhLogger.Instance.LogInformation("Checking the Internet connection...");
             IsWorking = true;
-            if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true, cancellationToken: cancellationToken).VhConfigureAwait())
+            if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true,
+                    cancellationToken: cancellationToken).VhConfigureAwait())
                 throw new NoInternetException();
 
             throw;
@@ -89,7 +90,8 @@ public class Diagnoser
         try {
             VhLogger.Instance.LogInformation("Checking the Internet connection...");
             IsWorking = true;
-            if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true, cancellationToken).VhConfigureAwait())
+            if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true, cancellationToken)
+                    .VhConfigureAwait())
                 throw new NoInternetException();
         }
         finally {
@@ -102,8 +104,10 @@ public class Diagnoser
         try {
             VhLogger.Instance.LogInformation("Checking the Vpn Connection...");
             IsWorking = true;
-            await Task.Delay(2000, cancellationToken).VhConfigureAwait(); // connections can not be established on android immediately
-            if (!await NetworkCheck(successOnAny: false, checkPing: true, checkUdp: true, cancellationToken).VhConfigureAwait())
+            await Task.Delay(2000, cancellationToken)
+                .VhConfigureAwait(); // connections can not be established on android immediately
+            if (!await NetworkCheck(successOnAny: false, checkPing: true, checkUdp: true, cancellationToken)
+                    .VhConfigureAwait())
                 throw new NoStableVpnException();
             VhLogger.Instance.LogInformation("VPN has been established and tested successfully.");
         }
@@ -112,7 +116,8 @@ public class Diagnoser
         }
     }
 
-    private async Task<bool> NetworkCheck(bool successOnAny, bool checkPing, bool checkUdp, CancellationToken cancellationToken)
+    private async Task<bool> NetworkCheck(bool successOnAny, bool checkPing, bool checkUdp,
+        CancellationToken cancellationToken)
     {
         var taskPing = checkPing
             ? DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout, cancellationToken)
@@ -134,9 +139,9 @@ public class Diagnoser
             return hasInternet;
         }
         catch (Exception) {
-            cancellationToken.ThrowIfCancellationRequested(); // change aggregate exception to operation canceled exception
+            cancellationToken
+                .ThrowIfCancellationRequested(); // change aggregate exception to operation canceled exception
             throw;
         }
-
     }
 }

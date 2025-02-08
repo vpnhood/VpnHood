@@ -5,8 +5,8 @@ namespace VpnHood.Core.Client.ApiControllers;
 // todo: temporary public. it should be internal
 public class ApiController(VpnHoodClient client)
 {
-    public ConnectionInfo GetConnectionInfo()=> client.ConnectionInfo.ToDto();
-    
+    public ConnectionInfo GetConnectionInfo() => client.ConnectionInfo.ToDto();
+
     //private TcpListener _tcpListener = new TcpListener();
     //private async Task Start()
     //{

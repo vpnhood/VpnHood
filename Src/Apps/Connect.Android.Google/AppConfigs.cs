@@ -9,8 +9,11 @@ namespace VpnHood.App.Client.Droid.Google;
 internal class AppConfigs : AppConfigsBase<AppConfigs>
 {
     public const string AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
-    public string? UpdateInfoUrl { get; init; } = "https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android.json";
-    public int? SpaDefaultPort { get; init; }= IsDebugMode ? 9571 : 9570;
+
+    public string? UpdateInfoUrl { get; init; } =
+        "https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android.json";
+
+    public int? SpaDefaultPort { get; init; } = IsDebugMode ? 9571 : 9570;
     public bool SpaListenToAllIps { get; init; } = IsDebugMode;
     public bool AllowEndPointTracker { get; init; }
 
@@ -40,7 +43,10 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
 
     // Chartboost
     public string ChartboostAppId { get; init; } = "000000000000000000000000"; //YOUR_CHATBOOST_APP_ID
-    public string ChartboostAppSignature { get; init; } = "0000000000000000000000000000000000000000"; //YOUR_CHATBOOST_APP_SIGNATURE
+
+    public string ChartboostAppSignature { get; init; } =
+        "0000000000000000000000000000000000000000"; //YOUR_CHATBOOST_APP_SIGNATURE
+
     public string ChartboostAdLocation { get; init; } = "YOUR_CHARTBOOST_AD_LOCATION";
 
     // Inmobi
@@ -61,5 +67,4 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
 #else
     public const bool IsDebugMode = false;
 #endif
-
 }

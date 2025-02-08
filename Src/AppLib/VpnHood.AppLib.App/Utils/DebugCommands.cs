@@ -13,11 +13,11 @@ public static class DebugCommands
 
     public static string[] All => [
         CaptureContext,
-        DropUdp, 
+        DropUdp,
         FullLog,
         KillSpaServer,
         UseTcpOverTun,
-        NoTcpReuse, 
+        NoTcpReuse,
         NullCapture,
         Verbose
     ];

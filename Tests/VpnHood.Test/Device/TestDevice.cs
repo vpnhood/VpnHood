@@ -2,7 +2,7 @@
 
 namespace VpnHood.Test.Device;
 
-public class TestDevice(Func<IPacketCapture> packetCaptureFactory) : IDevice
+public class TestDevice(Func<IVpnAdapter> vpnAdapterFactory) : IDevice
 {
 #pragma warning disable CS0067 // The event 'TestDevice.StartedAsService' is never used
     public event EventHandler? StartedAsService;
@@ -15,9 +15,9 @@ public class TestDevice(Func<IPacketCapture> packetCaptureFactory) : IDevice
 
     public DeviceAppInfo[] InstalledApps => throw new NotSupportedException();
 
-    public Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext)
+    public Task<IVpnAdapter> CreateVpnAdapter(IUiContext? uiContext)
     {
-        return Task.FromResult(packetCaptureFactory());
+        return Task.FromResult(vpnAdapterFactory());
     }
 
     public void Dispose()

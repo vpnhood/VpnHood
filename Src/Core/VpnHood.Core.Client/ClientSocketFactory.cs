@@ -7,7 +7,7 @@ using VpnHood.Core.Tunneling.Factory;
 namespace VpnHood.Core.Client;
 
 public class ClientSocketFactory(
-    IPacketCapture packetCapture,
+    IVpnAdapter vpnAdapter,
     ISocketFactory socketFactory)
     : ISocketFactory
 {
@@ -20,8 +20,8 @@ public class ClientSocketFactory(
         VhUtil.ConfigTcpClient(tcpClient, null, null);
 
         // auto protect
-        if (packetCapture.CanProtectSocket)
-            packetCapture.ProtectSocket(tcpClient.Client);
+        if (vpnAdapter.CanProtectSocket)
+            vpnAdapter.ProtectSocket(tcpClient.Client);
 
         return tcpClient;
     }
@@ -29,8 +29,8 @@ public class ClientSocketFactory(
     public UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
         var ret = socketFactory.CreateUdpClient(addressFamily);
-        if (packetCapture.CanProtectSocket)
-            packetCapture.ProtectSocket(ret.Client);
+        if (vpnAdapter.CanProtectSocket)
+            vpnAdapter.ProtectSocket(ret.Client);
         return ret;
     }
 
@@ -39,10 +39,11 @@ public class ClientSocketFactory(
         socketFactory.SetKeepAlive(socket, enable);
     }
 
-    public bool CanDetectInProcessPacket => packetCapture.CanDetectInProcessPacket;
+    public bool CanDetectInProcessPacket => vpnAdapter.CanDetectInProcessPacket;
 
-    public bool IsInProcessPacket(PacketDotNet.ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+    public bool IsInProcessPacket(PacketDotNet.ProtocolType protocol, IPEndPoint localEndPoint,
+        IPEndPoint remoteEndPoint)
     {
-        return packetCapture.IsInProcessPacket(protocol, localEndPoint, remoteEndPoint);
+        return vpnAdapter.IsInProcessPacket(protocol, localEndPoint, remoteEndPoint);
     }
 }

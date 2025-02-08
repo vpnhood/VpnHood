@@ -13,9 +13,9 @@ internal class HttpTesterServer : IDisposable
     private readonly WebServer _webServer;
 
     public HttpTesterServer(
-        IPEndPoint? httpEndPoint, 
-        IPEndPoint? httpsEndPoint, 
-        X509Certificate2? certificate, 
+        IPEndPoint? httpEndPoint,
+        IPEndPoint? httpsEndPoint,
+        X509Certificate2? certificate,
         CancellationToken cancellationToken)
     {
         // create web server
@@ -26,8 +26,8 @@ internal class HttpTesterServer : IDisposable
 
         if (httpEndPoint != null) {
             webServerOptions.AddUrlPrefix($"http://+:{httpEndPoint.Port}");
-
         }
+
         if (httpsEndPoint != null) {
             webServerOptions.AddUrlPrefix($"https://+:{httpsEndPoint.Port}");
         }

@@ -9,9 +9,9 @@ internal class PartialIntentScope : IDisposable
     {
         Interlocked.Increment(ref _partialIntentCounter);
     }
+
     public void Dispose()
     {
         Interlocked.Decrement(ref _partialIntentCounter);
-
     }
 }

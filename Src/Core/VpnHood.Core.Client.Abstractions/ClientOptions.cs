@@ -20,7 +20,7 @@ public class ClientOptions
     public IPAddress TcpProxyCatcherAddressIpV6 { get; set; } = IPAddress.Parse("2000::");
 
     public IPAddress[]? DnsServers { get; set; }
-    public bool AutoDisposePacketCapture { get; set; } = true;
+    public bool AutoDisposeVpnAdapter { get; set; } = true;
     public TimeSpan SessionTimeout { get; set; } = TimeSpan.FromDays(3);
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
     public TimeSpan ReconnectTimeout { get; set; } = TimeSpan.FromSeconds(60); // connect timeout before pause
@@ -29,7 +29,7 @@ public class ClientOptions
     public bool UseUdpChannel { get; set; }
     public bool IncludeLocalNetwork { get; set; }
     public IpRangeOrderedList IncludeIpRanges { get; set; } = new(IpNetwork.All.ToIpRanges());
-    public IpRangeOrderedList PacketCaptureIncludeIpRanges { get; set; } = new(IpNetwork.All.ToIpRanges());
+    public IpRangeOrderedList VpnAdapterIncludeIpRanges { get; set; } = new(IpNetwork.All.ToIpRanges());
     public int MaxDatagramChannelCount { get; set; } = 4;
     public string UserAgent { get; set; } = Environment.OSVersion.ToString();
     public TimeSpan MinTcpDatagramTimespan { get; set; } = TimeSpan.FromMinutes(5);

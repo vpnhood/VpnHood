@@ -23,13 +23,13 @@ namespace VpnHood.Core.Client.Device.Droid;
     //Process = ":vpnhood_process",
     ForegroundServiceType = ForegroundService.TypeSystemExempted)]
 [IntentFilter(["android.net.VpnService"])]
-public class AndroidPacketCapture : VpnService, IPacketCapture
+public class AndroidVpnAdapter : VpnService, IVpnAdapter
 {
     private FileInputStream? _inStream; // Packets to be sent are queued in this input stream.
     private ParcelFileDescriptor? _mInterface;
     private FileOutputStream? _outStream; // Packets received need to be written to this output stream.
     private readonly ConnectivityManager? _connectivityManager = ConnectivityManager.FromContext(Application.Context);
-    internal static TaskCompletionSource<AndroidPacketCapture>? StartServiceTaskCompletionSource { get; set; }
+    internal static TaskCompletionSource<AndroidVpnAdapter>? StartServiceTaskCompletionSource { get; set; }
 
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Stopped;
@@ -44,7 +44,6 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
 
     public void Init()
     {
-
     }
 
     public void StartCapture(VpnAdapterOptions options)
@@ -55,7 +54,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
             .SetBlocking(true);
 
         // Private IP Networks
-        if (options.VirtualIpNetworkV4!=null)
+        if (options.VirtualIpNetworkV4 != null)
             builder.AddAddress(options.VirtualIpNetworkV4.Prefix.ToString(), options.VirtualIpNetworkV4.PrefixLength);
 
         if (options.VirtualIpNetworkV6 != null)
@@ -78,8 +77,10 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
             builder.AddRoute(network.Prefix.ToString(), network.PrefixLength);
 
         // AppFilter
-        var appPackageName = ApplicationContext?.PackageName ?? throw new Exception("Could not get the app PackageName!");
-        AddAppFilter(builder, includeApps: options.IncludeApps, excludeApps: options.ExcludeApps, appPackageName: appPackageName);
+        var appPackageName =
+            ApplicationContext?.PackageName ?? throw new Exception("Could not get the app PackageName!");
+        AddAppFilter(builder, includeApps: options.IncludeApps, excludeApps: options.ExcludeApps,
+            appPackageName: appPackageName);
 
         // DNS Servers
         AddDnsServers(builder, options.DnsServers, PrivateIpNetworks.Any(x => x.IsIpV6));
@@ -94,7 +95,6 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         _outStream = new FileOutputStream(_mInterface.FileDescriptor);
 
         Task.Run(ReadingPacketTask);
-
     }
 
     public void SendPacketToInbound(IPPacket ipPacket)
@@ -169,10 +169,9 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
             builder.AddDnsServer(dnsServer.ToString());
     }
 
-    private static void AddAppFilter(Builder builder, string appPackageName, 
+    private static void AddAppFilter(Builder builder, string appPackageName,
         string[]? includeApps, string[]? excludeApps)
     {
-
         // Applications Filter
         if (includeApps != null) {
             builder.AddAllowedApplication(appPackageName);
@@ -226,6 +225,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     }
 
     public bool CanDetectInProcessPacket => OperatingSystem.IsAndroidVersionAtLeast(29);
+
     public bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
     {
         // check if the packet is in process
@@ -244,6 +244,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     }
 
     private PacketReceivedEventArgs? _packetReceivedEventArgs;
+
     protected virtual void ProcessPacket(IPPacket ipPacket)
     {
         // create the event args. for performance, we will reuse the same instance

@@ -10,6 +10,7 @@ namespace VpnHood.Core.Tunneling;
 public class PingV4ProxyRaw : IDisposable
 {
     private readonly Socket _socket;
+
     public PingV4ProxyRaw()
     {
         _socket = new Socket(AddressFamily.InterNetwork, SocketType.Raw, System.Net.Sockets.ProtocolType.Icmp);
@@ -25,6 +26,7 @@ public class PingV4ProxyRaw : IDisposable
             //var ipPacket = Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>();
         }
     }
+
     public void Send(IPPacket ipPacket)
     {
         if (ipPacket.Protocol != ProtocolType.Icmp)

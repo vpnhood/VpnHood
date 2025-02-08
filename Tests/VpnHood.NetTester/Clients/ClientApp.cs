@@ -30,7 +30,8 @@ internal class ClientApp : IDisposable
             }));
 
         if (clientOptions.IsDebug)
-            StreamRandomReader.ReadDelay = TimeSpan.FromMilliseconds(1); // Task.Delay ignore any value less than milliseconds
+            StreamRandomReader.ReadDelay =
+                TimeSpan.FromMilliseconds(1); // Task.Delay ignore any value less than milliseconds
     }
 
     public static async Task<ClientApp> Create(ClientOptions clientOptions)
@@ -89,11 +90,10 @@ internal class ClientApp : IDisposable
             // test multi
             if (_clientOptions.Multi > 0)
                 await testerClient.Start(
-                    upSize: _clientOptions.UpSize * 1000000, 
+                    upSize: _clientOptions.UpSize * 1000000,
                     downSize: _clientOptions.DownSize * 1000000,
                     connectionCount: _clientOptions.Multi,
                     cancellationToken: cancellationToken);
-
         }
     }
 

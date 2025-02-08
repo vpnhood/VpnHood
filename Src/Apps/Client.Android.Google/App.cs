@@ -20,7 +20,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     protected override AppOptions CreateAppOptions()
     {
         var appConfigs = AppConfigs.Load();
-        
+
         var resources = DefaultAppResource.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
 

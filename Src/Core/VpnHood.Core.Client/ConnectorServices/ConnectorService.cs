@@ -30,7 +30,8 @@ internal class ConnectorService(
 
         // set request timeout
         using var cancellationTokenSource = new CancellationTokenSource(RequestTimeout);
-        using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
+        using var linkedCancellationTokenSource =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
         cancellationToken = linkedCancellationTokenSource.Token;
 
         await using var mem = new MemoryStream();
@@ -88,7 +89,8 @@ internal class ConnectorService(
             // parse the HTTP request
             if (clientStream.RequireHttpResponse) {
                 clientStream.RequireHttpResponse = false;
-                var responseMessage = await HttpUtil.ReadResponse(clientStream.Stream, cancellationToken).VhConfigureAwait();
+                var responseMessage =
+                    await HttpUtil.ReadResponse(clientStream.Stream, cancellationToken).VhConfigureAwait();
                 if (responseMessage.StatusCode == HttpStatusCode.Unauthorized)
                     throw new UnauthorizedAccessException();
 
@@ -102,7 +104,7 @@ internal class ConnectorService(
                 ClientStream = clientStream
             };
         }
-        catch{
+        catch {
             DisposingTasks.Add(clientStream.DisposeAsync(false));
             throw;
         }
@@ -127,13 +129,13 @@ internal class ConnectorService(
 
     private static void ProcessResponseException(SessionResponse response)
     {
-        if (response.ErrorCode == SessionErrorCode.RedirectHost) 
+        if (response.ErrorCode == SessionErrorCode.RedirectHost)
             throw new RedirectHostException(response);
 
-        if (response.ErrorCode == SessionErrorCode.Maintenance) 
+        if (response.ErrorCode == SessionErrorCode.Maintenance)
             throw new MaintenanceException();
 
-        if (response.ErrorCode != SessionErrorCode.Ok) 
+        if (response.ErrorCode != SessionErrorCode.Ok)
             throw new SessionException(response);
     }
 

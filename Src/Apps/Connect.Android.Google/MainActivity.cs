@@ -9,7 +9,7 @@ namespace VpnHood.App.Client.Droid.Google;
     MainLauncher = true,
     Label = AppConfigs.AppName,
     Theme = AndroidMainActivityConstants.Theme,
-    LaunchMode = AndroidMainActivityConstants.LaunchMode, 
+    LaunchMode = AndroidMainActivityConstants.LaunchMode,
     Exported = AndroidMainActivityConstants.Exported,
     WindowSoftInputMode = AndroidMainActivityConstants.WindowSoftInputMode,
     ScreenOrientation = AndroidMainActivityConstants.ScreenOrientation,

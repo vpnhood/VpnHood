@@ -45,5 +45,4 @@ public static class JsonSerializerExt
 
         propertyInfo.SetValue(target, parsedValue);
     }
-
 }

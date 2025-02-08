@@ -40,7 +40,8 @@ public class AdMobAppOpenAdProvider(string adUnitId) : IAppAdProvider
 
         var adLoadCallback = new MyAppOpenAdLoadCallback();
         var adRequest = new AdRequest.Builder().Build();
-        await AndroidUtil.RunOnUiThread(activity, () => { AppOpenAd.Load(activity, adUnitId, adRequest, adLoadCallback); })
+        await AndroidUtil.RunOnUiThread(activity,
+                () => { AppOpenAd.Load(activity, adUnitId, adRequest, adLoadCallback); })
             .WaitAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -66,8 +67,9 @@ public class AdMobAppOpenAdProvider(string adUnitId) : IAppAdProvider
             var fullScreenContentCallback = new MyFullScreenContentCallback();
             await AndroidUtil
                 .RunOnUiThread(activity, () => {
-                        _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
-                        _loadedAd.Show(activity); })
+                    _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
+                    _loadedAd.Show(activity);
+                })
                 .WaitAsync(cancellationToken)
                 .ConfigureAwait(false);
 

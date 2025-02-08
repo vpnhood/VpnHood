@@ -39,6 +39,7 @@ public class ServerApp : IDisposable
     public IAccessManager AccessManager { get; }
     public FileAccessManager? FileAccessManager => AccessManager as FileAccessManager;
     public static string AppName => "VpnHoodServer";
+
     public static string AppFolderPath => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ??
                                           throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
 
@@ -54,7 +55,7 @@ public class ServerApp : IDisposable
         // set storage folder
         var parentAppFolderPath = Path.GetDirectoryName(Path.GetDirectoryName(typeof(ServerApp).Assembly.Location));
         var storagePath =
-            (parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish)))
+            parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish))
                 ? Path.Combine(parentAppFolderPath, FolderNameStorage)
                 : Path.Combine(Directory.GetCurrentDirectory(), FolderNameStorage);
         Directory.CreateDirectory(storagePath);
@@ -150,7 +151,8 @@ public class ServerApp : IDisposable
         return ret;
     }
 
-    private static async Task<IPEndPoint[]> GetDefaultPublicEndPoints(IEnumerable<IPEndPoint> tcpEndPoints, CancellationToken cancellationToken)
+    private static async Task<IPEndPoint[]> GetDefaultPublicEndPoints(IEnumerable<IPEndPoint> tcpEndPoints,
+        CancellationToken cancellationToken)
     {
         var publicIps = await IPAddressUtil.GetPublicIpAddresses(cancellationToken);
         var defaultPublicEps = new List<IPEndPoint>();

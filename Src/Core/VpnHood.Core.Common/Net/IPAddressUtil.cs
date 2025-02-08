@@ -108,7 +108,8 @@ public static class IPAddressUtil
         return ret.ToArray();
     }
 
-    public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily, CancellationToken cancellationToken)
+    public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily,
+        CancellationToken cancellationToken)
     {
         try {
             // create linked cancellation token of max 5 seconds
@@ -132,7 +133,8 @@ public static class IPAddressUtil
         return null;
     }
 
-    private static async Task<IPAddress?> GetPublicIpAddressByCloudflare(AddressFamily addressFamily, CancellationToken cancellationToken)
+    private static async Task<IPAddress?> GetPublicIpAddressByCloudflare(AddressFamily addressFamily,
+        CancellationToken cancellationToken)
     {
         var url = addressFamily == AddressFamily.InterNetwork
             ? "https://1.1.1.1/cdn-cgi/trace"
@@ -151,7 +153,8 @@ public static class IPAddressUtil
         return ipLine != null ? IPAddress.Parse(ipLine.Split('=')[1]) : null;
     }
 
-    private static async Task<IPAddress?> GetPublicIpAddressByIpify(AddressFamily addressFamily, CancellationToken cancellationToken)
+    private static async Task<IPAddress?> GetPublicIpAddressByIpify(AddressFamily addressFamily,
+        CancellationToken cancellationToken)
     {
         //var url = addressFamily == AddressFamily.InterNetwork
         //    ? "https://api.ipify.org?format=json"

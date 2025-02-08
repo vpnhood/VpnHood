@@ -22,7 +22,7 @@ public class SessionService : IDisposable, IJob
     private readonly TimeSpan _trialTimeout = TimeSpan.FromMinutes(10);
     private long _lastSessionId;
     private readonly string _sessionsFolderPath;
-    private readonly ConcurrentDictionary<ulong, bool> _updatedSessionIds = new ();
+    private readonly ConcurrentDictionary<ulong, bool> _updatedSessionIds = new();
     public ConcurrentDictionary<ulong, Session> Sessions { get; }
     public JobSection JobSection { get; } = new();
 
@@ -118,7 +118,9 @@ public class SessionService : IDisposable, IJob
             };
         }
 
-        var adRequirement = IsUnitTest ? ProcessPlanId(session, accessTokenData, sessionRequestEx.PlanId) : AdRequirement.None;
+        var adRequirement = IsUnitTest
+            ? ProcessPlanId(session, accessTokenData, sessionRequestEx.PlanId)
+            : AdRequirement.None;
 
         //create response
         var responseEx = BuildSessionResponse(session, accessTokenData);
@@ -182,7 +184,7 @@ public class SessionService : IDisposable, IJob
         var ret = BuildSessionResponse(session, accessTokenData, isValidAd);
         return ret;
     }
-    
+
     public ulong[] ResetUpdatedSessions()
     {
         lock (_updatedSessionIds) {
@@ -191,7 +193,9 @@ public class SessionService : IDisposable, IJob
             return sessionIds;
         }
     }
-    private SessionResponseEx BuildSessionResponse(Session session, AccessTokenData accessTokenData, bool? isValidAd = null)
+
+    private SessionResponseEx BuildSessionResponse(Session session, AccessTokenData accessTokenData,
+        bool? isValidAd = null)
     {
         // check if the ad is valid. MUST before access usage
         if (isValidAd == true)
@@ -207,7 +211,7 @@ public class SessionService : IDisposable, IJob
 #pragma warning restore CS0618 // Type or member is obsolete
             MaxTraffic = accessToken.MaxTraffic,
             CycleTraffic = new Traffic(accessTokenData.Usage.Sent, accessTokenData.Usage.Received),
-            IsPremium = true, // token is always premium in File Access Manager
+            IsPremium = true // token is always premium in File Access Manager
         };
 
 
@@ -268,7 +272,7 @@ public class SessionService : IDisposable, IJob
             if (accessTokenData.AccessToken.MaxClientCount != 0) {
                 // suppressedTo others by MaxClientCount
                 var otherSessions2 = otherSessions
-                    .Where(x => 
+                    .Where(x =>
                         x.ClientInfo.ClientId != session.ClientInfo.ClientId &&
                         x.SessionId != session.SessionId)
                     .OrderBy(x => x.CreatedTime).ToArray();
@@ -286,7 +290,8 @@ public class SessionService : IDisposable, IJob
             }
 
             // set to session expiration time if session expiration time is shorter than accessUsage.ExpirationTime
-            if (session.ExpirationTime != null && (accessUsage.ExpirationTime == null || session.ExpirationTime < accessUsage.ExpirationTime)) {
+            if (session.ExpirationTime != null && (accessUsage.ExpirationTime == null ||
+                                                   session.ExpirationTime < accessUsage.ExpirationTime)) {
                 accessUsage.ExpirationTime = session.ExpirationTime.Value;
             }
 
@@ -308,7 +313,7 @@ public class SessionService : IDisposable, IJob
             RedirectHostEndPoint = null,
             AdRequirement = accessToken.AdRequirement,
             ExtraData = session.ExtraData,
-            ProtocolVersion = session.ProtocolVersion,
+            ProtocolVersion = session.ProtocolVersion
         };
     }
 
@@ -326,5 +331,4 @@ public class SessionService : IDisposable, IJob
     public void Dispose()
     {
     }
-  
 }

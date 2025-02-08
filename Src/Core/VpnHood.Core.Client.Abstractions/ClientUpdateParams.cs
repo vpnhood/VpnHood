@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Core.Client.Abstractions;
 
-public class ClientUpdateParams   
+public class ClientUpdateParams
 {
     public bool UseTcpOverTun { get; set; }
     public bool UseUdpChannel { get; set; }

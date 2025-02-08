@@ -168,7 +168,7 @@ public class ClientAppTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
-        var deviceOptions = new TestPacketCaptureOptions {
+        var deviceOptions = new TestVpnAdapterOptions {
             CanSendPacketToOutbound = usePassthru,
             IsDnsServerSupported = isDnsServerSupported,
             CaptureDnsAddresses = TestHelper.TestIpAddresses.ToArray()
@@ -392,7 +392,6 @@ public class ClientAppTest : TestBase
 
         // code should not exist any return objects
         Assert.IsFalse(app.State.LastError?.Data.ContainsKey("AccessCode") == true);
-
     }
 
     [TestMethod]
@@ -418,7 +417,6 @@ public class ClientAppTest : TestBase
         // token name must be updated
         var token2 = app.ClientProfileService.GetToken(token.TokenId);
         Assert.AreEqual(orgTokenName, token2.Name);
-
     }
 
     [TestMethod]
@@ -507,9 +505,9 @@ public class ClientAppTest : TestBase
         await using var server = await TestHelper.CreateServer();
 
         // create app
-        var packetCaptureOptions = TestHelper.CreateTestPacketCaptureOptions();
-        packetCaptureOptions.CanSendPacketToOutbound = false;
-        await using var app = TestAppHelper.CreateClientApp(device: TestHelper.CreateDevice(packetCaptureOptions));
+        var vpnAdapterOptions = TestHelper.CreateTestVpnAdapterOptions();
+        vpnAdapterOptions.CanSendPacketToOutbound = false;
+        await using var app = TestAppHelper.CreateClientApp(device: TestHelper.CreateDevice(vpnAdapterOptions));
         app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsUri1.Host];
 
         // connect
@@ -540,9 +538,9 @@ public class ClientAppTest : TestBase
         await using var server = await TestHelper.CreateServer();
 
         // create app
-        var packetCaptureOptions = TestHelper.CreateTestPacketCaptureOptions();
-        packetCaptureOptions.CanSendPacketToOutbound = false;
-        await using var app = TestAppHelper.CreateClientApp(device: TestHelper.CreateDevice(packetCaptureOptions));
+        var vpnAdapterOptions = TestHelper.CreateTestVpnAdapterOptions();
+        vpnAdapterOptions.CanSendPacketToOutbound = false;
+        await using var app = TestAppHelper.CreateClientApp(device: TestHelper.CreateDevice(vpnAdapterOptions));
         app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsUri1.Host];
 
         // connect
@@ -633,7 +631,7 @@ public class ClientAppTest : TestBase
         });
 
         // no exception expected
-        await app.Connect(clientProfile.ClientProfileId); 
+        await app.Connect(clientProfile.ClientProfileId);
 
         // check location
         app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {

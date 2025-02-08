@@ -52,7 +52,8 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         return base.Server_Configure(serverInfo);
     }
 
-    public override async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    public override async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint,
+        IPAddress? clientIp)
     {
         lock (_lockObject)
             SessionGetCounter++;
@@ -95,7 +96,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
             }
 
             // just accepted if it is null 
-            if (redirectEndPoint== null) {
+            if (redirectEndPoint == null) {
                 sessionRequestEx.ServerLocation = null;
                 return ret;
             }

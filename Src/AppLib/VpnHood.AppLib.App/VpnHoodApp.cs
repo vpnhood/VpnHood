@@ -12,10 +12,14 @@ using VpnHood.AppLib.Diagnosing;
 using VpnHood.AppLib.DtoConverters;
 using VpnHood.AppLib.Providers;
 using VpnHood.AppLib.Services.Accounts;
+using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.Services.Logging;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
-using VpnHood.Core.Common.Trackers;
+using VpnHood.Core.Client;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Manager;
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.IpLocations;
@@ -25,14 +29,10 @@ using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling;
-using VpnHood.AppLib.Services.Logging;
-using VpnHood.AppLib.Services.Ads;
-using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Manager;
 using VpnHood.Core.Tunneling.Factory;
-using VpnHood.Core.Client;
 
 namespace VpnHood.AppLib;
 
@@ -104,7 +104,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Directory.CreateDirectory(options.StorageFolderPath); //make sure directory exists
         Resource = options.Resource;
         Device = device;
-        StorageFolderPath = options.StorageFolderPath ?? throw new ArgumentNullException(nameof(options.StorageFolderPath));
+        StorageFolderPath = options.StorageFolderPath ??
+                            throw new ArgumentNullException(nameof(options.StorageFolderPath));
         SettingsService = new AppSettingsService(StorageFolderPath);
         SettingsService.BeforeSave += SettingsBeforeSave;
         _oldUserSettings = VhUtil.JsonClone(UserSettings);
@@ -145,7 +146,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var builtInProfileIds = ClientProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
 
         // remove default client profile if not exists
-        if (UserSettings.ClientProfileId != null && ClientProfileService.FindById(UserSettings.ClientProfileId.Value) == null)
+        if (UserSettings.ClientProfileId != null &&
+            ClientProfileService.FindById(UserSettings.ClientProfileId.Value) == null)
             UserSettings.ClientProfileId = null;
 
         // set first built in profile as default if default is not set
@@ -188,7 +190,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Services = new AppServices {
             CultureProvider = options.CultureProvider ?? new AppCultureProvider(this),
             AdService = appAdService,
-            AccountService = options.AccountProvider != null ? new AppAccountService(this, options.AccountProvider) : null,
+            AccountService = options.AccountProvider != null
+                ? new AppAccountService(this, options.AccountProvider)
+                : null,
             UpdaterProvider = options.UpdaterProvider,
             UiProvider = uiProvider,
             Tracker = options.Tracker
@@ -232,13 +236,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
                 // check is disconnect required
                 disconnectRequired =
-                    (UserSettings.UsePacketCaptureIpFilter != _oldUserSettings.UsePacketCaptureIpFilter) ||
-                    (UserSettings.UseAppIpFilter != _oldUserSettings.UseAppIpFilter) ||
-                    (UserSettings.TunnelClientCountry != _oldUserSettings.TunnelClientCountry) ||
-                    (UserSettings.ClientProfileId != _activeClientProfileId) ||
-                    (UserSettings.IncludeLocalNetwork != _oldUserSettings.IncludeLocalNetwork) ||
-                    (UserSettings.AppFiltersMode != _oldUserSettings.AppFiltersMode) ||
-                    (!UserSettings.AppFilters.SequenceEqual(_oldUserSettings.AppFilters));
+                    UserSettings.UseVpnAdapterIpFilter != _oldUserSettings.UseVpnAdapterIpFilter ||
+                    UserSettings.UseAppIpFilter != _oldUserSettings.UseAppIpFilter ||
+                    UserSettings.TunnelClientCountry != _oldUserSettings.TunnelClientCountry ||
+                    UserSettings.ClientProfileId != _activeClientProfileId ||
+                    UserSettings.IncludeLocalNetwork != _oldUserSettings.IncludeLocalNetwork ||
+                    UserSettings.AppFiltersMode != _oldUserSettings.AppFiltersMode ||
+                    !UserSettings.AppFilters.SequenceEqual(_oldUserSettings.AppFilters);
             }
 
             // set default ContinueOnCapturedContext
@@ -311,16 +315,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 IsIdle = IsIdle,
                 CanConnect = connectionState is AppConnectionState.None,
                 CanDiagnose = connectionState is AppConnectionState.None ||
-                              (!_hasDiagnoseRequested && (connectionState is AppConnectionState.Connected or AppConnectionState.Connecting)),
-                CanDisconnect = !_isDisconnecting && (connectionState
+                              (!_hasDiagnoseRequested &&
+                               connectionState is AppConnectionState.Connected or AppConnectionState.Connecting),
+                CanDisconnect = !_isDisconnecting && connectionState
                     is AppConnectionState.Connected or AppConnectionState.Connecting
-                    or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
+                    or AppConnectionState.Diagnosing or AppConnectionState.Waiting,
                 PromptForLog = IsIdle && _hasDiagnoseRequested && LogService.Exists,
                 LogExists = LogService.Exists,
                 LastError = _appPersistState.LastError,
                 HasDiagnoseRequested = _hasDiagnoseRequested,
                 HasDisconnectedByUser = _hasDisconnectedByUser,
-                HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseRequested || _appPersistState.LastError != null),
+                HasProblemDetected = _hasConnectRequested && IsIdle &&
+                                     (_hasDiagnoseRequested || _appPersistState.LastError != null),
                 ClientCountryCode = _appPersistState.ClientCountryCode,
                 ClientCountryName = VhUtil.TryGetCountryName(_appPersistState.ClientCountryCode),
                 ConnectRequestTime = _connectRequestTime,
@@ -400,10 +406,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         _appPersistState.LastError = null;
         _hasDiagnoseRequested = false;
-
     }
 
     private readonly AsyncLock _connectLock = new();
+
     public async Task Connect(
         Guid? clientProfileId = null,
         ConnectPlanId planId = ConnectPlanId.Normal,
@@ -463,8 +469,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             });
 
             // set current profile only if it has been updated to avoid unnecessary new config time
-            if (clientProfile.ClientProfileId != UserSettings.ClientProfileId || serverLocation != clientProfileInfo.SelectedLocationInfo?.ServerLocation) {
-                clientProfile = ClientProfileService.Update(clientProfileId.Value, new ClientProfileUpdateParams { SelectedLocation = serverLocation });
+            if (clientProfile.ClientProfileId != UserSettings.ClientProfileId ||
+                serverLocation != clientProfileInfo.SelectedLocationInfo?.ServerLocation) {
+                clientProfile = ClientProfileService.Update(clientProfileId.Value,
+                    new ClientProfileUpdateParams { SelectedLocation = serverLocation });
                 UserSettings.ClientProfileId = clientProfile.ClientProfileId;
                 Settings.Save();
             }
@@ -514,11 +522,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 switch (sessionException.SessionResponse.ErrorCode) {
                     case SessionErrorCode.NoServerAvailable:
                     case SessionErrorCode.PremiumLocation:
-                        ClientProfileService.Update(clientProfileId.Value, new ClientProfileUpdateParams { SelectedLocation = new Patch<string?>(null) });
+                        ClientProfileService.Update(clientProfileId.Value,
+                            new ClientProfileUpdateParams { SelectedLocation = new Patch<string?>(null) });
                         break;
 
                     case SessionErrorCode.AccessCodeRejected:
-                        ClientProfileService.Update(clientProfileId.Value, new ClientProfileUpdateParams { AccessCode = new Patch<string?>(null) });
+                        ClientProfileService.Update(clientProfileId.Value,
+                            new ClientProfileUpdateParams { AccessCode = new Patch<string?>(null) });
                         break;
 
                     // remove client profile if access expired
@@ -552,18 +562,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private async Task<IPacketCapture> CreatePacketCapture()
+    private async Task<IVpnAdapter> CreateVpnAdapter()
     {
-        VhLogger.Instance.LogInformation("Creating PacketCapture ...");
+        VhLogger.Instance.LogInformation("Creating VpnAdapter ...");
 
         if (HasDebugCommand(DebugCommands.NullCapture)) {
-            VhLogger.Instance.LogWarning("Using NullPacketCapture. No packet will go through the VPN.");
-            return new NullPacketCapture();
+            VhLogger.Instance.LogWarning("Using NullVpnAdapter. No packet will go through the VPN.");
+            return new NullVpnAdapter();
         }
 
         // create packet capture
-        var packetCapture = await Device.CreatePacketCapture(ActiveUiContext.Context).VhConfigureAwait();
-        return packetCapture;
+        var vpnAdapter = await Device.CreateVpnAdapter(ActiveUiContext.Context).VhConfigureAwait();
+        return vpnAdapter;
     }
 
 
@@ -583,11 +593,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         VhLogger.Instance.LogInformation("TokenId: {TokenId}, SupportId: {SupportId}",
             VhLogger.FormatId(token.TokenId), VhLogger.FormatId(token.SupportId));
 
-        // calculate packetCaptureIpRanges
-        var packetCaptureIpRanges = IpNetwork.All.ToIpRanges();
-        if (UserSettings.UsePacketCaptureIpFilter) {
-            packetCaptureIpRanges = packetCaptureIpRanges.Intersect(IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.PacketCaptureIpFilterIncludes));
-            packetCaptureIpRanges = packetCaptureIpRanges.Exclude(IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.PacketCaptureIpFilterExcludes));
+        // calculate vpnAdapterIpRanges
+        var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
+        if (UserSettings.UseVpnAdapterIpFilter) {
+            vpnAdapterIpRanges =
+                vpnAdapterIpRanges.Intersect(
+                    IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.VpnAdapterIpFilterIncludes));
+            vpnAdapterIpRanges =
+                vpnAdapterIpRanges.Exclude(
+                    IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.VpnAdapterIpFilterExcludes));
         }
 
         // create clientOptions
@@ -597,7 +611,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AutoWaitTimeout = _autoWaitTimeout,
             IncludeLocalNetwork = UserSettings.IncludeLocalNetwork && Features.IsLocalNetworkSupported,
             IncludeIpRanges = await GetIncludeIpRanges(cancellationToken),
-            PacketCaptureIncludeIpRanges = packetCaptureIpRanges,
+            VpnAdapterIncludeIpRanges = vpnAdapterIpRanges,
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
             ServerQueryTimeout = _serverQueryTimeout,
@@ -618,7 +632,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowRewardedAd = Services.AdService.CanShowRewarded,
             ExcludeApps = UserSettings.AppFiltersMode == FilterMode.Exclude ? UserSettings.AppFilters : null,
             IncludeApps = UserSettings.AppFiltersMode == FilterMode.Include ? UserSettings.AppFilters : null,
-            SessionName = CurrentClientProfileInfo?.ClientProfileName,
+            SessionName = CurrentClientProfileInfo?.ClientProfileName
         };
 
         if (userAgent != null) clientOptions.UserAgent = userAgent;
@@ -627,19 +641,20 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (_clientManager != null)
             throw new Exception("Last client has not been disposed properly.");
 
-        // Create Client with a new PacketCapture
-        var packetCapture = await CreatePacketCapture().VhConfigureAwait();
+        // Create Client with a new VpnAdapter
+        var vpnAdapter = await CreateVpnAdapter().VhConfigureAwait();
         VpnHoodClientManager? clientManager = null;
 
         try {
             VhLogger.Instance.LogTrace("Creating VpnHood Client engine ...");
 
             // set eventWatcherInterval
-            var eventWatcherInterval = _eventWatcherInterval == null && ConnectionStateChanged != null ?
-                TimeSpan.FromSeconds(1) : _eventWatcherInterval;
+            var eventWatcherInterval = _eventWatcherInterval == null && ConnectionStateChanged != null
+                ? TimeSpan.FromSeconds(1)
+                : _eventWatcherInterval;
 
             // create client controller
-            clientManager = VpnHoodClientManager.Create(packetCapture, new SocketFactory(),
+            clientManager = VpnHoodClientManager.Create(vpnAdapter, new SocketFactory(),
                 Services.AdService, Features.ClientId, token, clientOptions, eventWatcherInterval);
             clientManager.StateChanged += Client_StateChanged;
             _clientManager = clientManager;
@@ -650,7 +665,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // start diagnose if requested
             if (_hasDiagnoseRequested) {
-                var hostEndPoints = await ServerTokenHelper.ResolveHostEndPoints(token.ServerToken, cancellationToken).VhConfigureAwait();
+                var hostEndPoints = await ServerTokenHelper.ResolveHostEndPoints(token.ServerToken, cancellationToken)
+                    .VhConfigureAwait();
                 await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).VhConfigureAwait();
                 await Diagnoser.CheckPureNetwork(cancellationToken).VhConfigureAwait();
                 await _clientManager.Start(cancellationToken).VhConfigureAwait();
@@ -704,7 +720,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             throw;
         }
         catch (Exception) {
-            packetCapture.Dispose(); // don't miss to dispose when there is no client to handle it
+            vpnAdapter.Dispose(); // don't miss to dispose when there is no client to handle it
             throw;
         }
     }
@@ -778,7 +794,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     public CultureInfo SystemUiCulture =>
-        _systemUiCulture ?? new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ?? CultureInfo.InstalledUICulture.Name);
+        _systemUiCulture ?? new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ??
+                                            CultureInfo.InstalledUICulture.Name);
 
     private void InitCulture()
     {
@@ -812,7 +829,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _isFindingCountryCode = true;
 
         if ((_appPersistState.ClientCountryCode == null || ignoreCache) && _useExternalLocationService) {
-
             try {
                 using var httpClient = new HttpClient();
                 const string userAgent = "VpnHood-Client";
@@ -916,6 +932,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private readonly AsyncLock _versionCheckLock = new();
+
     public async Task VersionCheck(bool force = false)
     {
         using var lockAsync = await _versionCheckLock.LockAsync().VhConfigureAwait();
@@ -996,11 +1013,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async Task<IpRangeOrderedList> GetIncludeIpRanges(CancellationToken cancellationToken)
     {
-        // calculate packetCaptureIpRanges
+        // calculate vpnAdapterIpRanges
         var ipRanges = IpNetwork.All.ToIpRanges();
         if (UserSettings.UseAppIpFilter) {
-            ipRanges = ipRanges.Intersect(IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.AppIpFilterIncludes));
-            ipRanges = ipRanges.Exclude(IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.AppIpFilterExcludes));
+            ipRanges = ipRanges.Intersect(
+                IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.AppIpFilterIncludes));
+            ipRanges = ipRanges.Exclude(
+                IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.AppIpFilterExcludes));
         }
 
         // exclude client country IPs
@@ -1016,7 +1035,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             var countryCode = await GetCurrentCountryAsync(true, cancellationToken).VhConfigureAwait();
             var countryIpRanges = await IpRangeLocationProvider.GetIpRanges(countryCode).VhConfigureAwait();
-            VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}", VhUtil.TryGetCountryName(_appPersistState.ClientCountryCode));
+            VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}",
+                VhUtil.TryGetCountryName(_appPersistState.ClientCountryCode));
             ipRanges = ipRanges.Exclude(countryIpRanges);
         }
         catch (Exception ex) {

@@ -22,8 +22,10 @@ public class HelloResponse : SessionResponse
 
     public int? UdpPort { get; set; }
     public string ServerVersion { get; set; } = null!;
+
     [Obsolete("Use MaxProtocolVersion and MinProtocolVersion")]
     public int ServerProtocolVersion { get; set; }
+
     public int MaxProtocolVersion { get; set; }
     public int MinProtocolVersion { get; set; }
     public byte[] ServerSecret { get; set; } = null!;
@@ -34,7 +36,7 @@ public class HelloResponse : SessionResponse
     public bool IsIpV6Supported { get; set; }
     public bool IsReviewRequested { get; set; }
     public IpRange[]? IncludeIpRanges { get; set; }
-    public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
+    public IpRange[]? VpnAdapterIncludeIpRanges { get; set; }
     public string? GaMeasurementId { get; init; }
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(60);
     public TimeSpan TcpReuseTimeout { get; init; } = TimeSpan.FromSeconds(60);
@@ -43,5 +45,4 @@ public class HelloResponse : SessionResponse
     public string[] ServerTags { get; set; } = [];
     public AccessInfo? AccessInfo { get; set; }
     public bool IsTunProviderSupported { get; set; }
-   
 }

@@ -81,5 +81,4 @@ public static class WebViewUpdaterPage
         shape.SetColor(Color.LightGreen); // Transparent background
         return shape;
     }
-
 }

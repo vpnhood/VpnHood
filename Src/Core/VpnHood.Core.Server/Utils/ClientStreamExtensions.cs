@@ -7,7 +7,8 @@ namespace VpnHood.Core.Server.Utils;
 
 public static class ClientStreamExtensions
 {
-    public static async Task WriteResponse(this IClientStream clientStream, SessionResponse sessionResponse, CancellationToken cancellationToken)
+    public static async Task WriteResponse(this IClientStream clientStream, SessionResponse sessionResponse,
+        CancellationToken cancellationToken)
     {
         // If the client stream requires an HTTP response, write it to the client stream
         if (clientStream.RequireHttpResponse) {
@@ -19,7 +20,8 @@ public static class ClientStreamExtensions
         await StreamUtil.WriteJsonAsync(clientStream.Stream, sessionResponse, cancellationToken).VhConfigureAwait();
     }
 
-    public static async Task WriteFinalResponse(this IClientStream clientStream, SessionResponse sessionResponse, CancellationToken cancellationToken)
+    public static async Task WriteFinalResponse(this IClientStream clientStream, SessionResponse sessionResponse,
+        CancellationToken cancellationToken)
     {
         // Write the session response to the client stream
         await clientStream.WriteResponse(sessionResponse, cancellationToken).VhConfigureAwait();
@@ -33,6 +35,4 @@ public static class ClientStreamExtensions
         await clientStream.WriteResponse(sessionResponse, cancellationToken).VhConfigureAwait();
         await clientStream.DisposeAsync(false).VhConfigureAwait();
     }
-
-
 }

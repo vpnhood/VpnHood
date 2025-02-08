@@ -16,7 +16,9 @@ public class AppAccountService
         _vpnHoodApp = vpnHoodApp;
         _accountProvider = accountProvider;
         AuthenticationService = new AppAuthenticationService(this, accountProvider.AuthenticationProvider);
-        BillingService = accountProvider.BillingProvider != null ? new AppBillingService(this, accountProvider.BillingProvider) : null;
+        BillingService = accountProvider.BillingProvider != null
+            ? new AppBillingService(this, accountProvider.BillingProvider)
+            : null;
     }
 
     private string AppAccountFilePath => Path.Combine(_vpnHoodApp.StorageFolderPath, "account", "account.json");

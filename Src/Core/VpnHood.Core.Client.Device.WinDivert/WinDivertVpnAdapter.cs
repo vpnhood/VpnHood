@@ -12,7 +12,7 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Client.Device.WinDivert;
 
-public class WinDivertPacketCapture : IPacketCapture
+public class WinDivertVpnAdapter : IVpnAdapter
 {
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr LoadLibrary(string lpFileName);
@@ -36,12 +36,13 @@ public class WinDivertPacketCapture : IPacketCapture
     public bool IsMtuSupported => false;
 
     public bool CanDetectInProcessPacket => false;
+
     public bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
     {
         throw new NotSupportedException("This device can not detect IsInProcessPacket.");
     }
 
-    public WinDivertPacketCapture()
+    public WinDivertVpnAdapter()
     {
         // initialize devices
         _device = new SharpPcap.WinDivert.WinDivertDevice { Flags = 0 };
@@ -100,7 +101,7 @@ public class WinDivertPacketCapture : IPacketCapture
             throw new ObjectDisposedException(VhLogger.FormatType(this));
 
         if (Started)
-            throw new InvalidOperationException("PacketCapture has been already started.");
+            throw new InvalidOperationException("VpnAdapter has been already started.");
 
         // create include and exclude phrases
         var phraseX = "true";
@@ -173,7 +174,7 @@ public class WinDivertPacketCapture : IPacketCapture
         SetInternalIp(ipPacket.SourceAddress);
         var virtualIp = GetVirtualIp(ipPacket.Version);
         if (virtualIp == null) {
-            VhLogger.Instance.LogTrace("The device arrival packet is not supported: {Packet}", 
+            VhLogger.Instance.LogTrace("The device arrival packet is not supported: {Packet}",
                 VhLogger.FormatIpPacket(ipPacket.ToString()!));
             return;
         }

@@ -17,5 +17,4 @@ public static class IpRangeExtension
     {
         return string.Join(Environment.NewLine, ipRanges.Select(x => x.ToString()));
     }
-
 }

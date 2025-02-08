@@ -10,6 +10,7 @@ public class WinDivertDevice : IDevice
     public bool IsExcludeAppsSupported => IsDebugMode;
     public bool IsAlwaysOnSupported => false;
     public bool IsIncludeAppsSupported => IsDebugMode;
+
     public DeviceMemInfo MemInfo {
         get {
             var gcMemoryInfo = GC.GetGCMemoryInfo();
@@ -38,9 +39,9 @@ public class WinDivertDevice : IDevice
         }
     }
 
-    public Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext)
+    public Task<IVpnAdapter> CreateVpnAdapter(IUiContext? uiContext)
     {
-        IPacketCapture res = new WinDivertPacketCapture();
+        IVpnAdapter res = new WinDivertVpnAdapter();
         return Task.FromResult(res);
     }
 

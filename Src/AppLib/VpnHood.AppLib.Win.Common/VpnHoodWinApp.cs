@@ -35,7 +35,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
     public bool ShowWindowAfterStart { get; private set; }
     public bool ConnectAfterStart { get; private set; }
     public bool EnableOpenMainWindow { get; set; } = true;
-    
+
     [DllImport("DwmApi")]
     private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);
 
@@ -45,7 +45,8 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
         _appId = appId;
         _storageFolder = storageFolder;
-        _appIcon = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly()?.Location ?? throw new Exception("Could not get the location of Assembly."))
+        _appIcon = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly()?.Location ??
+                                              throw new Exception("Could not get the location of Assembly."))
                    ?? throw new Exception("Could not get the icon of the executing assembly.");
 
         //create command Listener

@@ -28,7 +28,8 @@ public class LocalIpLocationProvider : IIpLocationProvider
     {
         var ipAddress =
             await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken).VhConfigureAwait() ??
-            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken).VhConfigureAwait() ??
+            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken)
+                .VhConfigureAwait() ??
             throw new Exception("Could not find any public ip address.");
 
         var ipLocation = await GetLocation(ipAddress, cancellationToken);
@@ -56,7 +57,7 @@ public class LocalIpLocationProvider : IIpLocationProvider
             CountryCode = countryCode,
             IpAddress = ipAddress,
             RegionName = null,
-            CityName = null,
+            CityName = null
         };
 
         return Task.FromResult(ipLocation);
@@ -118,5 +119,4 @@ public class LocalIpLocationProvider : IIpLocationProvider
 
         return new LocalIpLocationProvider(ipRangeInfos);
     }
-
 }

@@ -44,7 +44,7 @@ public class ClientServerTest : TestBase
 
         // Create Client
         var token1 = TestHelper.CreateAccessToken(accessManager1);
-        await using var client = await TestHelper.CreateClient(token1, packetCapture: TestHelper.CreateTestPacketCapture());
+        await using var client = await TestHelper.CreateClient(token1, vpnAdapter: TestHelper.CreateTestVpnAdapter());
         await TestHelper.Test_Https();
 
         Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
@@ -76,7 +76,7 @@ public class ClientServerTest : TestBase
         var clientOptions = TestHelper.CreateClientOptions();
         clientOptions.ServerLocation = "UK/london";
         await using var client = await TestHelper.CreateClient(token1, clientOptions: clientOptions,
-            packetCapture: new TestNullPacketCapture());
+            vpnAdapter: new TestNullVpnAdapter());
 
         Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
         Assert.AreEqual("UK/london", client.ConnectionInfo.SessionInfo?.ServerLocationInfo?.ServerLocation);
@@ -93,7 +93,7 @@ public class ClientServerTest : TestBase
 
         // create client
         var token1 = TestHelper.CreateAccessToken(accessManager1);
-        await using var client = await TestHelper.CreateClient(token1, packetCapture: new TestNullPacketCapture());
+        await using var client = await TestHelper.CreateClient(token1, vpnAdapter: new TestNullVpnAdapter());
         Assert.AreEqual("US/california", client.ConnectionInfo.SessionInfo?.ServerLocationInfo?.ServerLocation);
     }
 
@@ -167,7 +167,7 @@ public class ClientServerTest : TestBase
         clientOptions.UseUdpChannel = false;
         clientOptions.MaxDatagramChannelCount = 6;
         await using var client = await TestHelper.CreateClient(token,
-            packetCapture: TestHelper.CreateTestPacketCapture(), clientOptions: clientOptions);
+            vpnAdapter: TestHelper.CreateTestVpnAdapter(), clientOptions: clientOptions);
 
         // let channel be created gradually
         for (var i = 0; i < 6; i++) {
@@ -209,7 +209,7 @@ public class ClientServerTest : TestBase
         var clientOptions = TestHelper.CreateClientOptions();
         clientOptions.MaxDatagramChannelCount = 4;
         await using var client = await TestHelper.CreateClient(token,
-            packetCapture: TestHelper.CreateTestPacketCapture(), clientOptions: clientOptions);
+            vpnAdapter: TestHelper.CreateTestVpnAdapter(), clientOptions: clientOptions);
 
         var tasks = new List<Task>();
         for (var i = 0; i < 50; i++)
@@ -229,7 +229,7 @@ public class ClientServerTest : TestBase
 
         // Create Client
         await using var client = await TestHelper.CreateClient(token,
-            packetCapture: TestHelper.CreateTestPacketCapture(),
+            vpnAdapter: TestHelper.CreateTestVpnAdapter(),
             clientOptions: TestHelper.CreateClientOptions(useUdpChannel: true));
 
         var tasks = new List<Task>();
@@ -284,7 +284,7 @@ public class ClientServerTest : TestBase
 
         // Create Client
         await using var client = await TestHelper.CreateClient(token,
-            packetCapture: new TestNullPacketCapture(),
+            vpnAdapter: new TestNullVpnAdapter(),
             clientOptions: TestHelper.CreateClientOptions(useUdpChannel: true));
 
         Assert.IsTrue(fileAccessManagerOptions.UdpEndPoints.Any(x => x.Port == client.HostUdpEndPoint?.Port));
@@ -388,10 +388,10 @@ public class ClientServerTest : TestBase
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
-        using var packetCapture = new TestNullPacketCapture();
-        await using var client = await TestHelper.CreateClient(token, packetCapture);
+        using var vpnAdapter = new TestNullVpnAdapter();
+        await using var client = await TestHelper.CreateClient(token, vpnAdapter);
 
-        packetCapture.StopCapture();
+        vpnAdapter.StopCapture();
         await TestHelper.WaitForClientState(client, ClientState.Disposed);
     }
 
@@ -405,7 +405,7 @@ public class ClientServerTest : TestBase
         var clientOptions = TestHelper.CreateClientOptions();
         clientOptions.SessionTimeout = TimeSpan.FromSeconds(1);
         await using var client = await TestHelper.CreateClient(token,
-            packetCapture: TestHelper.CreateTestPacketCapture(), clientOptions: clientOptions);
+            vpnAdapter: TestHelper.CreateTestVpnAdapter(), clientOptions: clientOptions);
 
         await TestHelper.Test_Https();
 
@@ -442,14 +442,14 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using (await TestHelper.CreateClient(token, packetCapture: TestHelper.CreateTestPacketCapture())) {
+        await using (await TestHelper.CreateClient(token, vpnAdapter: TestHelper.CreateTestVpnAdapter())) {
             // test Icmp & Udp
             await TestHelper.Test_Ping(ping);
             await TestHelper.Test_Udp(udpClient, TestConstants.UdpV4EndPoint1);
         }
 
         // create client
-        await using (await TestHelper.CreateClient(token, packetCapture: TestHelper.CreateTestPacketCapture())) {
+        await using (await TestHelper.CreateClient(token, vpnAdapter: TestHelper.CreateTestVpnAdapter())) {
             // test Icmp & Udp
             await TestHelper.Test_Ping(ping);
             await TestHelper.Test_Udp(udpClient, TestConstants.UdpV4EndPoint1);
@@ -489,7 +489,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // connect
-        await using var client = await TestHelper.CreateClient(token, packetCapture: TestHelper.CreateTestPacketCapture());
+        await using var client = await TestHelper.CreateClient(token, vpnAdapter: TestHelper.CreateTestVpnAdapter());
         Assert.AreEqual(ClientState.Connected, client.State);
 
         // close session
@@ -536,7 +536,7 @@ public class ClientServerTest : TestBase
         // ----------
         var token = TestHelper.CreateAccessToken(server);
         await using var client =
-            await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
+            await TestHelper.CreateClient(token, autoConnect: false, vpnAdapter: new TestNullVpnAdapter());
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client.Connect());
 
         Assert.AreEqual(SessionErrorCode.Maintenance, client.ConnectionInfo.ErrorCode);
@@ -546,7 +546,7 @@ public class ClientServerTest : TestBase
         // Check: Connect after Maintenance is done
         // ----------
         accessManager.EmbedIoAccessManager.Start();
-        await using var client2 = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
+        await using var client2 = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
         await TestHelper.WaitForClientState(client2, ClientState.Connected);
 
         // ----------
@@ -554,7 +554,7 @@ public class ClientServerTest : TestBase
         // ----------
         accessManager.EmbedIoAccessManager.Stop();
         await using var client3 =
-            await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
+            await TestHelper.CreateClient(token, autoConnect: false, vpnAdapter: new TestNullVpnAdapter());
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client3.Connect());
 
         await TestHelper.WaitForClientState(client3, ClientState.Disposed);
@@ -564,14 +564,15 @@ public class ClientServerTest : TestBase
         // Check: Connect after Maintenance is done
         // ----------
         accessManager.EmbedIoAccessManager.Start();
-        await using var client4 = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
+        await using var client4 = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
         await TestHelper.WaitForClientState(client4, ClientState.Connected);
 
         // ----------
         // Check: Go Maintenance mode by replying 404 from access-server
         // ----------
         accessManager.EmbedIoAccessManager.HttpException = HttpException.Forbidden();
-        await using var client5 = await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
+        await using var client5 =
+            await TestHelper.CreateClient(token, autoConnect: false, vpnAdapter: new TestNullVpnAdapter());
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client5.Connect());
 
         await TestHelper.WaitForClientState(client5, ClientState.Disposed);
@@ -581,7 +582,7 @@ public class ClientServerTest : TestBase
         // Check: Connect after Maintenance is done
         // ----------
         accessManager.EmbedIoAccessManager.HttpException = null;
-        await using var client6 = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
+        await using var client6 = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
         await TestHelper.WaitForClientState(client6, ClientState.Connected);
     }
 
@@ -662,13 +663,15 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = await TestHelper.CreateClient(token, clientOptions: TestHelper.CreateClientOptions(useUdpChannel: true));
+        await using var client =
+            await TestHelper.CreateClient(token, clientOptions: TestHelper.CreateClientOptions(useUdpChannel: true));
         var lasCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
         var lasReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
 
         // create one connection
         await TestHelper.Test_Https();
-        Assert.AreEqual(lasReusedConnectionSucceededCount, client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
+        Assert.AreEqual(lasReusedConnectionSucceededCount,
+            client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
         Assert.AreEqual(lasCreatedConnectionCount + 1, client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
         lasCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
         lasReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
@@ -738,7 +741,7 @@ public class ClientServerTest : TestBase
 
         // Create Client
         await using var client = await TestHelper.CreateClient(token,
-            packetCapture: new TestNullPacketCapture(),
+            vpnAdapter: new TestNullVpnAdapter(),
             clientOptions: TestHelper.CreateClientOptions(useUdpChannel: true));
 
         Assert.IsFalse(client.ConnectionInfo.SessionInfo?.IsUdpChannelSupported);
@@ -763,14 +766,14 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
-    public async Task Set_DnsServer_to_packetCapture()
+    public async Task Set_DnsServer_to_vpnAdapter()
     {
         // Create Server
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
-        await using var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
+        await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
         await TestHelper.WaitForClientState(client, ClientState.Connected);
 
         Assert.IsTrue(client.DnsServers is { Length: > 0 });

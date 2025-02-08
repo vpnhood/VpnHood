@@ -20,6 +20,13 @@ public class WinDivertPacketCapture : IPacketCapture
     private readonly SharpPcap.WinDivert.WinDivertDevice _device;
     private bool _disposed;
     private WinDivertHeader? _lastCaptureHeader;
+    private PacketReceivedEventArgs? _packetReceivedEventArgs;
+    private IPAddress? _virtualIpV4;
+    private IPAddress? _virtualIpV6;
+    private IPAddress? _clientInternalIpV4;
+    private IPAddress? _clientInternalIpV6;
+
+
     public const short ProtectedTtl = 111;
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Stopped;
@@ -88,6 +95,9 @@ public class WinDivertPacketCapture : IPacketCapture
 
     public void StartCapture(VpnAdapterOptions options)
     {
+        _virtualIpV4 = options.VirtualIpNetworkV4?.Prefix;
+        _virtualIpV6 = options.VirtualIpNetworkV6?.Prefix;
+
         if (_disposed)
             throw new ObjectDisposedException(VhLogger.FormatType(this));
 
@@ -134,6 +144,25 @@ public class WinDivertPacketCapture : IPacketCapture
         Stopped?.Invoke(this, EventArgs.Empty);
     }
 
+    private void SetInternalIp(IPAddress address)
+    {
+        if (address.AddressFamily == AddressFamily.InterNetwork)
+            _clientInternalIpV4 = address;
+        else
+            _clientInternalIpV6 = address;
+    }
+
+    private IPAddress? GetInternalIp(IPVersion ipVersion)
+    {
+        return ipVersion == IPVersion.IPv4 ? _clientInternalIpV4 : _clientInternalIpV6;
+    }
+
+    private IPAddress? GetVirtualIp(IPVersion ipVersion)
+    {
+        return ipVersion == IPVersion.IPv4 ? _virtualIpV4 : _virtualIpV6;
+    }
+
+
     private void Device_OnPacketArrival(object sender, PacketCapture e)
     {
         var rawPacket = e.GetPacket();
@@ -141,10 +170,17 @@ public class WinDivertPacketCapture : IPacketCapture
         var ipPacket = packet.Extract<IPPacket>();
 
         _lastCaptureHeader = (WinDivertHeader)e.Header;
+
+        // try to simulate tun
+        SetInternalIp(ipPacket.SourceAddress);
+        ipPacket.SourceAddress = GetVirtualIp(ipPacket.Version);
+        if (ipPacket is IPv4Packet ipV4Packet)
+            ipV4Packet.UpdateIPChecksum();
+
+
         ProcessPacketReceivedFromInbound(ipPacket);
     }
 
-    private PacketReceivedEventArgs? _packetReceivedEventArgs;
     protected virtual void ProcessPacketReceivedFromInbound(IPPacket ipPacket)
     {
         // create the event args. for performance, we will reuse the same instance
@@ -160,10 +196,24 @@ public class WinDivertPacketCapture : IPacketCapture
         }
     }
 
-    private void SendPacket(Packet ipPacket, bool outbound)
+    private void SendPacket(IPPacket ipPacket, bool outbound)
     {
         if (_lastCaptureHeader == null)
             throw new InvalidOperationException("Could not send any data without receiving a packet.");
+
+        // start trying to simulate tun
+        var internalIp = GetInternalIp(ipPacket.Version);
+        if (internalIp == null)
+            throw new InvalidOperationException("Could not send packet to inbound. there is no internal IP.");
+
+        if (outbound)
+            ipPacket.SourceAddress = internalIp;
+        else
+            ipPacket.DestinationAddress = internalIp;
+
+        if (ipPacket is IPv4Packet ipV4Packet)
+            ipV4Packet.UpdateIPChecksum();
+        // end trying to simulate tun
 
         // send by a device
         _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;

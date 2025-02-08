@@ -40,7 +40,7 @@ public class WinDivertDevice : IDevice
 
     public Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext)
     {
-        var res = (IPacketCapture)new WinDivertPacketCapture();
+        IPacketCapture res = new WinDivertPacketCapture();
         return Task.FromResult(res);
     }
 

@@ -1,9 +1,9 @@
-﻿using System.Net;
-using Ga4.Trackers;
+﻿using Ga4.Trackers;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.SystemInformation;
+using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Factory;
 
 namespace VpnHood.Core.Server;
@@ -24,6 +24,6 @@ public class ServerOptions
     public ServerConfig? Config { get; init; }
     public TimeSpan DeadSessionTimeout { get; init; } = TimeSpan.FromMinutes(5);
     public TimeSpan HeartbeatInterval { get; init; } = TimeSpan.FromMinutes(1);
-    public IpNetwork VirtualIpNetworkV4 { get; init; } = new(IPAddress.Parse("10.255.0.0"), 16);
-    public IpNetwork VirtualIpNetworkV6 { get; init; } = new(IPAddress.Parse("fd12:2020::"), 48);
+    public IpNetwork VirtualIpNetworkV4 { get; init; } = TunnelDefaults.VirtualIpNetworkV4;
+    public IpNetwork VirtualIpNetworkV6 { get; init; } = TunnelDefaults.VirtualIpNetworkV6;
 }

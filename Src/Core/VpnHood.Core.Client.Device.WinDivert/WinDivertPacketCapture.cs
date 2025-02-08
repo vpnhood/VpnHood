@@ -175,7 +175,7 @@ public class WinDivertPacketCapture : IPacketCapture
         SetInternalIp(ipPacket.SourceAddress);
         var virtualIp = GetVirtualIp(ipPacket.Version);
         if (virtualIp == null) {
-            VhLogger.Instance.Log(LogLevel.Error, "The device arrival packet is not supported: {Packet}", 
+            VhLogger.Instance.LogTrace("The device arrival packet is not supported: {Packet}", 
                 VhLogger.FormatIpPacket(ipPacket.ToString()!));
             return;
         }

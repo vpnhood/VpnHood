@@ -58,7 +58,8 @@ public class AppAdService(
         try {
             var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
             var countryCode = await regionProvider.GetCurrentCountryAsync(cancellationToken);
-            await appCompositeAdService.LoadAd(uiContext, countryCode: countryCode, forceReload: false, cancellationToken);
+            await appCompositeAdService.LoadAd(uiContext, countryCode: countryCode, forceReload: false,
+                cancellationToken);
             var networkName = await appCompositeAdService.ShowLoadedAd(uiContext, adData, cancellationToken);
             var showAdResult = new AdResult {
                 AdData = adData,

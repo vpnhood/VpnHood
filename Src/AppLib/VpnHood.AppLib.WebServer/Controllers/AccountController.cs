@@ -10,8 +10,9 @@ namespace VpnHood.AppLib.WebServer.Controllers;
 
 internal class AccountController : WebApiController, IAccountController
 {
-    private static AppAccountService AccountService => 
-        VpnHoodApp.Instance.Services.AccountService ?? throw new Exception("Account service is not available at this moment.");
+    private static AppAccountService AccountService =>
+        VpnHoodApp.Instance.Services.AccountService ??
+        throw new Exception("Account service is not available at this moment.");
 
     [Route(HttpVerbs.Get, "/")]
     public Task<AppAccount?> Get()

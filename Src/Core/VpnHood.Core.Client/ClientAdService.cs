@@ -40,7 +40,6 @@ public class ClientAdService(VpnHoodClient client)
         }
         // ignore exception for flexible ad if load failed
         catch (LoadAdException ex) {
-
             VhLogger.Instance.LogInformation(ex, "Could not load any interstitial ad.");
             return null;
         }
@@ -48,17 +47,18 @@ public class ClientAdService(VpnHoodClient client)
 
 
     private readonly AsyncLock _showLock = new();
+
     public async Task<AdResult> Show(AdRequest adRequest, CancellationToken cancellationToken)
     {
         using var lockAsync = await _showLock.LockAsync(cancellationToken).VhConfigureAwait();
         try {
-
             client.EnablePassthruInProcessPackets(true);
             AdRequestTaskCompletionSource = new TaskCompletionSource<AdResult>();
             AdRequest = adRequest;
             var adResult = await AdRequestTaskCompletionSource.Task.VhWait(cancellationToken).VhConfigureAwait();
             _ = Task.Delay(2000, CancellationToken.None)
-                .ContinueWith(_ => client.EnablePassthruInProcessPackets(false), CancellationToken.None); // not cancellation
+                .ContinueWith(_ => client.EnablePassthruInProcessPackets(false),
+                    CancellationToken.None); // not cancellation
 
             // Send RewardedAd result to the server
             if (adRequest.AdRequestType == AdRequestType.Rewarded) {
@@ -90,9 +90,9 @@ public class ClientAdService(VpnHoodClient client)
                     RequestId = Guid.NewGuid() + ":client",
                     SessionId = client.SessionId,
                     SessionKey = client.SessionKey,
-                    AdData = adData,
+                    AdData = adData
                 },
-        cancellationToken)
+                cancellationToken)
             .VhConfigureAwait();
     }
 }

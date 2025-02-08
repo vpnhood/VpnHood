@@ -1884,7 +1884,7 @@ export class UserSettings implements IUserSettings {
     logAnonymous!: boolean;
     includeLocalNetwork!: boolean;
     useAppIpFilter!: boolean;
-    usePacketCaptureIpFilter!: boolean;
+    useVpnAdapterIpFilter!: boolean;
 
     constructor(data?: IUserSettings) {
         if (data) {
@@ -1933,7 +1933,7 @@ export class UserSettings implements IUserSettings {
             this.logAnonymous = _data["logAnonymous"] !== undefined ? _data["logAnonymous"] : <any>null;
             this.includeLocalNetwork = _data["includeLocalNetwork"] !== undefined ? _data["includeLocalNetwork"] : <any>null;
             this.useAppIpFilter = _data["useAppIpFilter"] !== undefined ? _data["useAppIpFilter"] : <any>null;
-            this.usePacketCaptureIpFilter = _data["usePacketCaptureIpFilter"] !== undefined ? _data["usePacketCaptureIpFilter"] : <any>null;
+            this.useVpnAdapterIpFilter = _data["useVpnAdapterIpFilter"] !== undefined ? _data["useVpnAdapterIpFilter"] : <any>null;
         }
     }
 
@@ -1972,7 +1972,7 @@ export class UserSettings implements IUserSettings {
         data["logAnonymous"] = this.logAnonymous !== undefined ? this.logAnonymous : <any>null;
         data["includeLocalNetwork"] = this.includeLocalNetwork !== undefined ? this.includeLocalNetwork : <any>null;
         data["useAppIpFilter"] = this.useAppIpFilter !== undefined ? this.useAppIpFilter : <any>null;
-        data["usePacketCaptureIpFilter"] = this.usePacketCaptureIpFilter !== undefined ? this.usePacketCaptureIpFilter : <any>null;
+        data["useVpnAdapterIpFilter"] = this.useVpnAdapterIpFilter !== undefined ? this.useVpnAdapterIpFilter : <any>null;
         return data;
     }
 }
@@ -1996,7 +1996,7 @@ export interface IUserSettings {
     logAnonymous: boolean;
     includeLocalNetwork: boolean;
     useAppIpFilter: boolean;
-    usePacketCaptureIpFilter: boolean;
+    useVpnAdapterIpFilter: boolean;
 }
 
 export enum FilterMode {
@@ -2134,8 +2134,8 @@ export interface IAppSettingsService {
 export class IpFilterSettings implements IIpFilterSettings {
     appIpFilterIncludes!: string;
     appIpFilterExcludes!: string;
-    packetCaptureIpFilterIncludes!: string;
-    packetCaptureIpFilterExcludes!: string;
+    vpnAdapterIpFilterIncludes!: string;
+    vpnAdapterIpFilterExcludes!: string;
 
     constructor(data?: IIpFilterSettings) {
         if (data) {
@@ -2150,8 +2150,8 @@ export class IpFilterSettings implements IIpFilterSettings {
         if (_data) {
             this.appIpFilterIncludes = _data["appIpFilterIncludes"] !== undefined ? _data["appIpFilterIncludes"] : <any>null;
             this.appIpFilterExcludes = _data["appIpFilterExcludes"] !== undefined ? _data["appIpFilterExcludes"] : <any>null;
-            this.packetCaptureIpFilterIncludes = _data["packetCaptureIpFilterIncludes"] !== undefined ? _data["packetCaptureIpFilterIncludes"] : <any>null;
-            this.packetCaptureIpFilterExcludes = _data["packetCaptureIpFilterExcludes"] !== undefined ? _data["packetCaptureIpFilterExcludes"] : <any>null;
+            this.vpnAdapterIpFilterIncludes = _data["vpnAdapterIpFilterIncludes"] !== undefined ? _data["vpnAdapterIpFilterIncludes"] : <any>null;
+            this.vpnAdapterIpFilterExcludes = _data["vpnAdapterIpFilterExcludes"] !== undefined ? _data["vpnAdapterIpFilterExcludes"] : <any>null;
         }
     }
 
@@ -2166,8 +2166,8 @@ export class IpFilterSettings implements IIpFilterSettings {
         data = typeof data === 'object' ? data : {};
         data["appIpFilterIncludes"] = this.appIpFilterIncludes !== undefined ? this.appIpFilterIncludes : <any>null;
         data["appIpFilterExcludes"] = this.appIpFilterExcludes !== undefined ? this.appIpFilterExcludes : <any>null;
-        data["packetCaptureIpFilterIncludes"] = this.packetCaptureIpFilterIncludes !== undefined ? this.packetCaptureIpFilterIncludes : <any>null;
-        data["packetCaptureIpFilterExcludes"] = this.packetCaptureIpFilterExcludes !== undefined ? this.packetCaptureIpFilterExcludes : <any>null;
+        data["vpnAdapterIpFilterIncludes"] = this.vpnAdapterIpFilterIncludes !== undefined ? this.vpnAdapterIpFilterIncludes : <any>null;
+        data["vpnAdapterIpFilterExcludes"] = this.vpnAdapterIpFilterExcludes !== undefined ? this.vpnAdapterIpFilterExcludes : <any>null;
         return data;
     }
 }
@@ -2175,8 +2175,8 @@ export class IpFilterSettings implements IIpFilterSettings {
 export interface IIpFilterSettings {
     appIpFilterIncludes: string;
     appIpFilterExcludes: string;
-    packetCaptureIpFilterIncludes: string;
-    packetCaptureIpFilterExcludes: string;
+    vpnAdapterIpFilterIncludes: string;
+    vpnAdapterIpFilterExcludes: string;
 }
 
 export class AppState implements IAppState {
@@ -3454,8 +3454,8 @@ export interface IAppStrings {
 }
 
 export class IpFilters implements IIpFilters {
-    packetCaptureIpFilterInclude!: string;
-    packetCaptureIpFilterExclude!: string;
+    vpnAdapterIpFilterInclude!: string;
+    vpnAdapterIpFilterExclude!: string;
     appIpFilterInclude!: string;
     appIpFilterExclude!: string;
 
@@ -3470,8 +3470,8 @@ export class IpFilters implements IIpFilters {
 
     init(_data?: any) {
         if (_data) {
-            this.packetCaptureIpFilterInclude = _data["packetCaptureIpFilterInclude"] !== undefined ? _data["packetCaptureIpFilterInclude"] : <any>null;
-            this.packetCaptureIpFilterExclude = _data["packetCaptureIpFilterExclude"] !== undefined ? _data["packetCaptureIpFilterExclude"] : <any>null;
+            this.vpnAdapterIpFilterInclude = _data["vpnAdapterIpFilterInclude"] !== undefined ? _data["vpnAdapterIpFilterInclude"] : <any>null;
+            this.vpnAdapterIpFilterExclude = _data["vpnAdapterIpFilterExclude"] !== undefined ? _data["vpnAdapterIpFilterExclude"] : <any>null;
             this.appIpFilterInclude = _data["appIpFilterInclude"] !== undefined ? _data["appIpFilterInclude"] : <any>null;
             this.appIpFilterExclude = _data["appIpFilterExclude"] !== undefined ? _data["appIpFilterExclude"] : <any>null;
         }
@@ -3486,8 +3486,8 @@ export class IpFilters implements IIpFilters {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["packetCaptureIpFilterInclude"] = this.packetCaptureIpFilterInclude !== undefined ? this.packetCaptureIpFilterInclude : <any>null;
-        data["packetCaptureIpFilterExclude"] = this.packetCaptureIpFilterExclude !== undefined ? this.packetCaptureIpFilterExclude : <any>null;
+        data["vpnAdapterIpFilterInclude"] = this.vpnAdapterIpFilterInclude !== undefined ? this.vpnAdapterIpFilterInclude : <any>null;
+        data["vpnAdapterIpFilterExclude"] = this.vpnAdapterIpFilterExclude !== undefined ? this.vpnAdapterIpFilterExclude : <any>null;
         data["appIpFilterInclude"] = this.appIpFilterInclude !== undefined ? this.appIpFilterInclude : <any>null;
         data["appIpFilterExclude"] = this.appIpFilterExclude !== undefined ? this.appIpFilterExclude : <any>null;
         return data;
@@ -3495,8 +3495,8 @@ export class IpFilters implements IIpFilters {
 }
 
 export interface IIpFilters {
-    packetCaptureIpFilterInclude: string;
-    packetCaptureIpFilterExclude: string;
+    vpnAdapterIpFilterInclude: string;
+    vpnAdapterIpFilterExclude: string;
     appIpFilterInclude: string;
     appIpFilterExclude: string;
 }

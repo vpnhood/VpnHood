@@ -2,10 +2,10 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
-using VpnHood.Core.Client.Device;
 using VpnHood.Store.Api;
 
 namespace VpnHood.AppLib.Store;
@@ -93,7 +93,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
             var idToken = _authenticationExternalProvider != null
                 ? await _authenticationExternalProvider.SignIn(uiContext, true).VhConfigureAwait()
                 : null;
-            
+
             if (!string.IsNullOrWhiteSpace(idToken)) {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
                 ApiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken })

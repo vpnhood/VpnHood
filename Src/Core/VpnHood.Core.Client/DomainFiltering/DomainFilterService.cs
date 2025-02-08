@@ -10,10 +10,10 @@ namespace VpnHood.Core.Client.DomainFiltering;
 
 public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni)
 {
-    public bool IsEnabled => 
-        forceLogSni || 
-        domainFilter.Includes.Length>0 || 
-        domainFilter.Excludes.Length>0 || 
+    public bool IsEnabled =>
+        forceLogSni ||
+        domainFilter.Includes.Length > 0 ||
+        domainFilter.Excludes.Length > 0 ||
         domainFilter.Blocks.Length > 0;
 
     public async Task<DomainFilterResult> Process(Stream tlsStream, IPAddress remoteAddress,

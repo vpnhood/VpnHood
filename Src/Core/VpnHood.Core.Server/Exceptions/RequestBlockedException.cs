@@ -7,7 +7,7 @@ using VpnHood.Core.Tunneling;
 namespace VpnHood.Core.Server.Exceptions;
 
 internal class RequestBlockedException(IPEndPoint remoteEndPoint, Session session, string requestId)
-    : ServerSessionException(remoteEndPoint, session, SessionErrorCode.GeneralError, requestId, 
+    : ServerSessionException(remoteEndPoint, session, SessionErrorCode.GeneralError, requestId,
         // always redact because it will end up to client & server logs
         $"The destination address is blocked. Address: {VhUtil.RedactIpAddress(remoteEndPoint.Address)}:{remoteEndPoint.Port}")
 {

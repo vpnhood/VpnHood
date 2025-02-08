@@ -91,7 +91,6 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps,
             // read all data from the stream
             await using var streamDiscarder = new StreamDiscarder(speedometer);
             await stream.CopyToAsync(streamDiscarder, cancellationToken);
-
         }
         catch (Exception ex) {
             VhLogger.Instance.LogInformation(ex, "Error in download via HTTP.");

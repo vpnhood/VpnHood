@@ -94,8 +94,8 @@ public class ClientProfileService
     public ClientProfile Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
         var item = _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
-                            ?? throw new NotExistsException(
-                                "ClientProfile does not exists. ClientProfileId: {clientProfileId}");
+                   ?? throw new NotExistsException(
+                       "ClientProfile does not exists. ClientProfileId: {clientProfileId}");
 
         // update name
         if (updateParams.ClientProfileName != null) {
@@ -118,8 +118,9 @@ public class ClientProfileService
             item.SelectedLocation = updateParams.SelectedLocation;
 
         if (updateParams.AccessCode != null)
-            item.AccessCode = string.IsNullOrEmpty(updateParams.AccessCode.Value) 
-            ? null : AccessCodeUtils.Validate(updateParams.AccessCode.Value);
+            item.AccessCode = string.IsNullOrEmpty(updateParams.AccessCode.Value)
+                ? null
+                : AccessCodeUtils.Validate(updateParams.AccessCode.Value);
 
         Save();
         return item;
@@ -137,12 +138,12 @@ public class ClientProfileService
     }
 
     private readonly object _importLock = new();
+
     // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
     private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn,
         bool isForAccount = false, bool isBuiltIn = false)
     {
         lock (_importLock) {
-
             // make sure no one overwrites built-in tokens
             if (!allowOverwriteBuiltIn && _clientProfiles.Any(x => x.IsBuiltIn && x.Token.TokenId == token.TokenId))
                 throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
@@ -249,8 +250,8 @@ public class ClientProfileService
 
         try {
             var encryptedServerToken = await VhUtil
-                    .RunTask(httpClient.GetStringAsync(url), TimeSpan.FromSeconds(20), cts.Token)
-                    .VhConfigureAwait();
+                .RunTask(httpClient.GetStringAsync(url), TimeSpan.FromSeconds(20), cts.Token)
+                .VhConfigureAwait();
 
             // update token
             lock (_updateByUrlLock) {
@@ -323,5 +324,4 @@ public class ClientProfileService
         foreach (var accessKey in accessKeys)
             ImportAccessKey(accessKey, true);
     }
-
 }

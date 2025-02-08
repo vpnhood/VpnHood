@@ -53,6 +53,7 @@ public static class CertificateUtil
         catch (Exception) {
             // ignore
         }
+
         return serverCertificate ?? throw new Exception("Could not extract certificate from url");
     }
 
@@ -69,10 +70,12 @@ public static class CertificateUtil
         return CreateSelfSigned(rsa, subjectName, notAfter);
     }
 
-    public static X509Certificate2 CreateSelfSigned(X509Certificate2 originalCert, DateTime? noBefore = null, DateTime? notAfter = null)
+    public static X509Certificate2 CreateSelfSigned(X509Certificate2 originalCert, DateTime? noBefore = null,
+        DateTime? notAfter = null)
     {
         using var rsa = RSA.Create();
-        var request = new CertificateRequest(originalCert.SubjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request = new CertificateRequest(originalCert.SubjectName, rsa, HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1);
 
         // Copy all extensions from the original certificate
         foreach (var extension in originalCert.Extensions)
@@ -88,7 +91,8 @@ public static class CertificateUtil
         return CreateExportable(selfSignedCert);
     }
 
-    public static X509Certificate2 CreateSelfSigned(RSA rsa, string? subjectName = null, DateTimeOffset? notAfter = null)
+    public static X509Certificate2 CreateSelfSigned(RSA rsa, string? subjectName = null,
+        DateTimeOffset? notAfter = null)
     {
         subjectName ??= $"CN={CreateRandomDns()}";
         notAfter ??= DateTimeOffset.Now.AddYears(20);

@@ -7,12 +7,13 @@ public class AppSettings
     public bool? IsQuickLaunchEnabled { get; set; }
     public bool? IsNotificationEnabled { get; set; }
     public DateTime ConfigTime { get; set; } = DateTime.Now;
-    public UserSettings UserSettings { get; set; } = new ();
+    public UserSettings UserSettings { get; set; } = new();
 
     internal AppSettingsService? AppSettingsService { get; set; }
+
     public void Save()
     {
-        if (AppSettingsService == null) 
+        if (AppSettingsService == null)
             throw new InvalidOperationException("AppSettingsService is not set");
 
         AppSettingsService.Save();

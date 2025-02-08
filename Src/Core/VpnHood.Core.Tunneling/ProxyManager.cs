@@ -52,10 +52,12 @@ public abstract class ProxyManager : IPacketProxyReceiver
             logScope: options.LogScope);
 
         _udpProxyPool = options.UseUdpProxy2
-            ? new UdpProxyPoolEx(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount, logScope: options.LogScope,
+            ? new UdpProxyPoolEx(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount,
+                logScope: options.LogScope,
                 sendBufferSize: options.UdpSendBufferSize, receiveBufferSize: options.UdpReceiveBufferSize)
-            : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount, logScope: options.LogScope,
-                    sendBufferSize: options.UdpSendBufferSize, receiveBufferSize: options.UdpReceiveBufferSize);
+            : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount,
+                logScope: options.LogScope,
+                sendBufferSize: options.UdpSendBufferSize, receiveBufferSize: options.UdpReceiveBufferSize);
     }
 
     public async Task SendPackets(IList<IPPacket> ipPackets)

@@ -66,7 +66,8 @@ public class AndroidAppWebViewMainActivityHandler(
 
         // set window background color
         var linearLayout =
-            ActivityEvent.Activity.FindViewById<LinearLayout>(_Microsoft.Android.Resource.Designer.Resource.Id.myLayout);
+            ActivityEvent.Activity.FindViewById<LinearLayout>(_Microsoft.Android.Resource.Designer.Resource.Id
+                .myLayout);
 
         var backgroundColor = VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor?.ToAndroidColor();
         if (linearLayout != null && backgroundColor != null) {

@@ -19,7 +19,7 @@ public static class IpFilterParser
 
         // parse each line
         var ipRanges = lines
-            .Select(x=>IpRange.Parse(x.Trim())).ToArray();
+            .Select(x => IpRange.Parse(x.Trim())).ToArray();
         return ipRanges;
     }
 

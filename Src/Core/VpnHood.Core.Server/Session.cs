@@ -71,7 +71,7 @@ public class Session : IAsyncDisposable
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
     public IPAddress VirtualIpV4 { get; }
     public IPAddress VirtualIpV6 { get; }
-    
+
     internal Session(IAccessManager accessManager, SessionResponseEx sessionResponse,
         INetFilter netFilter,
         ISocketFactory socketFactory,
@@ -204,9 +204,11 @@ public class Session : IAsyncDisposable
         if (clientInternalIp != null && !ipPacket.DestinationAddress.Equals(clientInternalIp)) {
             ipPacket.DestinationAddress = clientInternalIp;
             if (ipPacket.Protocol == ProtocolType.IcmpV6)
-                PacketUtil.UpdateIpPacket(ipPacket); //IPv6 ICMP checksum need to be recalculated if destination address changed
+                PacketUtil.UpdateIpPacket(
+                    ipPacket); //IPv6 ICMP checksum need to be recalculated if destination address changed
             else
-                PacketUtil.UpdateIpChecksum(ipPacket); //IPv4 header checksum need to be recalculated if destination address changed
+                PacketUtil.UpdateIpChecksum(
+                    ipPacket); //IPv4 header checksum need to be recalculated if destination address changed
         }
 
         return Tunnel.SendPacketAsync(ipPacket, CancellationToken.None);
@@ -223,9 +225,9 @@ public class Session : IAsyncDisposable
             var ipPacket = e.IpPackets[i];
 
             // todo: legacy save caller internal ip at first call
-            if (ipPacket.Version == IPVersion.IPv4) 
+            if (ipPacket.Version == IPVersion.IPv4)
                 _clientInternalIpV4 ??= ipPacket.SourceAddress;
-            else if (ipPacket.Version == IPVersion.IPv6) 
+            else if (ipPacket.Version == IPVersion.IPv6)
                 _clientInternalIpV6 ??= ipPacket.SourceAddress;
 
             // update source client virtual ip. will be obsolete in future if client set correct ip
@@ -233,9 +235,8 @@ public class Session : IAsyncDisposable
             if (!virtualIp.Equals(ipPacket.SourceAddress)) {
                 // todo: legacy version. Packet must be dropped if it does not have correct source address
                 // PacketUtil.LogPacket(ipPacket, $"Invalid tunnel packet source ip.");
-                ipPacket.SourceAddress = virtualIp; 
+                ipPacket.SourceAddress = virtualIp;
                 PacketUtil.UpdateIpChecksum(ipPacket);
-
             }
 
             // filter
@@ -333,7 +334,8 @@ public class Session : IAsyncDisposable
     public async Task ProcessRewardedAdRequest(RewardedAdRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
-        SessionResponse = await _accessManager.Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData).VhConfigureAwait();
+        SessionResponse = await _accessManager
+            .Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData).VhConfigureAwait();
         await clientStream.WriteFinalResponse(SessionResponse, cancellationToken).VhConfigureAwait();
     }
 
@@ -365,7 +367,8 @@ public class Session : IAsyncDisposable
 
             // connect to requested destination
             isRequestedEpException = true;
-            await tcpClientHost.VhConnectAsync(request.DestinationEndPoint, _tcpConnectTimeout, cancellationToken).VhConfigureAwait();
+            await tcpClientHost.VhConnectAsync(request.DestinationEndPoint, _tcpConnectTimeout, cancellationToken)
+                .VhConfigureAwait();
             isRequestedEpException = false;
 
             //tracking
@@ -380,7 +383,8 @@ public class Session : IAsyncDisposable
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
                 "Adding a StreamProxyChannel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
-            tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
+            tcpClientStreamHost =
+                new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
             streamProxyChannel = new StreamProxyChannel(request.RequestId, tcpClientStreamHost, clientStream,
                 _tcpBufferSize, _tcpBufferSize);
 
@@ -446,6 +450,7 @@ public class Session : IAsyncDisposable
     }
 
     private readonly AsyncLock _disposeLock = new();
+
     public async ValueTask DisposeAsync()
     {
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();

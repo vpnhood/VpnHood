@@ -36,7 +36,7 @@ public class ServerHost : IAsyncDisposable, IJob
     public int MinClientProtocolVersion { get; set; } = MinProtocolVersion; // used for tests
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
     public bool IsIpV6Supported { get; set; }
-    public IpRange[]? NetFilterPacketCaptureIncludeIpRanges { get; set; }
+    public IpRange[]? NetFilterVpnAdapterIncludeIpRanges { get; set; }
     public IpRange[]? NetFilterIncludeIpRanges { get; set; }
     public IPAddress[]? DnsServers { get; set; }
     public CertificateHostName[] Certificates { get; private set; } = [];
@@ -271,7 +271,8 @@ public class ServerHost : IAsyncDisposable, IJob
                     if (authorization != "ApiKey")
                         throw new UnauthorizedAccessException();
 
-                    await sslStream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).VhConfigureAwait();
+                    await sslStream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken)
+                        .VhConfigureAwait();
                     return new TcpClientStream(tcpClient, sslStream, streamId);
                 }
 
@@ -319,7 +320,8 @@ public class ServerHost : IAsyncDisposable, IJob
     {
         // add timeout to cancellationToken
         using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
-        using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
+        using var cancellationTokenSource =
+            CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
         cancellationToken = cancellationTokenSource.Token;
 
         IClientStream? clientStream = null;
@@ -358,7 +360,8 @@ public class ServerHost : IAsyncDisposable, IJob
     {
         lock (_clientStreams) _clientStreams.Add(clientStream);
         using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
-        using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
+        using var cancellationTokenSource =
+            CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
         var cancellationToken = cancellationTokenSource.Token;
 
         // don't add new client in disposing
@@ -426,7 +429,8 @@ public class ServerHost : IAsyncDisposable, IJob
                     clientStream.ClientStreamId);
 
             // return 401 for ANY non SessionException to keep server's anonymity
-            await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).VhConfigureAwait();
+            await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken)
+                .VhConfigureAwait();
             await clientStream.DisposeAsync(false).VhConfigureAwait();
         }
         finally {
@@ -594,7 +598,7 @@ public class ServerHost : IAsyncDisposable, IJob
             MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
             ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,
             IncludeIpRanges = NetFilterIncludeIpRanges,
-            PacketCaptureIncludeIpRanges = NetFilterPacketCaptureIncludeIpRanges,
+            VpnAdapterIncludeIpRanges = NetFilterVpnAdapterIncludeIpRanges,
             IsIpV6Supported = IsIpV6Supported,
             IsReviewRequested = sessionResponseEx.IsReviewRequested,
             // client should wait more to get session exception replies
@@ -665,7 +669,8 @@ public class ServerHost : IAsyncDisposable, IJob
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
 
         // Before calling CloseSession. Session must be validated by GetSession
-        await clientStream.WriteFinalResponseUngracefully(new SessionResponse { ErrorCode = SessionErrorCode.Ok }, cancellationToken)
+        await clientStream
+            .WriteFinalResponseUngracefully(new SessionResponse { ErrorCode = SessionErrorCode.Ok }, cancellationToken)
             .VhConfigureAwait();
 
         // must be last

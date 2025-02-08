@@ -5,13 +5,13 @@ namespace VpnHood.App.Server.Providers.Linux;
 
 internal class LinuxTunProvider : ITunProvider
 {
-
     public LinuxTunProvider Create()
-    { 
+    {
         throw new NotImplementedException();
     }
 
     public event EventHandler<IPPacket>? OnPacketReceived;
+
     public Task SendPacket(IPPacket ipPacket)
     {
         throw new NotImplementedException();

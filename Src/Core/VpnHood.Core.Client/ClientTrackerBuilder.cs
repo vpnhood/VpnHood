@@ -40,7 +40,7 @@ public static class ClientTrackerBuilder
                 { "ipv6_supported", isIpV6Supported.ToString() },
                 { "redirected", hasRedirected.ToString() },
                 { "ad_network", adNetwork ?? string.Empty },
-                { "endpoint", endPoint?.ToString() ?? string.Empty },
+                { "endpoint", endPoint?.ToString() ?? string.Empty }
             }
         };
     }

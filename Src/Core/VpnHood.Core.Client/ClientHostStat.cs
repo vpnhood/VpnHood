@@ -2,6 +2,6 @@
 
 internal interface IClientHostStat
 {
-    int TcpTunnelledCount { get;  }
+    int TcpTunnelledCount { get; }
     int TcpPassthruCount { get; }
 }

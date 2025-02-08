@@ -36,5 +36,4 @@ public static class IPAddressExtensions
     {
         return addressFamily == AddressFamily.InterNetworkV6;
     }
-
 }

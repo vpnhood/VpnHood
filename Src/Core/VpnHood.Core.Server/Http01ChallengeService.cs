@@ -68,7 +68,7 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
         VhLogger.Instance.LogInformation(GeneralEventId.DnsChallenge,
             "HTTP Challenge. Request: {request}, IsMatched: {isMatched}", request, isMatched);
 
-        var response = (isMatched)
+        var response = isMatched
             ? HttpResponseBuilder.Http01(keyAuthorization)
             : HttpResponseBuilder.NotFound();
 

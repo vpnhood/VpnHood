@@ -29,7 +29,7 @@ public class Ip2LocationDbParser
         using var ipLocationZipArchive = new ZipArchive(ipLocationZipStream, ZipArchiveMode.Read);
         const string entryName = "IP2LOCATION-LITE-DB1.IPV6.CSV";
         var ipLocationEntry = ipLocationZipArchive.GetEntry(entryName) ??
-            throw new Exception($"{entryName} not found in the zip file!");
+                              throw new Exception($"{entryName} not found in the zip file!");
 
         await using var crvStream = ipLocationEntry.Open();
         if (forIpRange)
@@ -61,7 +61,8 @@ public class Ip2LocationDbParser
         // Building the IpGroups directory structure
         VhLogger.Instance.LogTrace("Building the optimized Ip2Location archive...");
         var ipRangeInfos = new List<LocalIpLocationProvider.IpRangeInfo>();
-        foreach (var country in countries) ipRangeInfos.AddRange(
+        foreach (var country in countries)
+            ipRangeInfos.AddRange(
                 country.Value.Select(ipRange => new LocalIpLocationProvider.IpRangeInfo {
                     CountryCode = country.Key,
                     IpRanges = ipRange

@@ -32,7 +32,7 @@ public class PingProxyPool : IPacketProxyPool, IJob
         icmpTimeout ??= TimeSpan.FromSeconds(120);
         maxClientCount ??= int.MaxValue;
 
-        _workerMaxCount = (maxClientCount > 0)
+        _workerMaxCount = maxClientCount > 0
             ? maxClientCount.Value
             : throw new ArgumentException($"{nameof(maxClientCount)} must be greater than 0", nameof(maxClientCount));
         _packetProxyReceiver = packetProxyReceiver;
@@ -69,7 +69,8 @@ public class PingProxyPool : IPacketProxyPool, IJob
 
     public async Task SendPacket(IPPacket ipPacket)
     {
-        if ((ipPacket.Version != IPVersion.IPv4 || ipPacket.Extract<IcmpV4Packet>()?.TypeCode != IcmpV4TypeCode.EchoRequest) &&
+        if ((ipPacket.Version != IPVersion.IPv4 ||
+             ipPacket.Extract<IcmpV4Packet>()?.TypeCode != IcmpV4TypeCode.EchoRequest) &&
             (ipPacket.Version != IPVersion.IPv6 || ipPacket.Extract<IcmpV6Packet>()?.Type != IcmpV6Type.EchoRequest))
             throw new NotSupportedException($"The icmp is not supported. Packet: {PacketUtil.Format(ipPacket)}.");
 

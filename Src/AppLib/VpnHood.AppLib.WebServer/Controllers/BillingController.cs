@@ -11,7 +11,8 @@ namespace VpnHood.AppLib.WebServer.Controllers;
 internal class BillingController : WebApiController, IBillingController
 {
     private static AppBillingService BillingService => VpnHoodApp.Instance.Services.AccountService?.BillingService
-                                                ?? throw new Exception("Billing service is not available at this moment.");
+                                                       ?? throw new Exception(
+                                                           "Billing service is not available at this moment.");
 
     [Route(HttpVerbs.Get, "/subscription-plans")]
     public Task<SubscriptionPlan[]> GetSubscriptionPlans()

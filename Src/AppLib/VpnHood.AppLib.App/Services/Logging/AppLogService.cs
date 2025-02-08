@@ -117,7 +117,7 @@ public class AppLogService : IDisposable
                 GeneralEventId.Request.Name,
                 GeneralEventId.TcpLife.Name,
                 GeneralEventId.Test.Name,
-                GeneralEventId.UdpSign.Name,
+                GeneralEventId.UdpSign.Name
             ]);
 
         var parts = debugCommand.Split(' ').Where(x => x.Contains("/log:", StringComparison.OrdinalIgnoreCase));
@@ -148,7 +148,7 @@ public class AppLogService : IDisposable
 
                 // find first linefeed and split into two parts
                 message = message.Replace("\r\n", "\n");
-                var index = message.Length > 2 ?  message.TrimStart().IndexOf('\n') : 0;
+                var index = message.Length > 2 ? message.TrimStart().IndexOf('\n') : 0;
                 var part1 = index > 0 ? message[..index] : message;
                 var part2 = index > 0 ? message[(index + 1)..] : "";
 
@@ -164,11 +164,11 @@ public class AppLogService : IDisposable
             return message;
         }
 
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter) =>
             innerLogger.Log(logLevel, eventId, state, exception, (_, _) => UpdateMessage(formatter(state, exception)));
+
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => innerLogger.BeginScope(state);
         public bool IsEnabled(LogLevel logLevel) => innerLogger.IsEnabled(logLevel);
     }
 }
-
-

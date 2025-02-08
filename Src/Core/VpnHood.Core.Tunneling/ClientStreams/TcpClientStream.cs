@@ -81,7 +81,8 @@ public class TcpClientStream : IClientStream
             Stream? newStream = null;
             try {
                 newStream = await chunkStream.CreateReuse().VhConfigureAwait();
-                _ = _reuseCallback.Invoke(new TcpClientStream(TcpClient, newStream, ClientStreamId, _reuseCallback, false));
+                _ = _reuseCallback.Invoke(new TcpClientStream(TcpClient, newStream, ClientStreamId, _reuseCallback,
+                    false));
 
                 VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
                     "A TcpClientStream has been freed. ClientStreamId: {ClientStreamId}", ClientStreamId);

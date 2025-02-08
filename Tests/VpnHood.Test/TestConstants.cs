@@ -6,7 +6,10 @@ namespace VpnHood.Test;
 public class TestConstants
 {
     public const int DefaultTimeout = 30000;
-    public static Uri HttpsUri1 => new("https://www.wireshark.org/tools/v46status.html/"); //make sure always return same ips
+
+    public static Uri HttpsUri1 =>
+        new("https://www.wireshark.org/tools/v46status.html/"); //make sure always return same ips
+
     public static Uri HttpsUri2 => new("https://ip4.me/"); //make sure always return same ips
     public static IPEndPoint NsEndPoint1 => IPEndPoint.Parse("1.1.1.1:53");
     public static IPEndPoint NsEndPoint2 => IPEndPoint.Parse("1.0.0.1:53");

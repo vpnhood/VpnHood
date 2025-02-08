@@ -43,13 +43,15 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpPost("connect")]
-    public Task Connect(Guid? clientProfileId = null, string? serverLocation = null, ConnectPlanId planId = ConnectPlanId.Normal)
+    public Task Connect(Guid? clientProfileId = null, string? serverLocation = null,
+        ConnectPlanId planId = ConnectPlanId.Normal)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPost("diagnose")]
-    public Task Diagnose(Guid? clientProfileId = null, string? serverLocation = null, ConnectPlanId planId = ConnectPlanId.Normal)
+    public Task Diagnose(Guid? clientProfileId = null, string? serverLocation = null,
+        ConnectPlanId planId = ConnectPlanId.Normal)
     {
         throw new SwaggerOnlyException();
     }

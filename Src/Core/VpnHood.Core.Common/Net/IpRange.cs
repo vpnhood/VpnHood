@@ -60,19 +60,18 @@ public class IpRange
 
     private static IPAddress ParseIpAddress(string value)
     {
-        if (IPAddress.TryParse(value, out var ipAddress)) 
+        if (IPAddress.TryParse(value, out var ipAddress))
             return ipAddress;
 
         var ex = new FormatException($"Could not parse the IpAddress from: {value}");
         ex.Data.Add("IpAddress", value);
         throw ex;
-
     }
 
     public override string ToString()
     {
-        return FirstIpAddress.Equals(LastIpAddress) 
-            ? $"{FirstIpAddress}" 
+        return FirstIpAddress.Equals(LastIpAddress)
+            ? $"{FirstIpAddress}"
             : $"{FirstIpAddress}-{LastIpAddress}";
     }
 

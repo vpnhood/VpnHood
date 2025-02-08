@@ -30,7 +30,7 @@ internal class ClientHost(
     private IPEndPoint? _localEndpointIpV4;
     private IPEndPoint? _localEndpointIpV6;
     private int _processingCount;
-    private  readonly ClientHostStat _stat = new();
+    private readonly ClientHostStat _stat = new();
     private int _passthruInProcessPacketsCounter;
 
 
@@ -126,7 +126,8 @@ internal class ClientHost(
 
                 // redirect to inbound
                 if (Equals(ipPacket.DestinationAddress, loopbackAddress)) {
-                    var natItem = (NatItemEx?)vpnHoodClient.Nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
+                    var natItem = (NatItemEx?)vpnHoodClient.Nat.Resolve(ipPacket.Version, ipPacket.Protocol,
+                                      tcpPacket.DestinationPort)
                                   ?? throw new Exception("Could not find incoming tcp destination in NAT.");
 
                     ipPacket.SourceAddress = natItem.DestinationAddress;
@@ -161,7 +162,8 @@ internal class ClientHost(
             catch (Exception ex) {
                 if (tcpPacket != null) {
                     ret.Add(PacketUtil.CreateTcpResetReply(ipPacket, true));
-                    PacketUtil.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.",
+                    PacketUtil.LogPacket(ipPacket,
+                        "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.",
                         LogLevel.Error, ex);
                 }
                 else {
@@ -238,7 +240,8 @@ internal class ClientHost(
 
             var natItem =
                 (NatItemEx?)vpnHoodClient.Nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port) ??
-                throw new Exception($"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
+                throw new Exception(
+                    $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
 
             var syncCustomData = natItem.CustomData as SyncCustomData?;
 
@@ -270,7 +273,6 @@ internal class ClientHost(
             if (syncCustomData?.Passthru == true ||
                 filterResult.Action == DomainFilterAction.Exclude ||
                 (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
-
                 var channelId = Guid.NewGuid() + ":client";
                 await vpnHoodClient.AddPassthruTcpStream(
                         new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),

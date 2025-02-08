@@ -5,7 +5,7 @@ using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.Core.Client.Exceptions;
 
-public class RedirectHostException(SessionResponse sessionResponse) 
+public class RedirectHostException(SessionResponse sessionResponse)
     : SessionException(sessionResponse)
 {
     public IPEndPoint[] RedirectHostEndPoints {

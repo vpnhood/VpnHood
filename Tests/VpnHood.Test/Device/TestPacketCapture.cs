@@ -3,11 +3,11 @@ using VpnHood.Core.Client.Device.WinDivert;
 
 namespace VpnHood.Test.Device;
 
-public class TestPacketCapture(TestPacketCaptureOptions packetCaptureOptions) : WinDivertPacketCapture
+public class TestVpnAdapter(TestVpnAdapterOptions vpnAdapterOptions) : WinDivertVpnAdapter
 {
-    public override bool IsDnsServersSupported => packetCaptureOptions.IsDnsServerSupported;
+    public override bool IsDnsServersSupported => vpnAdapterOptions.IsDnsServerSupported;
 
-    public override bool CanSendPacketToOutbound => packetCaptureOptions.CanSendPacketToOutbound;
+    public override bool CanSendPacketToOutbound => vpnAdapterOptions.CanSendPacketToOutbound;
 
     protected override void ProcessPacketReceivedFromInbound(IPPacket ipPacket)
     {
@@ -15,8 +15,8 @@ public class TestPacketCapture(TestPacketCaptureOptions packetCaptureOptions) : 
 
         ignore |=
             ipPacket.Extract<UdpPacket>()?.DestinationPort == 53 &&
-            packetCaptureOptions.CaptureDnsAddresses != null &&
-            packetCaptureOptions.CaptureDnsAddresses.All(x => !x.Equals(ipPacket.DestinationAddress));
+            vpnAdapterOptions.CaptureDnsAddresses != null &&
+            vpnAdapterOptions.CaptureDnsAddresses.All(x => !x.Equals(ipPacket.DestinationAddress));
 
         // ignore protected packets
         if (ignore)

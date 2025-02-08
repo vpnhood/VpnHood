@@ -22,7 +22,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         // load app settings and resources
         var appConfigs = AppConfigs.Load();
-        
+
         var resources = DefaultAppResource.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
@@ -40,5 +40,4 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             Ga4MeasurementId = appConfigs.Ga4MeasurementId
         };
     }
-
 }

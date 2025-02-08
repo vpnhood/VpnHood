@@ -6,7 +6,6 @@ using VpnHood.Core.Server.Abstractions;
 
 namespace VpnHood.App.Server.Providers.Linux;
 
-
 // add & remove ip address for linux server
 public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationProvider
 {

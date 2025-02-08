@@ -17,7 +17,7 @@ public static class VhUtil
     public const long Gigabytes = 1L << 30; // 1 GB
     public const long Terabytes = 1L << 40; // 1 TB
     public const long Petabytes = 1L << 50; // 1 PB
-    
+
     public static bool IsConnectionRefusedException(Exception ex)
     {
         return
@@ -118,7 +118,8 @@ public static class VhUtil
         return RunTask(task, TimeSpan.Zero, cancellationToken);
     }
 
-    public static async Task<T> RunTask<T>(Task<T> task, TimeSpan timeout, CancellationToken cancellationToken = default)
+    public static async Task<T> RunTask<T>(Task<T> task, TimeSpan timeout,
+        CancellationToken cancellationToken = default)
     {
         await RunTask((Task)task, timeout, cancellationToken).VhConfigureAwait();
         return await task.VhConfigureAwait();

@@ -11,7 +11,8 @@ public class Socks5Client(Socks5Options options)
     private readonly string? _username = options.Username;
     private readonly string? _password = options.Password;
 
-    public async Task ConnectAsync(TcpClient tcpClient, IPEndPoint remoteEp, TimeSpan timeout, CancellationToken cancellationToken)
+    public async Task ConnectAsync(TcpClient tcpClient, IPEndPoint remoteEp, TimeSpan timeout,
+        CancellationToken cancellationToken)
     {
         if (options == null)
             throw new ArgumentNullException(nameof(options));
@@ -30,8 +31,7 @@ public class Socks5Client(Socks5Options options)
 
     private async Task SelectAuth(NetworkStream stream, CancellationToken cancellationToken)
     {
-        var buffer = new byte[]
-        {
+        var buffer = new byte[] {
             5, // SOCKS version 5
             2, // Number of authentication methods supported
             (byte)Socks5AuthenticationType.NoAuthenticationRequired, // No authentication required
@@ -60,7 +60,8 @@ public class Socks5Client(Socks5Options options)
         }
     }
 
-    private static async Task PerformUserNameAndPasswordAuth(NetworkStream stream, string userName, string password, CancellationToken cancellationToken)
+    private static async Task PerformUserNameAndPasswordAuth(NetworkStream stream, string userName, string password,
+        CancellationToken cancellationToken)
     {
         var buffer = ConstructAuthBuffer(userName, password);
         await stream.WriteAsync(buffer, 0, buffer.Length, cancellationToken);
@@ -73,7 +74,8 @@ public class Socks5Client(Socks5Options options)
             throw new UnauthorizedAccessException("Proxy authentication failed.");
     }
 
-    private static async Task PerformConnect(NetworkStream stream, IPEndPoint destinationEndPoint, CancellationToken cancellationToken)
+    private static async Task PerformConnect(NetworkStream stream, IPEndPoint destinationEndPoint,
+        CancellationToken cancellationToken)
     {
         var addressType = GetDestAddressType(destinationEndPoint.AddressFamily);
         var addressBytes = destinationEndPoint.Address.GetAddressBytes();
@@ -107,8 +109,10 @@ public class Socks5Client(Socks5Options options)
             Socks5CommandReply.HostUnreachable => new SocketException((int)SocketError.HostUnreachable),
             Socks5CommandReply.ConnectionRefused => new SocketException((int)SocketError.ConnectionRefused),
             Socks5CommandReply.TtlExpired => new IOException("TTL Expired."),
-            Socks5CommandReply.CommandNotSupported => new NotSupportedException("Command not supported by SOCKS5 proxy."),
-            Socks5CommandReply.AddressTypeNotSupported => new SocketException((int)SocketError.AddressFamilyNotSupported),
+            Socks5CommandReply.CommandNotSupported => new NotSupportedException(
+                "Command not supported by SOCKS5 proxy."),
+            Socks5CommandReply.AddressTypeNotSupported => new SocketException(
+                (int)SocketError.AddressFamilyNotSupported),
             _ => new SocketException((int)SocketError.ProtocolNotSupported)
         };
 
@@ -155,5 +159,4 @@ public class Socks5Client(Socks5Options options)
             read += bytesRead;
         }
     }
-
 }

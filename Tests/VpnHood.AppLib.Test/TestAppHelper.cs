@@ -38,7 +38,7 @@ public class TestAppHelper : TestHelper
             AdOptions = new AppAdOptions {
                 ShowAdPostDelay = TimeSpan.Zero,
                 LoadAdPostDelay = TimeSpan.Zero
-            },
+            }
         };
         return appOptions;
     }
@@ -46,15 +46,16 @@ public class TestAppHelper : TestHelper
     public static VpnHoodApp CreateClientApp(AppOptions? appOptions = null, IDevice? device = null)
     {
         appOptions ??= CreateAppOptions();
-        device ??= new TestDevice(() => new TestNullPacketCapture());
+        device ??= new TestDevice(() => new TestNullVpnAdapter());
 
         //create app
         var clientApp = VpnHoodApp.Init(device, appOptions);
         clientApp.Diagnoser.HttpTimeout = 2000;
         clientApp.Diagnoser.NsTimeout = 2000;
-        clientApp.UserSettings.UsePacketCaptureIpFilter = true;
+        clientApp.UserSettings.UseVpnAdapterIpFilter = true;
         clientApp.UserSettings.UseAppIpFilter = true;
-        clientApp.SettingsService.IpFilterSettings.PacketCaptureIpFilterIncludes = TestIpAddresses.Select(x => new IpRange(x)).ToText();
+        clientApp.SettingsService.IpFilterSettings.VpnAdapterIpFilterIncludes =
+            TestIpAddresses.Select(x => new IpRange(x)).ToText();
         clientApp.UserSettings.LogAnonymous = false;
         clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
         ActiveUiContext.Context = new TestAppUiContext();

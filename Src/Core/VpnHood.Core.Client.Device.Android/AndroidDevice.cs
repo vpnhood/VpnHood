@@ -141,16 +141,16 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         }
     }
 
-    public async Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext)
+    public async Task<IVpnAdapter> CreateVpnAdapter(IUiContext? uiContext)
     {
         // prepare vpn service
         var androidUiContext = (AndroidUiContext?)uiContext;
         await PrepareVpnService(androidUiContext?.ActivityEvent);
 
         // start service
-        var intent = new Intent(Application.Context, typeof(AndroidPacketCapture));
+        var intent = new Intent(Application.Context, typeof(AndroidVpnAdapter));
         intent.PutExtra("manual", true);
-        AndroidPacketCapture.StartServiceTaskCompletionSource = new TaskCompletionSource<AndroidPacketCapture>();
+        AndroidVpnAdapter.StartServiceTaskCompletionSource = new TaskCompletionSource<AndroidVpnAdapter>();
         if (OperatingSystem.IsAndroidVersionAtLeast(26)) {
             Application.Context.StartForegroundService(intent.SetAction("connect"));
         }
@@ -160,21 +160,22 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 
         // check is service started
         try {
-            var packetCapture = await AndroidPacketCapture.StartServiceTaskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            return packetCapture;
+            var vpnAdapter =
+                await AndroidVpnAdapter.StartServiceTaskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            return vpnAdapter;
         }
         catch (Exception ex) {
-            AndroidPacketCapture.StartServiceTaskCompletionSource.TrySetCanceled();
+            AndroidVpnAdapter.StartServiceTaskCompletionSource.TrySetCanceled();
             throw new Exception("Could not create VpnService in given time.", ex);
         }
     }
 
 
-    internal void OnServiceStartCommand(AndroidPacketCapture packetCapture, Intent? intent)
+    internal void OnServiceStartCommand(AndroidVpnAdapter vpnAdapter, Intent? intent)
     {
         // set foreground
         _deviceNotification ??= CreateDefaultNotification();
-        packetCapture.StartForeground(_deviceNotification.NotificationId, _deviceNotification.Notification);
+        vpnAdapter.StartForeground(_deviceNotification.NotificationId, _deviceNotification.Notification);
 
         // fire AutoCreate for always on
         var manual = intent?.GetBooleanExtra("manual", false) ?? false;

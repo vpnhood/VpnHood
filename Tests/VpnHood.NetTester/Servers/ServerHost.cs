@@ -79,7 +79,8 @@ internal class ServerHost(IPAddress listenerIp) : IDisposable
             return copyCert;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Failed to create self-signed certificate from the url. Domain: {Domain}", domain);
+            VhLogger.Instance.LogError(ex, "Failed to create self-signed certificate from the url. Domain: {Domain}",
+                domain);
         }
 
         var cert = CertificateUtil.CreateSelfSigned($"CN={domain}");

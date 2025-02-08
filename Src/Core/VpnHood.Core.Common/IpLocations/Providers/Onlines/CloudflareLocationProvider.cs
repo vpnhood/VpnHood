@@ -32,7 +32,7 @@ public class CloudflareLocationProvider(HttpClient httpClient, string userAgent)
             CountryName = new RegionInfo(countryCode).EnglishName,
             CountryCode = countryCode,
             RegionName = null,
-            CityName = null,
+            CityName = null
         };
 
         return ipLocation;

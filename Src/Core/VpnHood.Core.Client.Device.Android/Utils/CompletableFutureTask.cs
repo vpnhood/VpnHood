@@ -5,7 +5,7 @@ namespace VpnHood.Core.Client.Device.Droid.Utils;
 
 public class CompletableFutureTask
 {
-    private readonly TaskCompletionSource<Java.Lang.Object?> _taskCompletionSource = new ();
+    private readonly TaskCompletionSource<Java.Lang.Object?> _taskCompletionSource = new();
     public Task<Java.Lang.Object?> Task => _taskCompletionSource.Task;
 
     private class BiConsumer(CompletableFutureTask completableFutureTask) : Java.Lang.Object, IBiConsumer

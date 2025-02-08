@@ -5,7 +5,6 @@ namespace VpnHood.Core.Client.ApiControllers;
 
 internal static class DtoConverters
 {
-
     public static ConnectionInfo ToDto(this IConnectionInfo connectionInfo)
     {
         var dto = new ConnectionInfo {

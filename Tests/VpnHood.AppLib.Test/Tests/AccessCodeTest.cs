@@ -14,7 +14,6 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class AccessCodeTest : TestBase
 {
-
     [TestMethod]
     public async Task AaFoo()
     {
@@ -45,8 +44,8 @@ public class AccessCodeTest : TestBase
 
         // connect
         await app.Connect(clientProfile.ClientProfileId);
-        Assert.AreEqual(6, app.State.SessionInfo?.AccessInfo?.MaxDeviceCount, "token2 must be used instead of token1 due the access code.");
-
+        Assert.AreEqual(6, app.State.SessionInfo?.AccessInfo?.MaxDeviceCount,
+            "token2 must be used instead of token1 due the access code.");
     }
 
     [TestMethod]
@@ -76,7 +75,7 @@ public class AccessCodeTest : TestBase
         clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
 
         Assert.IsNull(clientProfile.AccessCode, "Access code must be removed from profile.");
-        
+
         // code should not exist any return objects
         Assert.IsFalse(ex.Data.Contains("AccessCode"));
         Assert.IsFalse(app.State.LastError?.Data.ContainsKey("AccessCode") == true);
@@ -107,7 +106,7 @@ public class AccessCodeTest : TestBase
     public async Task ClientProfile_with_access_code_must_be_premium()
     {
         await using var server = await TestHelper.CreateServer();
-        
+
         // create token
         var defaultPolicy = new ClientPolicy {
             ClientCountries = ["*"],
@@ -137,6 +136,5 @@ public class AccessCodeTest : TestBase
         Assert.IsFalse(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByPurchase);
         Assert.IsNull(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByRewardedAd);
         Assert.IsNull(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByTrial);
-
     }
 }

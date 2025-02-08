@@ -198,23 +198,23 @@ public class IpRangeOrderedList :
     {
         var ipRanges = new List<IpRange>();
         foreach (var ipRange1 in orderedIpRanges1)
-            foreach (var ipRange2 in orderedIpRanges2) {
-                if (ipRange1.IsInRange(ipRange2.FirstIpAddress))
-                    ipRanges.Add(new IpRange(ipRange2.FirstIpAddress,
-                        IPAddressUtil.Min(ipRange1.LastIpAddress, ipRange2.LastIpAddress)));
+        foreach (var ipRange2 in orderedIpRanges2) {
+            if (ipRange1.IsInRange(ipRange2.FirstIpAddress))
+                ipRanges.Add(new IpRange(ipRange2.FirstIpAddress,
+                    IPAddressUtil.Min(ipRange1.LastIpAddress, ipRange2.LastIpAddress)));
 
-                else if (ipRange1.IsInRange(ipRange2.LastIpAddress))
-                    ipRanges.Add(new IpRange(IPAddressUtil.Max(ipRange1.FirstIpAddress, ipRange2.FirstIpAddress),
-                        ipRange2.LastIpAddress));
+            else if (ipRange1.IsInRange(ipRange2.LastIpAddress))
+                ipRanges.Add(new IpRange(IPAddressUtil.Max(ipRange1.FirstIpAddress, ipRange2.FirstIpAddress),
+                    ipRange2.LastIpAddress));
 
-                else if (ipRange2.IsInRange(ipRange1.FirstIpAddress))
-                    ipRanges.Add(new IpRange(ipRange1.FirstIpAddress,
-                        IPAddressUtil.Min(ipRange1.LastIpAddress, ipRange2.LastIpAddress)));
+            else if (ipRange2.IsInRange(ipRange1.FirstIpAddress))
+                ipRanges.Add(new IpRange(ipRange1.FirstIpAddress,
+                    IPAddressUtil.Min(ipRange1.LastIpAddress, ipRange2.LastIpAddress)));
 
-                else if (ipRange2.IsInRange(ipRange1.LastIpAddress))
-                    ipRanges.Add(new IpRange(IPAddressUtil.Max(ipRange1.FirstIpAddress, ipRange2.FirstIpAddress),
-                        ipRange1.LastIpAddress));
-            }
+            else if (ipRange2.IsInRange(ipRange1.LastIpAddress))
+                ipRanges.Add(new IpRange(IPAddressUtil.Max(ipRange1.FirstIpAddress, ipRange2.FirstIpAddress),
+                    ipRange1.LastIpAddress));
+        }
 
         return ipRanges;
     }
@@ -277,11 +277,11 @@ public class IpRangeOrderedList :
     {
         public int Compare(IpRange x, IpRange y)
         {
-            if (IPAddressUtil.Compare(x.FirstIpAddress, y.FirstIpAddress) <= 0 && 
-                IPAddressUtil.Compare(x.LastIpAddress, y.LastIpAddress) >= 0) 
+            if (IPAddressUtil.Compare(x.FirstIpAddress, y.FirstIpAddress) <= 0 &&
+                IPAddressUtil.Compare(x.LastIpAddress, y.LastIpAddress) >= 0)
                 return 0;
 
-            if (IPAddressUtil.Compare(x.FirstIpAddress, y.FirstIpAddress) < 0) 
+            if (IPAddressUtil.Compare(x.FirstIpAddress, y.FirstIpAddress) < 0)
                 return -1;
 
             return +1;

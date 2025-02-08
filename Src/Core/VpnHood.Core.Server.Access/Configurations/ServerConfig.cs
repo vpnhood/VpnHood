@@ -37,8 +37,14 @@ public class ServerConfig
     public string? TcpCongestionControl { get; set; } = "bbr";
 
     // Inherit
-    [JsonIgnore] public IPEndPoint[] TcpEndPointsValue => TcpEndPoints ?? [new IPEndPoint(IPAddress.Any, 443), new IPEndPoint(IPAddress.IPv6Any, 443)];
-    [JsonIgnore] public IPEndPoint[] UdpEndPointsValue => UdpEndPoints ?? [new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.IPv6Any, 0)];
+    [JsonIgnore]
+    public IPEndPoint[] TcpEndPointsValue =>
+        TcpEndPoints ?? [new IPEndPoint(IPAddress.Any, 443), new IPEndPoint(IPAddress.IPv6Any, 443)];
+
+    [JsonIgnore]
+    public IPEndPoint[] UdpEndPointsValue =>
+        UdpEndPoints ?? [new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.IPv6Any, 0)];
+
     [JsonIgnore] public IPAddress[] DnsServersValue => DnsServers ?? IPAddressUtil.GoogleDnsServers;
     [JsonIgnore] public TimeSpan UpdateStatusIntervalValue => UpdateStatusInterval ?? TimeSpan.FromSeconds(120);
     [JsonIgnore] public bool LogAnonymizerValue => LogAnonymizer ?? true;

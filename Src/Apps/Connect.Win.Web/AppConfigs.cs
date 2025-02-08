@@ -8,7 +8,10 @@ namespace VpnHood.App.Connect.Win.Web;
 internal class AppConfigs : AppConfigsBase<AppConfigs>
 {
     public string AppName { get; init; } = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
-    public string? UpdateInfoUrl { get; init; } = "https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-win-x64.json";
+
+    public string? UpdateInfoUrl { get; init; } =
+        "https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-win-x64.json";
+
     public int? SpaDefaultPort { get; init; } = IsDebugMode ? 9571 : 80;
     public bool SpaListenToAllIps { get; init; } = IsDebugMode;
 

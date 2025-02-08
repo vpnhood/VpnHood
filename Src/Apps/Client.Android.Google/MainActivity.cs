@@ -16,8 +16,10 @@ namespace VpnHood.App.Client.Droid.Google;
     ConfigurationChanges = AndroidMainActivityConstants.ConfigChanges)]
 [IntentFilter([TileService.ActionQsTilePreferences])]
 [IntentFilter([Intent.ActionMain], Categories = [Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher])]
-[IntentFilter([Intent.ActionView], Categories = [Intent.CategoryDefault], DataScheme = "content", DataMimeTypes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3])]
-[IntentFilter([Intent.ActionView], Categories = [Intent.CategoryDefault, Intent.CategoryBrowsable], DataSchemes = [AccessKeyScheme1, AccessKeyScheme2])]
+[IntentFilter([Intent.ActionView], Categories = [Intent.CategoryDefault], DataScheme = "content",
+    DataMimeTypes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3])]
+[IntentFilter([Intent.ActionView], Categories = [Intent.CategoryDefault, Intent.CategoryBrowsable],
+    DataSchemes = [AccessKeyScheme1, AccessKeyScheme2])]
 public class MainActivity : AndroidAppMainActivity
 {
     // https://android.googlesource.com/platform/libcore/+/android-5.0.2_r1/luni/src/main/java/libcore/net/MimeUtils.java

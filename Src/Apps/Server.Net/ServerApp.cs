@@ -138,7 +138,6 @@ public class ServerApp : IDisposable
         return serverId;
     }
 
-
     private static FileAccessManager CreateFileAccessManager(string storageFolderPath,
         FileAccessManagerOptions? options)
     {
@@ -244,14 +243,18 @@ public class ServerApp : IDisposable
                 : null;
 
             // run server
+            var virtualIpNetworkV4 = TunnelDefaults.VirtualIpNetworkV4;
+            var virtualIpNetworkV6 = TunnelDefaults.VirtualIpNetworkV4;
             _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions {
                 Tracker = _tracker,
-                TunProvider = CreateTunProvider(),
+                TunProvider = CreateTunProvider(virtualIpNetworkV4, virtualIpNetworkV6),
                 SystemInfoProvider = systemInfoProvider,
                 NetConfigurationProvider = configurationProvider,
                 SwapMemoryProvider = swapMemoryProvider,
                 StoragePath = InternalStoragePath,
-                Config = AppSettings.ServerConfig
+                Config = AppSettings.ServerConfig,
+                VirtualIpNetworkV4 = virtualIpNetworkV4,
+                VirtualIpNetworkV6 = virtualIpNetworkV6
             });
 
             // Command listener
@@ -265,9 +268,11 @@ public class ServerApp : IDisposable
         });
     }
 
-    private ITunProvider? CreateTunProvider()
+    private ITunProvider? CreateTunProvider(IpNetwork virtualIpNetworkV4, IpNetwork virtualIpNetworkV6)
     {
         try {
+            _ = virtualIpNetworkV4;
+            _ = virtualIpNetworkV6;
             //return RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
             //    ? LinuxTunProvider.Create()
             //    : null;

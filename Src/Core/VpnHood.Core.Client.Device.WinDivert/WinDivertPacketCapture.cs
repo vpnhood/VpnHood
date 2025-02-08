@@ -171,7 +171,7 @@ public class WinDivertPacketCapture : IPacketCapture
 
         _lastCaptureHeader = (WinDivertHeader)e.Header;
 
-        // try to simulate tun
+        // start trying to simulate tun
         SetInternalIp(ipPacket.SourceAddress);
         var virtualIp = GetVirtualIp(ipPacket.Version);
         if (virtualIp == null) {
@@ -183,7 +183,7 @@ public class WinDivertPacketCapture : IPacketCapture
         ipPacket.SourceAddress = virtualIp;
         if (ipPacket is IPv4Packet ipV4Packet)
             ipV4Packet.UpdateIPChecksum();
-
+        // end trying to simulate tun
 
         ProcessPacketReceivedFromInbound(ipPacket);
     }

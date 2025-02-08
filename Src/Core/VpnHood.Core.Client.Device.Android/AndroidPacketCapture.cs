@@ -36,8 +36,6 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     public bool Started => _mInterface != null;
     private bool _isServiceStarted;
     public bool CanSendPacketToOutbound => false;
-    public bool CanExcludeApps => true;
-    public bool CanIncludeApps => true;
     public bool IsMtuSupported => true;
 
     public IpNetwork[] PrivateIpNetworks { get; set; } = [];

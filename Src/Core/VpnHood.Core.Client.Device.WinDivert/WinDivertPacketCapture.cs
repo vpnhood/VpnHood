@@ -33,8 +33,6 @@ public class WinDivertPacketCapture : IPacketCapture
     public bool Started => _device.Started;
     public virtual bool CanSendPacketToOutbound => true;
     public virtual bool IsDnsServersSupported => false;
-    public bool CanExcludeApps => false;
-    public bool CanIncludeApps => false;
     public bool IsMtuSupported => false;
 
     public bool CanDetectInProcessPacket => false;

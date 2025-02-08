@@ -11,8 +11,6 @@ public class NullPacketCapture : IPacketCapture
     public event EventHandler? Stopped;
     public virtual bool Started { get; set; }
     public virtual bool IsDnsServersSupported { get; set; } = true;
-    public virtual bool CanExcludeApps { get; set; } = true;
-    public virtual bool CanIncludeApps { get; set; } = true;
     public virtual bool IsMtuSupported { get; set; } = true;
     public virtual bool CanProtectSocket { get; set; } = true;
     public virtual bool CanSendPacketToOutbound { get; set; }

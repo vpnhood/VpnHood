@@ -9,8 +9,6 @@ public interface IPacketCapture : IDisposable
     event EventHandler Stopped;
     bool Started { get; }
     bool IsDnsServersSupported { get; }
-    bool CanExcludeApps { get; }
-    bool CanIncludeApps { get; }
     bool IsMtuSupported { get; }
     bool CanProtectSocket { get; }
     bool CanSendPacketToOutbound { get; }

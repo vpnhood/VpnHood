@@ -5,7 +5,6 @@ namespace VpnHood.Core.Common.Utils;
 
 public static class AccessCodeUtils
 {
-
     public static string Build(string random)
     {
         var checksum = CalculateChecksum(random);

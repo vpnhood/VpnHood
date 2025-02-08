@@ -82,7 +82,8 @@ public class TestWebServer : IDisposable
 
         // Create web server
         var webServerOptions = new WebServerOptions {
-            Certificate = X509CertificateLoader.LoadPkcs12FromFile("Assets/VpnHood.UnitTest.pfx", null, X509KeyStorageFlags.Exportable),
+            Certificate = X509CertificateLoader.LoadPkcs12FromFile("Assets/VpnHood.UnitTest.pfx", null,
+                X509KeyStorageFlags.Exportable),
             AutoRegisterCertificate = false
         };
 

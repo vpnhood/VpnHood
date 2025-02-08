@@ -11,6 +11,7 @@ public class LinuxSwapMemoryProvider(ILogger logger)
 {
     // ReSharper disable once NotAccessedPositionalProperty.Local
     private record struct SwapFile(string FilePath, long Size, long Used);
+
     private const string SwapFilePath = "/vpnhood.swap";
 
     public async Task<SwapMemoryInfo> GetInfo()
@@ -20,13 +21,14 @@ public class LinuxSwapMemoryProvider(ILogger logger)
             TotalSize = swapFiles.Sum(x => x.Size),
             TotalUsed = swapFiles.Sum(x => x.Used),
             AppSize = swapFiles.Where(x => x.FilePath == SwapFilePath).Sum(x => x.Size),
-            AppUsed = swapFiles.Where(x => x.FilePath == SwapFilePath).Sum(x => x.Used),
+            AppUsed = swapFiles.Where(x => x.FilePath == SwapFilePath).Sum(x => x.Used)
         };
     }
 
     public async Task SetAppSwapMemorySize(long size)
     {
-        logger.LogInformation("Configuring swap file. File: {SwapFilePath}, Size: {Size}.", SwapFilePath, VhUtil.FormatBytes(size));
+        logger.LogInformation("Configuring swap file. File: {SwapFilePath}, Size: {Size}.", SwapFilePath,
+            VhUtil.FormatBytes(size));
 
         // Disable the current swap file
         if (File.Exists($"{SwapFilePath}")) {

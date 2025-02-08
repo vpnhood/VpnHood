@@ -15,7 +15,8 @@ public class DiagnoseUtil
         return WhenAnySuccess(tasks.ToArray());
     }
 
-    public static Task<Exception?> CheckUdp(IPEndPoint[] nsIpEndPoints, int timeout, CancellationToken cancellationToken)
+    public static Task<Exception?> CheckUdp(IPEndPoint[] nsIpEndPoints, int timeout,
+        CancellationToken cancellationToken)
     {
         var tasks = nsIpEndPoints.Select(x => CheckUdp(x, timeout, cancellationToken));
         return WhenAnySuccess(tasks.ToArray());
@@ -75,7 +76,8 @@ public class DiagnoseUtil
         }
     }
 
-    public static async Task<Exception?> CheckUdp(IPEndPoint nsIpEndPoint, int timeout, CancellationToken cancellationToken)
+    public static async Task<Exception?> CheckUdp(IPEndPoint nsIpEndPoint, int timeout,
+        CancellationToken cancellationToken)
     {
         using var udpClient = new UdpClient();
         const string dnsName = "www.google.com";
@@ -109,7 +111,8 @@ public class DiagnoseUtil
         }
     }
 
-    public static async Task<Exception?> CheckPing(IPAddress ipAddress, int timeout, CancellationToken cancellationToken)
+    public static async Task<Exception?> CheckPing(IPAddress ipAddress, int timeout,
+        CancellationToken cancellationToken)
     {
         try {
             using var ping = new Ping();

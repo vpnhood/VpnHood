@@ -45,6 +45,5 @@ public static class HttpClientUtil
 
         var client = new HttpClient(socketHttpHandler);
         return client;
-
     }
 }

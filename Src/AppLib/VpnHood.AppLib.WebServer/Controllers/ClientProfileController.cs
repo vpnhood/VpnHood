@@ -10,7 +10,7 @@ namespace VpnHood.AppLib.WebServer.Controllers;
 internal class ClientProfileController : WebApiController, IClientProfileController
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
-    
+
     [Route(HttpVerbs.Put, "/access-keys")]
     public Task<ClientProfileInfo> AddByAccessKey([QueryField] string accessKey)
     {

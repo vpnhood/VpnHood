@@ -47,7 +47,8 @@ internal static class ClientProfileServiceLegacy
                     clientProfiles.Add(clientProfile);
                 }
                 catch (Exception ex) {
-                    VhLogger.Instance.LogError(ex, "Could not load token. TokenId: {TokenId}", legacyClientProfile.TokenId);
+                    VhLogger.Instance.LogError(ex, "Could not load token. TokenId: {TokenId}",
+                        legacyClientProfile.TokenId);
                 }
 
             var json = JsonSerializer.Serialize(clientProfiles);
@@ -61,14 +62,16 @@ internal static class ClientProfileServiceLegacy
             File.Move(legacyProfilesFilePath, legacyProfilesFilePath + ".backup");
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could not delete legacy file. FilePath: {FilePath}", legacyProfilesFilePath);
+            VhLogger.Instance.LogWarning(ex, "Could not delete legacy file. FilePath: {FilePath}",
+                legacyProfilesFilePath);
         }
 
         try {
             File.Move(legacyTokensFilePath, legacyTokensFilePath + ".backup");
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could not delete a legacy file. FilePath: {FilePath}", legacyTokensFilePath);
+            VhLogger.Instance.LogWarning(ex, "Could not delete a legacy file. FilePath: {FilePath}",
+                legacyTokensFilePath);
         }
     }
 }

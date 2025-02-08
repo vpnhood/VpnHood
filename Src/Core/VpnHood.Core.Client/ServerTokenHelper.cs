@@ -8,7 +8,8 @@ namespace VpnHood.Core.Client;
 
 public class ServerTokenHelper
 {
-    private static async Task<IPEndPoint[]> ResolveHostEndPointsInternal(ServerToken serverToken , CancellationToken cancellationToken)
+    private static async Task<IPEndPoint[]> ResolveHostEndPointsInternal(ServerToken serverToken,
+        CancellationToken cancellationToken)
     {
         if (serverToken.IsValidHostName) {
             try {
@@ -39,7 +40,8 @@ public class ServerTokenHelper
         throw new Exception($"Could not resolve {nameof(serverToken.HostEndPoints)} from token!");
     }
 
-    public static async Task<IPEndPoint[]> ResolveHostEndPoints(ServerToken serverToken, CancellationToken cancellationToken)
+    public static async Task<IPEndPoint[]> ResolveHostEndPoints(ServerToken serverToken,
+        CancellationToken cancellationToken)
     {
         var ipEndPoints = await ResolveHostEndPointsInternal(serverToken, cancellationToken).VhConfigureAwait();
         if (VhUtil.IsNullOrEmpty(ipEndPoints))

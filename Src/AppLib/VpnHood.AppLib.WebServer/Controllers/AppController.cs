@@ -1,9 +1,9 @@
 ﻿using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
+using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.WebServer.Api;
-using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
@@ -46,10 +46,10 @@ internal class AppController : WebApiController, IAppController
     public Task<IpFilters> GetIpFilters()
     {
         var appIpFilters = new IpFilters {
-            PacketCaptureIpFilterInclude = App.SettingsService.IpFilterSettings.PacketCaptureIpFilterIncludes,
-            PacketCaptureIpFilterExclude = App.SettingsService.IpFilterSettings.PacketCaptureIpFilterExcludes,
+            VpnAdapterIpFilterInclude = App.SettingsService.IpFilterSettings.VpnAdapterIpFilterIncludes,
+            VpnAdapterIpFilterExclude = App.SettingsService.IpFilterSettings.VpnAdapterIpFilterExcludes,
             AppIpFilterInclude = App.SettingsService.IpFilterSettings.AppIpFilterIncludes,
-            AppIpFilterExclude = App.SettingsService.IpFilterSettings.AppIpFilterExcludes,
+            AppIpFilterExclude = App.SettingsService.IpFilterSettings.AppIpFilterExcludes
         };
 
         return Task.FromResult(appIpFilters);
@@ -59,8 +59,8 @@ internal class AppController : WebApiController, IAppController
     public async Task SetIpFilters(IpFilters ipFilters)
     {
         ipFilters = await HttpContext.GetRequestDataAsync<IpFilters>().VhConfigureAwait();
-        App.SettingsService.IpFilterSettings.PacketCaptureIpFilterExcludes = ipFilters.PacketCaptureIpFilterExclude;
-        App.SettingsService.IpFilterSettings.PacketCaptureIpFilterIncludes = ipFilters.PacketCaptureIpFilterInclude;
+        App.SettingsService.IpFilterSettings.VpnAdapterIpFilterExcludes = ipFilters.VpnAdapterIpFilterExclude;
+        App.SettingsService.IpFilterSettings.VpnAdapterIpFilterIncludes = ipFilters.VpnAdapterIpFilterInclude;
         App.SettingsService.IpFilterSettings.AppIpFilterExcludes = ipFilters.AppIpFilterExclude;
         App.SettingsService.IpFilterSettings.AppIpFilterIncludes = ipFilters.AppIpFilterInclude;
     }

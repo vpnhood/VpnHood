@@ -112,7 +112,7 @@ public class AccessTokenService
                     new AccessTokenUsage { Version = 2 };
 
         // for backward compatibility
-        if (File.Exists(usageFileName) &&  usage.Version < 2) {
+        if (File.Exists(usageFileName) && usage.Version < 2) {
             usage.CreatedTime = File.GetCreationTimeUtc(usageFileName);
             usage.LastUsedTime = File.GetLastWriteTime(usageFileName);
         }

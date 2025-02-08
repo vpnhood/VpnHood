@@ -15,7 +15,7 @@ public class SessionUsage
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public long Received { get; set; }
-    
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? AdData { get; set; }
 

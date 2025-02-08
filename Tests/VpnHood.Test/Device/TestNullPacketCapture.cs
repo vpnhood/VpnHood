@@ -2,4 +2,4 @@
 
 namespace VpnHood.Test.Device;
 
-public class TestNullPacketCapture : NullPacketCapture;
+public class TestNullVpnAdapter : NullVpnAdapter;

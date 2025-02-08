@@ -37,7 +37,8 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
         Console.WriteLine("--- Access Usage ---");
         Console.WriteLine();
         Console.WriteLine($"{nameof(accessTokenData.Usage.Sent)}: {VhUtil.FormatBytes(accessTokenData.Usage.Sent)}");
-        Console.WriteLine($"{nameof(accessTokenData.Usage.Received)}: {VhUtil.FormatBytes(accessTokenData.Usage.Received)}");
+        Console.WriteLine(
+            $"{nameof(accessTokenData.Usage.Received)}: {VhUtil.FormatBytes(accessTokenData.Usage.Received)}");
 
         Console.WriteLine();
         Console.WriteLine("--- Access Token ---");

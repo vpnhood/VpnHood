@@ -50,5 +50,4 @@ public static class VhTaskExtensions
 
         return await task;
     }
-
 }

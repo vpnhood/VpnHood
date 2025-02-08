@@ -6,15 +6,15 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Droid.Ads.VhAdMob;
+using VpnHood.AppLib.Droid.Ads.VhChartboost;
+using VpnHood.AppLib.Droid.Ads.VhInMobi;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
 using VpnHood.AppLib.Resources;
-using VpnHood.AppLib.Store;
-using VpnHood.AppLib.Droid.Ads.VhChartboost;
-using VpnHood.AppLib.Droid.Ads.VhInMobi;
-using VpnHood.Core.Common.Logging;
 using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.Store;
+using VpnHood.Core.Common.Logging;
 
 namespace VpnHood.App.Client.Droid.Google;
 
@@ -38,8 +38,19 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         var appConfigs = AppConfigs.Load();
 
         // initialize Firebase services
-        try { _analytics = FirebaseAnalytics.GetInstance(this); } catch { /* ignored*/ }
-        try { FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(Java.Lang.Boolean.True); } catch { /* ignored */ }
+        try {
+            _analytics = FirebaseAnalytics.GetInstance(this);
+        }
+        catch {
+            /* ignored*/
+        }
+
+        try {
+            FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(Java.Lang.Boolean.True);
+        }
+        catch {
+            /* ignored */
+        }
 
         // load app settings and resources
         var storageFolderPath = AppOptions.BuildStorageFolderPath("VpnHoodConnect");
@@ -82,32 +93,34 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         items.Add(new AppAdProviderItem {
             AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialAdUnitId),
             ExcludeCountryCodes = ["CN"],
-            ProviderName = "AdMob",
+            ProviderName = "AdMob"
         });
 
         if (InMobiAdProvider.IsAndroidVersionSupported)
             items.Add(new AppAdProviderItem {
-                AdProvider = InMobiAdProvider.Create(appConfigs.InmobiAccountId, appConfigs.InmobiPlacementId, initializeTimeout, appConfigs.InmobiIsDebugMode),
-                ProviderName = "InMobi",
+                AdProvider = InMobiAdProvider.Create(appConfigs.InmobiAccountId, appConfigs.InmobiPlacementId,
+                    initializeTimeout, appConfigs.InmobiIsDebugMode),
+                ProviderName = "InMobi"
             });
 
         if (ChartboostAdProvider.IsAndroidVersionSupported)
             items.Add(new AppAdProviderItem {
-                AdProvider = ChartboostAdProvider.Create(appConfigs.ChartboostAppId, appConfigs.ChartboostAppSignature, appConfigs.ChartboostAdLocation, initializeTimeout),
+                AdProvider = ChartboostAdProvider.Create(appConfigs.ChartboostAppId, appConfigs.ChartboostAppSignature,
+                    appConfigs.ChartboostAdLocation, initializeTimeout),
                 ExcludeCountryCodes = ["IR", "CN"],
-                ProviderName = "Chartboost",
+                ProviderName = "Chartboost"
             });
 
         items.Add(new AppAdProviderItem {
             AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialNoVideoAdUnitId),
             ExcludeCountryCodes = ["CN"],
-            ProviderName = "AdMob-NoVideo",
+            ProviderName = "AdMob-NoVideo"
         });
 
         items.Add(new AppAdProviderItem {
             AdProvider = AdMobRewardedAdProvider.Create(appConfigs.AdMobRewardedAdUnitId),
             ExcludeCountryCodes = ["CN"],
-            ProviderName = "AdMob-Rewarded",
+            ProviderName = "AdMob-Rewarded"
         });
 
         return items.ToArray();
@@ -117,10 +130,13 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         try {
             var authenticationExternalProvider = new GooglePlayAuthenticationProvider(appConfigs.GoogleSignInClientId);
-            var authenticationProvider = new StoreAuthenticationProvider(storageFolderPath, new Uri(appConfigs.StoreBaseUri),
-                appConfigs.StoreAppId, authenticationExternalProvider, ignoreSslVerification: appConfigs.StoreIgnoreSslVerification);
+            var authenticationProvider = new StoreAuthenticationProvider(storageFolderPath,
+                new Uri(appConfigs.StoreBaseUri),
+                appConfigs.StoreAppId, authenticationExternalProvider,
+                ignoreSslVerification: appConfigs.StoreIgnoreSslVerification);
             var googlePlayBillingProvider = new GooglePlayBillingProvider(authenticationProvider);
-            var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider, appConfigs.StoreAppId);
+            var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider,
+                appConfigs.StoreAppId);
             return accountProvider;
         }
         catch (Exception ex) {

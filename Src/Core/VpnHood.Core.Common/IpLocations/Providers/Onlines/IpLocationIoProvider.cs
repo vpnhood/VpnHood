@@ -15,20 +15,15 @@ public class IpLocationIoProvider(HttpClient httpClient, string userAgent, strin
         [JsonConverter(typeof(IPAddressConverter))]
         public required IPAddress Ip { get; set; }
 
-        [JsonPropertyName("country_code")]
-        public required string CountryCode { get; set; }
+        [JsonPropertyName("country_code")] public required string CountryCode { get; set; }
 
-        [JsonPropertyName("region_name")]
-        public string? RegionName { get; set; }
+        [JsonPropertyName("region_name")] public string? RegionName { get; set; }
 
-        [JsonPropertyName("city_name")]
-        public string? CityName { get; set; }
+        [JsonPropertyName("city_name")] public string? CityName { get; set; }
 
-        [JsonPropertyName("latitude")]
-        public string? Latitude { get; set; }
+        [JsonPropertyName("latitude")] public string? Latitude { get; set; }
 
-        [JsonPropertyName("longitude")]
-        public string? Longitude { get; set; }
+        [JsonPropertyName("longitude")] public string? Longitude { get; set; }
     }
 
     public Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)

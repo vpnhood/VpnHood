@@ -5,7 +5,7 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Client.Device;
 
-public class NullPacketCapture : IPacketCapture
+public class NullVpnAdapter : IVpnAdapter
 {
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Stopped;

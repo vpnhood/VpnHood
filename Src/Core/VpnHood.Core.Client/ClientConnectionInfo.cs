@@ -14,6 +14,7 @@ internal class ClientConnectionInfo : IConnectionInfo
     public ISessionStatus? SessionStatus { get; set; }
 
     private readonly object _updateLock = new();
+
     internal void SetException(Exception ex)
     {
         lock (_updateLock) {

@@ -301,32 +301,32 @@ public static class PacketUtil
 
             switch (ipPacket.Protocol) {
                 case ProtocolType.Icmp: {
-                        eventId = GeneralEventId.Ping;
-                        var icmpPacket = ExtractIcmp(ipPacket);
-                        packetPayload = icmpPacket.PayloadData ?? [];
-                        break;
-                    }
+                    eventId = GeneralEventId.Ping;
+                    var icmpPacket = ExtractIcmp(ipPacket);
+                    packetPayload = icmpPacket.PayloadData ?? [];
+                    break;
+                }
 
                 case ProtocolType.IcmpV6: {
-                        eventId = GeneralEventId.Ping;
-                        var icmpPacket = ExtractIcmpV6(ipPacket);
-                        packetPayload = icmpPacket.PayloadData ?? [];
-                        break;
-                    }
+                    eventId = GeneralEventId.Ping;
+                    var icmpPacket = ExtractIcmpV6(ipPacket);
+                    packetPayload = icmpPacket.PayloadData ?? [];
+                    break;
+                }
 
                 case ProtocolType.Udp: {
-                        eventId = GeneralEventId.Udp;
-                        var udpPacket = ExtractUdp(ipPacket);
-                        packetPayload = udpPacket.PayloadData ?? [];
-                        break;
-                    }
+                    eventId = GeneralEventId.Udp;
+                    var udpPacket = ExtractUdp(ipPacket);
+                    packetPayload = udpPacket.PayloadData ?? [];
+                    break;
+                }
 
                 case ProtocolType.Tcp: {
-                        eventId = GeneralEventId.Tcp;
-                        var tcpPacket = ExtractTcp(ipPacket);
-                        packetPayload = tcpPacket.PayloadData ?? [];
-                        break;
-                    }
+                    eventId = GeneralEventId.Tcp;
+                    var tcpPacket = ExtractTcp(ipPacket);
+                    packetPayload = tcpPacket.PayloadData ?? [];
+                    break;
+                }
             }
 
             VhLogger.Instance.Log(logLevel, eventId, exception,
@@ -498,5 +498,4 @@ public static class PacketUtil
         // Check if the packet is targeting port 443 (common for QUIC)
         return udpPacket.DestinationPort is 80 or 443;
     }
-
 }

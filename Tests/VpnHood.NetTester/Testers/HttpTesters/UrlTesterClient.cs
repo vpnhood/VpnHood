@@ -6,13 +6,14 @@ using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Testers.HttpTesters;
 
-public class UrlTesterClient(Uri url, IPAddress? serverIp, TimeSpan? timeout = null) 
+public class UrlTesterClient(Uri url, IPAddress? serverIp, TimeSpan? timeout = null)
     : IStreamTesterClient
 {
     public async Task Start(long upSize, long downSize, int connectionCount, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation("Url => Start Downloading. Size: {Size}, Connections: {Connections}, Url: {Url}, serverIp: {serverIp}",
+        VhLogger.Instance.LogInformation(
+            "Url => Start Downloading. Size: {Size}, Connections: {Connections}, Url: {Url}, serverIp: {serverIp}",
             VhUtil.FormatBytes(downSize), connectionCount, url, serverIp);
 
         // start multi downloader

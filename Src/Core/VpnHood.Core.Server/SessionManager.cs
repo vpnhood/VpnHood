@@ -3,11 +3,12 @@ using System.Net;
 using System.Text.Json;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Trackers;
+using PacketDotNet;
 using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Net;
+using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
@@ -18,7 +19,6 @@ using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Factory;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
-using PacketDotNet;
 
 namespace VpnHood.Core.Server;
 
@@ -59,7 +59,7 @@ public class SessionManager : IAsyncDisposable, IJob
         ITunProvider? tunProvider,
         Version serverVersion,
         SessionManagerOptions options
-        )
+    )
     {
         _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
@@ -96,6 +96,7 @@ public class SessionManager : IAsyncDisposable, IJob
     }
 
     private readonly ConcurrentDictionary<IPAddress, Session> _virtualIps = new();
+
     private IPAddress GetFreeVirtualIp(IpNetwork ipNetwork)
     {
         // find the max virtual IP
@@ -113,6 +114,7 @@ public class SessionManager : IAsyncDisposable, IJob
     }
 
     private readonly object _virtualIpLock = new();
+
     private Session BuildSessionFromResponseEx(SessionResponseEx sessionResponseEx)
     {
         var extraData = sessionResponseEx.ExtraData != null
@@ -121,7 +123,6 @@ public class SessionManager : IAsyncDisposable, IJob
 
         // make sure that not to give same IP to multiple sessions
         lock (_virtualIpLock) {
-
             // allocate a new IP
             // todo: try to use virtual ip returned by sessionResponseEx or local disk
             var virtualIpV4 = GetFreeVirtualIp(VirtualIpNetworkV4);
@@ -226,7 +227,8 @@ public class SessionManager : IAsyncDisposable, IJob
 
     private async Task<Session> RecoverSession(RequestBase sessionRequest, IPEndPointPair ipEndPointPair)
     {
-        using var recoverLock = await AsyncLock.LockAsync($"Recover_session_{sessionRequest.SessionId}").VhConfigureAwait();
+        using var recoverLock =
+            await AsyncLock.LockAsync($"Recover_session_{sessionRequest.SessionId}").VhConfigureAwait();
         var session = GetSessionById(sessionRequest.SessionId);
         if (session != null)
             return session;
@@ -414,6 +416,7 @@ public class SessionManager : IAsyncDisposable, IJob
     }
 
     private SessionUsage[] _pendingUsages = [];
+
     public SessionUsage[] CollectSessionUsages(bool force = false)
     {
         // traffic should be collected if there is some traffic and last activity time is expired
@@ -472,6 +475,7 @@ public class SessionManager : IAsyncDisposable, IJob
     }
 
     private readonly AsyncLock _syncLock = new();
+
     public async Task Sync(bool force = false)
     {
         using var lockResult = await _syncLock.LockAsync().VhConfigureAwait();
@@ -510,6 +514,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
     private bool _disposed;
     private readonly AsyncLock _disposeLock = new();
+
     public async ValueTask DisposeAsync()
     {
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
@@ -528,6 +533,4 @@ public class SessionManager : IAsyncDisposable, IJob
         // dispose all sessions
         await Task.WhenAll(Sessions.Values.Select(x => x.DisposeAsync().AsTask())).VhConfigureAwait();
     }
-
-
 }

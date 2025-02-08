@@ -6,14 +6,14 @@ namespace VpnHood.Core.Common.Utils;
 
 public static class DnsResolver
 {
-    public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint, 
+    public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint,
         int timeout, CancellationToken cancellationToken)
     {
         using var udpClientTemp = new UdpClient();
         return await GetHostEntry(host, dnsEndPoint, udpClientTemp, timeout, cancellationToken);
     }
 
-    public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint, 
+    public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint,
         UdpClient udpClient, int timeout, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(host)) {
@@ -48,7 +48,6 @@ public static class DnsResolver
         var hostEntry = ParseDnsResponse(response, queryId);
         hostEntry.HostName = host;
         return hostEntry;
-
     }
 
     private static byte[] BuildDnsQuery(ushort queryId, string host)

@@ -26,10 +26,11 @@ public class VpnHoodClientManager : IJob, IAsyncDisposable
         JobRunner.Default.Add(this);
     }
 
-    public static VpnHoodClientManager Create(IPacketCapture packetCapture, ISocketFactory socketFactory, IAdService adService,
+    public static VpnHoodClientManager Create(IVpnAdapter vpnAdapter, ISocketFactory socketFactory,
+        IAdService adService,
         string clientId, Token token, ClientOptions clientOptions, TimeSpan? eventWatcherInterval)
     {
-        var client = new VpnHoodClient(packetCapture, socketFactory, clientId, token, clientOptions);
+        var client = new VpnHoodClient(vpnAdapter, socketFactory, clientId, token, clientOptions);
         return new VpnHoodClientManager(client, adService, eventWatcherInterval);
     }
 
@@ -68,6 +69,7 @@ public class VpnHoodClientManager : IJob, IAsyncDisposable
     private ConnectionInfo? _connectionInfo;
     private DateTime? _connectionInfoTime;
     private readonly AsyncLock _connectionInfoLock = new();
+
     private async Task<ConnectionInfo> UpdateConnectionInfo(bool force = false)
     {
         using var scopeLock = await _connectionInfoLock.LockAsync(_cancellationToken).ConfigureAwait(false);
@@ -85,6 +87,7 @@ public class VpnHoodClientManager : IJob, IAsyncDisposable
 
     private ConnectionInfo? _lastConnectionInfo;
     private Guid? _lastAdRequestId;
+
     private void CheckForEvents(ConnectionInfo connectionInfo)
     {
         // show ad if needed (Protect double show by RequestId)

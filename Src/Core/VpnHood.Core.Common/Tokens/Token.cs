@@ -28,17 +28,16 @@ public class Token
 
     [JsonPropertyName("iat")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public DateTime IssuedAt { get; set; } = DateTime.MinValue; // for backward compatibility. Default value it is not required
+    public DateTime IssuedAt { get; set; } =
+        DateTime.MinValue; // for backward compatibility. Default value it is not required
 
     [JsonPropertyName("sec")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required byte[] Secret { get; set; }
 
-    [JsonPropertyName("ser")]
-    public required ServerToken ServerToken { get; set; }
+    [JsonPropertyName("ser")] public required ServerToken ServerToken { get; set; }
 
-    [JsonPropertyName("tags")]
-    public string[] Tags { get; set; } = [];
+    [JsonPropertyName("tags")] public string[] Tags { get; set; } = [];
 
     [JsonPropertyName("ispub")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -52,7 +51,7 @@ public class Token
     public string ToAccessKey()
     {
         var json = JsonSerializer.Serialize(this, new JsonSerializerOptions {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
         });
         return "vh://" + Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
     }

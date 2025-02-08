@@ -11,7 +11,7 @@ public class GoogleBillingException : Exception
     public GoogleBillingException(string message, Exception innerException) : base(message, innerException)
     {
     }
-    
+
     public static Exception Create(BillingResult billingResult, PurchaseState? purchaseState = null)
     {
         if (billingResult.ResponseCode == BillingResponseCode.Ok)

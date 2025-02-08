@@ -3,7 +3,7 @@ using PacketDotNet;
 
 namespace VpnHood.Core.Client.Device;
 
-public interface IPacketCapture : IDisposable
+public interface IVpnAdapter : IDisposable
 {
     event EventHandler<PacketReceivedEventArgs> PacketReceivedFromInbound;
     event EventHandler Stopped;

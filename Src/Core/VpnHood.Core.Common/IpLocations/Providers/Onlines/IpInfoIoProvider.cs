@@ -20,16 +20,11 @@ public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string? a
         ]
         public required string CountryCode { get; set; }
 
-        [JsonPropertyName("region")]
-        public string? RegionName { get; set; }
+        [JsonPropertyName("region")] public string? RegionName { get; set; }
 
-        [JsonPropertyName("city")]
-        public string? CityName { get; set; }
+        [JsonPropertyName("city")] public string? CityName { get; set; }
 
-        [JsonPropertyName("loc")]
-        public string? GeoLoc { get; set; }
-
-
+        [JsonPropertyName("loc")] public string? GeoLoc { get; set; }
     }
 
     private static string RemoveDiacritics(string text)
@@ -89,5 +84,4 @@ public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string? a
 
         return ipLocation;
     }
-
 }

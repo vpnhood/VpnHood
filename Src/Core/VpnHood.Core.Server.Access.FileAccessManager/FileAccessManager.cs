@@ -42,7 +42,8 @@ public class FileAccessManager : IAccessManager
 
         var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
         DefaultCert = File.Exists(defaultCertFile)
-            ? new X509Certificate2(defaultCertFile, options.SslCertificatesPassword ?? string.Empty, X509KeyStorageFlags.Exportable)
+            ? new X509Certificate2(defaultCertFile, options.SslCertificatesPassword ?? string.Empty,
+                X509KeyStorageFlags.Exportable)
             : CreateSelfSignedCertificate(defaultCertFile, options.SslCertificatesPassword ?? string.Empty);
 
         ServerConfig.Certificates = [
@@ -137,9 +138,12 @@ public class FileAccessManager : IAccessManager
                     new IpApiCoLocationProvider(httpClient, userAgent)
                 ]);
 
-                var ipLocation = await ipLocationProvider.GetCurrentLocation(cancellationTokenSource.Token).VhConfigureAwait();
-                serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName, ipLocation.CityName);
-                await File.WriteAllTextAsync(serverCountryFile, serverLocation, CancellationToken.None).VhConfigureAwait();
+                var ipLocation = await ipLocationProvider.GetCurrentLocation(cancellationTokenSource.Token)
+                    .VhConfigureAwait();
+                serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName,
+                    ipLocation.CityName);
+                await File.WriteAllTextAsync(serverCountryFile, serverLocation, CancellationToken.None)
+                    .VhConfigureAwait();
             }
 
             VhLogger.Instance.LogInformation("ServerLocation: {ServerLocation}", serverLocation ?? "Unknown");
@@ -222,7 +226,8 @@ public class FileAccessManager : IAccessManager
         if (accessTokenData == null)
             return false;
 
-        var encryptClientId = VhUtil.EncryptClientId(sessionRequestEx.ClientInfo.ClientId, accessTokenData.AccessToken.Secret);
+        var encryptClientId =
+            VhUtil.EncryptClientId(sessionRequestEx.ClientInfo.ClientId, accessTokenData.AccessToken.Secret);
         return encryptClientId.SequenceEqual(sessionRequestEx.EncryptedClientId);
     }
 
@@ -242,7 +247,9 @@ public class FileAccessManager : IAccessManager
         // find token for AccessCode 
         if (!string.IsNullOrWhiteSpace(sessionRequestEx.AccessCode)) {
             var accessTokenId = GetAccessTokenIdFromAccessCode(sessionRequestEx.AccessCode);
-            accessTokenData = accessTokenId != null ? await AccessTokenService.Find(accessTokenId).VhConfigureAwait() : null;
+            accessTokenData = accessTokenId != null
+                ? await AccessTokenService.Find(accessTokenId).VhConfigureAwait()
+                : null;
             if (accessTokenData == null)
                 return new SessionResponseEx {
                     ErrorCode = SessionErrorCode.AccessCodeRejected,
@@ -309,7 +316,8 @@ public class FileAccessManager : IAccessManager
                 // read accessItem
                 var accessTokenData = await AccessTokenService.Find(session.Value.TokenId).VhConfigureAwait();
                 if (accessTokenData != null)
-                    responses.Add(SessionService.GetSessionResponse(session.Key, accessTokenData, session.Value.HostEndPoint));
+                    responses.Add(SessionService.GetSessionResponse(session.Key, accessTokenData,
+                        session.Value.HostEndPoint));
             }
             catch (Exception e) {
                 VhLogger.Instance.LogError(e, "Failed to get session. SessionId: {SessionId}", session.Key);
@@ -362,7 +370,7 @@ public class FileAccessManager : IAccessManager
         var updatedSessionIds = SessionService.ResetUpdatedSessions();
         foreach (var updatedSessionId in updatedSessionIds.Where(x => !ret.ContainsKey(x))) {
             var sessionUsage = new SessionUsage {
-                SessionId = updatedSessionId,
+                SessionId = updatedSessionId
             };
 
             try {
@@ -419,6 +427,7 @@ public class FileAccessManager : IAccessManager
 
         return ret;
     }
+
     protected virtual bool IsValidAd(string? adData)
     {
         return true; // this server does not validate ad at server side

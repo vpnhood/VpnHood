@@ -24,13 +24,13 @@ public class GooglePlayBillingProvider : IAppBillingProvider
     {
         var builder = BillingClient.NewBuilder(Application.Context);
         builder.SetListener(PurchasesUpdatedListener);
-        
+
         // We don't have the On-Time Purchase in this app, but if EnablePendingPurchases is not implemented,
         // we get the error "Pending purchases for one-time products must be supported."
         _billingClient = builder.EnablePendingPurchases(
             PendingPurchasesParams.NewBuilder().EnableOneTimeProducts().Build()
-            ).Build();
-        
+        ).Build();
+
         _authenticationProvider = authenticationProvider;
     }
 
@@ -50,9 +50,10 @@ public class GooglePlayBillingProvider : IAppBillingProvider
                     // Based on Google document, orderId is null on pending state.
                     // The pending state must be handled in the UI to let the user know their subscription will be
                     // available when Google accepts payment and changes the purchase state to PURCHASES.
-                    _taskCompletionSource?.TrySetException(GoogleBillingException.Create(billingResult, purchasedItem.PurchaseState));
+                    _taskCompletionSource?.TrySetException(
+                        GoogleBillingException.Create(billingResult, purchasedItem.PurchaseState));
                 break;
-            
+
             default:
                 _taskCompletionSource?.TrySetException(GoogleBillingException.Create(billingResult));
                 break;

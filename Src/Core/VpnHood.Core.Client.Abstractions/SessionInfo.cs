@@ -9,12 +9,12 @@ namespace VpnHood.Core.Client.Abstractions;
 public class SessionInfo
 {
     public required string SessionId { get; init; }
-    public required AccessInfo? AccessInfo { get; init;}
-    public required bool IsUdpChannelSupported { get; init;}
-    public required bool IsDnsServersAccepted { get; init;}
-    public required ServerLocationInfo? ServerLocationInfo { get; init;}
-    public required bool IsPremiumSession { get; init;}
-    public required SessionSuppressType SuppressedTo { get; init;}
+    public required AccessInfo? AccessInfo { get; init; }
+    public required bool IsUdpChannelSupported { get; init; }
+    public required bool IsDnsServersAccepted { get; init; }
+    public required ServerLocationInfo? ServerLocationInfo { get; init; }
+    public required bool IsPremiumSession { get; init; }
+    public required SessionSuppressType SuppressedTo { get; init; }
     public required string? AccessKey { get; set; } // allow set to let clear
     public required string? ClientCountry { get; init; }
 
@@ -25,6 +25,5 @@ public class SessionInfo
     public required Version ServerVersion { get; init; }
 
     [JsonConverter(typeof(IPAddressConverter))]
-    public required IPAddress ClientPublicIpAddress { get; init;}
-
+    public required IPAddress ClientPublicIpAddress { get; init; }
 }

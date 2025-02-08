@@ -4,14 +4,15 @@ using Microsoft.Extensions.Logging;
 namespace VpnHood.Core.Common.IpLocations;
 
 public class CompositeIpLocationProvider(
-    ILogger logger, 
-    IEnumerable<IIpLocationProvider> providers, 
-    TimeSpan? providerTimeout = null) 
+    ILogger logger,
+    IEnumerable<IIpLocationProvider> providers,
+    TimeSpan? providerTimeout = null)
     : IIpLocationProvider
 {
     public async Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
     {
-        foreach (var provider in providers) try {
+        foreach (var provider in providers)
+            try {
                 using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 if (providerTimeout.HasValue)
                     linkedToken.CancelAfter(providerTimeout.Value);
@@ -30,7 +31,8 @@ public class CompositeIpLocationProvider(
 
     public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
-        foreach (var provider in providers) try {
+        foreach (var provider in providers)
+            try {
                 using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 if (providerTimeout.HasValue)
                     linkedToken.CancelAfter(providerTimeout.Value);

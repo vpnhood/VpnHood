@@ -16,7 +16,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
         try {
             var appUiContext = (AndroidUiContext)uiContext;
             using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
-            using var appUpdateInfo = 
+            using var appUpdateInfo =
                 await appUpdateManager.AppUpdateInfo.AsTask<AppUpdateInfo>().ConfigureAwait(false) ??
                 throw new Exception("Could not retrieve AppUpdateInfo");
 
@@ -30,7 +30,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
             // Show Google Play update dialog
             using var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
                 AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
-            if (updateFlowPlayTask!=null)
+            if (updateFlowPlayTask != null)
                 await updateFlowPlayTask.AsTask().ConfigureAwait(false);
 
             return true;

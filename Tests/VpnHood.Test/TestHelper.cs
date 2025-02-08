@@ -45,7 +45,7 @@ public class TestHelper : IDisposable
         _isIpV6Supported ??= await IPAddressUtil.IsIpv6Supported();
         return _isIpV6Supported.Value;
     }
-    
+
     public static void Cleanup()
     {
         try {
@@ -96,7 +96,8 @@ public class TestHelper : IDisposable
         return await SendHttpGet(httpClient, uri, timeout);
     }
 
-    private static async Task<bool> SendHttpGet(HttpClient httpClient, Uri uri, int timeout = TestConstants.DefaultTimeout)
+    private static async Task<bool> SendHttpGet(HttpClient httpClient, Uri uri,
+        int timeout = TestConstants.DefaultTimeout)
     {
         var cancellationTokenSource = new CancellationTokenSource(timeout);
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
@@ -118,9 +119,11 @@ public class TestHelper : IDisposable
             throw new PingException($"Ping failed. Status: {pingReply.Status}");
     }
 
-    public static async Task Test_Dns(IPEndPoint? nsEndPoint = null, int timeout = 3000, CancellationToken cancellationToken = default)
+    public static async Task Test_Dns(IPEndPoint? nsEndPoint = null, int timeout = 3000,
+        CancellationToken cancellationToken = default)
     {
-        var hostEntry = await DnsResolver.GetHostEntry("www.google.com", nsEndPoint ?? TestConstants.NsEndPoint1, timeout, cancellationToken);
+        var hostEntry = await DnsResolver.GetHostEntry("www.google.com", nsEndPoint ?? TestConstants.NsEndPoint1,
+            timeout, cancellationToken);
         Assert.IsNotNull(hostEntry);
         Assert.IsTrue(hostEntry.AddressList.Length > 0);
     }
@@ -284,7 +287,7 @@ public class TestHelper : IDisposable
     }
 
     public static Task<VpnHoodServer> CreateServer(FileAccessManagerOptions? options, bool autoStart = true,
-        TimeSpan? configureInterval = null, bool useHttpAccessManager = true, 
+        TimeSpan? configureInterval = null, bool useHttpAccessManager = true,
         ITunProvider? tunProvider = null)
     {
         return CreateServer(null, options,
@@ -341,22 +344,22 @@ public class TestHelper : IDisposable
         return server;
     }
 
-    public static TestPacketCaptureOptions CreateTestPacketCaptureOptions()
+    public static TestVpnAdapterOptions CreateTestVpnAdapterOptions()
     {
-        return new TestPacketCaptureOptions();
+        return new TestVpnAdapterOptions();
     }
 
-    public static TestPacketCapture CreateTestPacketCapture(TestPacketCaptureOptions? options = null)
+    public static TestVpnAdapter CreateTestVpnAdapter(TestVpnAdapterOptions? options = null)
     {
-        options ??= CreateTestPacketCaptureOptions();
-        return new TestPacketCapture(options);
+        options ??= CreateTestVpnAdapterOptions();
+        return new TestVpnAdapter(options);
     }
 
 
-    public static TestDevice CreateDevice(TestPacketCaptureOptions? options = null)
+    public static TestDevice CreateDevice(TestVpnAdapterOptions? options = null)
     {
-        options ??= CreateTestPacketCaptureOptions();
-        return new TestDevice(()=>new TestPacketCapture(options));
+        options ??= CreateTestVpnAdapterOptions();
+        return new TestDevice(() => new TestVpnAdapter(options));
     }
 
 
@@ -368,7 +371,7 @@ public class TestHelper : IDisposable
             MaxDatagramChannelCount = 1,
             UseUdpChannel = useUdpChannel,
             Tracker = new TestTrackerProvider(),
-            PacketCaptureIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToOrderedList(),
+            VpnAdapterIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToOrderedList(),
             IncludeLocalNetwork = true,
             ConnectTimeout = TimeSpan.FromSeconds(3),
             SessionName = "UnitTestSession"
@@ -376,17 +379,17 @@ public class TestHelper : IDisposable
     }
 
     public static async Task<VpnHoodClient> CreateClient(Token token,
-        IPacketCapture? packetCapture = null,
+        IVpnAdapter? vpnAdapter = null,
         string? clientId = null,
         bool autoConnect = true,
         ClientOptions? clientOptions = null,
         bool throwConnectException = true)
     {
-        packetCapture ??= new TestPacketCapture(new TestPacketCaptureOptions());
+        vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
         clientId ??= Guid.NewGuid().ToString();
         clientOptions ??= CreateClientOptions();
 
-        var client = new VpnHoodClient(packetCapture, new TestSocketFactory(), 
+        var client = new VpnHoodClient(vpnAdapter, new TestSocketFactory(),
             clientId, token, clientOptions);
 
         // test starting the client
@@ -402,7 +405,6 @@ public class TestHelper : IDisposable
         return client;
     }
 
-    
 
     public static SessionRequestEx CreateSessionRequestEx(Token token, string? clientId = null)
     {

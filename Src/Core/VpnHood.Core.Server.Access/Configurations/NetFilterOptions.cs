@@ -8,8 +8,8 @@ public class NetFilterOptions
 {
     public bool? NetworkIsolation { get; set; }
     public bool? IncludeLocalNetwork { get; set; }
-    public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
-    public IpRange[]? PacketCaptureExcludeIpRanges { get; set; }
+    public IpRange[]? VpnAdapterIncludeIpRanges { get; set; }
+    public IpRange[]? VpnAdapterExcludeIpRanges { get; set; }
     public IpRange[]? IncludeIpRanges { get; set; }
     public IpRange[]? ExcludeIpRanges { get; set; }
     public bool? BlockIpV6 { get; set; }
@@ -22,8 +22,8 @@ public class NetFilterOptions
     {
         if (obj.NetworkIsolation != null) NetworkIsolation = obj.NetworkIsolation;
         if (obj.IncludeLocalNetwork != null) IncludeLocalNetwork = obj.IncludeLocalNetwork;
-        if (obj.PacketCaptureIncludeIpRanges != null) PacketCaptureIncludeIpRanges = obj.PacketCaptureIncludeIpRanges;
-        if (obj.PacketCaptureExcludeIpRanges != null) PacketCaptureExcludeIpRanges = obj.PacketCaptureExcludeIpRanges;
+        if (obj.VpnAdapterIncludeIpRanges != null) VpnAdapterIncludeIpRanges = obj.VpnAdapterIncludeIpRanges;
+        if (obj.VpnAdapterExcludeIpRanges != null) VpnAdapterExcludeIpRanges = obj.VpnAdapterExcludeIpRanges;
         if (obj.IncludeIpRanges != null) IncludeIpRanges = obj.IncludeIpRanges;
         if (obj.ExcludeIpRanges != null) ExcludeIpRanges = obj.ExcludeIpRanges;
         if (obj.BlockIpV6 != null) BlockIpV6 = obj.BlockIpV6;
@@ -48,24 +48,24 @@ public class NetFilterOptions
         return includeIpRanges;
     }
 
-    public IEnumerable<IpRange> GetFinalPacketCaptureIncludeIpRanges()
+    public IEnumerable<IpRange> GetFinalVpnAdapterIncludeIpRanges()
     {
-        var packetCaptureIncludeIpRanges = IpNetwork.All.ToIpRanges();
+        var vpnAdapterIncludeIpRanges = IpNetwork.All.ToIpRanges();
         if (!IncludeLocalNetworkValue)
-            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
+            vpnAdapterIncludeIpRanges = vpnAdapterIncludeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
 
-        if (!VhUtil.IsNullOrEmpty(PacketCaptureIncludeIpRanges))
-            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Intersect(PacketCaptureIncludeIpRanges);
+        if (!VhUtil.IsNullOrEmpty(VpnAdapterIncludeIpRanges))
+            vpnAdapterIncludeIpRanges = vpnAdapterIncludeIpRanges.Intersect(VpnAdapterIncludeIpRanges);
 
-        if (!VhUtil.IsNullOrEmpty(PacketCaptureExcludeIpRanges))
-            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Exclude(PacketCaptureExcludeIpRanges);
+        if (!VhUtil.IsNullOrEmpty(VpnAdapterExcludeIpRanges))
+            vpnAdapterIncludeIpRanges = vpnAdapterIncludeIpRanges.Exclude(VpnAdapterExcludeIpRanges);
 
-        return packetCaptureIncludeIpRanges;
+        return vpnAdapterIncludeIpRanges;
     }
 
     public IpRangeOrderedList GetBlockedIpRanges()
     {
-        var includeIpRanges = GetFinalIncludeIpRanges().Intersect(GetFinalPacketCaptureIncludeIpRanges());
+        var includeIpRanges = GetFinalIncludeIpRanges().Intersect(GetFinalVpnAdapterIncludeIpRanges());
         if (BlockIpV6Value)
             includeIpRanges = includeIpRanges.Exclude(IpNetwork.AllV6.ToIpRange());
 

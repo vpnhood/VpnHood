@@ -23,12 +23,12 @@ public class IpFilterSettings(string folderPath)
         set => Write("app_ip_filter_excludes", value);
     }
 
-    public string PacketCaptureIpFilterIncludes {
+    public string VpnAdapterIpFilterIncludes {
         get => Read("packetcapture_ip_filter_includes");
         set => Write("packetcapture_ip_filter_includes", value);
     }
 
-    public string PacketCaptureIpFilterExcludes {
+    public string VpnAdapterIpFilterExcludes {
         get => Read("packetcapture_ip_filter_excludes");
         set => Write("packetcapture_ip_filter_excludes", value);
     }
@@ -44,5 +44,4 @@ public class IpFilterSettings(string folderPath)
         IpFilterParser.Parse(content); // validate
         File.WriteAllText(GetFilePath(fileTitle), content);
     }
-
 }

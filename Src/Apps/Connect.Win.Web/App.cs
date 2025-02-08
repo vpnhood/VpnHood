@@ -14,6 +14,7 @@ public class App : VpnHoodWpfSpaApp
         var app = new App();
         app.Run();
     }
+
     public override bool SpaListenToAllIps => AppConfigs.Instance.SpaListenToAllIps;
     public override int? SpaDefaultPort => AppConfigs.Instance.SpaDefaultPort;
 
@@ -41,5 +42,4 @@ public class App : VpnHoodWpfSpaApp
             Ga4MeasurementId = appConfigs.Ga4MeasurementId
         };
     }
-
 }

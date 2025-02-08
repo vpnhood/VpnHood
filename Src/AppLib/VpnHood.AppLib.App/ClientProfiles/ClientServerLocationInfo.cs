@@ -14,7 +14,8 @@ public class ClientServerLocationInfo : ServerLocationInfo
         var token = clientProfile.Token;
 
         // get country policy
-        var policy = token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y.Equals(clientCountry, StringComparison.OrdinalIgnoreCase))) ??
+        var policy = token.ClientPolicies?.FirstOrDefault(x =>
+                         x.ClientCountries.Any(y => y.Equals(clientCountry, StringComparison.OrdinalIgnoreCase))) ??
                      token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));
 
         var items = AddCategoryGaps(token.ServerToken.ServerLocations ?? [], policy?.FreeLocations);
@@ -39,8 +40,10 @@ public class ClientServerLocationInfo : ServerLocationInfo
         var tags = Tags ?? [];
         Options = new ServerLocationOptions {
             HasFree = !tags.Contains(ServerRegisteredTags.Premium) || tags.Contains($"~{ServerRegisteredTags.Premium}"),
-            HasPremium = tags.Contains(ServerRegisteredTags.Premium) || tags.Contains($"~{ServerRegisteredTags.Premium}"),
-            HasUnblockable = tags.Contains(ServerRegisteredTags.Unblockable) || tags.Contains($"~{ServerRegisteredTags.Unblockable}")
+            HasPremium = tags.Contains(ServerRegisteredTags.Premium) ||
+                         tags.Contains($"~{ServerRegisteredTags.Premium}"),
+            HasUnblockable = tags.Contains(ServerRegisteredTags.Unblockable) ||
+                             tags.Contains($"~{ServerRegisteredTags.Unblockable}")
         };
 
         if (isPremium) {
@@ -120,7 +123,9 @@ public class ClientServerLocationInfo : ServerLocationInfo
 
         // set head sub auto items
         foreach (var locationInfo in results.Where(x => !x.IsAuto && x.RegionName == "*")) {
-            locationInfo.Tags = CalcCategoryTags(results.Where(x => x.CountryCode == locationInfo.CountryCode && x.RegionName != "*")).ToArray();
+            locationInfo.Tags =
+                CalcCategoryTags(results.Where(x => x.CountryCode == locationInfo.CountryCode && x.RegionName != "*"))
+                    .ToArray();
         }
 
         // set head the auto after setting all sub auto items. This is to make sure the auto tags are calculated after all sub auto tags are set
@@ -157,7 +162,8 @@ public class ClientServerLocationInfo : ServerLocationInfo
             return tags;
 
         // check if the location is free
-        var isFree = freeLocations.Contains(item.CountryCode, StringComparer.OrdinalIgnoreCase) || freeLocations.Contains("*");
+        var isFree = freeLocations.Contains(item.CountryCode, StringComparer.OrdinalIgnoreCase) ||
+                     freeLocations.Contains("*");
 
         // if the location is not free, add premium tag
         if (!isFree && !tags.Contains(ServerRegisteredTags.Premium))
@@ -165,5 +171,4 @@ public class ClientServerLocationInfo : ServerLocationInfo
 
         return tags;
     }
-
 }

@@ -18,13 +18,14 @@ public class ClientOptions(string[] args)
     public bool Single { get; } = ArgumentUtils.Get(args, "/single", true);
     public int Multi { get; } = ArgumentUtils.Get(args, "/multi", 0);
     public Uri? Url { get; } = ArgumentUtils.Get<Uri?>(args, "/url", null);
+
     [JsonConverter(typeof(IPAddressConverter))]
     public IPAddress? UrlIp { get; } = ArgumentUtils.Get<IPAddress?>(args, "/url-ip", null);
+
     public string Domain { get; } = ArgumentUtils.Get(args, "/domain", CertificateUtil.CreateRandomDns());
     public bool IsValidDomain { get; } = args.Contains("/valid-domain", StringComparer.OrdinalIgnoreCase);
     public bool IsDebug { get; } = args.Contains("/debug", StringComparer.OrdinalIgnoreCase);
 
     [JsonConverter(typeof(IPEndPointConverter))]
     public IPEndPoint ServerEndPoint { get; } = ArgumentUtils.Get<IPEndPoint>(args, "/ep");
-
 }

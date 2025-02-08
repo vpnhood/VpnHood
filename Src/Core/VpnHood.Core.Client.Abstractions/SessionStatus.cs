@@ -5,7 +5,7 @@ namespace VpnHood.Core.Client.Abstractions;
 public class SessionStatus
 {
     public required ConnectorStat ConnectorStat { get; init; }
-    public required Traffic Speed { get; init;}
+    public required Traffic Speed { get; init; }
     public required Traffic SessionTraffic { get; init; }
     public required Traffic CycleTraffic { get; init; }
     public required Traffic TotalTraffic { get; init; }
@@ -18,5 +18,4 @@ public class SessionStatus
     public required DateTime? SessionExpirationTime { get; init; }
     public required int? ActiveClientCount { get; init; }
     public required AdRequest? AdRequest { get; init; }
-
 }

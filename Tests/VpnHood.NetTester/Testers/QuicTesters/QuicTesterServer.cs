@@ -31,7 +31,7 @@ public class QuicTesterServer(
         var listenerOptions = new QuicListenerOptions {
             ApplicationProtocols = [SslApplicationProtocol.Http3],
             ListenEndPoint = quicEndPoint,
-            ConnectionOptionsCallback = ConnectionOptionsCallback,
+            ConnectionOptionsCallback = ConnectionOptionsCallback
         };
 
         // create listener
@@ -61,7 +61,7 @@ public class QuicTesterServer(
             DefaultStreamErrorCode = 0,
             DefaultCloseErrorCode = 0,
             IdleTimeout = TimeSpan.FromMinutes(10),
-            ServerAuthenticationOptions = new SslServerAuthenticationOptions { 
+            ServerAuthenticationOptions = new SslServerAuthenticationOptions {
                 ServerCertificate = certificate,
                 ServerCertificateSelectionCallback = (_, _) => certificate,
                 RemoteCertificateValidationCallback = (_, _, _, _) => true,
@@ -69,7 +69,7 @@ public class QuicTesterServer(
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                 ClientCertificateRequired = false,
                 EncryptionPolicy = EncryptionPolicy.RequireEncryption,
-                EnabledSslProtocols = SslProtocols.Tls13,
+                EnabledSslProtocols = SslProtocols.Tls13
             }
         };
         return new ValueTask<QuicServerConnectionOptions>(ret);
@@ -77,7 +77,8 @@ public class QuicTesterServer(
 
     private static async Task ProcessConnection(QuicConnection quickConnection, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation("Server: Start processing quickConnection. ClientEp: {ClientEp}", quickConnection.RemoteEndPoint);
+        VhLogger.Instance.LogInformation("Server: Start processing quickConnection. ClientEp: {ClientEp}",
+            quickConnection.RemoteEndPoint);
         try {
             while (!cancellationToken.IsCancellationRequested) {
                 var stream = await quickConnection.AcceptInboundStreamAsync(cancellationToken);
@@ -112,7 +113,6 @@ public class QuicTesterServer(
             VhLogger.Instance.LogInformation("Server: Finish processing a QUIC stream.");
             await stream.DisposeAsync();
         }
-
     }
 
     public void Dispose()

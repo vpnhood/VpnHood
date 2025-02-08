@@ -23,7 +23,7 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
         _tracker = tracker;
         JobRunner.Default.Add(this);
     }
-    
+
     public Task RunJob()
     {
         return Report();

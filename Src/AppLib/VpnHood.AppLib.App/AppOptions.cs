@@ -35,7 +35,10 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public TimeSpan ReconnectTimeout { get; set; } = ClientOptions.Default.ReconnectTimeout;
     public TimeSpan AutoWaitTimeout { get; set; } = ClientOptions.Default.AutoWaitTimeout;
     public bool LogVerbose { get; set; }
-    public bool? LogAnonymous { get; set; } = isDebugMode ? false : null; // it follows user's settings if it set to null
+
+    public bool? LogAnonymous { get; set; } =
+        isDebugMode ? false : null; // it follows user's settings if it set to null
+
     public TimeSpan ServerQueryTimeout { get; set; } = ClientOptions.Default.ServerQueryTimeout;
     public bool SingleLineConsoleLog { get; set; } = true;
     public bool AutoDiagnose { get; set; } = true;

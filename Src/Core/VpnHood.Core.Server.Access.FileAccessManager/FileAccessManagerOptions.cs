@@ -10,6 +10,7 @@ public class FileAccessManagerOptions : ServerConfig
 {
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[]? PublicEndPoints { get; set; }
+
     public string? SslCertificatesPassword { get; set; }
     public int? HostPort { get; set; }
     public bool IsValidHostName { get; set; }

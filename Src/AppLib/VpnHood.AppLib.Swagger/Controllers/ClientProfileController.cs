@@ -9,7 +9,6 @@ namespace VpnHood.AppLib.Swagger.Controllers;
 [Route("api/client-profiles")]
 public class ClientProfileController : ControllerBase, IClientProfileController
 {
-
     [HttpPut("access-keys")]
     public Task<ClientProfileInfo> AddByAccessKey(string accessKey)
     {

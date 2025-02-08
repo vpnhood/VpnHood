@@ -16,7 +16,7 @@ public class StreamLogger(Stream stream, bool includeScopes = true, bool leaveOp
         var text = FormatLog(logLevel, eventId, state, exception, formatter);
         lock (_lock) {
             _streamWriter?.WriteLine(text);
-            if (autoFlush || logLevel>= LogLevel.Error)
+            if (autoFlush || logLevel >= LogLevel.Error)
                 _streamWriter?.Flush();
         }
     }

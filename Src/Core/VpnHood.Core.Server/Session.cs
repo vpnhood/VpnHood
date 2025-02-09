@@ -57,33 +57,31 @@ public class Session : IAsyncDisposable
     public Tunnel Tunnel { get; }
     public ulong SessionId { get; }
     public byte[] SessionKey { get; }
-    public SessionResponse SessionResponse { get; internal set; }
+    public SessionResponse SessionResponseEx { get; internal set; }
     public UdpChannel? UdpChannel => Tunnel.UdpChannel;
     public bool IsDisposed => DisposedTime != null;
     public DateTime? DisposedTime { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
     public JobSection JobSection { get; }
-    public SessionExtraData SessionExtraData { get; }
+    public SessionExtraData ExtraData { get; }
     public int ProtocolVersion { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
     public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (Tunnel.IsUdpMode ? 0 : Tunnel.DatagramChannelCount);
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
-    public IPAddress VirtualIpV4 { get; }
-    public IPAddress VirtualIpV6 { get; }
+    public VirtualIpBundle VirtualIps { get; }
 
-    internal Session(IAccessManager accessManager, SessionResponseEx sessionResponse,
+    internal Session(IAccessManager accessManager, 
+        ITunProvider? tunProvider,
         INetFilter netFilter,
         ISocketFactory socketFactory,
+        SessionResponseEx sessionResponseEx,
         SessionOptions options,
         TrackingOptions trackingOptions,
-        SessionExtraData sessionExtraData,
-        int protocolVersion,
-        ITunProvider? tunProvider,
-        IPAddress virtualIpV4,
-        IPAddress virtualIpV6)
+        SessionExtraData extraData,
+        VirtualIpBundle virtualIps)
     {
-        var sessionTuple = Tuple.Create("SessionId", (object?)sessionResponse.SessionId);
+        var sessionTuple = Tuple.Create("SessionId", (object?)sessionResponseEx.SessionId);
         var logScope = new LogScope();
         logScope.Data.Add(sessionTuple);
 
@@ -111,14 +109,13 @@ public class Session : IAsyncDisposable
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         JobSection = new JobSection(options.SyncIntervalValue);
-        SessionExtraData = sessionExtraData;
-        ProtocolVersion = protocolVersion;
-        SessionResponse = sessionResponse;
-        VirtualIpV4 = virtualIpV4;
-        VirtualIpV6 = virtualIpV6;
-        SessionId = sessionResponse.SessionId;
-        SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException(
-            $"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
+        ExtraData = extraData;
+        VirtualIps = virtualIps;
+        SessionResponseEx = sessionResponseEx;
+        ProtocolVersion = sessionResponseEx.ProtocolVersion;
+        SessionId = sessionResponseEx.SessionId;
+        SessionKey = sessionResponseEx.SessionKey ?? throw new InvalidOperationException(
+            $"{nameof(sessionResponseEx)} does not have {nameof(sessionResponseEx.SessionKey)}!");
         Tunnel = new Tunnel(new TunnelOptions { MaxDatagramChannelCount = options.MaxDatagramChannelCountValue });
         Tunnel.PacketReceived += Tunnel_OnPacketReceived;
 
@@ -182,7 +179,7 @@ public class Session : IAsyncDisposable
 
     private IPAddress GetClientVirtualIp(IPVersion ipVersion)
     {
-        return ipVersion == IPVersion.IPv4 ? VirtualIpV4 : VirtualIpV6;
+        return ipVersion == IPVersion.IPv4 ? VirtualIps.IpV4 : VirtualIps.IpV6;
     }
 
     // todo: legacy version. remove in future
@@ -297,7 +294,7 @@ public class Session : IAsyncDisposable
         CancellationToken cancellationToken)
     {
         // send OK reply
-        await clientStream.WriteResponse(SessionResponse, cancellationToken).VhConfigureAwait();
+        await clientStream.WriteResponse(SessionResponseEx, cancellationToken).VhConfigureAwait();
 
         // Disable UdpChannel
         UseUdpChannel = false;
@@ -328,15 +325,15 @@ public class Session : IAsyncDisposable
     public async Task ProcessSessionStatusRequest(SessionStatusRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
-        await clientStream.WriteFinalResponse(SessionResponse, cancellationToken).VhConfigureAwait();
+        await clientStream.WriteFinalResponse(SessionResponseEx, cancellationToken).VhConfigureAwait();
     }
 
     public async Task ProcessRewardedAdRequest(RewardedAdRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
-        SessionResponse = await _accessManager
+        SessionResponseEx = await _accessManager
             .Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData).VhConfigureAwait();
-        await clientStream.WriteFinalResponse(SessionResponse, cancellationToken).VhConfigureAwait();
+        await clientStream.WriteFinalResponse(SessionResponseEx, cancellationToken).VhConfigureAwait();
     }
 
     public async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IClientStream clientStream,
@@ -377,7 +374,7 @@ public class Session : IAsyncDisposable
                 true, true, null);
 
             // send response
-            await clientStream.WriteResponse(SessionResponse, cancellationToken).VhConfigureAwait();
+            await clientStream.WriteResponse(SessionResponseEx, cancellationToken).VhConfigureAwait();
 
             // add the connection
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
@@ -465,14 +462,14 @@ public class Session : IAsyncDisposable
 
         // if there is no reason it is temporary
         var reason = "Cleanup";
-        if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
-            reason = SessionResponse.ErrorCode == SessionErrorCode.SessionClosed ? "User" : "Access";
+        if (SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
+            reason = SessionResponseEx.ErrorCode == SessionErrorCode.SessionClosed ? "User" : "Access";
 
         // Report removing session
         VhLogger.Instance.LogInformation(GeneralEventId.SessionTrack,
             "SessionId: {SessionId-5}\t{Mode,-5}\tActor: {Actor,-7}\tSuppressBy: {SuppressedBy,-8}\tErrorCode: {ErrorCode,-20}\tMessage: {message}",
-            SessionId, "Close", reason, SessionResponse.SuppressedBy, SessionResponse.ErrorCode,
-            SessionResponse.ErrorMessage ?? "None");
+            SessionId, "Close", reason, SessionResponseEx.SuppressedBy, SessionResponseEx.ErrorCode,
+            SessionResponseEx.ErrorMessage ?? "None");
     }
 
     private class SessionProxyManager(

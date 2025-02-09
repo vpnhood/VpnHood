@@ -10,8 +10,8 @@ namespace VpnHood.Core.Server;
 internal class SessionLocalService : IJob
 {
     private readonly string _storagePath;
-    public JobSection JobSection { get; } = new(TimeSpan.FromHours(24));
     private const string SessionFileExtension = "session";
+    public JobSection JobSection { get; } = new(TimeSpan.FromHours(24));
 
     public SessionLocalService(string storagePath)
     {

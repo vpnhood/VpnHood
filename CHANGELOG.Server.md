@@ -1,3 +1,6 @@
+# Upcoming
+* Update: Improve virtual ip allocation
+
 # v5.1.647
 * Fix: Ping IPv6 
 

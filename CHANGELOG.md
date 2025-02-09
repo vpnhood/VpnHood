@@ -1,3 +1,6 @@
+# Upcoming
+* Update: Improve virtual ip allocation
+
 # v5.1.654
 * Fix: IPv6 ping
 * Fix: Playing animation while login with Google

@@ -391,6 +391,7 @@ public class SessionManager : IAsyncDisposable, IJob
     {
         _ = session.DisposeAsync();
         Sessions.TryRemove(session.SessionId, out _);
+        _sessionLocalService.Update(session); // let update the last state
         _virtualIpManager.Release(session.VirtualIps);
     }
 
@@ -477,8 +478,10 @@ public class SessionManager : IAsyncDisposable, IJob
         // immediately close the session from the access server, to prevent get SuppressByYourself error
         session.SessionResponseEx.ErrorCode = SessionErrorCode.SessionClosed;
         session.SetSyncRequired();
-        _sessionLocalService.Remove(session.SessionId);
         await Sync();
+
+        // remove after sync to make sure it is not added by the sync
+        _sessionLocalService.Remove(session.SessionId);
     }
 
     private void TunProvider_OnPacketReceived(object sender, IPPacket ipPacket)

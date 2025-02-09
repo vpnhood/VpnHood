@@ -553,7 +553,7 @@ public class ServerHost : IAsyncDisposable, IJob
         VhLogger.Instance.LogInformation(GeneralEventId.SessionTrack,
             "SessionId: {SessionId-5}\t{Mode,-5}\tTokenId: {TokenId}\tClientCount: {ClientCount,-3}\tClientId: {ClientId}\tClientIp: {ClientIp-15}\tVersion: {Version}\tOS: {OS}",
             VhLogger.FormatSessionId(session.SessionId), "New", VhLogger.FormatId(request.TokenId),
-            session.SessionResponse.AccessUsage?.ActiveClientCount, VhLogger.FormatId(request.ClientInfo.ClientId),
+            session.SessionResponseEx.AccessUsage?.ActiveClientCount, VhLogger.FormatId(request.ClientInfo.ClientId),
             clientIp, request.ClientInfo.ClientVersion,
             UserAgentParser.GetOperatingSystem(request.ClientInfo.UserAgent));
 
@@ -615,8 +615,8 @@ public class ServerHost : IAsyncDisposable, IJob
             AccessInfo = sessionResponseEx.AccessInfo,
             IsTunProviderSupported = _sessionManager.IsTunProviderSupported,
             ClientCountry = sessionResponseEx.ClientCountry,
-            VirtualIpNetworkV4 = new IpNetwork(session.VirtualIpV4, _sessionManager.VirtualIpNetworkV4.PrefixLength),
-            VirtualIpNetworkV6 = new IpNetwork(session.VirtualIpV6, _sessionManager.VirtualIpNetworkV6.PrefixLength)
+            VirtualIpNetworkV4 = new IpNetwork(session.VirtualIps.IpV4, _sessionManager.VirtualIpNetworkV4.PrefixLength),
+            VirtualIpNetworkV6 = new IpNetwork(session.VirtualIps.IpV6, _sessionManager.VirtualIpNetworkV6.PrefixLength)
         };
 
         await clientStream.WriteFinalResponse(helloResponse, cancellationToken).VhConfigureAwait();

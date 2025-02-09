@@ -235,10 +235,10 @@ public class ServerTest : TestBase
             TestHelper.Test_Https(timeout: 10000, throwError: false)
         );
 
-        Assert.AreEqual(0, accessManager.SessionGetCounter, "session must loaded in startup.");
+        Assert.AreEqual(0, accessManager.SessionGetCounter, "session must be loaded in startup.");
 
         // remove session from access server
-        server2.SessionManager.Sessions.Remove(client.SessionId, out _);
+        server2.SessionManager.RemoveSession(server2.SessionManager.GetSessionById(client.SessionId)!);
 
         // try using recovery
         await Task.WhenAll(

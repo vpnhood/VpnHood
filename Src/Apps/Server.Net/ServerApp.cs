@@ -54,8 +54,7 @@ public class ServerApp : IDisposable
 
         // set storage folder
         var parentAppFolderPath = Path.GetDirectoryName(Path.GetDirectoryName(typeof(ServerApp).Assembly.Location));
-        var storagePath =
-            parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish))
+        var storagePath = parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish))
                 ? Path.Combine(parentAppFolderPath, FolderNameStorage)
                 : Path.Combine(Directory.GetCurrentDirectory(), FolderNameStorage);
         Directory.CreateDirectory(storagePath);

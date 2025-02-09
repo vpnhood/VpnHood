@@ -632,7 +632,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowRewardedAd = Services.AdService.CanShowRewarded,
             ExcludeApps = UserSettings.AppFiltersMode == FilterMode.Exclude ? UserSettings.AppFilters : null,
             IncludeApps = UserSettings.AppFiltersMode == FilterMode.Include ? UserSettings.AppFilters : null,
-            SessionName = CurrentClientProfileInfo?.ClientProfileName
+            SessionName = CurrentClientProfileInfo?.ClientProfileName,
         };
 
         if (userAgent != null) clientOptions.UserAgent = userAgent;

@@ -62,6 +62,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             options.Tracker,
             tunProvider: options.TunProvider,
             serverVersion: ServerVersion,
+            storagePath: options.StoragePath,
             new SessionManagerOptions {
                 DeadSessionTimeout = options.DeadSessionTimeout,
                 HeartbeatInterval = options.HeartbeatInterval,

@@ -14,7 +14,6 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 {
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
     private const int RequestVpnPermissionId = 20100;
-    private AndroidDeviceNotification? _deviceNotification;
 
     public event EventHandler? StartedAsService;
     public bool IsExcludeAppsSupported => true;
@@ -29,11 +28,6 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     public static AndroidDevice Create()
     {
         return new AndroidDevice();
-    }
-
-    public void InitNotification(AndroidDeviceNotification deviceNotification)
-    {
-        _deviceNotification = deviceNotification;
     }
 
     private static AndroidDeviceNotification CreateDefaultNotification()
@@ -170,7 +164,6 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         }
     }
 
-
     internal void OnServiceStartCommand(AndroidVpnAdapter vpnAdapter, Intent? intent)
     {
         // set foreground
@@ -239,7 +232,6 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 
     public void Dispose()
     {
-        _deviceNotification?.Notification.Dispose();
         DisposeSingleton();
     }
 }

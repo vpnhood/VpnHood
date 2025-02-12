@@ -1,4 +1,5 @@
 ﻿using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.ApiControllers;
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -8,7 +9,7 @@ namespace VpnHood.Core.Client;
 internal class ClientConnectionInfo : IConnectionInfo
 {
     public ClientState ClientState { get; set; } = ClientState.None;
-    public SessionErrorCode ErrorCode { get; set; } = SessionErrorCode.Ok;
+    public SessionErrorCode ErrorCode { get; private set; } = SessionErrorCode.Ok;
     public ApiError? Error { get; set; }
     public SessionInfo? SessionInfo { get; set; }
     public ISessionStatus? SessionStatus { get; set; }
@@ -26,6 +27,8 @@ internal class ClientConnectionInfo : IConnectionInfo
                 : SessionErrorCode.GeneralError;
 
             Error = new ApiError(ex);
+
+            VpnHoodClientFactory.SaveConnectionInfo(this.ToDto());
         }
     }
 }

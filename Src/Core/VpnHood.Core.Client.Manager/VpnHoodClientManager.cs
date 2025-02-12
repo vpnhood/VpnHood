@@ -1,9 +1,10 @@
-﻿using VpnHood.Core.Client.Abstractions;
+﻿using System.Text.Json;
+using Ga4.Trackers;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Jobs;
-using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling.Factory;
 
@@ -26,11 +27,15 @@ public class VpnHoodClientManager : IJob, IAsyncDisposable
         JobRunner.Default.Add(this);
     }
 
-    public static VpnHoodClientManager Create(IVpnAdapter vpnAdapter, ISocketFactory socketFactory,
-        IAdService adService,
-        string clientId, Token token, ClientOptions clientOptions, TimeSpan? eventWatcherInterval)
+    public static VpnHoodClientManager Create(
+        IVpnAdapter vpnAdapter, ISocketFactory socketFactory, IAdService adService, ITracker? tracker,
+        ClientOptions clientOptions, TimeSpan? eventWatcherInterval)
     {
-        var client = new VpnHoodClient(vpnAdapter, socketFactory, clientId, token, clientOptions);
+        // save client options
+        var vpnConfigFileName = Path.Combine(Directory.GetCurrentDirectory(), ClientOptions.VpnConfigFileName);
+        File.WriteAllText(vpnConfigFileName, JsonSerializer.Serialize(clientOptions));
+
+        var client = VpnHoodClientFactory.Create(vpnAdapter, socketFactory, tracker);
         return new VpnHoodClientManager(client, adService, eventWatcherInterval);
     }
 

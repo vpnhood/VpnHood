@@ -22,7 +22,7 @@ public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership
 
             var vpnHoodDevice = AndroidDevice.Create();
             var vpnHoodApp = VpnHoodApp.Init(vpnHoodDevice, options);
-            vpnHoodDevice.InitNotification(new AndroidAppNotification(vpnHoodApp).DeviceNotification);
+            vpnHoodDevice.InitNotification(new AndroidVpnNotification(vpnHoodApp).DeviceNotification);
         }
     }
 

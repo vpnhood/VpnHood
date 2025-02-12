@@ -46,7 +46,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private readonly bool _allowAnonymousTracker;
-    private readonly ITracker? _usageTracker;
+    private readonly ITracker? _usageUsageTracker;
     private IPAddress[] _dnsServersIpV4 = [];
     private IPAddress[] _dnsServersIpV6 = [];
     private IPAddress[] _dnsServers = [];
@@ -70,10 +70,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private ulong? _sessionId;
     private readonly string[]? _includeApps;
     private readonly string[]? _excludeApps;
-    private readonly string? _sessionName;
 
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
-    public ulong SessionId => _sessionId ?? throw new InvalidOperationException("SessionId has not been initialized.");
     internal Nat Nat { get; }
     internal Tunnel Tunnel { get; }
     internal ClientSocketFactory SocketFactory { get; }
@@ -106,9 +104,14 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public DomainFilterService DomainFilterService { get; }
     public bool AllowTcpReuse { get; }
     public ClientAdService AdService { get; init; }
-
-    public VpnHoodClient(IVpnAdapter vpnAdapter, ISocketFactory socketFactory,
-        string clientId, Token token, ClientOptions options)
+    public string? SessionName { get; }
+    public ulong SessionId => _sessionId ?? throw new InvalidOperationException("SessionId has not been initialized.");
+    
+    public VpnHoodClient(
+        IVpnAdapter vpnAdapter, 
+        ISocketFactory socketFactory, 
+        ITracker? tracker, 
+        ClientOptions options)
     {
         if (options.TcpProxyCatcherAddressIpV4 == null)
             throw new ArgumentNullException(nameof(options.TcpProxyCatcherAddressIpV4));
@@ -120,10 +123,10 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             throw new ArgumentNullException(nameof(options.MaxTcpDatagramTimespan),
                 $"{nameof(options.MaxTcpDatagramTimespan)} must be bigger or equal than {nameof(options.MinTcpDatagramTimespan)}.");
 
+        var token = Token.FromAccessKey(options.AccessKey);
         SocketFactory = new ClientSocketFactory(vpnAdapter, socketFactory);
         socketFactory = SocketFactory;
         DnsServers = options.DnsServers ?? [];
-        IncludeIpRanges = options.IncludeIpRanges;
         _allowAnonymousTracker = options.AllowAnonymousTracker;
         _minTcpDatagramLifespan = options.MinTcpDatagramTimespan;
         _maxTcpDatagramLifespan = options.MaxTcpDatagramTimespan;
@@ -131,12 +134,11 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _autoDisposeVpnAdapter = options.AutoDisposeVpnAdapter;
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _proxyManager = new ClientProxyManager(vpnAdapter, socketFactory, new ProxyManagerOptions());
-        _usageTracker = options.Tracker;
+        _usageUsageTracker = tracker;
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
         _planId = options.PlanId;
         _accessCode = options.AccessCode;
-        _sessionName = options.SessionName;
         _excludeApps = options.ExcludeApps;
         _includeApps = options.IncludeApps;
         _allowRewardedAd = options.AllowRewardedAd;
@@ -144,15 +146,16 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _serverFinder = new ServerFinder(socketFactory, token.ServerToken,
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
-            tracker: options.AllowEndPointTracker ? options.Tracker : null);
+            tracker: options.AllowEndPointTracker ? tracker : null);
 
+        SessionName = options.SessionName;
         AllowTcpReuse = options.AllowTcpReuse;
         ReconnectTimeout = options.ReconnectTimeout;
         AutoWaitTimeout = options.AutoWaitTimeout;
         Token = token;
         Version = options.Version;
         UserAgent = options.UserAgent;
-        ClientId = clientId;
+        ClientId = options.ClientId;
         SessionTimeout = options.SessionTimeout;
         IncludeLocalNetwork = options.IncludeLocalNetwork;
         DropUdp = options.DropUdp;
@@ -160,8 +163,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         UseTcpOverTun = options.UseTcpOverTun;
         DomainFilterService = new DomainFilterService(options.DomainFilter, options.ForceLogSni);
         var dnsRange = DnsServers.Select(x => new IpRange(x)).ToArray();
-        VpnAdapterIncludeIpRanges = options.VpnAdapterIncludeIpRanges.Union(dnsRange);
-        IncludeIpRanges = options.IncludeIpRanges.Union(dnsRange);
+        VpnAdapterIncludeIpRanges = options.VpnAdapterIncludeIpRanges.ToOrderedList().Union(dnsRange);
+        IncludeIpRanges = options.IncludeIpRanges.ToOrderedList().Union(dnsRange);
         AdService = new ClientAdService(this);
         ApiController = new ApiController(this);
 
@@ -176,7 +179,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _clientHost = new ClientHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
 
         // init vpnAdapter cancellation
-        vpnAdapter.Stopped += VpnAdapter_OnStopped;
         vpnAdapter.PacketReceivedFromInbound += VpnAdapter_OnPacketReceivedFromInbound;
 
         // Create simple disposable objects
@@ -228,12 +230,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             _useUdpChannel = value;
             _ = ManageDatagramChannels(_cancellationTokenSource.Token);
         }
-    }
-
-    private void VpnAdapter_OnStopped(object sender, EventArgs e)
-    {
-        VhLogger.Instance.LogTrace("Device has been stopped.");
-        _ = DisposeAsync();
     }
 
     internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint,
@@ -845,15 +841,15 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 }
 
                 // Anonymous app usage tracker
-                if (_usageTracker != null) {
-                    _ = _usageTracker.Track(ClientTrackerBuilder.BuildConnectionSucceeded(
+                if (_usageUsageTracker != null) {
+                    _ = _usageUsageTracker.Track(ClientTrackerBuilder.BuildConnectionSucceeded(
                         _serverFinder.ServerLocation,
                         isIpV6Supported: IsIpV6SupportedByClient,
                         hasRedirected: !allowRedirect,
                         endPoint: ConnectorService.EndPointInfo.TcpEndPoint,
                         adNetworkName: adResult?.NetworkName));
 
-                    _clientUsageTracker = new ClientUsageTracker(_connectionInfo.SessionStatus, _usageTracker);
+                    _clientUsageTracker = new ClientUsageTracker(_connectionInfo.SessionStatus, _usageUsageTracker);
                 }
             }
 
@@ -878,7 +874,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 VirtualIpNetworkV6 = networkV6,
                 Mtu = TunnelDefaults.MtuWithoutFragmentation,
                 IncludeNetworks = BuildVpnAdapterIncludeNetworks(ConnectorService.EndPointInfo.TcpEndPoint.Address),
-                SessionName = _sessionName,
+                SessionName = SessionName,
                 ExcludeApps = _excludeApps,
                 IncludeApps = _includeApps
             };
@@ -1054,7 +1050,12 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
     private readonly AsyncLock _disposeLock = new();
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
+    {
+        return DisposeAsync(true);
+    }
+
+    public async ValueTask DisposeAsync(bool sendBye)
     {
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
@@ -1066,7 +1067,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         State = ClientState.Disconnecting;
 
         // disposing VpnAdapter
-        _vpnAdapter.Stopped -= VpnAdapter_OnStopped;
         _vpnAdapter.PacketReceivedFromInbound -= VpnAdapter_OnPacketReceivedFromInbound;
         if (_autoDisposeVpnAdapter) {
             VhLogger.Instance.LogTrace("Disposing the VpnAdapter...");

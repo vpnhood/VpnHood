@@ -6,6 +6,7 @@ using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
+using VpnHood.Core.Client.Device.Droid.Utils;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;
 

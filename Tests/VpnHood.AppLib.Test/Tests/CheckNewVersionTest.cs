@@ -143,7 +143,7 @@ public class CheckNewVersionTest : TestBase
         SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
             DateTime.UtcNow, TimeSpan.Zero);
         await app.Connect(clientProfile.ClientProfileId);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await app.WaitForState( AppConnectionState.Connected);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.State.VersionStatus);
     }
 }

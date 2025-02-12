@@ -1,10 +1,6 @@
 ﻿using System.Net;
-using Android;
-using Android.Content;
-using Android.Content.PM;
 using Android.Net;
 using Android.OS;
-using Android.Runtime;
 using Java.IO;
 using Java.Net;
 using Microsoft.Extensions.Logging;
@@ -12,45 +8,70 @@ using PacketDotNet;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Utils;
-using ProtocolType = PacketDotNet.ProtocolType;
-using Socket = System.Net.Sockets.Socket;
 
 namespace VpnHood.Core.Client.Device.Droid;
 
-[Service(
-    Permission = Manifest.Permission.BindVpnService,
-    Exported = false,
-    //Process = ":vpnhood_process",
-    ForegroundServiceType = ForegroundService.TypeSystemExempted)]
-[IntentFilter(["android.net.VpnService"])]
-public class AndroidVpnAdapter : VpnService, IVpnAdapter
+public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
 {
     private FileInputStream? _inStream; // Packets to be sent are queued in this input stream.
     private ParcelFileDescriptor? _mInterface;
     private FileOutputStream? _outStream; // Packets received need to be written to this output stream.
     private readonly ConnectivityManager? _connectivityManager = ConnectivityManager.FromContext(Application.Context);
-    internal static TaskCompletionSource<AndroidVpnAdapter>? StartServiceTaskCompletionSource { get; set; }
+    private PacketReceivedEventArgs? _packetReceivedEventArgs;
+    private bool _stopRequested;
 
+    public event EventHandler? Disposed;
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
-    public event EventHandler? Stopped;
     public bool Started => _mInterface != null;
-    private bool _isServiceStarted;
     public bool CanSendPacketToOutbound => false;
     public bool IsMtuSupported => true;
-
-    public IpNetwork[] PrivateIpNetworks { get; set; } = [];
-
     public bool IsDnsServersSupported => true;
+    public bool CanDetectInProcessPacket => OperatingSystem.IsAndroidVersionAtLeast(29);
+    public bool CanProtectSocket => true;
 
-    public void Init()
+    public bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
     {
+        // check if the packet is in process
+        if (!CanDetectInProcessPacket || !OperatingSystem.IsAndroidVersionAtLeast(29))
+            throw new NotSupportedException("IsInProcessPacket is not supported on this device.");
+
+        // check if the packet is from the current app
+        var localAddress = new InetSocketAddress(InetAddress.GetByAddress(localEndPoint.Address.GetAddressBytes()),
+            localEndPoint.Port);
+        var remoteAddress = new InetSocketAddress(InetAddress.GetByAddress(remoteEndPoint.Address.GetAddressBytes()),
+            remoteEndPoint.Port);
+
+        // Android 10 and above
+        var uid = _connectivityManager?.GetConnectionOwnerUid((int)protocol, localAddress, remoteAddress);
+        return uid == Process.MyUid();
+    }
+
+    protected void ProcessPacket(IPPacket ipPacket)
+    {
+        // create the event args. for performance, we will reuse the same instance
+        _packetReceivedEventArgs ??= new PacketReceivedEventArgs(new IPPacket[1], this);
+
+        try {
+            _packetReceivedEventArgs.IpPackets[0] = ipPacket;
+            PacketReceivedFromInbound?.Invoke(this, _packetReceivedEventArgs);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Error in processing packet. Packet: {Packet}",
+                VhLogger.FormatIpPacket(ipPacket.ToString()!));
+        }
     }
 
     public void StartCapture(VpnAdapterOptions options)
     {
-        CloseVpn();
+        if (Started)
+            StopCapture();
 
-        var builder = new Builder(this)
+        // reset the stop request
+        _stopRequested = false;
+
+        VhLogger.Instance.LogTrace("Starting the adapter...");
+        
+        var builder = new VpnService.Builder(vpnService)
             .SetBlocking(true);
 
         // Private IP Networks
@@ -77,13 +98,12 @@ public class AndroidVpnAdapter : VpnService, IVpnAdapter
             builder.AddRoute(network.Prefix.ToString(), network.PrefixLength);
 
         // AppFilter
-        var appPackageName =
-            ApplicationContext?.PackageName ?? throw new Exception("Could not get the app PackageName!");
+        var appPackageName = vpnService.ApplicationContext?.PackageName ?? throw new Exception("Could not get the app PackageName!");
         AddAppFilter(builder, includeApps: options.IncludeApps, excludeApps: options.ExcludeApps,
             appPackageName: appPackageName);
 
         // DNS Servers
-        AddDnsServers(builder, options.DnsServers, PrivateIpNetworks.Any(x => x.IsIpV6));
+        AddDnsServers(builder, options.DnsServers, options.IncludeNetworks.Any(x => x.IsIpV6));
 
         // try to establish the connection
         _mInterface = builder.Establish() ?? throw new Exception("Could not establish VpnService.");
@@ -95,6 +115,44 @@ public class AndroidVpnAdapter : VpnService, IVpnAdapter
         _outStream = new FileOutputStream(_mInterface.FileDescriptor);
 
         Task.Run(ReadingPacketTask);
+    }
+
+    private readonly Lock _stopCaptureLock = new();
+    public void StopCapture()
+    {
+        using var lockScope = _stopCaptureLock.EnterScope();
+
+        if (_mInterface == null || _stopRequested) return;
+        _stopRequested = true;
+
+        VhLogger.Instance.LogTrace("Stopping the adapter...");
+
+        // close in streams
+        try {
+            _inStream?.Dispose();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Error while closing the VpnService streams.");
+        }
+
+        // close out streams
+        try {
+            _outStream?.Dispose();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Error while closing the VpnService streams.");
+        }
+
+        // close VpnService
+        try {
+            _mInterface?.Close(); //required to close the vpn. dispose is not enough
+            _mInterface?.Dispose();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Error while closing the VpnService.");
+        }
+
+        _mInterface = null;
     }
 
     public void SendPacketToInbound(IPPacket ipPacket)
@@ -121,46 +179,13 @@ public class AndroidVpnAdapter : VpnService, IVpnAdapter
         throw new NotSupportedException();
     }
 
-    public bool CanProtectSocket => true;
-
-    public void ProtectSocket(Socket socket)
+    public void ProtectSocket(System.Net.Sockets.Socket socket)
     {
-        if (!Protect(socket.Handle.ToInt32()))
+        if (!vpnService.Protect(socket.Handle.ToInt32()))
             throw new Exception("Could not protect socket!");
     }
 
-    public void StopCapture()
-    {
-        VhLogger.Instance.LogTrace("Stopping VPN Service...");
-        StopVpnService();
-    }
-
-    [return: GeneratedEnum]
-    public override StartCommandResult OnStartCommand(Intent? intent,
-        [GeneratedEnum] StartCommandFlags flags, int startId)
-    {
-        // close Vpn if it is already started
-        CloseVpn();
-
-        // post vpn service start command
-        try {
-            AndroidDevice.Instance.OnServiceStartCommand(this, intent);
-        }
-        catch (Exception ex) {
-            StartServiceTaskCompletionSource?.TrySetException(ex);
-            StopVpnService();
-            return StartCommandResult.NotSticky;
-        }
-
-        // signal start command
-        if (intent?.Action == "connect")
-            StartServiceTaskCompletionSource?.TrySetResult(this);
-
-        _isServiceStarted = true;
-        return StartCommandResult.Sticky;
-    }
-
-    private static void AddDnsServers(Builder builder, IPAddress[] dnsServers, bool isIpV6Supported)
+    private static void AddDnsServers(VpnService.Builder builder, IPAddress[] dnsServers, bool isIpV6Supported)
     {
         if (!isIpV6Supported)
             dnsServers = dnsServers.Where(x => x.IsV4()).ToArray();
@@ -169,7 +194,7 @@ public class AndroidVpnAdapter : VpnService, IVpnAdapter
             builder.AddDnsServer(dnsServer.ToString());
     }
 
-    private static void AddAppFilter(Builder builder, string appPackageName,
+    private static void AddAppFilter(VpnService.Builder builder, string appPackageName,
         string[]? includeApps, string[]? excludeApps)
     {
         // Applications Filter
@@ -206,7 +231,7 @@ public class AndroidVpnAdapter : VpnService, IVpnAdapter
         try {
             var buf = new byte[short.MaxValue];
             int read;
-            while (!_isClosing && (read = _inStream.Read(buf)) > 0) {
+            while (!_stopRequested && (read = _inStream.Read(buf)) > 0) {
                 var packetBuffer = buf[..read]; // copy buffer for packet
                 var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer)?.Extract<IPPacket>();
                 if (ipPacket != null)
@@ -220,127 +245,20 @@ public class AndroidVpnAdapter : VpnService, IVpnAdapter
                 VhLogger.Instance.LogError(ex, "Error occurred in Android ReadingPacketTask.");
         }
 
-        StopVpnService();
-        return Task.FromResult(0);
+        // if not requested to stop, dispose the adapter which means critical error
+        if (!_stopRequested)
+            Dispose();
+
+        return Task.CompletedTask;
     }
 
-    public bool CanDetectInProcessPacket => OperatingSystem.IsAndroidVersionAtLeast(29);
-
-    public bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+    private bool _disposed;
+    public void Dispose()
     {
-        // check if the packet is in process
-        if (!CanDetectInProcessPacket || !OperatingSystem.IsAndroidVersionAtLeast(29))
-            throw new NotSupportedException("IsInProcessPacket is not supported on this device.");
+        if (_disposed) return;
+        _disposed = true;
 
-        // check if the packet is from the current app
-        var localAddress = new InetSocketAddress(InetAddress.GetByAddress(localEndPoint.Address.GetAddressBytes()),
-            localEndPoint.Port);
-        var remoteAddress = new InetSocketAddress(InetAddress.GetByAddress(remoteEndPoint.Address.GetAddressBytes()),
-            remoteEndPoint.Port);
-
-        // Android 10 and above
-        var uid = _connectivityManager?.GetConnectionOwnerUid((int)protocol, localAddress, remoteAddress);
-        return uid == Process.MyUid();
-    }
-
-    private PacketReceivedEventArgs? _packetReceivedEventArgs;
-
-    protected virtual void ProcessPacket(IPPacket ipPacket)
-    {
-        // create the event args. for performance, we will reuse the same instance
-        _packetReceivedEventArgs ??= new PacketReceivedEventArgs(new IPPacket[1], this);
-
-        try {
-            _packetReceivedEventArgs.IpPackets[0] = ipPacket;
-            PacketReceivedFromInbound?.Invoke(this, _packetReceivedEventArgs);
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Error in processing packet. Packet: {Packet}",
-                VhLogger.FormatIpPacket(ipPacket.ToString()!));
-        }
-    }
-
-    public override void OnDestroy()
-    {
-        VhLogger.Instance.LogTrace("VpnService has been destroyed!");
-        CloseVpn();
-        base.OnDestroy();
-    }
-
-    private bool _isClosing;
-
-    private void CloseVpn()
-    {
-        if (_mInterface == null || _isClosing) return;
-        _isClosing = true;
-
-        VhLogger.Instance.LogTrace("Closing VpnService...");
-
-        // close streams
-        try {
-            _inStream?.Close();
-            _outStream?.Close();
-            _inStream?.Dispose();
-            _outStream?.Dispose();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Error while closing the VpnService streams.");
-        }
-
-
-        // close VpnService
-        try {
-            _mInterface?.Close(); //required to close the vpn. dispose is not enough
-            _mInterface?.Dispose();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Error while closing the VpnService.");
-        }
-        finally {
-            _mInterface = null;
-        }
-
-        try {
-            Stopped?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Error while invoking Stopped event.");
-        }
-
-        _isClosing = false;
-    }
-
-    private void StopVpnService()
-    {
-        // make sure to close vpn; it has self check
-        CloseVpn();
-
-        // close the service
-        if (!_isServiceStarted) return;
-        _isServiceStarted = false;
-
-        try {
-            // it must be after _mInterface.Close
-            if (OperatingSystem.IsAndroidVersionAtLeast(24))
-                StopForeground(StopForegroundFlags.Remove);
-            else
-                StopForeground(true);
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Error in StopForeground of VpnService.");
-        }
-
-        try {
-            StopSelf();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Error in StopSelf of VpnService.");
-        }
-    }
-
-    void IDisposable.Dispose()
-    {
-        // The parent should not be disposed, never call parent dispose
-        StopVpnService();
+        StopCapture();
+        Disposed?.Invoke(this, EventArgs.Empty);
     }
 }

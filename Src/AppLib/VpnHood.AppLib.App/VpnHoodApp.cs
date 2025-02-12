@@ -100,7 +100,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private VpnHoodApp(IDevice device, AppOptions options)
     {
-        device.StartedAsService += DeviceOnStartedAsService;
         Directory.CreateDirectory(options.StorageFolderPath); //make sure directory exists
         Resource = options.Resource;
         Device = device;
@@ -391,17 +390,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return new VpnHoodApp(device, options);
     }
 
-    private void DeviceOnStartedAsService(object sender, EventArgs e)
-    {
-        if (CurrentClientProfileInfo == null) {
-            var ex = new Exception("Could not start as service. No server is selected.");
-            _appPersistState.LastError = new ApiError(ex);
-            throw ex;
-        }
-
-        _ = Connect(CurrentClientProfileInfo.ClientProfileId);
-    }
-
     public void ClearLastError()
     {
         _appPersistState.LastError = null;
@@ -606,12 +594,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // create clientOptions
         var clientOptions = new ClientOptions {
+            ClientId = Features.ClientId,
+            AccessKey = token.ToAccessKey(),
             SessionTimeout = SessionTimeout,
             ReconnectTimeout = _reconnectTimeout,
             AutoWaitTimeout = _autoWaitTimeout,
             IncludeLocalNetwork = UserSettings.IncludeLocalNetwork && Features.IsLocalNetworkSupported,
-            IncludeIpRanges = await GetIncludeIpRanges(cancellationToken),
-            VpnAdapterIncludeIpRanges = vpnAdapterIpRanges,
+            IncludeIpRanges = (await GetIncludeIpRanges(cancellationToken)).ToArray(),
+            VpnAdapterIncludeIpRanges = vpnAdapterIpRanges.ToArray(),
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
             ServerQueryTimeout = _serverQueryTimeout,
@@ -627,7 +617,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
             AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
             AllowTcpReuse = !HasDebugCommand(DebugCommands.NoTcpReuse),
-            Tracker = Services.Tracker,
             CanExtendByRewardedAdThreshold = _canExtendByRewardedAdThreshold,
             AllowRewardedAd = Services.AdService.CanShowRewarded,
             ExcludeApps = UserSettings.AppFiltersMode == FilterMode.Exclude ? UserSettings.AppFilters : null,
@@ -655,7 +644,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // create client controller
             clientManager = VpnHoodClientManager.Create(vpnAdapter, new SocketFactory(),
-                Services.AdService, Features.ClientId, token, clientOptions, eventWatcherInterval);
+                Services.AdService, Services.Tracker, clientOptions, eventWatcherInterval);
             clientManager.StateChanged += Client_StateChanged;
             _clientManager = clientManager;
 

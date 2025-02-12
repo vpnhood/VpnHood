@@ -6,7 +6,7 @@ using VpnHood.Core.Tunneling.Factory;
 
 namespace VpnHood.Core.Client;
 
-public class ClientSocketFactory(
+internal class ClientSocketFactory(
     IVpnAdapter vpnAdapter,
     ISocketFactory socketFactory)
     : ISocketFactory

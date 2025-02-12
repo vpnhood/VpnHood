@@ -15,7 +15,6 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
     private const int RequestVpnPermissionId = 20100;
 
-    public event EventHandler? StartedAsService;
     public bool IsExcludeAppsSupported => true;
     public bool IsIncludeAppsSupported => true;
     public bool IsAlwaysOnSupported => OperatingSystem.IsAndroidVersionAtLeast(24);

@@ -391,8 +391,8 @@ public class ClientServerTest : TestBase
         using var vpnAdapter = new TestNullVpnAdapter();
         await using var client = await TestHelper.CreateClient(token, vpnAdapter);
 
-        vpnAdapter.StopCapture();
-        await TestHelper.WaitForClientState(client, ClientState.Disposed);
+        vpnAdapter.Dispose();
+        await client.WaitForState(ClientState.Disposed);
     }
 
     [TestMethod]

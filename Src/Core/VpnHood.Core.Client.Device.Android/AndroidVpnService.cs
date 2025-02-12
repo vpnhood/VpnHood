@@ -5,6 +5,8 @@ using Android.Net;
 using Android.OS;
 using Android.Runtime;
 using Microsoft.Extensions.Logging;
+using System.Net;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Tunneling.Factory;
 
@@ -50,7 +52,6 @@ public class AndroidVpnService : VpnService
             // create vpn adapter
             var clientOptions = VpnHoodClientFactory.ReadClientOptions();
             IVpnAdapter adapter = clientOptions.UseNullCapture ? new NullVpnAdapter() : new AndroidVpnAdapter(this);
-            adapter.Disposed += (sender, e) => _ = Disconnect();
 
             // create vpn client //todo: set tracker
             _vpnHoodClient = VpnHoodClientFactory.Create(adapter, new SocketFactory(), null, clientOptions: clientOptions);
@@ -74,8 +75,15 @@ public class AndroidVpnService : VpnService
     private void Client_StateChanged(object? sender, EventArgs e)
     {
         var client = _vpnHoodClient;
-        if (client != null)
-            _notification?.Update(client.State);
+        if (client == null) 
+            return;
+
+        // update notification
+        _notification?.Update(client.State);
+
+        // disconnect when disposed
+        if (client.State == ClientState.Disposed)
+            _ = Disconnect();
     }
 
 

@@ -3,7 +3,6 @@ using Ga4.Trackers;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.ApiClients;
-using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling.Factory;
 

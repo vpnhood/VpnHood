@@ -57,25 +57,6 @@ public class TestHelper : IDisposable
         }
     }
 
-    public static Task WaitForClientState(VpnHoodClient client, ClientState clientState, int timeout = 6000,
-        bool useUpdateStatus = false)
-    {
-        return VhTestUtil.AssertEqualsWait(clientState,
-            async () => {
-                if (useUpdateStatus)
-                    try {
-                        await client.UpdateSessionStatus();
-                    }
-                    catch {
-                        /*ignore*/
-                    }
-
-                return client.State;
-            },
-            "Client state didn't reach the expected value.",
-            timeout);
-    }
-
     private static Task<PingReply> SendPing(Ping? ping = null, IPAddress? ipAddress = null,
         int timeout = TestConstants.DefaultTimeout)
     {

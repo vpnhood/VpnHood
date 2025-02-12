@@ -36,7 +36,7 @@ public class ServerFinderTest
 
             // connect
             var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
-            await TestHelper.WaitForClientState(client, ClientState.Connected);
+            await client.WaitForState( ClientState.Connected);
 
             Assert.IsTrue(
                 servers[2].ServerHost.TcpEndPoints.First().Equals(client.HostTcpEndPoint) ||
@@ -90,7 +90,7 @@ public class ServerFinderTest
             // connect
             var clientOptions = TestHelper.CreateClientOptions(token);
             var client = await TestHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: new TestNullVpnAdapter());
-            await TestHelper.WaitForClientState(client, ClientState.Connected);
+            await client.WaitForState( ClientState.Connected);
 
             Assert.AreEqual(servers[5].ServerHost.TcpEndPoints.First(), client.HostTcpEndPoint);
 

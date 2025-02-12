@@ -30,6 +30,7 @@ public class VpnHoodClientManager : IJob, IAsyncDisposable
     public JobSection JobSection { get; }
     public VpnHoodClientManager(IDevice device, IAdService adService, TimeSpan? eventWatcherInterval)
     {
+        Directory.CreateDirectory(device.VpnServiceSharedFolder);
         _vpnConfigFilePath = Path.Combine(device.VpnServiceSharedFolder, ClientOptions.VpnConfigFileName);
         _vpnStatusFilePath = Path.Combine(device.VpnServiceSharedFolder, ClientOptions.VpnStatusFileName);
         _device = device;

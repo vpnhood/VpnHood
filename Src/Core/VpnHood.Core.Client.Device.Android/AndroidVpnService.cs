@@ -5,7 +5,6 @@ using Android.Net;
 using Android.OS;
 using Android.Runtime;
 using Microsoft.Extensions.Logging;
-using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Tunneling.Factory;
@@ -144,7 +143,7 @@ public class AndroidVpnService : VpnService
     // todo: check it
     private void ShowToast(string message)
     {
-        var handler = new Handler(Looper.MainLooper);
+        var handler = new Handler(Looper.MainLooper!);
         handler.Post(() =>
         {
             try {

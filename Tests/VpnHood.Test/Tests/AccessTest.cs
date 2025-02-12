@@ -66,13 +66,14 @@ public class AccessTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create a short expiring token
-        var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(1));
+        var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.UtcNow.AddSeconds(1));
 
         // connect and download
         await using var client = await TestHelper.CreateClient(accessToken);
 
         // test expiration
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {
+            await server.SessionManager.Sync(true);
             await TestHelper.Test_Https(throwError: false, timeout: 1000);
             return client.State;
         });
@@ -131,7 +132,7 @@ public class AccessTest : TestBase
             token: token, clientId: client1.ClientId);
 
         Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionInfo?.SuppressedTo);
-        Assert.IsNull(client2.GetLastSessionErrorCode());
+        Assert.AreEqual(SessionErrorCode.Ok, client2.GetLastSessionErrorCode());
 
         // wait for finishing client1
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for client1 disposal.");

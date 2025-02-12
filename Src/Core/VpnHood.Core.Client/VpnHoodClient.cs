@@ -174,10 +174,12 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         Tunnel = new Tunnel();
         Tunnel.PacketReceived += Tunnel_OnPacketReceived;
 
+
         // create proxy host
         _clientHost = new ClientHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
 
-        // init vpnAdapter cancellation
+        // init vpnAdapter events
+        vpnAdapter.Disposed += (_, _) => _ = DisposeAsync();
         vpnAdapter.PacketReceivedFromInbound += VpnAdapter_OnPacketReceivedFromInbound;
 
         // Create simple disposable objects

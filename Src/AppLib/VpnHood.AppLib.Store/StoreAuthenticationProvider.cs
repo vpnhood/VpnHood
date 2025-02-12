@@ -43,7 +43,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
         if (ignoreSslVerification) handlerWithoutAuth.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
         _httpClientWithoutAuth = new HttpClient(handlerWithoutAuth) { BaseAddress = storeBaseUrl };
 
-        _apiKey = VhUtil.JsonDeserializeFile<ApiKey>(ApiKeyFilePath, logger: VhLogger.Instance);
+        _apiKey = JsonUtils.TryDeserializeFile<ApiKey>(ApiKeyFilePath, logger: VhLogger.Instance);
     }
 
     private ApiKey? ApiKey {

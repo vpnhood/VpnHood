@@ -1,8 +1,12 @@
-﻿namespace VpnHood.Core.Client.Device.WinDivert;
+﻿using Ga4.Trackers;
+using VpnHood.Core.Tunneling.Factory;
 
-public class WinDivertDevice : IDevice
+namespace VpnHood.Core.Client.Device.WinDivert;
+
+public class WinDivertDevice(string storageFolder, ITracker? tracker) : IDevice
 {
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
+    public string VpnServiceSharedFolder { get; } = Path.Combine(storageFolder, "VpnService-Shared");
     public bool IsExcludeAppsSupported => IsDebugMode;
     public bool IsAlwaysOnSupported => false;
     public bool IsIncludeAppsSupported => IsDebugMode;
@@ -35,10 +39,19 @@ public class WinDivertDevice : IDevice
         }
     }
 
-    public Task<IVpnAdapter> CreateVpnAdapter(IUiContext? uiContext)
+    public Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        IVpnAdapter res = new WinDivertVpnAdapter();
-        return Task.FromResult(res);
+        // no need to request vpn service on windows
+        return Task.CompletedTask;
+    }
+
+    private VpnHoodClient? _vpnHoodClient;
+    public Task StartVpnService(CancellationToken cancellationToken)
+    {
+        var vpnAdapter = new WinDivertVpnAdapter();
+        _vpnHoodClient?.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        _vpnHoodClient = VpnHoodClientFactory.Create(vpnAdapter, new SocketFactory(), tracker: tracker);
+        return Task.CompletedTask;
     }
 
     private static bool IsDebugMode {
@@ -53,5 +66,6 @@ public class WinDivertDevice : IDevice
 
     public void Dispose()
     {
+        _vpnHoodClient?.DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 }

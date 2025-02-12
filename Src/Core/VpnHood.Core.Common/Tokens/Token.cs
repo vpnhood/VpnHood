@@ -65,14 +65,14 @@ public class Token
                 base64 = base64[prefix.Length..];
 
         // load
-        var json = Encoding.UTF8.GetString(VhUtil.ConvertFromBase64AndFixPadding(base64));
-        var tokenVersion = VhUtil.JsonDeserialize<TokenVersion>(json);
+        var json = Encoding.UTF8.GetString(VhUtils.ConvertFromBase64AndFixPadding(base64));
+        var tokenVersion = JsonUtils.Deserialize<TokenVersion>(json);
 
         return tokenVersion.Version switch {
 #pragma warning disable CS0618 // Type or member is obsolete
-            0 or 1 or 2 or 3 => VhUtil.JsonDeserialize<TokenV3>(json).ToToken(),
+            0 or 1 or 2 or 3 => JsonUtils.Deserialize<TokenV3>(json).ToToken(),
 #pragma warning restore CS0618 // Type or member is obsolete
-            4 => VhUtil.JsonDeserialize<Token>(json),
+            4 => JsonUtils.Deserialize<Token>(json),
             _ => throw new NotSupportedException($"Token version {tokenVersion.Version} is not supported!")
         };
     }

@@ -20,8 +20,8 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
     private PacketReceivedEventArgs? _packetReceivedEventArgs;
     private bool _stopRequested;
 
-    public event EventHandler? Disposed;
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
+    public event EventHandler? Disposed;
     public bool Started => _mInterface != null;
     public bool CanSendPacketToOutbound => false;
     public bool IsMtuSupported => true;
@@ -241,7 +241,7 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
         catch (ObjectDisposedException) {
         }
         catch (Exception ex) {
-            if (!VhUtil.IsSocketClosedException(ex))
+            if (!VhUtils.IsSocketClosedException(ex))
                 VhLogger.Instance.LogError(ex, "Error occurred in Android ReadingPacketTask.");
         }
 

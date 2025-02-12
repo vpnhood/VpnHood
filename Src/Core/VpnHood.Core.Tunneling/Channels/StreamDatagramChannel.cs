@@ -37,7 +37,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     {
         ChannelId = channelId;
         _clientStream = clientStream ?? throw new ArgumentNullException(nameof(clientStream));
-        if (!VhUtil.IsInfinite(lifespan)) {
+        if (!VhUtils.IsInfinite(lifespan)) {
             _lifeTime = FastDateTime.Now + lifespan;
             JobRunner.Default.Add(this);
         }

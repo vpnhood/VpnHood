@@ -89,7 +89,7 @@ public class FileAccessManager : IAccessManager
             IsValidHostName = serverConfig.IsValidHostName,
             Secret = serverConfig.ServerSecret,
             Urls = serverConfig.ServerTokenUrls,
-            CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow),
+            CreatedTime = VhUtils.RemoveMilliseconds(DateTime.UtcNow),
             ServerLocations = string.IsNullOrEmpty(serverLocation) ? null : [serverLocation]
         };
 
@@ -115,7 +115,7 @@ public class FileAccessManager : IAccessManager
         var serverSecretFile = Path.Combine(CertsFolderPath, "secret");
         var secretBase64 = TryToReadFile(serverSecretFile);
         if (string.IsNullOrEmpty(secretBase64)) {
-            secretBase64 = Convert.ToBase64String(VhUtil.GenerateKey(128));
+            secretBase64 = Convert.ToBase64String(VhUtils.GenerateKey(128));
             File.WriteAllText(serverSecretFile, secretBase64);
         }
 
@@ -227,7 +227,7 @@ public class FileAccessManager : IAccessManager
             return false;
 
         var encryptClientId =
-            VhUtil.EncryptClientId(sessionRequestEx.ClientInfo.ClientId, accessTokenData.AccessToken.Secret);
+            VhUtils.EncryptClientId(sessionRequestEx.ClientInfo.ClientId, accessTokenData.AccessToken.Secret);
         return encryptClientId.SequenceEqual(sessionRequestEx.EncryptedClientId);
     }
 

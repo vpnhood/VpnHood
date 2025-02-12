@@ -48,11 +48,12 @@ public class AndroidVpnService : VpnService
                 return true;
 
             // create vpn adapter
-            var adapter = new AndroidVpnAdapter(this);
+            var clientOptions = VpnHoodClientFactory.ReadClientOptions();
+            IVpnAdapter adapter = clientOptions.UseNullCapture ? new NullVpnAdapter() : new AndroidVpnAdapter(this);
             adapter.Disposed += (sender, e) => _ = Disconnect();
 
             // create vpn client //todo: set tracker
-            _vpnHoodClient = VpnHoodClientFactory.Create(adapter, new SocketFactory(), null);
+            _vpnHoodClient = VpnHoodClientFactory.Create(adapter, new SocketFactory(), null, clientOptions: clientOptions);
 
             // initialize notification
             _notification = new AndroidVpnNotification(this, new VpnServiceLocalization(), _vpnHoodClient.SessionName);

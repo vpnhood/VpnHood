@@ -69,7 +69,7 @@ public class ServerApp : IDisposable
         if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(StoragePath, "appsettings.json");
         if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
         AppSettings = File.Exists(appSettingsFilePath)
-            ? VhUtil.JsonDeserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
+            ? JsonUtils.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
             : new AppSettings();
 
         // Init File Logger before starting server
@@ -176,7 +176,7 @@ public class ServerApp : IDisposable
 
     private void CommandListener_CommandReceived(object? sender, CommandReceivedEventArgs e)
     {
-        if (!VhUtil.IsNullOrEmpty(e.Arguments) && e.Arguments[0] == "stop") {
+        if (!VhUtils.IsNullOrEmpty(e.Arguments) && e.Arguments[0] == "stop") {
             VhLogger.Instance.LogInformation("I have received the stop command!");
             _vpnHoodServer?.Dispose();
         }
@@ -243,7 +243,7 @@ public class ServerApp : IDisposable
 
             // run server
             var virtualIpNetworkV4 = TunnelDefaults.VirtualIpNetworkV4;
-            var virtualIpNetworkV6 = TunnelDefaults.VirtualIpNetworkV4;
+            var virtualIpNetworkV6 = TunnelDefaults.VirtualIpNetworkV6;
             _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions {
                 Tracker = _tracker,
                 TunProvider = CreateTunProvider(virtualIpNetworkV4, virtualIpNetworkV6),

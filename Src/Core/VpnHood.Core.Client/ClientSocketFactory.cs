@@ -17,7 +17,7 @@ internal class ClientSocketFactory(
 
         // config for client
         socketFactory.SetKeepAlive(tcpClient.Client, true);
-        VhUtil.ConfigTcpClient(tcpClient, null, null);
+        VhUtils.ConfigTcpClient(tcpClient, null, null);
 
         // auto protect
         if (vpnAdapter.CanProtectSocket)

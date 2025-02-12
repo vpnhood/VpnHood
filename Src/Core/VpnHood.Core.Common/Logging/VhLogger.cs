@@ -66,7 +66,7 @@ public static class VhLogger
     public static string Format(IPAddress? ipAddress)
     {
         if (ipAddress == null) return "<null>";
-        return IsAnonymousMode ? VhUtil.RedactIpAddress(ipAddress) : ipAddress.ToString();
+        return IsAnonymousMode ? VhUtils.RedactIpAddress(ipAddress) : ipAddress.ToString();
     }
 
     public static string Format(IpNetwork? ipNetwork)
@@ -105,7 +105,7 @@ public static class VhLogger
         if (IPEndPointConverter.TryParse(dnsName, out var ipEndPoint))
             return Format(ipEndPoint);
 
-        return IsAnonymousMode ? VhUtil.RedactHostName(dnsName) : dnsName;
+        return IsAnonymousMode ? VhUtils.RedactHostName(dnsName) : dnsName;
     }
 
     public static string FormatIpPacket(string ipPacketText)

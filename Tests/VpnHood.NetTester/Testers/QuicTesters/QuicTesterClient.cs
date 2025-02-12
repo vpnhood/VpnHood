@@ -21,7 +21,7 @@ public class QuicTesterClient(IPEndPoint serverEp, string domain, TimeSpan? time
         // start multi uploaders
         VhLogger.Instance.LogInformation("\n--------");
         VhLogger.Instance.LogInformation(
-            $"Quic => Start Uploading {VhUtil.FormatBytes(upSize)}, Connections: {connectionCount}");
+            $"Quic => Start Uploading {VhUtils.FormatBytes(upSize)}, Connections: {connectionCount}");
         using (var speedometer = new Speedometer("Up")) {
             for (var i = 0; i < connectionCount; i++)
                 uploadTasks.Add(StartUpload(upSize: upSize / connectionCount, downSize: downSize / connectionCount,
@@ -33,7 +33,7 @@ public class QuicTesterClient(IPEndPoint serverEp, string domain, TimeSpan? time
         // start multi downloaders
         VhLogger.Instance.LogInformation("\n--------");
         VhLogger.Instance.LogInformation(
-            $"QUIC => Start Downloading {VhUtil.FormatBytes(downSize)}, Connections: {connectionCount}");
+            $"QUIC => Start Downloading {VhUtils.FormatBytes(downSize)}, Connections: {connectionCount}");
         using (var speedometer = new Speedometer("Down")) {
             var downloadTasks = uploadTasks
                 .Where(x => x is { IsCompletedSuccessfully: true, Result: not null })

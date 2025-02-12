@@ -104,11 +104,11 @@ public class AccessTokenService
 
         // try read token
         var tokenJson = await File.ReadAllTextAsync(tokenFileName).VhConfigureAwait();
-        var accessToken = VhUtil.JsonDeserialize<AccessToken>(tokenJson);
+        var accessToken = JsonUtils.Deserialize<AccessToken>(tokenJson);
 
         // try read usage
         var usageFileName = GetAccessTokenUsageFileName(tokenId);
-        var usage = VhUtil.JsonDeserializeFile<AccessTokenUsage>(usageFileName) ??
+        var usage = JsonUtils.TryDeserializeFile<AccessTokenUsage>(usageFileName) ??
                     new AccessTokenUsage { Version = 2 };
 
         // for backward compatibility

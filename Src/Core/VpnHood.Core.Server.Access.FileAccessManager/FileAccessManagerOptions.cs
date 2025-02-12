@@ -23,7 +23,7 @@ public class FileAccessManagerOptions : ServerConfig
     public string? ServerTokenUrl {
         get => ServerTokenUrls.FirstOrDefault();
         set {
-            if (VhUtil.IsNullOrEmpty(ServerTokenUrls))
+            if (VhUtils.IsNullOrEmpty(ServerTokenUrls))
                 ServerTokenUrls = value != null ? [value] : [];
 
             Console.WriteLine("Warning: ServerTokenUrl is obsoleted. Use ServerTokenUrls.");

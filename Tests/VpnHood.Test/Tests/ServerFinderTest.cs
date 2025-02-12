@@ -88,15 +88,14 @@ public class ServerFinderTest
             await servers[6].DisposeAsync();
 
             // connect
-            var clientOptions = TestHelper.CreateClientOptions();
-            var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter(),
-                clientOptions: clientOptions);
+            var clientOptions = TestHelper.CreateClientOptions(token);
+            var client = await TestHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: new TestNullVpnAdapter());
             await TestHelper.WaitForClientState(client, ClientState.Connected);
 
             Assert.AreEqual(servers[5].ServerHost.TcpEndPoints.First(), client.HostTcpEndPoint);
 
             // tracker should report unreachable servers
-            var testTracker = (TestTrackerProvider?)clientOptions.Tracker;
+            var testTracker = (TestTrackerProvider?)client.Tracker;
             Assert.IsNotNull(testTracker);
             Assert.IsTrue(
                 testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[0])?.Parameters["available"] is null

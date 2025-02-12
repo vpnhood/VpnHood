@@ -1,10 +1,9 @@
 ﻿using System.Text;
 using System.Text.Json;
-using VpnHood.Core.Common.Utils;
 
-namespace VpnHood.Core.Tunneling;
+namespace VpnHood.Core.Common.Utils;
 
-public static class StreamUtil
+public static class StreamUtils
 {
     public static byte[]? ReadExact(Stream stream, int count)
     {
@@ -49,7 +48,7 @@ public static class StreamUtil
         return true;
     }
 
-    public static T ReadJson<T>(Stream stream, int maxLength = 0xFFFF)
+    public static T ReadObject<T>(Stream stream, int maxLength = 0xFFFF)
     {
         // read length
         var buffer = ReadExact(stream, 4) ?? throw new Exception($"Could not read {typeof(T).Name}");
@@ -73,7 +72,7 @@ public static class StreamUtil
         return ret;
     }
 
-    public static async Task<T> ReadJsonAsync<T>(Stream stream, CancellationToken cancellationToken,
+    public static async Task<T> ReadObjectAsync<T>(Stream stream, CancellationToken cancellationToken,
         int maxLength = 0xFFFF)
     {
         var message = await ReadMessage(stream, cancellationToken, maxLength).VhConfigureAwait();
@@ -120,13 +119,13 @@ public static class StreamUtil
         return buffer;
     }
 
-    public static void WriteJson(Stream stream, object obj)
+    public static void WriteObject(Stream stream, object obj)
     {
         stream.Write(ObjectToJsonBuffer(obj));
     }
 
-    public static Task WriteJsonAsync(Stream stream, object obj, CancellationToken cancellationToken)
+    public static ValueTask WriteObjectAsync(Stream stream, object obj, CancellationToken cancellationToken)
     {
-        return stream.WriteAsync(ObjectToJsonBuffer(obj), cancellationToken).AsTask();
+        return stream.WriteAsync(ObjectToJsonBuffer(obj), cancellationToken);
     }
 }

@@ -46,10 +46,10 @@ internal class AppController : WebApiController, IAppController
     public Task<IpFilters> GetIpFilters()
     {
         var appIpFilters = new IpFilters {
-            VpnAdapterIpFilterInclude = App.SettingsService.IpFilterSettings.VpnAdapterIpFilterIncludes,
-            VpnAdapterIpFilterExclude = App.SettingsService.IpFilterSettings.VpnAdapterIpFilterExcludes,
-            AppIpFilterInclude = App.SettingsService.IpFilterSettings.AppIpFilterIncludes,
-            AppIpFilterExclude = App.SettingsService.IpFilterSettings.AppIpFilterExcludes
+            AdapterIpFilterIncludes = App.SettingsService.IpFilterSettings.AdapterIpFilterIncludes,
+            AdapterIpFilterExcludes = App.SettingsService.IpFilterSettings.AdapterIpFilterExcludes,
+            AppIpFilterIncludes = App.SettingsService.IpFilterSettings.AppIpFilterIncludes,
+            AppIpFilterExcludes = App.SettingsService.IpFilterSettings.AppIpFilterExcludes
         };
 
         return Task.FromResult(appIpFilters);
@@ -59,10 +59,10 @@ internal class AppController : WebApiController, IAppController
     public async Task SetIpFilters(IpFilters ipFilters)
     {
         ipFilters = await HttpContext.GetRequestDataAsync<IpFilters>().VhConfigureAwait();
-        App.SettingsService.IpFilterSettings.VpnAdapterIpFilterExcludes = ipFilters.VpnAdapterIpFilterExclude;
-        App.SettingsService.IpFilterSettings.VpnAdapterIpFilterIncludes = ipFilters.VpnAdapterIpFilterInclude;
-        App.SettingsService.IpFilterSettings.AppIpFilterExcludes = ipFilters.AppIpFilterExclude;
-        App.SettingsService.IpFilterSettings.AppIpFilterIncludes = ipFilters.AppIpFilterInclude;
+        App.SettingsService.IpFilterSettings.AdapterIpFilterExcludes = ipFilters.AdapterIpFilterExcludes;
+        App.SettingsService.IpFilterSettings.AdapterIpFilterIncludes = ipFilters.AdapterIpFilterIncludes;
+        App.SettingsService.IpFilterSettings.AppIpFilterExcludes = ipFilters.AppIpFilterExcludes;
+        App.SettingsService.IpFilterSettings.AppIpFilterIncludes = ipFilters.AppIpFilterIncludes;
     }
 
     [Route(HttpVerbs.Get, "/state")]
@@ -108,15 +108,16 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/version-check-postpone")]
-    public void VersionCheckPostpone()
+    public Task VersionCheckPostpone()
     {
         App.VersionCheckPostpone();
+        return Task.CompletedTask;
     }
 
     [Route(HttpVerbs.Post, "/clear-last-error")]
-    public void ClearLastError()
+    public Task ClearLastError()
     {
-        App.ClearLastError();
+        return App.ClearLastError();
     }
 
     [Route(HttpVerbs.Post, "/extend-by-rewarded-ad")]
@@ -152,9 +153,10 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/settings/open-always-on-page")]
-    public void OpenAlwaysOnPage()
+    public Task OpenAlwaysOnPage()
     {
         App.Services.UiProvider.OpenAlwaysOnPage(ActiveUiContext.RequiredContext);
+        return Task.CompletedTask;
     }
 
     [Route(HttpVerbs.Post, "/settings/request-quick-launch")]

@@ -39,9 +39,9 @@ internal class SessionLocalService : IJob
             return null;
 
         // deserialize the file
-        var sessionLocalData = VhUtil.JsonDeserializeFile<SessionLocalData>(filePath, logger: VhLogger.Instance);
+        var sessionLocalData = JsonUtils.TryDeserializeFile<SessionLocalData>(filePath, logger: VhLogger.Instance);
         if (sessionLocalData == null) {
-            VhUtil.TryDeleteFile(filePath);
+            VhUtils.TryDeleteFile(filePath);
             return null;
         }
 
@@ -53,7 +53,7 @@ internal class SessionLocalService : IJob
     public void Remove(ulong sessionId)
     {
         var filePath = GetSessionFilePath(sessionId);
-        VhUtil.TryDeleteFile(filePath);
+        VhUtils.TryDeleteFile(filePath);
     }
 
     public void Update(Session session)
@@ -75,7 +75,7 @@ internal class SessionLocalService : IJob
         foreach (var file in files) {
             var lastWriteTime = File.GetLastWriteTimeUtc(file);
             if (utcNow - lastWriteTime > TimeSpan.FromDays(7))
-                VhUtil.TryDeleteFile(file);
+                VhUtils.TryDeleteFile(file);
         }
     }
     public Task RunJob()

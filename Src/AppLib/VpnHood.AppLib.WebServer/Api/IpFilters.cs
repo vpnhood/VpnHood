@@ -2,8 +2,8 @@
 
 public class IpFilters
 {
-    public required string VpnAdapterIpFilterInclude { get; set; }
-    public required string VpnAdapterIpFilterExclude { get; set; }
-    public required string AppIpFilterInclude { get; set; }
-    public required string AppIpFilterExclude { get; set; }
+    public required string AdapterIpFilterIncludes { get; set; }
+    public required string AdapterIpFilterExcludes { get; set; }
+    public required string AppIpFilterIncludes { get; set; }
+    public required string AppIpFilterExcludes { get; set; }
 }

@@ -42,8 +42,8 @@ public class TunnelTest : TestBase
         };
 
         // create keys
-        var serverKey = VhUtil.GenerateKey();
-        var sessionKey = VhUtil.GenerateKey();
+        var serverKey = VhUtils.GenerateKey();
+        var sessionKey = VhUtils.GenerateKey();
 
         // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
@@ -94,8 +94,8 @@ public class TunnelTest : TestBase
         };
 
         // create keys
-        var serverKey = VhUtil.GenerateKey();
-        var sessionKey = VhUtil.GenerateKey();
+        var serverKey = VhUtils.GenerateKey();
+        var sessionKey = VhUtils.GenerateKey();
 
         // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));

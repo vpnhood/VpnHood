@@ -21,8 +21,7 @@ public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership
             options.DeviceId ??= AndroidUtil.GetDeviceId(this); //this will be hashed using AppId
 
             var vpnHoodDevice = AndroidDevice.Create();
-            var vpnHoodApp = VpnHoodApp.Init(vpnHoodDevice, options);
-            vpnHoodDevice.InitNotification(new AndroidVpnNotification(vpnHoodApp).DeviceNotification);
+            VpnHoodApp.Init(vpnHoodDevice, options);
         }
     }
 

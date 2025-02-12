@@ -26,9 +26,9 @@ public class WinDivertVpnAdapter : IVpnAdapter
     private IPAddress? _clientInternalIpV4;
     private IPAddress? _clientInternalIpV6;
 
-
     public const short ProtectedTtl = 111;
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
+    public event EventHandler? Disposed;
     public event EventHandler? Stopped;
     public bool Started => _device.Started;
     public virtual bool CanSendPacketToOutbound => true;
@@ -180,8 +180,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
         }
 
         ipPacket.SourceAddress = virtualIp;
-        if (ipPacket is IPv4Packet ipV4Packet)
-            ipV4Packet.UpdateIPChecksum();
+        UpdateIpPacket(ipPacket);
         // end trying to simulate tun
 
         ProcessPacketReceivedFromInbound(ipPacket);
@@ -217,13 +216,26 @@ public class WinDivertVpnAdapter : IVpnAdapter
         else
             ipPacket.DestinationAddress = internalIp;
 
-        if (ipPacket is IPv4Packet ipV4Packet)
-            ipV4Packet.UpdateIPChecksum();
+        UpdateIpPacket(ipPacket);
         // end trying to simulate tun
 
         // send by a device
         _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
         _device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
+    }
+
+    private static void UpdateIpPacket(IPPacket ipPacket)
+    {
+        if (ipPacket.Protocol is ProtocolType.Icmp)
+            ipPacket.Extract<IcmpV4Packet>()?.UpdateIcmpChecksum();
+
+        if (ipPacket.Protocol is ProtocolType.IcmpV6)
+            ipPacket.Extract<IcmpV6Packet>()?.UpdateIcmpChecksum();
+
+        if (ipPacket is IPv4Packet ipV4Packet)
+            ipV4Packet.UpdateIPChecksum();
+
+        ipPacket.UpdateCalculatedValues();
     }
 
     // Note: System may load WinDivert driver into memory and lock it, so we'd better to copy it into a temporary folder 
@@ -254,5 +266,6 @@ public class WinDivertVpnAdapter : IVpnAdapter
 
         _device.Dispose();
         _disposed = true;
+        Disposed?.Invoke(this, EventArgs.Empty);
     }
 }

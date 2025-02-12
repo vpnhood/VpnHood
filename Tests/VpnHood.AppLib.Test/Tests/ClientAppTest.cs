@@ -80,7 +80,7 @@ public class ClientAppTest : TestBase
         Assert.IsTrue(app.State.HasProblemDetected);
         Assert.IsTrue(app.State.IsIdle);
 
-        app.ClearLastError();
+        await app.ClearLastError();
         Assert.IsNull(app.State.LastError);
         Assert.IsFalse(app.State.HasProblemDetected);
 
@@ -372,7 +372,7 @@ public class ClientAppTest : TestBase
         // Update ServerTokenUrl after token creation
         const string newTokenUrl = "http://127.0.0.100:6000";
         accessManager.ServerConfig.ServerTokenUrls = [newTokenUrl];
-        accessManager.ServerConfig.ServerSecret = VhUtil.GenerateKey(); // It can not be changed in new version
+        accessManager.ServerConfig.ServerSecret = VhUtils.GenerateKey(); // It can not be changed in new version
         accessManager.ClearCache();
 
         // create server and app
@@ -423,13 +423,13 @@ public class ClientAppTest : TestBase
     public async Task update_server_token_from_server_token_url()
     {
         // create update webserver
-        var endPoint1 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
-        var endPoint2 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
+        var endPoint1 = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
+        var endPoint2 = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
         using var webServer1 = new WebServer(endPoint1.Port);
         using var webServer2 = new WebServer(endPoint2.Port);
 
         // create server1
-        var tcpEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
+        var tcpEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions1.TcpEndPoints = [tcpEndPoint];
         fileAccessManagerOptions1.ServerTokenUrls = [$"http://{endPoint1}/accesskey", $"http://{endPoint2}/accesskey"];
@@ -440,7 +440,7 @@ public class ClientAppTest : TestBase
 
         // create server 2
         await Task.Delay(1100); // wait for new CreatedTime
-        fileAccessManagerOptions1.TcpEndPoints = [VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, tcpEndPoint.Port + 1)];
+        fileAccessManagerOptions1.TcpEndPoints = [VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, tcpEndPoint.Port + 1)];
         var accessManager2 = TestHelper.CreateAccessManager(storagePath: accessManager1.StoragePath,
             options: fileAccessManagerOptions1);
         await using var server2 = await TestHelper.CreateServer(accessManager2);

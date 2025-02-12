@@ -295,7 +295,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         // check default ip
         IPEndPoint? freeLocalEndPoint = null;
         try {
-            freeLocalEndPoint = VhUtil.GetFreeTcpEndPoint(hostEndPoint.Address, hostEndPoint.Port);
+            freeLocalEndPoint = VhUtils.GetFreeTcpEndPoint(hostEndPoint.Address, hostEndPoint.Port);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError("Could not find free port local host. LocalIp:{LocalIp}, Message: {Message}",
@@ -305,7 +305,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         // check 127.0.0.1
         if (freeLocalEndPoint == null) {
             try {
-                freeLocalEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, 9090);
+                freeLocalEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, 9090);
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError("Could not find free port local host. LocalIp:{LocalIp}, Message: {Message}",

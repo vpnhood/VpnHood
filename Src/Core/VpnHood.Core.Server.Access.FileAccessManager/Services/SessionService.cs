@@ -45,10 +45,10 @@ public class SessionService : IDisposable, IJob
         // read all session from files
         var sessions = new ConcurrentDictionary<ulong, Session>();
         foreach (var filePath in Directory.GetFiles(sessionsFolderPath, $"*.{SessionFileExtension}")) {
-            var session = VhUtil.JsonDeserializeFile<Session>(filePath);
+            var session = JsonUtils.TryDeserializeFile<Session>(filePath);
             if (session == null) {
                 VhLogger.Instance.LogError("Could not load session file. File: {File}", filePath);
-                VhUtil.TryDeleteFile(filePath);
+                VhUtils.TryDeleteFile(filePath);
                 continue;
             }
 
@@ -81,7 +81,7 @@ public class SessionService : IDisposable, IJob
 
         foreach (var item in timeoutSessions) {
             Sessions.TryRemove(item.Key, out _);
-            VhUtil.TryDeleteFile(GetSessionFilePath(item.Key));
+            VhUtils.TryDeleteFile(GetSessionFilePath(item.Key));
         }
     }
 
@@ -102,7 +102,7 @@ public class SessionService : IDisposable, IJob
             ClientInfo = sessionRequestEx.ClientInfo,
             CreatedTime = FastDateTime.Now,
             LastUsedTime = FastDateTime.Now,
-            SessionKey = VhUtil.GenerateKey(),
+            SessionKey = VhUtils.GenerateKey(),
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,

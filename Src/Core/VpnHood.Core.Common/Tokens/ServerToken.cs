@@ -32,7 +32,7 @@ public class ServerToken
     public string? Url {
         get => Urls?.FirstOrDefault();
         set {
-            if (VhUtil.IsNullOrEmpty(Urls))
+            if (VhUtils.IsNullOrEmpty(Urls))
                 Urls = value != null ? [value] : null;
         }
     }
@@ -113,18 +113,18 @@ public class ServerToken
         using var streamReader = new StreamReader(csEncrypt);
 
         var json = streamReader.ReadToEnd();
-        var serverToken = VhUtil.JsonDeserialize<ServerToken>(json);
+        var serverToken = JsonUtils.Deserialize<ServerToken>(json);
         return serverToken;
     }
 
     public bool IsTokenUpdated(ServerToken newServerToken)
     {
         // create first server token by removing its created time
-        var serverToken1 = VhUtil.JsonClone(this);
+        var serverToken1 = JsonUtils.JsonClone(this);
         serverToken1.CreatedTime = DateTime.MinValue;
 
         // create second server token by removing its created time
-        var serverToken2 = VhUtil.JsonClone(newServerToken);
+        var serverToken2 = JsonUtils.JsonClone(newServerToken);
         serverToken2.CreatedTime = DateTime.MinValue;
 
         // compare

@@ -12,12 +12,6 @@ namespace VpnHood.AppLib.Test;
 
 public class TestAppHelper : TestHelper
 {
-    public static Task WaitForAppState(VpnHoodApp app, AppConnectionState connectionSate, int timeout = 5000)
-    {
-        return VhTestUtil.AssertEqualsWait(connectionSate, () => app.State.ConnectionState,
-            "App state didn't reach the expected value.", timeout);
-    }
-
     public static AppOptions CreateAppOptions()
     {
         var tracker = new TestTrackerProvider();

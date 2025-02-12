@@ -59,7 +59,7 @@ public class AdTest : TestBase
         var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() => app.Connect(clientProfile.ClientProfileId));
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.None);
+        await app.WaitForState( AppConnectionState.None);
     }
 
     [TestMethod]
@@ -79,7 +79,7 @@ public class AdTest : TestBase
         var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId, planId: ConnectPlanId.PremiumByTrial);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await app.WaitForState( AppConnectionState.Connected);
     }
 
     [TestMethod]
@@ -103,7 +103,7 @@ public class AdTest : TestBase
         await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() =>
             app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd));
 
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.None);
+        await app.WaitForState( AppConnectionState.None);
     }
 
     [TestMethod]
@@ -178,7 +178,7 @@ public class AdTest : TestBase
                 app.ExtendByRewardedAd(CancellationToken.None));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
             await Task.Delay(500);
-            await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+            await app.WaitForState( AppConnectionState.Connected);
         }
     }
 

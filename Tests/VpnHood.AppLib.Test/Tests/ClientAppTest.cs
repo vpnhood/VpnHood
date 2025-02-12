@@ -70,9 +70,9 @@ public class ClientAppTest : TestBase
         // ************
         // Test: With diagnose
         await app.Connect(clientProfile1.ClientProfileId, diagnose: true);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected, 10000);
+        await app.WaitForState( AppConnectionState.Connected, 10000);
         await app.Disconnect(true);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.None);
+        await app.WaitForState( AppConnectionState.None);
 
         Assert.IsTrue(app.State.LogExists);
         Assert.IsTrue(app.State.HasDiagnoseRequested);
@@ -87,9 +87,9 @@ public class ClientAppTest : TestBase
         // ************
         // Test: Without diagnose
         await app.Connect(clientProfile1.ClientProfileId);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await app.WaitForState( AppConnectionState.Connected);
         await app.Disconnect(true);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.None);
+        await app.WaitForState( AppConnectionState.None);
 
         Assert.IsTrue(app.State.IsIdle);
         Assert.IsFalse(app.State.HasDiagnoseRequested);
@@ -110,7 +110,7 @@ public class ClientAppTest : TestBase
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await Assert.ThrowsExceptionAsync<TimeoutException>(() => app.Connect(clientProfile.ClientProfileId));
 
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.None);
+        await app.WaitForState( AppConnectionState.None);
         Assert.IsTrue(app.State.LogExists);
         Assert.IsFalse(app.State.HasDiagnoseRequested);
         Assert.IsTrue(app.State.HasProblemDetected);
@@ -136,7 +136,7 @@ public class ClientAppTest : TestBase
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestHelper.CreateDevice());
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await app.WaitForState( AppConnectionState.Connected);
 
         // dispose server and wait for waiting state
         await server1.DisposeAsync();
@@ -191,7 +191,7 @@ public class ClientAppTest : TestBase
         app.SettingsService.IpFilterSettings.AppIpFilterIncludes = customIps.ToText();
         app.SettingsService.IpFilterSettings.AppIpFilterExcludes = "";
         await app.Connect(clientProfile.ClientProfileId);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await app.WaitForState( AppConnectionState.Connected);
         await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
 
         await IpFilters_TestInclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
@@ -202,7 +202,7 @@ public class ClientAppTest : TestBase
         app.SettingsService.IpFilterSettings.AppIpFilterIncludes = "";
         app.SettingsService.IpFilterSettings.AppIpFilterExcludes = customIps.ToText();
         await app.Connect(clientProfile.ClientProfileId);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await app.WaitForState( AppConnectionState.Connected);
 
         await IpFilters_TestExclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
         await app.Disconnect();
@@ -346,7 +346,7 @@ public class ClientAppTest : TestBase
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         await app.Connect(clientProfile.ClientProfileId);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await app.WaitForState( AppConnectionState.Connected);
 
         // get data through tunnel
         await TestHelper.Test_Https();
@@ -359,7 +359,7 @@ public class ClientAppTest : TestBase
 
         // test disconnect
         await app.Disconnect();
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.None);
+        await app.WaitForState( AppConnectionState.None);
     }
 
     [TestMethod]
@@ -382,7 +382,7 @@ public class ClientAppTest : TestBase
 
         // wait for connect
         await app.Connect(clientProfile1.ClientProfileId);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await app.WaitForState( AppConnectionState.Connected);
 
         Assert.AreEqual(accessManager.ServerConfig.ServerTokenUrls.First(),
             app.ClientProfileService.GetToken(token.TokenId).ServerToken.Urls?.First());
@@ -489,10 +489,10 @@ public class ClientAppTest : TestBase
         var clientProfile2 = app.ClientProfileService.ImportAccessKey(token2.ToAccessKey());
 
         await app.Connect(clientProfile1.ClientProfileId);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await app.WaitForState( AppConnectionState.Connected);
 
         await app.Connect(clientProfile2.ClientProfileId);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await app.WaitForState( AppConnectionState.Connected);
 
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState,
             "Client connection has not been changed!");
@@ -514,7 +514,7 @@ public class ClientAppTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId, diagnose: true);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await app.WaitForState( AppConnectionState.Connected);
 
         // text include
         var oldTcpTunnelledCount = app.GetSessionStatus().TcpTunnelledCount;
@@ -547,7 +547,7 @@ public class ClientAppTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId, diagnose: true);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await app.WaitForState( AppConnectionState.Connected);
 
         // text include
         var oldTcpTunnelledCount = app.GetSessionStatus().TcpTunnelledCount;

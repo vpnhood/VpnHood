@@ -7,8 +7,6 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
-using Environment = System.Environment;
-using Path = System.IO.Path;
 
 namespace VpnHood.Core.Client.Device.Droid;
 
@@ -21,8 +19,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     public bool IsIncludeAppsSupported => true;
     public bool IsAlwaysOnSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
     public string OsInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
-    public string VpnServiceSharedFolder { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "vpn-service");
+    public string VpnServiceConfigFolder => AndroidVpnService.VpnServiceConfigFolder;
 
     private AndroidDevice()
     {
@@ -108,7 +105,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         await PrepareVpnService(null, TimeSpan.FromSeconds(0), cancellationToken);
 
         // start service
-        var intent = new Intent(Application.Context, typeof(AndroidVpnAdapter));
+        var intent = new Intent(Application.Context, typeof(AndroidVpnService));
         intent.PutExtra("manual", true);
         if (OperatingSystem.IsAndroidVersionAtLeast(26)) {
             Application.Context.StartForegroundService(intent.SetAction("connect"));

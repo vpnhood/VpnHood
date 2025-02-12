@@ -1,4 +1,5 @@
 # Upcoming
+* Feature: Android: Using seperate process for vpn service
 * Update: Improve virtual ip allocation
 
 # v5.1.654

@@ -2,7 +2,7 @@
 
 public interface IDevice : IDisposable
 {
-    string VpnServiceSharedFolder { get; }
+    string VpnServiceConfigFolder { get; }
     bool IsExcludeAppsSupported { get; }
     bool IsIncludeAppsSupported { get; }
     bool IsAlwaysOnSupported { get; }

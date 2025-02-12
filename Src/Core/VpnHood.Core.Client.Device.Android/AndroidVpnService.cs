@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Tunneling.Factory;
+using Environment = System.Environment;
 
 namespace VpnHood.Core.Client.Device.Droid;
 
@@ -19,8 +20,11 @@ namespace VpnHood.Core.Client.Device.Droid;
 [IntentFilter(["android.net.VpnService"])]
 public class AndroidVpnService : VpnService
 {
-    private VpnHoodClient? _vpnHoodClient;
+    private VpnHoodService? _vpnHoodService;
     private AndroidVpnNotification? _notification;
+
+    public static string VpnServiceConfigFolder { get; } =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "vpn-service");
 
     [return: GeneratedEnum]
     public override StartCommandResult OnStartCommand(Intent? intent,
@@ -45,23 +49,24 @@ public class AndroidVpnService : VpnService
     {
         try {
             // already connecting
-            if (_vpnHoodClient != null)
+            if (_vpnHoodService != null)
                 return true;
 
             // create vpn adapter
-            var clientOptions = VpnHoodClientFactory.ReadClientOptions();
+            var serviceContext = new VpnHoodServiceContext(VpnServiceConfigFolder);
+            var clientOptions = serviceContext.ReadClientOptions();
             IVpnAdapter adapter = clientOptions.UseNullCapture ? new NullVpnAdapter() : new AndroidVpnAdapter(this);
 
             // create vpn client //todo: set tracker
-            _vpnHoodClient = VpnHoodClientFactory.Create(adapter, new SocketFactory(), null, clientOptions: clientOptions);
+            _vpnHoodService = VpnHoodService.Create(serviceContext, adapter, new SocketFactory(), null);
 
             // initialize notification
-            _notification = new AndroidVpnNotification(this, new VpnServiceLocalization(), _vpnHoodClient.SessionName);
+            _notification = new AndroidVpnNotification(this, new VpnServiceLocalization(), _vpnHoodService.Client.SessionName);
             StartForeground(AndroidVpnNotification.NotificationId, _notification.Build());
-            _vpnHoodClient.StateChanged += Client_StateChanged;
+            _vpnHoodService.Client.StateChanged += Client_StateChanged;
 
             // cancellation token will be handled by dispose 
-            _ = _vpnHoodClient.Connect();
+            _ = _vpnHoodService.Client.Connect();
             return true;
         }
         catch (Exception ex) {
@@ -73,28 +78,28 @@ public class AndroidVpnService : VpnService
 
     private void Client_StateChanged(object? sender, EventArgs e)
     {
-        var client = _vpnHoodClient;
-        if (client == null) 
+        var vpnHoodService = _vpnHoodService;
+        if (vpnHoodService == null) 
             return;
 
         // update notification
-        _notification?.Update(client.State);
+        _notification?.Update(vpnHoodService.Client.State);
 
         // disconnect when disposed
-        if (client.State == ClientState.Disposed)
+        if (vpnHoodService.Client.State == ClientState.Disposed)
             _ = Disconnect();
     }
 
 
     private async Task Disconnect()
     {
-        if (_vpnHoodClient == null)
+        if (_vpnHoodService == null)
             return;
 
         // stop vpn
-        await _vpnHoodClient.DisposeAsync();
-        _vpnHoodClient.StateChanged -= Client_StateChanged;
-        _vpnHoodClient = null;
+        await _vpnHoodService.DisposeAsync();
+        _vpnHoodService.Client.StateChanged -= Client_StateChanged;
+        _vpnHoodService = null;
 
         // clear notification
         _notification?.Dispose();
@@ -114,12 +119,12 @@ public class AndroidVpnService : VpnService
         VhLogger.Instance.LogTrace("VpnService is destroying.");
 
         // can not call Disconnect() because it will call StopSelf, also disconnect does not have timeout
-        if (_vpnHoodClient != null) {
-            var disposeTask = _vpnHoodClient.DisposeAsync(sendBye: false).AsTask();
+        if (_vpnHoodService != null) {
+            var disposeTask = _vpnHoodService.DisposeAsync(waitForBye: false).AsTask();
             if (!disposeTask.Wait(TimeSpan.FromSeconds(3))) // Timeout for safety
                 VhLogger.Instance.LogWarning("DisposeAsync() took too long, skipping remaining cleanup.");
-            _vpnHoodClient.StateChanged -= Client_StateChanged;
-            _vpnHoodClient = null;
+            _vpnHoodService.Client.StateChanged -= Client_StateChanged;
+            _vpnHoodService = null;
         }
 
         // clear notification

@@ -5,7 +5,6 @@ using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.ApiControllers;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.DomainFiltering;
@@ -93,7 +92,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     public bool DropUdp { get; set; }
     public bool DropQuic { get; set; }
     public bool UseTcpOverTun { get; set; }
-    public ApiController ApiController { get; }
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public byte[]? ServerSecret { get; private set; }
     public DomainFilterService DomainFilterService { get; }
@@ -165,7 +163,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         VpnAdapterIncludeIpRanges = options.VpnAdapterIncludeIpRanges.ToOrderedList().Union(dnsRange);
         IncludeIpRanges = options.IncludeIpRanges.ToOrderedList().Union(dnsRange);
         AdService = new ClientAdService(this);
-        ApiController = new ApiController(this);
 
         // NAT
         Nat = new Nat(true);
@@ -1050,7 +1047,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         return DisposeAsync(true);
     }
 
-    public async ValueTask DisposeAsync(bool sendBye)
+    public async ValueTask DisposeAsync(bool waitForBye)
     {
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
@@ -1091,8 +1088,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         // Sending Bye
         if (SessionInfo != null && LastException == null) {
-            using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
             try {
+                using var cancellationTokenSource = new CancellationTokenSource(
+                    waitForBye ? TunnelDefaults.TcpGracefulTimeout : TimeSpan.FromSeconds(1));
                 await SendByeRequest(cancellationTokenSource.Token).VhConfigureAwait();
             }
             catch (Exception ex) {

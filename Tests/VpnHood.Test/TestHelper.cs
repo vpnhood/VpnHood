@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Client;
@@ -337,10 +338,10 @@ public class TestHelper : IDisposable
     }
 
 
-    public static TestDevice CreateDevice(TestVpnAdapterOptions? options = null)
+    public static TestDevice CreateDevice(TestVpnAdapterOptions? options = null, ITracker? tracker = null)
     {
         options ??= CreateTestVpnAdapterOptions();
-        return new TestDevice(() => new TestVpnAdapter(options));
+        return new TestDevice(() => new TestVpnAdapter(options), tracker);
     }
 
 

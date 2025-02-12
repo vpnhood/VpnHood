@@ -1,12 +1,13 @@
 ﻿using Ga4.Trackers;
-using VpnHood.Core.Tunneling.Factory;
+using Microsoft.Extensions.Logging;
+using VpnHood.Core.Common.Logging;
 
 namespace VpnHood.Core.Client.Device.WinDivert;
 
 public class WinDivertDevice(string storageFolder, ITracker? tracker) : IDevice
 {
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
-    public string VpnServiceSharedFolder { get; } = Path.Combine(storageFolder, "VpnService-Shared");
+    public string VpnServiceConfigFolder { get; } = Path.Combine(storageFolder, "vpn-service");
     public bool IsExcludeAppsSupported => IsDebugMode;
     public bool IsAlwaysOnSupported => false;
     public bool IsIncludeAppsSupported => IsDebugMode;
@@ -45,13 +46,29 @@ public class WinDivertDevice(string storageFolder, ITracker? tracker) : IDevice
         return Task.CompletedTask;
     }
 
-    private VpnHoodClient? _vpnHoodClient;
+    private WinVpnService? _winVpnService;
     public Task StartVpnService(CancellationToken cancellationToken)
     {
-        var vpnAdapter = new WinDivertVpnAdapter();
-        _vpnHoodClient?.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        _vpnHoodClient = VpnHoodClientFactory.Create(vpnAdapter, new SocketFactory(), tracker: tracker);
+
+        try {
+            // if service already running, do nothing
+            if (_winVpnService?.IsRunning == true)
+                return Task.CompletedTask;
+
+            _winVpnService = new WinVpnService(VpnServiceConfigFolder, tracker);
+            _ = _winVpnService.Start();
+        }
+        catch (Exception ex) {
+            // let's simulate outer process and do no throw error 
+            VhLogger.Instance.LogError(ex, "Failed to start VPN service");
+        }
+
         return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        _winVpnService?.DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 
     private static bool IsDebugMode {
@@ -64,8 +81,4 @@ public class WinDivertDevice(string storageFolder, ITracker? tracker) : IDevice
         }
     }
 
-    public void Dispose()
-    {
-        _vpnHoodClient?.DisposeAsync().AsTask().GetAwaiter().GetResult();
-    }
 }

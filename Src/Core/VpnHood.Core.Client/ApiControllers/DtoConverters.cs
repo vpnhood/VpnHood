@@ -6,15 +6,15 @@ namespace VpnHood.Core.Client.ApiControllers;
 
 internal static class DtoConverters
 {
-    public static ConnectionInfo ToConnectionInfo(this VpnHoodClient vpnHoodClient)
+    public static ConnectionInfo ToConnectionInfo(this VpnHoodClient vpnHoodClient, ApiController apiController)
     {
         var dto = new ConnectionInfo {
             SessionInfo = vpnHoodClient.SessionInfo,
             SessionStatus = vpnHoodClient.SessionStatus?.ToDto(),
             ClientState = vpnHoodClient.State,
             Error = vpnHoodClient.LastException?.ToApiError(),
-            ApiEndPoint = vpnHoodClient.ApiController.ApiEndPoint,
-            ApiKey = vpnHoodClient.ApiController.ApiKey
+            ApiEndPoint = apiController.ApiEndPoint,
+            ApiKey = apiController.ApiKey
         };
 
         return dto;

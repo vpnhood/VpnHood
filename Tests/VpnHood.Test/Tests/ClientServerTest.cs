@@ -425,7 +425,7 @@ public class ClientServerTest : TestBase
             /* ignored */
         }
 
-        await TestHelper.WaitForClientState(client, ClientState.Disposed);
+        await client.WaitForState( ClientState.Disposed);
         await client.DisposeAsync();
     }
 
@@ -509,7 +509,7 @@ public class ClientServerTest : TestBase
             // ignored
         }
 
-        await TestHelper.WaitForClientState(client, ClientState.Disposed);
+        await client.WaitForState( ClientState.Disposed);
     }
 
     [TestMethod]
@@ -547,7 +547,7 @@ public class ClientServerTest : TestBase
         // ----------
         accessManager.EmbedIoAccessManager.Start();
         await using var client2 = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
-        await TestHelper.WaitForClientState(client2, ClientState.Connected);
+        await client2.WaitForState( ClientState.Connected);
 
         // ----------
         // Check: Go Maintenance mode after server started by stopping the server
@@ -557,7 +557,7 @@ public class ClientServerTest : TestBase
             await TestHelper.CreateClient(token, autoConnect: false, vpnAdapter: new TestNullVpnAdapter());
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client3.Connect());
 
-        await TestHelper.WaitForClientState(client3, ClientState.Disposed);
+        await client3.WaitForState(ClientState.Disposed);
         Assert.AreEqual(SessionErrorCode.Maintenance, client3.GetLastSessionErrorCode());
 
         // ----------
@@ -565,7 +565,7 @@ public class ClientServerTest : TestBase
         // ----------
         accessManager.EmbedIoAccessManager.Start();
         await using var client4 = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
-        await TestHelper.WaitForClientState(client4, ClientState.Connected);
+        await client4.WaitForState(ClientState.Connected);
 
         // ----------
         // Check: Go Maintenance mode by replying 404 from access-server
@@ -575,7 +575,7 @@ public class ClientServerTest : TestBase
             await TestHelper.CreateClient(token, autoConnect: false, vpnAdapter: new TestNullVpnAdapter());
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client5.Connect());
 
-        await TestHelper.WaitForClientState(client5, ClientState.Disposed);
+        await client5.WaitForState(ClientState.Disposed);
         Assert.AreEqual(SessionErrorCode.Maintenance, client5.GetLastSessionErrorCode());
 
         // ----------
@@ -583,7 +583,7 @@ public class ClientServerTest : TestBase
         // ----------
         accessManager.EmbedIoAccessManager.HttpException = null;
         await using var client6 = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
-        await TestHelper.WaitForClientState(client6, ClientState.Connected);
+        await client6.WaitForState( ClientState.Connected);
     }
 
     [TestMethod]
@@ -774,7 +774,7 @@ public class ClientServerTest : TestBase
 
         // create app
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
-        await TestHelper.WaitForClientState(client, ClientState.Connected);
+        await client.WaitForState( ClientState.Connected);
 
         Assert.IsTrue(client.DnsServers is { Length: > 0 });
     }

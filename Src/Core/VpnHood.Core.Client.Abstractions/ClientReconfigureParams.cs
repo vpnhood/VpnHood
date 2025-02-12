@@ -1,6 +1,4 @@
-﻿using VpnHood.Core.Client.Abstractions.ApiRequests;
-
-namespace VpnHood.Core.Client.Abstractions;
+﻿namespace VpnHood.Core.Client.Abstractions;
 
 public class ClientReconfigureParams
 {

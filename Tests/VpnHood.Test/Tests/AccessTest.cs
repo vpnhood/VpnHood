@@ -136,10 +136,10 @@ public class AccessTest : TestBase
 
         // wait for finishing client1
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for client1 disposal.");
-        await TestHelper.WaitForClientState(client1, ClientState.Disposed, useUpdateStatus: true);
+        await client1.WaitForState(ClientState.Disposed, useUpdateStatus: true);
         Assert.AreEqual(SessionSuppressType.None, client1.SessionInfo?.SuppressedTo);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, client1.GetLastSessionErrorCode());
-        Assert.AreEqual(SessionSuppressType.YourSelf, 
+        Assert.AreEqual(SessionSuppressType.YourSelf,
             (client1.LastException as SessionException)?.SessionResponse.SuppressedBy);
 
         // suppress by other (MaxTokenClient is 2)
@@ -157,7 +157,7 @@ public class AccessTest : TestBase
 
         // wait for finishing client2
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for client2 disposal.");
-        await TestHelper.WaitForClientState(client2, ClientState.Disposed, useUpdateStatus: true);
+        await client2.WaitForState(ClientState.Disposed, useUpdateStatus: true);
 
         Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionInfo?.SuppressedTo);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, client2.GetLastSessionErrorCode());
@@ -202,7 +202,7 @@ public class AccessTest : TestBase
         var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
             token: token);
         await client1.DisposeAsync();
-        await TestHelper.WaitForClientState(client1, ClientState.Disposed);
+        await client1.WaitForState(ClientState.Disposed);
 
 
         // suppress by yourself
@@ -226,7 +226,7 @@ public class AccessTest : TestBase
         // create default token with 2 client count
         var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         await client1.DisposeAsync();
-        await TestHelper.WaitForClientState(client1, ClientState.Disposed);
+        await client1.WaitForState(ClientState.Disposed);
         await server.SessionManager.Sync(true);
 
         await Task.Delay(1000);
@@ -244,7 +244,7 @@ public class AccessTest : TestBase
         Assert.IsTrue(accessInfo.CreatedTime < time);
         Assert.IsTrue(accessInfo.LastUsedTime < time);
         await client2.DisposeAsync();
-        await TestHelper.WaitForClientState(client2, ClientState.Disposed);
+        await client2.WaitForState(ClientState.Disposed);
         await server.SessionManager.Sync(true);
 
         await Task.Delay(1000);

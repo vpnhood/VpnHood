@@ -185,7 +185,7 @@ public class ServerTest : TestBase
         Assert.IsTrue(accessManager.SessionService.Sessions.TryGetValue(client.SessionId, out var session));
         await client.DisposeAsync();
 
-        await TestHelper.WaitForClientState(client, ClientState.Disposed);
+        await client.WaitForState( ClientState.Disposed);
         await VhTestUtil.AssertEqualsWait(false, () => session.IsAlive);
     }
 

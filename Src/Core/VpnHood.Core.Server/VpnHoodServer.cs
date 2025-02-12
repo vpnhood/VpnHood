@@ -28,7 +28,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private readonly bool _autoDisposeAccessManager;
     private readonly string _lastConfigFilePath;
     private bool _disposed;
-    private ApiError? _lastConfigError;
+    private Exception? _lastConfigException;
     private string? _lastConfigCode;
     private readonly bool _publicIpDiscovery;
     private readonly ServerConfig? _config;
@@ -241,7 +241,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             _lastConfigCode = serverConfig.ConfigCode;
             State = ServerState.Ready;
 
-            _lastConfigError = null;
+            _lastConfigException = null;
             VhLogger.Instance.LogInformation("Server is ready!");
 
             // set status after successful configuration
@@ -249,10 +249,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         }
         catch (Exception ex) {
             State = ServerState.Waiting;
-            _lastConfigError = new ApiError(ex);
-            if (ex is SocketException socketException)
-                _lastConfigError.Data.Add("SocketErrorCode", socketException.SocketErrorCode.ToString());
-
+            _lastConfigException = ex;
             SessionManager.Tracker?.VhTrackErrorAsync(ex, "Could not configure server!", "Configure");
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.",
                 JobSection.Interval.TotalSeconds);
@@ -280,17 +277,17 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         try {
             var info = await _swapMemoryProvider.GetInfo();
-            var size = sizeMb * VhUtil.Megabytes ?? 0;
+            var size = sizeMb * VhUtils.Megabytes ?? 0;
             var otherSize = info.TotalSize - info.AppSize;
             var newAppSize = Math.Max(0, size - otherSize);
 
-            if (Math.Abs(info.AppSize - newAppSize) < VhUtil.Megabytes) {
+            if (Math.Abs(info.AppSize - newAppSize) < VhUtils.Megabytes) {
                 if (size == 0 && info.AppSize == 0)
                     return; // there is no need to configure swap file
 
                 VhLogger.Instance.LogInformation(
                     "Swap file size is already near to the requested size. CurrentSize: {CurrentSize}, RequestedSize: {RequestedSize}",
-                    VhUtil.FormatBytes(info.TotalSize), VhUtil.FormatBytes(size));
+                    VhUtils.FormatBytes(info.TotalSize), VhUtils.FormatBytes(size));
                 return;
             }
 
@@ -386,7 +383,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     {
         var json = JsonSerializer.Serialize(serverInfo, new JsonSerializerOptions { WriteIndented = true });
         return VhLogger.IsAnonymousMode
-            ? VhUtil.RedactJsonValue(json, [
+            ? JsonUtils.RedactValue(json, [
                 nameof(ServerInfo.PrivateIpAddresses),
                 nameof(ServerInfo.PublicIpAddresses)
             ])
@@ -397,13 +394,13 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     {
         var json = JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
         return VhLogger.IsAnonymousMode
-            ? VhUtil.RedactJsonValue(json, [
+            ? JsonUtils.RedactValue(json, [
                 nameof(ServerConfig.ServerSecret),
                 nameof(CertificateData.RawData),
                 nameof(ServerConfig.TcpEndPoints),
                 nameof(ServerConfig.UdpEndPoints)
             ])
-            : VhUtil.RedactJsonValue(json, [
+            : JsonUtils.RedactValue(json, [
                 nameof(CertificateData.RawData) // it will ruin the report and useless to see
             ]);
     }
@@ -428,7 +425,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             try {
                 if (File.Exists(_lastConfigFilePath)) {
                     var configJson = await File.ReadAllTextAsync(_lastConfigFilePath).VhConfigureAwait();
-                    var ret = VhUtil.JsonDeserialize<ServerConfig>(configJson);
+                    var ret = JsonUtils.Deserialize<ServerConfig>(configJson);
                     VhLogger.Instance.LogWarning("Last configuration has been loaded to report Maintenance mode.");
                     return ret;
                 }
@@ -461,7 +458,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 Received = SessionManager.Sessions.Sum(x => x.Value.Tunnel.Speed.Received)
             },
             ConfigCode = _lastConfigCode,
-            ConfigError = _lastConfigError?.ToJson()
+            ConfigError = _lastConfigException?.ToApiError().ToJson()
         };
         return serverStatus;
     }

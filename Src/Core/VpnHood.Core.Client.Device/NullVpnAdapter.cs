@@ -1,6 +1,8 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Core.Common.Logging;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Client.Device;
@@ -8,7 +10,7 @@ namespace VpnHood.Core.Client.Device;
 public class NullVpnAdapter : IVpnAdapter
 {
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
-    public event EventHandler? Stopped;
+    public event EventHandler? Disposed;
     public virtual bool Started { get; set; }
     public virtual bool IsDnsServersSupported { get; set; } = true;
     public virtual bool IsMtuSupported { get; set; } = true;
@@ -16,8 +18,15 @@ public class NullVpnAdapter : IVpnAdapter
     public virtual bool CanSendPacketToOutbound { get; set; }
     public bool CanDetectInProcessPacket { get; set; } = true;
 
+    public NullVpnAdapter()
+    {
+        VhLogger.Instance.LogInformation("A NullVpnAdapter has been created.");
+    }
+
     public virtual void StartCapture(VpnAdapterOptions options)
     {
+        VhLogger.Instance.LogInformation("The null adapter has been started. No packet will go through the VPN.");
+
         Started = true;
         _ = PacketReceivedFromInbound; //prevent not used warning
     }
@@ -25,7 +34,6 @@ public class NullVpnAdapter : IVpnAdapter
     public virtual void StopCapture()
     {
         Started = false;
-        Stopped?.Invoke(this, EventArgs.Empty);
     }
 
     public virtual void ProtectSocket(Socket socket)
@@ -61,8 +69,13 @@ public class NullVpnAdapter : IVpnAdapter
         return false;
     }
 
+    private bool _disposed;
     public virtual void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+
         StopCapture();
+        Disposed?.Invoke(this, EventArgs.Empty);
     }
 }

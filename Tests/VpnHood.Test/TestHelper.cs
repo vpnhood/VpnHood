@@ -254,7 +254,7 @@ public class TestHelper : IDisposable
         var options = new FileAccessManagerOptions {
             IsUnitTest = true,
             PublicEndPoints = null, // use TcpEndPoints
-            TcpEndPoints = tcpEndPoints ?? [VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)],
+            TcpEndPoints = tcpEndPoints ?? [VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback)],
             UdpEndPoints = [new IPEndPoint(IPAddress.Loopback, 0)],
             TrackingOptions = new TrackingOptions {
                 TrackClientIp = true,
@@ -363,44 +363,42 @@ public class TestHelper : IDisposable
     }
 
 
-    public static ClientOptions CreateClientOptions(bool useUdpChannel = false)
+    public static ClientOptions CreateClientOptions(Token token, bool useUdpChannel = false, string? clientId = null)
     {
         return new ClientOptions {
+            ClientId = clientId ?? Guid.NewGuid().ToString(),
             AllowAnonymousTracker = true,
             AllowEndPointTracker = true,
             MaxDatagramChannelCount = 1,
             UseUdpChannel = useUdpChannel,
-            Tracker = new TestTrackerProvider(),
-            VpnAdapterIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToOrderedList(),
+            VpnAdapterIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToArray(),
             IncludeLocalNetwork = true,
             ConnectTimeout = TimeSpan.FromSeconds(3),
-            SessionName = "UnitTestSession"
+            SessionName = "UnitTestSession",
+            AccessKey = token.ToAccessKey()
         };
     }
 
-    public static async Task<VpnHoodClient> CreateClient(Token token,
+    public static Task<VpnHoodClient> CreateClient(Token token,
         IVpnAdapter? vpnAdapter = null,
         string? clientId = null,
-        bool autoConnect = true,
-        ClientOptions? clientOptions = null,
-        bool throwConnectException = true)
+        bool autoConnect = true)
+    {
+        var clientOptions = CreateClientOptions(token, clientId: clientId);
+        return CreateClient(clientOptions, vpnAdapter, autoConnect);
+    }
+
+    public static async Task<VpnHoodClient> CreateClient(
+        ClientOptions clientOptions,
+        IVpnAdapter? vpnAdapter = null,
+        bool autoConnect = true)
     {
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
-        clientId ??= Guid.NewGuid().ToString();
-        clientOptions ??= CreateClientOptions();
-
-        var client = new VpnHoodClient(vpnAdapter, new TestSocketFactory(),
-            clientId, token, clientOptions);
+        var client = new VpnHoodClient(vpnAdapter, new TestSocketFactory(), new TestTrackerProvider(), clientOptions);
 
         // test starting the client
-        try {
-            if (autoConnect)
-                await client.Connect();
-        }
-        catch (Exception) {
-            if (throwConnectException)
-                throw;
-        }
+        if (autoConnect)
+            await client.Connect();
 
         return client;
     }
@@ -418,7 +416,7 @@ public class TestHelper : IDisposable
                 ProtocolVersion = 4
             },
             HostEndPoint = token.ServerToken.HostEndPoints!.First(),
-            EncryptedClientId = VhUtil.EncryptClientId(clientId, token.Secret),
+            EncryptedClientId = VhUtils.EncryptClientId(clientId, token.Secret),
             ClientIp = null,
             ExtraData = null
         };

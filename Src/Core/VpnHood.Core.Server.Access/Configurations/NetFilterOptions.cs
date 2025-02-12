@@ -39,10 +39,10 @@ public class NetFilterOptions
     public IpRangeOrderedList GetFinalIncludeIpRanges()
     {
         var includeIpRanges = IpNetwork.All.ToIpRanges();
-        if (!VhUtil.IsNullOrEmpty(IncludeIpRanges))
+        if (!VhUtils.IsNullOrEmpty(IncludeIpRanges))
             includeIpRanges = includeIpRanges.Intersect(IncludeIpRanges);
 
-        if (!VhUtil.IsNullOrEmpty(ExcludeIpRanges))
+        if (!VhUtils.IsNullOrEmpty(ExcludeIpRanges))
             includeIpRanges = includeIpRanges.Exclude(ExcludeIpRanges);
 
         return includeIpRanges;
@@ -54,10 +54,10 @@ public class NetFilterOptions
         if (!IncludeLocalNetworkValue)
             vpnAdapterIncludeIpRanges = vpnAdapterIncludeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
 
-        if (!VhUtil.IsNullOrEmpty(VpnAdapterIncludeIpRanges))
+        if (!VhUtils.IsNullOrEmpty(VpnAdapterIncludeIpRanges))
             vpnAdapterIncludeIpRanges = vpnAdapterIncludeIpRanges.Intersect(VpnAdapterIncludeIpRanges);
 
-        if (!VhUtil.IsNullOrEmpty(VpnAdapterExcludeIpRanges))
+        if (!VhUtils.IsNullOrEmpty(VpnAdapterExcludeIpRanges))
             vpnAdapterIncludeIpRanges = vpnAdapterIncludeIpRanges.Exclude(VpnAdapterExcludeIpRanges);
 
         return vpnAdapterIncludeIpRanges;

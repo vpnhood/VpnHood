@@ -22,7 +22,7 @@ internal class AccessTokenLegacyConverter
 
             foreach (var file in files) {
                 try {
-                    var accessTokenLegacy = VhUtil.JsonDeserializeFile<AccessTokenLegacy>(file);
+                    var accessTokenLegacy = JsonUtils.TryDeserializeFile<AccessTokenLegacy>(file);
                     if (!string.IsNullOrEmpty(accessTokenLegacy?.Token.TokenId)) {
                         var accessToken = new AccessToken {
                             TokenId = accessTokenLegacy.Token.TokenId,

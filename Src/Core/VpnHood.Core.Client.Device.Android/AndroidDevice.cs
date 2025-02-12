@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
+using Environment = System.Environment;
+using Path = System.IO.Path;
 
 namespace VpnHood.Core.Client.Device.Droid;
 
@@ -19,6 +21,8 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     public bool IsIncludeAppsSupported => true;
     public bool IsAlwaysOnSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
     public string OsInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
+    public string VpnServiceSharedFolder { get; } =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "vpn-service");
 
     private AndroidDevice()
     {
@@ -27,49 +31,6 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     public static AndroidDevice Create()
     {
         return new AndroidDevice();
-    }
-
-    private static AndroidDeviceNotification CreateDefaultNotification()
-    {
-        const string channelId = "1000";
-        var context = Application.Context;
-        var notificationManager = context.GetSystemService(Context.NotificationService) as NotificationManager
-                                  ?? throw new Exception("Could not resolve NotificationManager.");
-
-        Notification.Builder notificationBuilder;
-        if (OperatingSystem.IsAndroidVersionAtLeast(26)) {
-            var channel = new NotificationChannel(channelId, "VPN", NotificationImportance.Low);
-            channel.EnableVibration(false);
-            channel.EnableLights(false);
-            channel.SetShowBadge(false);
-            channel.LockscreenVisibility = NotificationVisibility.Public;
-            notificationManager.CreateNotificationChannel(channel);
-            notificationBuilder = new Notification.Builder(context, channelId);
-        }
-        else {
-            notificationBuilder = new Notification.Builder(context);
-        }
-
-        // get default icon
-        var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
-        if (context.Resources == null) throw new Exception("Could not retrieve context.Resources.");
-        var iconId = appInfo.Icon;
-        if (iconId == 0)
-            iconId = context.Resources.GetIdentifier("@mipmap/notification", "drawable", context.PackageName);
-        if (iconId == 0)
-            iconId = context.Resources.GetIdentifier("@mipmap/ic_launcher", "drawable", context.PackageName);
-        if (iconId == 0) iconId = context.Resources.GetIdentifier("@mipmap/appicon", "drawable", context.PackageName);
-        if (iconId == 0) throw new Exception("Could not retrieve default icon.");
-
-        var notification = notificationBuilder
-            .SetSmallIcon(iconId)
-            .SetOngoing(true)
-            .Build();
-
-        return new AndroidDeviceNotification {
-            Notification = notification,
-            NotificationId = 3500
-        };
     }
 
     public DeviceAppInfo[] InstalledApps {
@@ -104,7 +65,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         }
     }
 
-    private async Task PrepareVpnService(IActivityEvent? activityEvent)
+    private async Task PrepareVpnService(IActivityEvent? activityEvent, TimeSpan userIntentTimeout, CancellationToken cancellationToken)
     {
         // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
         VhLogger.Instance.LogTrace("Preparing VpnService...");
@@ -120,7 +81,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         try {
             VhLogger.Instance.LogTrace("Requesting user consent...");
             activityEvent.Activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
-            await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(TimeSpan.FromMinutes(2)))
+            await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(userIntentTimeout, cancellationToken))
                 .VhConfigureAwait();
 
             if (!_grantPermissionTaskSource.Task.IsCompletedSuccessfully)
@@ -134,50 +95,26 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         }
     }
 
-    public async Task<IVpnAdapter> CreateVpnAdapter(IUiContext? uiContext)
+    public Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
     {
         // prepare vpn service
         var androidUiContext = (AndroidUiContext?)uiContext;
-        await PrepareVpnService(androidUiContext?.ActivityEvent);
+        return PrepareVpnService(androidUiContext?.ActivityEvent, timeout, cancellationToken);
+    }
+
+    public async Task StartVpnService(CancellationToken cancellationToken)
+    {
+        // throw exception if not prepared
+        await PrepareVpnService(null, TimeSpan.FromSeconds(0), cancellationToken);
 
         // start service
         var intent = new Intent(Application.Context, typeof(AndroidVpnAdapter));
         intent.PutExtra("manual", true);
-        AndroidVpnAdapter.StartServiceTaskCompletionSource = new TaskCompletionSource<AndroidVpnAdapter>();
         if (OperatingSystem.IsAndroidVersionAtLeast(26)) {
             Application.Context.StartForegroundService(intent.SetAction("connect"));
         }
         else {
             Application.Context.StartService(intent.SetAction("connect"));
-        }
-
-        // check is service started
-        try {
-            var vpnAdapter =
-                await AndroidVpnAdapter.StartServiceTaskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            return vpnAdapter;
-        }
-        catch (Exception ex) {
-            AndroidVpnAdapter.StartServiceTaskCompletionSource.TrySetCanceled();
-            throw new Exception("Could not create VpnService in given time.", ex);
-        }
-    }
-
-    internal void OnServiceStartCommand(AndroidVpnAdapter vpnAdapter, Intent? intent)
-    {
-        // set foreground
-        _deviceNotification ??= CreateDefaultNotification();
-        vpnAdapter.StartForeground(_deviceNotification.NotificationId, _deviceNotification.Notification);
-
-        // fire AutoCreate for always on
-        var manual = intent?.GetBooleanExtra("manual", false) ?? false;
-        if (!manual) {
-            try {
-                StartedAsService?.Invoke(this, EventArgs.Empty);
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogError(ex, "Could not start service.");
-            }
         }
     }
 

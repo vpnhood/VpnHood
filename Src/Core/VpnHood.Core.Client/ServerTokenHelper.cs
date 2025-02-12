@@ -20,7 +20,7 @@ public class ServerTokenHelper
                     .VhWait(cancellationToken)
                     .VhConfigureAwait();
 
-                if (!VhUtil.IsNullOrEmpty(hostEntities.AddressList)) {
+                if (!VhUtils.IsNullOrEmpty(hostEntities.AddressList)) {
                     return hostEntities.AddressList
                         .Select(x => new IPEndPoint(x, serverToken.HostPort))
                         .ToArray();
@@ -34,7 +34,7 @@ public class ServerTokenHelper
             }
         }
 
-        if (!VhUtil.IsNullOrEmpty(serverToken.HostEndPoints))
+        if (!VhUtils.IsNullOrEmpty(serverToken.HostEndPoints))
             return serverToken.HostEndPoints;
 
         throw new Exception($"Could not resolve {nameof(serverToken.HostEndPoints)} from token!");
@@ -44,7 +44,7 @@ public class ServerTokenHelper
         CancellationToken cancellationToken)
     {
         var ipEndPoints = await ResolveHostEndPointsInternal(serverToken, cancellationToken).VhConfigureAwait();
-        if (VhUtil.IsNullOrEmpty(ipEndPoints))
+        if (VhUtils.IsNullOrEmpty(ipEndPoints))
             throw new Exception("Could not resolve any host endpoint from AccessToken.");
 
         return ipEndPoints;

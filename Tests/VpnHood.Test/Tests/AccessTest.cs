@@ -54,7 +54,7 @@ public class AccessTest : TestBase
         // create client and connect
         await using var client = await TestHelper.CreateClient(token, autoConnect: false);
         await Assert.ThrowsExceptionAsync<SessionException>(() => client.Connect());
-        Assert.AreEqual(SessionErrorCode.AccessExpired, client.ConnectionInfo.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.AccessExpired, client.GetLastSessionErrorCode());
     }
 
     [TestMethod]
@@ -69,14 +69,14 @@ public class AccessTest : TestBase
         var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(1));
 
         // connect and download
-        await using var client = await TestHelper.CreateClient(accessToken, throwConnectException: false);
+        await using var client = await TestHelper.CreateClient(accessToken);
 
         // test expiration
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {
             await TestHelper.Test_Https(throwError: false, timeout: 1000);
             return client.State;
         });
-        Assert.AreEqual(SessionErrorCode.AccessExpired, client.ConnectionInfo.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.AccessExpired, client.GetLastSessionErrorCode());
     }
 
     [TestMethod]
@@ -99,24 +99,17 @@ public class AccessTest : TestBase
         VhLogger.Instance.LogTrace("Test: second try should get the AccessTrafficOverflow status.");
         await VhTestUtil.AssertEqualsWait(SessionErrorCode.AccessTrafficOverflow, async () => {
             await TestHelper.Test_Https(timeout: 2000, throwError: false);
-            return client1.ConnectionInfo.ErrorCode;
+            return client1.GetLastSessionErrorCode();
         });
 
 
         // ----------
         // check: client must disconnect at hello on traffic overflow
         // ----------
-        try {
-            VhLogger.Instance.LogTrace("Test: try to connect with another client.");
-            await using var client2 = await TestHelper.CreateClient(accessToken);
-            Assert.Fail("Exception expected! Traffic must been overflowed!");
-        }
-        catch (AssertFailedException) {
-            throw;
-        }
-        catch {
-            Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, client1.ConnectionInfo.ErrorCode);
-        }
+        await using var client2 = await TestHelper.CreateClient(accessToken, autoConnect: false);
+        var ex = await Assert.ThrowsExceptionAsync<SessionException>(() => client2.Connect());
+        Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, client1.GetLastSessionErrorCode());
+        Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, ex.SessionResponse.ErrorCode);
     }
 
     [TestMethod]
@@ -137,16 +130,16 @@ public class AccessTest : TestBase
         await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
             token: token, clientId: client1.ClientId);
 
-        Assert.AreEqual(SessionSuppressType.YourSelf, client2.ConnectionInfo.SessionInfo?.SuppressedTo);
-        Assert.IsNull(client2.ConnectionInfo.Error);
+        Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionInfo?.SuppressedTo);
+        Assert.IsNull(client2.GetLastSessionErrorCode());
 
         // wait for finishing client1
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for client1 disposal.");
         await TestHelper.WaitForClientState(client1, ClientState.Disposed, useUpdateStatus: true);
-        Assert.AreEqual(SessionSuppressType.None, client1.ConnectionInfo.SessionInfo?.SuppressedTo);
-        Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, client1.ConnectionInfo.ErrorCode);
-        Assert.AreEqual(nameof(SessionSuppressType.YourSelf),
-            client1.ConnectionInfo.Error?.Data[nameof(SessionResponse.SuppressedBy)]);
+        Assert.AreEqual(SessionSuppressType.None, client1.SessionInfo?.SuppressedTo);
+        Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, client1.GetLastSessionErrorCode());
+        Assert.AreEqual(SessionSuppressType.YourSelf, 
+            (client1.LastException as SessionException)?.SessionResponse.SuppressedBy);
 
         // suppress by other (MaxTokenClient is 2)
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Creating client3.");
@@ -165,16 +158,15 @@ public class AccessTest : TestBase
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for client2 disposal.");
         await TestHelper.WaitForClientState(client2, ClientState.Disposed, useUpdateStatus: true);
 
-        Assert.AreEqual(SessionSuppressType.YourSelf, client2.ConnectionInfo.SessionInfo?.SuppressedTo);
-        Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, client2.ConnectionInfo.ErrorCode);
-        Assert.AreEqual(nameof(SessionSuppressType.Other),
-            client2.ConnectionInfo.Error?.Data[nameof(SessionResponse.SuppressedBy)]);
-        Assert.AreEqual(SessionErrorCode.Ok, client3.ConnectionInfo.ErrorCode);
-        Assert.AreEqual(SessionSuppressType.None, client3.ConnectionInfo.SessionInfo?.SuppressedTo);
-        Assert.AreEqual(SessionSuppressType.Other, client4.ConnectionInfo.SessionInfo?.SuppressedTo);
-        Assert.AreEqual(SessionErrorCode.Ok, client4.ConnectionInfo.ErrorCode);
-        Assert.AreEqual(SessionErrorCode.Ok, clientX.ConnectionInfo.ErrorCode);
-        Assert.AreEqual(SessionSuppressType.None, clientX.ConnectionInfo.SessionInfo?.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionInfo?.SuppressedTo);
+        Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, client2.GetLastSessionErrorCode());
+        Assert.AreEqual(SessionSuppressType.Other, (client2.LastException as SessionException)?.SessionResponse.SuppressedBy);
+        Assert.AreEqual(SessionErrorCode.Ok, client3.GetLastSessionErrorCode());
+        Assert.AreEqual(SessionSuppressType.None, client3.SessionInfo?.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.Other, client4.SessionInfo?.SuppressedTo);
+        Assert.AreEqual(SessionErrorCode.Ok, client4.GetLastSessionErrorCode());
+        Assert.AreEqual(SessionErrorCode.Ok, clientX.GetLastSessionErrorCode());
+        Assert.AreEqual(SessionSuppressType.None, clientX.SessionInfo?.SuppressedTo);
     }
 
     [TestMethod]
@@ -194,8 +186,8 @@ public class AccessTest : TestBase
         await using var client3 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
             token: token);
 
-        Assert.AreEqual(SessionSuppressType.None, client3.ConnectionInfo.SessionInfo?.SuppressedTo);
-        Assert.AreEqual(SessionErrorCode.Ok, client3.ConnectionInfo.ErrorCode);
+        Assert.AreEqual(SessionSuppressType.None, client3.SessionInfo?.SuppressedTo);
+        Assert.AreEqual(SessionErrorCode.Ok, client3.GetLastSessionErrorCode());
     }
 
     [TestMethod]
@@ -216,8 +208,8 @@ public class AccessTest : TestBase
         await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
             token: token, clientId: client1.ClientId);
 
-        Assert.AreEqual(SessionErrorCode.Ok, client1.ConnectionInfo.ErrorCode);
-        Assert.AreEqual(SessionSuppressType.None, client2.ConnectionInfo.SessionInfo?.SuppressedTo);
+        Assert.AreEqual(SessionErrorCode.Ok, client1.GetLastSessionErrorCode());
+        Assert.AreEqual(SessionSuppressType.None, client2.SessionInfo?.SuppressedTo);
     }
 
     [TestMethod]
@@ -240,10 +232,10 @@ public class AccessTest : TestBase
         var time = DateTime.UtcNow;
         // suppress by yourself
         await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
-        var accessInfo = client2.ConnectionInfo.SessionInfo?.AccessInfo;
+        var accessInfo = client2.SessionInfo?.AccessInfo;
         Assert.IsNotNull(accessInfo);
-        Assert.IsNull(client1.ConnectionInfo.Error);
-        Assert.AreEqual(SessionSuppressType.None, client2.ConnectionInfo.SessionInfo?.SuppressedTo);
+        Assert.IsNull(client1.LastException);
+        Assert.AreEqual(SessionSuppressType.None, client2.SessionInfo?.SuppressedTo);
         Assert.AreEqual(2, accessInfo.MaxDeviceCount);
         Assert.AreEqual(2_000_000, accessInfo.MaxTotalTraffic);
         Assert.AreEqual(true, accessInfo.IsPremium);
@@ -256,7 +248,7 @@ public class AccessTest : TestBase
 
         await Task.Delay(1000);
         await using var client3 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
-        accessInfo = client3.ConnectionInfo.SessionInfo?.AccessInfo;
+        accessInfo = client3.SessionInfo?.AccessInfo;
         Assert.IsNotNull(accessInfo);
         Assert.IsNotNull(accessInfo);
         Assert.IsTrue(accessInfo.CreatedTime < time);

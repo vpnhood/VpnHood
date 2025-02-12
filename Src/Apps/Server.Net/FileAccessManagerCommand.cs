@@ -36,9 +36,9 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
         Console.WriteLine();
         Console.WriteLine("--- Access Usage ---");
         Console.WriteLine();
-        Console.WriteLine($"{nameof(accessTokenData.Usage.Sent)}: {VhUtil.FormatBytes(accessTokenData.Usage.Sent)}");
+        Console.WriteLine($"{nameof(accessTokenData.Usage.Sent)}: {VhUtils.FormatBytes(accessTokenData.Usage.Sent)}");
         Console.WriteLine(
-            $"{nameof(accessTokenData.Usage.Received)}: {VhUtil.FormatBytes(accessTokenData.Usage.Received)}");
+            $"{nameof(accessTokenData.Usage.Received)}: {VhUtils.FormatBytes(accessTokenData.Usage.Received)}");
 
         Console.WriteLine();
         Console.WriteLine("--- Access Token ---");
@@ -46,7 +46,7 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
         Console.WriteLine($"{nameof(ServerToken.HostEndPoints)}: {string.Join(",", endPoints)}");
         Console.WriteLine($"{nameof(ServerToken.HostName)}: {hostName}");
         Console.WriteLine($"{nameof(ServerToken.HostPort)}: {token.ServerToken.HostPort}");
-        Console.WriteLine("TokenUpdateUrls: " + (VhUtil.IsNullOrEmpty(token.ServerToken.Urls) ? "NotSet" : ""));
+        Console.WriteLine("TokenUpdateUrls: " + (VhUtils.IsNullOrEmpty(token.ServerToken.Urls) ? "NotSet" : ""));
         foreach (var url in token.ServerToken.Urls ?? [])
             Console.WriteLine($"\t Url: {url}");
 

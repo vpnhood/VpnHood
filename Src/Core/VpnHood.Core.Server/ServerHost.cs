@@ -52,7 +52,7 @@ public class ServerHost : IAsyncDisposable, IJob
     public async Task Configure(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints,
         IPAddress[]? dnsServers, X509Certificate2[] certificates)
     {
-        if (VhUtil.IsNullOrEmpty(certificates))
+        if (VhUtils.IsNullOrEmpty(certificates))
             throw new ArgumentNullException(nameof(certificates), "No certificate has been configured.");
 
         if (_disposed)
@@ -168,7 +168,7 @@ public class ServerHost : IAsyncDisposable, IJob
                 if (_disposed)
                     throw new ObjectDisposedException("ServerHost has been stopped.");
 
-                VhUtil.ConfigTcpClient(tcpClient,
+                VhUtils.ConfigTcpClient(tcpClient,
                     _sessionManager.SessionOptions.TcpKernelSendBufferSize,
                     _sessionManager.SessionOptions.TcpKernelReceiveBufferSize);
 
@@ -307,7 +307,7 @@ public class ServerHost : IAsyncDisposable, IJob
         }
         catch (Exception ex) {
             //always return BadRequest 
-            if (!VhUtil.IsTcpClientHealthy(tcpClient)) throw;
+            if (!VhUtils.IsTcpClientHealthy(tcpClient)) throw;
             var response = ex is UnauthorizedAccessException
                 ? HttpResponseBuilder.Unauthorized()
                 : HttpResponseBuilder.BadRequest();
@@ -504,7 +504,7 @@ public class ServerHost : IAsyncDisposable, IJob
             "Processing a request. RequestType: {RequestType}.",
             VhLogger.FormatType<T>());
 
-        var request = await StreamUtil.ReadJsonAsync<T>(clientStream.Stream, cancellationToken).VhConfigureAwait();
+        var request = await StreamUtils.ReadObjectAsync<T>(clientStream.Stream, cancellationToken).VhConfigureAwait();
         request.RequestId = request.RequestId.Replace(":client", ":server");
         clientStream.ClientStreamId = request.RequestId;
 
@@ -742,7 +742,7 @@ public class ServerHost : IAsyncDisposable, IJob
         // wait for finalizing all listener tasks
         VhLogger.Instance.LogTrace("Disposing current processing requests...");
         try {
-            await VhUtil.RunTask(Task.WhenAll(_tcpListenerTasks), TimeSpan.FromSeconds(15)).VhConfigureAwait();
+            await VhUtils.RunTask(Task.WhenAll(_tcpListenerTasks), TimeSpan.FromSeconds(15)).VhConfigureAwait();
         }
         catch (Exception ex) {
             if (ex is TimeoutException)

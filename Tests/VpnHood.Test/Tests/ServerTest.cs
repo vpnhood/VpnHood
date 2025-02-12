@@ -69,7 +69,7 @@ public class ServerTest : TestBase
         // Create client
         var token = TestHelper.CreateAccessToken(server);
         await using var client =
-            await TestHelper.CreateClient(token, clientOptions: TestHelper.CreateClientOptions(useUdpChannel: true));
+            await TestHelper.CreateClient(clientOptions: TestHelper.CreateClientOptions(token, useUdpChannel: true));
 
         // check usage when usage should be 0
         var sessionResponseEx = await accessManager.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);
@@ -93,7 +93,7 @@ public class ServerTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // change tcp end points
-        var newTcpEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
+        var newTcpEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
         VhLogger.Instance.LogTrace(GeneralEventId.Test,
             "Test: Changing access server TcpEndPoint. TcpEndPoint: {TcpEndPoint}", newTcpEndPoint);
         accessManager.ServerConfig.TcpEndPoints = [newTcpEndPoint];
@@ -101,11 +101,11 @@ public class ServerTest : TestBase
         await VhTestUtil.AssertEqualsWait(accessManager.ServerConfig.ConfigCode,
             () => accessManager.LastServerStatus!.ConfigCode);
         Assert.AreNotEqual(
-            VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, accessManager.ServerConfig.TcpEndPoints[0].Port),
+            VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, accessManager.ServerConfig.TcpEndPoints[0].Port),
             accessManager.ServerConfig.TcpEndPoints[0]);
 
         // change udp end points
-        var newUdpEndPoint = VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback);
+        var newUdpEndPoint = VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback);
         VhLogger.Instance.LogTrace(GeneralEventId.Test,
             "Test: Changing access server UdpEndPoint. UdpEndPoint: {UdpEndPoint}", newUdpEndPoint);
         accessManager.ServerConfig.UdpEndPoints = [newUdpEndPoint];
@@ -114,14 +114,14 @@ public class ServerTest : TestBase
             () => accessManager.LastServerStatus!.ConfigCode);
 
         Assert.AreNotEqual(
-            VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback, accessManager.ServerConfig.UdpEndPoints[0].Port),
+            VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback, accessManager.ServerConfig.UdpEndPoints[0].Port),
             accessManager.ServerConfig.UdpEndPoints[0]);
     }
 
     [TestMethod]
     public async Task Reconfigure()
     {
-        var serverEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
+        var serverEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions(tcpEndPoints: [serverEndPoint]);
         using var accessManager = TestHelper.CreateAccessManager(fileAccessManagerOptions);
         var serverConfig = accessManager.ServerConfig;
@@ -137,7 +137,7 @@ public class ServerTest : TestBase
         serverConfig.SessionOptions.TcpBufferSize = 2076;
         serverConfig.SessionOptions.UdpReceiveBufferSize = 4001;
         serverConfig.SessionOptions.UdpSendBufferSize = 4002;
-        serverConfig.ServerSecret = VhUtil.GenerateKey();
+        serverConfig.ServerSecret = VhUtils.GenerateKey();
 
         var dateTime = DateTime.Now;
         await using var server = await TestHelper.CreateServer(accessManager);
@@ -287,7 +287,7 @@ public class ServerTest : TestBase
             return client.State;
         });
         Assert.AreEqual(ClientState.Disposed, client.State);
-        Assert.AreEqual(SessionErrorCode.AccessError, client.ConnectionInfo.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.AccessError, client.GetLastSessionErrorCode());
     }
 
     [TestMethod]
@@ -391,10 +391,10 @@ public class ServerTest : TestBase
     {
         // create server
         var swapMemoryProvider = new TestSwapMemoryProvider {
-            AppSize = 100 * VhUtil.Megabytes,
-            AppUsed = 10 * VhUtil.Megabytes,
-            OtherSize = 200 * VhUtil.Megabytes,
-            OtherUsed = 20 * VhUtil.Megabytes
+            AppSize = 100 * VhUtils.Megabytes,
+            AppUsed = 10 * VhUtils.Megabytes,
+            OtherSize = 200 * VhUtils.Megabytes,
+            OtherUsed = 20 * VhUtils.Megabytes
         };
 
         using var accessManager = TestHelper.CreateAccessManager();
@@ -413,8 +413,8 @@ public class ServerTest : TestBase
             serverStatus?.AvailableSwapMemory);
 
         // check status after setting app swap memory
-        swapMemoryProvider.AppSize = 50 * VhUtil.Megabytes;
-        swapMemoryProvider.AppUsed = 10 * VhUtil.Megabytes;
+        swapMemoryProvider.AppSize = 50 * VhUtils.Megabytes;
+        swapMemoryProvider.AppUsed = 10 * VhUtils.Megabytes;
 
         await server.RunJob();
         serverStatus = accessManager.LastServerStatus;
@@ -425,10 +425,10 @@ public class ServerTest : TestBase
         // configure by access manager
         accessManager.ServerConfig.SwapMemorySizeMb = 2500;
         accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        swapMemoryProvider.AppUsed = 100 * VhUtil.Megabytes;
+        swapMemoryProvider.AppUsed = 100 * VhUtils.Megabytes;
         await server.RunJob();
         serverStatus = accessManager.LastServerStatus;
-        Assert.AreEqual(swapMemoryProvider.Info.TotalSize, 2500 * VhUtil.Megabytes);
+        Assert.AreEqual(swapMemoryProvider.Info.TotalSize, 2500 * VhUtils.Megabytes);
         Assert.AreEqual(swapMemoryProvider.Info.TotalSize, accessManager.LastServerStatus?.TotalSwapMemory);
         Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed,
             serverStatus?.AvailableSwapMemory);

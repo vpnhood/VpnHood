@@ -6,6 +6,7 @@ namespace VpnHood.Core.Client.Device;
 public interface IVpnAdapter : IDisposable
 {
     event EventHandler<PacketReceivedEventArgs> PacketReceivedFromInbound;
+    event EventHandler? Disposed;
     bool Started { get; }
     bool IsDnsServersSupported { get; }
     bool IsMtuSupported { get; }

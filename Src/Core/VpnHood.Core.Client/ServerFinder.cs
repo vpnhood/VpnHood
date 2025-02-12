@@ -52,7 +52,7 @@ public class ServerFinder(
             return hostEndPoints.First(x => x.Address.IsV4());
 
         // randomize endpoint 
-        VhUtil.Shuffle(hostEndPoints);
+        VhUtils.Shuffle(hostEndPoints);
 
         // find the best server
         _hostEndPointStatuses =
@@ -150,7 +150,7 @@ public class ServerFinder(
             // check all servers
             using var linkedCancellationTokenSource =
                 CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
-            await VhUtil.ParallelForEachAsync(hostStatuses, async hostStatus => {
+            await VhUtils.ParallelForEachAsync(hostStatuses, async hostStatus => {
                 var connector = CreateConnector(hostStatus.TcpEndPoint);
 
                 // ReSharper disable once AccessToDisposedClosure

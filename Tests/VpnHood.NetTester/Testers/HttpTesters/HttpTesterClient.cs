@@ -33,7 +33,7 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps,
     {
         VhLogger.Instance.LogInformation("\n--------");
         VhLogger.Instance.LogInformation(
-            $"{Scheme} => Start Uploading {VhUtil.FormatBytes(size)}, Connections: {connectionCount}");
+            $"{Scheme} => Start Uploading {VhUtils.FormatBytes(size)}, Connections: {connectionCount}");
 
         // start multi uploaders
         using var speedometer = new Speedometer("Up");
@@ -49,7 +49,7 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps,
     {
         VhLogger.Instance.LogInformation("\n--------");
         VhLogger.Instance.LogInformation(
-            $"{Scheme} => Start Downloading {VhUtil.FormatBytes(size)}, Connections: {connectionCount}");
+            $"{Scheme} => Start Downloading {VhUtils.FormatBytes(size)}, Connections: {connectionCount}");
 
         // start multi downloader
         using var speedometer = new Speedometer("Down");

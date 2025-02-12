@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 
@@ -13,16 +12,6 @@ internal class AppPersistState
 
     [JsonIgnore] public string FilePath { get; private set; } = null!;
 
-    // prop
-    private ApiError? _lastError;
-
-    public ApiError? LastError {
-        get => _lastError;
-        set {
-            _lastError = value;
-            Save();
-        }
-    }
 
     // prop
     private DateTime _updateIgnoreTime = DateTime.MinValue;
@@ -67,7 +56,7 @@ internal class AppPersistState
 
     internal static AppPersistState Load(string filePath)
     {
-        var ret = VhUtil.JsonDeserializeFile<AppPersistState>(filePath, logger: VhLogger.Instance) ??
+        var ret = JsonUtils.TryDeserializeFile<AppPersistState>(filePath, logger: VhLogger.Instance) ??
                   new AppPersistState();
         ret.FilePath = filePath;
         return ret;

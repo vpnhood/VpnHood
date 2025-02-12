@@ -12,11 +12,11 @@ namespace VpnHood.Core.Server;
 internal class VirtualIpManager(IpNetwork ipNetworkV4, IpNetwork ipNetworkV6, string lastVirtualIpFilePath)
 {
     private readonly ConcurrentDictionary<IPAddress, Session> _virtualIps = new();
-    private VirtualIpBundle _lastAllocatedVirtualIps = 
-        VhUtil.JsonDeserializeFile<VirtualIpBundle>(lastVirtualIpFilePath, logger: VhLogger.Instance) ?? new VirtualIpBundle {
-        IpV4 = ipNetworkV4.FirstIpAddress,
-        IpV6 = ipNetworkV6.FirstIpAddress
-    };
+    private VirtualIpBundle _lastAllocatedVirtualIps =
+        JsonUtils.TryDeserializeFile<VirtualIpBundle>(lastVirtualIpFilePath, logger: VhLogger.Instance) ?? new VirtualIpBundle {
+            IpV4 = ipNetworkV4.FirstIpAddress,
+            IpV6 = ipNetworkV6.FirstIpAddress
+        };
 
     public IpNetwork IpNetworkV4 => ipNetworkV4;
     public IpNetwork IpNetworkV6 => ipNetworkV6;
@@ -38,13 +38,15 @@ internal class VirtualIpManager(IpNetwork ipNetworkV4, IpNetwork ipNetworkV6, st
 
     private IPAddress Allocate(IpNetwork ipNetwork, IPAddress lastUsedIpAddress)
     {
-        var ipAddress = IPAddressUtil.Compare(lastUsedIpAddress, ipNetwork.FirstIpAddress) < 0
-            ? ipNetwork.FirstIpAddress
+        var firstValidIpAddress = IPAddressUtil.Increment(IPAddressUtil.Increment(ipNetwork.FirstIpAddress));
+
+        var ipAddress = IPAddressUtil.Compare(lastUsedIpAddress, firstValidIpAddress) < 0
+            ? firstValidIpAddress
             : lastUsedIpAddress;
 
         for (var i = 0; i < 0xffff; i++) {
             if (ipAddress.Equals(ipNetwork.LastIpAddress))
-                ipAddress = ipNetwork.FirstIpAddress;
+                ipAddress = firstValidIpAddress;
 
             if (!_virtualIps.ContainsKey(ipAddress))
                 return ipAddress;
@@ -58,12 +60,12 @@ internal class VirtualIpManager(IpNetwork ipNetworkV4, IpNetwork ipNetworkV6, st
     public void Add(VirtualIpBundle virtualIpBundle, Session session)
     {
         if (!_virtualIps.TryAdd(virtualIpBundle.IpV4, session))
-            throw new SessionException(SessionErrorCode.SessionError, 
-                $"Could not add virtual IP to collection. IpAddress: {virtualIpBundle.IpV4}");
+            throw new SessionException(SessionErrorCode.SessionError,
+                $"Could not add virtual IPv4 to collection. IpAddress: {virtualIpBundle.IpV4}");
 
         if (!_virtualIps.TryAdd(virtualIpBundle.IpV6, session))
             throw new SessionException(SessionErrorCode.SessionError,
-                $"Could not add virtual IP to collection. IpAddress: {virtualIpBundle.IpV6}");
+                $"Could not add virtual IPv6 to collection. IpAddress: {virtualIpBundle.IpV6}");
     }
 
     public void Release(VirtualIpBundle virtualIps)

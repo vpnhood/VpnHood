@@ -1,18 +1,20 @@
 ﻿using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.ConnectorServices;
+using VpnHood.Core.Common.ApiClients;
 
 namespace VpnHood.Core.Client.ApiControllers;
 
 internal static class DtoConverters
 {
-    public static ConnectionInfo ToDto(this IConnectionInfo connectionInfo)
+    public static ConnectionInfo ToConnectionInfo(this VpnHoodClient vpnHoodClient)
     {
         var dto = new ConnectionInfo {
-            SessionInfo = connectionInfo.SessionInfo,
-            SessionStatus = connectionInfo.SessionStatus?.ToDto(),
-            ClientState = connectionInfo.ClientState,
-            Error = connectionInfo.Error,
-            ErrorCode = connectionInfo.ErrorCode
+            SessionInfo = vpnHoodClient.SessionInfo,
+            SessionStatus = vpnHoodClient.SessionStatus?.ToDto(),
+            ClientState = vpnHoodClient.State,
+            Error = vpnHoodClient.LastException?.ToApiError(),
+            ApiEndPoint = vpnHoodClient.ApiController.ApiEndPoint,
+            ApiKey = vpnHoodClient.ApiController.ApiKey
         };
 
         return dto;

@@ -66,7 +66,7 @@ public class SessionManager : IAsyncDisposable, IJob
         _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _tunProvider = tunProvider;
-        _serverSecret = VhUtil.GenerateKey(128);
+        _serverSecret = VhUtils.GenerateKey(128);
         _deadSessionTimeout = options.DeadSessionTimeout;
         _heartbeatSection = new JobSection(options.HeartbeatInterval);
         _sessionLocalService = new SessionLocalService(Path.Combine(storagePath, "sessions"));
@@ -105,7 +105,7 @@ public class SessionManager : IAsyncDisposable, IJob
     private Session BuildSessionFromResponseEx(SessionResponseEx sessionResponseEx, bool isRecovery)
     {
         var extraData = sessionResponseEx.ExtraData != null
-            ? VhUtil.JsonDeserialize<SessionExtraData>(sessionResponseEx.ExtraData)
+            ? JsonUtils.Deserialize<SessionExtraData>(sessionResponseEx.ExtraData)
             : new SessionExtraData();
 
         // make sure that not to give same IP to multiple sessions

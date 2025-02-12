@@ -30,7 +30,7 @@ public abstract class VpnHoodWpfSpaApp : Application
             VpnHoodWinApp.Instance.PreStart(e.Args);
 
             // initialize VpnHoodApp
-            VpnHoodApp.Init(new WinDivertDevice(), appOptions);
+            VpnHoodApp.Init(new WinDivertDevice(appOptions.StorageFolderPath, appOptions.Tracker), appOptions);
 
             // initialize SPA
             ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resource.SpaZipData);

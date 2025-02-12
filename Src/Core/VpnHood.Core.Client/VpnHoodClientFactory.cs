@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Ga4.Trackers;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
@@ -13,18 +12,28 @@ namespace VpnHood.Core.Client;
 public class VpnHoodClientFactory
 {
     private static string ConfigFilePath => Path.Combine(Directory.GetCurrentDirectory(), ClientOptions.VpnConfigFileName);
-    private static string ConfigResultFilePath => Path.Combine(Directory.GetCurrentDirectory(), ClientOptions.VpnConfigResultFileName);
+    private static string StatusFilePath => Path.Combine(Directory.GetCurrentDirectory(), ClientOptions.VpnStatusFileName);
+
+    public static ClientOptions ReadClientOptions()
+    {
+        // read from config file
+        var json = File.ReadAllText(ConfigFilePath);
+        return JsonUtils.Deserialize<ClientOptions>(json);
+    }
 
     public static VpnHoodClient Create(IVpnAdapter vpnAdapter, ISocketFactory socketFactory, ITracker? tracker)
     {
+        var clientOptions = ReadClientOptions();
+        return Create(vpnAdapter, socketFactory, tracker, clientOptions);
+    }
+
+    public static VpnHoodClient Create(IVpnAdapter vpnAdapter, ISocketFactory socketFactory, ITracker? tracker, 
+        ClientOptions clientOptions)
+    {
         try {
             // delete the result file
-            if (File.Exists(ConfigResultFilePath))
-                File.Delete(ConfigResultFilePath);
-
-            // read from config file
-            var json = File.ReadAllText(ConfigFilePath);
-            var clientOptions = VhUtil.JsonDeserialize<ClientOptions>(json);
+            if (File.Exists(StatusFilePath))
+                File.Delete(StatusFilePath);
 
             // create the client
             var client = new VpnHoodClient(vpnAdapter, socketFactory, tracker, clientOptions);
@@ -37,8 +46,7 @@ public class VpnHoodClientFactory
                 ApiEndPoint = null,
                 ApiKey = null,
                 ClientState = ClientState.None,
-                ErrorCode = SessionErrorCode.GeneralError,
-                Error = new ApiError(ex)
+                Error = ex.ToApiError()
             });
             throw;
         }
@@ -47,6 +55,6 @@ public class VpnHoodClientFactory
     internal static void SaveConnectionInfo(ConnectionInfo connectionInfo)
     {
         var json = JsonSerializer.Serialize(connectionInfo);
-        File.WriteAllText(ConfigResultFilePath, json);
+        File.WriteAllText(StatusFilePath, json);
     }
 }

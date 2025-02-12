@@ -38,10 +38,10 @@ internal class AppCompositeAdService
 
     private static bool IsCountrySupported(AppAdProviderItem adProviderItem, string countryCode)
     {
-        if (!VhUtil.IsNullOrEmpty(adProviderItem.IncludeCountryCodes))
+        if (!VhUtils.IsNullOrEmpty(adProviderItem.IncludeCountryCodes))
             return adProviderItem.IncludeCountryCodes.Contains(countryCode, StringComparer.OrdinalIgnoreCase);
 
-        if (!VhUtil.IsNullOrEmpty(adProviderItem.ExcludeCountryCodes))
+        if (!VhUtils.IsNullOrEmpty(adProviderItem.ExcludeCountryCodes))
             return !adProviderItem.ExcludeCountryCodes.Contains(countryCode, StringComparer.OrdinalIgnoreCase);
 
         return true;

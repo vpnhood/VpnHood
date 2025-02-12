@@ -1,7 +1,8 @@
-﻿using VpnHood.Core.Client.ConnectorServices;
+﻿using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Messaging;
 
-namespace VpnHood.Core.Client.Abstractions;
+namespace VpnHood.Core.Client;
 
 public interface ISessionStatus
 {

@@ -1,58 +1,26 @@
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Exceptions;
 
 namespace VpnHood.Core.Common.ApiClients;
 
-public class ApiError
+public class ApiError : ICloneable
 {
-    public string TypeName { get; set; }
+    public required string TypeName { get; init; }
     public string? TypeFullName { get; set; }
-    public string Message { get; set; }
+    public required string Message { get; init; }
     public Dictionary<string, string?> Data { get; set; } = new();
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? InnerMessage { get; set; }
 
-    [JsonConstructor]
-    public ApiError(string typeName, string message)
-    {
-        TypeName = typeName;
-        Message = message;
-    }
+    public object Clone() => new ApiError {
+        TypeName = TypeName,
+        TypeFullName = TypeFullName,
+        Message = Message,
+        Data = new Dictionary<string, string?>(Data),
+        InnerMessage = InnerMessage
+    };
 
-    public ApiError(Exception ex)
-    {
-        if (ex is ApiException apiException) {
-            TypeName = apiException.ExceptionTypeName ?? nameof(ApiException);
-            TypeFullName = apiException.ExceptionTypeFullName;
-        }
-        else {
-            var exceptionType = GetExceptionType(ex);
-            TypeName = exceptionType.Name;
-            TypeFullName = exceptionType.FullName;
-        }
-
-        // common properties
-        Message = ex.Message;
-        InnerMessage = ex.InnerException?.Message;
-
-        // data
-        foreach (DictionaryEntry item in ex.Data) {
-            var key = item.Key.ToString();
-            if (key != null)
-                Data.Add(key, item.Value?.ToString());
-        }
-    }
-
-    private static Type GetExceptionType(Exception ex)
-    {
-        if (AlreadyExistsException.Is(ex)) return typeof(AlreadyExistsException);
-        if (NotExistsException.Is(ex)) return typeof(NotExistsException);
-        return ex.GetType();
-    }
 
     public static bool TryParse(string value, [NotNullWhen(true)] out ApiError? apiError)
     {
@@ -87,5 +55,55 @@ public class ApiError
     public bool Is<T>()
     {
         return TypeName == typeof(T).Name;
+    }
+
+    public Exception ToException()
+    {
+        // create exception
+        var innerException = new Exception(InnerMessage ?? "");
+        var exception = ToException(innerException);
+
+        // add data
+        foreach (var item in Data)
+            exception.Data.Add(item.Key, item.Value);
+
+        // add type info
+        if (!exception.Data.Contains(nameof(TypeFullName)))
+            exception.Data.Add(nameof(TypeFullName), TypeFullName);
+
+        // add type info
+        if (!exception.Data.Contains(nameof(TypeName)))
+            exception.Data.Add(nameof(TypeName), TypeName);
+
+        return exception;
+    }
+
+    private Exception ToException(Exception innerException)
+    {
+        if (Is<OperationCanceledException>())
+            return new OperationCanceledException(Message, innerException);
+        
+        if (Is<TaskCanceledException>())
+            return new TaskCanceledException(Message, innerException);
+        
+        if (Is<AlreadyExistsException>())
+            return new AlreadyExistsException(Message, innerException);
+
+        if (Is<NotExistsException>())
+            return new NotExistsException(Message, innerException);
+        
+        if (Is<UnauthorizedAccessException>())
+            return new UnauthorizedAccessException(Message, innerException);
+
+        return new Exception(Message, innerException);
+    }
+
+    public void ImportData(IDictionary data)
+    {
+        foreach (DictionaryEntry item in data) {
+            var key = item.Key.ToString();
+            if (key != null)
+                Data.TryAdd(key, item.Value?.ToString());
+        }
     }
 }

@@ -230,7 +230,7 @@ internal class ClientHost(
 
             // config tcpOrgClient
             vpnHoodClient.SocketFactory.SetKeepAlive(orgTcpClient.Client, true);
-            VhUtil.ConfigTcpClient(orgTcpClient, null, null);
+            VhUtils.ConfigTcpClient(orgTcpClient, null, null);
 
             // get original remote from NAT
             var orgRemoteEndPoint = (IPEndPoint)orgTcpClient.Client.RemoteEndPoint;
@@ -290,7 +290,7 @@ internal class ClientHost(
                 SessionId = vpnHoodClient.SessionId,
                 SessionKey = vpnHoodClient.SessionKey,
                 DestinationEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-                CipherKey = VhUtil.GenerateKey(),
+                CipherKey = VhUtils.GenerateKey(),
                 CipherLength = natItem.DestinationPort == 443 ? TunnelDefaults.TlsHandshakeLength : -1
             };
 

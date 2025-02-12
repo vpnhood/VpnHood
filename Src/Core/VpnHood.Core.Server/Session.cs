@@ -276,7 +276,7 @@ public class Session : IAsyncDisposable
 
         if (destinationEndPoint != null) {
             destinationIpStr = _trackingOptions.TrackDestinationIpValue
-                ? VhUtil.RedactIpAddress(destinationEndPoint.Address)
+                ? VhUtils.RedactIpAddress(destinationEndPoint.Address)
                 : "*";
             destinationPortStr = _trackingOptions.TrackDestinationPortValue ? destinationEndPoint.Port.ToString() : "*";
             netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint).ToString() ?? "*";
@@ -360,7 +360,7 @@ public class Session : IAsyncDisposable
             //set reuseAddress to  true to prevent error only one usage of each socket address is normally permitted
             tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
             _socketFactory.SetKeepAlive(tcpClientHost.Client, true);
-            VhUtil.ConfigTcpClient(tcpClientHost, _tcpKernelSendBufferSize, _tcpKernelReceiveBufferSize);
+            VhUtils.ConfigTcpClient(tcpClientHost, _tcpKernelSendBufferSize, _tcpKernelReceiveBufferSize);
 
             // connect to requested destination
             isRequestedEpException = true;

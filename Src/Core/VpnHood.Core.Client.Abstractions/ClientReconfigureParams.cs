@@ -1,6 +1,8 @@
-﻿namespace VpnHood.Core.Client.Abstractions;
+﻿using VpnHood.Core.Client.Abstractions.ApiRequests;
 
-public class ClientUpdateParams
+namespace VpnHood.Core.Client.Abstractions;
+
+public class ClientReconfigureParams
 {
     public bool UseTcpOverTun { get; set; }
     public bool UseUdpChannel { get; set; }

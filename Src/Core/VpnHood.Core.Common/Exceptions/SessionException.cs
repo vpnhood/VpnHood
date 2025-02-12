@@ -1,9 +1,13 @@
-﻿using VpnHood.Core.Common.Messaging;
+﻿using System.Text.Json;
+using VpnHood.Core.Common.ApiClients;
+using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.Core.Common.Exceptions;
 
 public class SessionException : Exception
 {
+    public SessionResponse SessionResponse { get; }
+
     public SessionException(SessionResponse sessionResponse)
         : base(sessionResponse.ErrorMessage ?? MessageFromErrorCode(sessionResponse.ErrorCode))
     {
@@ -11,9 +15,9 @@ public class SessionException : Exception
         SessionResponse.ErrorMessage ??= MessageFromErrorCode(sessionResponse.ErrorCode);
 
         // ReSharper disable VirtualMemberCallInConstructor
+        Data.Add(nameof(SessionResponse), JsonSerializer.Serialize(SessionResponse));
         Data.Add(nameof(SessionResponse.ErrorCode), SessionResponse.ErrorCode.ToString());
         Data.Add(nameof(SessionResponse.SuppressedBy), SessionResponse.SuppressedBy.ToString());
-        Data.Add(nameof(SessionResponse.AccessKey), SessionResponse.AccessKey);
         // ReSharper restore VirtualMemberCallInConstructor
     }
 
@@ -23,6 +27,20 @@ public class SessionException : Exception
             ErrorMessage = message
         })
     {
+    }
+
+    public SessionException(ApiError apiError)
+        : base(apiError.Message)
+    {
+        // check is it apiError
+        if (!apiError.Is<SessionException>())
+            throw new ArgumentException("apiError is not a SessionException", nameof(apiError));
+
+        // check is SessionResponse exists in data
+        var json = apiError.Data.GetValueOrDefault(nameof(SessionResponse))
+            ?? throw new ArgumentException("apiError does not contain SessionResponse", nameof(apiError));
+
+        SessionResponse = JsonSerializer.Deserialize<SessionResponse>(json)!;
     }
 
     private static string? MessageFromErrorCode(SessionErrorCode errorCode)
@@ -52,6 +70,4 @@ public class SessionException : Exception
             _ => null
         };
     }
-
-    public SessionResponse SessionResponse { get; }
 }

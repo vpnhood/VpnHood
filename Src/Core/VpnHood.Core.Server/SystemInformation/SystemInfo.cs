@@ -12,7 +12,7 @@ public class SystemInfo
 
     public override string ToString()
     {
-        var totalMemory = TotalMemory != null ? VhUtil.FormatBytes(TotalMemory.Value) : "*";
+        var totalMemory = TotalMemory != null ? VhUtils.FormatBytes(TotalMemory.Value) : "*";
         return $"{OsInfo}, TotalMemory: {totalMemory}, Logical Cores: {LogicalCoreCount}";
     }
 }

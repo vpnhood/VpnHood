@@ -54,7 +54,7 @@ public class TestAppHelper : TestHelper
         clientApp.Diagnoser.NsTimeout = 2000;
         clientApp.UserSettings.UseVpnAdapterIpFilter = true;
         clientApp.UserSettings.UseAppIpFilter = true;
-        clientApp.SettingsService.IpFilterSettings.VpnAdapterIpFilterIncludes =
+        clientApp.SettingsService.IpFilterSettings.AdapterIpFilterIncludes =
             TestIpAddresses.Select(x => new IpRange(x)).ToText();
         clientApp.UserSettings.LogAnonymous = false;
         clientApp.TcpTimeout = TimeSpan.FromSeconds(2);

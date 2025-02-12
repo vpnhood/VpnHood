@@ -37,7 +37,7 @@ internal class ConnectorService(
         await using var mem = new MemoryStream();
         mem.WriteByte(1);
         mem.WriteByte(request.RequestCode);
-        await StreamUtil.WriteJsonAsync(mem, request, cancellationToken).VhConfigureAwait();
+        await StreamUtils.WriteObjectAsync(mem, request, cancellationToken).VhConfigureAwait();
         var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, cancellationToken).VhConfigureAwait();
 
         // log the response
@@ -113,15 +113,15 @@ internal class ConnectorService(
     private static async Task<T> ReadSessionResponse<T>(Stream stream, CancellationToken cancellationToken)
         where T : SessionResponse
     {
-        var message = await StreamUtil.ReadMessage(stream, cancellationToken).VhConfigureAwait();
+        var message = await StreamUtils.ReadMessage(stream, cancellationToken).VhConfigureAwait();
         try {
-            var response = VhUtil.JsonDeserialize<T>(message);
+            var response = JsonUtils.Deserialize<T>(message);
             ProcessResponseException(response);
             return response;
         }
         catch (Exception ex) when (ex is not SessionException && typeof(T) != typeof(SessionResponse)) {
             // try to deserialize as a SessionResponse (base)
-            var sessionResponse = VhUtil.JsonDeserialize<SessionResponse>(message);
+            var sessionResponse = JsonUtils.Deserialize<SessionResponse>(message);
             ProcessResponseException(sessionResponse);
             throw;
         }

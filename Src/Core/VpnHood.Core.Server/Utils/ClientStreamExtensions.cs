@@ -17,7 +17,7 @@ public static class ClientStreamExtensions
         }
 
         // Write the session response to the client stream
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, sessionResponse, cancellationToken).VhConfigureAwait();
+        await StreamUtils.WriteObjectAsync(clientStream.Stream, sessionResponse, cancellationToken).VhConfigureAwait();
     }
 
     public static async Task WriteFinalResponse(this IClientStream clientStream, SessionResponse sessionResponse,

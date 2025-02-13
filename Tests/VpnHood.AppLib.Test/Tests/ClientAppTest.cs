@@ -16,16 +16,15 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Test;
 using VpnHood.Test.Device;
-using VpnHood.Test.Tests;
 
 // ReSharper disable DisposeOnUsingVariable
 
 namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
-public class ClientAppTest : TestBase
+public class ClientAppTest : TestAppBase
 {
-    private static async Task UpdateIp2LocationFile()
+    private async Task UpdateIp2LocationFile()
     {
         // update current ipLocation in app project after a week
         var solutionFolder = TestHelper.GetParentDirectory(Directory.GetCurrentDirectory(), 5);
@@ -207,7 +206,7 @@ public class ClientAppTest : TestBase
         await app.Disconnect();
     }
 
-    public static async Task IpFilters_TestInclude(VpnHoodApp app, bool testUdp, bool testPing, bool testDns)
+    public async Task IpFilters_TestInclude(VpnHoodApp app, bool testUdp, bool testPing, bool testDns)
     {
         // TCP
         var oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
@@ -269,7 +268,7 @@ public class ClientAppTest : TestBase
         }
     }
 
-    public static async Task IpFilters_TestExclude(VpnHoodApp app, bool testUdp, bool testPing, bool testDns)
+    public async Task IpFilters_TestExclude(VpnHoodApp app, bool testUdp, bool testPing, bool testDns)
     {
         // TCP
         var oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;

@@ -7,7 +7,6 @@ using Android.Runtime;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling.Factory;
 using Environment = System.Environment;
 

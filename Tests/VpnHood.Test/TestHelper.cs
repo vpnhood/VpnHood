@@ -34,31 +34,49 @@ public class TestHelper : IDisposable
         public bool IsActive => true;
     }
 
-    public static string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "_test_vpnhood");
-    public static TestWebServer WebServer { get; private set; } = null!;
-    public static TestNetFilter NetFilter { get; private set; } = null!;
-    public static bool LogVerbose => true;
-    private static bool? _isIpV6Supported;
-    private static int _accessTokenIndex;
+    public string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "_test_vpnhood");
+    public TestWebServer WebServer { get; }
+    public TestNetFilter NetFilter { get; }
+    public bool LogVerbose => true;
+    private bool? _isIpV6Supported;
+    private int _accessTokenIndex;
 
-    public static async Task<bool> IsIpV6Supported()
+    public TestHelper()
+    {
+        TunnelDefaults.TcpGracefulTimeout = TimeSpan.FromSeconds(10);
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
+        VhLogger.IsDiagnoseMode = true;
+        VhLogger.IsAnonymousMode = false;
+        WebServer = TestWebServer.Create();
+        NetFilter = new TestNetFilter();
+        NetFilter.Init([
+            Tuple.Create(ProtocolType.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
+            Tuple.Create(ProtocolType.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
+            Tuple.Create(ProtocolType.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
+            Tuple.Create(ProtocolType.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
+            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
+            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
+            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
+            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
+            Tuple.Create(ProtocolType.Icmp, new IPEndPoint(TestConstants.PingV4Address1, 0),
+                IPEndPoint.Parse("127.0.0.1:0")),
+            Tuple.Create(ProtocolType.Icmp, new IPEndPoint(TestConstants.PingV4Address2, 0),
+                IPEndPoint.Parse("127.0.0.2:0")),
+            Tuple.Create(ProtocolType.IcmpV6, new IPEndPoint(TestConstants.PingV6Address1, 0),
+                IPEndPoint.Parse("[::1]:0"))
+        ]);
+        FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
+        JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
+        JobSection.DefaultInterval = TimeSpan.FromMilliseconds(200);
+    }
+
+    public async Task<bool> IsIpV6Supported()
     {
         _isIpV6Supported ??= await IPAddressUtil.IsIpv6Supported();
         return _isIpV6Supported.Value;
     }
 
-    public static void Cleanup()
-    {
-        try {
-            if (Directory.Exists(WorkingPath))
-                Directory.Delete(WorkingPath, true);
-        }
-        catch {
-            // ignored
-        }
-    }
-
-    private static Task<PingReply> SendPing(Ping? ping = null, IPAddress? ipAddress = null,
+    private Task<PingReply> SendPing(Ping? ping = null, IPAddress? ipAddress = null,
         int timeout = TestConstants.DefaultTimeout)
     {
         using var pingT = new Ping();
@@ -68,7 +86,7 @@ public class TestHelper : IDisposable
         return ping.SendPingAsync(ipAddress ?? TestConstants.PingV4Address1, timeout, buffer);
     }
 
-    private static async Task<bool> SendHttpGet(Uri uri, int timeout = TestConstants.DefaultTimeout)
+    private async Task<bool> SendHttpGet(Uri uri, int timeout = TestConstants.DefaultTimeout)
     {
         using var httpClient = new HttpClient(new HttpClientHandler {
             CheckCertificateRevocationList = false,
@@ -78,7 +96,7 @@ public class TestHelper : IDisposable
         return await SendHttpGet(httpClient, uri, timeout);
     }
 
-    private static async Task<bool> SendHttpGet(HttpClient httpClient, Uri uri,
+    private async Task<bool> SendHttpGet(HttpClient httpClient, Uri uri,
         int timeout = TestConstants.DefaultTimeout)
     {
         var cancellationTokenSource = new CancellationTokenSource(timeout);
@@ -93,7 +111,7 @@ public class TestHelper : IDisposable
         return res.Length > 100;
     }
 
-    public static async Task Test_Ping(Ping? ping = null, IPAddress? ipAddress = null,
+    public async Task Test_Ping(Ping? ping = null, IPAddress? ipAddress = null,
         int timeout = TestConstants.DefaultTimeout)
     {
         var pingReply = await SendPing(ping, ipAddress, timeout);
@@ -101,7 +119,7 @@ public class TestHelper : IDisposable
             throw new PingException($"Ping failed. Status: {pingReply.Status}");
     }
 
-    public static async Task Test_Dns(IPEndPoint? nsEndPoint = null, int timeout = 3000,
+    public async Task Test_Dns(IPEndPoint? nsEndPoint = null, int timeout = 3000,
         CancellationToken cancellationToken = default)
     {
         var hostEntry = await DnsResolver.GetHostEntry("www.google.com", nsEndPoint ?? TestConstants.NsEndPoint1,
@@ -110,12 +128,12 @@ public class TestHelper : IDisposable
         Assert.IsTrue(hostEntry.AddressList.Length > 0);
     }
 
-    public static Task Test_Udp(int timeout = TestConstants.DefaultTimeout)
+    public Task Test_Udp(int timeout = TestConstants.DefaultTimeout)
     {
         return Test_Udp(TestConstants.UdpV4EndPoint1, timeout);
     }
 
-    public static async Task Test_Udp(IPEndPoint udpEndPoint, int timeout = TestConstants.DefaultTimeout)
+    public async Task Test_Udp(IPEndPoint udpEndPoint, int timeout = TestConstants.DefaultTimeout)
     {
         if (udpEndPoint.AddressFamily == AddressFamily.InterNetwork) {
             using var udpClientIpV4 = new UdpClient(AddressFamily.InterNetwork);
@@ -128,7 +146,7 @@ public class TestHelper : IDisposable
         }
     }
 
-    public static async Task Test_Udp(UdpClient udpClient, IPEndPoint udpEndPoint,
+    public async Task Test_Udp(UdpClient udpClient, IPEndPoint udpEndPoint,
         int timeout = TestConstants.DefaultTimeout)
     {
         var buffer = new byte[1024];
@@ -140,7 +158,7 @@ public class TestHelper : IDisposable
         CollectionAssert.AreEquivalent(buffer, res.Buffer);
     }
 
-    public static async Task<bool> Test_Https(Uri? uri = null,
+    public async Task<bool> Test_Https(Uri? uri = null,
         int timeout = TestConstants.DefaultTimeout, bool throwError = true)
     {
         uri ??= TestConstants.HttpsUri1;
@@ -159,7 +177,7 @@ public class TestHelper : IDisposable
         }
     }
 
-    public static IPAddress[] TestIpAddresses {
+    public IPAddress[] TestIpAddresses {
         get {
             var addresses = new List<IPAddress> {
                 TestConstants.NsEndPoint1.Address,
@@ -180,7 +198,7 @@ public class TestHelper : IDisposable
         }
     }
 
-    public static Token CreateAccessToken(FileAccessManager fileAccessManager,
+    public Token CreateAccessToken(FileAccessManager fileAccessManager,
         int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
     {
         var accessToken = fileAccessManager.AccessTokenService.Create(
@@ -193,7 +211,7 @@ public class TestHelper : IDisposable
         return fileAccessManager.GetToken(accessToken);
     }
 
-    private static FileAccessManager GetFileAccessManagerFromServer(VpnHoodServer server)
+    private FileAccessManager GetFileAccessManagerFromServer(VpnHoodServer server)
     {
         var accessManager = server.AccessManager;
         return accessManager switch {
@@ -205,19 +223,19 @@ public class TestHelper : IDisposable
         };
     }
 
-    public static Token CreateAccessToken(VpnHoodServer server,
+    public Token CreateAccessToken(VpnHoodServer server,
         int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
     {
         var fileAccessManager = GetFileAccessManagerFromServer(server);
         return CreateAccessToken(fileAccessManager, maxClientCount, maxTrafficByteCount, expirationTime);
     }
 
-    public static string CreateAccessManagerWorkingDir()
+    public string CreateAccessManagerWorkingDir()
     {
         return Path.Combine(WorkingPath, $"AccessManager_{Guid.NewGuid()}");
     }
 
-    public static TestAccessManager CreateAccessManager(FileAccessManagerOptions? options = null,
+    public TestAccessManager CreateAccessManager(FileAccessManagerOptions? options = null,
         string? storagePath = null,
         string? serverLocation = null)
     {
@@ -231,7 +249,7 @@ public class TestHelper : IDisposable
         return new TestAccessManager(storagePath, options);
     }
 
-    public static FileAccessManagerOptions CreateFileAccessManagerOptions(IPEndPoint[]? tcpEndPoints = null)
+    public FileAccessManagerOptions CreateFileAccessManagerOptions(IPEndPoint[]? tcpEndPoints = null)
     {
         var options = new FileAccessManagerOptions {
             IsUnitTest = true,
@@ -254,7 +272,7 @@ public class TestHelper : IDisposable
         return options;
     }
 
-    public static Task<VpnHoodServer> CreateServer(
+    public Task<VpnHoodServer> CreateServer(
         IAccessManager? accessManager = null,
         bool autoStart = true, TimeSpan? configureInterval = null, bool useHttpAccessManager = true,
         INetConfigurationProvider? netConfigurationProvider = null,
@@ -268,7 +286,7 @@ public class TestHelper : IDisposable
             swapMemoryProvider: swapMemoryProvider);
     }
 
-    public static Task<VpnHoodServer> CreateServer(FileAccessManagerOptions? options, bool autoStart = true,
+    public Task<VpnHoodServer> CreateServer(FileAccessManagerOptions? options, bool autoStart = true,
         TimeSpan? configureInterval = null, bool useHttpAccessManager = true,
         ITunProvider? tunProvider = null)
     {
@@ -279,7 +297,7 @@ public class TestHelper : IDisposable
             tunProvider: tunProvider);
     }
 
-    private static async Task<VpnHoodServer> CreateServer(IAccessManager? accessManager,
+    private async Task<VpnHoodServer> CreateServer(IAccessManager? accessManager,
         FileAccessManagerOptions? fileAccessManagerOptions,
         bool autoStart, TimeSpan? configureInterval = null, bool useHttpAccessManager = true,
         INetConfigurationProvider? netConfigurationProvider = null,
@@ -326,26 +344,26 @@ public class TestHelper : IDisposable
         return server;
     }
 
-    public static TestVpnAdapterOptions CreateTestVpnAdapterOptions()
+    public TestVpnAdapterOptions CreateTestVpnAdapterOptions()
     {
         return new TestVpnAdapterOptions();
     }
 
-    public static TestVpnAdapter CreateTestVpnAdapter(TestVpnAdapterOptions? options = null)
+    public TestVpnAdapter CreateTestVpnAdapter(TestVpnAdapterOptions? options = null)
     {
         options ??= CreateTestVpnAdapterOptions();
         return new TestVpnAdapter(options);
     }
 
 
-    public static TestDevice CreateDevice(TestVpnAdapterOptions? options = null, ITracker? tracker = null)
+    public TestDevice CreateDevice(TestVpnAdapterOptions? options = null, ITracker? tracker = null)
     {
         options ??= CreateTestVpnAdapterOptions();
-        return new TestDevice(() => new TestVpnAdapter(options), tracker);
+        return new TestDevice(this, () => new TestVpnAdapter(options), tracker);
     }
 
 
-    public static ClientOptions CreateClientOptions(Token token, bool useUdpChannel = false, string? clientId = null)
+    public ClientOptions CreateClientOptions(Token token, bool useUdpChannel = false, string? clientId = null)
     {
         return new ClientOptions {
             ClientId = clientId ?? Guid.NewGuid().ToString(),
@@ -361,7 +379,7 @@ public class TestHelper : IDisposable
         };
     }
 
-    public static Task<VpnHoodClient> CreateClient(Token token,
+    public Task<VpnHoodClient> CreateClient(Token token,
         IVpnAdapter? vpnAdapter = null,
         string? clientId = null,
         bool autoConnect = true)
@@ -370,7 +388,7 @@ public class TestHelper : IDisposable
         return CreateClient(clientOptions, vpnAdapter, autoConnect);
     }
 
-    public static async Task<VpnHoodClient> CreateClient(
+    public async Task<VpnHoodClient> CreateClient(
         ClientOptions clientOptions,
         IVpnAdapter? vpnAdapter = null,
         bool autoConnect = true)
@@ -386,7 +404,7 @@ public class TestHelper : IDisposable
     }
 
 
-    public static SessionRequestEx CreateSessionRequestEx(Token token, string? clientId = null)
+    public SessionRequestEx CreateSessionRequestEx(Token token, string? clientId = null)
     {
         clientId ??= Guid.NewGuid().ToString();
         return new SessionRequestEx {
@@ -404,41 +422,8 @@ public class TestHelper : IDisposable
         };
     }
 
-    private static bool _isInit;
 
-    public static void Init()
-    {
-        if (_isInit) return;
-        _isInit = true;
-
-        TunnelDefaults.TcpGracefulTimeout = TimeSpan.FromSeconds(10);
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
-        VhLogger.IsDiagnoseMode = true;
-        VhLogger.IsAnonymousMode = false;
-        WebServer = TestWebServer.Create();
-        NetFilter = new TestNetFilter();
-        NetFilter.Init([
-            Tuple.Create(ProtocolType.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
-            Tuple.Create(ProtocolType.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
-            Tuple.Create(ProtocolType.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
-            Tuple.Create(ProtocolType.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
-            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
-            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
-            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
-            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
-            Tuple.Create(ProtocolType.Icmp, new IPEndPoint(TestConstants.PingV4Address1, 0),
-                IPEndPoint.Parse("127.0.0.1:0")),
-            Tuple.Create(ProtocolType.Icmp, new IPEndPoint(TestConstants.PingV4Address2, 0),
-                IPEndPoint.Parse("127.0.0.2:0")),
-            Tuple.Create(ProtocolType.IcmpV6, new IPEndPoint(TestConstants.PingV6Address1, 0),
-                IPEndPoint.Parse("[::1]:0"))
-        ]);
-        FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
-        JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
-        JobSection.DefaultInterval = TimeSpan.FromMilliseconds(200);
-    }
-
-    public static string GetParentDirectory(string path, int level = 1)
+    public string GetParentDirectory(string path, int level = 1)
     {
         for (var i = 0; i < level; i++)
             path = Path.GetDirectoryName(path) ?? throw new Exception("Invalid path");
@@ -448,5 +433,14 @@ public class TestHelper : IDisposable
 
     public virtual void Dispose()
     {
+        WebServer.Dispose();
+
+        try {
+            if (Directory.Exists(WorkingPath))
+                Directory.Delete(WorkingPath, true);
+        }
+        catch {
+            // ignored
+        }
     }
 }

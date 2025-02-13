@@ -1,12 +1,11 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Client.Exceptions;
 using VpnHood.Test;
-using VpnHood.Test.Tests;
 
 namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
-public class DiagnoserTest : TestBase
+public class DiagnoserTest : TestAppBase
 {
     [TestMethod]
     public async Task NormalConnect_NoInternet()

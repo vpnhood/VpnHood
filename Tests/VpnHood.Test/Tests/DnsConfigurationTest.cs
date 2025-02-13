@@ -7,7 +7,7 @@ using VpnHood.Test.Device;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class DnsConfigurationTest
+public class DnsConfigurationTest : TestBase
 {
     [TestMethod]
     public async Task Server_specify_dns_servers()

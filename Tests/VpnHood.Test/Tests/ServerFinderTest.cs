@@ -8,7 +8,7 @@ using VpnHood.Test.Providers;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class ServerFinderTest
+public class ServerFinderTest : TestBase
 {
     [TestMethod]
     public async Task Find_reachable()

@@ -6,12 +6,11 @@ using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
-using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
-public class ClientProfileTest
+public class ClientProfileTest : TestAppBase
 {
     private int _lastSupportId;
 

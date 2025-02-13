@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.ApiRequests;
 using VpnHood.Core.Client.Device.Exceptions;
 using VpnHood.Core.Common.Exceptions;
@@ -55,7 +56,8 @@ public class ApiController : IDisposable
             if (!ApiKey.SequenceEqual(apiKey))
                 throw new Exception("Invalid API key.");
 
-            while (await ProcessRequests(stream, cancellationToken)) ;
+            while (!cancellationToken.IsCancellationRequested)
+                await ProcessRequests(stream, cancellationToken);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not handle API request.");
@@ -65,53 +67,88 @@ public class ApiController : IDisposable
         }
     }
 
-    private async Task<bool> ProcessRequests(Stream stream, CancellationToken cancellationToken)
+    private async Task ProcessRequests(Stream stream, CancellationToken cancellationToken)
     {
+        object result = true;
+
         // read request type
         var requestType = await StreamUtils.ReadObjectAsync<string>(stream, cancellationToken);
         switch (requestType) {
 
             // handle connection info request
             case nameof(ApiConnectionInfoRequest):
-                await StreamUtils.ReadObjectAsync<ApiConnectionInfoRequest>(stream, cancellationToken);
-                var connectionInfo = VpnHoodClient.ToConnectionInfo(this);
-                await _vpnHoodService.Context.SaveConnectionInfo(connectionInfo);
-                await StreamUtils.WriteObjectAsync(stream, connectionInfo, cancellationToken);
-                return true;
+                result = await GetConnectionInfo(
+                    await StreamUtils.ReadObjectAsync<ApiConnectionInfoRequest>(stream, cancellationToken), cancellationToken);
+                break;
 
             // handle disconnect request
             case nameof(ApiDisconnectRequest):
-                await StreamUtils.ReadObjectAsync<ApiDisconnectRequest>(stream, cancellationToken);
-                await StreamUtils.WriteObjectAsync(stream, true, cancellationToken);
-                _ = VpnHoodClient.DisposeAsync();
-                return false;
+                await Disconnect(
+                    await StreamUtils.ReadObjectAsync<ApiDisconnectRequest>(stream, cancellationToken), cancellationToken);
+                break;
 
             // handle ad request
-            case nameof(ApiRequestedAdResult):
-                var adResultRequest = await StreamUtils.ReadObjectAsync<ApiRequestedAdResult>(stream, cancellationToken);
-                if (adResultRequest.AdResult != null)
-                    VpnHoodClient.AdService.AdRequestTaskCompletionSource?.TrySetResult(adResultRequest.AdResult);
-                else if (adResultRequest.ApiError?.Is<UiContextNotAvailableException>() == true ||
-                         adResultRequest.ApiError?.Is<ShowAdNoUiException>() == true)
-                    VpnHoodClient.AdService.AdRequestTaskCompletionSource?.TrySetException(new ShowAdNoUiException());
-                else
-                    VpnHoodClient.AdService.AdRequestTaskCompletionSource?.TrySetException(
-                        adResultRequest.ApiError?.ToException() ?? new InvalidOperationException("Invalid ApiAdResultRequest."));
-                return true;
+            case nameof(ApiSetRequestedAdResultRequest):
+                await SetRequestedAdResult(
+                    await StreamUtils.ReadObjectAsync<ApiSetRequestedAdResultRequest>(stream, cancellationToken), cancellationToken);
+                break;
 
             // handle ad reward request
-            case nameof(ApiRewardedAdResult):
-                var apiRewardedAdResult = await StreamUtils.ReadObjectAsync<ApiRewardedAdResult>(stream, cancellationToken);
-                if (string.IsNullOrEmpty(apiRewardedAdResult.AdResult.AdData))
-                    throw new InvalidOperationException("There is no AdData in ad reward.");
-                await VpnHoodClient.AdService.SendRewardedAdResult(apiRewardedAdResult.AdResult.AdData, cancellationToken);
-                return true;
+            case nameof(ApiSendRewardedAdResultRequest):
+                await SendRewardedAdResult(
+                    await StreamUtils.ReadObjectAsync<ApiSendRewardedAdResultRequest>(stream, cancellationToken), cancellationToken);
+                break;
 
 
             default:
                 throw new InvalidOperationException($"Unknown request type: {requestType}");
         }
+
+        // write the result
+        await StreamUtils.WriteObjectAsync(stream, result, cancellationToken);
     }
+
+    public async Task<ConnectionInfo> GetConnectionInfo(ApiConnectionInfoRequest request, CancellationToken cancellationToken)
+    {
+        var connectionInfo = VpnHoodClient.ToConnectionInfo(this);
+        await _vpnHoodService.Context.SaveConnectionInfo(connectionInfo);
+        return connectionInfo;
+    }
+
+    public Task Disconnect(ApiDisconnectRequest request, CancellationToken cancellationToken)
+    {
+        _ = VpnHoodClient.DisposeAsync();
+        return Task.CompletedTask;
+    }
+
+    public Task SetRequestedAdResult(ApiSetRequestedAdResultRequest request, CancellationToken cancellationToken)
+    {
+        if (request.AdResult != null) {
+            VpnHoodClient.AdService.AdRequestTaskCompletionSource?.TrySetResult(request.AdResult);
+            return Task.CompletedTask;
+        }
+
+        var exception = 
+            request.ApiError?.Is<UiContextNotAvailableException>() == true ||
+            request.ApiError?.Is<ShowAdNoUiException>() == true
+            ? new ShowAdNoUiException()
+            : request.ApiError?.ToException() ?? new InvalidOperationException("Invalid ApiAdResultRequest.");
+
+
+        VpnHoodClient.AdService.AdRequestTaskCompletionSource?
+            .TrySetException(exception);
+
+        return Task.CompletedTask;
+    }
+
+    public Task SendRewardedAdResult(ApiSendRewardedAdResultRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(request.AdResult.AdData))
+            throw new InvalidOperationException("There is no AdData in ad reward.");
+        
+        return VpnHoodClient.AdService.SendRewardedAdResult(request.AdResult.AdData, cancellationToken);
+    }
+
 
     public void Dispose()
     {

@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
 using VpnHood.Core.Common.ApiClients;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.AppLib;
@@ -9,7 +8,7 @@ namespace VpnHood.AppLib;
 internal class AppPersistState(string filePath)
 {
     private readonly object _saveLock = new();
-    private readonly Data _data = JsonUtils.TryDeserializeFile<Data>(filePath, logger: VhLogger.Instance) ?? new Data();
+    private readonly Data _data = JsonUtils.TryDeserializeFile<Data>(filePath) ?? new Data();
 
     private class Data
     {

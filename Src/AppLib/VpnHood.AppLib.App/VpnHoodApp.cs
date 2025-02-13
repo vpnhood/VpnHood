@@ -372,19 +372,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Task.Run(() => ConnectionStateChanged?.Invoke(this, EventArgs.Empty));
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_disconnectOnDispose && ConnectionState.CanDisconnect())
-            await Disconnect().VhConfigureAwait();
-
-        _clientManager.Dispose();
-        Device.Dispose();
-        LogService.Dispose();
-        DisposeSingleton();
-        ActiveUiContext.OnChanged -= ActiveUiContext_OnChanged;
-        _clientManager.StateChanged -= Client_StateChanged;
-    }
-
     public static VpnHoodApp Init(IDevice device, AppOptions options)
     {
         return new VpnHoodApp(device, options);
@@ -530,7 +517,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (timeoutCancellationSource.IsCancellationRequested) {
                 var exception = new ConnectionTimeoutException("Could not establish connection in given time.", ex);
                 await _clientManager.Stop(); // stop client if timeout
-                await _clientManager.ClearState(exception);
+                await _clientManager.ClearState();
                 _appPersistState.LastError = exception.ToApiError();
                 throw exception;
             }
@@ -1019,5 +1006,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         ApplySettings();
         UiHasChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disconnectOnDispose && ConnectionState.CanDisconnect())
+            await Disconnect().VhConfigureAwait();
+
+        _clientManager.Dispose();
+        Device.Dispose();
+        LogService.Dispose();
+        DisposeSingleton();
+        ActiveUiContext.OnChanged -= ActiveUiContext_OnChanged;
+        _clientManager.StateChanged -= Client_StateChanged;
     }
 }

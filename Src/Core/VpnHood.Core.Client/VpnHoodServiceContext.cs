@@ -24,7 +24,7 @@ public class VpnHoodServiceContext(string configFolder)
         var json = JsonSerializer.Serialize(connectionInfo);
 
         try {
-            await FileUtils.WriteAllTextAsync(StatusFilePath, json, timeout: TimeSpan.FromSeconds(1));
+            await FileUtils.WriteAllTextRetryAsync(StatusFilePath, json, timeout: TimeSpan.FromSeconds(1));
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not save connection info to file. FilePath: {FilePath}", StatusFilePath);

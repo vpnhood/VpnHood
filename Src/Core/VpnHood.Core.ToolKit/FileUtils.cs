@@ -2,7 +2,7 @@
 
 public static class FileUtils
 {
-    public static async Task WriteAllTextAsync(string filePath, string content, TimeSpan timeout, CancellationToken cancellationToken = default)
+    public static async Task WriteAllTextRetryAsync(string filePath, string content, TimeSpan timeout, CancellationToken cancellationToken = default)
     {
         var startTime = FastDateTime.Now;
         while (true) {

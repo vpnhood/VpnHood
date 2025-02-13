@@ -40,7 +40,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
         isDebugMode ? false : null; // it follows user's settings if it set to null
 
     public TimeSpan ServerQueryTimeout { get; set; } = ClientOptions.Default.ServerQueryTimeout;
-    public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(2);
+    public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(60);
     public bool SingleLineConsoleLog { get; set; } = true;
     public bool AutoDiagnose { get; set; } = true;
     public AppAdOptions AdOptions { get; set; } = new();

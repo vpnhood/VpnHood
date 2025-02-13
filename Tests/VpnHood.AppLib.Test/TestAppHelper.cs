@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Device;
@@ -30,10 +31,11 @@ public class TestAppHelper : TestHelper
             SingleLineConsoleLog = false,
             CanExtendByRewardedAdThreshold = TimeSpan.Zero,
             DisconnectOnDispose = true,
+            ConnectTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(5),
             AdOptions = new AppAdOptions {
                 ShowAdPostDelay = TimeSpan.Zero,
                 LoadAdPostDelay = TimeSpan.Zero
-            }
+            },
         };
         return appOptions;
     }

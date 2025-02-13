@@ -1,5 +1,8 @@
-﻿namespace VpnHood.Core.Client.DomainFiltering;
+﻿using System.Text.Json.Serialization;
 
+namespace VpnHood.Core.Client.DomainFiltering;
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum DomainFilterAction
 {
     None,

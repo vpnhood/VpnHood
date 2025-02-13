@@ -29,10 +29,9 @@ public class ApiController : IDisposable
 
     private async Task Start()
     {
-        _tcpListener.Start();
-
         try {
-            while (true) {
+            _tcpListener.Start();
+            while (!_cancellationTokenSource.IsCancellationRequested) {
                 var client = await _tcpListener.AcceptTcpClientAsync();
                 _ = ProcessClientAsync(client, _cancellationTokenSource.Token);
             }
@@ -76,7 +75,7 @@ public class ApiController : IDisposable
             case nameof(ApiConnectionInfoRequest):
                 await StreamUtils.ReadObjectAsync<ApiConnectionInfoRequest>(stream, cancellationToken);
                 var connectionInfo = VpnHoodClient.ToConnectionInfo(this);
-                _vpnHoodService.Context.SaveConnectionInfo(connectionInfo);
+                await _vpnHoodService.Context.SaveConnectionInfo(connectionInfo);
                 await StreamUtils.WriteObjectAsync(stream, connectionInfo, cancellationToken);
                 return true;
 
@@ -116,6 +115,7 @@ public class ApiController : IDisposable
 
     public void Dispose()
     {
+        _cancellationTokenSource.Cancel();
         _tcpListener.Stop();
     }
 }

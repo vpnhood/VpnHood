@@ -500,6 +500,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception ex) {
             ReportError(ex, "Could not connect.");
+            _sessionCancellationTokenSource?.Cancel(); // cancel all pending tasks
+            _sessionCancellationTokenSource = null;
+            await _clientManager.Stop(); // stop if it is not stopped yet
 
             // Reset server location if no server is available
             if (ex is SessionException sessionException) {
@@ -523,6 +526,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 }
             }
 
+            // throw ConnectionTimeoutException if timeout
             if (timeoutCancellationSource.IsCancellationRequested) {
                 var exception = new ConnectionTimeoutException("Could not establish connection in given time.", ex);
                 await _clientManager.Stop(); // stop client if timeout

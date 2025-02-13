@@ -945,7 +945,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             }
 
             _lastConnectionErrorTime = null;
-            State = ClientState.Connected;
+            if (SessionInfo != null)
+                State = ClientState.Connected;
             return requestResult;
         }
         catch (SessionException ex) {

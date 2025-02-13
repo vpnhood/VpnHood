@@ -118,7 +118,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
     {
         // auto connect
         if (ConnectAfterStart && VpnHoodApp.Instance.CurrentClientProfileInfo != null)
-            _ = VpnHoodApp.Instance.Connect(VpnHoodApp.Instance.CurrentClientProfileInfo.ClientProfileId);
+            _ = VpnHoodApp.Instance.Connect();
 
         // create notification icon
         InitNotifyIcon();
@@ -144,7 +144,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         _connectMenuItemId =
             _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Connect, (_, _) => ConnectClicked());
         _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Disconnect,
-            (_, _) => _ = VpnHoodApp.Instance.Disconnect(true));
+            (_, _) => _ = VpnHoodApp.Instance.Disconnect());
         _sysTray.ContextMenu.AddMenuSeparator();
         _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Exit, (_, _) => Exit());
 
@@ -207,15 +207,17 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
 
     private void ConnectClicked()
     {
-        if (VpnHoodApp.Instance.UserSettings.ClientProfileId != null) {
-            try {
-                _ = VpnHoodApp.Instance.Connect(VpnHoodApp.Instance.UserSettings.ClientProfileId.Value);
-            }
-            catch {
-                OpenMainWindow();
-            }
+        // open main window if no profile is selected
+        if (VpnHoodApp.Instance.UserSettings.ClientProfileId == null) {
+            OpenMainWindow();
+            return;
         }
-        else {
+
+        // connect
+        try {
+            _ = VpnHoodApp.Instance.Connect();
+        }
+        catch {
             OpenMainWindow();
         }
     }

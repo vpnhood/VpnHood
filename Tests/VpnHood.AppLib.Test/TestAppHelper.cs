@@ -29,6 +29,7 @@ public class TestAppHelper : TestHelper
             AutoDiagnose = false,
             SingleLineConsoleLog = false,
             CanExtendByRewardedAdThreshold = TimeSpan.Zero,
+            DisconnectOnDispose = true,
             AdOptions = new AppAdOptions {
                 ShowAdPostDelay = TimeSpan.Zero,
                 LoadAdPostDelay = TimeSpan.Zero

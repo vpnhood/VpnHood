@@ -17,7 +17,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr LoadLibrary(string lpFileName);
 
-    private readonly SharpPcap.WinDivert.WinDivertDevice _device;
+    private readonly WinDivertDevice _device;
     private bool _disposed;
     private WinDivertHeader? _lastCaptureHeader;
     private PacketReceivedEventArgs? _packetReceivedEventArgs;
@@ -45,7 +45,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
     public WinDivertVpnAdapter()
     {
         // initialize devices
-        _device = new SharpPcap.WinDivert.WinDivertDevice { Flags = 0 };
+        _device = new WinDivertDevice { Flags = 0 };
         _device.OnPacketArrival += Device_OnPacketArrival;
 
         // manage WinDivert file

@@ -40,6 +40,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
         isDebugMode ? false : null; // it follows user's settings if it set to null
 
     public TimeSpan ServerQueryTimeout { get; set; } = ClientOptions.Default.ServerQueryTimeout;
+    public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(2);
     public bool SingleLineConsoleLog { get; set; } = true;
     public bool AutoDiagnose { get; set; } = true;
     public AppAdOptions AdOptions { get; set; } = new();
@@ -48,4 +49,5 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public string? LocalSpaHostName { get; set; }
     public TimeSpan CanExtendByRewardedAdThreshold { get; set; } = TimeSpan.FromMinutes(5);
     public TimeSpan? EventWatcherInterval { get; set; } // set if you don't call State periodically
+    public bool DisconnectOnDispose { get; set; }
 }

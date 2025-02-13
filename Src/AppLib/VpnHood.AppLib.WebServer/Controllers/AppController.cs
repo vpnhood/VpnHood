@@ -76,11 +76,12 @@ internal class AppController : WebApiController, IAppController
         [QueryField] ConnectPlanId planId = ConnectPlanId.Normal)
     {
         return App.Connect(
-            clientProfileId,
-            serverLocation: serverLocation,
-            diagnose: false,
-            userAgent: HttpContext.Request.UserAgent,
-            planId: planId);
+            new ConnectOptions {
+                ClientProfileId = clientProfileId,
+                ServerLocation = serverLocation,
+                PlanId = planId,
+                UserAgent = HttpContext.Request.UserAgent,
+            });
     }
 
     [Route(HttpVerbs.Post, "/diagnose")]
@@ -88,17 +89,19 @@ internal class AppController : WebApiController, IAppController
         [QueryField] ConnectPlanId planId = ConnectPlanId.Normal)
     {
         return App.Connect(
-            clientProfileId,
-            serverLocation: serverLocation,
-            diagnose: true,
-            planId: planId,
-            userAgent: HttpContext.Request.UserAgent);
+            new ConnectOptions {
+                ClientProfileId = clientProfileId,
+                ServerLocation = serverLocation,
+                PlanId = planId,
+                UserAgent = HttpContext.Request.UserAgent,
+                Diagnose = true
+            });
     }
 
     [Route(HttpVerbs.Post, "/disconnect")]
     public Task Disconnect()
     {
-        return App.Disconnect(true);
+        return App.Disconnect();
     }
 
     [Route(HttpVerbs.Post, "/version-check")]

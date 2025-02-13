@@ -12,10 +12,10 @@ using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.Core.Client.Manager;
 
-public class VpnHoodClientManager : IJob, IAsyncDisposable
+public class VpnHoodClientManager : IJob, IDisposable
 {
     private readonly TimeSpan _requestVpnServiceTimeout = TimeSpan.FromSeconds(120);
-    private readonly TimeSpan _startVpnServiceTimeout = TimeSpan.FromSeconds(15);
+    private readonly TimeSpan _startVpnServiceTimeout = TimeSpan.FromSeconds(2); //todo
     private readonly TimeSpan _connectionInfoTimeout = TimeSpan.FromSeconds(1);
     private readonly IDevice _device;
     private readonly IAdService _adService;
@@ -78,7 +78,7 @@ public class VpnHoodClientManager : IJob, IAsyncDisposable
     public async Task Start(ClientOptions clientOptions, CancellationToken cancellationToken)
     {
         _cancellationToken = cancellationToken;
-        _connectionInfo = SetConnectionInfo(ClientState.Connecting);
+        _connectionInfo = SetConnectionInfo(ClientState.Initializing);
 
         // delete last config file
         if (File.Exists(_vpnStatusFilePath))
@@ -108,9 +108,9 @@ public class VpnHoodClientManager : IJob, IAsyncDisposable
     {
         VhLogger.Instance.LogInformation("Waiting for VpnService ...");
         var timeoutTask = Task.Delay(_startVpnServiceTimeout, cancellationToken);
-        while (ConnectionInfo.ClientState == ClientState.None) {
+        while (ConnectionInfo.ClientState == ClientState.Initializing) {
             if (await Task.WhenAny(Task.Delay(100, cancellationToken), timeoutTask) == timeoutTask)
-                throw new TimeoutException("VpnService did not start in time.");
+                throw new TimeoutException($"VpnService did not respond within {_startVpnServiceTimeout.TotalSeconds} seconds.");
         }
     }
 
@@ -120,7 +120,7 @@ public class VpnHoodClientManager : IJob, IAsyncDisposable
         var connectionInfo = ConnectionInfo;
         while (true) {
             // check for error
-            if (connectionInfo.Error != null) 
+            if (connectionInfo.Error != null)
                 throw CreateException(connectionInfo.Error);
 
             // make sure it is not disposed
@@ -142,6 +142,10 @@ public class VpnHoodClientManager : IJob, IAsyncDisposable
         return apiError.ToException();
     }
 
+    /// <summary>
+    /// Stop the VPN service and disconnect from the server if running. This method is idempotent.
+    /// No exception is thrown
+    /// </summary>
     public async Task Stop()
     {
         if (!ConnectionInfo.IsStarted())
@@ -303,9 +307,9 @@ public class VpnHoodClientManager : IJob, IAsyncDisposable
         await UpdateConnectionInfo(false, CancellationToken.None);
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        await Stop();
+        // do not stop, lets service keep running until user explicitly stop it
         _tcpClient?.Dispose();
     }
 }

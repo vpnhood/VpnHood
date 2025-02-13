@@ -39,4 +39,8 @@
 		<Folder Include="Resources\" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\VpnHood.Core.ToolKit\VpnHood.Core.ToolKit.csproj" />
+	</ItemGroup>
+
 </Project>

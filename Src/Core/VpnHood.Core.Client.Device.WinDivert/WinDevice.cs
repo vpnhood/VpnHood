@@ -4,7 +4,7 @@ using VpnHood.Core.Common.Logging;
 
 namespace VpnHood.Core.Client.Device.WinDivert;
 
-public class WinDivertDevice(string storageFolder, ITracker? tracker) : IDevice
+public class WinDevice(string storageFolder, ITracker? tracker) : IDevice
 {
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public string VpnServiceConfigFolder { get; } = Path.Combine(storageFolder, "vpn-service");

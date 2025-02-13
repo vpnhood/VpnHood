@@ -3,6 +3,7 @@
 public enum ClientState
 {
     None,
+    Initializing,
     Connecting,
     Connected,
     Waiting,

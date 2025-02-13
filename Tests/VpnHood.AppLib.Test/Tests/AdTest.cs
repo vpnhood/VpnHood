@@ -48,8 +48,7 @@ public class AdTest : TestBase
 
         // create client app
         var appOptions = TestAppHelper.CreateAppOptions();
-        var adProviderItem = new AppAdProviderItem
-            { AdProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd) };
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd) };
         appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         ActiveUiContext.Context = null;
@@ -59,7 +58,7 @@ public class AdTest : TestBase
         var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() => app.Connect(clientProfile.ClientProfileId));
-        await app.WaitForState( AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None);
     }
 
     [TestMethod]
@@ -79,7 +78,7 @@ public class AdTest : TestBase
         var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId, planId: ConnectPlanId.PremiumByTrial);
-        await app.WaitForState( AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected);
     }
 
     [TestMethod]
@@ -100,10 +99,12 @@ public class AdTest : TestBase
         // connect
         var token = accessManager.CreateToken();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() =>
-            app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd));
+        await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() => app.Connect(new ConnectOptions {
+            ClientProfileId = clientProfile.ClientProfileId,
+            PlanId = ConnectPlanId.PremiumByRewardedAd
+        }));
 
-        await app.WaitForState( AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None);
     }
 
     [TestMethod]
@@ -178,7 +179,7 @@ public class AdTest : TestBase
                 app.ExtendByRewardedAd(CancellationToken.None));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
             await Task.Delay(500);
-            await app.WaitForState( AppConnectionState.Connected);
+            await app.WaitForState(AppConnectionState.Connected);
         }
     }
 

@@ -152,10 +152,21 @@ public class VpnHoodClientManager : IJob, IDisposable
 
     private static Exception CreateException(ApiError apiError)
     {
-        if (apiError.Is<SessionException>())
-            return new SessionException(apiError);
+        Exception? exception = null;
 
-        return apiError.ToException();
+        if (apiError.Is<SessionException>())
+            exception = new SessionException(apiError);
+
+        if (apiError.Is<ShowAdException>())
+            exception = new ShowAdException(apiError.Message);
+
+        if (apiError.Is<ShowAdNoUiException>())
+            exception = new ShowAdNoUiException(apiError.Message);
+
+        if (exception!=null)
+            apiError.ExportData(exception.Data);
+
+        return exception ?? apiError.ToException();
     }
 
     /// <summary>

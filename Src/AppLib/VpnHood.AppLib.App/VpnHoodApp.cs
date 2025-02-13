@@ -525,7 +525,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             if (timeoutCancellationSource.IsCancellationRequested) {
                 var exception = new ConnectionTimeoutException("Could not establish connection in given time.", ex);
+                await _clientManager.Stop(); // stop client if timeout
                 await _clientManager.ClearState(exception);
+                _appPersistState.LastError = exception.ToApiError();
                 throw exception;
             }
 

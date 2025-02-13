@@ -10,7 +10,6 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
-using VpnHood.Core.ToolKit;
 using FastDateTime = VpnHood.Core.Common.Utils.FastDateTime;
 
 namespace VpnHood.Core.Client.Manager;
@@ -38,7 +37,8 @@ public class VpnHoodClientManager : IJob, IDisposable
         _vpnStatusFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
         _device = device;
         _adService = adService;
-        _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath) ?? SetConnectionInfo(ClientState.None);
+        _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath) ?? BuildConnectionInfo(ClientState.None);
+
         JobSection = new JobSection(eventWatcherInterval ?? TimeSpan.MaxValue);
         JobRunner.Default.Add(this);
     }
@@ -50,9 +50,9 @@ public class VpnHoodClientManager : IJob, IDisposable
         }
     }
 
-    private ConnectionInfo SetConnectionInfo(ClientState clientState, Exception? ex = null)
+    private static ConnectionInfo BuildConnectionInfo(ClientState clientState, Exception? ex = null)
     {
-        _connectionInfo = new ConnectionInfo {
+        return new ConnectionInfo {
             SessionInfo = null,
             SessionStatus = null,
             ApiEndPoint = null,
@@ -60,22 +60,28 @@ public class VpnHoodClientManager : IJob, IDisposable
             ClientState = clientState,
             Error = ex?.ToApiError()
         };
+    }
 
-        File.WriteAllText(_vpnStatusFilePath, JsonSerializer.Serialize(_connectionInfo));
+    private ConnectionInfo SetConnectionInfo(ClientState clientState, Exception? ex = null)
+    {
+        _connectionInfo = BuildConnectionInfo(clientState, ex);
+        try {
+            File.WriteAllText(_vpnStatusFilePath, JsonSerializer.Serialize(_connectionInfo));
+        }
+        catch {
+            // it is ok if we can't write to the file
+            // It means the service is overwriting the file
+        }
         return _connectionInfo;
 
     }
 
     public async Task ClearState()
     {
-        await ClearState(null);
-    }
-
-    public async Task ClearState(Exception? ex)
-    {
+        // clear state just if the state is disposed
         var connectionInfo = await UpdateConnectionInfo(true, CancellationToken.None);
         if (connectionInfo.ClientState == ClientState.Disposed)
-            SetConnectionInfo(ClientState.None, ex);
+            SetConnectionInfo(ClientState.None);
     }
 
     public async Task Start(ClientOptions clientOptions, CancellationToken cancellationToken)
@@ -156,13 +162,16 @@ public class VpnHoodClientManager : IJob, IDisposable
     /// Stop the VPN service and disconnect from the server if running. This method is idempotent.
     /// No exception is thrown
     /// </summary>
-    public async Task Stop()
+    public async Task Stop(TimeSpan? timeSpan = null)
     {
+        timeSpan ??= TimeSpan.FromSeconds(5);
+
         if (!ConnectionInfo.IsStarted())
             return;
 
         try {
-            await SendRequest(new ApiDisconnectRequest(), CancellationToken.None);
+            var timeoutCt = new CancellationTokenSource(timeSpan.Value);
+            await SendRequest(new ApiDisconnectRequest(), timeoutCt.Token).VhConfigureAwait();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error in Stopping VpnService.");
@@ -193,8 +202,7 @@ public class VpnHoodClientManager : IJob, IDisposable
 
         // update from file to make sure there is no error
         // VpnClient always update the file when ConnectionState changes
-        var json = await FileUtils.ReadAllTextAsync(_vpnStatusFilePath, TimeSpan.FromSeconds(1), cancellationToken).VhConfigureAwait();
-        _connectionInfo = JsonUtils.TryDeserialize<ConnectionInfo>(json) ?? _connectionInfo;
+        _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath) ?? _connectionInfo;
         if (_connectionInfo.Error != null || !_connectionInfo.IsStarted()) {
             CheckForEvents(_connectionInfo, cancellationToken);
             return _connectionInfo;
@@ -224,7 +232,7 @@ public class VpnHoodClientManager : IJob, IDisposable
     private async Task<T> SendRequest<T>(IApiRequest request, CancellationToken cancellationToken)
     {
         // for simplicity, we send one request at a time
-        using var scopeLock = await _sendLock.LockAsync(cancellationToken).VhConfigureAwait();
+        using var scopeLock = await _sendLock.LockAsync(TimeSpan.FromSeconds(5), cancellationToken).VhConfigureAwait();
 
         if (_connectionInfo == null)
             throw new InvalidOperationException("VpnService is not active.");
@@ -246,9 +254,12 @@ public class VpnHoodClientManager : IJob, IDisposable
                     .AsTask().VhConfigureAwait();
             }
 
-            await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request.GetType().Name, cancellationToken).AsTask().VhConfigureAwait();
-            await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request, cancellationToken).AsTask().VhConfigureAwait();
-            var ret = await StreamUtils.ReadObjectAsync<T>(_tcpClient.GetStream(), cancellationToken).VhConfigureAwait();
+            await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request.GetType().Name, cancellationToken)
+                .AsTask().VhConfigureAwait();
+            await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request, cancellationToken).AsTask()
+                .VhConfigureAwait();
+            var ret = await StreamUtils.ReadObjectAsync<T>(_tcpClient.GetStream(), cancellationToken)
+                .VhConfigureAwait();
             if (request is ApiDisconnectRequest) {
                 _tcpClient.Dispose();
                 _tcpClient = null;
@@ -294,13 +305,13 @@ public class VpnHoodClientManager : IJob, IDisposable
                 _ => throw new NotSupportedException(
                     $"The requested ad is not supported. AdRequestType={adRequest.AdRequestType}")
             };
-            await SendRequest<ApiRequestedAdResult>(new ApiRequestedAdResult {
+            await SendRequest<ApiSetRequestedAdResultRequest>(new ApiSetRequestedAdResultRequest {
                 ApiError = null,
                 AdResult = adRequestResult
             }, cancellationToken);
         }
         catch (Exception ex) {
-            await SendRequest<ApiRequestedAdResult>(new ApiRequestedAdResult {
+            await SendRequest<ApiSetRequestedAdResultRequest>(new ApiSetRequestedAdResultRequest {
                 ApiError = ex.ToApiError(),
                 AdResult = null
             }, cancellationToken);
@@ -309,7 +320,7 @@ public class VpnHoodClientManager : IJob, IDisposable
 
     public async Task SendRewardedAdResult(AdResult adResult, CancellationToken cancellationToken)
     {
-        await SendRequest<ApiRequestedAdResult>(new ApiRewardedAdResult {
+        await SendRequest<ApiSetRequestedAdResultRequest>(new ApiSendRewardedAdResultRequest {
             AdResult = adResult
         }, cancellationToken);
     }

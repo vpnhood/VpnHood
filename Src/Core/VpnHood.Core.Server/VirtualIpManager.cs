@@ -2,7 +2,6 @@
 using System.Net;
 using System.Text.Json;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Utils;
@@ -13,7 +12,7 @@ internal class VirtualIpManager(IpNetwork ipNetworkV4, IpNetwork ipNetworkV6, st
 {
     private readonly ConcurrentDictionary<IPAddress, Session> _virtualIps = new();
     private VirtualIpBundle _lastAllocatedVirtualIps =
-        JsonUtils.TryDeserializeFile<VirtualIpBundle>(lastVirtualIpFilePath, logger: VhLogger.Instance) ?? new VirtualIpBundle {
+        JsonUtils.TryDeserializeFile<VirtualIpBundle>(lastVirtualIpFilePath) ?? new VirtualIpBundle {
             IpV4 = ipNetworkV4.FirstIpAddress,
             IpV6 = ipNetworkV6.FirstIpAddress
         };

@@ -7,6 +7,7 @@ using Android.Runtime;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling.Factory;
 using Environment = System.Environment;
 
@@ -33,7 +34,8 @@ public class AndroidVpnService : VpnService
 
         // signal start command
         if (intent?.Action == "connect") {
-            return Connect() ? StartCommandResult.Sticky : StartCommandResult.NotSticky;
+            _ = Connect();
+            return StartCommandResult.Sticky;
         }
 
         if (intent?.Action == "disconnect") {
@@ -45,7 +47,7 @@ public class AndroidVpnService : VpnService
         return StartCommandResult.NotSticky;
     }
 
-    public bool Connect()
+    public async Task<bool> Connect()
     {
         try {
             // already connecting
@@ -58,7 +60,7 @@ public class AndroidVpnService : VpnService
             IVpnAdapter adapter = clientOptions.UseNullCapture ? new NullVpnAdapter() : new AndroidVpnAdapter(this);
 
             // create vpn client //todo: set tracker
-            _vpnHoodService = VpnHoodService.Create(serviceContext, adapter, new SocketFactory(), null);
+            _vpnHoodService = await VpnHoodService.Create(serviceContext, adapter, new SocketFactory(), null);
 
             // initialize notification
             _notification = new AndroidVpnNotification(this, new VpnServiceLocalization(), _vpnHoodService.Client.SessionName);

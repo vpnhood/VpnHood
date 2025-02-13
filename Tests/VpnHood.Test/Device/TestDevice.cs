@@ -10,7 +10,7 @@ namespace VpnHood.Test.Device;
 public class TestDevice(Func<IVpnAdapter> vpnAdapterFactory, ITracker? tracker = null) : IDevice
 {
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
-    public string VpnServiceConfigFolder { get; } = Path.Combine(TestHelper.WorkingPath, "VpnService-Shared", Guid.CreateVersion7().ToString());
+    public string VpnServiceConfigFolder { get; } = Path.Combine(TestHelper.WorkingPath, "VpnService", Guid.CreateVersion7().ToString());
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
     public bool IsAlwaysOnSupported => false;
@@ -33,12 +33,14 @@ public class TestDevice(Func<IVpnAdapter> vpnAdapterFactory, ITracker? tracker =
     private VpnHoodService? _vpnHoodService;
     private async Task SimulateStartService()
     {
-        if (_vpnHoodService == null)
+        if (_vpnHoodService != null) {
+            VhLogger.Instance.LogDebug("Test VpnService already started.");
             return;
+        }
 
         // create service
         var serviceContext = new VpnHoodServiceContext(VpnServiceConfigFolder);
-        _vpnHoodService = VpnHoodService.Create(serviceContext, vpnAdapterFactory(), new TestSocketFactory(), tracker: tracker);
+        _vpnHoodService = await VpnHoodService.Create(serviceContext, vpnAdapterFactory(), new TestSocketFactory(), tracker: tracker);
         _vpnHoodService.Disposed += (_, _) => Dispose();
 
         // connect
@@ -47,6 +49,7 @@ public class TestDevice(Func<IVpnAdapter> vpnAdapterFactory, ITracker? tracker =
 
     public void Dispose()
     {
+        _vpnHoodService = null;
         _vpnHoodService?.DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 }

@@ -19,6 +19,17 @@ public static class JsonUtils
         return Deserialize<T>(json, options);
     }
 
+    public static T? TryDeserialize<T>(string json, JsonSerializerOptions? options = null, ILogger? logger = null)
+    {
+        try {
+            return JsonSerializer.Deserialize<T>(json, options);
+        }
+        catch (Exception ex) {
+            logger?.LogError(ex, "Could not read json file.");
+            return default;
+        }
+    }
+
     public static T Deserialize<T>(string json, JsonSerializerOptions? options = null)
     {
         return JsonSerializer.Deserialize<T>(json, options) ??

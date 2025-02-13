@@ -14,7 +14,7 @@ public class WinVpnService(string configFolder, ITracker? tracker) : IAsyncDispo
 
         // create the vpnhood service
         var serviceContext = new VpnHoodServiceContext(configFolder);
-        _vpnHoodService = VpnHoodService.Create(serviceContext, new WinDivertVpnAdapter(), new SocketFactory(), tracker: tracker);
+        _vpnHoodService = await VpnHoodService.Create(serviceContext, new WinDivertVpnAdapter(), new SocketFactory(), tracker: tracker);
         _vpnHoodService.Disposed += (sender, args) => _ = DisposeAsync();
 
         // start the service

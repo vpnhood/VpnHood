@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System.Diagnostics;
+using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
@@ -9,14 +10,16 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
+using VpnHood.Core.ToolKit;
+using FastDateTime = VpnHood.Core.Common.Utils.FastDateTime;
 
 namespace VpnHood.Core.Client.Manager;
 
 public class VpnHoodClientManager : IJob, IDisposable
 {
-    private readonly TimeSpan _requestVpnServiceTimeout = TimeSpan.FromSeconds(120);
-    private readonly TimeSpan _startVpnServiceTimeout = TimeSpan.FromSeconds(2); //todo
-    private readonly TimeSpan _connectionInfoTimeout = TimeSpan.FromSeconds(1);
+    private readonly TimeSpan _requestVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(120);
+    private readonly TimeSpan _startVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(15);
+    private readonly TimeSpan _connectionInfoTimeSpan = TimeSpan.FromSeconds(1);
     private readonly IDevice _device;
     private readonly IAdService _adService;
     private readonly string _vpnConfigFilePath;
@@ -85,7 +88,8 @@ public class VpnHoodClientManager : IJob, IDisposable
             File.Delete(_vpnStatusFilePath);
 
         // save vpn config
-        await File.WriteAllTextAsync(_vpnConfigFilePath, JsonSerializer.Serialize(clientOptions), cancellationToken);
+        await File.WriteAllTextAsync(_vpnConfigFilePath, JsonSerializer.Serialize(clientOptions), cancellationToken)
+            .VhConfigureAwait();
 
         // prepare vpn service
         VhLogger.Instance.LogInformation("Requesting VpnService ...");
@@ -94,31 +98,37 @@ public class VpnHoodClientManager : IJob, IDisposable
 
         // start vpn service
         VhLogger.Instance.LogInformation("Starting VpnService ...");
-        await _device.StartVpnService(cancellationToken)
-            .VhConfigureAwait();
+        await _device.StartVpnService(cancellationToken).VhConfigureAwait();
 
         // wait for vpn service
-        await WaitForVpnService(cancellationToken);
+        await WaitForVpnService(cancellationToken).VhConfigureAwait();
 
         // wait for connection or error
-        await WaitForConnection(cancellationToken);
+        await WaitForConnection(cancellationToken).VhConfigureAwait();
     }
 
     private async Task WaitForVpnService(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("Waiting for VpnService ...");
         var timeoutTask = Task.Delay(_startVpnServiceTimeout, cancellationToken);
-        while (ConnectionInfo.ClientState == ClientState.Initializing) {
-            if (await Task.WhenAny(Task.Delay(100, cancellationToken), timeoutTask) == timeoutTask)
+        var connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
+
+        // wait for vpn service to start
+        while (connectionInfo == null || connectionInfo.ClientState is ClientState.None or ClientState.Initializing) {
+            if (await Task.WhenAny(Task.Delay(200, cancellationToken), timeoutTask) == timeoutTask)
                 throw new TimeoutException($"VpnService did not respond within {_startVpnServiceTimeout.TotalSeconds} seconds.");
+
+            connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
         }
+        _connectionInfo = connectionInfo;
     }
 
     private async Task WaitForConnection(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("Waiting for connection ...");
-        var connectionInfo = ConnectionInfo;
         while (true) {
+            var connectionInfo = ConnectionInfo;
+
             // check for error
             if (connectionInfo.Error != null)
                 throw CreateException(connectionInfo.Error);
@@ -130,7 +140,7 @@ public class VpnHoodClientManager : IJob, IDisposable
             if (connectionInfo.ClientState == ClientState.Connected)
                 break;
 
-            await Task.Delay(_connectionInfoTimeout, cancellationToken);
+            await Task.Delay(_connectionInfoTimeSpan, cancellationToken);
         }
     }
 
@@ -177,13 +187,14 @@ public class VpnHoodClientManager : IJob, IDisposable
         using var scopeLock = await _connectionInfoLock.LockAsync(cancellationToken).ConfigureAwait(false);
 
         // read from cache if not expired
-        if (!force && FastDateTime.Now - _connectionInfoTime < _connectionInfoTimeout)
+        if (!force && FastDateTime.Now - _connectionInfoTime < _connectionInfoTimeSpan)
             return _connectionInfo;
         _connectionInfoTime = FastDateTime.Now;
 
         // update from file to make sure there is no error
         // VpnClient always update the file when ConnectionState changes
-        _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath) ?? SetConnectionInfo(ClientState.None);
+        var json = await FileUtils.ReadAllTextAsync(_vpnStatusFilePath, TimeSpan.FromSeconds(1), cancellationToken).VhConfigureAwait();
+        _connectionInfo = JsonUtils.TryDeserialize<ConnectionInfo>(json) ?? _connectionInfo;
         if (_connectionInfo.Error != null || !_connectionInfo.IsStarted()) {
             CheckForEvents(_connectionInfo, cancellationToken);
             return _connectionInfo;
@@ -228,7 +239,8 @@ public class VpnHoodClientManager : IJob, IDisposable
             // establish and set the api key
             if (_tcpClient is not { Connected: true }) {
                 _tcpClient?.Dispose();
-                _tcpClient = new TcpClient(_connectionInfo.ApiEndPoint);
+                _tcpClient = new TcpClient();
+                await _tcpClient.ConnectAsync(_connectionInfo.ApiEndPoint.Address, _connectionInfo.ApiEndPoint.Port);
                 await StreamUtils
                     .WriteObjectAsync(_tcpClient.GetStream(), _connectionInfo.ApiKey ?? [], cancellationToken)
                     .AsTask().VhConfigureAwait();

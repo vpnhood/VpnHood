@@ -7,10 +7,10 @@ using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Device;
 
-public class TestDevice(Func<IVpnAdapter> vpnAdapterFactory, ITracker? tracker = null) : IDevice
+public class TestDevice(TestHelper testHelper, Func<IVpnAdapter> vpnAdapterFactory, ITracker? tracker = null) : IDevice
 {
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
-    public string VpnServiceConfigFolder { get; } = Path.Combine(TestHelper.WorkingPath, "VpnService", Guid.CreateVersion7().ToString());
+    public string VpnServiceConfigFolder { get; } = Path.Combine(testHelper.WorkingPath, "VpnService", Guid.CreateVersion7().ToString());
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
     public bool IsAlwaysOnSupported => false;

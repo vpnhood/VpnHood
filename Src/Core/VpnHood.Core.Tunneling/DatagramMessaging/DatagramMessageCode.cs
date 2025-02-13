@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace VpnHood.Core.Tunneling.DatagramMessaging;
+﻿namespace VpnHood.Core.Tunneling.DatagramMessaging;
 
 public enum DatagramMessageCode : byte
 {

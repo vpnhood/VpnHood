@@ -5,13 +5,11 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
-using VpnHood.Test;
-using VpnHood.Test.Tests;
 
 namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
-public class AccessCodeTest : TestBase
+public class AccessCodeTest : TestAppBase
 {
     [TestMethod]
     public async Task AaFoo()

@@ -290,7 +290,7 @@ public class ClientServerTest : TestBase
         Assert.IsTrue(fileAccessManagerOptions.UdpEndPoints.Any(x => x.Port == client.HostUdpEndPoint?.Port));
     }
 
-    private static async Task TestTunnel(VpnHoodServer server, VpnHoodClient client)
+    private async Task TestTunnel(VpnHoodServer server, VpnHoodClient client)
     {
         Assert.AreEqual(ServerState.Ready, server.State);
         Assert.AreEqual(ClientState.Connected, client.State);

@@ -13,7 +13,7 @@ namespace VpnHood.AppLib.Test;
 
 public class TestAppHelper : TestHelper
 {
-    public static AppOptions CreateAppOptions()
+    public AppOptions CreateAppOptions()
     {
         var tracker = new TestTrackerProvider();
         var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode: true) {
@@ -40,10 +40,10 @@ public class TestAppHelper : TestHelper
         return appOptions;
     }
 
-    public static VpnHoodApp CreateClientApp(AppOptions? appOptions = null, IDevice? device = null)
+    public VpnHoodApp CreateClientApp(AppOptions? appOptions = null, IDevice? device = null)
     {
         appOptions ??= CreateAppOptions();
-        device ??= new TestDevice(() => new TestNullVpnAdapter());
+        device ??= new TestDevice(this, () => new TestNullVpnAdapter());
 
         //create app
         var clientApp = VpnHoodApp.Init(device, appOptions);
@@ -74,7 +74,7 @@ public class TestAppHelper : TestHelper
         return result.ToString();
     }
 
-    public static string BuildAccessCode()
+    public string BuildAccessCode()
     {
         return AccessCodeUtils.Build(GenerateSecureRandomDigits(18));
     }

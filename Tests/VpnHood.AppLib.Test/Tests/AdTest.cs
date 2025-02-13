@@ -6,14 +6,12 @@ using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Test;
 using VpnHood.Test.Device;
-using VpnHood.Test.Tests;
 
 namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
-public class AdTest : TestBase
+public class AdTest : TestAppBase
 {
     [TestMethod]
     public async Task flexible_ad_should_not_close_session_if_load_ad_failed()
@@ -155,7 +153,7 @@ public class AdTest : TestBase
         var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
-        var device = new TestDevice(() => new NullVpnAdapter { CanDetectInProcessPacket = true });
+        var device = new TestDevice(TestHelper,() => new NullVpnAdapter { CanDetectInProcessPacket = true });
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
 
         // create access token
@@ -196,7 +194,7 @@ public class AdTest : TestBase
         var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
-        var device = new TestDevice(() => new NullVpnAdapter { CanDetectInProcessPacket = canDetectInProcessPacket });
+        var device = new TestDevice(TestHelper, () => new NullVpnAdapter { CanDetectInProcessPacket = canDetectInProcessPacket });
         await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
 
         // create token
@@ -226,7 +224,7 @@ public class AdTest : TestBase
         var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
-        var device = new TestDevice(() => new NullVpnAdapter { CanDetectInProcessPacket = true });
+        var device = new TestDevice(TestHelper, () => new NullVpnAdapter { CanDetectInProcessPacket = true });
         await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
 
         // create token

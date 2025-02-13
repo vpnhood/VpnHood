@@ -9,5 +9,6 @@ public abstract class TestBase
     public void TestInitialize()
     {
         VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
+        TestHelper.
     }
 }

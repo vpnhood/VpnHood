@@ -82,16 +82,16 @@ public class ApiError : ICloneable
     {
         if (Is<OperationCanceledException>())
             return new OperationCanceledException(Message, innerException);
-        
+
         if (Is<TaskCanceledException>())
             return new TaskCanceledException(Message, innerException);
-        
+
         if (Is<AlreadyExistsException>())
             return new AlreadyExistsException(Message, innerException);
 
         if (Is<NotExistsException>())
             return new NotExistsException(Message, innerException);
-        
+
         if (Is<UnauthorizedAccessException>())
             return new UnauthorizedAccessException(Message, innerException);
 
@@ -106,4 +106,11 @@ public class ApiError : ICloneable
                 Data.TryAdd(key, item.Value?.ToString());
         }
     }
+
+    public void ExportData(IDictionary data)
+    {
+        foreach (var kvp in Data.Where(kvp => !data.Contains(kvp.Key)))
+            data.Add(kvp.Key, kvp.Value);
+    }
+
 }

@@ -7,6 +7,7 @@ namespace VpnHood.Core.Common.ApiClients;
 
 public class ApiError : ICloneable
 {
+    public const string Flag = "IsApiError";
     public required string TypeName { get; init; }
     public string? TypeFullName { get; set; }
     public required string Message { get; init; }
@@ -61,41 +62,28 @@ public class ApiError : ICloneable
     {
         // create exception
         var innerException = new Exception(InnerMessage ?? "");
-        var exception = ToException(innerException);
+        Exception? exception;
 
-        // add data
-        foreach (var item in Data)
-            exception.Data.Add(item.Key, item.Value);
-
-        // add type info
-        if (!exception.Data.Contains(nameof(TypeFullName)))
-            exception.Data.Add(nameof(TypeFullName), TypeFullName);
-
-        // add type info
-        if (!exception.Data.Contains(nameof(TypeName)))
-            exception.Data.Add(nameof(TypeName), TypeName);
-
-        return exception;
-    }
-
-    private Exception ToException(Exception innerException)
-    {
         if (Is<OperationCanceledException>())
-            return new OperationCanceledException(Message, innerException);
+            exception = new OperationCanceledException(Message, innerException);
 
-        if (Is<TaskCanceledException>())
-            return new TaskCanceledException(Message, innerException);
+        else if (Is<TaskCanceledException>())
+            exception = new TaskCanceledException(Message, innerException);
 
-        if (Is<AlreadyExistsException>())
-            return new AlreadyExistsException(Message, innerException);
+        else if (Is<AlreadyExistsException>())
+            exception = new AlreadyExistsException(Message, innerException);
 
-        if (Is<NotExistsException>())
-            return new NotExistsException(Message, innerException);
+        else if (Is<NotExistsException>())
+            exception = new NotExistsException(Message, innerException);
 
-        if (Is<UnauthorizedAccessException>())
-            return new UnauthorizedAccessException(Message, innerException);
+        else if (Is<UnauthorizedAccessException>())
+            exception = new UnauthorizedAccessException(Message, innerException);
 
-        return new Exception(Message, innerException);
+        else
+            exception = new ApiException(this);
+
+        ExportData(exception.Data);
+        return exception;
     }
 
     public void ImportData(IDictionary data)
@@ -105,12 +93,20 @@ public class ApiError : ICloneable
             if (key != null)
                 Data.TryAdd(key, item.Value?.ToString());
         }
+
+        if (data.Contains(Flag))
+            data.Add(Flag, "true");
     }
 
     public void ExportData(IDictionary data)
     {
         foreach (var kvp in Data.Where(kvp => !data.Contains(kvp.Key)))
             data.Add(kvp.Key, kvp.Value);
+
+        Data.TryAdd(nameof(TypeFullName), TypeFullName);
+        Data.TryAdd(nameof(TypeName), TypeName);
+        Data.TryAdd("IsApiError", "true");
+
     }
 
 }

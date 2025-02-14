@@ -16,7 +16,10 @@ public static class ClientExceptionConverter
 
         if (apiError.Is<SessionException>())
             exception = new SessionException(apiError);
-        
+
+        if (apiError.Is<UiContextNotAvailableException>())
+            exception = new UiContextNotAvailableException();
+
         if (apiError.Is<AdException>())
             exception = new AdException(apiError.Message);
         

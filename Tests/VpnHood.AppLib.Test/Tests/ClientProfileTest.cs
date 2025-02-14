@@ -40,8 +40,6 @@ public class ClientProfileTest : TestAppBase
     [TestMethod]
     public async Task BuiltIn_AccessKeys_initialization()
     {
-        using var testApp = new TestAppHelper();
-
         var appOptions = TestAppHelper.CreateAppOptions();
         var tokens = new[] { CreateToken(), CreateToken() };
         appOptions.AccessKeys = tokens.Select(x => x.ToAccessKey()).ToArray();

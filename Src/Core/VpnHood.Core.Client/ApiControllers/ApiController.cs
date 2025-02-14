@@ -3,8 +3,7 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.ApiRequests;
-using VpnHood.Core.Client.Device.Exceptions;
-using VpnHood.Core.Common.Exceptions;
+using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 
@@ -88,9 +87,9 @@ public class ApiController : IDisposable
                 break;
 
             // handle ad request
-            case nameof(ApiSetRequestedAdResultRequest):
-                await SetRequestedAdResult(
-                    await StreamUtils.ReadObjectAsync<ApiSetRequestedAdResultRequest>(stream, cancellationToken), cancellationToken);
+            case nameof(ApiSetAdResultRequest):
+                await SetAdResult(
+                    await StreamUtils.ReadObjectAsync<ApiSetAdResultRequest>(stream, cancellationToken), cancellationToken);
                 break;
 
             // handle ad reward request
@@ -121,22 +120,20 @@ public class ApiController : IDisposable
         return Task.CompletedTask;
     }
 
-    public Task SetRequestedAdResult(ApiSetRequestedAdResultRequest request, CancellationToken cancellationToken)
+    public Task SetAdResult(ApiSetAdResultRequest request, CancellationToken cancellationToken)
     {
         if (request.AdResult != null) {
             VpnHoodClient.AdService.AdRequestTaskCompletionSource?.TrySetResult(request.AdResult);
             return Task.CompletedTask;
         }
 
-        var exception = 
-            request.ApiError?.Is<UiContextNotAvailableException>() == true ||
-            request.ApiError?.Is<ShowAdNoUiException>() == true
-            ? new ShowAdNoUiException()
-            : request.ApiError?.ToException() ?? new InvalidOperationException("Invalid ApiAdResultRequest.");
+        // handle error
+        if (request.ApiError is null)
+            throw new InvalidOperationException("Invalid ApiAdResultRequest. There is no ApiError nor AdResult");
 
 
         VpnHoodClient.AdService.AdRequestTaskCompletionSource?
-            .TrySetException(exception);
+            .TrySetException(ClientExceptionConverter.ApiErrorToException(request.ApiError));
 
         return Task.CompletedTask;
     }

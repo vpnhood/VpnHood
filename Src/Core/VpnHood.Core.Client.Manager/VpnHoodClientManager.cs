@@ -6,7 +6,6 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.ApiRequests;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.ApiClients;
-using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
@@ -137,7 +136,7 @@ public class VpnHoodClientManager : IJob, IDisposable
 
             // check for error
             if (connectionInfo.Error != null)
-                throw CreateException(connectionInfo.Error);
+                throw ClientExceptionConverter.ApiErrorToException(connectionInfo.Error);
 
             // make sure it is not disposed
             if (connectionInfo.ClientState is ClientState.Disposed)
@@ -148,25 +147,6 @@ public class VpnHoodClientManager : IJob, IDisposable
 
             await Task.Delay(_connectionInfoTimeSpan, cancellationToken);
         }
-    }
-
-    private static Exception CreateException(ApiError apiError)
-    {
-        Exception? exception = null;
-
-        if (apiError.Is<SessionException>())
-            exception = new SessionException(apiError);
-
-        if (apiError.Is<ShowAdException>())
-            exception = new ShowAdException(apiError.Message);
-
-        if (apiError.Is<ShowAdNoUiException>())
-            exception = new ShowAdNoUiException(apiError.Message);
-
-        if (exception!=null)
-            apiError.ExportData(exception.Data);
-
-        return exception ?? apiError.ToException();
     }
 
     /// <summary>
@@ -189,13 +169,6 @@ public class VpnHoodClientManager : IJob, IDisposable
         }
     }
 
-    public async Task Reconfigure(ClientReconfigureParams reconfigureParams, CancellationToken cancellationToken)
-    {
-        await SendRequest(new ApiReconfigureRequest { ReconfigureParams = reconfigureParams }, cancellationToken);
-
-        // make sure the connection info is updated before caller gets the result of configuration
-        await UpdateConnectionInfo(true, cancellationToken);
-    }
 
     public Task ForceUpdateState(CancellationToken cancellationToken) => UpdateConnectionInfo(true, cancellationToken);
 
@@ -267,8 +240,8 @@ public class VpnHoodClientManager : IJob, IDisposable
 
             await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request.GetType().Name, cancellationToken)
                 .AsTask().VhConfigureAwait();
-            await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request, cancellationToken).AsTask()
-                .VhConfigureAwait();
+            await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request, cancellationToken)
+                .AsTask().VhConfigureAwait();
             var ret = await StreamUtils.ReadObjectAsync<T>(_tcpClient.GetStream(), cancellationToken)
                 .VhConfigureAwait();
             if (request is ApiDisconnectRequest) {
@@ -316,24 +289,35 @@ public class VpnHoodClientManager : IJob, IDisposable
                 _ => throw new NotSupportedException(
                     $"The requested ad is not supported. AdRequestType={adRequest.AdRequestType}")
             };
-            await SendRequest<ApiSetRequestedAdResultRequest>(new ApiSetRequestedAdResultRequest {
+            await SendRequest<bool>(new ApiSetAdResultRequest {
                 ApiError = null,
                 AdResult = adRequestResult
             }, cancellationToken);
         }
         catch (Exception ex) {
-            await SendRequest<ApiSetRequestedAdResultRequest>(new ApiSetRequestedAdResultRequest {
+            await SendRequest<bool>(new ApiSetAdResultRequest {
                 ApiError = ex.ToApiError(),
                 AdResult = null
             }, cancellationToken);
         }
     }
 
+    public async Task Reconfigure(ClientReconfigureParams reconfigureParams, CancellationToken cancellationToken)
+    {
+        await SendRequest(new ApiReconfigureRequest { ReconfigureParams = reconfigureParams }, cancellationToken);
+
+        // make sure the connection info is updated before caller gets the result
+        await UpdateConnectionInfo(true, cancellationToken);
+    }
+
     public async Task SendRewardedAdResult(AdResult adResult, CancellationToken cancellationToken)
     {
-        await SendRequest<ApiSetRequestedAdResultRequest>(new ApiSendRewardedAdResultRequest {
+        await SendRequest<bool>(new ApiSendRewardedAdResultRequest {
             AdResult = adResult
         }, cancellationToken);
+
+        // make sure the connection info is updated before caller gets the result
+        await UpdateConnectionInfo(true, cancellationToken);
     }
 
     public async Task RunJob()

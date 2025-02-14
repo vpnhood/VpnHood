@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Client.Device.Exceptions;
+﻿using VpnHood.Core.Common.Exceptions;
 
 namespace VpnHood.Core.Client.Device;
 
@@ -7,7 +7,6 @@ public static class ActiveUiContext
     private static IUiContext? _context;
 
     public static event EventHandler? OnChanged;
-
 
     public static IUiContext? Context {
         get => _context;

@@ -1,3 +1,3 @@
 ﻿namespace VpnHood.Core.Client.Abstractions.ApiRequests;
 
-public class ApiConnectionInfoRequest : IApiRequest;
+public class ApiSaveConnectionInfoRequest : IApiRequest;

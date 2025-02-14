@@ -79,6 +79,9 @@ public class ApiError : ICloneable
         else if (Is<UnauthorizedAccessException>())
             exception = new UnauthorizedAccessException(Message, innerException);
 
+        else if (Is<TimeoutException>())
+            exception = new TimeoutException(Message, innerException);
+        
         else
             exception = new ApiException(this);
 

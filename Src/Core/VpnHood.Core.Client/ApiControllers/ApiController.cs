@@ -68,50 +68,67 @@ public class ApiController : IDisposable
 
     private async Task ProcessRequests(Stream stream, CancellationToken cancellationToken)
     {
-        object result = true;
+        try {
+            var result = await ProcessRequestsInternal(stream, cancellationToken);
 
+            // write response
+            var response = new ApiResponse<object> {
+                ApiError = null,
+                ConnectionInfo = VpnHoodClient.ToConnectionInfo(this),
+                Result = result
+            };
+            await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
+        }
+        catch (Exception ex) {
+            var response = new ApiResponse<object> {
+                ApiError = ex.ToApiError(),
+                ConnectionInfo = VpnHoodClient.ToConnectionInfo(this),
+                Result = null
+            };
+            await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
+        }
+    }
+
+    private async Task<object?> ProcessRequestsInternal(Stream stream, CancellationToken cancellationToken)
+    {
         // read request type
         var requestType = await StreamUtils.ReadObjectAsync<string>(stream, cancellationToken);
         switch (requestType) {
 
             // handle connection info request
-            case nameof(ApiConnectionInfoRequest):
-                result = await GetConnectionInfo(
-                    await StreamUtils.ReadObjectAsync<ApiConnectionInfoRequest>(stream, cancellationToken), cancellationToken);
-                break;
+            case nameof(ApiSaveConnectionInfoRequest):
+                await SaveConnectionInfo(
+                    await StreamUtils.ReadObjectAsync<ApiSaveConnectionInfoRequest>(stream, cancellationToken),
+                    cancellationToken);
+                return null; 
 
             // handle disconnect request
             case nameof(ApiDisconnectRequest):
                 await Disconnect(
                     await StreamUtils.ReadObjectAsync<ApiDisconnectRequest>(stream, cancellationToken), cancellationToken);
-                break;
+                return null;
 
             // handle ad request
             case nameof(ApiSetAdResultRequest):
                 await SetAdResult(
                     await StreamUtils.ReadObjectAsync<ApiSetAdResultRequest>(stream, cancellationToken), cancellationToken);
-                break;
+                return null;
 
             // handle ad reward request
             case nameof(ApiSendRewardedAdResultRequest):
                 await SendRewardedAdResult(
                     await StreamUtils.ReadObjectAsync<ApiSendRewardedAdResultRequest>(stream, cancellationToken), cancellationToken);
-                break;
-
-
+                return null;
+            
             default:
                 throw new InvalidOperationException($"Unknown request type: {requestType}");
         }
-
-        // write the result
-        await StreamUtils.WriteObjectAsync(stream, result, cancellationToken);
     }
 
-    public async Task<ConnectionInfo> GetConnectionInfo(ApiConnectionInfoRequest request, CancellationToken cancellationToken)
+    public Task SaveConnectionInfo(ApiSaveConnectionInfoRequest request, CancellationToken cancellationToken)
     {
         var connectionInfo = VpnHoodClient.ToConnectionInfo(this);
-        await _vpnHoodService.Context.SaveConnectionInfo(connectionInfo);
-        return connectionInfo;
+        return _vpnHoodService.Context.SaveConnectionInfo(connectionInfo);
     }
 
     public Task Disconnect(ApiDisconnectRequest request, CancellationToken cancellationToken)
@@ -142,7 +159,7 @@ public class ApiController : IDisposable
     {
         if (string.IsNullOrEmpty(request.AdResult.AdData))
             throw new InvalidOperationException("There is no AdData in ad reward.");
-        
+
         return VpnHoodClient.AdService.SendRewardedAdResult(request.AdResult.AdData, cancellationToken);
     }
 

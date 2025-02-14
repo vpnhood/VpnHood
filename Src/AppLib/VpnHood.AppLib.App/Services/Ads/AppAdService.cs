@@ -3,7 +3,6 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
-using VpnHood.Core.Client.Device.Exceptions;
 using VpnHood.Core.Client.Manager;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.IpLocations;

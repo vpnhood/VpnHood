@@ -12,7 +12,8 @@ internal class AppPersistState(string filePath)
 
     private class Data
     {
-        public ApiError? ApiError { get; set; }
+        public ApiError? LastError { get; set; }
+        public ApiError? LastClearedError { get; set; }
         public DateTime UpdateIgnoreTime { get; set; } = DateTime.MinValue;
         public string? ClientCountryCode { get; set; }
         public string? ClientCountryCodeByServer { get; set; }
@@ -21,15 +22,27 @@ internal class AppPersistState(string filePath)
     }
 
     public ApiError? LastError {
-        get => _data.ApiError;
+        get => _data.LastError;
         set {
-            if (JsonUtils.JsonEquals(_data.ApiError, value))
+            if (JsonUtils.JsonEquals(_data.LastError, value))
                 return;
 
-            _data.ApiError = value;
+            _data.LastError = value;
             Save();
         }
     }
+
+    public ApiError? LastClearedError {
+        get => _data.LastClearedError;
+        set {
+            if (JsonUtils.JsonEquals(_data.LastClearedError, value))
+                return;
+
+            _data.LastClearedError = value;
+            Save();
+        }
+    }
+
 
     public DateTime UpdateIgnoreTime {
         get => _data.UpdateIgnoreTime;

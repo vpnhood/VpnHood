@@ -2,10 +2,11 @@ using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using VpnHood.Core.Common.Exceptions;
+using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.Core.Common.ApiClients;
 
-public class ApiError : ICloneable
+public class ApiError : ICloneable, IEquatable<ApiError>
 {
     public const string Flag = "IsApiError";
     public required string TypeName { get; init; }
@@ -114,4 +115,21 @@ public class ApiError : ICloneable
 
     }
 
+    public bool Equals(ApiError? other)
+    {
+        return JsonUtils.JsonEquals(this, other);
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is null) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        return Equals((ApiError)obj);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(TypeName, TypeFullName, Message, Data, InnerMessage);
+    }
 }

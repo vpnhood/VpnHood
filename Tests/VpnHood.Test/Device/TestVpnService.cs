@@ -12,6 +12,7 @@ public class TestVpnService
     private readonly Func<IVpnAdapter> _vpnAdapterFactory;
     private readonly ITracker? _tracker;
     private readonly VpnHoodService _vpnHoodService;
+    public bool IsDisposed { get; private set; }
 
     // config folder should be read from static place in read environment, because service can be started independently
     public TestVpnService(
@@ -55,11 +56,13 @@ public class TestVpnService
 
     public void StopSelf()
     {
-        DisposeAsync();
+        _ = DisposeAsync();
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        return _vpnHoodService.DisposeAsync();
+        if (IsDisposed) return;
+        await _vpnHoodService.DisposeAsync();
+        IsDisposed = true;
     }
 }

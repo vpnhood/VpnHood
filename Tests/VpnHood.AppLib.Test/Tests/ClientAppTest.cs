@@ -78,10 +78,6 @@ public class ClientAppTest : TestAppBase
         Assert.IsTrue(app.State.IsIdle);
         Assert.IsNotNull(app.State.LastError);
 
-        //todo
-        //it may take little time the dispose event
-        //await VhTestUtil.AssertEqualsWait(true, () => app.State.LastError != null); 
-
         await app.ClearLastError();
         Assert.IsNull(app.State.LastError);
 

@@ -4,6 +4,8 @@ namespace VpnHood.Core.Client.Device.WinDivert;
 
 public class WinDevice(string storageFolder, ITracker? tracker, bool isDebugMode) : IDevice
 {
+    private WinVpnService? _vpnService;
+
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public string VpnServiceConfigFolder { get; } = Path.Combine(storageFolder, "vpn-service");
     public bool IsExcludeAppsSupported => isDebugMode;
@@ -44,17 +46,19 @@ public class WinDevice(string storageFolder, ITracker? tracker, bool isDebugMode
         return Task.CompletedTask;
     }
 
-    private WinVpnService? _winVpnService;
     public Task StartVpnService(CancellationToken cancellationToken)
     {
-        _winVpnService ??= new WinVpnService(VpnServiceConfigFolder, tracker);
-        _winVpnService.OnConnect();
+        if (_vpnService == null || _vpnService.IsDisposed)
+            _vpnService = new WinVpnService(VpnServiceConfigFolder, tracker);
+
+        _vpnService.OnConnect();
         return Task.CompletedTask;
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_winVpnService != null)
-            await _winVpnService.DisposeAsync();
+        if (_vpnService != null)
+            await _vpnService.DisposeAsync();
+        _vpnService = null;
     }
 }

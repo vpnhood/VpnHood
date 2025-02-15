@@ -15,5 +15,4 @@ public class ClientProfile
     public bool IsBuiltIn { get; set; }
     public bool IsPremium => !Token.IsPublic || AccessCode != null; //todo: test is premium when there is key
     public string? AccessCode { get; set; }
-    public ClientProfileAccess? Access { get; set; } //todo
 }

@@ -12,6 +12,8 @@ public class VpnHoodService : IAsyncDisposable
     private readonly ApiController _apiController;
     private readonly IVpnServiceHandler _vpnServiceHandler;
     private readonly ISocketFactory _socketFactory;
+    private bool _isDisposed;
+
     internal VpnHoodClient? Client { get; private set; }
     internal VpnHoodClient RequiredClient => Client ?? throw new InvalidOperationException("Client is not initialized.");
     internal VpnHoodServiceContext Context { get; }
@@ -50,6 +52,9 @@ public class VpnHoodService : IAsyncDisposable
     private readonly object _connectLock = new();
     public bool Connect()
     {
+        if (_isDisposed)
+            throw new ObjectDisposedException(nameof(VpnHoodService));
+
         lock (_connectLock) {
             VhLogger.Instance.LogTrace("VpnService is connecting...");
 
@@ -106,6 +111,9 @@ public class VpnHoodService : IAsyncDisposable
 
     public void Disconnect()
     {
+        if (_isDisposed)
+            throw new ObjectDisposedException(nameof(VpnHoodService));
+
         // let dispose in the background
         _ = Client?.DisposeAsync();
     }
@@ -113,6 +121,7 @@ public class VpnHoodService : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         VhLogger.Instance.LogTrace("VpnService is destroying...");
+        if (_isDisposed) return;
 
         // dispose client
         var client = Client;
@@ -124,6 +133,7 @@ public class VpnHoodService : IAsyncDisposable
         // dispose api controller
         _apiController.Dispose();
         VhLogger.Instance.LogTrace("VpnService has been destroyed.");
+        _isDisposed = true;
     }
 }
 

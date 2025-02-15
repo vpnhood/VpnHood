@@ -39,7 +39,8 @@ public class TestDevice(TestHelper testHelper, Func<IVpnAdapter> vpnAdapterFacto
         _disposeCancellationTokenSource.Token.ThrowIfCancellationRequested();
 
         // create service
-        _vpnService = new TestVpnService(VpnServiceConfigFolder, vpnAdapterFactory, tracker);
+        if (_vpnService == null || _vpnService.IsDisposed)
+            _vpnService = new TestVpnService(VpnServiceConfigFolder, vpnAdapterFactory, tracker);
         _vpnService.OnConnect();
     }
 

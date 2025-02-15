@@ -37,7 +37,8 @@ public class ApiController : IDisposable
             }
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Client API Listener has been stopped.");
+            if (_disposed == 0)
+                VhLogger.Instance.LogError(ex, "Client API Listener has been stopped.");
         }
         finally {
             _cancellationTokenSource.Cancel();
@@ -59,14 +60,15 @@ public class ApiController : IDisposable
                 await ProcessRequests(stream, cancellationToken);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not handle API request.");
+            if (_disposed == 0)
+                VhLogger.Instance.LogError(ex, "Could not handle API request.");
         }
         finally {
             client.Dispose();
         }
     }
 
-    
+
     private async Task<ConnectionInfo> GetConnectionInfoOrDefault()
     {
         return _vpnHoodService.Client?.ToConnectionInfo(this) ??
@@ -136,8 +138,8 @@ public class ApiController : IDisposable
     public Task GetConnectionInfo(ApiGetConnectionInfoRequest request, CancellationToken cancellationToken)
     {
         var connectionInfo = _vpnHoodService.Client?.ToConnectionInfo(this);
-        return connectionInfo != null ? 
-            _vpnHoodService.Context.WriteConnectionInfo(connectionInfo) 
+        return connectionInfo != null ?
+            _vpnHoodService.Context.WriteConnectionInfo(connectionInfo)
             : Task.CompletedTask;
     }
 

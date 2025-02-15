@@ -72,7 +72,7 @@ public class VpnHoodClientManager : IJob, IDisposable
             // it is ok if we can't write to the file
             // It means the service is overwriting the file
         }
-        
+
         return _connectionInfo;
 
     }
@@ -130,7 +130,7 @@ public class VpnHoodClientManager : IJob, IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             if (timeoutCts.IsCancellationRequested)
                 throw new TimeoutException($"VpnService did not respond within {_startVpnServiceTimeout.TotalSeconds} seconds.");
-                
+
             await Task.Delay(200, cancellationToken);
             connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
         }
@@ -156,35 +156,6 @@ public class VpnHoodClientManager : IJob, IDisposable
             await Task.Delay(_connectionInfoTimeSpan, cancellationToken);
         }
     }
-
-    /// <summary>
-    /// Stop the VPN service and disconnect from the server if running. This method is idempotent.
-    /// No exception is thrown
-    /// </summary>
-    public async Task Stop(TimeSpan? timeSpan = null)
-    {
-        if (!ConnectionInfo.IsStarted())
-            return;
-
-        try {
-            using var cancellationTokenSource = new CancellationTokenSource(
-                Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(5));
-
-            // wait for the service to stop
-            while (true) {
-                await UpdateConnectionInfo(true, cancellationTokenSource.Token);
-                if (!ConnectionInfo.IsStarted())
-                    break;
-                
-                await Task.Delay(200, cancellationTokenSource.Token);
-            }
-
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Error in Stopping VpnService.");
-        }
-    }
-
 
     public Task ForceUpdateState(CancellationToken cancellationToken) => UpdateConnectionInfo(true, cancellationToken);
 
@@ -241,7 +212,7 @@ public class VpnHoodClientManager : IJob, IDisposable
         if (_connectionInfo.Error != null)
             throw new InvalidOperationException("VpnService is not active.");
 
-        if (_connectionInfo.ApiEndPoint == null || _connectionInfo.ClientState is ClientState.Disposed)
+        if (_connectionInfo.ApiEndPoint == null)
             throw new InvalidOperationException("ApiEndPoint is not available.");
 
         try {
@@ -255,12 +226,9 @@ public class VpnHoodClientManager : IJob, IDisposable
                     .AsTask().VhConfigureAwait();
             }
 
-            await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request.GetType().Name, cancellationToken)
-                .AsTask().VhConfigureAwait();
-            await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request, cancellationToken)
-                .AsTask().VhConfigureAwait();
-            var ret = await StreamUtils.ReadObjectAsync<ApiResponse<T>>(_tcpClient.GetStream(), cancellationToken)
-                .VhConfigureAwait();
+            await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request.GetType().Name, cancellationToken).AsTask().VhConfigureAwait();
+            await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request, cancellationToken).AsTask().VhConfigureAwait();
+            var ret = await StreamUtils.ReadObjectAsync<ApiResponse<T>>(_tcpClient.GetStream(), cancellationToken).VhConfigureAwait();
             if (request is ApiDisconnectRequest) {
                 _tcpClient.Dispose();
                 _tcpClient = null;
@@ -269,6 +237,10 @@ public class VpnHoodClientManager : IJob, IDisposable
             // update the last connection info
             _connectionInfo = ret.ConnectionInfo;
             _connectionInfoTime = FastDateTime.Now;
+
+            // convert to error. 
+            if (ret.ApiError != null)
+                throw ClientExceptionConverter.ApiErrorToException(ret.ApiError);
 
             return ret.Result;
         }
@@ -339,6 +311,28 @@ public class VpnHoodClientManager : IJob, IDisposable
     public async Task RunJob()
     {
         await UpdateConnectionInfo(false, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Stop the VPN service and disconnect from the server if running. This method is idempotent.
+    /// No exception will be thrown
+    /// </summary>
+    public async Task Stop(TimeSpan? timeSpan = null)
+    {
+        try {
+            using var timeoutCts = new CancellationTokenSource(
+                Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(5));
+
+            // wait for the service to stop
+            while (ConnectionInfo.IsStarted()) {
+                await SendRequest(new ApiDisconnectRequest(), timeoutCts.Token).VhConfigureAwait();
+                CheckForEvents(ConnectionInfo, timeoutCts.Token); // send request does not check for events
+                await Task.Delay(200, timeoutCts.Token);
+            }
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Error in Stopping VpnService.");
+        }
     }
 
     public void Dispose()

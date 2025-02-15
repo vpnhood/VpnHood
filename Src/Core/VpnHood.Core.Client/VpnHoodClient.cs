@@ -789,6 +789,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             // set the session info
             SessionInfo = new SessionInfo {
                 SessionId = helloResponse.SessionId.ToString(),
+                SessionName = SessionName,
                 ClientPublicIpAddress = helloResponse.ClientPublicAddress,
                 ClientCountry = helloResponse.ClientCountry,
                 AccessInfo = helloResponse.AccessInfo ?? new AccessInfo(),
@@ -1041,16 +1042,16 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         await DisposeAsync().VhConfigureAwait();
     }
 
-    private readonly AsyncLock _disposeLock = new();
 
     public ValueTask DisposeAsync()
     {
         return DisposeAsync(true);
     }
 
-    public async ValueTask DisposeAsync(bool waitForBye)
+    private readonly AsyncLock _disposeLock = new();
+    private async ValueTask DisposeAsync(bool waitForBye)
     {
-        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
+        using var disposeLock = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
         _disposed = true;
 
@@ -1087,6 +1088,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         VhLogger.Instance.LogTrace("Disposing Nat...");
         Nat.Dispose();
 
+        // don't wait for this. It is just for server clean up we should not wait the user for it
         // Sending Bye
         if (SessionInfo != null && LastException == null) {
             try {
@@ -1103,8 +1105,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         VhLogger.Instance.LogTrace("Disposing ConnectorService...");
         await ConnectorService.DisposeAsync().VhConfigureAwait();
 
-        State = ClientState.Disposed;
         VhLogger.Instance.LogInformation("Bye Bye!");
+        State = ClientState.Disposed; //everything is clean
     }
 
     private class SendingPackets

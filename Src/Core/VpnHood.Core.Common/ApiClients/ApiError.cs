@@ -81,7 +81,9 @@ public class ApiError : ICloneable
 
         else if (Is<TimeoutException>())
             exception = new TimeoutException(Message, innerException);
-        
+
+        else if (Is<InvalidOperationException>())
+            exception = new InvalidOperationException(Message, innerException);
         else
             exception = new ApiException(this);
 

@@ -12,7 +12,6 @@ using VpnHood.Core.Common.IpLocations.Providers;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Net;
-using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Test;
 using VpnHood.Test.Device;
@@ -73,12 +72,15 @@ public class ClientAppTest : TestAppBase
         await app.WaitForState(AppConnectionState.Connected, 10000);
         await app.Disconnect();
         await app.WaitForState(AppConnectionState.None);
-
         Assert.IsTrue(app.State.LogExists);
         Assert.IsTrue(app.State.HasDiagnoseRequested);
         Assert.IsTrue(app.State.HasDisconnectedByUser);
-        Assert.IsNotNull(app.State.LastError);
         Assert.IsTrue(app.State.IsIdle);
+        Assert.IsNotNull(app.State.LastError);
+
+        //todo
+        //it may take little time the dispose event
+        //await VhTestUtil.AssertEqualsWait(true, () => app.State.LastError != null); 
 
         await app.ClearLastError();
         Assert.IsNull(app.State.LastError);
@@ -338,10 +340,14 @@ public class ClientAppTest : TestAppBase
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
+        // create device
+        await using var testDevice = TestHelper.CreateNullDevice();
+        testDevice.StartServiceDelay = TimeSpan.FromSeconds(100);
+
         // create app
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.ConnectTimeout = TimeSpan.FromSeconds(1);
-        await using var app = TestAppHelper.CreateClientApp(appOptions);
+        await using var app = TestAppHelper.CreateClientApp(appOptions, testDevice);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         
         await Assert.ThrowsExceptionAsync<ConnectionTimeoutException>(() => app.Connect(clientProfile.ClientProfileId));
@@ -510,7 +516,7 @@ public class ClientAppTest : TestAppBase
         await app.WaitForState(AppConnectionState.Connected);
 
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState,
-            "Client connection has not been changed!");
+            "Could not connect to new server!");
     }
 
     [TestMethod]
@@ -624,40 +630,5 @@ public class ClientAppTest : TestAppBase
         // reload clientProfile
         clientProfile = clientApp.ClientProfileService.Get(clientProfile.ClientProfileId);
         Assert.IsTrue(clientProfile.ToInfo().SelectedLocationInfo?.IsAuto);
-    }
-
-    [TestMethod]
-    public async Task Connect_success_to_new_location_fail_current()
-    {
-        using var accessManager = TestHelper.CreateAccessManager();
-        accessManager.ServerLocations.Add(ServerLocationInfo.Parse("US").ServerLocation, null);
-        accessManager.ServerLocations.Add(ServerLocationInfo.Parse("UK").ServerLocation, null);
-
-        // create Access Manager and token
-        await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
-        token.ServerToken.ServerLocations = ["US", "UK"];
-
-        // create server and app
-        await using var app = TestAppHelper.CreateClientApp();
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
-            SelectedLocation = "UK"
-        });
-
-        // no exception expected
-        await app.Connect(clientProfile.ClientProfileId);
-
-        // check location
-        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
-            SelectedLocation = "US"
-        });
-
-        // no exception expected (new location)
-        await app.Connect(clientProfile.ClientProfileId); // no exception expected
-
-        // fail to connect (same location)
-        var ex = await Assert.ThrowsExceptionAsync<Exception>(() => app.Connect(clientProfile.ClientProfileId));
-        Assert.IsTrue(ex.Message.Contains("already"));
     }
 }

@@ -72,6 +72,7 @@ public class VpnHoodClientManager : IJob, IDisposable
             // it is ok if we can't write to the file
             // It means the service is overwriting the file
         }
+        
         return _connectionInfo;
 
     }
@@ -89,10 +90,6 @@ public class VpnHoodClientManager : IJob, IDisposable
         _cancellationToken = cancellationToken;
         _connectionInfo = SetConnectionInfo(ClientState.Initializing);
 
-        // delete last config file
-        if (File.Exists(_vpnStatusFilePath))
-            File.Delete(_vpnStatusFilePath);
-
         // save vpn config
         await File.WriteAllTextAsync(_vpnConfigFilePath, JsonSerializer.Serialize(clientOptions), cancellationToken)
             .VhConfigureAwait();
@@ -107,7 +104,13 @@ public class VpnHoodClientManager : IJob, IDisposable
         await _device.StartVpnService(cancellationToken).VhConfigureAwait();
 
         // wait for vpn service
-        await WaitForVpnService(cancellationToken).VhConfigureAwait();
+        try {
+            await WaitForVpnService(cancellationToken).VhConfigureAwait();
+        }
+        catch (Exception ex) {
+            SetConnectionInfo(ClientState.Disposed, ex);
+            throw;
+        }
 
         // wait for connection or error
         await WaitForConnection(cancellationToken).VhConfigureAwait();
@@ -116,19 +119,23 @@ public class VpnHoodClientManager : IJob, IDisposable
     private async Task WaitForVpnService(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("Waiting for VpnService ...");
-        var timeoutTask = Task.Delay(_startVpnServiceTimeout, cancellationToken);
+        using var timeoutCts = new CancellationTokenSource(_startVpnServiceTimeout);
+
+        // directly read file because UpdateConnection will set the state to disposed
+        // if it could not connect to the service
         var connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
 
         // wait for vpn service to start
         while (connectionInfo == null || connectionInfo.ClientState is ClientState.None or ClientState.Initializing) {
-            if (await Task.WhenAny(Task.Delay(200, cancellationToken), timeoutTask) == timeoutTask)
+            cancellationToken.ThrowIfCancellationRequested();
+            if (timeoutCts.IsCancellationRequested)
                 throw new TimeoutException($"VpnService did not respond within {_startVpnServiceTimeout.TotalSeconds} seconds.");
-
+                
+            await Task.Delay(200, cancellationToken);
             connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
         }
         _connectionInfo = connectionInfo;
     }
-
     private async Task WaitForConnection(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("Waiting for connection ...");
@@ -156,14 +163,22 @@ public class VpnHoodClientManager : IJob, IDisposable
     /// </summary>
     public async Task Stop(TimeSpan? timeSpan = null)
     {
-        timeSpan ??= TimeSpan.FromSeconds(5);
-
         if (!ConnectionInfo.IsStarted())
             return;
 
         try {
-            var timeoutCt = new CancellationTokenSource(timeSpan.Value);
-            await SendRequest(new ApiDisconnectRequest(), timeoutCt.Token).VhConfigureAwait();
+            using var cancellationTokenSource = new CancellationTokenSource(
+                Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(5));
+
+            // wait for the service to stop
+            while (true) {
+                await UpdateConnectionInfo(true, cancellationTokenSource.Token);
+                if (!ConnectionInfo.IsStarted())
+                    break;
+                
+                await Task.Delay(200, cancellationTokenSource.Token);
+            }
+
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error in Stopping VpnService.");
@@ -187,15 +202,16 @@ public class VpnHoodClientManager : IJob, IDisposable
 
         // update from file to make sure there is no error
         // VpnClient always update the file when ConnectionState changes
+        // Should send request if service is in initializing state, because SendRequest will set the state to disposed if failed
         _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath) ?? _connectionInfo;
-        if (_connectionInfo.Error != null || !_connectionInfo.IsStarted()) {
+        if (_connectionInfo.Error != null || !_connectionInfo.IsStarted() || _connectionInfo.ClientState is ClientState.Initializing) {
             CheckForEvents(_connectionInfo, cancellationToken);
             return _connectionInfo;
         }
 
         // connect to the server and get the connection info
         try {
-            await SendRequest(new ApiSaveConnectionInfoRequest(), cancellationToken);
+            await SendRequest(new ApiGetConnectionInfoRequest(), cancellationToken);
         }
         catch (Exception ex) {
             // update connection info and set error
@@ -253,10 +269,6 @@ public class VpnHoodClientManager : IJob, IDisposable
             // update the last connection info
             _connectionInfo = ret.ConnectionInfo;
             _connectionInfoTime = FastDateTime.Now;
-
-            // convert to error. 
-            if (ret.ApiError != null && request is not ApiSaveConnectionInfoRequest)
-                throw ClientExceptionConverter.ApiErrorToException(ret.ApiError);
 
             return ret.Result;
         }
@@ -333,6 +345,7 @@ public class VpnHoodClientManager : IJob, IDisposable
     {
         // do not stop, lets service keep running until user explicitly stop it
         _tcpClient?.Dispose();
+        JobRunner.Default.Remove(this);
     }
 }
 

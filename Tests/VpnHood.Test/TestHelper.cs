@@ -362,6 +362,12 @@ public class TestHelper : IDisposable
         return new TestDevice(this, () => new TestVpnAdapter(options), tracker);
     }
 
+    public TestDevice CreateNullDevice(ITracker? tracker = null)
+    {
+        return new TestDevice(this, () => new NullVpnAdapter(), tracker);
+    }
+
+
 
     public ClientOptions CreateClientOptions(Token token, bool useUdpChannel = false, string? clientId = null)
     {

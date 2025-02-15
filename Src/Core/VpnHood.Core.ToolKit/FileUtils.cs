@@ -21,7 +21,10 @@ public static class FileUtils
         var startTime = FastDateTime.Now;
         while (true) {
             try {
-                return await File.ReadAllTextAsync(filePath, cancellationToken);
+                await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                using var reader = new StreamReader(stream);
+                var content = await reader.ReadToEndAsync();
+                return content;
             }
             catch (IOException) when (FastDateTime.Now - startTime > timeout) {
                 await Task.Delay(100, cancellationToken);

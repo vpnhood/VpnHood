@@ -1,16 +1,14 @@
 ﻿using Ga4.Trackers;
-using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
 
 namespace VpnHood.Core.Client.Device.WinDivert;
 
-public class WinDevice(string storageFolder, ITracker? tracker) : IDevice
+public class WinDevice(string storageFolder, ITracker? tracker, bool isDebugMode) : IDevice
 {
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public string VpnServiceConfigFolder { get; } = Path.Combine(storageFolder, "vpn-service");
-    public bool IsExcludeAppsSupported => IsDebugMode;
+    public bool IsExcludeAppsSupported => isDebugMode;
     public bool IsAlwaysOnSupported => false;
-    public bool IsIncludeAppsSupported => IsDebugMode;
+    public bool IsIncludeAppsSupported => isDebugMode;
 
     public DeviceMemInfo MemInfo {
         get {
@@ -24,7 +22,7 @@ public class WinDevice(string storageFolder, ITracker? tracker) : IDevice
 
     public DeviceAppInfo[] InstalledApps {
         get {
-            if (!IsDebugMode)
+            if (!isDebugMode)
                 throw new NotSupportedException();
 
             var list = new List<DeviceAppInfo>();
@@ -49,36 +47,14 @@ public class WinDevice(string storageFolder, ITracker? tracker) : IDevice
     private WinVpnService? _winVpnService;
     public Task StartVpnService(CancellationToken cancellationToken)
     {
-
-        try {
-            // if service already running, do nothing
-            if (_winVpnService?.IsRunning == true)
-                return Task.CompletedTask;
-
-            _winVpnService = new WinVpnService(VpnServiceConfigFolder, tracker);
-            _ = _winVpnService.Start();
-        }
-        catch (Exception ex) {
-            // let's simulate outer process and do no throw error 
-            VhLogger.Instance.LogError(ex, "Failed to start VPN service");
-        }
-
+        _winVpnService ??= new WinVpnService(VpnServiceConfigFolder, tracker);
+        _winVpnService.OnConnect();
         return Task.CompletedTask;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        _winVpnService?.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        if (_winVpnService != null)
+            await _winVpnService.DisposeAsync();
     }
-
-    private static bool IsDebugMode {
-        get {
-#if DEBUG
-            return true;
-#else
-            return false;
-#endif
-        }
-    }
-
 }

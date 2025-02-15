@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Core.Client.Device;
 
-public interface IDevice : IDisposable
+public interface IDevice : IAsyncDisposable
 {
     string VpnServiceConfigFolder { get; }
     bool IsExcludeAppsSupported { get; }

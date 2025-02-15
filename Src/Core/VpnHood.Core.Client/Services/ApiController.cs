@@ -7,14 +7,14 @@ using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 
-namespace VpnHood.Core.Client.ApiControllers;
+namespace VpnHood.Core.Client.Services;
 
 public class ApiController : IDisposable
 {
     private readonly VpnHoodService _vpnHoodService;
     private readonly TcpListener _tcpListener;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private VpnHoodClient VpnHoodClient => _vpnHoodService.Client;
+    private VpnHoodClient VpnHoodClient => _vpnHoodService.RequiredClient;
     public IPEndPoint ApiEndPoint => (IPEndPoint)_tcpListener.LocalEndpoint;
     public byte[] ApiKey { get; } = VhUtils.GenerateKey(128);
     public VpnHoodService? ServiceContext { get; set; }
@@ -66,6 +66,13 @@ public class ApiController : IDisposable
         }
     }
 
+    
+    private async Task<ConnectionInfo> GetConnectionInfoOrDefault()
+    {
+        return _vpnHoodService.Client?.ToConnectionInfo(this) ??
+               await _vpnHoodService.Context.ReadConnectionInfoOrDefault(ApiKey, ApiEndPoint);
+    }
+
     private async Task ProcessRequests(Stream stream, CancellationToken cancellationToken)
     {
         try {
@@ -74,7 +81,7 @@ public class ApiController : IDisposable
             // write response
             var response = new ApiResponse<object> {
                 ApiError = null,
-                ConnectionInfo = VpnHoodClient.ToConnectionInfo(this),
+                ConnectionInfo = await GetConnectionInfoOrDefault(),
                 Result = result
             };
             await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
@@ -82,7 +89,7 @@ public class ApiController : IDisposable
         catch (Exception ex) {
             var response = new ApiResponse<object> {
                 ApiError = ex.ToApiError(),
-                ConnectionInfo = VpnHoodClient.ToConnectionInfo(this),
+                ConnectionInfo = await GetConnectionInfoOrDefault(),
                 Result = null
             };
             await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
@@ -96,16 +103,10 @@ public class ApiController : IDisposable
         switch (requestType) {
 
             // handle connection info request
-            case nameof(ApiSaveConnectionInfoRequest):
-                await SaveConnectionInfo(
-                    await StreamUtils.ReadObjectAsync<ApiSaveConnectionInfoRequest>(stream, cancellationToken),
+            case nameof(ApiGetConnectionInfoRequest):
+                await GetConnectionInfo(
+                    await StreamUtils.ReadObjectAsync<ApiGetConnectionInfoRequest>(stream, cancellationToken),
                     cancellationToken);
-                return null; 
-
-            // handle disconnect request
-            case nameof(ApiDisconnectRequest):
-                await Disconnect(
-                    await StreamUtils.ReadObjectAsync<ApiDisconnectRequest>(stream, cancellationToken), cancellationToken);
                 return null;
 
             // handle ad request
@@ -119,22 +120,30 @@ public class ApiController : IDisposable
                 await SendRewardedAdResult(
                     await StreamUtils.ReadObjectAsync<ApiSendRewardedAdResultRequest>(stream, cancellationToken), cancellationToken);
                 return null;
-            
+
+            // handle disconnect request
+            case nameof(ApiDisconnectRequest):
+                await Disconnect(
+                    await StreamUtils.ReadObjectAsync<ApiDisconnectRequest>(stream, cancellationToken), cancellationToken);
+                return null;
+
+
             default:
                 throw new InvalidOperationException($"Unknown request type: {requestType}");
         }
     }
 
-    public Task SaveConnectionInfo(ApiSaveConnectionInfoRequest request, CancellationToken cancellationToken)
+    public Task GetConnectionInfo(ApiGetConnectionInfoRequest request, CancellationToken cancellationToken)
     {
-        var connectionInfo = VpnHoodClient.ToConnectionInfo(this);
-        return _vpnHoodService.Context.SaveConnectionInfo(connectionInfo);
+        var connectionInfo = _vpnHoodService.Client?.ToConnectionInfo(this);
+        return connectionInfo != null ? 
+            _vpnHoodService.Context.WriteConnectionInfo(connectionInfo) 
+            : Task.CompletedTask;
     }
 
-    public Task Disconnect(ApiDisconnectRequest request, CancellationToken cancellationToken)
+    public async Task Disconnect(ApiDisconnectRequest request, CancellationToken cancellationToken)
     {
-        _ = VpnHoodClient.DisposeAsync();
-        return Task.CompletedTask;
+        await VpnHoodClient.DisposeAsync();
     }
 
     public Task SetAdResult(ApiSetAdResultRequest request, CancellationToken cancellationToken)
@@ -164,8 +173,12 @@ public class ApiController : IDisposable
     }
 
 
+    private int _disposed;
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            return;
+
         _cancellationTokenSource.Cancel();
         _tcpListener.Stop();
     }

@@ -63,7 +63,7 @@ public sealed class AndroidVpnNotification : IDisposable
         notificationBuilder.AddAction(new Notification.Action.Builder(null, serviceLocalization.Manage, pendingIntent).Build());
 
         //  disconnect intent
-        var disconnectIntent = new Intent(context, typeof(AndroidVpnAdapter));
+        var disconnectIntent = new Intent(context, typeof(AndroidVpnService));
         disconnectIntent.SetAction(DisconnectAction);
         pendingIntent = PendingIntent.GetService(context, 2, disconnectIntent, intentFlags);
         notificationBuilder.AddAction(new Notification.Action.Builder(null, serviceLocalization.Disconnect, pendingIntent).Build());
@@ -78,7 +78,6 @@ public sealed class AndroidVpnNotification : IDisposable
         // set the required small icon
         ArgumentNullException.ThrowIfNull(context.ApplicationInfo);
         ArgumentNullException.ThrowIfNull(context.Resources);
-        //var iconId = context.Resources.GetIdentifier("@mipmap/notification", "mipmap", context.PackageName); //todo: remove if works
         var iconId = context.Resources.GetIdentifier("notification", "mipmap", context.PackageName);
         if (iconId == 0) iconId = context.ApplicationInfo.Icon;
         notificationBuilder.SetSmallIcon(iconId);

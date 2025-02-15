@@ -9,6 +9,7 @@ namespace VpnHood.Core.Client.Abstractions;
 public class SessionInfo
 {
     public required string SessionId { get; init; }
+    public required string? SessionName { get; init; }
     public required AccessInfo? AccessInfo { get; init; }
     public required bool IsUdpChannelSupported { get; init; }
     public required bool IsDnsServersAccepted { get; init; }

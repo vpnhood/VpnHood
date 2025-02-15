@@ -1,5 +1,7 @@
 ﻿using Android.Content;
 using Android.Content.PM;
+using Android.Graphics.Drawables;
+using Android.Graphics;
 
 namespace VpnHood.Core.Client.Device.Droid.Utils;
 

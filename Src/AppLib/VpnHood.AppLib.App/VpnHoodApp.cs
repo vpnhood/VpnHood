@@ -1014,10 +1014,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             await Disconnect().VhConfigureAwait();
 
         _clientManager.Dispose();
-        Device.Dispose();
+        _clientManager.StateChanged -= Client_StateChanged;
+
+        await Device.DisposeAsync();
         LogService.Dispose();
         DisposeSingleton();
         ActiveUiContext.OnChanged -= ActiveUiContext_OnChanged;
-        _clientManager.StateChanged -= Client_StateChanged;
+        
     }
 }

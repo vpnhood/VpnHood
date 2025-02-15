@@ -1,28 +1,36 @@
 ﻿using Ga4.Trackers;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Services;
-using VpnHood.Core.Tunneling.Factory;
+using VpnHood.Test.Providers;
 
-namespace VpnHood.Core.Client.Device.WinDivert;
+namespace VpnHood.Test.Device;
 
-public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
+public class TestVpnService
+    : IVpnServiceHandler, IAsyncDisposable
 {
+    private readonly Func<IVpnAdapter> _vpnAdapterFactory;
     private readonly ITracker? _tracker;
     private readonly VpnHoodService _vpnHoodService;
-    public WinVpnService(
+
+    // config folder should be read from static place in read environment, because service can be started independently
+    public TestVpnService(
         string configFolder,
+        Func<IVpnAdapter> vpnAdapterFactory,
         ITracker? tracker)
     {
+        _vpnAdapterFactory = vpnAdapterFactory;
         _tracker = tracker;
-        _vpnHoodService = new VpnHoodService(configFolder, this, new SocketFactory());
+        _vpnHoodService = new VpnHoodService(configFolder, this, new TestSocketFactory());
     }
 
+    // it is not async to simulate real environment
     public void OnConnect()
     {
         _vpnHoodService.Connect();
     }
 
-    public void OnDisconnect()
+    public void OnStop()
     {
         _vpnHoodService.Disconnect();
     }
@@ -34,7 +42,7 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
 
     public IVpnAdapter CreateAdapter()
     {
-        return new WinDivertVpnAdapter();
+        return _vpnAdapterFactory();
     }
 
     public void ShowNotification(ConnectionInfo connectionInfo)

@@ -2,7 +2,7 @@
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.ApiClients;
 
-namespace VpnHood.Core.Client.ApiControllers;
+namespace VpnHood.Core.Client.Services;
 
 internal static class DtoConverters
 {

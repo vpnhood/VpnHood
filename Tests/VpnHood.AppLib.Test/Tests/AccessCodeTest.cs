@@ -15,8 +15,7 @@ public class AccessCodeTest : TestAppBase
     [TestMethod]
     public async Task AaFoo()
     {
-        await Task.Delay(1);
-
+        await Task.Delay(100);
     }
 
     [TestMethod]

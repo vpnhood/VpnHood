@@ -1,20 +1,22 @@
 ﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Device;
 
 public class TestDevice(TestHelper testHelper, Func<IVpnAdapter> vpnAdapterFactory, ITracker? tracker = null) : IDevice
 {
+    private readonly CancellationTokenSource _disposeCancellationTokenSource = new();
+    private TestVpnService? _vpnService;
+
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public string VpnServiceConfigFolder { get; } = Path.Combine(testHelper.WorkingPath, "VpnService", Guid.CreateVersion7().ToString());
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
     public bool IsAlwaysOnSupported => false;
     public DeviceMemInfo? MemInfo => null;
+    public TimeSpan StartServiceDelay { get; set; } = TimeSpan.Zero;
 
     public DeviceAppInfo[] InstalledApps => throw new NotSupportedException();
     public Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
@@ -30,26 +32,22 @@ public class TestDevice(TestHelper testHelper, Func<IVpnAdapter> vpnAdapterFacto
         return Task.CompletedTask;
     }
 
-    private VpnHoodService? _vpnHoodService;
     private async Task SimulateStartService()
     {
-        if (_vpnHoodService != null) {
-            VhLogger.Instance.LogDebug("Test VpnService already started.");
-            return;
-        }
+        // delay start
+        await Task.Delay(StartServiceDelay, _disposeCancellationTokenSource.Token);
+        _disposeCancellationTokenSource.Token.ThrowIfCancellationRequested();
 
         // create service
-        var serviceContext = new VpnHoodServiceContext(VpnServiceConfigFolder);
-        _vpnHoodService = await VpnHoodService.Create(serviceContext, vpnAdapterFactory(), new TestSocketFactory(), tracker: tracker);
-        _vpnHoodService.Disposed += (_, _) => Dispose();
-
-        // connect
-        await _vpnHoodService.Client.Connect(CancellationToken.None);
+        _vpnService = new TestVpnService(VpnServiceConfigFolder, vpnAdapterFactory, tracker);
+        _vpnService.OnConnect();
     }
 
-    public void Dispose()
+
+    public async ValueTask DisposeAsync()
     {
-        _vpnHoodService = null;
-        _vpnHoodService?.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        if (_vpnService != null)
+            await _vpnService.DisposeAsync();
+        _vpnService = null;
     }
 }

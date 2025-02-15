@@ -296,13 +296,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public ClientProfileInfo? CurrentClientProfileInfo =>
         ClientProfileService.FindInfo(UserSettings.ClientProfileId ?? Guid.Empty);
 
+    public ApiError? LastError {
+        get {
+            var lastError = _appPersistState.LastError ?? //always show last app error
+                            ConnectionInfo.Error; // don't show error if user has disconnected
+
+            return lastError?.Equals(_appPersistState.LastClearedError) == true ||
+                   _appPersistState.HasDisconnectedByUser ? null : lastError;
+        }
+    }
+
     public AppState State {
         get {
             var clientProfileInfo = CurrentClientProfileInfo;
             var connectionInfo = ConnectionInfo;
             var connectionState = ConnectionState;
-            var lastError = _appPersistState.LastError ?? //always show last app error
-                (_appPersistState.HasDisconnectedByUser ? null : ConnectionInfo.Error); // don't show error if user has disconnected
 
             var appState = new AppState {
                 ConfigTime = Settings.ConfigTime,
@@ -326,7 +334,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 PurchaseState = Services.AccountService?.BillingService?.PurchaseState,
                 LastPublishInfo = _versionCheckResult?.GetNewerPublishInfo(),
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
-                LastError = lastError?.ToAppDto(),
+                LastError = LastError?.ToAppDto(),
             };
 
             return appState;
@@ -379,7 +387,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public Task ClearLastError()
     {
-        _appPersistState.LastError = null;
+        _appPersistState.LastClearedError = LastError;
         _appPersistState.HasDisconnectedByUser = false;
         _hasDiagnoseRequested = false;
         return _clientManager.ClearState();
@@ -1020,6 +1028,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         LogService.Dispose();
         DisposeSingleton();
         ActiveUiContext.OnChanged -= ActiveUiContext_OnChanged;
-        
+
     }
 }

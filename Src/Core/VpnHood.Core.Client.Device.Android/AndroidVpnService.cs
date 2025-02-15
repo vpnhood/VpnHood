@@ -17,7 +17,7 @@ namespace VpnHood.Core.Client.Device.Droid;
 [Service(
     Permission = Manifest.Permission.BindVpnService,
     Exported = false,
-    //Process = ":vpnhood_process",
+    Process = ":vpnhood_process",
     ForegroundServiceType = ForegroundService.TypeSystemExempted)]
 [IntentFilter(["android.net.VpnService"])]
 public class AndroidVpnService : VpnService, IVpnServiceHandler
@@ -40,6 +40,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         switch (intent?.Action) {
             // signal start command
             case "connect":
+                ShowToast("sssss"); //todo
                 return _vpnHoodService.Connect()
                     ? StartCommandResult.Sticky
                     : StartCommandResult.NotSticky;

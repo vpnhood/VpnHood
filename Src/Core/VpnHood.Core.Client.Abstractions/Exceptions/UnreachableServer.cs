@@ -1,6 +1,6 @@
 ﻿using VpnHood.Core.Common.Tokens;
 
-namespace VpnHood.Core.Client.Exceptions;
+namespace VpnHood.Core.Client.Abstractions.Exceptions;
 
 public class UnreachableServer(string? serverLocation = null)
     : Exception(

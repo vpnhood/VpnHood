@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Client.Exceptions;
+﻿namespace VpnHood.Core.Client.Abstractions.Exceptions;
 
 public class UnreachableServerLocation(string? serverLocation = null)
     : UnreachableServer(serverLocation);

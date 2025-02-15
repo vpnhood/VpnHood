@@ -9,6 +9,8 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
 {
     private readonly ITracker? _tracker;
     private readonly VpnHoodService _vpnHoodService;
+    public bool IsDisposed { get; private set; }
+
     public WinVpnService(
         string configFolder,
         ITracker? tracker)
@@ -47,11 +49,13 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
 
     public void StopSelf()
     {
-        DisposeAsync();
+        _ = DisposeAsync();
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        return _vpnHoodService.DisposeAsync();
+        if (IsDisposed) return;
+        await _vpnHoodService.DisposeAsync();
+        IsDisposed = true;
     }
 }

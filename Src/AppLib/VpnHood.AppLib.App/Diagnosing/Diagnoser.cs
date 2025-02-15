@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.Exceptions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Utils;

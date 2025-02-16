@@ -1,6 +1,6 @@
 ﻿using System.Drawing;
 
-namespace VpnHood.Core.Client.Device;
+namespace VpnHood.Core.Client.VpnServicing;
 
 public sealed class VpnServiceLocalization
 {

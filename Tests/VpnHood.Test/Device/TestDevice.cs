@@ -1,6 +1,7 @@
 ﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Common.Logging;
 
 namespace VpnHood.Test.Device;

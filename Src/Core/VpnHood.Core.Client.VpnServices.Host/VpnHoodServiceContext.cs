@@ -2,11 +2,12 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.ToolKit;
 
-namespace VpnHood.Core.Client.VpnServicing;
+namespace VpnHood.Core.Client.VpnServices.Host;
 
 internal class VpnHoodServiceContext(string configFolder)
 {

@@ -2,7 +2,6 @@
 	<PropertyGroup>
 		<Description>Handles VPN service tasks and controls the VpnHood client. It can be managed by VpnServiceManager.</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
-		<RootNamespace>VpnHood.Core.Client.VpnServicing</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -32,6 +31,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+   <ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Abstractions\VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
    <ProjectReference Include="..\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
 	</ItemGroup>
 

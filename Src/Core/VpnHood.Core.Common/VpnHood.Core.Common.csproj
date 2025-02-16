@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Common Library is shared among all other VpnHood modules.</Description>
+		<Description>VpnHood Common Library is shared among all other VpnHood modules</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
 	</PropertyGroup>
 

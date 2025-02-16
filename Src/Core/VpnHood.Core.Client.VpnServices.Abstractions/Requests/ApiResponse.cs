@@ -1,6 +1,6 @@
 ﻿using VpnHood.Core.Common.ApiClients;
 
-namespace VpnHood.Core.Client.Abstractions.ApiRequests;
+namespace VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 
 public class ApiResponse<T>
 {

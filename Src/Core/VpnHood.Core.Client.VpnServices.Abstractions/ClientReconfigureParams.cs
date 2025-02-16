@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Client.Abstractions;
+﻿namespace VpnHood.Core.Client.VpnServices.Abstractions;
 
 public class ClientReconfigureParams
 {

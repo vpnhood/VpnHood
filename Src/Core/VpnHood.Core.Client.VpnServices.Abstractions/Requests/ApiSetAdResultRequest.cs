@@ -1,6 +1,7 @@
-﻿using VpnHood.Core.Common.ApiClients;
+﻿using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.ApiClients;
 
-namespace VpnHood.Core.Client.Abstractions.ApiRequests;
+namespace VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 
 public class ApiSetAdResultRequest : IApiRequest
 {

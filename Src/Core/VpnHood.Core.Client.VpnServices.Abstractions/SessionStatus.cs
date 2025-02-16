@@ -1,6 +1,7 @@
-﻿using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.Messaging;
 
-namespace VpnHood.Core.Client.Abstractions;
+namespace VpnHood.Core.Client.VpnServices.Abstractions;
 
 public class SessionStatus
 {

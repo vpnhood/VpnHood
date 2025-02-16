@@ -2,7 +2,7 @@
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Exceptions;
 
-namespace VpnHood.Core.Client.Abstractions;
+namespace VpnHood.Core.Client.VpnServices.Abstractions;
 
 public static class ClientExceptionConverter
 {

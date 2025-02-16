@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.ConnectorServices;
-using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Client.Exceptions;

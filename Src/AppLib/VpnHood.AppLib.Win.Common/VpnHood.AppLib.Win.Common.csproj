@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Shared library for VpnHood Windows Clients.</Description>
+		<Description>Shared library for VpnHood Windows Clients</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
 		<RootNamespace>VpnHood.AppLib.Win.Common</RootNamespace>
 	</PropertyGroup>

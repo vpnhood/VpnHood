@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Provides tunnelling classes and protocols shared between VpnHood.Core.Client and VpnHood.Core.Server.</Description>
+		<Description>Provides tunnelling classes and protocols shared between VpnHood.Core.Client and VpnHood.Core.Server</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
 	</PropertyGroup>
 

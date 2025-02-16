@@ -1,11 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.Adapters;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Tunneling.Factory;
 
-namespace VpnHood.Core.Client.VpnServicing;
+namespace VpnHood.Core.Client.VpnServices.Host;
 
 public class VpnHoodService : IAsyncDisposable
 {

@@ -20,7 +20,8 @@ using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
-using VpnHood.Core.Client.VpnServiceManagement;
+using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.IpLocations;
@@ -59,7 +60,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly TimeSpan _canExtendByRewardedAdThreshold;
     private readonly TimeSpan _sessionTimeout;
     private readonly AppPersistState _appPersistState;
-    private readonly VpnHoodServiceManager _vpnServiceManager;
+    private readonly VpnServiceManager _vpnServiceManager;
     private bool _hasDiagnoseRequested;
     private bool _isLoadingCountryIpRange;
     private bool _isFindingCountryCode;
@@ -190,7 +191,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         };
 
         // initialize client manager
-        _vpnServiceManager = new VpnHoodServiceManager(device, appAdService, options.EventWatcherInterval);
+        _vpnServiceManager = new VpnServiceManager(device, appAdService, options.EventWatcherInterval);
         _vpnServiceManager.StateChanged += VpnServiceStateChanged;
 
         // Clear last update status if version has changed

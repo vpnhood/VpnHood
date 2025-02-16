@@ -11,15 +11,15 @@ namespace VpnHood.Core.Client.VpnServices.Host;
 
 internal class ApiController : IDisposable
 {
-    private readonly VpnHoodService _vpnHoodService;
+    private readonly VpnServiceHost _vpnHoodService;
     private readonly TcpListener _tcpListener;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private VpnHoodClient VpnHoodClient => _vpnHoodService.RequiredClient;
     public IPEndPoint ApiEndPoint => (IPEndPoint)_tcpListener.LocalEndpoint;
     public byte[] ApiKey { get; } = VhUtils.GenerateKey(128);
-    public VpnHoodService? ServiceContext { get; set; }
+    public VpnServiceHost? ServiceContext { get; set; }
 
-    public ApiController(VpnHoodService vpnHoodService)
+    public ApiController(VpnServiceHost vpnHoodService)
     {
         _vpnHoodService = vpnHoodService;
         _tcpListener = new TcpListener(IPAddress.Loopback, 0);

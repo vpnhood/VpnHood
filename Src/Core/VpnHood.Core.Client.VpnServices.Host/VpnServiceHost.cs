@@ -4,11 +4,11 @@ using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Tunneling.Factory;
+using VpnHood.Core.Common.Sockets;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 
-public class VpnHoodService : IAsyncDisposable
+public class VpnServiceHost : IAsyncDisposable
 {
     private readonly ApiController _apiController;
     private readonly IVpnServiceHandler _vpnServiceHandler;
@@ -17,14 +17,14 @@ public class VpnHoodService : IAsyncDisposable
 
     internal VpnHoodClient? Client { get; private set; }
     internal VpnHoodClient RequiredClient => Client ?? throw new InvalidOperationException("Client is not initialized.");
-    internal VpnHoodServiceContext Context { get; }
+    internal VpnServiceContext Context { get; }
 
-    public VpnHoodService(
+    public VpnServiceHost(
         string configFolder,
         IVpnServiceHandler vpnServiceHandler,
         ISocketFactory socketFactory)
     {
-        Context = new VpnHoodServiceContext(configFolder);
+        Context = new VpnServiceContext(configFolder);
         _socketFactory = socketFactory;
         _vpnServiceHandler = vpnServiceHandler;
         _apiController = new ApiController(this);
@@ -54,7 +54,7 @@ public class VpnHoodService : IAsyncDisposable
     public bool Connect()
     {
         if (_isDisposed)
-            throw new ObjectDisposedException(nameof(VpnHoodService));
+            throw new ObjectDisposedException(nameof(VpnServiceHost));
 
         lock (_connectLock) {
             VhLogger.Instance.LogTrace("VpnService is connecting...");
@@ -113,7 +113,7 @@ public class VpnHoodService : IAsyncDisposable
     public void Disconnect()
     {
         if (_isDisposed)
-            throw new ObjectDisposedException(nameof(VpnHoodService));
+            throw new ObjectDisposedException(nameof(VpnServiceHost));
 
         // let dispose in the background
         _ = Client?.DisposeAsync();

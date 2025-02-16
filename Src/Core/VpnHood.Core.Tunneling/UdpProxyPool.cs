@@ -4,8 +4,8 @@ using PacketDotNet;
 using VpnHood.Core.Common.Collections;
 using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Common.Sockets;
 using VpnHood.Core.Tunneling.Exceptions;
-using VpnHood.Core.Tunneling.Factory;
 using VpnHood.Core.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
 

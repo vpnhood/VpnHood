@@ -11,7 +11,7 @@ public class TestVpnService
 {
     private readonly Func<IVpnAdapter> _vpnAdapterFactory;
     private readonly ITracker? _tracker;
-    private readonly VpnHoodService _vpnHoodService;
+    private readonly VpnServiceHost _vpnServiceHost;
     public bool IsDisposed { get; private set; }
 
     // config folder should be read from static place in read environment, because service can be started independently
@@ -22,18 +22,18 @@ public class TestVpnService
     {
         _vpnAdapterFactory = vpnAdapterFactory;
         _tracker = tracker;
-        _vpnHoodService = new VpnHoodService(configFolder, this, new TestSocketFactory());
+        _vpnServiceHost = new VpnServiceHost(configFolder, this, new TestSocketFactory());
     }
 
     // it is not async to simulate real environment
     public void OnConnect()
     {
-        _vpnHoodService.Connect();
+        _vpnServiceHost.Connect();
     }
 
     public void OnStop()
     {
-        _vpnHoodService.Disconnect();
+        _vpnServiceHost.Disconnect();
     }
 
     public ITracker? CreateTracker()
@@ -62,7 +62,7 @@ public class TestVpnService
     public async ValueTask DisposeAsync()
     {
         if (IsDisposed) return;
-        await _vpnHoodService.DisposeAsync();
+        await _vpnServiceHost.DisposeAsync();
         IsDisposed = true;
     }
 }

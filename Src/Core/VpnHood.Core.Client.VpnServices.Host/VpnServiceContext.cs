@@ -9,7 +9,7 @@ using VpnHood.Core.ToolKit;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 
-internal class VpnHoodServiceContext(string configFolder)
+internal class VpnServiceContext(string configFolder)
 {
     public string ConfigFilePath => Path.Combine(configFolder, ClientOptions.VpnConfigFileName);
     public string StatusFilePath => Path.Combine(configFolder, ClientOptions.VpnStatusFileName);

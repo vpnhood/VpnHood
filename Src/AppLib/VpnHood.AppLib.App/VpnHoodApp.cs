@@ -34,7 +34,6 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.ToolKit;
-using VpnHood.Core.Tunneling;
 
 namespace VpnHood.AppLib;
 

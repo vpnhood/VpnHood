@@ -9,7 +9,7 @@ using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Tunneling.Factory;
+using VpnHood.Core.Common.Sockets;
 using Environment = System.Environment;
 
 namespace VpnHood.Core.Client.Device.Droid;
@@ -22,7 +22,7 @@ namespace VpnHood.Core.Client.Device.Droid;
 [IntentFilter(["android.net.VpnService"])]
 public class AndroidVpnService : VpnService, IVpnServiceHandler
 {
-    private readonly VpnHoodService _vpnHoodService;
+    private readonly VpnServiceHost _vpnServiceHost;
     private AndroidVpnNotification? _notification;
 
     public static string VpnServiceConfigFolder { get; } =
@@ -30,7 +30,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 
     public AndroidVpnService()
     {
-        _vpnHoodService = new VpnHoodService(VpnServiceConfigFolder, this, new SocketFactory());
+        _vpnServiceHost = new VpnServiceHost(VpnServiceConfigFolder, this, new SocketFactory());
     }
 
     [return: GeneratedEnum]
@@ -40,12 +40,12 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         switch (intent?.Action) {
             // signal start command
             case "connect":
-                return _vpnHoodService.Connect()
+                return _vpnServiceHost.Connect()
                     ? StartCommandResult.Sticky
                     : StartCommandResult.NotSticky;
 
             case "disconnect":
-                _vpnHoodService.Disconnect();
+                _vpnServiceHost.Disconnect();
                 return StartCommandResult.NotSticky;
 
             default:
@@ -85,7 +85,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     public override void OnDestroy()
     {
         VhLogger.Instance.LogTrace("VpnService is destroying.");
-        _ = _vpnHoodService.DisposeAsync();
+        _ = _vpnServiceHost.DisposeAsync();
 
         StopNotification(); 
         base.OnDestroy();

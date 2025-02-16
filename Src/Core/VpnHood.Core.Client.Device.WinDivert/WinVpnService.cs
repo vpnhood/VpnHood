@@ -2,14 +2,14 @@
 using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Host;
-using VpnHood.Core.Tunneling.Factory;
+using VpnHood.Core.Common.Sockets;
 
 namespace VpnHood.Core.Client.Device.WinDivert;
 
 public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
 {
     private readonly ITracker? _tracker;
-    private readonly VpnHoodService _vpnHoodService;
+    private readonly VpnServiceHost _vpnServiceHost;
     public bool IsDisposed { get; private set; }
 
     public WinVpnService(
@@ -17,17 +17,17 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
         ITracker? tracker)
     {
         _tracker = tracker;
-        _vpnHoodService = new VpnHoodService(configFolder, this, new SocketFactory());
+        _vpnServiceHost = new VpnServiceHost(configFolder, this, new SocketFactory());
     }
 
     public void OnConnect()
     {
-        _vpnHoodService.Connect();
+        _vpnServiceHost.Connect();
     }
 
     public void OnDisconnect()
     {
-        _vpnHoodService.Disconnect();
+        _vpnServiceHost.Disconnect();
     }
 
     public ITracker? CreateTracker()
@@ -56,7 +56,7 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         if (IsDisposed) return;
-        await _vpnHoodService.DisposeAsync();
+        await _vpnServiceHost.DisposeAsync();
         IsDisposed = true;
     }
 }

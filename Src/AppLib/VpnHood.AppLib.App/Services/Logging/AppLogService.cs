@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Tunneling;
 
 namespace VpnHood.AppLib.Services.Logging;
 

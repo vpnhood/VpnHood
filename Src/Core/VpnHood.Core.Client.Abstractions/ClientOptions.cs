@@ -67,4 +67,5 @@ public class ClientOptions
     // ReSharper restore StringLiteralTypo
     public const string VpnConfigFileName = "vpn.config";
     public const string VpnStatusFileName = "vpn.status";
+    public const string VpnLogFileName = "vpn.log";
 }

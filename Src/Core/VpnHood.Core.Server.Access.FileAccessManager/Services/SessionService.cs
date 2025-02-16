@@ -7,10 +7,10 @@ using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
 using VpnHood.Core.Server.Access.Messaging;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement.Services;
 
 public class SessionService : IDisposable, IJob
 {

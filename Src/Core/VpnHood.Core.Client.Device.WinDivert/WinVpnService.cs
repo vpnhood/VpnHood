@@ -1,6 +1,6 @@
 ﻿using Ga4.Trackers;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.VpnServices;
+using VpnHood.Core.Client.VpnServicing;
 using VpnHood.Core.Tunneling.Factory;
 
 namespace VpnHood.Core.Client.Device.WinDivert;

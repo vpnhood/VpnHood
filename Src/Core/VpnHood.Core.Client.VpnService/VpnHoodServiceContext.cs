@@ -6,7 +6,7 @@ using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.ToolKit;
 
-namespace VpnHood.Core.Client.VpnServices;
+namespace VpnHood.Core.Client.VpnServicing;
 
 internal class VpnHoodServiceContext(string configFolder)
 {

@@ -4,7 +4,7 @@ using VpnHood.Core.Common.Converters;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Access.Configurations;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 
 public class FileAccessManagerOptions : ServerConfig
 {

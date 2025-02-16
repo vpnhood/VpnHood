@@ -12,9 +12,9 @@ using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 using FastDateTime = VpnHood.Core.Common.Utils.FastDateTime;
 
-namespace VpnHood.Core.Client.Manager;
+namespace VpnHood.Core.Client.VpnServiceManagement;
 
-public class VpnHoodClientManager : IJob, IDisposable
+public class VpnHoodServiceManager : IJob, IDisposable
 {
     private readonly TimeSpan _requestVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(120);
     private readonly TimeSpan _startVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(15);
@@ -30,7 +30,7 @@ public class VpnHoodClientManager : IJob, IDisposable
 
     public event EventHandler? StateChanged;
     public JobSection JobSection { get; }
-    public VpnHoodClientManager(IDevice device, IAdService adService, TimeSpan? eventWatcherInterval)
+    public VpnHoodServiceManager(IDevice device, IAdService adService, TimeSpan? eventWatcherInterval)
     {
         Directory.CreateDirectory(device.VpnServiceConfigFolder);
         _vpnConfigFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnConfigFileName);

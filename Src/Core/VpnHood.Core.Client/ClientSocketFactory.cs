@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling.Factory;
 

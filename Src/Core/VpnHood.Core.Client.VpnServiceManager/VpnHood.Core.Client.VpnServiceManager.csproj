@@ -42,7 +42,7 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\VpnHood.Core.Client.Abstractions\VpnHood.Core.Client.Abstractions.csproj" />
-	  <ProjectReference Include="..\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
+	  <ProjectReference Include="..\VpnHood.Core.Client.Device\VpnHood.Core.Client.Device.csproj" />
 	</ItemGroup>
 
 </Project>

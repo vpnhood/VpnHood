@@ -6,6 +6,7 @@ using Android.Runtime;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Client.VpnServicing;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Tunneling.Factory;

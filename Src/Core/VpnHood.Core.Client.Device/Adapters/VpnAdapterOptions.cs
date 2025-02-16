@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using VpnHood.Core.Common.Net;
 
-namespace VpnHood.Core.Client.Device;
+namespace VpnHood.Core.Client.Device.Adapters;
 
 public class VpnAdapterOptions
 {

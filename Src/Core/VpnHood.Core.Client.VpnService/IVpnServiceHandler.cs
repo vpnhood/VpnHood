@@ -1,6 +1,6 @@
 ﻿using Ga4.Trackers;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.Adapters;
 
 namespace VpnHood.Core.Client.VpnServicing;
 

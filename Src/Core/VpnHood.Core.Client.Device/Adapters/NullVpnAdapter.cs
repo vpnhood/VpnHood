@@ -5,7 +5,7 @@ using PacketDotNet;
 using VpnHood.Core.Common.Logging;
 using ProtocolType = PacketDotNet.ProtocolType;
 
-namespace VpnHood.Core.Client.Device;
+namespace VpnHood.Core.Client.Device.Adapters;
 
 public class NullVpnAdapter : IVpnAdapter
 {

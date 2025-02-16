@@ -5,7 +5,7 @@ using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Tunneling.Factory;
 
-namespace VpnHood.Core.Client.Services;
+namespace VpnHood.Core.Client.VpnServices;
 
 public class VpnHoodService : IAsyncDisposable
 {

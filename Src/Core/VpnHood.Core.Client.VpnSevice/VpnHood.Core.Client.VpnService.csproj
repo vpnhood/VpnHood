@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Socks Proxy.</Description>
+		<Description>Handles VpnService jobs in a separate process and controls the VpnHood client.</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
+		<RootNamespace>VpnHood.Core.Client.VpnServices</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -31,11 +32,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Resources\" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\Src\Core\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
+   <ProjectReference Include="..\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
 	</ItemGroup>
 
 </Project>

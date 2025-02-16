@@ -2,7 +2,7 @@
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 
-namespace VpnHood.Core.Client.Services;
+namespace VpnHood.Core.Client.VpnServices;
 
 public interface IVpnServiceHandler
 {

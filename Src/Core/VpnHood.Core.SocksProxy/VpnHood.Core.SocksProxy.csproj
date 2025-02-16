@@ -1,9 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood client device provider for Android.</Description>
-		<TargetFramework>net9.0-android35.0</TargetFramework>
-		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.Core.Client.Device.Droid</RootNamespace>
+		<Description>VpnHood Socks Proxy.</Description>
+		<TargetFramework>netstandard2.1</TargetFramework>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -26,16 +24,18 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="..\..\..\VpnHood.png">
+		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
+			<PackagePath></PackagePath>
 		</None>
 	</ItemGroup>
+
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
+		<Folder Include="Resources\" />
 	</ItemGroup>
+
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Core.Client.Device\VpnHood.Core.Client.Device.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.Client.VpnSevice\VpnHood.Core.Client.VpnService.csproj" />
+	  <ProjectReference Include="..\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
 	</ItemGroup>
+
 </Project>

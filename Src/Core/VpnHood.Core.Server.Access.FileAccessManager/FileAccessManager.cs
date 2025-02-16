@@ -10,11 +10,11 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Access.Configurations;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Services;
 using VpnHood.Core.Server.Access.Messaging;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 
 public class FileAccessManager : IAccessManager
 {

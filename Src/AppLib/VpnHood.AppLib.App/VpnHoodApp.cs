@@ -20,7 +20,7 @@ using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
-using VpnHood.Core.Client.Manager;
+using VpnHood.Core.Client.VpnServiceManagement;
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.IpLocations;
@@ -59,7 +59,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly TimeSpan _canExtendByRewardedAdThreshold;
     private readonly TimeSpan _sessionTimeout;
     private readonly AppPersistState _appPersistState;
-    private readonly VpnHoodClientManager _clientManager;
+    private readonly VpnHoodServiceManager _vpnServiceManager;
     private bool _hasDiagnoseRequested;
     private bool _isLoadingCountryIpRange;
     private bool _isFindingCountryCode;
@@ -68,7 +68,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private VersionCheckResult? _versionCheckResult;
     private CultureInfo? _systemUiCulture;
     private UserSettings _oldUserSettings;
-    private ConnectionInfo ConnectionInfo => _clientManager.ConnectionInfo;
+    private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
     public event EventHandler? ConnectionStateChanged;
@@ -190,8 +190,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         };
 
         // initialize client manager
-        _clientManager = new VpnHoodClientManager(device, appAdService, options.EventWatcherInterval);
-        _clientManager.StateChanged += Client_StateChanged;
+        _vpnServiceManager = new VpnHoodServiceManager(device, appAdService, options.EventWatcherInterval);
+        _vpnServiceManager.StateChanged += VpnServiceStateChanged;
 
         // Clear last update status if version has changed
         if (_versionCheckResult != null && _versionCheckResult.LocalVersion != Features.Version) {
@@ -227,7 +227,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     DropQuic = UserSettings.DropQuic
                 };
                 // it is not important to take effect immediately
-                _ = _clientManager.Reconfigure(reconfigureParams, CancellationToken.None);
+                _ = _vpnServiceManager.Reconfigure(reconfigureParams, CancellationToken.None);
 
                 // check is disconnect required
                 disconnectRequired =
@@ -343,7 +343,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public Task ForceUpdateState()
     {
-        return _clientManager.ForceUpdateState(CancellationToken.None);
+        return _vpnServiceManager.ForceUpdateState(CancellationToken.None);
     }
 
     public AppConnectionState ConnectionState {
@@ -390,7 +390,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _appPersistState.LastClearedError = LastError;
         _appPersistState.HasDisconnectedByUser = false;
         _hasDiagnoseRequested = false;
-        return _clientManager.ClearState();
+        return _vpnServiceManager.ClearState();
     }
 
     private readonly AsyncLock _connectLock = new();
@@ -497,7 +497,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ReportError(ex, "Could not connect.");
             _sessionCancellationTokenSource?.Cancel(); // cancel all pending tasks
             _sessionCancellationTokenSource = null;
-            await _clientManager.Stop(); // stop if it is not stopped yet
+            await _vpnServiceManager.Stop(); // stop if it is not stopped yet
 
             // Reset server location if no server is available
             if (ex is SessionException sessionException) {
@@ -524,8 +524,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // throw ConnectionTimeoutException if timeout
             if (timeoutCancellationSource.IsCancellationRequested) {
                 var exception = new ConnectionTimeoutException("Could not establish connection in given time.", ex);
-                await _clientManager.Stop(); // stop client if timeout
-                await _clientManager.ClearState();
+                await _vpnServiceManager.Stop(); // stop client if timeout
+                await _vpnServiceManager.ClearState();
                 _appPersistState.LastError = exception.ToApiError();
                 throw exception;
             }
@@ -616,12 +616,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     .VhConfigureAwait();
                 await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).VhConfigureAwait();
                 await Diagnoser.CheckPureNetwork(cancellationToken).VhConfigureAwait();
-                await _clientManager.Start(clientOptions, cancellationToken).VhConfigureAwait();
+                await _vpnServiceManager.Start(clientOptions, cancellationToken).VhConfigureAwait();
                 await Diagnoser.CheckVpnNetwork(cancellationToken).VhConfigureAwait();
             }
             // start client
             else {
-                await _clientManager.Start(clientOptions, cancellationToken).VhConfigureAwait();
+                await _vpnServiceManager.Start(clientOptions, cancellationToken).VhConfigureAwait();
             }
 
             var connectionInfo = ConnectionInfo;
@@ -775,7 +775,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return _appPersistState.ClientCountryCode ?? RegionInfo.CurrentRegion.Name;
     }
 
-    private void Client_StateChanged(object sender, EventArgs e)
+    private void VpnServiceStateChanged(object sender, EventArgs e)
     {
         if (ConnectionInfo.ClientState == ClientState.Disposed)
             OnDisconnect();
@@ -799,7 +799,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _appPersistState.HasDisconnectedByUser = true;
         _sessionCancellationTokenSource?.Cancel();
         _sessionCancellationTokenSource = null;
-        await _clientManager.Stop();
+        await _vpnServiceManager.Stop();
     }
 
     public void VersionCheckPostpone()
@@ -935,7 +935,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public async Task ExtendByRewardedAd(CancellationToken cancellationToken)
     {
         // save variable to prevent null reference exception
-        var connectionInfo = _clientManager.ConnectionInfo;
+        var connectionInfo = _vpnServiceManager.ConnectionInfo;
 
         if (Services.AdService.CanShowRewarded != true)
             throw new InvalidOperationException("Rewarded ad is not supported in this app.");
@@ -951,7 +951,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var adResult = await Services.AdService.ShowRewarded(ActiveUiContext.RequiredContext,
             connectionInfo.SessionInfo.SessionId, cancellationToken);
 
-        await _clientManager.SendRewardedAdResult(adResult, cancellationToken);
+        await _vpnServiceManager.SendRewardedAdResult(adResult, cancellationToken);
     }
 
     // make sure the active profile is valid and exist
@@ -1021,8 +1021,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (_disconnectOnDispose && ConnectionState.CanDisconnect())
             await Disconnect().VhConfigureAwait();
 
-        _clientManager.Dispose();
-        _clientManager.StateChanged -= Client_StateChanged;
+        _vpnServiceManager.Dispose();
+        _vpnServiceManager.StateChanged -= VpnServiceStateChanged;
 
         await Device.DisposeAsync();
         LogService.Dispose();

@@ -17,7 +17,7 @@ using VpnHood.Core.Server;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test.AccessManagers;

@@ -1,12 +1,12 @@
 ﻿using Android;
 using Android.Content;
 using Android.Content.PM;
-using Android.OS;
+using Android.Net;
 using Android.Runtime;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.VpnServices;
+using VpnHood.Core.Client.VpnServicing;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Tunneling.Factory;
 using Environment = System.Environment;
@@ -19,7 +19,7 @@ namespace VpnHood.Core.Client.Device.Droid;
     Process = ":vpnhood_process",
     ForegroundServiceType = ForegroundService.TypeSystemExempted)]
 [IntentFilter(["android.net.VpnService"])]
-public class AndroidVpnService : Android.Net.VpnService, IVpnServiceHandler
+public class AndroidVpnService : VpnService, IVpnServiceHandler
 {
     private readonly VpnHoodService _vpnHoodService;
     private AndroidVpnNotification? _notification;
@@ -39,7 +39,6 @@ public class AndroidVpnService : Android.Net.VpnService, IVpnServiceHandler
         switch (intent?.Action) {
             // signal start command
             case "connect":
-                ShowToast("sssss"); //todo
                 return _vpnHoodService.Connect()
                     ? StartCommandResult.Sticky
                     : StartCommandResult.NotSticky;
@@ -89,19 +88,5 @@ public class AndroidVpnService : Android.Net.VpnService, IVpnServiceHandler
 
         StopNotification(); 
         base.OnDestroy();
-    }
-
-    // todo: check it
-    private void ShowToast(string message)
-    {
-        var handler = new Handler(Looper.MainLooper!);
-        handler.Post(() => {
-            try {
-                Toast.MakeText(Application.Context, message, ToastLength.Short)?.Show();
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogError(ex, "Error showing Toast in VpnService.");
-            }
-        });
     }
 }

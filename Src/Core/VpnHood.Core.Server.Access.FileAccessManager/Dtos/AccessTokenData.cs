@@ -1,4 +1,4 @@
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
 
 public class AccessTokenData
 {

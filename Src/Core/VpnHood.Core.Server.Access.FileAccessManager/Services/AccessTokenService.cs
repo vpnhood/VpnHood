@@ -5,9 +5,9 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Utils;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement.Services;
 
 public class AccessTokenService
 {

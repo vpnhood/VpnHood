@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Client Abstractions.</Description>
+		<Description>VpnHood Client Abstractions</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
 		<RootNamespace>VpnHood.Core.Client.Abstractions</RootNamespace>
 	</PropertyGroup>

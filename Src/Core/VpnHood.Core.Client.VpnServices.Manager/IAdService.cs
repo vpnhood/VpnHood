@@ -1,7 +1,7 @@
 ﻿using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 
-namespace VpnHood.Core.Client.VpnServiceManagement;
+namespace VpnHood.Core.Client.VpnServices.Manager;
 
 public interface IAdService
 {

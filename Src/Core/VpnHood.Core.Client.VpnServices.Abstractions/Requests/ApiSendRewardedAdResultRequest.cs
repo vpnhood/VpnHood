@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Core.Client.Abstractions.ApiRequests;
+﻿using VpnHood.Core.Client.Abstractions;
+
+namespace VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 
 public class ApiSendRewardedAdResultRequest : IApiRequest
 {

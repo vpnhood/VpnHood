@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Shared library for VpnHood Windows WPF Clients using SPA.</Description>
+		<Description>Shared library for VpnHood Windows WPF Clients using SPA</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
 		<RootNamespace>VpnHood.AppLib.Win.Common.WpfSpa</RootNamespace>
 	</PropertyGroup>

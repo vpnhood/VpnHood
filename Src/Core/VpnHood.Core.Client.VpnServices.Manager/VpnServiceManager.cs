@@ -3,8 +3,9 @@ using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Abstractions.ApiRequests;
 using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Jobs;
@@ -12,9 +13,9 @@ using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 using FastDateTime = VpnHood.Core.Common.Utils.FastDateTime;
 
-namespace VpnHood.Core.Client.VpnServiceManagement;
+namespace VpnHood.Core.Client.VpnServices.Manager;
 
-public class VpnHoodServiceManager : IJob, IDisposable
+public class VpnServiceManager : IJob, IDisposable
 {
     private readonly TimeSpan _requestVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(120);
     private readonly TimeSpan _startVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(15);
@@ -30,7 +31,7 @@ public class VpnHoodServiceManager : IJob, IDisposable
 
     public event EventHandler? StateChanged;
     public JobSection JobSection { get; }
-    public VpnHoodServiceManager(IDevice device, IAdService adService, TimeSpan? eventWatcherInterval)
+    public VpnServiceManager(IDevice device, IAdService adService, TimeSpan? eventWatcherInterval)
     {
         Directory.CreateDirectory(device.VpnServiceConfigFolder);
         _vpnConfigFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnConfigFileName);
@@ -300,7 +301,7 @@ public class VpnHoodServiceManager : IJob, IDisposable
 
     public Task Reconfigure(ClientReconfigureParams reconfigureParams, CancellationToken cancellationToken)
     {
-        return SendRequest(new ApiReconfigureRequest { ReconfigureParams = reconfigureParams }, cancellationToken);
+        return SendRequest(new ApiReconfigureRequest { Params = reconfigureParams }, cancellationToken);
     }
 
     public Task SendRewardedAdResult(AdResult adResult, CancellationToken cancellationToken)

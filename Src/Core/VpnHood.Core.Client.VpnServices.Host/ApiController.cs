@@ -1,13 +1,13 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Abstractions.ApiRequests;
+using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 
-namespace VpnHood.Core.Client.VpnServicing;
+namespace VpnHood.Core.Client.VpnServices.Host;
 
 internal class ApiController : IDisposable
 {

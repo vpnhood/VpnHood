@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood client device provider for Android.</Description>
+		<Description>VpnHood client device provider for Android</Description>
 		<TargetFramework>net9.0-android35.0</TargetFramework>
 		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
 		<RootNamespace>VpnHood.Core.Client.Device.Droid</RootNamespace>
@@ -36,6 +36,6 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Client.Device\VpnHood.Core.Client.Device.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.Client.VpnService\VpnHood.Core.Client.VpnService.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
 	</ItemGroup>
 </Project>

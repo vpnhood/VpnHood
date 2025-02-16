@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Light access manager using OS file system.</Description>
+		<Description>Light access manager using OS file system</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
 		<RootNamespace>VpnHood.Core.Server.Access.Managers.FileAccessManagement</RootNamespace>
 	</PropertyGroup>

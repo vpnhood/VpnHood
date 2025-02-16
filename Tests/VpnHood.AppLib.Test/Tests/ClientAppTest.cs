@@ -76,9 +76,11 @@ public class ClientAppTest : TestAppBase
         Assert.IsTrue(app.State.HasDiagnoseRequested);
         Assert.IsTrue(app.State.HasDisconnectedByUser);
         Assert.IsTrue(app.State.IsIdle);
-        Assert.IsNotNull(app.State.LastError);
+        Assert.IsNull(app.State.LastError); // no error when user disconnects
 
         await app.ClearLastError();
+        Assert.IsFalse(app.State.HasDiagnoseRequested);
+        Assert.IsFalse(app.State.HasDisconnectedByUser);
         Assert.IsNull(app.State.LastError);
 
         // ************

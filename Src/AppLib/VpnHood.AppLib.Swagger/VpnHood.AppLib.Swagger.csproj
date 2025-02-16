@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 	<PropertyGroup>
-		<Description>Provides endpoints to Swagger for generating client APIs.</Description>
+		<Description>Provides endpoints to Swagger for generating client APIs</Description>
 		<TargetFramework>net9.0</TargetFramework>
 		<IsPackable>false</IsPackable>
 		<RootNamespace>VpnHood.AppLib.Swagger</RootNamespace>

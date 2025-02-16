@@ -7,9 +7,9 @@ using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 
-namespace VpnHood.Core.Client.Services;
+namespace VpnHood.Core.Client.VpnServices;
 
-public class ApiController : IDisposable
+internal class ApiController : IDisposable
 {
     private readonly VpnHoodService _vpnHoodService;
     private readonly TcpListener _tcpListener;

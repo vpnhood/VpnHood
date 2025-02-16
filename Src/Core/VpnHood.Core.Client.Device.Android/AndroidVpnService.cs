@@ -1,13 +1,12 @@
 ﻿using Android;
 using Android.Content;
 using Android.Content.PM;
-using Android.Net;
 using Android.OS;
 using Android.Runtime;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Services;
+using VpnHood.Core.Client.VpnServices;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Tunneling.Factory;
 using Environment = System.Environment;
@@ -20,7 +19,7 @@ namespace VpnHood.Core.Client.Device.Droid;
     Process = ":vpnhood_process",
     ForegroundServiceType = ForegroundService.TypeSystemExempted)]
 [IntentFilter(["android.net.VpnService"])]
-public class AndroidVpnService : VpnService, IVpnServiceHandler
+public class AndroidVpnService : Android.Net.VpnService, IVpnServiceHandler
 {
     private readonly VpnHoodService _vpnHoodService;
     private AndroidVpnNotification? _notification;

@@ -30,6 +30,7 @@ if ($nugets) {
 	& "$solutionDir/Src/Core/VpnHood.Core.Common/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Tunneling/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Client.VpnService/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device.Android/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device.WinDivert/_publish.ps1";

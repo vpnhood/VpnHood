@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
+using VpnHood.Core.Client.Abstractions.Logging;
 using VpnHood.Core.Common.Converters;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Tokens;
@@ -60,6 +61,7 @@ public class ClientOptions
     public string[]? ExcludeApps { get; set; }
     public string[]? IncludeApps { get; set; }
     public bool UseNullCapture { get; set; }
+    public LogOptions LogOptions { get; set; } = new ();
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

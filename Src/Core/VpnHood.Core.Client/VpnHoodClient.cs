@@ -158,11 +158,13 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         DropUdp = options.DropUdp;
         DropQuic = options.DropQuic;
         UseTcpOverTun = options.UseTcpOverTun;
-        DomainFilterService = new DomainFilterService(options.DomainFilter, options.ForceLogSni);
         var dnsRange = DnsServers.Select(x => new IpRange(x)).ToArray();
         VpnAdapterIncludeIpRanges = options.VpnAdapterIncludeIpRanges.ToOrderedList().Union(dnsRange);
         IncludeIpRanges = options.IncludeIpRanges.ToOrderedList().Union(dnsRange);
         AdService = new ClientAdService(this);
+
+        // SNI is sensitive, must be explicitly enabled
+        DomainFilterService = new DomainFilterService(options.DomainFilter, forceLogSni: options.ForceLogSni);
 
         // NAT
         Nat = new Nat(true);

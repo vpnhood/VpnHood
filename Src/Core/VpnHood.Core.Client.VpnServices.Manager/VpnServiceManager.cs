@@ -30,6 +30,7 @@ public class VpnServiceManager : IJob, IDisposable
     private TcpClient? _tcpClient;
 
     public event EventHandler? StateChanged;
+    public string LogFilePath => Path.Combine(_device.VpnServiceConfigFolder, ClientOptions.VpnLogFileName);
     public JobSection JobSection { get; }
     public VpnServiceManager(IDevice device, IAdService adService, TimeSpan? eventWatcherInterval)
     {

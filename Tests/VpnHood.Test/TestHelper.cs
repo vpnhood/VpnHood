@@ -30,12 +30,14 @@ namespace VpnHood.Test;
 
 public class TestHelper : IDisposable
 {
+    private static readonly string AssemblyWorkingPath = Path.Combine(Path.GetTempPath(), "VpnHood.Test");
+
     public class TestAppUiContext : IUiContext
     {
         public bool IsActive => true;
     }
 
-    public string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "_test_vpnhood");
+    public string WorkingPath { get; } = Path.Combine(AssemblyWorkingPath, Guid.CreateVersion7().ToString());
     public TestWebServer WebServer { get; }
     public TestNetFilter NetFilter { get; }
     public bool LogVerbose => true;
@@ -264,8 +266,7 @@ public class TestHelper : IDisposable
                 TrackLocalPort = true
             },
             SessionOptions = {
-                SyncCacheSize = 50,
-                SyncInterval = TimeSpan.FromMilliseconds(100)
+                SyncCacheSize = 50
             },
             LogAnonymizer = false,
             UseExternalLocationService = false
@@ -441,10 +442,20 @@ public class TestHelper : IDisposable
     public virtual void Dispose()
     {
         WebServer.Dispose();
-
         try {
             if (Directory.Exists(WorkingPath))
                 Directory.Delete(WorkingPath, true);
+        }
+        catch {
+            // ignored
+        }
+    }
+
+    public static void AssemblyCleanup()
+    {
+        try {
+            if (Directory.Exists(AssemblyWorkingPath))
+                Directory.Delete(AssemblyWorkingPath, true);
         }
         catch {
             // ignored

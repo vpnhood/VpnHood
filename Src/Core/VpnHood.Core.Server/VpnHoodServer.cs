@@ -86,8 +86,11 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
     public async Task RunJob()
     {
-        if (_disposed) throw new ObjectDisposedException(VhLogger.FormatType(this));
+        if (_disposed) 
+            throw new ObjectDisposedException(VhLogger.FormatType(this));
 
+        using var scope = VhLogger.Instance.BeginScope("Server");
+        
         if (State == ServerState.Waiting && _configureTask.IsCompleted) {
             _configureTask = Configure(); // configure does not throw any error
             await _configureTask.VhConfigureAwait();

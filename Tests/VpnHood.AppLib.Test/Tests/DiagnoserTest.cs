@@ -18,6 +18,7 @@ public class DiagnoserTest : TestAppBase
         // create client
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.AutoDiagnose = true;
+        appOptions.ConnectTimeout = TimeSpan.FromSeconds(30);
         await using var clientApp = TestAppHelper.CreateClientApp(appOptions: appOptions);
         var clientProfile = clientApp.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
@@ -26,12 +27,7 @@ public class DiagnoserTest : TestAppBase
         clientApp.Diagnoser.TestHttpUris = [TestConstants.InvalidUri];
         clientApp.Diagnoser.TestNsIpEndPoints = [TestConstants.InvalidEp];
         clientApp.Diagnoser.TestPingIpAddresses = [TestConstants.InvalidIp];
-
-        try {
-            await clientApp.Connect(clientProfile.ClientProfileId);
-        }
-        catch (Exception ex) {
-            Assert.AreEqual(nameof(NoInternetException), ex.GetType().Name);
-        }
+        await Assert.ThrowsExceptionAsync<NoInternetException>(() =>
+            clientApp.Connect(clientProfile.ClientProfileId));
     }
 }

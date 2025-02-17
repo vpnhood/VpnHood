@@ -35,6 +35,7 @@ public sealed class ApiException : Exception
     }
 
     public ApiException(ApiError apiError)
+        : base(apiError.Message, new Exception(apiError.InnerMessage ?? ""))
     {
         StatusCode = 400;
         ExceptionTypeFullName = apiError.TypeFullName;

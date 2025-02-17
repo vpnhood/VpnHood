@@ -15,7 +15,7 @@ internal class ApiController : IDisposable
     private readonly TcpListener _tcpListener;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private VpnHoodClient VpnHoodClient => _vpnHoodService.RequiredClient;
-    public IPEndPoint ApiEndPoint => (IPEndPoint)_tcpListener.LocalEndpoint;
+    public IPEndPoint? ApiEndPoint { get; private set; }
     public byte[] ApiKey { get; } = VhUtils.GenerateKey(128);
     public VpnServiceHost? ServiceContext { get; set; }
 
@@ -31,6 +31,9 @@ internal class ApiController : IDisposable
     {
         try {
             _tcpListener.Start();
+            ApiEndPoint = (IPEndPoint)_tcpListener.LocalEndpoint;
+            VhLogger.Instance.LogDebug("VpnService host Listener has been started. EndPoint: {EndPoint}", ApiEndPoint);
+
             while (!_cancellationTokenSource.IsCancellationRequested) {
                 var client = await _tcpListener.AcceptTcpClientAsync();
                 _ = ProcessClientAsync(client, _cancellationTokenSource.Token);
@@ -38,11 +41,12 @@ internal class ApiController : IDisposable
         }
         catch (Exception ex) {
             if (_disposed == 0)
-                VhLogger.Instance.LogError(ex, "Client API Listener has been stopped.");
+                VhLogger.Instance.LogError(ex, "VpnService host Listener has been stopped.");
         }
         finally {
             _cancellationTokenSource.Cancel();
             _tcpListener.Stop();
+            VhLogger.Instance.LogDebug("VpnService host Listener has been stopped. EndPoint: {EndPoint}", ApiEndPoint);
         }
     }
 
@@ -88,7 +92,7 @@ internal class ApiController : IDisposable
             };
             await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
         }
-        catch (Exception ex) {
+        catch (Exception ex) when (_disposed == 0) {
             var response = new ApiResponse<object> {
                 ApiError = ex.ToApiError(),
                 ConnectionInfo = await GetConnectionInfoOrDefault(),

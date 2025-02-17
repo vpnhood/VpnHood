@@ -272,7 +272,7 @@ public class ServerTest : TestBase
         // create server
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
         serverOptions.SessionOptions.SyncCacheSize = 1000000;
-        serverOptions.UpdateStatusInterval = TimeSpan.FromMilliseconds(200);
+        serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
         using var accessManager = TestHelper.CreateAccessManager(serverOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
 

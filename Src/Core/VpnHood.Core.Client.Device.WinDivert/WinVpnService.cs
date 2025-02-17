@@ -17,7 +17,7 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
         ITracker? tracker)
     {
         _tracker = tracker;
-        _vpnServiceHost = new VpnServiceHost(configFolder, this, new SocketFactory());
+        _vpnServiceHost = new VpnServiceHost(configFolder, this, new SocketFactory(), withLogger: false);
     }
 
     public void OnConnect()

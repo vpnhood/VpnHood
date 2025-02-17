@@ -2,6 +2,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Net;
@@ -20,7 +22,7 @@ public class TestAppHelper : TestHelper
         var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode: true) {
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
             SessionTimeout = TimeSpan.FromSeconds(2),
-            EventWatcherInterval = TimeSpan.FromMilliseconds(100), // no SPA in test, so we need to use event watcher
+            EventWatcherInterval = TimeSpan.FromMilliseconds(200), // no SPA in test, so we need to use event watcher
             Ga4MeasurementId = null,
             Tracker = tracker,
             UseInternalLocationService = false,
@@ -36,7 +38,8 @@ public class TestAppHelper : TestHelper
                 LoadAdPostDelay = TimeSpan.Zero
             },
             LogOptions = {
-                LogLevel = LogVerbose ? LogLevel.Trace : LogLevel.Debug
+                LogLevel = LogVerbose ? LogLevel.Trace : LogLevel.Debug,
+                SingleLineConsole = false
             }
         };
 
@@ -80,5 +83,19 @@ public class TestAppHelper : TestHelper
     public string BuildAccessCode()
     {
         return AccessCodeUtils.Build(GenerateSecureRandomDigits(18));
+    }
+
+    [AssemblyCleanup]
+    public static void AssemblyCleanup2()
+    {
+        try {
+            //if (Directory.Exists(AssemblyWorkingPath))
+              //  Directory.Delete(AssemblyWorkingPath, true);
+              Console.WriteLine("sss");
+              throw new ConnectionTimeoutException("sss");
+        }
+        catch {
+            // ignored
+        }
     }
 }

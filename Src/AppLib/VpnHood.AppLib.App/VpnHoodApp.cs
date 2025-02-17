@@ -17,7 +17,6 @@ using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Abstractions.Logging;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Manager;

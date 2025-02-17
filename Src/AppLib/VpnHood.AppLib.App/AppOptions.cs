@@ -2,7 +2,7 @@
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Abstractions.Logging;
+using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Sockets;
 
 namespace VpnHood.AppLib;

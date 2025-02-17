@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Services.Ads;
-using VpnHood.Core.Client.Abstractions.Logging;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Utils;

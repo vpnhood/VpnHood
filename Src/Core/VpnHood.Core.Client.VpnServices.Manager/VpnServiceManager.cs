@@ -79,14 +79,6 @@ public class VpnServiceManager : IJob, IDisposable
 
     }
 
-    public async Task ClearState()
-    {
-        // clear state just if the state is disposed
-        var connectionInfo = await UpdateConnectionInfo(true, CancellationToken.None);
-        if (connectionInfo.ClientState == ClientState.Disposed)
-            SetConnectionInfo(ClientState.None);
-    }
-
     public async Task Start(ClientOptions clientOptions, CancellationToken cancellationToken)
     {
         _cancellationToken = cancellationToken;

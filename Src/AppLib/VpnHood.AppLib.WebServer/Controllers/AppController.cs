@@ -120,7 +120,8 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Post, "/clear-last-error")]
     public Task ClearLastError()
     {
-        return App.ClearLastError();
+        App.ClearLastError();
+        return Task.CompletedTask;
     }
 
     [Route(HttpVerbs.Post, "/extend-by-rewarded-ad")]

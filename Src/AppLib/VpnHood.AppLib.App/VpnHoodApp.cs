@@ -381,12 +381,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return new VpnHoodApp(device, options);
     }
 
-    public Task ClearLastError()
+    public void ClearLastError()
     {
-        _appPersistState.LastClearedError = LastError;
+        _appPersistState.LastClearedError = _appPersistState.LastError ?? ConnectionInfo.Error; 
         _appPersistState.HasDisconnectedByUser = false;
         _hasDiagnoseRequested = false;
-        return _vpnServiceManager.ClearState();
     }
 
     private LogOptions GetLogOptions()
@@ -439,7 +438,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         using var timeoutCancellationSource = new CancellationTokenSource(_connectTimeout);
         try {
             // Reset everything
-            await ClearLastError();
+            ClearLastError();
 
             // create cancellationToken after disconnecting previous connection
             _sessionCancellationTokenSource = new CancellationTokenSource();
@@ -528,7 +527,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (timeoutCancellationSource.IsCancellationRequested) {
                 var exception = new ConnectionTimeoutException("Could not establish connection in given time.", ex);
                 await _vpnServiceManager.Stop(); // stop client if timeout
-                await _vpnServiceManager.ClearState();
                 _appPersistState.LastError = exception.ToApiError();
                 throw exception;
             }

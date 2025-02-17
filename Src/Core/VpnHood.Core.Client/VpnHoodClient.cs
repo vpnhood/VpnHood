@@ -1065,7 +1065,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         // disposing VpnAdapter
         _vpnAdapter.PacketReceivedFromInbound -= VpnAdapter_OnPacketReceivedFromInbound;
         if (_autoDisposeVpnAdapter) {
-            VhLogger.Instance.LogTrace("Disposing the VpnAdapter...");
+            VhLogger.Instance.LogDebug("Disposing the VpnAdapter...");
             _vpnAdapter.Dispose();
         }
 
@@ -1075,19 +1075,19 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         // Anonymous usage tracker
         _ = _clientUsageTracker?.DisposeAsync();
 
-        VhLogger.Instance.LogTrace("Disposing ClientHost...");
+        VhLogger.Instance.LogDebug("Disposing ClientHost...");
         await _clientHost.DisposeAsync().VhConfigureAwait();
 
         // Tunnel
-        VhLogger.Instance.LogTrace("Disposing Tunnel...");
+        VhLogger.Instance.LogDebug("Disposing Tunnel...");
         Tunnel.PacketReceived -= Tunnel_OnPacketReceived;
         await Tunnel.DisposeAsync().VhConfigureAwait();
 
-        VhLogger.Instance.LogTrace("Disposing ProxyManager...");
+        VhLogger.Instance.LogDebug("Disposing ProxyManager...");
         await _proxyManager.DisposeAsync().VhConfigureAwait();
 
         // dispose NAT
-        VhLogger.Instance.LogTrace("Disposing Nat...");
+        VhLogger.Instance.LogDebug("Disposing Nat...");
         Nat.Dispose();
 
         // don't wait for this. It is just for server clean up we should not wait the user for it
@@ -1104,7 +1104,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
 
         // dispose ConnectorService
-        VhLogger.Instance.LogTrace("Disposing ConnectorService...");
+        VhLogger.Instance.LogDebug("Disposing ConnectorService...");
         await ConnectorService.DisposeAsync().VhConfigureAwait();
 
         VhLogger.Instance.LogInformation("Bye Bye!");

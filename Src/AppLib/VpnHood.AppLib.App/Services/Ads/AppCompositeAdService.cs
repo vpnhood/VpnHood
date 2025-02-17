@@ -124,7 +124,7 @@ internal class AppCompositeAdService
         try {
             VhLogger.Instance.LogInformation("Trying to show ad. ItemName: {ItemName}", _loadedAdProviderItem.Name);
             await _loadedAdProviderItem.AdProvider.ShowAd(uiContext, customData, cancellationToken).VhConfigureAwait();
-            VhLogger.Instance.LogTrace("Showing ad has been completed. {ItemName}", _loadedAdProviderItem.Name);
+            VhLogger.Instance.LogDebug("Showing ad has been completed. {ItemName}", _loadedAdProviderItem.Name);
             await VerifyActiveUi(false); // some ad provider may not raise exception on minimize
             await Task.Delay(_adOptions.ShowAdPostDelay, cancellationToken); //wait for finishing trackers
 

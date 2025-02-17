@@ -24,7 +24,7 @@ public class TcpClientStream : IClientStream
         get => _clientStreamId;
         set {
             if (_clientStreamId != value)
-                VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+                VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                     "ClientStreamId has been changed. ClientStreamId: {ClientStreamId}, NewClientStreamId: {NewClientStreamId}",
                     _clientStreamId, value);
 
@@ -51,7 +51,7 @@ public class TcpClientStream : IClientStream
             (IPEndPoint)TcpClient.Client.RemoteEndPoint);
 
         if (log)
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}, StreamType: {StreamType}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
                 ClientStreamId, stream.GetType().Name, VhLogger.Format(IpEndPointPair.LocalEndPoint),
                 VhLogger.Format(IpEndPointPair.RemoteEndPoint));
@@ -84,7 +84,7 @@ public class TcpClientStream : IClientStream
                 _ = _reuseCallback.Invoke(new TcpClientStream(TcpClient, newStream, ClientStreamId, _reuseCallback,
                     false));
 
-                VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+                VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                     "A TcpClientStream has been freed. ClientStreamId: {ClientStreamId}", ClientStreamId);
             }
             catch (Exception ex) {
@@ -101,7 +101,7 @@ public class TcpClientStream : IClientStream
             await Stream.DisposeAsync().VhConfigureAwait(); // first close stream 2
             TcpClient.Dispose();
 
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "A TcpClientStream has been disposed. ClientStreamId: {ClientStreamId}",
                 ClientStreamId);
         }

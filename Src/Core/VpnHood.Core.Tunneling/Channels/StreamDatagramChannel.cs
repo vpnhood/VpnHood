@@ -187,7 +187,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
             // send close message to peer
             var ipPacket = DatagramMessageHandler.CreateMessage(new CloseDatagramMessage());
-            VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
+            VhLogger.Instance.LogDebug(GeneralEventId.DatagramChannel,
                 "StreamDatagramChannel sending the close message to the remote. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);
 
@@ -208,7 +208,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     public Task RunJob()
     {
         if (Connected && FastDateTime.Now > _lifeTime) {
-            VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
+            VhLogger.Instance.LogDebug(GeneralEventId.DatagramChannel,
                 "StreamDatagramChannel lifetime ended. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);
 

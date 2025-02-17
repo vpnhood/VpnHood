@@ -102,13 +102,13 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         var tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint.AddressFamily);
 
         // Client.SessionTimeout does not affect in ConnectAsync
-        VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}",
+        VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}",
             VhLogger.Format(tcpEndPoint));
         await tcpClient.VhConnectAsync(tcpEndPoint, TcpConnectTimeout, cancellationToken).VhConfigureAwait();
 
         // Establish a TLS connection
         var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
-        VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}",
+        VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}",
             VhLogger.FormatHostName(hostName));
         await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
                 TargetHost = hostName,

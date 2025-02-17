@@ -133,7 +133,7 @@ public class SessionManager : IAsyncDisposable, IJob
     public async Task<SessionResponseEx> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair)
     {
         // validate the token
-        VhLogger.Instance.Log(LogLevel.Trace, "Validating the request by the access server. TokenId: {TokenId}",
+        VhLogger.Instance.LogDebug("Validating the request by the access server. TokenId: {TokenId}",
             VhLogger.FormatId(helloRequest.TokenId));
 
         var extraData = JsonSerializer.Serialize(new SessionExtraData());
@@ -222,7 +222,7 @@ public class SessionManager : IAsyncDisposable, IJob
             return session;
 
         // Get session from the access server
-        VhLogger.Instance.LogTrace(GeneralEventId.Session,
+        VhLogger.Instance.LogDebug(GeneralEventId.Session,
             "Trying to recover a session from the access server. SessionId: {SessionId}",
             VhLogger.FormatSessionId(sessionRequest.SessionId));
 
@@ -322,7 +322,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
     private void DisposeExpiredSessions()
     {
-        VhLogger.Instance.LogTrace("Disposing expired sessions...");
+        VhLogger.Instance.LogDebug("Disposing expired sessions...");
         var utcNow = DateTime.UtcNow;
         var timeoutSessions = Sessions.Values
             .Where(x => !x.IsDisposed && x.SessionResponseEx.AccessUsage?.ExpirationTime < utcNow);
@@ -338,7 +338,7 @@ public class SessionManager : IAsyncDisposable, IJob
     // remove sessions from memory that are idle but not disposed yet
     private void RemoveIdleSessions()
     {
-        VhLogger.Instance.LogTrace("Disposing all idle sessions...");
+        VhLogger.Instance.LogDebug("Disposing all idle sessions...");
         var minSessionActivityTime = FastDateTime.Now - SessionOptions.TimeoutValue;
         var timeoutSessions = Sessions
             .Where(x =>
@@ -358,7 +358,7 @@ public class SessionManager : IAsyncDisposable, IJob
     }
     private void DisposeFailedSessions()
     {
-        VhLogger.Instance.LogTrace("Process all failed sessions...");
+        VhLogger.Instance.LogDebug("Process all failed sessions...");
         var failedSessions = Sessions
             .Where(x =>
                 !x.Value.IsDisposed &&
@@ -373,7 +373,7 @@ public class SessionManager : IAsyncDisposable, IJob
     // remove sessions that are disposed a long time
     private void ProcessDeadSessions()
     {
-        VhLogger.Instance.LogTrace("Disposing all disposed sessions...");
+        VhLogger.Instance.LogDebug("Disposing all disposed sessions...");
         var utcNow = DateTime.UtcNow;
         var deadSessions = Sessions.Values
             .Where(x =>

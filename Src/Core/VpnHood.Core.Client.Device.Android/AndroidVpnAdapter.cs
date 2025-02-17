@@ -70,7 +70,7 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
         // reset the stop request
         _stopRequested = false;
 
-        VhLogger.Instance.LogTrace("Starting the adapter...");
+        VhLogger.Instance.LogDebug("Starting the adapter...");
         
         var builder = new VpnService.Builder(vpnService)
             .SetBlocking(true);
@@ -126,7 +126,7 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
         if (_mInterface == null || _stopRequested) return;
         _stopRequested = true;
 
-        VhLogger.Instance.LogTrace("Stopping the adapter...");
+        VhLogger.Instance.LogDebug("Stopping the adapter...");
 
         // close in streams
         try {

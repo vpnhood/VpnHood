@@ -465,7 +465,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LogToConsole = true,
                 LogToFile = true,
                 AutoFlush = true,
-                LogLevel = _logVerbose || connectOptions.Diagnose ? LogLevel.Trace : LogLevel.Information
+                LogLevel = _logVerbose || connectOptions.Diagnose ? LogLevel.Debug : LogLevel.Information
             });
 
             // set current profile only if it has been updated to avoid unnecessary new config time
@@ -622,7 +622,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             clientOptions.UserAgent = userAgent;
 
         try {
-            VhLogger.Instance.LogTrace(
+            VhLogger.Instance.LogDebug(
                 "Launching VpnService ... DiagnoseMode: {DiagnoseMode}, AutoDiagnose: {AutoDiagnose}",
                 _hasDiagnoseRequested, _autoDiagnose);
 
@@ -863,7 +863,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (Features.UpdateInfoUrl == null)
                 return null; // no update info url. Job done
 
-            VhLogger.Instance.LogTrace("Retrieving the latest publish info...");
+            VhLogger.Instance.LogDebug("Retrieving the latest publish info...");
 
             using var httpClient = new HttpClient();
             var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl).VhConfigureAwait();

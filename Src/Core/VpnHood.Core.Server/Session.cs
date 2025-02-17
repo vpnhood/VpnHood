@@ -300,7 +300,7 @@ public class Session : IAsyncDisposable
         UseUdpChannel = false;
 
         // add channel
-        VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
+        VhLogger.Instance.LogDebug(GeneralEventId.DatagramChannel,
             "Creating a TcpDatagramChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
         var channel = new StreamDatagramChannel(clientStream, request.RequestId);
@@ -347,7 +347,7 @@ public class Session : IAsyncDisposable
         StreamProxyChannel? streamProxyChannel = null;
         try {
             // connect to requested site
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
                 $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
 
             // Apply limitation
@@ -377,7 +377,7 @@ public class Session : IAsyncDisposable
             await clientStream.WriteResponse(SessionResponseEx, cancellationToken).VhConfigureAwait();
 
             // add the connection
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
                 "Adding a StreamProxyChannel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
             tcpClientStreamHost =

@@ -207,7 +207,7 @@ public class ServerHost : IAsyncDisposable, IJob
     private async Task<SslStream> AuthenticateAsServerAsync(Stream stream, CancellationToken cancellationToken)
     {
         try {
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating...");
+            VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "TLS Authenticating...");
             var sslStream = new SslStream(stream, true);
             await sslStream.AuthenticateAsServerAsync(
                     new SslServerAuthenticationOptions {
@@ -246,7 +246,7 @@ public class ServerHost : IAsyncDisposable, IJob
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream,
         CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Waiting for request...");
+        VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "Waiting for request...");
         var streamId = Guid.NewGuid() + ":incoming";
 
         // Version 2 is HTTP and starts with POST
@@ -372,13 +372,13 @@ public class ServerHost : IAsyncDisposable, IJob
 
         // process incoming client
         try {
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "ServerHost.ReuseClientStream: A shared ClientStream is pending for reuse. ClientStreamId: {ClientStreamId}",
                 clientStream.ClientStreamId);
 
             await ProcessClientStream(clientStream, cancellationToken).VhConfigureAwait();
 
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "ServerHost.ReuseClientStream: A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}",
                 clientStream.ClientStreamId);
         }
@@ -500,7 +500,7 @@ public class ServerHost : IAsyncDisposable, IJob
         where T : ClientRequest
     {
         // reading request
-        VhLogger.Instance.LogTrace(GeneralEventId.Session,
+        VhLogger.Instance.LogDebug(GeneralEventId.Session,
             "Processing a request. RequestType: {RequestType}.",
             VhLogger.FormatType<T>());
 
@@ -508,7 +508,7 @@ public class ServerHost : IAsyncDisposable, IJob
         request.RequestId = request.RequestId.Replace(":client", ":server");
         clientStream.ClientStreamId = request.RequestId;
 
-        VhLogger.Instance.LogTrace(GeneralEventId.Session,
+        VhLogger.Instance.LogDebug(GeneralEventId.Session,
             "Request has been read. RequestType: {RequestType}. RequestId: {RequestId}",
             VhLogger.FormatType<T>(), request.RequestId);
 
@@ -520,13 +520,13 @@ public class ServerHost : IAsyncDisposable, IJob
         var ipEndPointPair = clientStream.IpEndPointPair;
 
         // reading request
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Processing hello request... ClientIp: {ClientIp}",
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Processing hello request... ClientIp: {ClientIp}",
             VhLogger.Format(ipEndPointPair.RemoteEndPoint.Address));
 
         var request = await ReadRequest<HelloRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         // creating a session
-        VhLogger.Instance.LogTrace(GeneralEventId.Session,
+        VhLogger.Instance.LogDebug(GeneralEventId.Session,
             "Creating a session... TokenId: {TokenId}, ClientId: {ClientId}, ClientVersion: {ClientVersion}, UserAgent: {UserAgent}",
             VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId),
             request.ClientInfo.ClientVersion, request.ClientInfo.UserAgent);
@@ -565,7 +565,7 @@ public class ServerHost : IAsyncDisposable, IJob
         }
 
         // reply hello session
-        VhLogger.Instance.LogTrace(GeneralEventId.Session,
+        VhLogger.Instance.LogDebug(GeneralEventId.Session,
             $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponseEx.SessionId)}");
 
         // find udp port that match to the same tcp local IpAddress
@@ -624,7 +624,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessRewardedAdRequest(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the RewardedAd request...");
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading the RewardedAd request...");
         var request = await ReadRequest<RewardedAdRequest>(clientStream, cancellationToken).VhConfigureAwait();
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
         await session.ProcessRewardedAdRequest(request, clientStream, cancellationToken).VhConfigureAwait();
@@ -632,7 +632,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private static async Task ProcessServerStatus(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the ServerStatus request...");
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading the ServerStatus request...");
         var request = await ReadRequest<ServerStatusRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         // Before calling CloseSession. Session must be validated by GetSession
@@ -647,7 +647,7 @@ public class ServerHost : IAsyncDisposable, IJob
     // todo: it must be removed
     private async Task ProcessSessionStatus(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the SessionStatus request...");
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading the SessionStatus request...");
         var request = await ReadRequest<SessionStatusRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         // finding session
@@ -659,7 +659,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessBye(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the Bye request...");
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading the Bye request...");
         var request = await ReadRequest<ByeRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         // finding session
@@ -677,7 +677,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessUdpPacketRequest(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading a UdpPacket request...");
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading a UdpPacket request...");
         var request = await ReadRequest<UdpPacketRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
@@ -687,7 +687,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessTcpDatagramChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel, "Reading the TcpDatagramChannelRequest...");
+        VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel, "Reading the TcpDatagramChannelRequest...");
         var request = await ReadRequest<TcpDatagramChannelRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         // finding session
@@ -717,30 +717,30 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private async Task Stop()
     {
-        VhLogger.Instance.LogTrace("Stopping ServerHost...");
+        VhLogger.Instance.LogDebug("Stopping ServerHost...");
         _cancellationTokenSource.Cancel();
 
         // UDPs
-        VhLogger.Instance.LogTrace("Disposing UdpChannelTransmitters...");
+        VhLogger.Instance.LogDebug("Disposing UdpChannelTransmitters...");
         foreach (var udpChannelClient in _udpChannelTransmitters)
             udpChannelClient.Dispose();
         _udpChannelTransmitters.Clear();
 
         // TCPs
-        VhLogger.Instance.LogTrace("Disposing TcpListeners...");
+        VhLogger.Instance.LogDebug("Disposing TcpListeners...");
         foreach (var tcpListener in _tcpListeners)
             tcpListener.Stop();
         _tcpListeners.Clear();
 
         // dispose clientStreams
-        VhLogger.Instance.LogTrace("Disposing ClientStreams...");
+        VhLogger.Instance.LogDebug("Disposing ClientStreams...");
         Task[] disposeTasks;
         lock (_clientStreams)
             disposeTasks = _clientStreams.Select(x => x.DisposeAsync(false).AsTask()).ToArray();
         await Task.WhenAll(disposeTasks).VhConfigureAwait();
 
         // wait for finalizing all listener tasks
-        VhLogger.Instance.LogTrace("Disposing current processing requests...");
+        VhLogger.Instance.LogDebug("Disposing current processing requests...");
         try {
             await VhUtils.RunTask(Task.WhenAll(_tcpListenerTasks), TimeSpan.FromSeconds(15)).VhConfigureAwait();
         }

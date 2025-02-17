@@ -94,7 +94,7 @@ public class ServerTest : TestBase
 
         // change tcp end points
         var newTcpEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
-        VhLogger.Instance.LogTrace(GeneralEventId.Test,
+        VhLogger.Instance.LogDebug(GeneralEventId.Test,
             "Test: Changing access server TcpEndPoint. TcpEndPoint: {TcpEndPoint}", newTcpEndPoint);
         accessManager.ServerConfig.TcpEndPoints = [newTcpEndPoint];
         accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
@@ -106,7 +106,7 @@ public class ServerTest : TestBase
 
         // change udp end points
         var newUdpEndPoint = VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback);
-        VhLogger.Instance.LogTrace(GeneralEventId.Test,
+        VhLogger.Instance.LogDebug(GeneralEventId.Test,
             "Test: Changing access server UdpEndPoint. UdpEndPoint: {UdpEndPoint}", newUdpEndPoint);
         accessManager.ServerConfig.UdpEndPoints = [newUdpEndPoint];
         accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();

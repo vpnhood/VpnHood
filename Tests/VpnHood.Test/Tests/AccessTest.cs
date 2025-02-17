@@ -97,7 +97,7 @@ public class AccessTest : TestBase
         await using var client1 = await TestHelper.CreateClient(accessToken);
         Assert.AreEqual(50, client1.GetSessionStatus().SessionMaxTraffic);
 
-        VhLogger.Instance.LogTrace("Test: second try should get the AccessTrafficOverflow status.");
+        VhLogger.Instance.LogDebug("Test: second try should get the AccessTrafficOverflow status.");
         await VhTestUtil.AssertEqualsWait(SessionErrorCode.AccessTrafficOverflow, async () => {
             await TestHelper.Test_Https(timeout: 2000, throwError: false);
             return client1.GetLastSessionErrorCode();
@@ -135,7 +135,7 @@ public class AccessTest : TestBase
         Assert.AreEqual(SessionErrorCode.Ok, client2.GetLastSessionErrorCode());
 
         // wait for finishing client1
-        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for client1 disposal.");
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Waiting for client1 disposal.");
         await client1.WaitForState(ClientState.Disposed, useUpdateStatus: true);
         Assert.AreEqual(SessionSuppressType.None, client1.SessionInfo?.SuppressedTo);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, client1.GetLastSessionErrorCode());
@@ -143,7 +143,7 @@ public class AccessTest : TestBase
             (client1.LastException as SessionException)?.SessionResponse.SuppressedBy);
 
         // suppress by other (MaxTokenClient is 2)
-        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Creating client3.");
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Creating client3.");
         await using var client3 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
             token: token);
 
@@ -156,7 +156,7 @@ public class AccessTest : TestBase
             token: accessTokenX);
 
         // wait for finishing client2
-        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for client2 disposal.");
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Waiting for client2 disposal.");
         await client2.WaitForState(ClientState.Disposed, useUpdateStatus: true);
 
         Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionInfo?.SuppressedTo);

@@ -39,7 +39,7 @@ public class ServerFinder(
         VhLogger.Instance.LogInformation(GeneralEventId.Session, "Finding a reachable server...");
 
         // get all endpoints from serverToken
-        var hostEndPoints = await ServerTokenHelper.ResolveHostEndPoints(serverToken, cancellationToken);
+        var hostEndPoints = await serverToken.ResolveHostEndPoints(cancellationToken);
 
         // exclude ip v6 if not supported
         if (!IncludeIpV6)

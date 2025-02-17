@@ -1,6 +1,5 @@
 ﻿using Ga4.Trackers;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.VpnServices.Manager;
@@ -65,12 +64,12 @@ public class AppAdService(
                 NetworkName = networkName
             };
 
-            var trackEvent = ClientTrackerBuilder.BuildShowAdStatus(networkName);
+            var trackEvent = AppTrackerBuilder.BuildShowAdStatus(networkName);
             _ = tracker?.Track(trackEvent);
             return showAdResult;
         }
         catch (Exception ex) {
-            var trackEvent = ClientTrackerBuilder.BuildShowAdStatus("all", ex.Message);
+            var trackEvent = AppTrackerBuilder.BuildShowAdStatus("all", ex.Message);
             _ = tracker?.Track(trackEvent);
 
             if (ex is UiContextNotAvailableException)
@@ -79,4 +78,5 @@ public class AppAdService(
             throw;
         }
     }
+
 }

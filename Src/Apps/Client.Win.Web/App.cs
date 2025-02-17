@@ -33,8 +33,10 @@ public class App : VpnHoodWpfSpaApp
             UpdaterProvider = new AdvancedInstallerUpdaterProvider(),
             IsAddAccessKeySupported = true,
             IsLocalNetworkSupported = true,
-            SingleLineConsoleLog = false,
-            LocalSpaHostName = "my-vpnhood"
+            LocalSpaHostName = "my-vpnhood",
+            LogOptions = {
+                SingleLineConsole = false
+            }
         };
     }
 }

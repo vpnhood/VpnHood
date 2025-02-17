@@ -45,7 +45,7 @@ public class TestHelper : IDisposable
     public TestHelper()
     {
         TunnelDefaults.TcpGracefulTimeout = TimeSpan.FromSeconds(10);
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(LogLevel.Debug);
         VhLogger.IsDiagnoseMode = true;
         VhLogger.IsAnonymousMode = false;
         WebServer = TestWebServer.Create();

@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Logging;
 using VpnHood.Core.Client.Device.Adapters;
@@ -16,7 +15,7 @@ public class VpnServiceHost : IAsyncDisposable
     private readonly ApiController _apiController;
     private readonly IVpnServiceHandler _vpnServiceHandler;
     private readonly ISocketFactory _socketFactory;
-    private LogService _logService;
+    private readonly LogService _logService;
     private bool _isDisposed;
 
     internal VpnHoodClient? Client { get; private set; }
@@ -124,37 +123,7 @@ public class VpnServiceHost : IAsyncDisposable
         }
     }
 
-    public static string[] GetLogEventNames(bool verbose, bool diagnose)
-    {
-        if (verbose)
-            return ["*"];
-
-        // Extract all event names from debugData that contains "log:EventName1,EventName2"
-        var names = new List<string?> {
-            GeneralEventId.Session.Name,
-            GeneralEventId.Essential.Name
-        };
-
-        if (diagnose)
-            names.AddRange([
-                GeneralEventId.Essential.Name,
-                GeneralEventId.Nat.Name,
-                GeneralEventId.Ping.Name,
-                GeneralEventId.Dns.Name,
-                GeneralEventId.Tcp.Name,
-                GeneralEventId.Tls.Name,
-                GeneralEventId.StreamProxyChannel.Name,
-                GeneralEventId.DatagramChannel.Name,
-                GeneralEventId.Request.Name,
-                GeneralEventId.TcpLife.Name,
-                GeneralEventId.Test.Name,
-                GeneralEventId.UdpSign.Name
-            ]);
-
-        return names.ToArray()!;
-    }
-
-    public void Disconnect()
+   public void Disconnect()
     {
         if (_isDisposed)
             throw new ObjectDisposedException(nameof(VpnServiceHost));

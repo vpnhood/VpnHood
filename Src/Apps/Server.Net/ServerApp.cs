@@ -20,7 +20,6 @@ using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 using VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
 using VpnHood.Core.Server.SystemInformation;
 using VpnHood.Core.Tunneling;
-using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace VpnHood.App.Server;
 

@@ -11,10 +11,8 @@ public class LogService(string logFilePath) : IDisposable
     public string[] LogEvents { get; private set; } = [];
     public bool Exists => File.Exists(LogFilePath);
     public bool IsStarted => _streamLogger != null;
-
     public void Start(LogOptions logOptions)
     {
-        Stop();
         VhLogger.IsAnonymousMode = logOptions.LogAnonymous is null or true;
         VhLogger.IsDiagnoseMode = logOptions.LogEventNames.Contains("*");
         VhLogger.Instance = CreateLogger(logOptions);
@@ -84,7 +82,6 @@ public class LogService(string logFilePath) : IDisposable
             .Concat(GetLogEventNames(debugCommand))
             .Distinct();
     }
-
     public static IEnumerable<string> GetLogEventNames(string debugCommand)
     {
         var names = new List<string> { "Session", "Essential" };

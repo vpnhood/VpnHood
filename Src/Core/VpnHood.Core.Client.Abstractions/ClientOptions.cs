@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Client.Abstractions.Logging;
 using VpnHood.Core.Common.Converters;
+using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Tokens;
 

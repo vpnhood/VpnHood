@@ -1,8 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using VpnHood.Core.Common.Logging;
 
-namespace VpnHood.Core.Client.Abstractions.Logging;
+namespace VpnHood.Core.Common.Logging;
 
 public class LogService(string logFilePath) : IDisposable
 {
@@ -13,6 +12,8 @@ public class LogService(string logFilePath) : IDisposable
     public bool IsStarted => _streamLogger != null;
     public void Start(LogOptions logOptions)
     {
+        Stop();
+
         VhLogger.IsAnonymousMode = logOptions.LogAnonymous is null or true;
         VhLogger.IsDiagnoseMode = logOptions.LogEventNames.Contains("*");
         VhLogger.Instance = CreateLogger(logOptions);
@@ -99,6 +100,7 @@ public class LogService(string logFilePath) : IDisposable
         Stop();
     }
 
+    // ReSharper disable once GrammarMistakeInComment
     //private class InterceptingLogger(ILogger innerLogger) : ILogger
     //{
     //    private static string UpdateMessage(string message)

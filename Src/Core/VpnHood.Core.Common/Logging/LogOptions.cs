@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 
-namespace VpnHood.Core.Client.Abstractions.Logging;
+namespace VpnHood.Core.Common.Logging;
 
 public class LogOptions
 {

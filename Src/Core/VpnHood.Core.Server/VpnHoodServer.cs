@@ -148,14 +148,14 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             State = ServerState.Configuring;
 
             // get server info
-            VhLogger.Instance.LogTrace("Finding free EndPoints...");
+            VhLogger.Instance.LogDebug("Finding free EndPoints...");
             var freeUdpPortV4 = ServerUtil.GetFreeUdpPort(AddressFamily.InterNetwork, null);
             var freeUdpPortV6 = ServerUtil.GetFreeUdpPort(AddressFamily.InterNetworkV6, freeUdpPortV4);
 
-            VhLogger.Instance.LogTrace("Finding public addresses...");
+            VhLogger.Instance.LogDebug("Finding public addresses...");
             var privateIpAddresses = await IPAddressUtil.GetPrivateIpAddresses().VhConfigureAwait();
 
-            VhLogger.Instance.LogTrace("Finding public addresses..., PublicIpDiscovery: {PublicIpDiscovery}",
+            VhLogger.Instance.LogDebug("Finding public addresses..., PublicIpDiscovery: {PublicIpDiscovery}",
                 _publicIpDiscovery);
             var publicIpAddresses = _publicIpDiscovery
                 ? await IPAddressUtil.GetPublicIpAddresses(CancellationToken.None).VhConfigureAwait()
@@ -184,7 +184,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             VhLogger.Instance.LogInformation("ServerInfo: {ServerInfo}", GetServerInfoReport(serverInfo));
 
             // get configuration from access server
-            VhLogger.Instance.LogTrace("Sending config request to the Access Server...");
+            VhLogger.Instance.LogDebug("Sending config request to the Access Server...");
             var serverConfig = await ReadConfig(serverInfo).VhConfigureAwait();
             VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
@@ -467,7 +467,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     {
         try {
             var status = await GetStatus();
-            VhLogger.Instance.LogTrace("Sending status to Access... ConfigCode: {ConfigCode}", status.ConfigCode);
+            VhLogger.Instance.LogDebug("Sending status to Access... ConfigCode: {ConfigCode}", status.ConfigCode);
             status.SessionUsages = SessionManager.CollectSessionUsages();
             var res = await AccessManager.Server_UpdateStatus(status).VhConfigureAwait();
             SessionManager.ApplySessionResponses(res.SessionResponses);

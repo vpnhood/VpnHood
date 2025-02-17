@@ -72,7 +72,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
             _map.Remove((natItem.IpVersion, natItem.Protocol, natItem.NatId), out _);
         }
 
-        VhLogger.Instance.LogTrace(GeneralEventId.Nat, $"NatItem has been removed. {natItem2}");
+        VhLogger.Instance.LogDebug(GeneralEventId.Nat, $"NatItem has been removed. {natItem2}");
         NatItemRemoved?.Invoke(this, new NatEventArgs(natItem2));
     }
 
@@ -152,7 +152,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
             }
         }
 
-        VhLogger.Instance.LogTrace(GeneralEventId.Nat, $"New NAT record. {natItem}");
+        VhLogger.Instance.LogDebug(GeneralEventId.Nat, $"New NAT record. {natItem}");
         return natItem;
     }
 

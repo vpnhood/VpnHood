@@ -24,7 +24,7 @@ internal class ConnectorService(
         where T : SessionResponse
     {
         var eventId = GetRequestEventId(request);
-        VhLogger.Instance.LogTrace(eventId,
+        VhLogger.Instance.LogDebug(eventId,
             "Sending a request. RequestCode: {RequestCode}, RequestId: {RequestId}",
             (RequestCode)request.RequestCode, request.RequestId);
 
@@ -41,7 +41,7 @@ internal class ConnectorService(
         var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, cancellationToken).VhConfigureAwait();
 
         // log the response
-        VhLogger.Instance.LogTrace(eventId, "Received a response... ErrorCode: {ErrorCode}.", ret.Response.ErrorCode);
+        VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.", ret.Response.ErrorCode);
 
         lock (Stat) Stat.RequestCount++;
         return ret;
@@ -54,7 +54,7 @@ internal class ConnectorService(
         // try reuse
         var clientStream = GetFreeClientStream();
         if (clientStream != null) {
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}, LocalEp: {LocalEp}",
                 clientStream.ClientStreamId, clientStream.IpEndPointPair.LocalEndPoint);
 

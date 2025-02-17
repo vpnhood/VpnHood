@@ -64,7 +64,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     private async Task PrepareVpnService(IActivityEvent? activityEvent, TimeSpan userIntentTimeout, CancellationToken cancellationToken)
     {
         // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
-        VhLogger.Instance.LogTrace("Preparing VpnService...");
+        VhLogger.Instance.LogDebug("Preparing VpnService...");
         using var prepareIntent = VpnService.Prepare(activityEvent?.Activity ?? Application.Context);
         if (prepareIntent == null)
             return; // already prepared
@@ -75,7 +75,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         _grantPermissionTaskSource = new TaskCompletionSource<bool>();
         activityEvent.ActivityResultEvent += Activity_OnActivityResult;
         try {
-            VhLogger.Instance.LogTrace("Requesting user consent...");
+            VhLogger.Instance.LogDebug("Requesting user consent...");
             activityEvent.Activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
             await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(userIntentTimeout, cancellationToken))
                 .VhConfigureAwait();

@@ -108,8 +108,6 @@ public class ServerApp : IDisposable
         if (File.Exists(configFilePath)) {
             using var loggerFactory = LoggerFactory.Create(builder => {
                 builder.AddNLog(configFilePath);
-                if (AppSettings.IsDiagnoseMode)
-                    builder.SetMinimumLevel(LogLevel.Trace);
             });
             LogManager.Configuration.Variables["mydir"] = storagePath;
             VhLogger.Instance = loggerFactory.CreateLogger("NLog");

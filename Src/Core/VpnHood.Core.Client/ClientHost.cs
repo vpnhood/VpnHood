@@ -248,7 +248,7 @@ internal class ClientHost(
             // create a scope for the logger
             using var scope = VhLogger.Instance.BeginScope("LocalPort: {LocalPort}, RemoteEp: {RemoteEp}",
                 natItem.SourcePort, VhLogger.Format(natItem.DestinationAddress) + ":" + natItem.DestinationPort);
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel, "New TcpProxy Request.");
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel, "New TcpProxy Request.");
 
             // check invalid income
             var loopbackAddress = ipVersion == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
@@ -300,7 +300,7 @@ internal class ClientHost(
             var proxyClientStream = requestResult.ClientStream;
 
             // create a StreamProxyChannel
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
                 "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
             var orgTcpClientStream =
                 new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");

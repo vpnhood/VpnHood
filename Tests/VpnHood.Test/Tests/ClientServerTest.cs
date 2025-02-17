@@ -252,19 +252,19 @@ public class ClientServerTest : TestBase
         // Create Client
         await using var client =
             await TestHelper.CreateClient(clientOptions: TestHelper.CreateClientOptions(token, useUdpChannel: true));
-        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Testing by UdpChannel.");
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Testing by UdpChannel.");
         Assert.IsTrue(client.UseUdpChannel);
         await TestTunnel(server, client);
 
         // switch to tcp
-        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch to DatagramChannel.");
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Switch to DatagramChannel.");
         client.UseUdpChannel = false;
         await TestTunnel(server, client);
         await VhTestUtil.AssertEqualsWait(false, () => client.GetSessionStatus().IsUdpMode);
         Assert.IsFalse(client.UseUdpChannel);
 
         // switch back to udp
-        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch back to UdpChannel.");
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Switch back to UdpChannel.");
         client.UseUdpChannel = true;
         await TestTunnel(server, client);
         await VhTestUtil.AssertEqualsWait(true, () => client.GetSessionStatus().IsUdpMode);
@@ -493,7 +493,7 @@ public class ClientServerTest : TestBase
         Assert.AreEqual(ClientState.Connected, client.State);
 
         // close session
-        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Closing the session by Test.");
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Closing the session by Test.");
         await server.SessionManager.CloseSession(client.SessionId);
 
         // wait for disposing session in access server
@@ -696,7 +696,7 @@ public class ClientServerTest : TestBase
         await VhTestUtil.AssertEqualsWait(1, () => client.GetSessionStatus().ConnectorStat.FreeConnectionCount);
 
         // open 3 connections simultaneously
-        VhLogger.Instance.LogTrace("Test: Open 3 connections simultaneously.");
+        VhLogger.Instance.LogDebug("Test: Open 3 connections simultaneously.");
         using (var tcpClient1 = new TcpClient())
         using (var tcpClient2 = new TcpClient())
         using (var tcpClient3 = new TcpClient()) {
@@ -712,7 +712,7 @@ public class ClientServerTest : TestBase
             lasReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
         }
 
-        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for free connections...");
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Waiting for free connections...");
         await VhTestUtil.AssertEqualsWait(3, () => client.GetSessionStatus().ConnectorStat.FreeConnectionCount);
 
         // net two connection should use shared connection

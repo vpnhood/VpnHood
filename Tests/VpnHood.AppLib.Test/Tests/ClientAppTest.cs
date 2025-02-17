@@ -301,7 +301,7 @@ public class ClientAppTest : TestAppBase
 
         if (testUdp) {
             // UDP
-            VhLogger.Instance.LogTrace("Testing UDP include...");
+            VhLogger.Instance.LogDebug("Testing UDP include...");
             oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
             try {
                 await TestHelper.Test_Udp(udpEndPoint: TestConstants.UdpV4EndPoint1, timeout: 1000);
@@ -314,7 +314,7 @@ public class ClientAppTest : TestAppBase
             Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
             // UDP
-            VhLogger.Instance.LogTrace("Testing UDP exclude...");
+            VhLogger.Instance.LogDebug("Testing UDP exclude...");
             oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
             await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint2);
             Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);

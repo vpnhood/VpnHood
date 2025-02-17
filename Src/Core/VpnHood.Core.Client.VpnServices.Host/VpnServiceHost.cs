@@ -64,7 +64,7 @@ public class VpnServiceHost : IAsyncDisposable
             throw new ObjectDisposedException(nameof(VpnServiceHost));
 
         lock (_connectLock) {
-            VhLogger.Instance.LogTrace("VpnService is connecting...");
+            VhLogger.Instance.LogDebug("VpnService is connecting...");
 
             // handle previous client
             var client = Client;
@@ -90,7 +90,7 @@ public class VpnServiceHost : IAsyncDisposable
                     clientOptions.LogOptions.LogEventNames.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase);
 
                 // create client
-                VhLogger.Instance.LogTrace("VpnService is creating a new VpnHoodClient.");
+                VhLogger.Instance.LogDebug("VpnService is creating a new VpnHoodClient.");
                 Client = new VpnHoodClient(
                     vpnAdapter: clientOptions.UseNullCapture ? new NullVpnAdapter() : _vpnServiceHandler.CreateAdapter(),
                     tracker: _vpnServiceHandler.CreateTracker(),
@@ -165,7 +165,7 @@ public class VpnServiceHost : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        VhLogger.Instance.LogTrace("VpnService is destroying...");
+        VhLogger.Instance.LogDebug("VpnService is destroying...");
         if (_isDisposed) return;
 
         // dispose client
@@ -177,7 +177,7 @@ public class VpnServiceHost : IAsyncDisposable
 
         // dispose api controller
         _apiController.Dispose();
-        VhLogger.Instance.LogTrace("VpnService has been destroyed.");
+        VhLogger.Instance.LogDebug("VpnService has been destroyed.");
         _isDisposed = true;
     }
 }

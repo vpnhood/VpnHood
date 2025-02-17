@@ -84,7 +84,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 
     public override void OnDestroy()
     {
-        VhLogger.Instance.LogTrace("VpnService is destroying.");
+        VhLogger.Instance.LogDebug("VpnService is destroying.");
         _ = _vpnServiceHost.DisposeAsync();
 
         StopNotification(); 

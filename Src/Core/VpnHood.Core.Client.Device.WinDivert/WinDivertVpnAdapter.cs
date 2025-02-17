@@ -175,7 +175,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
         SetInternalIp(ipPacket.SourceAddress);
         var virtualIp = GetVirtualIp(ipPacket.Version);
         if (virtualIp == null) {
-            VhLogger.Instance.LogTrace("The device arrival packet is not supported: {Packet}",
+            VhLogger.Instance.LogDebug("The device arrival packet is not supported: {Packet}",
                 VhLogger.FormatIpPacket(ipPacket.ToString()!));
             return;
         }

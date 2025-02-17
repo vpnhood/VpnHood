@@ -22,7 +22,7 @@ public class TestVpnService
     {
         _vpnAdapterFactory = vpnAdapterFactory;
         _tracker = tracker;
-        _vpnServiceHost = new VpnServiceHost(configFolder, this, new TestSocketFactory());
+        _vpnServiceHost = new VpnServiceHost(configFolder, this, new TestSocketFactory(), withLogger: false);
     }
 
     // it is not async to simulate real environment

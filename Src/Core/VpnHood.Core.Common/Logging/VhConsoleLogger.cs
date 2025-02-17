@@ -2,8 +2,8 @@
 
 namespace VpnHood.Core.Common.Logging;
 
-public class VhConsoleLogger(bool includeScopes = true, bool singleLine = true)
-    : TextLogger(includeScopes)
+public class VhConsoleLogger(bool includeScopes = true, bool singleLine = true, string? globalScope = null)
+    : TextLogger(includeScopes, globalScope)
 {
     private static bool? _isColorSupported;
 

@@ -351,9 +351,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (Diagnoser.IsWorking)
                 return AppConnectionState.Diagnosing;
 
-            if (clientState == ClientState.Disconnecting)
-                return AppConnectionState.Disconnecting;
-
             if (clientState == ClientState.Connecting)
                 return AppConnectionState.Connecting;
 
@@ -362,6 +359,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             if (clientState == ClientState.Connected)
                 return AppConnectionState.Connected;
+
+            if (clientState == ClientState.Disconnecting)
+                return AppConnectionState.None; // treat as none. let's service disconnect on background
 
             return AppConnectionState.None;
         }
@@ -401,6 +401,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             LogToConsole = _logOptions.LogToConsole,
             LogToFile = _logOptions.LogToFile,
             AutoFlush = _logOptions.AutoFlush,
+            GlobalScope = _logOptions.GlobalScope
         };
         return logOptions;
     }
@@ -497,11 +498,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception ex) {
             ReportError(ex, "Could not connect.");
-            _sessionCancellationTokenSource?.Cancel(); // cancel all pending tasks
-            _sessionCancellationTokenSource = null;
-            await _vpnServiceManager.Stop(); // stop if it is not stopped yet
-
             // Reset server location if no server is available
+
             if (ex is SessionException sessionException) {
                 switch (sessionException.SessionResponse.ErrorCode) {
                     case SessionErrorCode.NoServerAvailable:

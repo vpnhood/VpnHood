@@ -14,7 +14,7 @@ public class VpnServiceHost : IAsyncDisposable
     private readonly ApiController _apiController;
     private readonly IVpnServiceHandler _vpnServiceHandler;
     private readonly ISocketFactory _socketFactory;
-    private readonly LogService _logService;
+    private readonly LogService? _logService;
     private bool _isDisposed;
 
     internal VpnHoodClient? Client { get; private set; }
@@ -24,14 +24,19 @@ public class VpnServiceHost : IAsyncDisposable
     public VpnServiceHost(
         string configFolder,
         IVpnServiceHandler vpnServiceHandler,
-        ISocketFactory socketFactory)
+        ISocketFactory socketFactory,
+        bool withLogger = true)
     {
         Context = new VpnServiceContext(configFolder);
         _socketFactory = socketFactory;
         _vpnServiceHandler = vpnServiceHandler;
         _apiController = new ApiController(this);
-        _logService = new LogService(Context.LogFilePath);
+        _logService = withLogger ? new LogService(Context.LogFilePath) : null;
         VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
+
+        // write initial state including api endpoint and key
+        _ = Context.WriteConnectionInfo(BuildConnectionInfo(ClientState.None, null));
+        VhLogger.Instance.LogDebug("VpnService has been initiated...");
     }
 
     private void VpnHoodClient_StateChanged(object sender, EventArgs e)
@@ -40,6 +45,8 @@ public class VpnServiceHost : IAsyncDisposable
         if (client == null) return;
 
         // update last sate
+        VhLogger.Instance.LogDebug("VpnService update the connection info file. State:{State}, LastError: {LastError}", 
+            client.State, client.LastException?.Message);
         _ = Context.WriteConnectionInfo(client.ToConnectionInfo(_apiController));
 
         // no client in progress, let's stop the service
@@ -48,7 +55,6 @@ public class VpnServiceHost : IAsyncDisposable
             _vpnServiceHandler.ShowNotification(client.ToConnectionInfo(_apiController));
         }
         else {
-            _logService.Stop();
             _vpnServiceHandler.StopNotification();
             _vpnServiceHandler.StopSelf();
         }
@@ -81,7 +87,7 @@ public class VpnServiceHost : IAsyncDisposable
             try {
                 // read client options and start log service
                 var clientOptions = Context.ReadClientOptions();
-                _logService.Start(clientOptions.LogOptions);
+                _logService?.Start(clientOptions.LogOptions);
 
                 // sni is sensitive, must be explicitly enabled
                 clientOptions.ForceLogSni |=
@@ -106,15 +112,7 @@ public class VpnServiceHost : IAsyncDisposable
                 return true;
             }
             catch (Exception ex) {
-                _ = Context.WriteConnectionInfo(new ConnectionInfo {
-                    SessionInfo = null,
-                    SessionStatus = null,
-                    ApiEndPoint = null,
-                    ApiKey = null,
-                    ClientState = ClientState.Disposed,
-                    Error = ex.ToApiError()
-                });
-
+                _ = Context.WriteConnectionInfo(BuildConnectionInfo(ClientState.Disposed, ex));
                 _vpnServiceHandler.StopNotification();
                 _vpnServiceHandler.StopSelf();
                 return false;
@@ -122,7 +120,21 @@ public class VpnServiceHost : IAsyncDisposable
         }
     }
 
-   public void Disconnect()
+    private ConnectionInfo BuildConnectionInfo(ClientState clientState, Exception? ex)
+    {
+        var connectionInfo = new ConnectionInfo {
+            SessionInfo = null,
+            SessionStatus = null,
+            ApiEndPoint = _apiController.ApiEndPoint,
+            ApiKey = _apiController.ApiKey,
+            ClientState = clientState,
+            Error = ex?.ToApiError()
+        };
+
+        return connectionInfo;
+    }
+
+    public void Disconnect()
     {
         if (_isDisposed)
             throw new ObjectDisposedException(nameof(VpnServiceHost));
@@ -146,6 +158,7 @@ public class VpnServiceHost : IAsyncDisposable
         // dispose api controller
         _apiController.Dispose();
         VhLogger.Instance.LogDebug("VpnService has been destroyed.");
+        _logService?.Dispose();
         _isDisposed = true;
     }
 }

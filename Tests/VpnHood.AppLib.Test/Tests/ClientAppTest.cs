@@ -13,6 +13,7 @@ using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Tunneling;
 using VpnHood.Test;
 using VpnHood.Test.Device;
 
@@ -192,6 +193,7 @@ public class ClientAppTest : TestAppBase
         await app.WaitForState(AppConnectionState.Connected);
         await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
 
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Starting IpFilters_TestInclude...");
         await IpFilters_TestInclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
         await app.Disconnect();
 
@@ -202,6 +204,7 @@ public class ClientAppTest : TestAppBase
         await app.Connect(clientProfile.ClientProfileId);
         await app.WaitForState(AppConnectionState.Connected);
 
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Starting IpFilters_TestExclude...");
         await IpFilters_TestExclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
         await app.Disconnect();
     }

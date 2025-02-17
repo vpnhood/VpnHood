@@ -58,7 +58,7 @@ public static class AndroidUtil
                 Android.Provider.Settings.Secure.AndroidId);
         }
         catch (Exception ex) {
-            Console.WriteLine($"Could not retrieve android id. Message: {ex}");
+            VhLogger.Instance.LogError(ex, "Could not retrieve android id.");
             return null;
         }
     }

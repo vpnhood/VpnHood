@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Core.Common.Logging;
 
-public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
+public abstract class TextLogger(bool includeScopes, string? globalScope) : ILogger, ILoggerProvider
 {
     private readonly LoggerExternalScopeProvider _scopeProvider = new();
 
@@ -25,10 +25,6 @@ public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
         return this;
     }
 
-    public virtual void Dispose()
-    {
-    }
-
     protected void WriteScopeInformation(StringBuilder stringBuilder)
     {
 
@@ -36,7 +32,7 @@ public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
         _scopeProvider.ForEachScope((scope, state) => {
             var (builder, length) = state;
             var first = length == builder.Length;
-            builder.Append(first ? "" : " => ").Append(scope);
+            builder.Append(first ? " " : " => ").Append(scope);
         }, (stringBuilder, initialLength));
     }
 
@@ -49,13 +45,14 @@ public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
         if (includeScopes) {
             logBuilder.AppendLine();
             logBuilder.Append($"{time} | ");
-            logBuilder.Append(logLevel.ToString()[..4] + " | ");
-            var initialLength = logBuilder.Length;
+            logBuilder.Append(logLevel.ToString()[..4] + " |");
+            if (globalScope != null) {
+                logBuilder.Append(" ");
+                logBuilder.Append(globalScope);
+                logBuilder.Append(" |");
+            }
             WriteScopeInformation(logBuilder);
-
-            // if there are scopes, add a new line
-            if (logBuilder.Length > initialLength)
-                logBuilder.AppendLine();
+            logBuilder.AppendLine();
         }
         else
             logBuilder.Append($"{time} | ");
@@ -73,5 +70,8 @@ public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
 
         logBuilder.Append(message);
         return logBuilder.ToString();
+    }
+    public virtual void Dispose()
+    {
     }
 }

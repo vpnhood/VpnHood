@@ -1,6 +1,8 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Converters;
+using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Access.Configurations;
 
@@ -26,7 +28,7 @@ public class FileAccessManagerOptions : ServerConfig
             if (VhUtils.IsNullOrEmpty(ServerTokenUrls))
                 ServerTokenUrls = value != null ? [value] : [];
 
-            Console.WriteLine("Warning: ServerTokenUrl is obsoleted. Use ServerTokenUrls.");
+            VhLogger.Instance.LogWarning("Warning: ServerTokenUrl is obsoleted. Use ServerTokenUrls.");
         }
     }
 }

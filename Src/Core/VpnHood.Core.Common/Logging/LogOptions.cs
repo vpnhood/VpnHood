@@ -11,6 +11,7 @@ public class LogOptions
     public bool AutoFlush { get; set; } = true;
     public string[] LogEventNames { get; set; } = [];
     public bool SingleLineConsole { get; set; } = true;
+    public string? GlobalScope { get; set; }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public LogLevel LogLevel { get; set; } = LogLevel.Information;

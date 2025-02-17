@@ -67,7 +67,7 @@ public class CommandListener(string commandFilePath) : IDisposable
     public void SendCommand(string command)
     {
         try {
-            Console.WriteLine($"Broadcasting a server command . command: {command}");
+            VhLogger.Instance.LogInformation("Broadcasting a server command . Command: {Command}", command);
             File.WriteAllText(commandFilePath, command);
         }
         catch (Exception ex) {

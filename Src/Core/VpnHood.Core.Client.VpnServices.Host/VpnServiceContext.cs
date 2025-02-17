@@ -22,12 +22,15 @@ internal class VpnServiceContext(string configFolder)
         return JsonUtils.Deserialize<ClientOptions>(json);
     }
 
+
+    private readonly AsyncLock _connectionInfoLock = new();
     public async Task WriteConnectionInfo(ConnectionInfo connectionInfo)
     {
+        using var scopeLock = await _connectionInfoLock.LockAsync();
         var json = JsonSerializer.Serialize(connectionInfo);
 
         try {
-            await FileUtils.WriteAllTextRetryAsync(StatusFilePath, json, timeout: TimeSpan.FromSeconds(1));
+            await FileUtils.WriteAllTextRetryAsync(StatusFilePath, json, timeout: TimeSpan.FromSeconds(2));
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not save connection info to file. FilePath: {FilePath}", StatusFilePath);
@@ -36,11 +39,12 @@ internal class VpnServiceContext(string configFolder)
 
     public async Task<ConnectionInfo> ReadConnectionInfo()
     {
+        using var scopeLock = await _connectionInfoLock.LockAsync();
         var json = await FileUtils.ReadAllTextAsync(StatusFilePath, TimeSpan.FromSeconds(1));
         return JsonUtils.Deserialize<ConnectionInfo>(json);
     }
 
-    public async Task<ConnectionInfo> ReadConnectionInfoOrDefault(byte[] apiKey, IPEndPoint apiEndPoint)
+    public async Task<ConnectionInfo> ReadConnectionInfoOrDefault(byte[] apiKey, IPEndPoint? apiEndPoint)
     {
         return await TryReadConnectionInfo() ??
                new ConnectionInfo {

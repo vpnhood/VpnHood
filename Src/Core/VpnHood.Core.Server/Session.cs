@@ -62,7 +62,6 @@ public class Session : IAsyncDisposable
     public bool IsDisposed => DisposedTime != null;
     public DateTime? DisposedTime { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
-    public JobSection JobSection { get; }
     public SessionExtraData ExtraData { get; }
     public int ProtocolVersion { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
@@ -108,7 +107,6 @@ public class Session : IAsyncDisposable
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
-        JobSection = new JobSection(options.SyncIntervalValue);
         ExtraData = extraData;
         VirtualIps = virtualIps;
         SessionResponseEx = sessionResponseEx;

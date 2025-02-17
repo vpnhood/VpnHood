@@ -34,12 +34,7 @@ public class LogService(string logFilePath) : IDisposable
 
     private ILogger CreateLogger(LogOptions logOptions)
     {
-        var logger = CreateLoggerInternal(
-            logToConsole: logOptions.LogToConsole,
-            logToFile: logOptions.LogToFile,
-            logLevel: logOptions.LogLevel,
-            autoFlush: logOptions.AutoFlush,
-            singleLineConsole: logOptions.SingleLineConsole);
+        var logger = CreateLoggerInternal(logOptions);
 
         logger = new SyncLogger(logger);
         logger = new FilterLogger(logger, eventId => {
@@ -52,8 +47,7 @@ public class LogService(string logFilePath) : IDisposable
         return logger;
     }
 
-    private ILogger CreateLoggerInternal(
-        bool logToConsole, bool logToFile, LogLevel logLevel, bool autoFlush, bool singleLineConsole)
+    private ILogger CreateLoggerInternal(LogOptions logOptions)
     {
         // delete last lgo
         if (File.Exists(LogFilePath))
@@ -61,16 +55,17 @@ public class LogService(string logFilePath) : IDisposable
 
         using var loggerFactory = LoggerFactory.Create(builder => {
             // console
-            if (logToConsole) // AddSimpleConsole does not support event id
-                builder.AddProvider(new VhConsoleLogger(includeScopes: true, singleLine: singleLineConsole));
+            if (logOptions.LogToConsole) // AddSimpleConsole does not support event id
+                builder.AddProvider(new VhConsoleLogger(includeScopes: true, singleLine: 
+                    logOptions.SingleLineConsole, globalScope: logOptions.GlobalScope));
 
-            if (logToFile) {
+            if (logOptions.LogToFile) {
                 var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                _streamLogger = new StreamLogger(fileStream, autoFlush: autoFlush);
+                _streamLogger = new StreamLogger(fileStream, autoFlush: logOptions.AutoFlush, globalScope: logOptions.GlobalScope);
                 builder.AddProvider(_streamLogger);
             }
 
-            builder.SetMinimumLevel(logLevel);
+            builder.SetMinimumLevel(logOptions.LogLevel);
         });
 
         var logger = loggerFactory.CreateLogger("");

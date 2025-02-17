@@ -1,14 +1,14 @@
 ﻿using System.Net;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
 
-namespace VpnHood.Core.Client;
+namespace VpnHood.Core.Common.Tokens;
 
-public class ServerTokenHelper
+public static class ServerTokenExtensions
 {
-    private static async Task<IPEndPoint[]> ResolveHostEndPointsInternal(ServerToken serverToken,
+    private static async Task<IPEndPoint[]> ResolveHostEndPointsInternal(this ServerToken serverToken,
         CancellationToken cancellationToken)
     {
         if (serverToken.IsValidHostName) {
@@ -40,7 +40,7 @@ public class ServerTokenHelper
         throw new Exception($"Could not resolve {nameof(serverToken.HostEndPoints)} from token!");
     }
 
-    public static async Task<IPEndPoint[]> ResolveHostEndPoints(ServerToken serverToken,
+    public static async Task<IPEndPoint[]> ResolveHostEndPoints(this ServerToken serverToken,
         CancellationToken cancellationToken)
     {
         var ipEndPoints = await ResolveHostEndPointsInternal(serverToken, cancellationToken).VhConfigureAwait();
@@ -48,5 +48,24 @@ public class ServerTokenHelper
             throw new Exception("Could not resolve any host endpoint from AccessToken.");
 
         return ipEndPoints;
+    }
+
+    public static bool IsTokenUpdated(this ServerToken serverToken, ServerToken newServerToken)
+    {
+        // create first server token by removing its created time
+        var serverToken1 = JsonUtils.JsonClone(serverToken);
+        serverToken1.CreatedTime = DateTime.MinValue;
+
+        // create second server token by removing its created time
+        var serverToken2 = JsonUtils.JsonClone(newServerToken);
+        serverToken2.CreatedTime = DateTime.MinValue;
+
+        // compare
+        if (JsonSerializer.Serialize(serverToken1) == JsonSerializer.Serialize(serverToken2))
+            return false;
+
+        // if token are not equal, check if new token CreatedTime is newer or equal.
+        // If created time is equal assume new token is updated because there is change in token.
+        return newServerToken.CreatedTime >= serverToken.CreatedTime;
     }
 }

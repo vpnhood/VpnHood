@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using System.IO;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -46,7 +45,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly bool _useInternalLocationService;
     private readonly bool _useExternalLocationService;
     private readonly bool _disconnectOnDispose;
-    private readonly bool? _logAnonymous;
     private readonly bool _autoDiagnose;
     private readonly bool _allowEndPointTracker;
     private readonly string? _ga4MeasurementId;
@@ -57,6 +55,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly TimeSpan _connectTimeout;
     private readonly TimeSpan _canExtendByRewardedAdThreshold;
     private readonly TimeSpan _sessionTimeout;
+    private readonly LogOptions _logOptions;
     private readonly AppPersistState _appPersistState;
     private readonly VpnServiceManager _vpnServiceManager;
     private bool _hasDiagnoseRequested;
@@ -67,7 +66,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private VersionCheckResult? _versionCheckResult;
     private CultureInfo? _systemUiCulture;
     private UserSettings _oldUserSettings;
-    private LogOptions _logOptions;
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -107,8 +105,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _reconnectTimeout = options.ReconnectTimeout;
         _autoWaitTimeout = options.AutoWaitTimeout;
         _versionCheckResult = JsonUtils.TryDeserializeFile<VersionCheckResult>(VersionCheckFilePath);
-        _logVerbose = options.LogVerbose;
-        _logAnonymous = options.LogAnonymous;
         _autoDiagnose = options.AutoDiagnose;
         _serverQueryTimeout = options.ServerQueryTimeout;
         _connectTimeout = options.ConnectTimeout;
@@ -394,6 +390,23 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return _vpnServiceManager.ClearState();
     }
 
+    private LogOptions GetLogOptions()
+    {
+        var logLevel = _logOptions.LogLevel;
+        if (HasDebugCommand(DebugCommands.LogDebug)) logLevel = LogLevel.Debug;
+        if (HasDebugCommand(DebugCommands.LogTrace)) logLevel = LogLevel.Trace;
+        var logOptions = new LogOptions {
+            LogLevel = logLevel,
+            LogAnonymous = !Features.IsDebugMode && (_logOptions.LogAnonymous == true || UserSettings.LogAnonymous),
+            LogEventNames = LogService.GetLogEventNames(_logOptions.LogEventNames, UserSettings.DebugData1 ?? "").ToArray(),
+            SingleLineConsole = _logOptions.SingleLineConsole,
+            LogToConsole = _logOptions.LogToConsole,
+            LogToFile = _logOptions.LogToFile,
+            AutoFlush = _logOptions.AutoFlush,
+        };
+        return logOptions;
+    }
+
     private readonly AsyncLock _connectLock = new();
     public async Task Connect(ConnectOptions? connectOptions = null, CancellationToken cancellationToken = default)
     {
@@ -445,28 +458,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 !string.IsNullOrEmpty(_ga4MeasurementId))
                 Services.Tracker = CreateBuildInTracker(connectOptions.UserAgent);
 
-            // prepare logger
-            var logOptions = JsonUtils.JsonClone(_logOptions);
-            if (HasDebugCommand(DebugCommands.LogDebug)) logOptions.LogLevel = LogLevel.Debug;
-            if (HasDebugCommand(DebugCommands.LogTrace)) logOptions.LogLevel = LogLevel.Trace;
-            logOptions.LogAnonymous = !Features.IsDebugMode && (_logOptions.LogAnonymous == true || UserSettings.LogAnonymous);
-            logOptions.LogEventNames = LogService.GetLogEventNames(_logOptions.LogEventNames, UserSettings.DebugData1 ?? "").ToArray();
-                diagnose: connectOptions.Diagnose || HasDebugCommand(DebugCommands.LogDebug),
-                debugCommand: UserSettings.DebugData1
-            );
-
             //logOptions.
-            LogService.Start(new LogOptions {
-                LogEventNames = LogService.GetLogEventNames(
-                    verbose: _logVerbose || HasDebugCommand(DebugCommands.LogTrace),
-                    diagnose: connectOptions.Diagnose || HasDebugCommand(DebugCommands.LogDebug),
-                    debugCommand: UserSettings.DebugData1),
-                LogAnonymous = _logAnonymous ?? UserSettings.LogAnonymous,
-                LogToConsole = true,
-                LogToFile = true,
-                AutoFlush = true,
-                LogLevel = _logVerbose || connectOptions.Diagnose ? LogLevel.Debug : LogLevel.Information
-            });
+            LogService.Start(GetLogOptions());
 
             // set current profile only if it has been updated to avoid unnecessary new config time
             if (clientProfile.ClientProfileId != UserSettings.ClientProfileId ||
@@ -580,12 +573,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.AdapterIpFilterExcludes));
         }
 
-        var logOptions = JsonUtils.JsonClone(_logOptions);
-        logOptions.LogEventNames = LogService.GetLogEventNames(logOptions.LogEventNames, UserSettings.DebugData1 ?? "").ToArray();
-            
-        diagnose: _hasDiagnoseRequested || HasDebugCommand(DebugCommands.LogDebug),
-            debugCommand: UserSettings.DebugData1);
-
         // create clientOptions
         var clientOptions = new ClientOptions {
             ClientId = Features.ClientId,
@@ -615,11 +602,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowRewardedAd = Services.AdService.CanShowRewarded,
             ExcludeApps = UserSettings.AppFiltersMode == FilterMode.Exclude ? UserSettings.AppFilters : null,
             IncludeApps = UserSettings.AppFiltersMode == FilterMode.Include ? UserSettings.AppFilters : null,
-            SessionName = CurrentClientProfileInfo?.ClientProfileName,,
+            SessionName = CurrentClientProfileInfo?.ClientProfileName,
+            LogOptions =  GetLogOptions(),
+            UserAgent = userAgent ?? ClientOptions.Default.UserAgent,
         };
-
-        if (userAgent != null)
-            clientOptions.UserAgent = userAgent;
 
         try {
             VhLogger.Instance.LogDebug(
@@ -628,7 +614,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // start diagnose if requested
             if (_hasDiagnoseRequested) {
-                var hostEndPoints = await ServerTokenHelper.ResolveHostEndPoints(token.ServerToken, cancellationToken)
+                var hostEndPoints = await token.ServerToken.ResolveHostEndPoints(cancellationToken)
                     .VhConfigureAwait();
                 await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).VhConfigureAwait();
                 await Diagnoser.CheckPureNetwork(cancellationToken).VhConfigureAwait();

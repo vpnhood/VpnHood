@@ -1,7 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Services.Ads;
+using VpnHood.Core.Client.Abstractions.Logging;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Utils;
@@ -25,10 +27,8 @@ public class TestAppHelper : TestHelper
             UseInternalLocationService = false,
             UseExternalLocationService = false,
             AllowEndPointTracker = true,
-            LogVerbose = LogVerbose,
             ServerQueryTimeout = TimeSpan.FromSeconds(2),
             AutoDiagnose = false,
-            SingleLineConsoleLog = false,
             CanExtendByRewardedAdThreshold = TimeSpan.Zero,
             DisconnectOnDispose = true,
             ConnectTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(5),
@@ -36,7 +36,11 @@ public class TestAppHelper : TestHelper
                 ShowAdPostDelay = TimeSpan.Zero,
                 LoadAdPostDelay = TimeSpan.Zero
             },
+            LogOptions = {
+                LogLevel = LogVerbose ? LogLevel.Trace : LogLevel.Debug
+            }
         };
+
         return appOptions;
     }
 

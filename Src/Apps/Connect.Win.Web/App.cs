@@ -36,10 +36,12 @@ public class App : VpnHoodWpfSpaApp
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             UpdaterProvider = new AdvancedInstallerUpdaterProvider(),
             IsAddAccessKeySupported = false,
-            SingleLineConsoleLog = false,
             LocalSpaHostName = "my-vpnhood-connect",
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
-            Ga4MeasurementId = appConfigs.Ga4MeasurementId
+            Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            LogOptions = {
+                SingleLineConsole = false
+            }
         };
     }
 }

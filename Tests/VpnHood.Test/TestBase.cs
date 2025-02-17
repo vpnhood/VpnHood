@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Common.Logging;
 
 namespace VpnHood.Test;
@@ -10,7 +11,6 @@ public abstract class TestBase
     [TestInitialize]
     public void TestInitialize()
     {
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
         TestHelper = CreateTestHelper();
     }
 

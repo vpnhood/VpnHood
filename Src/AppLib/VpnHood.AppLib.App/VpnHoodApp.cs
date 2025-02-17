@@ -447,19 +447,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // prepare logger
             var logOptions = JsonUtils.JsonClone(_logOptions);
+            if (HasDebugCommand(DebugCommands.LogDebug)) logOptions.LogLevel = LogLevel.Debug;
+            if (HasDebugCommand(DebugCommands.LogTrace)) logOptions.LogLevel = LogLevel.Trace;
             logOptions.LogAnonymous = !Features.IsDebugMode && (_logOptions.LogAnonymous == true || UserSettings.LogAnonymous);
-            logOptions.Verbose |= HasDebugCommand(DebugCommands.Verbose);
             logOptions.LogEventNames = LogService.GetLogEventNames(_logOptions.LogEventNames, UserSettings.DebugData1 ?? "").ToArray();
-                verbose: _logVerbose || HasDebugCommand(DebugCommands.Verbose),
-                diagnose: connectOptions.Diagnose || HasDebugCommand(DebugCommands.FullLog),
+                diagnose: connectOptions.Diagnose || HasDebugCommand(DebugCommands.LogDebug),
                 debugCommand: UserSettings.DebugData1
             );
 
             //logOptions.
             LogService.Start(new LogOptions {
                 LogEventNames = LogService.GetLogEventNames(
-                    verbose: _logVerbose || HasDebugCommand(DebugCommands.Verbose),
-                    diagnose: connectOptions.Diagnose || HasDebugCommand(DebugCommands.FullLog),
+                    verbose: _logVerbose || HasDebugCommand(DebugCommands.LogTrace),
+                    diagnose: connectOptions.Diagnose || HasDebugCommand(DebugCommands.LogDebug),
                     debugCommand: UserSettings.DebugData1),
                 LogAnonymous = _logAnonymous ?? UserSettings.LogAnonymous,
                 LogToConsole = true,
@@ -583,7 +583,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var logOptions = JsonUtils.JsonClone(_logOptions);
         logOptions.LogEventNames = LogService.GetLogEventNames(logOptions.LogEventNames, UserSettings.DebugData1 ?? "").ToArray();
             
-        diagnose: _hasDiagnoseRequested || HasDebugCommand(DebugCommands.FullLog),
+        diagnose: _hasDiagnoseRequested || HasDebugCommand(DebugCommands.LogDebug),
             debugCommand: UserSettings.DebugData1);
 
         // create clientOptions

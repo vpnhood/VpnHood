@@ -19,7 +19,7 @@ public class LogService(string logFilePath) : IDisposable
         VhLogger.IsDiagnoseMode = logOptions.LogEventNames.Contains("*");
         VhLogger.Instance = CreateLogger(logOptions);
         LogEvents = logOptions.LogEventNames;
-        if (logOptions.Verbose) {
+        if (logOptions.LogLevel == LogLevel.Trace) {
             VhLogger.IsDiagnoseMode = true;
             if (!logOptions.LogEventNames.Contains("*"))
                 LogEvents = LogEvents.Concat(["*"]).ToArray();

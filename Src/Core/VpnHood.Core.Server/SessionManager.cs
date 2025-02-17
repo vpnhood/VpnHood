@@ -489,7 +489,8 @@ public class SessionManager : IAsyncDisposable, IJob
         var session = GetSessionByVirtualIp(ipPacket.DestinationAddress);
         if (session == null) {
             // log dropped packet
-            PacketUtil.LogPacket(ipPacket, "Could not find session for packet destination.");
+            if (VhLogger.IsDiagnoseMode)
+                PacketUtil.LogPacket(ipPacket, "Could not find session for packet destination.");
             return;
         }
 

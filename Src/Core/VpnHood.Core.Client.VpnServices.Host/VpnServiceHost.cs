@@ -1,10 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.Logging;
 using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Sockets;
+using VpnHood.Core.Tunneling;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 
@@ -13,6 +16,7 @@ public class VpnServiceHost : IAsyncDisposable
     private readonly ApiController _apiController;
     private readonly IVpnServiceHandler _vpnServiceHandler;
     private readonly ISocketFactory _socketFactory;
+    private LogService _logService;
     private bool _isDisposed;
 
     internal VpnHoodClient? Client { get; private set; }
@@ -28,6 +32,8 @@ public class VpnServiceHost : IAsyncDisposable
         _socketFactory = socketFactory;
         _vpnServiceHandler = vpnServiceHandler;
         _apiController = new ApiController(this);
+        _logService = new LogService(Context.LogFilePath);
+        VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
     }
 
     private void VpnHoodClient_StateChanged(object sender, EventArgs e)
@@ -44,6 +50,7 @@ public class VpnServiceHost : IAsyncDisposable
             _vpnServiceHandler.ShowNotification(client.ToConnectionInfo(_apiController));
         }
         else {
+            _logService.Stop();
             _vpnServiceHandler.StopNotification();
             _vpnServiceHandler.StopSelf();
         }
@@ -74,15 +81,22 @@ public class VpnServiceHost : IAsyncDisposable
 
             // create service
             try {
+                // read client options and start log service
+                var clientOptions = Context.ReadClientOptions();
+                _logService.Start(clientOptions.LogOptions);
+
+                // sni is sensitive, must be explicitly enabled
+                clientOptions.ForceLogSni |=
+                    clientOptions.LogOptions.LogEventNames.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase);
+
+                // create client
                 VhLogger.Instance.LogTrace("VpnService is creating a new VpnHoodClient.");
-                var options = Context.ReadClientOptions();
                 Client = new VpnHoodClient(
-                    vpnAdapter: options.UseNullCapture ? new NullVpnAdapter() : _vpnServiceHandler.CreateAdapter(),
+                    vpnAdapter: clientOptions.UseNullCapture ? new NullVpnAdapter() : _vpnServiceHandler.CreateAdapter(),
                     tracker: _vpnServiceHandler.CreateTracker(),
                     socketFactory: _socketFactory,
-                    options: Context.ReadClientOptions()
+                    options: clientOptions
                 );
-
                 Client.StateChanged += VpnHoodClient_StateChanged;
 
                 // show notification. start foreground service
@@ -108,6 +122,36 @@ public class VpnServiceHost : IAsyncDisposable
                 return false;
             }
         }
+    }
+
+    public static string[] GetLogEventNames(bool verbose, bool diagnose)
+    {
+        if (verbose)
+            return ["*"];
+
+        // Extract all event names from debugData that contains "log:EventName1,EventName2"
+        var names = new List<string?> {
+            GeneralEventId.Session.Name,
+            GeneralEventId.Essential.Name
+        };
+
+        if (diagnose)
+            names.AddRange([
+                GeneralEventId.Essential.Name,
+                GeneralEventId.Nat.Name,
+                GeneralEventId.Ping.Name,
+                GeneralEventId.Dns.Name,
+                GeneralEventId.Tcp.Name,
+                GeneralEventId.Tls.Name,
+                GeneralEventId.StreamProxyChannel.Name,
+                GeneralEventId.DatagramChannel.Name,
+                GeneralEventId.Request.Name,
+                GeneralEventId.TcpLife.Name,
+                GeneralEventId.Test.Name,
+                GeneralEventId.UdpSign.Name
+            ]);
+
+        return names.ToArray()!;
     }
 
     public void Disconnect()

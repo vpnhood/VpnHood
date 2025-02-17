@@ -291,7 +291,7 @@ public static class PacketUtil
         }
     }
 
-    public static void LogPacket(IPPacket ipPacket, string message, LogLevel logLevel = LogLevel.Information,
+    public static void LogPacket(IPPacket ipPacket, string message, LogLevel logLevel = LogLevel.Trace,
         Exception? exception = null)
     {
         try {

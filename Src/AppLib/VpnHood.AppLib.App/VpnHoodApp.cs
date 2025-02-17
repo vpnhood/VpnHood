@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.IO;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -14,11 +15,10 @@ using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Providers;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Services.Ads;
-using VpnHood.AppLib.Services.Logging;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
-using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.Logging;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Manager;
@@ -46,7 +46,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly bool _useInternalLocationService;
     private readonly bool _useExternalLocationService;
     private readonly bool _disconnectOnDispose;
-    private readonly bool _logVerbose;
     private readonly bool? _logAnonymous;
     private readonly bool _autoDiagnose;
     private readonly bool _allowEndPointTracker;
@@ -68,6 +67,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private VersionCheckResult? _versionCheckResult;
     private CultureInfo? _systemUiCulture;
     private UserSettings _oldUserSettings;
+    private LogOptions _logOptions;
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -84,7 +84,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public IDevice Device { get; }
     public JobSection JobSection { get; }
     public TimeSpan TcpTimeout { get; set; } = ClientOptions.Default.ConnectTimeout;
-    public AppLogService LogService { get; }
+    public LogService LogService { get; }
     public AppResource Resource { get; }
     public AppServices Services { get; }
     public AppSettingsService SettingsService { get; }
@@ -115,10 +115,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _allowEndPointTracker = options.AllowEndPointTracker;
         _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
         _disconnectOnDispose = options.DisconnectOnDispose;
+        _logOptions = options.LogOptions;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
 
         _sessionTimeout = options.SessionTimeout;
-        LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), options.SingleLineConsoleLog);
+        LogService = new LogService(Path.Combine(StorageFolderPath, FileNameLog));
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
         IpRangeLocationProvider = new LocalIpRangeLocationProvider(
             () => new ZipArchive(new MemoryStream(AppLib.Resource.IpLocations)),
@@ -445,8 +446,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 Services.Tracker = CreateBuildInTracker(connectOptions.UserAgent);
 
             // prepare logger
-            LogService.Start(new AppLogOptions {
-                LogEventNames = AppLogService.GetLogEventNames(
+            var logOptions = JsonUtils.JsonClone(_logOptions);
+            logOptions.LogAnonymous = !Features.IsDebugMode && (_logOptions.LogAnonymous == true || UserSettings.LogAnonymous);
+            logOptions.Verbose |= HasDebugCommand(DebugCommands.Verbose);
+            logOptions.LogEventNames = LogService.GetLogEventNames(_logOptions.LogEventNames, UserSettings.DebugData1 ?? "").ToArray();
+                verbose: _logVerbose || HasDebugCommand(DebugCommands.Verbose),
+                diagnose: connectOptions.Diagnose || HasDebugCommand(DebugCommands.FullLog),
+                debugCommand: UserSettings.DebugData1
+            );
+
+            //logOptions.
+            LogService.Start(new LogOptions {
+                LogEventNames = LogService.GetLogEventNames(
                     verbose: _logVerbose || HasDebugCommand(DebugCommands.Verbose),
                     diagnose: connectOptions.Diagnose || HasDebugCommand(DebugCommands.FullLog),
                     debugCommand: UserSettings.DebugData1),
@@ -569,6 +580,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.AdapterIpFilterExcludes));
         }
 
+        var logOptions = JsonUtils.JsonClone(_logOptions);
+        logOptions.LogEventNames = LogService.GetLogEventNames(logOptions.LogEventNames, UserSettings.DebugData1 ?? "").ToArray();
+            
+        diagnose: _hasDiagnoseRequested || HasDebugCommand(DebugCommands.FullLog),
+            debugCommand: UserSettings.DebugData1);
+
         // create clientOptions
         var clientOptions = new ClientOptions {
             ClientId = Features.ClientId,
@@ -591,7 +608,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             UseTcpOverTun = HasDebugCommand(DebugCommands.UseTcpOverTun),
             UseUdpChannel = UserSettings.UseUdpChannel,
             DomainFilter = UserSettings.DomainFilter,
-            ForceLogSni = LogService.LogEvents.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase),
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
             AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
             AllowTcpReuse = !HasDebugCommand(DebugCommands.NoTcpReuse),
@@ -599,7 +615,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowRewardedAd = Services.AdService.CanShowRewarded,
             ExcludeApps = UserSettings.AppFiltersMode == FilterMode.Exclude ? UserSettings.AppFilters : null,
             IncludeApps = UserSettings.AppFiltersMode == FilterMode.Include ? UserSettings.AppFilters : null,
-            SessionName = CurrentClientProfileInfo?.ClientProfileName,
+            SessionName = CurrentClientProfileInfo?.ClientProfileName,,
         };
 
         if (userAgent != null)
@@ -786,9 +802,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // check diagnose
         if (_hasDiagnoseRequested && ConnectionInfo.Error == null)
             _appPersistState.LastError = new NoErrorFoundException().ToApiError();
-
-        // stop logger if opened
-        LogService.Stop();
     }
 
 
@@ -975,6 +988,45 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var clientProfiles = ClientProfileService.List();
             UserSettings.ClientProfileId = clientProfiles.Length == 1 ? clientProfiles.First().ClientProfileId : null;
             Settings.Save();
+        }
+    }
+
+    public async Task CopyLogToStream(Stream destination)
+    {
+        await using var write = new StreamWriter(destination, Encoding.UTF8, bufferSize: -1, leaveOpen: true);
+
+        // write app log
+        try {
+            if (File.Exists(LogService.LogFilePath)) {
+                await using var appLogStream = new FileStream(LogService.LogFilePath,
+                    FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                await appLogStream.CopyToAsync(destination);
+                await destination.FlushAsync();
+            }
+        }
+        catch (Exception ex) {
+            await write.WriteLineAsync($"Error: Could not read application log. {ex.Message}");
+            await write.FlushAsync();
+        }
+
+        // write vpn service log
+        await write.WriteLineAsync("");
+        await write.WriteLineAsync("--------------------------------------------------");
+        await write.WriteLineAsync("VPN Service Log");
+        await write.WriteLineAsync("--------------------------------------------------");
+        await write.FlushAsync();
+
+        try {
+            if (File.Exists(_vpnServiceManager.LogFilePath)) {
+                await using var serviceLogStream = new FileStream(_vpnServiceManager.LogFilePath,
+                    FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                await serviceLogStream.CopyToAsync(destination);
+                await destination.FlushAsync();
+            }
+        }
+        catch (Exception ex) {
+            await write.WriteLineAsync($"Error: Could not read vpn service log. {ex.Message}");
+            await write.FlushAsync();
         }
     }
 

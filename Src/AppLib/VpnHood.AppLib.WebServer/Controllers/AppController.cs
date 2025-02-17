@@ -142,11 +142,9 @@ internal class AppController : WebApiController, IAppController
     {
         Response.ContentType = MimeType.PlainText;
         await using var stream = HttpContext.OpenResponseStream();
-        await using var streamWriter = new StreamWriter(stream);
-        var log = await App.LogService.GetLog().VhConfigureAwait();
-        await streamWriter.WriteAsync(log).VhConfigureAwait();
+        await App.CopyLogToStream(stream).VhConfigureAwait();
         HttpContext.SetHandled();
-        return "";
+        return ""; // already wrote to stream
     }
 
     [Route(HttpVerbs.Get, "/installed-apps")]

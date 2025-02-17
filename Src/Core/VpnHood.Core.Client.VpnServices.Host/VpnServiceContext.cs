@@ -13,6 +13,7 @@ internal class VpnServiceContext(string configFolder)
 {
     public string ConfigFilePath => Path.Combine(configFolder, ClientOptions.VpnConfigFileName);
     public string StatusFilePath => Path.Combine(configFolder, ClientOptions.VpnStatusFileName);
+    public string LogFilePath => Path.Combine(configFolder, ClientOptions.VpnLogFileName);
     public string ConfigFolder => configFolder;
     public ClientOptions ReadClientOptions()
     {

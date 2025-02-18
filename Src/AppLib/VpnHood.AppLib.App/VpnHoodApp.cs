@@ -64,6 +64,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private VersionCheckResult? _versionCheckResult;
     private CultureInfo? _systemUiCulture;
     private UserSettings _oldUserSettings;
+    private bool _isConnecting;
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -362,7 +363,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (Diagnoser.IsWorking)
                 return AppConnectionState.Diagnosing;
 
-            if (clientState == ClientState.Connecting)
+            if (clientState == ClientState.Connecting || _isConnecting)
                 return AppConnectionState.Connecting;
 
             if (clientState == ClientState.Waiting)
@@ -447,6 +448,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var clientProfile = ClientProfileService.Get(clientProfileId);
         var clientProfileInfo = ClientProfileService.GetInfo(clientProfileId);
         var serverLocation = connectOptions.ServerLocation ?? clientProfileInfo.SelectedLocationInfo?.ServerLocation;
+        var orgCancellationToken = cancellationToken;
 
         using var timeoutCancellationSource = new CancellationTokenSource(_connectTimeout);
         try {
@@ -460,6 +462,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             cancellationToken = linkedCts.Token;
 
             // reset connection state
+            _isConnecting = true;
             _appPersistState.HasDiagnoseRequested = connectOptions.Diagnose;
             _appPersistState.ConnectRequestTime = DateTime.Now;
             FireConnectionStateChanged();
@@ -533,6 +536,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 }
             }
 
+            // throw OperationCanceledException if user has canceled the connection
+            if (_appPersistState.HasDisconnectedByUser) {
+                throw new OperationCanceledException("Connection has been canceled by the user.", ex);
+            }
+
+            // check no internet connection, use original cancellation token to avoid timeout exception
+            if (_autoDiagnose && ex is not SessionException &&
+                _appPersistState is { HasDisconnectedByUser: false, HasDiagnoseRequested: false }) {
+                await Diagnoser.CheckPureNetwork(orgCancellationToken).VhConfigureAwait();
+            }
+
             // throw ConnectionTimeoutException if timeout
             if (timeoutCancellationSource.IsCancellationRequested) {
                 var exception = new ConnectionTimeoutException("Could not establish connection in given time.", ex);
@@ -541,14 +555,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 throw exception;
             }
 
-            // throw OperationCanceledException if user has canceled the connection
-            if (_appPersistState.HasDisconnectedByUser) {
-                throw new OperationCanceledException("Connection has been canceled by the user.", ex);
-            }
-
             throw;
         }
         finally {
+            _isConnecting = false;
             FireConnectionStateChanged();
         }
     }
@@ -677,11 +687,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                         cancellationToken: cancellationToken)
                     .VhConfigureAwait();
                 return;
-            }
-
-            // check no internet connection
-            if (!_appPersistState.HasDisconnectedByUser && _autoDiagnose) {
-                await Diagnoser.CheckPureNetwork(cancellationToken).VhConfigureAwait();
             }
 
             throw;

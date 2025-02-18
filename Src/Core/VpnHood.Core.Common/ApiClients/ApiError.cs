@@ -5,14 +5,14 @@ using VpnHood.Core.Common.Exceptions;
 
 namespace VpnHood.Core.Common.ApiClients;
 
-public class ApiError : ICloneable
+public class ApiError : ICloneable, IEquatable<ApiError>
 {
     public const string Flag = "IsApiError";
     public required string TypeName { get; init; }
-    public string? TypeFullName { get; set; }
+    public string? TypeFullName { get; init; }
     public required string Message { get; init; }
-    public Dictionary<string, string?> Data { get; set; } = new();
-    public string? InnerMessage { get; set; }
+    public Dictionary<string, string?> Data { get; init; } = new();
+    public string? InnerMessage { get; init; }
 
     public object Clone() => new ApiError {
         TypeName = TypeName,
@@ -62,30 +62,15 @@ public class ApiError : ICloneable
     {
         // create exception
         var innerException = new Exception(InnerMessage ?? "");
-        Exception? exception;
-
-        if (Is<OperationCanceledException>())
-            exception = new OperationCanceledException(Message, innerException);
-
-        else if (Is<TaskCanceledException>())
-            exception = new TaskCanceledException(Message, innerException);
-
-        else if (Is<AlreadyExistsException>())
-            exception = new AlreadyExistsException(Message, innerException);
-
-        else if (Is<NotExistsException>())
-            exception = new NotExistsException(Message, innerException);
-
-        else if (Is<UnauthorizedAccessException>())
-            exception = new UnauthorizedAccessException(Message, innerException);
-
-        else if (Is<TimeoutException>())
-            exception = new TimeoutException(Message, innerException);
-
-        else if (Is<InvalidOperationException>())
-            exception = new InvalidOperationException(Message, innerException);
-        else
-            exception = new ApiException(this);
+        Exception exception =
+            Is<OperationCanceledException>() ? new OperationCanceledException(Message, innerException) :
+            Is<TaskCanceledException>() ? new TaskCanceledException(Message, innerException) :
+            Is<AlreadyExistsException>() ? new AlreadyExistsException(Message, innerException) :
+            Is<NotExistsException>() ? new NotExistsException(Message, innerException) :
+            Is<UnauthorizedAccessException>() ? new UnauthorizedAccessException(Message, innerException) :
+            Is<TimeoutException>() ? new TimeoutException(Message, innerException) :
+            Is<InvalidOperationException>() ? new InvalidOperationException(Message, innerException) :
+            new ApiException(this);
 
         ExportData(exception.Data);
         return exception;
@@ -99,8 +84,7 @@ public class ApiError : ICloneable
                 Data.TryAdd(key, item.Value?.ToString());
         }
 
-        if (data.Contains(Flag))
-            data.Add(Flag, "true");
+        Data.TryAdd(Flag, "true");
     }
 
     public void ExportData(IDictionary data)
@@ -108,9 +92,51 @@ public class ApiError : ICloneable
         foreach (var kvp in Data.Where(kvp => !data.Contains(kvp.Key)))
             data.Add(kvp.Key, kvp.Value);
 
-        Data.TryAdd(nameof(TypeFullName), TypeFullName);
-        Data.TryAdd(nameof(TypeName), TypeName);
-        Data.TryAdd("IsApiError", "true");
+        if (!data.Contains(nameof(TypeFullName)))
+            data.Add(nameof(TypeFullName), TypeFullName);
 
+        if (!data.Contains(nameof(TypeName)))
+            data.Add(nameof(TypeName), TypeName);
+
+        if (!data.Contains(Flag))
+            data.Add(Flag, "true");
     }
+
+    public bool Equals(ApiError? other)
+    {
+        if (other is null) return false;
+        if (ReferenceEquals(this, other)) return true;
+        return TypeName == other.TypeName &&
+               TypeFullName == other.TypeFullName &&
+               Message == other.Message &&
+               InnerMessage == other.InnerMessage &&
+               DictionariesEqual(Data, other.Data);
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is null) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        return Equals((ApiError)obj);
+    }
+
+    private static bool DictionariesEqual(Dictionary<string, string?> dict1, Dictionary<string, string?> dict2)
+    {
+        if (dict1.Count != dict2.Count)
+            return false;
+
+        foreach (var kvp in dict1) {
+            if (!dict2.TryGetValue(kvp.Key, out var value) || !string.Equals(kvp.Value, value))
+                return false;
+        }
+
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(TypeName, TypeFullName, Message, InnerMessage);
+    }
+
 }

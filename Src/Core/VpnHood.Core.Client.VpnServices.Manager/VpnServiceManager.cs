@@ -277,6 +277,38 @@ public class VpnServiceManager : IJob, IDisposable
         }
     }
 
+    /// <summary>
+    /// Stop the VPN service and disconnect from the server if running. This method is idempotent.
+    /// No exception will be thrown
+    /// </summary>
+    public async Task Stop(TimeSpan? timeSpan = null)
+    {
+        using var timeoutCts = new CancellationTokenSource(
+            Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(5));
+
+        VhLogger.Instance.LogDebug("Waiting for VpnService to stop.");
+
+        // make sure to send the disconnect request
+        try {
+            await SendRequest(new ApiDisconnectRequest(), timeoutCts.Token).VhConfigureAwait();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogDebug(ex, "Could not send disconnect request.");
+        }
+
+        // wait for the service to stop
+        try {
+            while (ConnectionInfo.IsStarted()) {
+                await UpdateConnectionInfo(true, timeoutCts.Token);
+                await Task.Delay(200, timeoutCts.Token);
+            }
+            VhLogger.Instance.LogDebug("VpnService has been stopped.");
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not stop the VpnService.");
+        }
+    }
+
     private ConnectionInfo? _lastConnectionInfo;
     private Guid? _lastAdRequestId;
     private void CheckForEvents(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
@@ -341,38 +373,6 @@ public class VpnServiceManager : IJob, IDisposable
     {
         // let _updateConnectionInfoCts inside UpdateConnection info handle the cancellation
         await UpdateConnectionInfo(false, CancellationToken.None);
-    }
-
-    /// <summary>
-    /// Stop the VPN service and disconnect from the server if running. This method is idempotent.
-    /// No exception will be thrown
-    /// </summary>
-    public async Task Stop(TimeSpan? timeSpan = null)
-    {
-        using var timeoutCts = new CancellationTokenSource(
-            Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(5));
-
-        VhLogger.Instance.LogDebug("Waiting for VpnService to stop.");
-
-        // make sure to send the disconnect request
-        try {
-            await SendRequest(new ApiDisconnectRequest(), timeoutCts.Token).VhConfigureAwait();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogDebug(ex, "Could not send disconnect request.");
-        }
-
-        // wait for the service to stop
-        try {
-            while (ConnectionInfo.IsStarted()) {
-                await UpdateConnectionInfo(true, timeoutCts.Token);
-                await Task.Delay(200, timeoutCts.Token);
-            }
-            VhLogger.Instance.LogDebug("VpnService has been stopped.");
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not stop the VpnService.");
-        }
     }
 
     public void Dispose()

@@ -1,7 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Test;
 
-namespace VpnHood.AppLib.Test;
+namespace VpnHood.Test;
 
 [TestClass]
 public class TestAssembly

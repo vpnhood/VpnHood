@@ -208,8 +208,8 @@ public class VpnServiceManager : IJob, IDisposable
         }
         catch (Exception ex) {
             // update connection info and set error
-            _connectionInfo = SetConnectionInfo(ClientState.Disposed, new Exception("VpnService stopped unexpectedly.", ex));
-            VhLogger.Instance.LogError(ex, "Error in UpdateConnection Info.");
+            _connectionInfo = SetConnectionInfo(ClientState.Disposed, new Exception("VpnService has been stopped.", ex));
+            VhLogger.Instance.LogDebug(ex, "Could not update connection info.");
         }
 
         CheckForEvents(_connectionInfo, cancellationToken);
@@ -286,9 +286,11 @@ public class VpnServiceManager : IJob, IDisposable
         using var timeoutCts = new CancellationTokenSource(
             Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(5));
 
-        VhLogger.Instance.LogDebug("Waiting for VpnService to stop.");
+        // stop the service
+        if (!ConnectionInfo.IsStarted())
+            return;
 
-        // make sure to send the disconnect request
+        // send disconnect request
         try {
             await SendRequest(new ApiDisconnectRequest(), timeoutCts.Token).VhConfigureAwait();
         }
@@ -297,6 +299,7 @@ public class VpnServiceManager : IJob, IDisposable
         }
 
         // wait for the service to stop
+        VhLogger.Instance.LogDebug("Waiting for VpnService to stop.");
         try {
             while (ConnectionInfo.IsStarted()) {
                 await UpdateConnectionInfo(true, timeoutCts.Token);

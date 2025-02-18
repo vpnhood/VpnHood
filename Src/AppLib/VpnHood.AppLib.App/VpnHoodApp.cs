@@ -57,7 +57,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly LogOptions _logOptions;
     private readonly AppPersistState _appPersistState;
     private readonly VpnServiceManager _vpnServiceManager;
-    private bool _hasDiagnoseRequested;
     private bool _isLoadingCountryIpRange;
     private bool _isFindingCountryCode;
     private AppConnectionState _lastConnectionState;
@@ -294,11 +293,23 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public ApiError? LastError {
         get {
-            var lastError = _appPersistState.LastError ?? //always show last app error
-                            ConnectionInfo.Error; // don't show error if user has disconnected
+            // don't show error if it is not idle
+            if (!IsIdle)
+                return null;
 
-            return lastError?.Equals(_appPersistState.LastClearedError) == true ||
-                   _appPersistState.HasDisconnectedByUser ? null : lastError;
+            // show last error
+            if (_appPersistState.LastError != null)
+                return _appPersistState.LastError;
+
+            // Show error if diagnose has been requested and there is no error
+            if (_appPersistState.HasDiagnoseRequested)
+                return new NoErrorFoundException().ToApiError();
+
+            if (_appPersistState.HasDisconnectedByUser)
+                return null;
+
+            return ConnectionInfo.Error?.Equals(_appPersistState.LastClearedError) == true
+                ? null : ConnectionInfo.Error;
         }
     }
 
@@ -314,12 +325,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 SessionInfo = connectionInfo.SessionInfo?.ToAppDto(),
                 ConnectionState = connectionState,
                 CanConnect = connectionState.CanConnect(),
-                CanDiagnose = connectionState.CanDiagnose(_hasDiagnoseRequested),
+                CanDiagnose = connectionState.CanDiagnose(_appPersistState.HasDiagnoseRequested),
                 CanDisconnect = connectionState.CanDisconnect(),
                 IsIdle = IsIdle,
-                PromptForLog = IsIdle && _hasDiagnoseRequested && LogService.Exists,
+                PromptForLog = IsIdle && _appPersistState.HasDiagnoseRequested && LogService.Exists,
                 LogExists = LogService.Exists,
-                HasDiagnoseRequested = _hasDiagnoseRequested,
+                HasDiagnoseRequested = _appPersistState.HasDiagnoseRequested,
                 HasDisconnectedByUser = _appPersistState.HasDisconnectedByUser,
                 ClientCountryCode = _appPersistState.ClientCountryCode,
                 ClientCountryName = VhUtils.TryGetCountryName(_appPersistState.ClientCountryCode),
@@ -330,7 +341,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 PurchaseState = Services.AccountService?.BillingService?.PurchaseState,
                 LastPublishInfo = _versionCheckResult?.GetNewerPublishInfo(),
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
-                LastError = LastError?.ToAppDto(),
+                LastError = IsIdle ? LastError?.ToAppDto() : null,
             };
 
             return appState;
@@ -383,9 +394,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public void ClearLastError()
     {
-        _appPersistState.LastClearedError = _appPersistState.LastError ?? ConnectionInfo.Error; 
+        _appPersistState.LastError = null;
+        _appPersistState.LastClearedError = ConnectionInfo.Error;
         _appPersistState.HasDisconnectedByUser = false;
-        _hasDiagnoseRequested = false;
+        _appPersistState.HasDiagnoseRequested = false;
     }
 
     private LogOptions GetLogOptions()
@@ -448,7 +460,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             cancellationToken = linkedCts.Token;
 
             // reset connection state
-            _hasDiagnoseRequested = connectOptions.Diagnose;
+            _appPersistState.HasDiagnoseRequested = connectOptions.Diagnose;
             _appPersistState.ConnectRequestTime = DateTime.Now;
             FireConnectionStateChanged();
 
@@ -598,17 +610,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ExcludeApps = UserSettings.AppFiltersMode == FilterMode.Exclude ? UserSettings.AppFilters : null,
             IncludeApps = UserSettings.AppFiltersMode == FilterMode.Include ? UserSettings.AppFilters : null,
             SessionName = CurrentClientProfileInfo?.ClientProfileName,
-            LogOptions =  GetLogOptions(),
+            LogOptions = GetLogOptions(),
             UserAgent = userAgent ?? ClientOptions.Default.UserAgent,
         };
 
         try {
             VhLogger.Instance.LogDebug(
                 "Launching VpnService ... DiagnoseMode: {DiagnoseMode}, AutoDiagnose: {AutoDiagnose}",
-                _hasDiagnoseRequested, _autoDiagnose);
+                _appPersistState.HasDiagnoseRequested, _autoDiagnose);
 
             // start diagnose if requested
-            if (_hasDiagnoseRequested) {
+            if (_appPersistState.HasDiagnoseRequested) {
                 var hostEndPoints = await token.ServerToken.ResolveHostEndPoints(cancellationToken)
                     .VhConfigureAwait();
                 await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).VhConfigureAwait();
@@ -774,17 +786,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void VpnServiceStateChanged(object sender, EventArgs e)
     {
-        if (ConnectionInfo.ClientState == ClientState.Disposed)
-            OnDisconnect();
-    }
+        // clear last error we get out of idle state
+        if (!IsIdle)
+            _appPersistState.LastClearedError = null;
 
-    private void OnDisconnect()
-    {
-        // check diagnose
-        if (_hasDiagnoseRequested && ConnectionInfo.Error == null)
-            _appPersistState.LastError = new NoErrorFoundException().ToApiError();
+        // fire connection state changed
+        FireConnectionStateChanged();
     }
-
 
     public async Task Disconnect()
     {
@@ -1061,6 +1069,5 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         LogService.Dispose();
         DisposeSingleton();
         ActiveUiContext.OnChanged -= ActiveUiContext_OnChanged;
-
     }
 }

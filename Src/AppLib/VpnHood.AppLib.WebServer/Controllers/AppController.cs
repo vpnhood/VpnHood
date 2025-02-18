@@ -142,7 +142,7 @@ internal class AppController : WebApiController, IAppController
     public async Task<string> Log()
     {
         Response.ContentType = MimeType.PlainText;
-        await using var stream = HttpContext.OpenResponseStream();
+        var stream = HttpContext.OpenResponseStream(); // do not dispose, EmbedIO will do it
         await App.CopyLogToStream(stream).VhConfigureAwait();
         HttpContext.SetHandled();
         return ""; // already wrote to stream

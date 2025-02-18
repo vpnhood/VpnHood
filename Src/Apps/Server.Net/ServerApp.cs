@@ -39,8 +39,9 @@ public class ServerApp : IDisposable
     public FileAccessManager? FileAccessManager => AccessManager as FileAccessManager;
     public static string AppName => "VpnHoodServer";
 
-    public static string AppFolderPath => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ??
-                                          throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
+    public static string AppFolderPath => 
+        Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ??
+        throw new Exception($"Could not acquire {nameof(AppFolderPath)}.");
 
     public AppSettings AppSettings { get; }
     public static string StoragePath => Directory.GetCurrentDirectory();

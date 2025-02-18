@@ -151,6 +151,33 @@ public static class PacketUtil
         return ipPacket;
     }
 
+    public static IcmpV4Packet CreateIcmpV4EchoRequest(ushort id, ushort sequence, byte[] data,
+        bool updateChecksum, IPPacket? parentPacket = null)
+    {
+        // packet is too big
+        const int headerSize = 8;
+        var icmpDataLen = data.Length;
+        var buffer = new byte[headerSize + icmpDataLen];
+        Array.Copy(data, 0, buffer, headerSize, icmpDataLen);
+        var icmpPacket = parentPacket != null
+            ? new IcmpV4Packet(new ByteArraySegment(buffer))
+            : new IcmpV4Packet(new ByteArraySegment(buffer), parentPacket);
+
+        icmpPacket.TypeCode = IcmpV4TypeCode.EchoRequest;
+        icmpPacket.Id = id;
+        icmpPacket.Sequence = sequence;
+
+        if (updateChecksum) {
+            // Create the ICMP packet
+            // Calculate and set the checksum
+            icmpPacket.UpdateIcmpChecksum();
+            icmpPacket.UpdateCalculatedValues();
+        }
+
+        return icmpPacket;
+    }
+
+
     public static IcmpV4Packet ExtractIcmp(IPPacket ipPacket)
     {
         return ipPacket.Extract<IcmpV4Packet>() ??
@@ -358,33 +385,6 @@ public static class PacketUtil
 
         return newIpPacket;
     }
-
-    public static IcmpV4Packet CreateIcmpV4EchoRequest(ushort id, ushort sequence, byte[] data,
-        bool updateChecksum, IPPacket? parentPacket = null)
-    {
-        // packet is too big
-        const int headerSize = 8;
-        var icmpDataLen = data.Length;
-        var buffer = new byte[headerSize + icmpDataLen];
-        Array.Copy(data, 0, buffer, headerSize, icmpDataLen);
-        var icmpPacket = parentPacket != null
-            ? new IcmpV4Packet(new ByteArraySegment(buffer))
-            : new IcmpV4Packet(new ByteArraySegment(buffer), parentPacket);
-
-        icmpPacket.TypeCode = IcmpV4TypeCode.EchoRequest;
-        icmpPacket.Id = id;
-        icmpPacket.Sequence = sequence;
-
-        if (updateChecksum) {
-            // Create the ICMP packet
-            // Calculate and set the checksum
-            icmpPacket.UpdateIcmpChecksum();
-            icmpPacket.UpdateCalculatedValues();
-        }
-
-        return icmpPacket;
-    }
-
 
     public static IPPacket CreateIcmpV6NeighborAdvertisement(IPPacket ipPacket)
     {

@@ -19,12 +19,13 @@ internal class AppPersistState(string filePath)
         public string? ClientCountryCodeByServer { get; set; }
         public bool HasDisconnectedByUser { get; set; }
         public DateTime? ConnectRequestTime { get; set; }
+        public bool HasDiagnoseRequested { get; set; }
     }
 
     public ApiError? LastError {
         get => _data.LastError;
         set {
-            if (JsonUtils.JsonEquals(_data.LastError, value))
+            if (Equals(_data.LastError, value))
                 return;
 
             _data.LastError = value;
@@ -35,14 +36,23 @@ internal class AppPersistState(string filePath)
     public ApiError? LastClearedError {
         get => _data.LastClearedError;
         set {
-            if (JsonUtils.JsonEquals(_data.LastClearedError, value))
+            if (Equals(_data.LastClearedError, value))
                 return;
 
             _data.LastClearedError = value;
             Save();
         }
     }
+    public bool HasDiagnoseRequested {
+        get => _data.HasDiagnoseRequested;
+        set {
+            if (HasDiagnoseRequested==value)
+                return;
 
+            _data.HasDiagnoseRequested = value;
+            Save();
+        }
+    }
 
     public DateTime UpdateIgnoreTime {
         get => _data.UpdateIgnoreTime;

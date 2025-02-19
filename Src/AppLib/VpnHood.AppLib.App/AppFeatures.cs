@@ -1,9 +1,11 @@
-﻿namespace VpnHood.AppLib;
+﻿using System.Text.Json.Serialization;
+using VpnHood.Core.Common.Converters;
+
+namespace VpnHood.AppLib;
 
 public class AppFeatures
 {
     public required string AppId { get; init; }
-    public required Version Version { get; init; }
     public required bool IsExcludeAppsSupported { get; init; }
     public required bool IsIncludeAppsSupported { get; init; }
     public required Uri? UpdateInfoUrl { get; init; }
@@ -22,4 +24,7 @@ public class AppFeatures
     public required bool IsDebugMode { get; init; }
     public required string[] DebugCommands { get; init; }
     public required bool IsLocalNetworkSupported { get; init; }
+
+    [JsonConverter(typeof(VersionConverter))]
+    public required Version Version { get; init; }
 }

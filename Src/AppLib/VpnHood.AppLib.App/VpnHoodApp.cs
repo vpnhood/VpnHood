@@ -4,8 +4,6 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Ga4.Trackers;
-using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Diagnosing;
@@ -19,6 +17,7 @@ using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Exceptions;
@@ -29,7 +28,6 @@ using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.ToolKit;
 
@@ -57,6 +55,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly LogOptions _logOptions;
     private readonly AppPersistState _appPersistState;
     private readonly VpnServiceManager _vpnServiceManager;
+    private readonly ITrackerFactory _trackerFactory;
     private bool _isLoadingCountryIpRange;
     private bool _isFindingCountryCode;
     private AppConnectionState _lastConnectionState;
@@ -111,6 +110,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
         _disconnectOnDispose = options.DisconnectOnDispose;
         _logOptions = options.LogOptions;
+        _trackerFactory = options.TrackerFactory ?? new BuiltInTrackerFactory();
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
 
         _sessionTimeout = options.SessionTimeout;
@@ -167,11 +167,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsDebugMode = options.IsDebugMode
         };
 
+        // create tracker
+        var tracker = options.TrackerFactory?.TryCreateTracker(new TrackerCreateParams {
+            ClientId = Features.ClientId,
+            ClientVersion = Features.Version,
+            Ga4MeasurementId = Features.GaMeasurementId,
+            UserAgent = null //not set yet
+        });
+
         // create ad service
         var appAdService = new AppAdService(regionProvider: this,
             adProviderItems: options.AdProviderItems,
             adOptions: options.AdOptions,
-            tracker: options.Tracker);
+            tracker: tracker);
 
         // initialize services
         Services = new AppServices {
@@ -182,7 +190,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 : null,
             UpdaterProvider = options.UpdaterProvider,
             UiProvider = uiProvider,
-            Tracker = options.Tracker
+            Tracker = tracker
         };
 
         // initialize client manager
@@ -259,27 +267,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         catch (Exception ex) {
             ReportError(ex, "Could not apply settings.");
         }
-    }
-
-    private ITracker CreateBuildInTracker(string? userAgent)
-    {
-        if (string.IsNullOrEmpty(_ga4MeasurementId))
-            throw new InvalidOperationException("AppGa4MeasurementId is required to create a built-in tracker.");
-
-        var tracker = new Ga4TagTracker {
-            MeasurementId = _ga4MeasurementId,
-            SessionCount = 1,
-            ClientId = Settings.ClientId,
-            SessionId = Guid.NewGuid().ToString(),
-            UserProperties = new Dictionary<string, object> { { "client_version", Features.Version.ToString(3) } }
-        };
-
-        if (!string.IsNullOrEmpty(userAgent))
-            tracker.UserAgent = userAgent;
-
-        _ = tracker.Track(new TrackEvent { EventName = TrackEventNames.SessionStart });
-
-        return tracker;
     }
 
     private void ActiveUiContext_OnChanged(object sender, EventArgs e)
@@ -468,9 +455,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             FireConnectionStateChanged();
 
             // initialize built-in tracker after acquire userAgent
-            if (Services.Tracker == null && UserSettings.AllowAnonymousTracker &&
-                !string.IsNullOrEmpty(_ga4MeasurementId))
-                Services.Tracker = CreateBuildInTracker(connectOptions.UserAgent);
+            if (Services.Tracker == null && UserSettings.AllowAnonymousTracker)
+                Services.Tracker = _trackerFactory.TryCreateTracker(new TrackerCreateParams {
+                    ClientId = Features.ClientId,
+                    ClientVersion = Features.Version,
+                    Ga4MeasurementId = Features.GaMeasurementId,
+                    UserAgent = connectOptions.UserAgent
+                });
 
             //logOptions.
             LogService.Start(GetLogOptions());
@@ -621,6 +612,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IncludeApps = UserSettings.AppFiltersMode == FilterMode.Include ? UserSettings.AppFilters : null,
             SessionName = CurrentClientProfileInfo?.ClientProfileName,
             LogOptions = GetLogOptions(),
+            Ga4MeasurementId = _ga4MeasurementId,
+            Version = Features.Version,
+            TrackerFactoryAssemblyQualifiedName = _trackerFactory.GetType().AssemblyQualifiedName,
             UserAgent = userAgent ?? ClientOptions.Default.UserAgent,
         };
 

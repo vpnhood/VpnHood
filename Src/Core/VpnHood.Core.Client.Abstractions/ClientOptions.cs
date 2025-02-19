@@ -62,6 +62,8 @@ public class ClientOptions
     public string[]? IncludeApps { get; set; }
     public bool UseNullCapture { get; set; }
     public LogOptions LogOptions { get; set; } = new ();
+    public string? Ga4MeasurementId { get; set; }
+    public string? TrackerFactoryAssemblyQualifiedName { get; set; }
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

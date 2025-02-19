@@ -2,6 +2,7 @@
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Sockets;
@@ -93,11 +94,20 @@ public class VpnServiceHost : IAsyncDisposable
                 clientOptions.ForceLogSni |=
                     clientOptions.LogOptions.LogEventNames.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase);
 
+                // create tracker
+                var trackerFactory = TryCreateTrackerFactory(clientOptions.TrackerFactoryAssemblyQualifiedName);
+                var tracker = trackerFactory?.TryCreateTracker(new TrackerCreateParams {
+                    ClientId = clientOptions.ClientId,
+                    ClientVersion = clientOptions.Version,
+                    Ga4MeasurementId = clientOptions.Ga4MeasurementId,
+                    UserAgent = clientOptions.UserAgent
+                });
+
                 // create client
                 VhLogger.Instance.LogDebug("VpnService is creating a new VpnHoodClient.");
                 Client = new VpnHoodClient(
                     vpnAdapter: clientOptions.UseNullCapture ? new NullVpnAdapter() : _vpnServiceHandler.CreateAdapter(),
-                    tracker: _vpnServiceHandler.CreateTracker(),
+                    tracker: tracker,
                     socketFactory: _socketFactory,
                     options: clientOptions
                 );
@@ -132,6 +142,25 @@ public class VpnServiceHost : IAsyncDisposable
         };
 
         return connectionInfo;
+    }
+
+    private static ITrackerFactory? TryCreateTrackerFactory(string? assemblyQualifiedName)
+    {
+        if (string.IsNullOrEmpty(assemblyQualifiedName))
+            return null;
+
+        try {
+            var type = Type.GetType(assemblyQualifiedName);
+            if (type == null)
+                return null;
+
+            var trackerFactory = Activator.CreateInstance(type) as ITrackerFactory;
+            return trackerFactory;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not create tracker factory. ClassName: {className}", assemblyQualifiedName);
+            return null;
+        }
     }
 
     public void Disconnect()

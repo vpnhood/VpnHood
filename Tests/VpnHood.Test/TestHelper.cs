@@ -358,15 +358,15 @@ public class TestHelper : IDisposable
     }
 
 
-    public TestDevice CreateDevice(TestVpnAdapterOptions? options = null, ITracker? tracker = null)
+    public TestDevice CreateDevice(TestVpnAdapterOptions? options = null)
     {
         options ??= CreateTestVpnAdapterOptions();
-        return new TestDevice(this, () => new TestVpnAdapter(options), tracker);
+        return new TestDevice(this, () => new TestVpnAdapter(options));
     }
 
     public TestDevice CreateNullDevice(ITracker? tracker = null)
     {
-        return new TestDevice(this, () => new NullVpnAdapter(), tracker);
+        return new TestDevice(this, () => new NullVpnAdapter());
     }
 
 
@@ -402,7 +402,7 @@ public class TestHelper : IDisposable
         bool autoConnect = true)
     {
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
-        var client = new VpnHoodClient(vpnAdapter, new TestSocketFactory(), new TestTrackerProvider(), clientOptions);
+        var client = new VpnHoodClient(vpnAdapter, new TestSocketFactory(), new TestTracker(), clientOptions);
 
         // test starting the client
         if (autoConnect)

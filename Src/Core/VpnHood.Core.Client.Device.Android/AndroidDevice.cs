@@ -20,10 +20,6 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     public string OsInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
     public string VpnServiceConfigFolder => AndroidVpnService.VpnServiceConfigFolder;
 
-    private AndroidDevice()
-    {
-    }
-
     public static AndroidDevice Create()
     {
         return new AndroidDevice();

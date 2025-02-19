@@ -1,5 +1,4 @@
-﻿using Ga4.Trackers;
-using VpnHood.Core.Client.Device.Adapters;
+﻿using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Common.Sockets;
@@ -8,15 +7,12 @@ namespace VpnHood.Core.Client.Device.WinDivert;
 
 public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
 {
-    private readonly ITracker? _tracker;
     private readonly VpnServiceHost _vpnServiceHost;
     public bool IsDisposed { get; private set; }
 
     public WinVpnService(
-        string configFolder,
-        ITracker? tracker)
+        string configFolder)
     {
-        _tracker = tracker;
         _vpnServiceHost = new VpnServiceHost(configFolder, this, new SocketFactory(), withLogger: false);
     }
 
@@ -28,11 +24,6 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
     public void OnDisconnect()
     {
         _vpnServiceHost.Disconnect();
-    }
-
-    public ITracker? CreateTracker()
-    {
-        return _tracker;
     }
 
     public IVpnAdapter CreateAdapter()

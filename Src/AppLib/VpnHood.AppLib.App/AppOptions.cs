@@ -1,7 +1,7 @@
-﻿using Ga4.Trackers;
-using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Sockets;
 
@@ -32,7 +32,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public IAppUpdaterProvider? UpdaterProvider { get; set; }
     public IAppAccountProvider? AccountProvider { get; set; }
     public AppAdProviderItem[] AdProviderItems { get; set; } = [];
-    public ITracker? Tracker { get; set; }
+    public ITrackerFactory? TrackerFactory { get; set; }
     public TimeSpan ReconnectTimeout { get; set; } = ClientOptions.Default.ReconnectTimeout;
     public TimeSpan AutoWaitTimeout { get; set; } = ClientOptions.Default.AutoWaitTimeout;
 

@@ -1,4 +1,5 @@
 ﻿using Android.Runtime;
+using Ga4.Trackers;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.Utils;
 
@@ -8,6 +9,7 @@ public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership
     : Application(javaReference, transfer)
 {
     protected abstract AppOptions CreateAppOptions();
+    protected virtual Type GetVpnServiceType() => typeof(ITracker);
 
     public override void OnCreate()
     {

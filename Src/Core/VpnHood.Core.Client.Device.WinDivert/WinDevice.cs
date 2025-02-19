@@ -1,8 +1,6 @@
-﻿using Ga4.Trackers;
+﻿namespace VpnHood.Core.Client.Device.WinDivert;
 
-namespace VpnHood.Core.Client.Device.WinDivert;
-
-public class WinDevice(string storageFolder, ITracker? tracker, bool isDebugMode) : IDevice
+public class WinDevice(string storageFolder, bool isDebugMode) : IDevice
 {
     private WinVpnService? _vpnService;
 
@@ -49,7 +47,7 @@ public class WinDevice(string storageFolder, ITracker? tracker, bool isDebugMode
     public Task StartVpnService(CancellationToken cancellationToken)
     {
         if (_vpnService == null || _vpnService.IsDisposed)
-            _vpnService = new WinVpnService(VpnServiceConfigFolder, tracker);
+            _vpnService = new WinVpnService(VpnServiceConfigFolder);
 
         _vpnService.OnConnect();
         return Task.CompletedTask;

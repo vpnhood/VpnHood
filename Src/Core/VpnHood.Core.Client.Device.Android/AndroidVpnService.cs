@@ -3,7 +3,6 @@ using Android.Content;
 using Android.Content.PM;
 using Android.Net;
 using Android.Runtime;
-using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Client.VpnServices.Abstractions;
@@ -17,7 +16,7 @@ namespace VpnHood.Core.Client.Device.Droid;
 [Service(
     Permission = Manifest.Permission.BindVpnService,
     Exported = false,
-    Process = ":vpnhood_process",
+    //Process = ":vpnhood_process",
     ForegroundServiceType = ForegroundService.TypeSystemExempted)]
 [IntentFilter(["android.net.VpnService"])]
 public class AndroidVpnService : VpnService, IVpnServiceHandler
@@ -52,10 +51,6 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
                 return StartCommandResult.NotSticky;
         }
     }
-    public ITracker? CreateTracker()
-    {
-        return null;
-    }
 
     public IVpnAdapter CreateAdapter()
     {
@@ -87,7 +82,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         VhLogger.Instance.LogDebug("VpnService is destroying.");
         _ = _vpnServiceHost.DisposeAsync();
 
-        StopNotification(); 
+        StopNotification();
         base.OnDestroy();
     }
 }

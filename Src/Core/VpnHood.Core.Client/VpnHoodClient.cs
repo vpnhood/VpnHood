@@ -1033,7 +1033,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             await DisposeAsync(new SessionException(SessionErrorCode.AccessExpired));
     }
 
-
     private async ValueTask DisposeAsync(Exception ex)
     {
         // DisposeAsync will try SendByte, and it may cause calling this dispose method again and go to deadlock
@@ -1043,7 +1042,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         LastException = ex;
         await DisposeAsync().VhConfigureAwait();
     }
-
 
     public ValueTask DisposeAsync()
     {

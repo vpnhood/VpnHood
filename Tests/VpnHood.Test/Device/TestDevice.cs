@@ -1,12 +1,11 @@
-﻿using Ga4.Trackers;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Common.Logging;
 
 namespace VpnHood.Test.Device;
 
-public class TestDevice(TestHelper testHelper, Func<IVpnAdapter> vpnAdapterFactory, ITracker? tracker = null) : IDevice
+public class TestDevice(TestHelper testHelper, Func<IVpnAdapter> vpnAdapterFactory) : IDevice
 {
     private readonly CancellationTokenSource _disposeCancellationTokenSource = new();
     private TestVpnService? _vpnService;
@@ -41,7 +40,7 @@ public class TestDevice(TestHelper testHelper, Func<IVpnAdapter> vpnAdapterFacto
 
         // create service
         if (_vpnService == null || _vpnService.IsDisposed)
-            _vpnService = new TestVpnService(VpnServiceConfigFolder, vpnAdapterFactory, tracker);
+            _vpnService = new TestVpnService(VpnServiceConfigFolder, vpnAdapterFactory);
         _vpnService.OnConnect();
     }
 

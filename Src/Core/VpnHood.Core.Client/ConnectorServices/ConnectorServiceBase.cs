@@ -13,7 +13,6 @@ using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.ClientStreams;
-using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client.ConnectorServices;
 
@@ -23,7 +22,6 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
     private readonly bool _allowTcpReuse;
     private readonly ConcurrentQueue<ClientStreamItem> _freeClientStreams = new();
     protected readonly TaskCollection DisposingTasks = new();
-    private string _apiKey = "";
 
     public TimeSpan TcpConnectTimeout { get; set; }
     public ConnectorEndPointInfo EndPointInfo { get; }
@@ -31,7 +29,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
     public ClientConnectorStat Stat { get; }
     public TimeSpan RequestTimeout { get; private set; }
     public TimeSpan TcpReuseTimeout { get; private set; }
-    public int ProtocolVersion { get; private set; } = 5; // 5 is initial connection version
+    public int ProtocolVersion { get; private set; } = 6; // 5 is initial connection version
 
     public ConnectorServiceBase(ConnectorEndPointInfo endPointInfo, ISocketFactory socketFactory,
         TimeSpan tcpConnectTimeout, bool allowTcpReuse)
@@ -53,24 +51,17 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         ProtocolVersion = protocolVersion;
         RequestTimeout = tcpRequestTimeout;
         TcpReuseTimeout = tcpReuseTimeout;
-        _apiKey = serverSecret != null ? HttpUtil.GetApiKey(serverSecret, TunnelDefaults.HttpPassCheck) : string.Empty;
     }
 
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream,
         string streamId, CancellationToken cancellationToken)
     {
         const bool useBuffer = true;
-        var binaryStreamType = ProtocolVersion switch {
-            <= 5 => string.IsNullOrEmpty(_apiKey) || !_allowTcpReuse
-                ? BinaryStreamType.None
-                : BinaryStreamType.Standard,
-            >= 6 => _allowTcpReuse ? BinaryStreamType.Standard : BinaryStreamType.None
-        };
+        var binaryStreamType = _allowTcpReuse ? BinaryStreamType.Standard : BinaryStreamType.None;
 
         // write HTTP request
         var header =
             $"POST /{Guid.NewGuid()} HTTP/1.1\r\n" +
-            $"Authorization: ApiKey {_apiKey}\r\n" +
             $"X-BinaryStream: {binaryStreamType}\r\n" +
             $"X-Buffered: {useBuffer}\r\n" +
             $"X-ProtocolVersion: {ProtocolVersion}\r\n" +
@@ -78,16 +69,12 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
 
         // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).VhConfigureAwait();
-        if (ProtocolVersion <= 5)
-            await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken).VhConfigureAwait();
-
-        var srcStream = ProtocolVersion >= 6 ? sslStream : tcpClient.GetStream();
         var clientStream = binaryStreamType == BinaryStreamType.None
             ? new TcpClientStream(tcpClient, sslStream, streamId)
-            : new TcpClientStream(tcpClient, new BinaryStreamStandard(srcStream, streamId, useBuffer), streamId,
+            : new TcpClientStream(tcpClient, new BinaryStreamStandard(sslStream, streamId, useBuffer), streamId,
                 ReuseStreamClient);
 
-        clientStream.RequireHttpResponse = ProtocolVersion >= 6;
+        clientStream.RequireHttpResponse = true;
         return clientStream;
     }
 
@@ -102,7 +89,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         var tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint.AddressFamily);
 
         // Client.SessionTimeout does not affect in ConnectAsync
-        VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}",
+        VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "Establishing a new TCP to the Server... EndPoint: {EndPoint}",
             VhLogger.Format(tcpEndPoint));
         await tcpClient.VhConnectAsync(tcpEndPoint, TcpConnectTimeout, cancellationToken).VhConfigureAwait();
 

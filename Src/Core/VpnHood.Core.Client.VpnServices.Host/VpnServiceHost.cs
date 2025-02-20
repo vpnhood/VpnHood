@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Client.VpnServices.Abstractions;
@@ -69,7 +70,7 @@ public class VpnServiceHost : IAsyncDisposable
             throw new ObjectDisposedException(nameof(VpnServiceHost));
 
         lock (_connectLock) {
-            VhLogger.Instance.LogDebug("VpnService is connecting...");
+            VhLogger.Instance.LogDebug("VpnService is connecting... ProcessId: {ProcessId}", Process.GetCurrentProcess().Id);
 
             // handle previous client
             var client = Client;
@@ -174,7 +175,7 @@ public class VpnServiceHost : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        VhLogger.Instance.LogDebug("VpnService is destroying...");
+        VhLogger.Instance.LogDebug("VpnService Host is destroying...");
         if (_isDisposed) return;
 
         // dispose client

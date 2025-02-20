@@ -101,9 +101,10 @@ public class ServerFinder(
         var res = endpointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
-            "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}",
+            "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}, Best: {Best}",
             endpointStatuses.Count(x => x.Available == true), endpointStatuses.Count(x => x.Available == false),
-            endpointStatuses.Count(x => x.Available == null));
+            endpointStatuses.Count(x => x.Available == null),
+            VhLogger.Format(res));
 
         // track new endpoints availability 
         _ = TrackEndPointsAvailability(_hostEndPointStatuses, endpointStatuses).VhConfigureAwait();

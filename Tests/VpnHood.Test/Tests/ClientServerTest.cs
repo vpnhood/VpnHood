@@ -665,34 +665,33 @@ public class ClientServerTest : TestBase
         // Create Client
         await using var client =
             await TestHelper.CreateClient(clientOptions: TestHelper.CreateClientOptions(token, useUdpChannel: true));
-        var lasCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
-        var lasReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
+        Assert.AreEqual(1, client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
+        Assert.AreEqual(0, client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
+        var lastCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
+        var lastReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
 
         // create one connection
         await TestHelper.Test_Https();
-        Assert.AreEqual(lasReusedConnectionSucceededCount,
-            client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
-        Assert.AreEqual(lasCreatedConnectionCount + 1, client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
-        lasCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
-        lasReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
+        Assert.AreEqual(lastReusedConnectionSucceededCount + 1, client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
+        Assert.AreEqual(lastCreatedConnectionCount, client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
+        lastCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
+        lastReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
         await VhTestUtil.AssertEqualsWait(1, () => client.GetSessionStatus().ConnectorStat.FreeConnectionCount);
 
         // this connection must reuse the old one
         await TestHelper.Test_Https();
-        Assert.AreEqual(lasCreatedConnectionCount, client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
-        Assert.AreEqual(lasReusedConnectionSucceededCount + 1,
-            client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
-        lasCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
-        lasReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
+        Assert.AreEqual(lastCreatedConnectionCount, client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
+        Assert.AreEqual(lastReusedConnectionSucceededCount + 1, client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
+        lastCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
+        lastReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
         await VhTestUtil.AssertEqualsWait(1, () => client.GetSessionStatus().ConnectorStat.FreeConnectionCount);
 
         // this connection must reuse the old one again
         await TestHelper.Test_Https();
-        Assert.AreEqual(lasCreatedConnectionCount, client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
-        Assert.AreEqual(lasReusedConnectionSucceededCount + 1,
-            client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
-        lasCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
-        lasReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
+        Assert.AreEqual(lastCreatedConnectionCount, client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
+        Assert.AreEqual(lastReusedConnectionSucceededCount + 1, client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
+        lastCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
+        lastReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
         await VhTestUtil.AssertEqualsWait(1, () => client.GetSessionStatus().ConnectorStat.FreeConnectionCount);
 
         // open 3 connections simultaneously
@@ -704,12 +703,12 @@ public class ClientServerTest : TestBase
             await tcpClient2.ConnectAsync(TestConstants.HttpsEndPoint1);
             await tcpClient3.ConnectAsync(TestConstants.HttpsEndPoint1);
 
-            await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount + 2,
+            await VhTestUtil.AssertEqualsWait(lastCreatedConnectionCount + 2,
                 () => client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
-            await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 1,
+            await VhTestUtil.AssertEqualsWait(lastReusedConnectionSucceededCount + 1,
                 () => client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
-            lasCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
-            lasReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
+            lastCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
+            lastReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
         }
 
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Waiting for free connections...");
@@ -720,9 +719,9 @@ public class ClientServerTest : TestBase
         using (var tcpClient5 = new TcpClient()) {
             await tcpClient4.ConnectAsync(TestConstants.HttpsEndPoint1);
             await tcpClient5.ConnectAsync(TestConstants.HttpsEndPoint2);
-            await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount,
+            await VhTestUtil.AssertEqualsWait(lastCreatedConnectionCount,
                 () => client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
-            await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 2,
+            await VhTestUtil.AssertEqualsWait(lastReusedConnectionSucceededCount + 2,
                 () => client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
         }
 

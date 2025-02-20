@@ -36,7 +36,7 @@ namespace VpnHood.AppLib;
 public class VpnHoodApp : Singleton<VpnHoodApp>,
     IAsyncDisposable, IJob, IRegionProvider
 {
-    private const string FileNameLog = "log.txt";
+    private const string FileNameLog = "app.log";
     private const string FileNamePersistState = "state.json";
     private const string FolderNameProfiles = "profiles";
     private readonly bool _useInternalLocationService;
@@ -999,9 +999,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // write vpn service log
         await write.WriteLineAsync("");
-        await write.WriteLineAsync("--------------------------------------------------");
+        await write.WriteLineAsync("-----------------------");
         await write.WriteLineAsync("VPN Service Log");
-        await write.WriteLineAsync("--------------------------------------------------");
+        await write.WriteLineAsync("-----------------------");
         await write.FlushAsync();
 
         try {

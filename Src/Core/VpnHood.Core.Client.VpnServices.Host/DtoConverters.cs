@@ -9,6 +9,7 @@ internal static class DtoConverters
     public static ConnectionInfo ToConnectionInfo(this VpnHoodClient vpnHoodClient, ApiController apiController)
     {
         var dto = new ConnectionInfo {
+            SessionName = vpnHoodClient.SessionName,
             SessionInfo = vpnHoodClient.SessionInfo,
             SessionStatus = vpnHoodClient.SessionStatus?.ToDto(),
             ClientState = vpnHoodClient.State,

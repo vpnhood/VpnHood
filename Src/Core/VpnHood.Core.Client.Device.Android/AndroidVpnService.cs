@@ -16,7 +16,7 @@ namespace VpnHood.Core.Client.Device.Droid;
 [Service(
     Permission = Manifest.Permission.BindVpnService,
     Exported = false,
-    //Process = ":vpnhood_process",
+    Process = ":vpnhood_process",
     ForegroundServiceType = ForegroundService.TypeSystemExempted)]
 [IntentFilter(["android.net.VpnService"])]
 public class AndroidVpnService : VpnService, IVpnServiceHandler
@@ -60,8 +60,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     public void ShowNotification(ConnectionInfo connectionInfo)
     {
         if (_notification == null) {
-            _notification = new AndroidVpnNotification(this, new VpnServiceLocalization(),
-                connectionInfo.SessionInfo?.SessionName ?? "VPN");
+            _notification = new AndroidVpnNotification(this, new VpnServiceLocalization(), connectionInfo.SessionName ?? "VPN");
             StartForeground(AndroidVpnNotification.NotificationId, _notification.Build());
         }
 

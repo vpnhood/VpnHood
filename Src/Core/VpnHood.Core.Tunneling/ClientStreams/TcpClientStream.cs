@@ -53,8 +53,8 @@ public class TcpClientStream : IClientStream
         if (log)
             VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}, StreamType: {StreamType}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
-                ClientStreamId, stream.GetType().Name, VhLogger.Format(IpEndPointPair.LocalEndPoint),
-                VhLogger.Format(IpEndPointPair.RemoteEndPoint));
+                ClientStreamId, stream.GetType().Name, 
+                VhLogger.Format(IpEndPointPair.LocalEndPoint), VhLogger.Format(IpEndPointPair.RemoteEndPoint));
     }
 
     public bool CheckIsAlive()

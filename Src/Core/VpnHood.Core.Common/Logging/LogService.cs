@@ -27,16 +27,15 @@ public class LogService(string logFilePath) : IDisposable
 
     public void Stop()
     {
+        VhLogger.Instance = NullLogger.Instance;
         _streamLogger?.Dispose();
         _streamLogger = null;
-        VhLogger.Instance = NullLogger.Instance;
     }
 
     private ILogger CreateLogger(LogOptions logOptions)
     {
         var logger = CreateLoggerInternal(logOptions);
 
-        logger = new SyncLogger(logger);
         logger = new FilterLogger(logger, eventId => {
             if (logOptions.LogEventNames.Contains(eventId.Name, StringComparer.OrdinalIgnoreCase))
                 return true;
@@ -44,6 +43,7 @@ public class LogService(string logFilePath) : IDisposable
             return eventId.Id == 0 || logOptions.LogEventNames.Contains("*");
         });
 
+        logger = new SyncLogger(logger);
         return logger;
     }
 
@@ -56,7 +56,7 @@ public class LogService(string logFilePath) : IDisposable
         using var loggerFactory = LoggerFactory.Create(builder => {
             // console
             if (logOptions.LogToConsole) // AddSimpleConsole does not support event id
-                builder.AddProvider(new VhConsoleLogger(includeScopes: true, singleLine: 
+                builder.AddProvider(new VhConsoleLogger(includeScopes: true, singleLine:
                     logOptions.SingleLineConsole, globalScope: logOptions.GlobalScope));
 
             if (logOptions.LogToFile) {
@@ -80,7 +80,7 @@ public class LogService(string logFilePath) : IDisposable
     }
     public static IEnumerable<string> GetLogEventNames(string debugCommand)
     {
-        var names = new List<string> { "Session", "Essential" };
+        var names = new List<string> { "*" };
 
         var parts = debugCommand.Split(' ').Where(x => x.Contains("/log:", StringComparison.OrdinalIgnoreCase));
         foreach (var part in parts)

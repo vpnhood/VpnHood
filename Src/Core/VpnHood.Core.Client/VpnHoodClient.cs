@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Diagnostics;
+using System.Net;
 using System.Net.Sockets;
 using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
@@ -264,9 +265,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         // Connect
         try {
             // merge cancellation tokens
-            using var linkedCancellationTokenSource =
-                CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
-            cancellationToken = linkedCancellationTokenSource.Token;
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
+            cancellationToken = linkedCts.Token;
 
             // create connection log scope
             using var scope = VhLogger.Instance.BeginScope("Client");
@@ -287,9 +287,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             VhLogger.Instance.LogInformation(
                 "UseUdpChannel: {UseUdpChannel}, DropUdp: {DropUdp}, DropQuic: {DropQuic}, UseTcpOverTun: {UseTcpOverTun}" +
                 "IncludeLocalNetwork: {IncludeLocalNetwork}, MinWorkerThreads: {WorkerThreads}, " +
-                "CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}",
+                "CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}, ProcessId: {ProcessId}",
                 UseUdpChannel, DropUdp, DropQuic, UseTcpOverTun, IncludeLocalNetwork, workerThreads,
-                completionPortThreads, IsIpV6SupportedByClient);
+                completionPortThreads, IsIpV6SupportedByClient, Process.GetCurrentProcess().Id);
 
             // report version
             VhLogger.Instance.LogInformation(
@@ -299,17 +299,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 Version, MinProtocolVersion, MaxProtocolVersion, VhLogger.FormatId(ClientId));
 
 
-            // Init hostEndPoint
-            var endPointInfo = new ConnectorEndPointInfo {
-                HostName = Token.ServerToken.HostName,
-                TcpEndPoint = await _serverFinder.FindReachableServerAsync(cancellationToken).VhConfigureAwait(),
-                CertificateHash = Token.ServerToken.CertificateHash
-            };
-            _connectorService = new ConnectorService(endPointInfo, SocketFactory, _tcpConnectTimeout,
-                allowTcpReuse: AllowTcpReuse);
-
             // Establish first connection and create a session
-            await ConnectInternal(cancellationToken).VhConfigureAwait();
+            var hostEndPoint = await _serverFinder.FindReachableServerAsync(cancellationToken).VhConfigureAwait();
+            await ConnectInternal(hostEndPoint, true, cancellationToken).VhConfigureAwait(); 
 
             // Create Tcp Proxy Host
             _clientHost.Start();
@@ -673,16 +665,27 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
     }
 
-    private async Task ConnectInternal(CancellationToken cancellationToken, bool allowRedirect = true)
+    private async Task ConnectInternal(IPEndPoint hostEndPoint, bool allowRedirect, CancellationToken cancellationToken)
     {
         try {
-            VhLogger.Instance.LogInformation("Connecting to the server...");
+            VhLogger.Instance.LogInformation("Connecting to the server... EndPoint: {hostEndPoint}", VhLogger.Format(hostEndPoint));
+
+            // create connector service
+            _connectorService = new ConnectorService(
+                new ConnectorEndPointInfo {
+                    HostName = Token.ServerToken.HostName,
+                    TcpEndPoint = hostEndPoint,
+                    CertificateHash = Token.ServerToken.CertificateHash
+                }, 
+                SocketFactory, 
+                tcpConnectTimeout: _tcpConnectTimeout, 
+                allowTcpReuse: AllowTcpReuse);
 
             // send hello request
             var clientInfo = new ClientInfo {
                 ClientId = ClientId,
                 ClientVersion = Version.ToString(3),
-                ProtocolVersion = ConnectorService.ProtocolVersion,
+                ProtocolVersion = _connectorService.ProtocolVersion,
                 UserAgent = UserAgent
             };
 
@@ -718,9 +721,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     "This app is outdated and does not support by the server!");
 
             // initialize the connector
-            ConnectorService.Init(
+            _connectorService.Init(
                 Math.Min(helloResponse.MaxProtocolVersion, MaxProtocolVersion),
-                helloResponse.RequestTimeout,
+                Debugger.IsAttached ? Timeout.InfiniteTimeSpan : helloResponse.RequestTimeout,
                 helloResponse.ServerSecret,
                 helloResponse.TcpReuseTimeout);
 
@@ -731,7 +734,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 $"ServerVersion: {helloResponse.ServerVersion}, " +
                 $"ServerMinProtocolVersion: {helloResponse.MinProtocolVersion}, " +
                 $"ServerMaxProtocolVersion: {helloResponse.MaxProtocolVersion}, " +
-                $"CurrentProtocolVersion: {ConnectorService.ProtocolVersion}, " +
+                $"CurrentProtocolVersion: {_connectorService.ProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(helloResponse.ClientPublicAddress)}",
                 $"IsTunProviderSupported: {helloResponse.IsTunProviderSupported}",
                 $"ClientCountry: {helloResponse.ClientCountry}");
@@ -744,7 +747,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             IsIpV6SupportedByServer = helloResponse.IsIpV6Supported;
 
             if (helloResponse.UdpPort > 0)
-                HostUdpEndPoint = new IPEndPoint(ConnectorService.EndPointInfo.TcpEndPoint.Address,
+                HostUdpEndPoint = new IPEndPoint(_connectorService.EndPointInfo.TcpEndPoint.Address,
                     helloResponse.UdpPort.Value);
 
             // VpnAdapterIpRanges
@@ -791,7 +794,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             // set the session info
             SessionInfo = new SessionInfo {
                 SessionId = helloResponse.SessionId.ToString(),
-                SessionName = SessionName,
                 ClientPublicIpAddress = helloResponse.ClientPublicAddress,
                 ClientCountry = helloResponse.ClientCountry,
                 AccessInfo = helloResponse.AccessInfo ?? new AccessInfo(),
@@ -841,7 +843,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                         _serverFinder.ServerLocation,
                         isIpV6Supported: IsIpV6SupportedByClient,
                         hasRedirected: !allowRedirect,
-                        endPoint: ConnectorService.EndPointInfo.TcpEndPoint,
+                        endPoint: _connectorService.EndPointInfo.TcpEndPoint,
                         adNetworkName: adResult?.NetworkName));
 
                     _clientUsageTracker = new ClientUsageTracker(_sessionStatus, Tracker);
@@ -868,7 +870,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 VirtualIpNetworkV4 = networkV4,
                 VirtualIpNetworkV6 = networkV6,
                 Mtu = TunnelDefaults.MtuWithoutFragmentation,
-                IncludeNetworks = BuildVpnAdapterIncludeNetworks(ConnectorService.EndPointInfo.TcpEndPoint.Address),
+                IncludeNetworks = BuildVpnAdapterIncludeNetworks(_connectorService.EndPointInfo.TcpEndPoint.Address),
                 SessionName = SessionName,
                 ExcludeApps = _excludeApps,
                 IncludeApps = _includeApps
@@ -892,11 +894,10 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 throw;
             }
 
-            // todo: init new connector
-            ConnectorService.EndPointInfo.TcpEndPoint =
-                await _serverFinder.FindBestRedirectedServerAsync(ex.RedirectHostEndPoints, cancellationToken);
-
-            await ConnectInternal(cancellationToken, false).VhConfigureAwait();
+            // init new connector
+            _ = _connectorService?.DisposeAsync();
+            var redirectedEndPoint = await _serverFinder.FindBestRedirectedServerAsync(ex.RedirectHostEndPoints.ToArray(), cancellationToken);
+            await ConnectInternal(redirectedEndPoint, false, cancellationToken).VhConfigureAwait();
         }
     }
 
@@ -1039,6 +1040,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         if (_disposed)
             return;
 
+        VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Error in connection that caused disposal.");
         LastException = ex;
         await DisposeAsync().VhConfigureAwait();
     }

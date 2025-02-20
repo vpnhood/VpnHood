@@ -27,11 +27,14 @@ Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 
 # rebuild libraries
 if ($nugets) {
+	& "$solutionDir/Src/Core/VpnHood.Core.ToolKit/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Common/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.SocksProxy/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Tunneling/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client/_publish.ps1";
-	& "$solutionDir/Src/Core/VpnHood.Core.Client.VpnService/_publish.ps1";
-	& "$solutionDir/Src/Core/VpnHood.Core.Client.VpnServiceManager/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Client.VpnServices.Abstractions/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Client.VpnServices.Host/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Client.VpnServices.Manager/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device.Android/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device.WinDivert/_publish.ps1";

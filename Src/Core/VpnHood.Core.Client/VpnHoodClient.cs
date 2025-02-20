@@ -301,7 +301,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             // Establish first connection and create a session
             var hostEndPoint = await _serverFinder.FindReachableServerAsync(cancellationToken).VhConfigureAwait();
-            await ConnectInternal(hostEndPoint, true, cancellationToken).VhConfigureAwait(); 
+            await ConnectInternal(hostEndPoint, true, cancellationToken).VhConfigureAwait();
 
             // Create Tcp Proxy Host
             _clientHost.Start();
@@ -349,6 +349,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 UpdateDnsRequest(ipPacket, false);
             }
 
+        // ReSharper disable once ForCanBeConvertedToForeach
         _vpnAdapter.SendPacketToInbound(e.IpPackets);
     }
 
@@ -676,9 +677,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     HostName = Token.ServerToken.HostName,
                     TcpEndPoint = hostEndPoint,
                     CertificateHash = Token.ServerToken.CertificateHash
-                }, 
-                SocketFactory, 
-                tcpConnectTimeout: _tcpConnectTimeout, 
+                },
+                SocketFactory,
+                tcpConnectTimeout: _tcpConnectTimeout,
                 allowTcpReuse: AllowTcpReuse);
 
             // send hello request

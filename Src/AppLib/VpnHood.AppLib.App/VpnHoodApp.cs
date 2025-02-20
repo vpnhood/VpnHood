@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
+using System.Globalization;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -437,7 +438,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var serverLocation = connectOptions.ServerLocation ?? clientProfileInfo.SelectedLocationInfo?.ServerLocation;
         var orgCancellationToken = cancellationToken;
 
-        using var timeoutCancellationSource = new CancellationTokenSource();
+        // set timeout
+        using var timeoutCancellationSource = new CancellationTokenSource(
+            Debugger.IsAttached || connectOptions.Diagnose ? Timeout.InfiniteTimeSpan : _connectTimeout);
+
         try {
             // Reset everything
             ClearLastError();

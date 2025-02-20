@@ -165,8 +165,7 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
     {
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
-            var ipPacket = ipPackets[i];
-            _outStream?.Write(ipPacket.Bytes);
+            SendPacketToInbound(ipPackets[i]);
         }
     }
 

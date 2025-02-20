@@ -357,6 +357,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (clientState == ClientState.Waiting)
                 return AppConnectionState.Waiting;
 
+            if (clientState == ClientState.WaitingForAd)
+                return AppConnectionState.WaitingForAd;
+
             if (clientState == ClientState.Connected)
                 return AppConnectionState.Connected;
 

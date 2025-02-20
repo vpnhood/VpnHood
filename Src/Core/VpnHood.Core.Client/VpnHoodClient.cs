@@ -19,11 +19,13 @@ using VpnHood.Core.Common.Sockets;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Common.Utils;
+using VpnHood.Core.ToolKit;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
+using FastDateTime = VpnHood.Core.Common.Utils.FastDateTime;
 using PacketReceivedEventArgs = VpnHood.Core.Client.Device.Adapters.PacketReceivedEventArgs;
 using ProtocolType = PacketDotNet.ProtocolType;
 
@@ -670,6 +672,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     {
         try {
             VhLogger.Instance.LogInformation("Connecting to the server... EndPoint: {hostEndPoint}", VhLogger.Format(hostEndPoint));
+            State = ClientState.Connecting;
 
             // create connector service
             _connectorService = new ConnectorService(
@@ -814,13 +817,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             _sessionStatus = new ClientSessionStatus(this, helloResponse.AccessUsage ?? new AccessUsage());
 
             // show ad
-            var adResult = helloResponse.AdRequirement switch {
-                AdRequirement.Flexible => await AdService
-                    .TryShowInterstitial(helloResponse.SessionId.ToString(), cancellationToken).VhConfigureAwait(),
-                AdRequirement.Rewarded => await AdService
-                    .ShowRewarded(helloResponse.SessionId.ToString(), cancellationToken).VhConfigureAwait(),
-                _ => null
-            };
+            var adResult = await ShowAd(helloResponse.AdRequirement, helloResponse.SessionId, cancellationToken);
 
             // usage trackers
             if (_allowAnonymousTracker) {
@@ -900,6 +897,23 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             var redirectedEndPoint = await _serverFinder.FindBestRedirectedServerAsync(ex.RedirectHostEndPoints.ToArray(), cancellationToken);
             await ConnectInternal(redirectedEndPoint, false, cancellationToken).VhConfigureAwait();
         }
+    }
+
+    private async Task<AdResult?> ShowAd(AdRequirement adRequirement, ulong sessionId, CancellationToken cancellationToken)
+    {
+        if (adRequirement == AdRequirement.None)
+            return null;
+
+        var prevState = State;
+        using var autoDispose = new AutoDispose(() => State = prevState);
+
+        var adResult = adRequirement switch {
+            AdRequirement.Flexible => await AdService.TryShowInterstitial(sessionId.ToString(), cancellationToken).VhConfigureAwait(),
+            AdRequirement.Rewarded => await AdService.ShowRewarded(sessionId.ToString(), cancellationToken).VhConfigureAwait(),
+            _ => null
+        };
+
+        return adResult;
     }
 
     private async Task AddTcpDatagramChannel(CancellationToken cancellationToken)

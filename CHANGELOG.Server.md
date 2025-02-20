@@ -1,4 +1,4 @@
-# v6.0.655
+# v6.0.656
 * Update: Improve virtual ip allocation
 * Fix: Some android devices could not open website after connect
 

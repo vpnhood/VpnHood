@@ -1,5 +1,6 @@
 # Upcoming
 * Update: Improve virtual ip allocation
+* Fix: Some android devices could not open website after connect
 
 # v5.1.647
 * Fix: Ping IPv6 

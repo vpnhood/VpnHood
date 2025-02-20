@@ -14,10 +14,15 @@ public static class PacketUtil
 {
     public static void UpdateIpChecksum(IPPacket ipPacket)
     {
-        if (ipPacket is IPv4Packet ipV4Packet)
-            ipV4Packet.UpdateIPChecksum();
+        // ICMPv6 checksum needs to be updated if IPv6 packet changes
+        if (ipPacket.Protocol == ProtocolType.IcmpV6)
+            UpdateIpPacket(ipPacket);
 
-        ipPacket.UpdateCalculatedValues();
+        // ipv4 packet checksum needs to be updated if IPv4 packet changes
+        if (ipPacket is IPv4Packet ipV4Packet) {
+            ipV4Packet.UpdateIPChecksum();
+            ipPacket.UpdateCalculatedValues();
+        }
     }
 
     public static void UpdateIpPacket(IPPacket ipPacket, bool throwIfNotSupported = true)
@@ -328,32 +333,32 @@ public static class PacketUtil
 
             switch (ipPacket.Protocol) {
                 case ProtocolType.Icmp: {
-                    eventId = GeneralEventId.Ping;
-                    var icmpPacket = ExtractIcmp(ipPacket);
-                    packetPayload = icmpPacket.PayloadData ?? [];
-                    break;
-                }
+                        eventId = GeneralEventId.Ping;
+                        var icmpPacket = ExtractIcmp(ipPacket);
+                        packetPayload = icmpPacket.PayloadData ?? [];
+                        break;
+                    }
 
                 case ProtocolType.IcmpV6: {
-                    eventId = GeneralEventId.Ping;
-                    var icmpPacket = ExtractIcmpV6(ipPacket);
-                    packetPayload = icmpPacket.PayloadData ?? [];
-                    break;
-                }
+                        eventId = GeneralEventId.Ping;
+                        var icmpPacket = ExtractIcmpV6(ipPacket);
+                        packetPayload = icmpPacket.PayloadData ?? [];
+                        break;
+                    }
 
                 case ProtocolType.Udp: {
-                    eventId = GeneralEventId.Udp;
-                    var udpPacket = ExtractUdp(ipPacket);
-                    packetPayload = udpPacket.PayloadData ?? [];
-                    break;
-                }
+                        eventId = GeneralEventId.Udp;
+                        var udpPacket = ExtractUdp(ipPacket);
+                        packetPayload = udpPacket.PayloadData ?? [];
+                        break;
+                    }
 
                 case ProtocolType.Tcp: {
-                    eventId = GeneralEventId.Tcp;
-                    var tcpPacket = ExtractTcp(ipPacket);
-                    packetPayload = tcpPacket.PayloadData ?? [];
-                    break;
-                }
+                        eventId = GeneralEventId.Tcp;
+                        var tcpPacket = ExtractTcp(ipPacket);
+                        packetPayload = tcpPacket.PayloadData ?? [];
+                        break;
+                    }
             }
 
             VhLogger.Instance.Log(logLevel, eventId, exception,

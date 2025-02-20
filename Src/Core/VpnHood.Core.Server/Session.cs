@@ -197,12 +197,7 @@ public class Session : IAsyncDisposable
         var clientInternalIp = GetClientInternalIp(ipPacket.Version);
         if (clientInternalIp != null && !ipPacket.DestinationAddress.Equals(clientInternalIp)) {
             ipPacket.DestinationAddress = clientInternalIp;
-            if (ipPacket.Protocol == ProtocolType.IcmpV6)
-                PacketUtil.UpdateIpPacket(
-                    ipPacket); //IPv6 ICMP checksum need to be recalculated if destination address changed
-            else
-                PacketUtil.UpdateIpChecksum(
-                    ipPacket); //IPv4 header checksum need to be recalculated if destination address changed
+            PacketUtil.UpdateIpChecksum(ipPacket);
         }
 
         return Tunnel.SendPacketAsync(ipPacket, CancellationToken.None);

@@ -437,7 +437,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var serverLocation = connectOptions.ServerLocation ?? clientProfileInfo.SelectedLocationInfo?.ServerLocation;
         var orgCancellationToken = cancellationToken;
 
-        using var timeoutCancellationSource = new CancellationTokenSource(_connectTimeout);
+        using var timeoutCancellationSource = new CancellationTokenSource();
         try {
             // Reset everything
             ClearLastError();

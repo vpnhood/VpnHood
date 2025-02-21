@@ -435,17 +435,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private async Task ConnectInternal(ConnectOptions connectOptions, CancellationToken cancellationToken)
     {
         // set use default clientProfile and serverLocation
+        var orgCancellationToken = cancellationToken;
         var clientProfileId = connectOptions.ClientProfileId ?? UserSettings.ClientProfileId ?? throw new NotExistsException("ClientProfile is not set.");
         var clientProfile = ClientProfileService.Get(clientProfileId);
-        var clientProfileInfo = ClientProfileService.GetInfo(clientProfileId);
-        var serverLocation = connectOptions.ServerLocation ?? clientProfileInfo.SelectedLocationInfo?.ServerLocation;
-        var orgCancellationToken = cancellationToken;
-
-        // set timeout
-        _connectTimeoutCts = new CancellationTokenSource(
-            Debugger.IsAttached || connectOptions.Diagnose ? Timeout.InfiniteTimeSpan : _connectTimeout);
 
         try {
+            var clientProfileInfo = ClientProfileService.GetInfo(clientProfileId);
+            var serverLocation = connectOptions.ServerLocation ?? clientProfileInfo.SelectedLocationInfo?.ServerLocation;
+
+            // set timeout
+            _connectTimeoutCts = new CancellationTokenSource(
+                Debugger.IsAttached || connectOptions.Diagnose ? Timeout.InfiniteTimeSpan : _connectTimeout);
+
             // Reset everything
             ClearLastError();
 

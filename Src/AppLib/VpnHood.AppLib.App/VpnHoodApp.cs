@@ -60,7 +60,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _isLoadingCountryIpRange;
     private bool _isFindingCountryCode;
     private AppConnectionState _lastConnectionState;
-    private CancellationTokenSource? _sessionCancellationTokenSource;
+    private CancellationTokenSource _connectTimeoutCts = new();
     private VersionCheckResult? _versionCheckResult;
     private CultureInfo? _systemUiCulture;
     private UserSettings _oldUserSettings;
@@ -442,7 +442,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var orgCancellationToken = cancellationToken;
 
         // set timeout
-        using var timeoutCancellationSource = new CancellationTokenSource(
+        _connectTimeoutCts = new CancellationTokenSource(
             Debugger.IsAttached || connectOptions.Diagnose ? Timeout.InfiniteTimeSpan : _connectTimeout);
 
         try {
@@ -450,9 +450,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ClearLastError();
 
             // create cancellationToken after disconnecting previous connection
-            _sessionCancellationTokenSource = new CancellationTokenSource();
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                cancellationToken, _sessionCancellationTokenSource.Token, timeoutCancellationSource.Token);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectTimeoutCts.Token);
             cancellationToken = linkedCts.Token;
 
             // reset connection state
@@ -546,7 +544,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
             // throw ConnectionTimeoutException if timeout
-            if (timeoutCancellationSource.IsCancellationRequested) {
+            if (_connectTimeoutCts.IsCancellationRequested) {
                 var exception = new ConnectionTimeoutException("Could not establish connection in given time.", ex);
                 _ = _vpnServiceManager.Stop(); // stop client if timeout
                 _appPersistState.LastError = exception.ToApiError();
@@ -796,6 +794,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (!IsIdle)
             _appPersistState.LastClearedError = null;
 
+        // cancel connect timeout if client reached to waiting ad state
+        if (ConnectionInfo.ClientState == ClientState.WaitingForAd)
+            _connectTimeoutCts.CancelAfter(Timeout.InfiniteTimeSpan);
+
         // fire connection state changed
         FireConnectionStateChanged();
     }
@@ -805,8 +807,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         VhLogger.Instance.LogInformation("User requested to disconnect.");
 
         _appPersistState.HasDisconnectedByUser = true;
-        _sessionCancellationTokenSource?.Cancel();
-        _sessionCancellationTokenSource = null;
+        _connectTimeoutCts.Cancel();
         await _vpnServiceManager.Stop();
     }
 

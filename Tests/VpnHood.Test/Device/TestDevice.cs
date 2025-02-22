@@ -9,7 +9,8 @@ public class TestDevice(TestHelper testHelper, Func<IVpnAdapter> vpnAdapterFacto
 {
     private readonly CancellationTokenSource _disposeCancellationTokenSource = new();
     private TestVpnService? _vpnService;
-
+    public bool LastBindProcessToVpnValue { get; private set; }
+    public bool IsBindProcessToVpnSupported => true;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public string VpnServiceConfigFolder { get; } = Path.Combine(testHelper.WorkingPath, "VpnService");
     public bool IsExcludeAppsSupported => false;
@@ -30,6 +31,11 @@ public class TestDevice(TestHelper testHelper, Func<IVpnAdapter> vpnAdapterFacto
         _ = cancellationToken; // ignore cancellation token to simulate outer service start
         Task.Run(SimulateStartService, CancellationToken.None);
         return Task.CompletedTask;
+    }
+
+    public void BindProcessToVpn(bool value)
+    {
+        LastBindProcessToVpnValue = value;
     }
 
     private async Task SimulateStartService()

@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Diagnosing;
 using VpnHood.AppLib.DtoConverters;
@@ -57,6 +58,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly AppPersistState _appPersistState;
     private readonly VpnServiceManager _vpnServiceManager;
     private readonly ITrackerFactory _trackerFactory;
+    private readonly IDevice _device;
+
     private bool _isLoadingCountryIpRange;
     private bool _isFindingCountryCode;
     private AppConnectionState _lastConnectionState;
@@ -78,19 +81,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppFeatures Features { get; }
     public ClientProfileService ClientProfileService { get; }
     public Diagnoser Diagnoser { get; } = new();
-    public IDevice Device { get; }
     public JobSection JobSection { get; }
     public TimeSpan TcpTimeout { get; set; } = ClientOptions.Default.ConnectTimeout;
     public LogService LogService { get; }
     public AppResource Resource { get; }
     public AppServices Services { get; }
     public AppSettingsService SettingsService { get; }
+    public DeviceAppInfo[] InstalledApps => _device.InstalledApps;
 
     private VpnHoodApp(IDevice device, AppOptions options)
     {
         Directory.CreateDirectory(options.StorageFolderPath); //make sure directory exists
         Resource = options.Resource;
-        Device = device;
+        _device = device;
         StorageFolderPath = options.StorageFolderPath ??
                             throw new ArgumentNullException(nameof(options.StorageFolderPath));
         SettingsService = new AppSettingsService(StorageFolderPath);
@@ -147,11 +150,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // initialize features
         Features = new AppFeatures {
             Version = typeof(VpnHoodApp).Assembly.GetName().Version,
-            IsExcludeAppsSupported = Device.IsExcludeAppsSupported,
-            IsIncludeAppsSupported = Device.IsIncludeAppsSupported,
+            IsExcludeAppsSupported = _device.IsExcludeAppsSupported,
+            IsIncludeAppsSupported = _device.IsIncludeAppsSupported,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
             IsPremiumFlagSupported = !options.IsAddAccessKeySupported,
             IsPremiumFeaturesForced = options.IsAddAccessKeySupported,
+            AdjustForSystemBars = options.AdjustForSystemBars,
             UpdateInfoUrl = options.UpdateInfoUrl != null ? new Uri(options.UpdateInfoUrl) : null,
             UiName = options.UiName,
             BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId,
@@ -180,6 +184,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var appAdService = new AppAdService(regionProvider: this,
             adProviderItems: options.AdProviderItems,
             adOptions: options.AdOptions,
+            device: _device,
             tracker: tracker);
 
         // initialize services
@@ -307,6 +312,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var clientProfileInfo = CurrentClientProfileInfo;
             var connectionInfo = ConnectionInfo;
             var connectionState = ConnectionState;
+            var uiContext = ActiveUiContext.Context;
 
             var appState = new AppState {
                 ConfigTime = Settings.ConfigTime,
@@ -331,6 +337,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LastPublishInfo = _versionCheckResult?.GetNewerPublishInfo(),
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
                 LastError = IsIdle ? LastError?.ToAppDto() : null,
+                SystemBarsInfo = uiContext !=null ? Services.UiProvider.GetSystemBarsInfo(uiContext) : SystemBarsInfo.Default
             };
 
             return appState;
@@ -429,7 +436,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             await Disconnect().VhConfigureAwait();
 
         await ConnectInternal(connectOptions, cancellationToken);
-
     }
 
     private async Task ConnectInternal(ConnectOptions connectOptions, CancellationToken cancellationToken)
@@ -485,7 +491,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogInformation("AppVersion: {AppVersion}, AppId: {Features.AppId}",
                 GetType().Assembly.GetName().Version, Features.AppId);
             VhLogger.Instance.LogInformation("Time: {Time}", DateTime.UtcNow.ToString("u", new CultureInfo("en-US")));
-            VhLogger.Instance.LogInformation("OS: {OsInfo}", Device.OsInfo);
+            VhLogger.Instance.LogInformation("OS: {OsInfo}", _device.OsInfo);
             VhLogger.Instance.LogInformation("UserAgent: {userAgent}", connectOptions.UserAgent);
             VhLogger.Instance.LogInformation("UserSettings: {UserSettings}",
                 JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
@@ -656,7 +662,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 _appPersistState.ClientCountryCodeByServer = connectionInfo.SessionInfo.ClientCountry;
 
             // check version after first connection
-            _ = VersionCheck();
+            _ = VersionCheck(delay: Services.AdService.ShowAdPostDelay.Add(TimeSpan.FromSeconds(1)));
         }
         catch (Exception ex) {
             if (ex is SessionException sessionException) {
@@ -824,11 +830,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private readonly AsyncLock _versionCheckLock = new();
-    public async Task VersionCheck(bool force = false)
+    public async Task VersionCheck(bool force = false, TimeSpan? delay = null)
     {
         using var lockAsync = await _versionCheckLock.LockAsync().VhConfigureAwait();
         if (!force && _appPersistState.UpdateIgnoreTime + _versionCheckInterval > DateTime.Now)
             return;
+
+        // wait for delay. Useful for waiting for ad to send its tracker
+        if (delay != null)
+            await Task.Delay(delay.Value).VhConfigureAwait();
 
         // check version by app container
         try {
@@ -1073,7 +1083,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _vpnServiceManager.Dispose();
         _vpnServiceManager.StateChanged -= VpnServiceStateChanged;
 
-        await Device.DisposeAsync();
+        await _device.DisposeAsync();
         LogService.Dispose();
         DisposeSingleton();
         ActiveUiContext.OnChanged -= ActiveUiContext_OnChanged;

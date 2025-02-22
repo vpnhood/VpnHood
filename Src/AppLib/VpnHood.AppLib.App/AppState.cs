@@ -29,4 +29,5 @@ public class AppState
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }
     public required BillingPurchaseState? PurchaseState { get; init; }
+    public required SystemBarsInfo SystemBarsInfo { get; init; }
 }

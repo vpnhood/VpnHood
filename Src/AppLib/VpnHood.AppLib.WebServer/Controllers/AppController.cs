@@ -151,7 +151,7 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Get, "/installed-apps")]
     public Task<DeviceAppInfo[]> GetInstalledApps()
     {
-        return Task.FromResult(App.Device.InstalledApps);
+        return Task.FromResult(App.InstalledApps);
     }
 
     [Route(HttpVerbs.Post, "/settings/open-always-on-page")]

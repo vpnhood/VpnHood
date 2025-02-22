@@ -63,6 +63,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _isLoadingCountryIpRange;
     private bool _isFindingCountryCode;
     private AppConnectionState _lastConnectionState;
+    private CancellationTokenSource _connectCts = new();
     private CancellationTokenSource _connectTimeoutCts = new();
     private VersionCheckResult? _versionCheckResult;
     private CultureInfo? _systemUiCulture;
@@ -337,7 +338,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LastPublishInfo = _versionCheckResult?.GetNewerPublishInfo(),
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
                 LastError = IsIdle ? LastError?.ToAppDto() : null,
-                SystemBarsInfo = uiContext !=null ? Services.UiProvider.GetSystemBarsInfo(uiContext) : SystemBarsInfo.Default
+                SystemBarsInfo = uiContext != null ? Services.UiProvider.GetSystemBarsInfo(uiContext) : SystemBarsInfo.Default
             };
 
             return appState;
@@ -435,7 +436,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (!IsIdle)
             await Disconnect().VhConfigureAwait();
 
-        await ConnectInternal(connectOptions, cancellationToken);
+        // create connect cancellation token
+        _connectCts = new CancellationTokenSource();
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectCts.Token);
+        await ConnectInternal(connectOptions, linkedCts.Token);
     }
 
     private async Task ConnectInternal(ConnectOptions connectOptions, CancellationToken cancellationToken)
@@ -814,7 +818,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         VhLogger.Instance.LogInformation("User requested to disconnect.");
 
         _appPersistState.HasDisconnectedByUser = true;
-        _connectTimeoutCts.Cancel();
+        _connectCts.Cancel();
         await _vpnServiceManager.Stop();
     }
 

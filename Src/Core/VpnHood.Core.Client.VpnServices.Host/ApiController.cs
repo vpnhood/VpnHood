@@ -147,9 +147,11 @@ internal class ApiController : IDisposable
             : Task.CompletedTask;
     }
 
-    public async Task Disconnect(ApiDisconnectRequest request, CancellationToken cancellationToken)
+    public Task Disconnect(ApiDisconnectRequest request, CancellationToken cancellationToken)
     {
-        await VpnHoodClient.DisposeAsync();
+        // let dispose in the background
+        _ = VpnHoodClient.DisposeAsync();
+        return Task.Delay(500, cancellationToken); 
     }
 
     public Task SetAdResult(ApiSetAdResultRequest request, CancellationToken cancellationToken)

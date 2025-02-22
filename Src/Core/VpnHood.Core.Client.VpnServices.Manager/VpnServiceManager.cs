@@ -134,13 +134,20 @@ public class VpnServiceManager : IJob, IDisposable
         while (connectionInfo == null || connectionInfo.ClientState is ClientState.None or ClientState.Initializing) {
             cancellationToken.ThrowIfCancellationRequested();
             if (timeoutCts.IsCancellationRequested)
-                throw new TimeoutException($"VpnService did not respond within {_startVpnServiceTimeout.TotalSeconds} seconds.");
+              throw new TimeoutException($"VpnService did not respond within {_startVpnServiceTimeout.TotalSeconds} seconds.");
 
-            await Task.Delay(300, cancellationToken);
+            await Task.Delay(1000, cancellationToken);
             connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
         }
         _connectionInfo = connectionInfo;
-        VhLogger.Instance.LogInformation("VpnService has started. EndPoint: {EndPoint}", connectionInfo.ApiEndPoint);
+
+        // check for error
+        if (connectionInfo.ClientState is ClientState.Disposed)
+            throw new Exception("VpnService could not start.");
+
+        // success
+        VhLogger.Instance.LogInformation("VpnService has started. EndPoint: {EndPoint}, ConnectionState: {ConnectionState}",
+            connectionInfo.ApiEndPoint, connectionInfo.ClientState);
     }
 
     private async Task WaitForConnection(CancellationToken cancellationToken)
@@ -203,7 +210,7 @@ public class VpnServiceManager : IJob, IDisposable
         try {
             await SendRequest(new ApiGetConnectionInfoRequest(), cancellationToken);
         }
-        catch (Exception ex) when (updateConnectionInfoCt.IsCancellationRequested) {
+        catch (Exception ex) when (updateConnectionInfoCt.IsCancellationRequested || _isInitializing) {
             VhLogger.Instance.LogWarning(ex, "Previous UpdateConnection Info has been ignored due to the new service.");
         }
         catch (Exception ex) {
@@ -337,7 +344,6 @@ public class VpnServiceManager : IJob, IDisposable
     private async Task ShowAd(AdRequest adRequest, CancellationToken cancellationToken)
     {
         try {
-            //todo: exclude ad from VPN
             var adRequestResult = adRequest.AdRequestType switch {
                 AdRequestType.Rewarded => await _adService.ShowRewarded(ActiveUiContext.RequiredContext,
                     adRequest.SessionId, cancellationToken),

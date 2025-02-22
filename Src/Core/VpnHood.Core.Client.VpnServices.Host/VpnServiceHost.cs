@@ -43,25 +43,37 @@ public class VpnServiceHost : IAsyncDisposable
 
     private void VpnHoodClient_StateChanged(object sender, EventArgs e)
     {
-        var client = Client;
-        if (client == null) return;
+        var client = (VpnHoodClient)sender;
+        if (client != Client)
+            return;
 
         // update last sate
-        VhLogger.Instance.LogDebug("VpnService update the connection info file. State:{State}, LastError: {LastError}", 
+        VhLogger.Instance.LogDebug("VpnService update the connection info file. State:{State}, LastError: {LastError}",
             client.State, client.LastException?.Message);
         _ = Context.WriteConnectionInfo(client.ToConnectionInfo(_apiController));
 
         // no client in progress, let's stop the service
         // handler is responsible to dispose this service
-        if (client.State != ClientState.Disposed) {
-            _vpnServiceHandler.ShowNotification(client.ToConnectionInfo(_apiController));
+        if (client.State is ClientState.Disposed or ClientState.Disconnecting) {
+            _vpnServiceHandler.StopNotification();
         }
         else {
-            _vpnServiceHandler.StopNotification();
-            _vpnServiceHandler.StopSelf();
+            _vpnServiceHandler.ShowNotification(client.ToConnectionInfo(_apiController));
         }
     }
 
+    private void VpnHoodClient_StateChangedForDisposal(object sender, EventArgs e)
+    {
+        var client = (VpnHoodClient)sender;
+        if (client.State != ClientState.Disposed) return;
+        client.StateChanged -= VpnHoodClient_StateChangedForDisposal;
+
+        // let the service stop if there is no client
+        Task.Delay(10000).ContinueWith(_ => {
+            if (Client == null)
+                _vpnServiceHandler.StopSelf();
+        });
+    }
 
     private readonly object _connectLock = new();
     public bool Connect()
@@ -83,6 +95,7 @@ public class VpnServiceHost : IAsyncDisposable
                 // before VpnHoodClient disposed, don't let the old connection overwrite the state or stop the service
                 client.StateChanged -= VpnHoodClient_StateChanged;
                 _ = client.DisposeAsync(); //let dispose in the background
+                Client = null;
             }
 
             // create service
@@ -90,7 +103,7 @@ public class VpnServiceHost : IAsyncDisposable
                 // read client options and start log service
                 var clientOptions = Context.ReadClientOptions();
                 _logService?.Start(clientOptions.LogOptions);
-
+                
                 // sni is sensitive, must be explicitly enabled
                 clientOptions.ForceLogSni |=
                     clientOptions.LogOptions.LogEventNames.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase);
@@ -113,6 +126,7 @@ public class VpnServiceHost : IAsyncDisposable
                     options: clientOptions
                 );
                 Client.StateChanged += VpnHoodClient_StateChanged;
+                Client.StateChanged += VpnHoodClient_StateChangedForDisposal;
 
                 // show notification. start foreground service
                 _vpnServiceHandler.ShowNotification(Client.ToConnectionInfo(_apiController));

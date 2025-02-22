@@ -6,6 +6,8 @@ namespace VpnHood.AppLib.Providers;
 internal class AppNotSupportedUiProvider
     : IAppUiProvider
 {
+    public SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext) => SystemBarsInfo.Default;
+
     public bool IsQuickLaunchSupported => false;
 
     public Task<bool> RequestQuickLaunch(IUiContext uiContext, CancellationToken cancellationToken) =>

@@ -24,7 +24,10 @@ public class AppFeatures
     public required bool IsDebugMode { get; init; }
     public required string[] DebugCommands { get; init; }
     public required bool IsLocalNetworkSupported { get; init; }
+    public required bool AdjustForSystemBars { get; init; }
+
 
     [JsonConverter(typeof(VersionConverter))]
     public required Version Version { get; init; }
+
 }

@@ -38,7 +38,7 @@ public class VpnServiceHost : IAsyncDisposable
 
         // write initial state including api endpoint and key
         _ = Context.WriteConnectionInfo(BuildConnectionInfo(ClientState.None, null));
-        VhLogger.Instance.LogDebug("VpnService has been initiated...");
+        VhLogger.Instance.LogDebug("VpnServiceHost has been initiated...");
     }
 
     private void VpnHoodClient_StateChanged(object sender, EventArgs e)

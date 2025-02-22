@@ -14,6 +14,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
     private const int RequestVpnPermissionId = 20100;
 
+    public bool IsBindProcessToVpnSupported => true;
     public bool IsExcludeAppsSupported => true;
     public bool IsIncludeAppsSupported => true;
     public bool IsAlwaysOnSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
@@ -110,8 +111,6 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         }
     }
 
-
-
     private void Activity_OnActivityResult(object? sender, ActivityResultEventArgs e)
     {
         if (e.RequestCode == RequestVpnPermissionId)
@@ -135,6 +134,44 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
                 TotalMemory = totalMemory
             };
         }
+    }
+
+    private static IEnumerable<(Network, NetworkCapabilities)> GetNetworkWithCapabilities(ConnectivityManager connectivityManager)
+    {
+        var networks = connectivityManager.GetAllNetworks();
+        foreach (var network in networks) {
+            var capabilities = connectivityManager.GetNetworkCapabilities(network);
+            if (capabilities != null &&
+                capabilities.HasCapability(NetCapability.Internet) &&
+                capabilities.HasCapability(NetCapability.Validated) &&
+                capabilities.HasCapability(NetCapability.NotVpn))
+                yield return (network, capabilities);
+        }
+    }
+
+    public void BindProcessToVpn(bool value)
+    {
+        var connectivityManager = (ConnectivityManager?)Application.Context.GetSystemService(Context.ConnectivityService)!;
+
+        // null is system default which is VPN if connected to VPN otherwise it is the default network
+        if (value) {
+            VhLogger.Instance.LogDebug("Binding process to the default network...");
+            connectivityManager.BindProcessToNetwork(null);
+            return;
+        }
+
+        VhLogger.Instance.LogDebug("Binding process to a non VPN network...");
+        var netCaps = GetNetworkWithCapabilities(connectivityManager).ToArray();
+        var network =
+            netCaps.FirstOrDefault(x => x.Item2.HasTransport(TransportType.Ethernet)).Item1 ??
+            netCaps.FirstOrDefault(x => x.Item2.HasTransport(TransportType.Wifi)).Item1 ??
+            netCaps.FirstOrDefault(x => x.Item2.HasTransport(TransportType.Usb)).Item1 ??
+            netCaps.FirstOrDefault(x => x.Item2.HasTransport(TransportType.Satellite)).Item1 ??
+            netCaps.FirstOrDefault(x => x.Item2.HasTransport(TransportType.Bluetooth)).Item1 ??
+            netCaps.FirstOrDefault(x => x.Item2.HasTransport(TransportType.Cellular)).Item1 ??
+            throw new Exception("Could not find any non VPN network.");
+
+        connectivityManager.BindProcessToNetwork(network);
     }
 
     public ValueTask DisposeAsync()

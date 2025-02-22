@@ -3,7 +3,7 @@
 public class WinDevice(string storageFolder, bool isDebugMode) : IDevice
 {
     private WinVpnService? _vpnService;
-
+    public bool IsBindProcessToVpnSupported => false;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public string VpnServiceConfigFolder { get; } = Path.Combine(storageFolder, "vpn-service");
     public bool IsExcludeAppsSupported => isDebugMode;
@@ -51,6 +51,11 @@ public class WinDevice(string storageFolder, bool isDebugMode) : IDevice
 
         _vpnService.OnConnect();
         return Task.CompletedTask;
+    }
+
+    public void BindProcessToVpn(bool value)
+    {
+        throw new NotSupportedException();
     }
 
     public async ValueTask DisposeAsync()

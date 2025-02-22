@@ -1,5 +1,8 @@
 # Upcoming
-* Feature: Android: Using seperate process for vpn service
+* Feature: Android: Run VPN in a separate process
+* Feature: Android: Using separate process for VPN service
+* Fix: Android: Menu goes beneath system tray
+* Fix: Some ANR and crashes
 * Update: Improve virtual ip allocation
 
 # v5.1.654

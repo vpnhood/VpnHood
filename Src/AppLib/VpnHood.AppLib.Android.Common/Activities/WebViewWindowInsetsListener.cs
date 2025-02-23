@@ -7,13 +7,16 @@ internal class WebViewWindowInsetsListener : Java.Lang.Object, View.IOnApplyWind
 {
     public WindowInsets OnApplyWindowInsets(View v, WindowInsets insets)
     {
-        var statusBarHeight = insets.GetInsets(WindowInsets.Type.StatusBars()).Top;
-        var navBarHeight = insets.GetInsets(WindowInsets.Type.NavigationBars()).Bottom;
+        // Get the insets for the IME and system bars
+        var mask = WindowInsets.Type.Ime();
+        if (VpnHoodApp.Instance.Features.AdjustForSystemBars)
+            mask |= WindowInsets.Type.SystemBars();
 
         // Apply padding to prevent layout overlap with system bars
-        if (VpnHoodApp.Instance.Features.AdjustForSystemBars)
-            v.SetPadding(0, statusBarHeight, 0, navBarHeight);
+        var rect = insets.GetInsets(mask);
+        v.SetPadding(rect.Left, rect.Top, rect.Right, rect.Bottom);
 
+        // Set the background color
         var backgroundColor = VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor?.ToAndroidColor();
         if (backgroundColor != null)
             v.SetBackgroundColor(backgroundColor.Value);

@@ -359,9 +359,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (Diagnoser.IsWorking)
                 return AppConnectionState.Diagnosing;
 
-            if (clientState == ClientState.Connecting || _isConnecting)
-                return AppConnectionState.Connecting;
-
             if (clientState == ClientState.Waiting)
                 return AppConnectionState.Waiting;
 
@@ -373,6 +370,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             if (clientState == ClientState.Disconnecting)
                 return AppConnectionState.None; // treat as none. let's service disconnect on background
+
+            // must be at end because _isConnecting overrides clientState
+            if (clientState == ClientState.Connecting || _isConnecting)
+                return AppConnectionState.Connecting;
 
             return AppConnectionState.None;
         }

@@ -239,4 +239,38 @@ public class AdTest : TestAppBase
         // asserts
         Assert.AreEqual(enable, app.State.SessionStatus?.CanExtendByRewardedAd);
     }
+
+    [TestMethod]
+    public async Task ShowAd_must_change_state_to_WaitingForAd()
+    {
+        // create server
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // create access item
+        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+
+        // configure client app for ad
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdOptions.PreloadAd = false;
+        appOptions.AdOptions.LoadAdPostDelay = TimeSpan.FromSeconds(1);
+        var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
+        var adProviderItem = new AppAdProviderItem { AdProvider = adProvider };
+        appOptions.AdProviderItems = [adProviderItem];
+
+        // create client app
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        
+        var clientProfile = app.ClientProfileService.ImportAccessKey(accessManager.GetToken(accessToken).ToAccessKey());
+        var isAdLoadingStatusMet = false;
+        app.ConnectionStateChanged += (_, _) => {
+            // ReSharper disable once AccessToDisposedClosure
+            if (app.ConnectionState == AppConnectionState.WaitingForAd)
+                isAdLoadingStatusMet = true;
+        };
+
+        // connect
+        await app.Connect(clientProfile.ClientProfileId);
+        Assert.IsTrue(isAdLoadingStatusMet);
+    }
 }

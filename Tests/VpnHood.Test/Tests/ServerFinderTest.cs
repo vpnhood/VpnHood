@@ -8,7 +8,7 @@ using VpnHood.Test.Providers;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class ServerFinderTest
+public class ServerFinderTest : TestBase
 {
     [TestMethod]
     public async Task Find_reachable()
@@ -36,7 +36,7 @@ public class ServerFinderTest
 
             // connect
             var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
-            await TestHelper.WaitForClientState(client, ClientState.Connected);
+            await client.WaitForState( ClientState.Connected);
 
             Assert.IsTrue(
                 servers[2].ServerHost.TcpEndPoints.First().Equals(client.HostTcpEndPoint) ||
@@ -88,15 +88,14 @@ public class ServerFinderTest
             await servers[6].DisposeAsync();
 
             // connect
-            var clientOptions = TestHelper.CreateClientOptions();
-            var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter(),
-                clientOptions: clientOptions);
-            await TestHelper.WaitForClientState(client, ClientState.Connected);
+            var clientOptions = TestHelper.CreateClientOptions(token);
+            var client = await TestHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: new TestNullVpnAdapter());
+            await client.WaitForState( ClientState.Connected);
 
             Assert.AreEqual(servers[5].ServerHost.TcpEndPoints.First(), client.HostTcpEndPoint);
 
             // tracker should report unreachable servers
-            var testTracker = (TestTrackerProvider?)clientOptions.Tracker;
+            var testTracker = (TestTracker?)client.Tracker;
             Assert.IsNotNull(testTracker);
             Assert.IsTrue(
                 testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[0])?.Parameters["available"] is null

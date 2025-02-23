@@ -10,7 +10,7 @@ public class RedirectHostException(SessionResponse sessionResponse)
 {
     public IPEndPoint[] RedirectHostEndPoints {
         get {
-            if (!VhUtil.IsNullOrEmpty(SessionResponse.RedirectHostEndPoints))
+            if (!VhUtils.IsNullOrEmpty(SessionResponse.RedirectHostEndPoints))
                 return SessionResponse.RedirectHostEndPoints;
 
             return SessionResponse.RedirectHostEndPoint != null

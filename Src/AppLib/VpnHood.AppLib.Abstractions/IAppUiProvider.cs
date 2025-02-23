@@ -12,4 +12,6 @@ public interface IAppUiProvider
 
     bool IsOpenAlwaysOnPageSupported { get; }
     void OpenAlwaysOnPage(IUiContext uiContext);
+    
+    SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext);
 }

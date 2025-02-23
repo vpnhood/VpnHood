@@ -1,16 +1,16 @@
 ﻿using System.Net;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
-using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Net;
+using VpnHood.Core.Common.Sockets;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.Factory;
 using VpnHood.Core.Tunneling.Messaging;
 
 namespace VpnHood.Core.Client;
@@ -39,7 +39,7 @@ public class ServerFinder(
         VhLogger.Instance.LogInformation(GeneralEventId.Session, "Finding a reachable server...");
 
         // get all endpoints from serverToken
-        var hostEndPoints = await ServerTokenHelper.ResolveHostEndPoints(serverToken, cancellationToken);
+        var hostEndPoints = await serverToken.ResolveHostEndPoints(cancellationToken);
 
         // exclude ip v6 if not supported
         if (!IncludeIpV6)
@@ -52,7 +52,7 @@ public class ServerFinder(
             return hostEndPoints.First(x => x.Address.IsV4());
 
         // randomize endpoint 
-        VhUtil.Shuffle(hostEndPoints);
+        VhUtils.Shuffle(hostEndPoints);
 
         // find the best server
         _hostEndPointStatuses =
@@ -101,9 +101,10 @@ public class ServerFinder(
         var res = endpointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
-            "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}",
+            "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}, Best: {Best}",
             endpointStatuses.Count(x => x.Available == true), endpointStatuses.Count(x => x.Available == false),
-            endpointStatuses.Count(x => x.Available == null));
+            endpointStatuses.Count(x => x.Available == null),
+            VhLogger.Format(res));
 
         // track new endpoints availability 
         _ = TrackEndPointsAvailability(_hostEndPointStatuses, endpointStatuses).VhConfigureAwait();
@@ -150,7 +151,7 @@ public class ServerFinder(
             // check all servers
             using var linkedCancellationTokenSource =
                 CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
-            await VhUtil.ParallelForEachAsync(hostStatuses, async hostStatus => {
+            await VhUtils.ParallelForEachAsync(hostStatuses, async hostStatus => {
                 var connector = CreateConnector(hostStatus.TcpEndPoint);
 
                 // ReSharper disable once AccessToDisposedClosure

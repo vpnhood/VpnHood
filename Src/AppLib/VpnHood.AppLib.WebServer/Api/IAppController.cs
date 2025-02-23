@@ -14,13 +14,13 @@ public interface IAppController
     Task Connect(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId);
     Task Diagnose(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId);
     Task Disconnect();
-    void ClearLastError();
+    Task ClearLastError();
     Task SetUserSettings(UserSettings userSettings);
     Task<string> Log();
     Task<DeviceAppInfo[]> GetInstalledApps();
     Task VersionCheck();
-    void VersionCheckPostpone();
-    void OpenAlwaysOnPage();
+    Task VersionCheckPostpone();
+    Task OpenAlwaysOnPage();
     Task RequestQuickLaunch();
     Task RequestNotification();
     Task ExtendByRewardedAd();

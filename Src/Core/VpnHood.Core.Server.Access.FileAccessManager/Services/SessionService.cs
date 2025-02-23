@@ -7,10 +7,10 @@ using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
 using VpnHood.Core.Server.Access.Messaging;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement.Services;
 
 public class SessionService : IDisposable, IJob
 {
@@ -45,10 +45,10 @@ public class SessionService : IDisposable, IJob
         // read all session from files
         var sessions = new ConcurrentDictionary<ulong, Session>();
         foreach (var filePath in Directory.GetFiles(sessionsFolderPath, $"*.{SessionFileExtension}")) {
-            var session = VhUtil.JsonDeserializeFile<Session>(filePath);
+            var session = JsonUtils.TryDeserializeFile<Session>(filePath);
             if (session == null) {
                 VhLogger.Instance.LogError("Could not load session file. File: {File}", filePath);
-                VhUtil.TryDeleteFile(filePath);
+                VhUtils.TryDeleteFile(filePath);
                 continue;
             }
 
@@ -81,7 +81,7 @@ public class SessionService : IDisposable, IJob
 
         foreach (var item in timeoutSessions) {
             Sessions.TryRemove(item.Key, out _);
-            VhUtil.TryDeleteFile(GetSessionFilePath(item.Key));
+            VhUtils.TryDeleteFile(GetSessionFilePath(item.Key));
         }
     }
 
@@ -102,7 +102,7 @@ public class SessionService : IDisposable, IJob
             ClientInfo = sessionRequestEx.ClientInfo,
             CreatedTime = FastDateTime.Now,
             LastUsedTime = FastDateTime.Now,
-            SessionKey = VhUtil.GenerateKey(),
+            SessionKey = VhUtils.GenerateKey(),
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,

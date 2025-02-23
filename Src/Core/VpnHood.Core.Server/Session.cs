@@ -2,9 +2,9 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Sockets;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
@@ -15,7 +15,6 @@ using VpnHood.Core.Server.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.ClientStreams;
-using VpnHood.Core.Tunneling.Factory;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
@@ -62,7 +61,6 @@ public class Session : IAsyncDisposable
     public bool IsDisposed => DisposedTime != null;
     public DateTime? DisposedTime { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
-    public JobSection JobSection { get; }
     public SessionExtraData ExtraData { get; }
     public int ProtocolVersion { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
@@ -108,7 +106,6 @@ public class Session : IAsyncDisposable
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
-        JobSection = new JobSection(options.SyncIntervalValue);
         ExtraData = extraData;
         VirtualIps = virtualIps;
         SessionResponseEx = sessionResponseEx;
@@ -200,12 +197,7 @@ public class Session : IAsyncDisposable
         var clientInternalIp = GetClientInternalIp(ipPacket.Version);
         if (clientInternalIp != null && !ipPacket.DestinationAddress.Equals(clientInternalIp)) {
             ipPacket.DestinationAddress = clientInternalIp;
-            if (ipPacket.Protocol == ProtocolType.IcmpV6)
-                PacketUtil.UpdateIpPacket(
-                    ipPacket); //IPv6 ICMP checksum need to be recalculated if destination address changed
-            else
-                PacketUtil.UpdateIpChecksum(
-                    ipPacket); //IPv4 header checksum need to be recalculated if destination address changed
+            PacketUtil.UpdateIpChecksum(ipPacket);
         }
 
         return Tunnel.SendPacketAsync(ipPacket, CancellationToken.None);
@@ -276,7 +268,7 @@ public class Session : IAsyncDisposable
 
         if (destinationEndPoint != null) {
             destinationIpStr = _trackingOptions.TrackDestinationIpValue
-                ? VhUtil.RedactIpAddress(destinationEndPoint.Address)
+                ? VhUtils.RedactIpAddress(destinationEndPoint.Address)
                 : "*";
             destinationPortStr = _trackingOptions.TrackDestinationPortValue ? destinationEndPoint.Port.ToString() : "*";
             netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint).ToString() ?? "*";
@@ -300,7 +292,7 @@ public class Session : IAsyncDisposable
         UseUdpChannel = false;
 
         // add channel
-        VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
+        VhLogger.Instance.LogDebug(GeneralEventId.DatagramChannel,
             "Creating a TcpDatagramChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
         var channel = new StreamDatagramChannel(clientStream, request.RequestId);
@@ -347,7 +339,7 @@ public class Session : IAsyncDisposable
         StreamProxyChannel? streamProxyChannel = null;
         try {
             // connect to requested site
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
                 $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
 
             // Apply limitation
@@ -360,7 +352,7 @@ public class Session : IAsyncDisposable
             //set reuseAddress to  true to prevent error only one usage of each socket address is normally permitted
             tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
             _socketFactory.SetKeepAlive(tcpClientHost.Client, true);
-            VhUtil.ConfigTcpClient(tcpClientHost, _tcpKernelSendBufferSize, _tcpKernelReceiveBufferSize);
+            VhUtils.ConfigTcpClient(tcpClientHost, _tcpKernelSendBufferSize, _tcpKernelReceiveBufferSize);
 
             // connect to requested destination
             isRequestedEpException = true;
@@ -377,7 +369,7 @@ public class Session : IAsyncDisposable
             await clientStream.WriteResponse(SessionResponseEx, cancellationToken).VhConfigureAwait();
 
             // add the connection
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
                 "Adding a StreamProxyChannel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
             tcpClientStreamHost =

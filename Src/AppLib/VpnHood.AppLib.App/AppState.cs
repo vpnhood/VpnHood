@@ -19,7 +19,6 @@ public class AppState
     public required bool LogExists { get; init; }
     public required bool HasDiagnoseRequested { get; init; }
     public required bool HasDisconnectedByUser { get; init; }
-    public required bool HasProblemDetected { get; init; }
     public required string? ClientCountryCode { get; init; }
     public required string? ClientCountryName { get; init; }
     public required VersionStatus VersionStatus { get; init; }
@@ -30,4 +29,5 @@ public class AppState
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }
     public required BillingPurchaseState? PurchaseState { get; init; }
+    public required SystemBarsInfo SystemBarsInfo { get; init; }
 }

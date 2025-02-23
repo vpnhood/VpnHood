@@ -43,7 +43,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
         if (ignoreSslVerification) handlerWithoutAuth.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
         _httpClientWithoutAuth = new HttpClient(handlerWithoutAuth) { BaseAddress = storeBaseUrl };
 
-        _apiKey = VhUtil.JsonDeserializeFile<ApiKey>(ApiKeyFilePath, logger: VhLogger.Instance);
+        _apiKey = JsonUtils.TryDeserializeFile<ApiKey>(ApiKeyFilePath, logger: VhLogger.Instance);
     }
 
     private ApiKey? ApiKey {
@@ -174,7 +174,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            var apiKey = await accountProvider.TryGetApiKey(ActiveUiContext.Context).VhConfigureAwait();
+            var apiKey = await accountProvider.TryGetApiKey(AppUiContext.Context).VhConfigureAwait();
             request.Headers.Authorization = apiKey != null
                 ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value)
                 : null;

@@ -54,8 +54,7 @@ public class IpLocationIoProvider(HttpClient httpClient, string userAgent, strin
             .VhWait(cancellationToken)
             .VhConfigureAwait();
 
-        var apiLocation = VhUtil.JsonDeserialize<ApiLocation>(json);
-
+        var apiLocation = JsonUtils.Deserialize<ApiLocation>(json);
         var regionName = apiLocation.RegionName?.ToUpper() == "NA" || string.IsNullOrEmpty(apiLocation.CityName)
             ? null
             : apiLocation.RegionName;

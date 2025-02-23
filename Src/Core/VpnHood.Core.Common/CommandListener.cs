@@ -34,7 +34,7 @@ public class CommandListener(string commandFilePath) : IDisposable
 
             _fileSystemWatcher.Changed += (_, e) => {
                 var command = ReadAllTextAndWait(e.FullPath);
-                OnCommand(VhUtil.ParseArguments(command).ToArray());
+                OnCommand(VhUtils.ParseArguments(command).ToArray());
             };
         }
         catch (Exception ex) {
@@ -67,7 +67,7 @@ public class CommandListener(string commandFilePath) : IDisposable
     public void SendCommand(string command)
     {
         try {
-            Console.WriteLine($"Broadcasting a server command . command: {command}");
+            VhLogger.Instance.LogInformation("Broadcasting a server command . Command: {Command}", command);
             File.WriteAllText(commandFilePath, command);
         }
         catch (Exception ex) {

@@ -1,3 +1,4 @@
+
 namespace VpnHood.Core.Common.ApiClients;
 
 public sealed class ApiException : Exception
@@ -10,8 +11,8 @@ public sealed class ApiException : Exception
 
     private static string BuildMessage(string message, int statusCode, string? response)
     {
-        return response != null && ApiError.TryParse(response, out var serverException)
-            ? serverException.Message
+        return response != null && ApiError.TryParse(response, out var apiError)
+            ? apiError.Message
             : $"{message}\n\nStatus: {statusCode}\nResponse: \n{response?[..Math.Min(512, response.Length)]}";
     }
 
@@ -31,6 +32,30 @@ public sealed class ApiException : Exception
             ExceptionTypeName = apiError.TypeName;
             ExceptionTypeFullName = apiError.TypeFullName;
         }
+    }
+
+    public ApiException(ApiError apiError)
+        : base(apiError.Message, new Exception(apiError.InnerMessage ?? ""))
+    {
+        StatusCode = 400;
+        ExceptionTypeFullName = apiError.TypeFullName;
+        ExceptionTypeName = apiError.TypeName;
+        Headers = new Dictionary<string, IEnumerable<string>>();
+        apiError.ExportData(Data);
+    }
+
+    public ApiError ToApiError()
+    {
+        var apiError = new ApiError {
+            TypeName = ExceptionTypeName ?? GetType().Name,
+            TypeFullName = ExceptionTypeFullName ?? GetType().FullName,
+            Message = Message,
+            InnerMessage = InnerException?.Message
+        };
+        apiError.ImportData(Data);
+        apiError.Data.TryAdd("InnerStatusCode", StatusCode.ToString());
+
+        return apiError;
     }
 
     public override string ToString()

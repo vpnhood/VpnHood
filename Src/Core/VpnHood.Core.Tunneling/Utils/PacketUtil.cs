@@ -14,10 +14,15 @@ public static class PacketUtil
 {
     public static void UpdateIpChecksum(IPPacket ipPacket)
     {
-        if (ipPacket is IPv4Packet ipV4Packet)
-            ipV4Packet.UpdateIPChecksum();
+        // ICMPv6 checksum needs to be updated if IPv6 packet changes
+        if (ipPacket.Protocol == ProtocolType.IcmpV6)
+            UpdateIpPacket(ipPacket);
 
-        ipPacket.UpdateCalculatedValues();
+        // ipv4 packet checksum needs to be updated if IPv4 packet changes
+        if (ipPacket is IPv4Packet ipV4Packet) {
+            ipV4Packet.UpdateIPChecksum();
+            ipPacket.UpdateCalculatedValues();
+        }
     }
 
     public static void UpdateIpPacket(IPPacket ipPacket, bool throwIfNotSupported = true)
@@ -150,6 +155,33 @@ public static class PacketUtil
 
         return ipPacket;
     }
+
+    public static IcmpV4Packet CreateIcmpV4EchoRequest(ushort id, ushort sequence, byte[] data,
+        bool updateChecksum, IPPacket? parentPacket = null)
+    {
+        // packet is too big
+        const int headerSize = 8;
+        var icmpDataLen = data.Length;
+        var buffer = new byte[headerSize + icmpDataLen];
+        Array.Copy(data, 0, buffer, headerSize, icmpDataLen);
+        var icmpPacket = parentPacket != null
+            ? new IcmpV4Packet(new ByteArraySegment(buffer))
+            : new IcmpV4Packet(new ByteArraySegment(buffer), parentPacket);
+
+        icmpPacket.TypeCode = IcmpV4TypeCode.EchoRequest;
+        icmpPacket.Id = id;
+        icmpPacket.Sequence = sequence;
+
+        if (updateChecksum) {
+            // Create the ICMP packet
+            // Calculate and set the checksum
+            icmpPacket.UpdateIcmpChecksum();
+            icmpPacket.UpdateCalculatedValues();
+        }
+
+        return icmpPacket;
+    }
+
 
     public static IcmpV4Packet ExtractIcmp(IPPacket ipPacket)
     {
@@ -291,7 +323,7 @@ public static class PacketUtil
         }
     }
 
-    public static void LogPacket(IPPacket ipPacket, string message, LogLevel logLevel = LogLevel.Information,
+    public static void LogPacket(IPPacket ipPacket, string message, LogLevel logLevel = LogLevel.Trace,
         Exception? exception = null)
     {
         try {
@@ -301,32 +333,32 @@ public static class PacketUtil
 
             switch (ipPacket.Protocol) {
                 case ProtocolType.Icmp: {
-                    eventId = GeneralEventId.Ping;
-                    var icmpPacket = ExtractIcmp(ipPacket);
-                    packetPayload = icmpPacket.PayloadData ?? [];
-                    break;
-                }
+                        eventId = GeneralEventId.Ping;
+                        var icmpPacket = ExtractIcmp(ipPacket);
+                        packetPayload = icmpPacket.PayloadData ?? [];
+                        break;
+                    }
 
                 case ProtocolType.IcmpV6: {
-                    eventId = GeneralEventId.Ping;
-                    var icmpPacket = ExtractIcmpV6(ipPacket);
-                    packetPayload = icmpPacket.PayloadData ?? [];
-                    break;
-                }
+                        eventId = GeneralEventId.Ping;
+                        var icmpPacket = ExtractIcmpV6(ipPacket);
+                        packetPayload = icmpPacket.PayloadData ?? [];
+                        break;
+                    }
 
                 case ProtocolType.Udp: {
-                    eventId = GeneralEventId.Udp;
-                    var udpPacket = ExtractUdp(ipPacket);
-                    packetPayload = udpPacket.PayloadData ?? [];
-                    break;
-                }
+                        eventId = GeneralEventId.Udp;
+                        var udpPacket = ExtractUdp(ipPacket);
+                        packetPayload = udpPacket.PayloadData ?? [];
+                        break;
+                    }
 
                 case ProtocolType.Tcp: {
-                    eventId = GeneralEventId.Tcp;
-                    var tcpPacket = ExtractTcp(ipPacket);
-                    packetPayload = tcpPacket.PayloadData ?? [];
-                    break;
-                }
+                        eventId = GeneralEventId.Tcp;
+                        var tcpPacket = ExtractTcp(ipPacket);
+                        packetPayload = tcpPacket.PayloadData ?? [];
+                        break;
+                    }
             }
 
             VhLogger.Instance.Log(logLevel, eventId, exception,
@@ -358,33 +390,6 @@ public static class PacketUtil
 
         return newIpPacket;
     }
-
-    public static IcmpV4Packet CreateIcmpV4EchoRequest(ushort id, ushort sequence, byte[] data,
-        bool updateChecksum, IPPacket? parentPacket = null)
-    {
-        // packet is too big
-        const int headerSize = 8;
-        var icmpDataLen = data.Length;
-        var buffer = new byte[headerSize + icmpDataLen];
-        Array.Copy(data, 0, buffer, headerSize, icmpDataLen);
-        var icmpPacket = parentPacket != null
-            ? new IcmpV4Packet(new ByteArraySegment(buffer))
-            : new IcmpV4Packet(new ByteArraySegment(buffer), parentPacket);
-
-        icmpPacket.TypeCode = IcmpV4TypeCode.EchoRequest;
-        icmpPacket.Id = id;
-        icmpPacket.Sequence = sequence;
-
-        if (updateChecksum) {
-            // Create the ICMP packet
-            // Calculate and set the checksum
-            icmpPacket.UpdateIcmpChecksum();
-            icmpPacket.UpdateCalculatedValues();
-        }
-
-        return icmpPacket;
-    }
-
 
     public static IPPacket CreateIcmpV6NeighborAdvertisement(IPPacket ipPacket)
     {

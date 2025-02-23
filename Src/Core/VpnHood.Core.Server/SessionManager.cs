@@ -8,6 +8,7 @@ using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Net;
+using VpnHood.Core.Common.Sockets;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Abstractions;
@@ -16,7 +17,6 @@ using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Core.Server.Exceptions;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.Factory;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
 
@@ -66,7 +66,7 @@ public class SessionManager : IAsyncDisposable, IJob
         _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _tunProvider = tunProvider;
-        _serverSecret = VhUtil.GenerateKey(128);
+        _serverSecret = VhUtils.GenerateKey(128);
         _deadSessionTimeout = options.DeadSessionTimeout;
         _heartbeatSection = new JobSection(options.HeartbeatInterval);
         _sessionLocalService = new SessionLocalService(Path.Combine(storagePath, "sessions"));
@@ -105,7 +105,7 @@ public class SessionManager : IAsyncDisposable, IJob
     private Session BuildSessionFromResponseEx(SessionResponseEx sessionResponseEx, bool isRecovery)
     {
         var extraData = sessionResponseEx.ExtraData != null
-            ? VhUtil.JsonDeserialize<SessionExtraData>(sessionResponseEx.ExtraData)
+            ? JsonUtils.Deserialize<SessionExtraData>(sessionResponseEx.ExtraData)
             : new SessionExtraData();
 
         // make sure that not to give same IP to multiple sessions
@@ -133,7 +133,7 @@ public class SessionManager : IAsyncDisposable, IJob
     public async Task<SessionResponseEx> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair)
     {
         // validate the token
-        VhLogger.Instance.Log(LogLevel.Trace, "Validating the request by the access server. TokenId: {TokenId}",
+        VhLogger.Instance.LogDebug("Validating the request by the access server. TokenId: {TokenId}",
             VhLogger.FormatId(helloRequest.TokenId));
 
         var extraData = JsonSerializer.Serialize(new SessionExtraData());
@@ -222,7 +222,7 @@ public class SessionManager : IAsyncDisposable, IJob
             return session;
 
         // Get session from the access server
-        VhLogger.Instance.LogTrace(GeneralEventId.Session,
+        VhLogger.Instance.LogDebug(GeneralEventId.Session,
             "Trying to recover a session from the access server. SessionId: {SessionId}",
             VhLogger.FormatSessionId(sessionRequest.SessionId));
 
@@ -322,7 +322,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
     private void DisposeExpiredSessions()
     {
-        VhLogger.Instance.LogTrace("Disposing expired sessions...");
+        VhLogger.Instance.LogDebug("Disposing expired sessions...");
         var utcNow = DateTime.UtcNow;
         var timeoutSessions = Sessions.Values
             .Where(x => !x.IsDisposed && x.SessionResponseEx.AccessUsage?.ExpirationTime < utcNow);
@@ -338,7 +338,7 @@ public class SessionManager : IAsyncDisposable, IJob
     // remove sessions from memory that are idle but not disposed yet
     private void RemoveIdleSessions()
     {
-        VhLogger.Instance.LogTrace("Disposing all idle sessions...");
+        VhLogger.Instance.LogDebug("Disposing all idle sessions...");
         var minSessionActivityTime = FastDateTime.Now - SessionOptions.TimeoutValue;
         var timeoutSessions = Sessions
             .Where(x =>
@@ -358,7 +358,7 @@ public class SessionManager : IAsyncDisposable, IJob
     }
     private void DisposeFailedSessions()
     {
-        VhLogger.Instance.LogTrace("Process all failed sessions...");
+        VhLogger.Instance.LogDebug("Process all failed sessions...");
         var failedSessions = Sessions
             .Where(x =>
                 !x.Value.IsDisposed &&
@@ -373,7 +373,7 @@ public class SessionManager : IAsyncDisposable, IJob
     // remove sessions that are disposed a long time
     private void ProcessDeadSessions()
     {
-        VhLogger.Instance.LogTrace("Disposing all disposed sessions...");
+        VhLogger.Instance.LogDebug("Disposing all disposed sessions...");
         var utcNow = DateTime.UtcNow;
         var deadSessions = Sessions.Values
             .Where(x =>
@@ -489,7 +489,8 @@ public class SessionManager : IAsyncDisposable, IJob
         var session = GetSessionByVirtualIp(ipPacket.DestinationAddress);
         if (session == null) {
             // log dropped packet
-            PacketUtil.LogPacket(ipPacket, "Could not find session for packet destination.");
+            if (VhLogger.IsDiagnoseMode)
+                PacketUtil.LogPacket(ipPacket, "Could not find session for packet destination.");
             return;
         }
 

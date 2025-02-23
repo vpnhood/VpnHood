@@ -23,16 +23,31 @@ public class IpFilterSettings(string folderPath)
         set => Write("app_ip_filter_excludes", value);
     }
 
-    public string VpnAdapterIpFilterIncludes {
-        get => Read("packetcapture_ip_filter_includes");
-        set => Write("packetcapture_ip_filter_includes", value);
+    public string AdapterIpFilterIncludes {
+        get {
+            // legacy: deprecated in 5.1.654 or upper
+            if (File.Exists("packetcapture_ip_filter_includes")) {
+                Write("adapter_ip_filter_includes", Read("packetcapture_ip_filter_includes"));
+                File.Delete("packetcapture_ip_filter_includes");
+            }
+
+            return Read("adapter_ip_filter_includes");
+        }
+        set => Write("adapter_ip_filter_includes", value);
     }
 
-    public string VpnAdapterIpFilterExcludes {
-        get => Read("packetcapture_ip_filter_excludes");
-        set => Write("packetcapture_ip_filter_excludes", value);
-    }
+    public string AdapterIpFilterExcludes {
+        get {
+            // legacy: deprecated in 5.1.654 or upper
+            if (File.Exists("packetcapture_ip_filter_excludes")) {
+                Write("adapter_ip_filter_excludes", Read("packetcapture_ip_filter_excludes"));
+                File.Delete("packetcapture_ip_filter_excludes");
+            }
 
+            return Read("adapter_ip_filter_excludes");
+        }
+        set => Write("adapter_ip_filter_excludes", value);
+    }
 
     private string Read(string fileTitle)
     {

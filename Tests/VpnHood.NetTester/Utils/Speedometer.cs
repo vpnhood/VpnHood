@@ -75,13 +75,13 @@ public class Speedometer : IJob, IDisposable
                 VhLogger.Instance.LogInformation(
                     _name +
                     " {Speed}, Success: {Success}, TotalSucceeded: {TotalSucceeded}, TotalFailed: {TotalFailed}, TotalBytes: {TotalBytes}",
-                    VhUtil.FormatBits(1000 * curTransferSize / _stopwatch.ElapsedMilliseconds), curSucceededCount,
-                    _succeededCount, _failedCount, VhUtil.FormatBytes(_transferSize));
+                    VhUtils.FormatBits(1000 * curTransferSize / _stopwatch.ElapsedMilliseconds), curSucceededCount,
+                    _succeededCount, _failedCount, VhUtils.FormatBytes(_transferSize));
             else
                 VhLogger.Instance.LogInformation(
                     _name + " {Speed}, Total: {Total} ",
-                    VhUtil.FormatBits(1000 * curTransferSize / _stopwatch.ElapsedMilliseconds),
-                    VhUtil.FormatBytes(_transferSize));
+                    VhUtils.FormatBits(1000 * curTransferSize / _stopwatch.ElapsedMilliseconds),
+                    VhUtils.FormatBytes(_transferSize));
 
             _lastTransferSize = _transferSize;
             _lastSucceededCount = _succeededCount;

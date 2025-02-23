@@ -1,8 +1,7 @@
 ﻿using System.Drawing;
 using Android.Runtime;
-using Firebase.Analytics;
-using Firebase.Crashlytics;
 using Microsoft.Extensions.Logging;
+using VpnHood.App.Client.Droid.Google.FirebaseUtils;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Droid.Ads.VhAdMob;
@@ -31,26 +30,14 @@ namespace VpnHood.App.Client.Droid.Google;
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
-    private FirebaseAnalytics? _analytics;
-
     protected override AppOptions CreateAppOptions()
     {
+        // lets init firebase analytics as single tone as soon as possible
+        if (!FirebaseAnalyticsTracker.IsInit)
+            FirebaseAnalyticsTracker.Init();
+
+        // load app configs
         var appConfigs = AppConfigs.Load();
-
-        // initialize Firebase services
-        try {
-            _analytics = FirebaseAnalytics.GetInstance(this);
-        }
-        catch {
-            /* ignored*/
-        }
-
-        try {
-            FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(Java.Lang.Boolean.True);
-        }
-        catch {
-            /* ignored */
-        }
 
         // load app settings and resources
         var storageFolderPath = AppOptions.BuildStorageFolderPath("VpnHoodConnect");
@@ -71,18 +58,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AccountProvider = CreateAppAccountProvider(appConfigs, storageFolderPath),
             AdProviderItems = CreateAppAdProviderItems(appConfigs),
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
-            Tracker = _analytics != null ? new AnalyticsTracker(_analytics) : null,
+            TrackerFactory = new FirebaseAnalyticsTrackerFactory(),
             AdOptions = new AppAdOptions {
                 PreloadAd = true
             }
         };
-    }
-
-    // Set the clientId as userId to the analytics
-    public override void OnCreate()
-    {
-        base.OnCreate();
-        _analytics?.SetUserId(VpnHoodApp.Instance.Features.ClientId);
     }
 
     private static AppAdProviderItem[] CreateAppAdProviderItems(AppConfigs appConfigs)

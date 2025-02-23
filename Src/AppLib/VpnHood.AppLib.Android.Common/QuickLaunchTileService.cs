@@ -51,7 +51,7 @@ public class QuickLaunchTileService : TileService
                 _ = VpnHoodApp.Instance.Connect();
             }
             else {
-                _ = VpnHoodApp.Instance.Disconnect(true);
+                _ = VpnHoodApp.Instance.Disconnect();
             }
         }
         catch (Exception ex) {

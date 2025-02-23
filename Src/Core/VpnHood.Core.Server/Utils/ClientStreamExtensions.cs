@@ -1,6 +1,5 @@
 ﻿using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Utils;
-using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.ClientStreams;
 
 namespace VpnHood.Core.Server.Utils;
@@ -17,7 +16,7 @@ public static class ClientStreamExtensions
         }
 
         // Write the session response to the client stream
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, sessionResponse, cancellationToken).VhConfigureAwait();
+        await StreamUtils.WriteObjectAsync(clientStream.Stream, sessionResponse, cancellationToken).VhConfigureAwait();
     }
 
     public static async Task WriteFinalResponse(this IClientStream clientStream, SessionResponse sessionResponse,

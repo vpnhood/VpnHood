@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Product>VpnHood! CLIENT</Product>
-		<Description>VpnHood Windows Client App.</Description>
+		<Description>VpnHood Windows Client App</Description>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net9.0-windows10.0.22621.0</TargetFramework>
 		<UseWPF>true</UseWPF>
@@ -49,7 +49,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2957.106" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3065.39" />
 	</ItemGroup>
 
 

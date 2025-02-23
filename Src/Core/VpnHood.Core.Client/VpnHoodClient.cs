@@ -906,6 +906,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         var prevState = State;
         using var autoDispose = new AutoDispose(() => State = prevState);
+        State = ClientState.WaitingForAd;
 
         var adResult = adRequirement switch {
             AdRequirement.Flexible => await AdService.TryShowInterstitial(sessionId.ToString(), cancellationToken).VhConfigureAwait(),

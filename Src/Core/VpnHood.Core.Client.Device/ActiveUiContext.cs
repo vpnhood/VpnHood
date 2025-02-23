@@ -2,7 +2,6 @@
 
 namespace VpnHood.Core.Client.Device;
 
-// todo: rename to CurrentUiContext
 public static class ActiveUiContext
 {
     private static IUiContext? _context;

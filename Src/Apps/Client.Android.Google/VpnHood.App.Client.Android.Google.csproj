@@ -10,10 +10,14 @@
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
+		<RuntimeIdentifiers>android-arm64;android-x64;android-x86;</RuntimeIdentifiers>
+	</PropertyGroup>
+
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
 		<PublishTrimmed>True</PublishTrimmed>
 		<RunAOTCompilation>True</RunAOTCompilation>
-		<RuntimeIdentifiers>android-arm;android-arm64;android-x64;</RuntimeIdentifiers>
+		<RuntimeIdentifiers>android-arm;android-arm64;android-x64;android-x86;</RuntimeIdentifiers>
 	</PropertyGroup>
 
 	<PropertyGroup>

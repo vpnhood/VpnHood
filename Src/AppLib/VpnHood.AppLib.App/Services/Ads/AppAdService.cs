@@ -1,12 +1,10 @@
-﻿using System.Net.Sockets;
-using Ga4.Trackers;
+﻿using Ga4.Trackers;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.IpLocations;
-using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.AppLib.Services.Ads;
@@ -65,12 +63,11 @@ public class AppAdService(
             // don't use VPN for the ad
             device.TryBindProcessToVpn(false);
 
-            var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
-            var countryCode = await regionProvider.GetCurrentCountryAsync(cancellationToken);
-            await appCompositeAdService.LoadAd(uiContext, countryCode: countryCode, forceReload: false,
-                loadAdTimeout: adOptions.LoadAdTimeout, cancellationToken);
+            // load ad if not loaded
+            await LoadAd(uiContext, cancellationToken);
 
             // show ad
+            var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
             var networkName = await appCompositeAdService.ShowLoadedAd(uiContext, adData, cancellationToken);
             var showAdResult = new AdResult {
                 AdData = adData,
@@ -93,19 +90,7 @@ public class AppAdService(
             throw;
         }
         finally {
-            _ = TryBindProcessToVpn(cancellationToken);
+            _ = device.TryBindProcessToVpn(true, adOptions.ShowAdPostDelay, cancellationToken);
         }
     }
-
-    private async Task TryBindProcessToVpn(CancellationToken cancellationToken)
-    {
-        try {
-            await Task.Delay(adOptions.ShowAdPostDelay, cancellationToken); 
-
-        }
-        finally {
-            device.TryBindProcessToVpn(true);
-        }
-    }
-
 }

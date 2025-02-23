@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Threading;
 using VpnHood.Core.Common.Logging;
 
 namespace VpnHood.Core.Client.Device;
@@ -21,4 +22,19 @@ public static class DeviceExtensions
             return false;
         }
     }
+
+    public static async Task<bool> TryBindProcessToVpn(this IDevice device, bool value, 
+        TimeSpan delay, CancellationToken cancellationToken)
+    {
+        bool result;
+        try {
+            await Task.Delay(delay, cancellationToken);
+        }
+        finally {
+            result = device.TryBindProcessToVpn(true);
+        }
+
+        return result;
+    }
+
 }

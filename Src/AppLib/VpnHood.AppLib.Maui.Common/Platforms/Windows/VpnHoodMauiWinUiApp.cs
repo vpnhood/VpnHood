@@ -1,12 +1,13 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Windows.UI.Notifications;
+using Microsoft.Maui.Controls.PlatformConfiguration;
 using Microsoft.Maui.Platform;
 using Microsoft.UI.Windowing;
+using SharpPcap.WinDivert;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Win.Common;
 using VpnHood.Core.Client.Device.WinDivert;
-using VpnHood.Core.Client.Device;
 
 // ReSharper disable once CheckNamespace
 namespace VpnHood.AppLib.Maui.Common;
@@ -19,11 +20,11 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
     
     protected AppWindow? AppWindow;
     
-    public IDevice Device { get; } = new WinDivertDevice();
-    public IAppCultureProvider? CultureService => null;
-
-    public void Init(VpnHoodApp vpnHoodApp)
+    public VpnHoodApp Init(AppOptions options)
     {
+        var device = new WinDevice(options.StorageFolderPath, options.IsDebugMode);
+        var vpnHoodApp = VpnHoodApp.Init(device, options);
+
         VpnHoodWinApp.Init(vpnHoodApp.Features.AppId, vpnHoodApp.StorageFolderPath);
         VpnHoodWinApp.Instance.PreStart(Environment.GetCommandLineArgs());
         VpnHoodWinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
@@ -54,6 +55,8 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
                 }
             }
         });
+
+        return vpnHoodApp;
     }
 
     protected virtual void OpenMainWindowRequested(object? sender, EventArgs e)

@@ -58,7 +58,7 @@ public class TestAppHelper : TestHelper
             TestIpAddresses.Select(x => new IpRange(x)).ToText();
         clientApp.UserSettings.LogAnonymous = false;
         clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
-        ActiveUiContext.Context = new TestAppUiContext();
+        AppUiContext.Context = new TestAppUiContext();
 
         return clientApp;
     }

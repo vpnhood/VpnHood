@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Client.Device;
 
-public static class ActiveUiContext
+public static class AppUiContext
 {
     private static IUiContext? _context;
 

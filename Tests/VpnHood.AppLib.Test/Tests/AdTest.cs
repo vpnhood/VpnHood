@@ -50,7 +50,7 @@ public class AdTest : TestAppBase
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd) };
         appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        ActiveUiContext.Context = null;
+        AppUiContext.Context = null;
         //adProviderItem.FailShow = true;
 
         // connect
@@ -70,7 +70,7 @@ public class AdTest : TestAppBase
         // create client app
         var appOptions = TestAppHelper.CreateAppOptions();
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        ActiveUiContext.Context = null;
+        AppUiContext.Context = null;
         //adProviderItem.FailShow = true;
 
         // connect
@@ -92,7 +92,7 @@ public class AdTest : TestAppBase
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        ActiveUiContext.Context = null;
+        AppUiContext.Context = null;
         //adProviderItem.FailShow = true;
 
         // connect

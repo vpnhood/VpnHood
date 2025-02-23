@@ -97,7 +97,7 @@ public class VpnServiceManager : IJob, IDisposable
 
             // prepare vpn service
             VhLogger.Instance.LogInformation("Requesting VpnService...");
-            await _device.RequestVpnService(ActiveUiContext.Context, _requestVpnServiceTimeout, cancellationToken)
+            await _device.RequestVpnService(AppUiContext.Context, _requestVpnServiceTimeout, cancellationToken)
                 .VhConfigureAwait();
 
             // start vpn service
@@ -140,10 +140,6 @@ public class VpnServiceManager : IJob, IDisposable
             connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
         }
         _connectionInfo = connectionInfo;
-
-        // check for error
-        if (connectionInfo.ClientState is ClientState.Disposed)
-            throw new Exception("VpnService could not start.");
 
         // success
         VhLogger.Instance.LogInformation("VpnService has started. EndPoint: {EndPoint}, ConnectionState: {ConnectionState}",
@@ -345,9 +341,9 @@ public class VpnServiceManager : IJob, IDisposable
     {
         try {
             var adRequestResult = adRequest.AdRequestType switch {
-                AdRequestType.Rewarded => await _adService.ShowRewarded(ActiveUiContext.RequiredContext,
+                AdRequestType.Rewarded => await _adService.ShowRewarded(AppUiContext.RequiredContext,
                     adRequest.SessionId, cancellationToken),
-                AdRequestType.Interstitial => await _adService.ShowInterstitial(ActiveUiContext.RequiredContext,
+                AdRequestType.Interstitial => await _adService.ShowInterstitial(AppUiContext.RequiredContext,
                     adRequest.SessionId, cancellationToken),
                 _ => throw new NotSupportedException(
                     $"The requested ad is not supported. AdRequestType={adRequest.AdRequestType}")

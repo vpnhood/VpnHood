@@ -157,19 +157,19 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Post, "/settings/open-always-on-page")]
     public Task OpenAlwaysOnPage()
     {
-        App.Services.UiProvider.OpenAlwaysOnPage(ActiveUiContext.RequiredContext);
+        App.Services.UiProvider.OpenAlwaysOnPage(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
     [Route(HttpVerbs.Post, "/settings/request-quick-launch")]
     public Task RequestQuickLaunch()
     {
-        return App.Services.UiProvider.RequestQuickLaunch(ActiveUiContext.RequiredContext, CancellationToken.None);
+        return App.Services.UiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, CancellationToken.None);
     }
 
     [Route(HttpVerbs.Post, "/settings/request-notification")]
     public Task RequestNotification()
     {
-        return App.Services.UiProvider.RequestNotification(ActiveUiContext.RequiredContext, CancellationToken.None);
+        return App.Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
     }
 }

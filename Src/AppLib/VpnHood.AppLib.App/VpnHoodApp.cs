@@ -214,7 +214,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         ApplySettings();
 
         // schedule job
-        ActiveUiContext.OnChanged += ActiveUiContext_OnChanged;
+        AppUiContext.OnChanged += ActiveUiContext_OnChanged;
         JobRunner.Default.Add(this);
     }
 
@@ -278,9 +278,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void ActiveUiContext_OnChanged(object sender, EventArgs e)
     {
-        var uiContext = ActiveUiContext.Context;
+        var uiContext = AppUiContext.Context;
         if (IsIdle && Services.AdService.IsPreloadAdEnabled && uiContext != null)
-            _ = Services.AdService.LoadAd(uiContext, CancellationToken.None);
+            _ = Services.AdService.LoadInterstitialAdAd(uiContext, CancellationToken.None);
     }
 
     public ClientProfileInfo? CurrentClientProfileInfo =>
@@ -313,7 +313,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var clientProfileInfo = CurrentClientProfileInfo;
             var connectionInfo = ConnectionInfo;
             var connectionState = ConnectionState;
-            var uiContext = ActiveUiContext.Context;
+            var uiContext = AppUiContext.Context;
 
             var appState = new AppState {
                 ConfigTime = Settings.ConfigTime,
@@ -707,12 +707,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private async Task RequestFeatures(CancellationToken cancellationToken)
     {
         // QuickLaunch
-        if (ActiveUiContext.Context != null &&
+        if (AppUiContext.Context != null &&
             Services.UiProvider.IsQuickLaunchSupported &&
             Settings.IsQuickLaunchEnabled is null) {
             try {
                 Settings.IsQuickLaunchEnabled =
-                    await Services.UiProvider.RequestQuickLaunch(ActiveUiContext.RequiredContext, cancellationToken)
+                    await Services.UiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, cancellationToken)
                         .VhConfigureAwait();
             }
             catch (Exception ex) {
@@ -723,12 +723,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // Notification
-        if (ActiveUiContext.Context != null &&
+        if (AppUiContext.Context != null &&
             Services.UiProvider.IsNotificationSupported &&
             Settings.IsNotificationEnabled is null) {
             try {
                 Settings.IsNotificationEnabled =
-                    await Services.UiProvider.RequestNotification(ActiveUiContext.RequiredContext, cancellationToken)
+                    await Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, cancellationToken)
                         .VhConfigureAwait();
             }
             catch (Exception ex) {
@@ -847,8 +847,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // check version by app container
         try {
-            if (ActiveUiContext.Context != null && Services.UpdaterProvider != null &&
-                await Services.UpdaterProvider.Update(ActiveUiContext.RequiredContext).VhConfigureAwait()) {
+            if (AppUiContext.Context != null && Services.UpdaterProvider != null &&
+                await Services.UpdaterProvider.Update(AppUiContext.RequiredContext).VhConfigureAwait()) {
                 VersionCheckPostpone();
                 return;
             }
@@ -973,7 +973,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             throw new InvalidOperationException("Could not extend this session by a rewarded ad at this time.");
 
         // use client manager so it can exclude ad data from the session
-        var adResult = await Services.AdService.ShowRewarded(ActiveUiContext.RequiredContext,
+        var adResult = await Services.AdService.ShowRewarded(AppUiContext.RequiredContext,
             connectionInfo.SessionInfo.SessionId, cancellationToken);
 
         await _vpnServiceManager.SendRewardedAdResult(adResult, cancellationToken);
@@ -1091,6 +1091,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         await _device.DisposeAsync();
         LogService.Dispose();
         DisposeSingleton();
-        ActiveUiContext.OnChanged -= ActiveUiContext_OnChanged;
+        AppUiContext.OnChanged -= ActiveUiContext_OnChanged;
     }
 }

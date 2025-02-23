@@ -174,7 +174,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            var apiKey = await accountProvider.TryGetApiKey(ActiveUiContext.Context).VhConfigureAwait();
+            var apiKey = await accountProvider.TryGetApiKey(AppUiContext.Context).VhConfigureAwait();
             request.Headers.Authorization = apiKey != null
                 ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value)
                 : null;

@@ -28,16 +28,9 @@ public class AppAdService(
     public bool CanShowRewarded => adProviderItems.Any(x => x.AdProvider.AdType == AppAdType.RewardedAd);
     public bool IsPreloadAdEnabled => adOptions.PreloadAd;
 
-    public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task LoadInterstitialAdAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        var countryCode = await regionProvider.GetCurrentCountryAsync(cancellationToken).VhConfigureAwait();
-        await _compositeInterstitialAdService
-            .LoadAd(uiContext, countryCode: countryCode,
-                forceReload: false, loadAdTimeout: adOptions.LoadAdTimeout, cancellationToken)
-            .VhConfigureAwait();
-
-        // apply delay to prevent showing ads immediately after loading
-        await Task.Delay(adOptions.LoadAdPostDelay, cancellationToken).VhConfigureAwait();
+        return LoadAd(_compositeInterstitialAdService, uiContext, cancellationToken);
     }
 
     public Task<AdResult> ShowInterstitial(IUiContext uiContext, string sessionId,
@@ -55,6 +48,16 @@ public class AppAdService(
         return ShowAd(_compositeRewardedAdService, uiContext, sessionId, cancellationToken);
     }
 
+    private async Task LoadAd(AppCompositeAdService appCompositeAdService, IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        var countryCode = await regionProvider.GetCurrentCountryAsync(cancellationToken).VhConfigureAwait();
+        await appCompositeAdService.LoadAd(uiContext, countryCode: countryCode,
+                forceReload: false, loadAdTimeout: adOptions.LoadAdTimeout, cancellationToken)
+            .VhConfigureAwait();
+
+        // apply delay to prevent showing ads immediately after loading
+        await Task.Delay(adOptions.LoadAdPostDelay, cancellationToken).VhConfigureAwait();
+    }
 
     private async Task<AdResult> ShowAd(AppCompositeAdService appCompositeAdService,
         IUiContext uiContext, string sessionId, CancellationToken cancellationToken)
@@ -64,7 +67,7 @@ public class AppAdService(
             device.TryBindProcessToVpn(false);
 
             // load ad if not loaded
-            await LoadAd(uiContext, cancellationToken);
+            await LoadAd(appCompositeAdService, uiContext, cancellationToken);
 
             // show ad
             var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";

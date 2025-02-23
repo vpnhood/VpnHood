@@ -47,7 +47,7 @@ public class AndroidAppWebViewMainActivityHandler(
     {
         base.OnPause();
 
-        if (!ActiveUiContext.IsPartialIntentRunning)
+        if (!AppUiContext.IsPartialIntentRunning)
             WebView?.OnPause();
 
         // temporarily stop the server to find is the crash belong to embed-io

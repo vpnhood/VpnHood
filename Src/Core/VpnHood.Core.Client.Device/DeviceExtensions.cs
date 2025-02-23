@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Threading;
 using VpnHood.Core.Common.Logging;
 
 namespace VpnHood.Core.Client.Device;

@@ -19,9 +19,9 @@ public class ServerNetFilterConfigTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        var clientOptions = TestHelper.CreateClientOptions();
-        clientOptions.VpnAdapterIncludeIpRanges = new IpRangeOrderedList([IpRange.Parse("230.0.0.0-230.0.0.200")]);
-        await using var client = await TestHelper.CreateClient(token: token, vpnAdapter: new TestNullVpnAdapter(),
+        var clientOptions = TestHelper.CreateClientOptions(token: token);
+        clientOptions.VpnAdapterIncludeIpRanges = [IpRange.Parse("230.0.0.0-230.0.0.200")];
+        await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
             clientOptions: clientOptions);
 
         Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.0")));
@@ -45,9 +45,9 @@ public class ServerNetFilterConfigTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        var clientOptions = TestHelper.CreateClientOptions();
-        clientOptions.VpnAdapterIncludeIpRanges = new IpRangeOrderedList([IpRange.Parse("230.0.0.0-230.0.0.200")]);
-        await using var client = await TestHelper.CreateClient(token: token, clientOptions: clientOptions,
+        var clientOptions = TestHelper.CreateClientOptions(token: token);
+        clientOptions.VpnAdapterIncludeIpRanges = [IpRange.Parse("230.0.0.0-230.0.0.200")];
+        await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: new TestNullVpnAdapter());
 
         Assert.IsTrue(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.0")));
@@ -74,10 +74,10 @@ public class ServerNetFilterConfigTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        var clientOptions = TestHelper.CreateClientOptions();
-        clientOptions.VpnAdapterIncludeIpRanges = IpNetwork.All.ToIpRanges();
+        var clientOptions = TestHelper.CreateClientOptions(token: token);
+        clientOptions.VpnAdapterIncludeIpRanges = IpNetwork.All.ToIpRanges().ToArray();
         clientOptions.IncludeLocalNetwork = false;
-        await using var client = await TestHelper.CreateClient(token: token, clientOptions: clientOptions,
+        await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: new TestNullVpnAdapter());
 
         Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("192.168.0.100")),
@@ -108,9 +108,9 @@ public class ServerNetFilterConfigTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        var clientOptions = TestHelper.CreateClientOptions();
-        clientOptions.VpnAdapterIncludeIpRanges = IpNetwork.All.ToIpRanges();
-        await using var client = await TestHelper.CreateClient(token: token, clientOptions: clientOptions,
+        var clientOptions = TestHelper.CreateClientOptions(token: token);
+        clientOptions.VpnAdapterIncludeIpRanges = IpNetwork.All.ToIpRanges().ToArray();
+        await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: new TestNullVpnAdapter());
 
         Assert.IsFalse(client.IncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.110")), "Excludes failed");

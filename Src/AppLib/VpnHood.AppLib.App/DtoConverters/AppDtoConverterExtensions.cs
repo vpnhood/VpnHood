@@ -1,5 +1,8 @@
 ﻿using VpnHood.AppLib.Dtos;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Common.ApiClients;
+using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.AppLib.DtoConverters;
 
@@ -49,5 +52,16 @@ public static class AppDtoConverterExtensions
             SessionExpirationTime = sessionStatus.SessionExpirationTime,
             ActiveClientCount = sessionStatus.ActiveClientCount
         };
+    }
+
+    public static ApiError ToAppDto(this ApiError apiError)
+    {
+        apiError = (ApiError)apiError.Clone();
+
+        // remove sensitive info like access key 
+        if (apiError.Data.ContainsKey(nameof(SessionResponse)))
+            apiError.Data.Remove(nameof(SessionResponse));
+
+        return apiError;
     }
 }

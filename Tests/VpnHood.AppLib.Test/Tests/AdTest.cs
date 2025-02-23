@@ -3,17 +3,16 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Test;
 using VpnHood.Test.Device;
-using VpnHood.Test.Tests;
 
 namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
-public class AdTest : TestBase
+public class AdTest : TestAppBase
 {
     [TestMethod]
     public async Task flexible_ad_should_not_close_session_if_load_ad_failed()
@@ -48,18 +47,17 @@ public class AdTest : TestBase
 
         // create client app
         var appOptions = TestAppHelper.CreateAppOptions();
-        var adProviderItem = new AppAdProviderItem
-            { AdProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd) };
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd) };
         appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        ActiveUiContext.Context = null;
+        AppUiContext.Context = null;
         //adProviderItem.FailShow = true;
 
         // connect
         var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() => app.Connect(clientProfile.ClientProfileId));
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None);
     }
 
     [TestMethod]
@@ -72,14 +70,14 @@ public class AdTest : TestBase
         // create client app
         var appOptions = TestAppHelper.CreateAppOptions();
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        ActiveUiContext.Context = null;
+        AppUiContext.Context = null;
         //adProviderItem.FailShow = true;
 
         // connect
         var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId, planId: ConnectPlanId.PremiumByTrial);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected);
     }
 
     [TestMethod]
@@ -94,16 +92,18 @@ public class AdTest : TestBase
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        ActiveUiContext.Context = null;
+        AppUiContext.Context = null;
         //adProviderItem.FailShow = true;
 
         // connect
         var token = accessManager.CreateToken();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() =>
-            app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd));
+        await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() => app.Connect(new ConnectOptions {
+            ClientProfileId = clientProfile.ClientProfileId,
+            PlanId = ConnectPlanId.PremiumByRewardedAd
+        }));
 
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None);
     }
 
     [TestMethod]
@@ -154,7 +154,7 @@ public class AdTest : TestBase
         var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
-        var device = new TestDevice(() => new NullVpnAdapter { CanDetectInProcessPacket = true });
+        var device = new TestDevice(TestHelper,() => new NullVpnAdapter { CanDetectInProcessPacket = true });
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
 
         // create access token
@@ -178,7 +178,7 @@ public class AdTest : TestBase
                 app.ExtendByRewardedAd(CancellationToken.None));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
             await Task.Delay(500);
-            await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+            await app.WaitForState(AppConnectionState.Connected);
         }
     }
 
@@ -195,7 +195,7 @@ public class AdTest : TestBase
         var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
-        var device = new TestDevice(() => new NullVpnAdapter { CanDetectInProcessPacket = canDetectInProcessPacket });
+        var device = new TestDevice(TestHelper, () => new NullVpnAdapter { CanDetectInProcessPacket = canDetectInProcessPacket });
         await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
 
         // create token
@@ -225,7 +225,7 @@ public class AdTest : TestBase
         var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
-        var device = new TestDevice(() => new NullVpnAdapter { CanDetectInProcessPacket = true });
+        var device = new TestDevice(TestHelper, () => new NullVpnAdapter { CanDetectInProcessPacket = true });
         await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
 
         // create token
@@ -238,5 +238,39 @@ public class AdTest : TestBase
 
         // asserts
         Assert.AreEqual(enable, app.State.SessionStatus?.CanExtendByRewardedAd);
+    }
+
+    [TestMethod]
+    public async Task ShowAd_must_change_state_to_WaitingForAd()
+    {
+        // create server
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // create access item
+        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+
+        // configure client app for ad
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdOptions.PreloadAd = false;
+        appOptions.AdOptions.LoadAdPostDelay = TimeSpan.FromSeconds(1);
+        var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
+        var adProviderItem = new AppAdProviderItem { AdProvider = adProvider };
+        appOptions.AdProviderItems = [adProviderItem];
+
+        // create client app
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        
+        var clientProfile = app.ClientProfileService.ImportAccessKey(accessManager.GetToken(accessToken).ToAccessKey());
+        var isAdLoadingStatusMet = false;
+        app.ConnectionStateChanged += (_, _) => {
+            // ReSharper disable once AccessToDisposedClosure
+            if (app.ConnectionState == AppConnectionState.WaitingForAd)
+                isAdLoadingStatusMet = true;
+        };
+
+        // connect
+        await app.Connect(clientProfile.ClientProfileId);
+        Assert.IsTrue(isAdLoadingStatusMet);
     }
 }

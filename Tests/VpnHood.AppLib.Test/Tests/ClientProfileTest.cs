@@ -6,12 +6,11 @@ using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
-using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
-public class ClientProfileTest
+public class ClientProfileTest : TestAppBase
 {
     private int _lastSupportId;
 
@@ -41,8 +40,6 @@ public class ClientProfileTest
     [TestMethod]
     public async Task BuiltIn_AccessKeys_initialization()
     {
-        using var testApp = new TestAppHelper();
-
         var appOptions = TestAppHelper.CreateAppOptions();
         var tokens = new[] { CreateToken(), CreateToken() };
         appOptions.AccessKeys = tokens.Select(x => x.ToAccessKey()).ToArray();

@@ -8,6 +8,7 @@ public enum AppConnectionState
     None,
     Initializing,
     Waiting,
+    WaitingForAd,
     Diagnosing,
     Connecting,
     Connected,

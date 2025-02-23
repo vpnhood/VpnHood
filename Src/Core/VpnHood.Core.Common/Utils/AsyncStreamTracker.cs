@@ -13,13 +13,15 @@ public class AsyncStreamTracker(Stream sourceStream, bool leaveOpen)
 
     public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(LogPrefix + "Reading count. " + count);
+        if (VhLogger.IsDiagnoseMode)
+            VhLogger.Instance.LogTrace(LogPrefix + "Reading count. " + count);
         return base.ReadAsync(buffer, offset, count, cancellationToken);
     }
 
     public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(LogPrefix + "writing count. " + count);
+        if (VhLogger.IsDiagnoseMode)
+            VhLogger.Instance.LogTrace(LogPrefix + "writing count. " + count);
         return base.WriteAsync(buffer, offset, count, cancellationToken);
     }
 }

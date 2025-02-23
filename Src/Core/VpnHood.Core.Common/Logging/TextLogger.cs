@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Core.Common.Logging;
 
-public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
+public abstract class TextLogger(bool includeScopes, string? globalScope) : ILogger, ILoggerProvider
 {
     private readonly LoggerExternalScopeProvider _scopeProvider = new();
 
@@ -25,17 +25,14 @@ public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
         return this;
     }
 
-    public virtual void Dispose()
+    protected void WriteScopeInformation(StringBuilder stringBuilder)
     {
-    }
 
-    protected void GetScopeInformation(StringBuilder stringBuilder)
-    {
         var initialLength = stringBuilder.Length;
         _scopeProvider.ForEachScope((scope, state) => {
             var (builder, length) = state;
             var first = length == builder.Length;
-            builder.Append(first ? "" : " => ").Append(scope);
+            builder.Append(first ? " " : " => ").Append(scope);
         }, (stringBuilder, initialLength));
     }
 
@@ -48,8 +45,13 @@ public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
         if (includeScopes) {
             logBuilder.AppendLine();
             logBuilder.Append($"{time} | ");
-            logBuilder.Append(logLevel.ToString()[..4] + " | ");
-            GetScopeInformation(logBuilder);
+            logBuilder.Append(logLevel.ToString()[..4] + " |");
+            if (globalScope != null) {
+                logBuilder.Append(" ");
+                logBuilder.Append(globalScope);
+                logBuilder.Append(" |");
+            }
+            WriteScopeInformation(logBuilder);
             logBuilder.AppendLine();
         }
         else
@@ -68,5 +70,8 @@ public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
 
         logBuilder.Append(message);
         return logBuilder.ToString();
+    }
+    public virtual void Dispose()
+    {
     }
 }

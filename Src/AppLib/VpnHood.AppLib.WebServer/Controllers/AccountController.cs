@@ -40,13 +40,13 @@ internal class AccountController : WebApiController, IAccountController
         if (!AccountService.AuthenticationService.IsSignInWithGoogleSupported)
             throw new NotSupportedException("Sign in with Google is not supported.");
 
-        return AccountService.AuthenticationService.SignInWithGoogle(ActiveUiContext.RequiredContext);
+        return AccountService.AuthenticationService.SignInWithGoogle(AppUiContext.RequiredContext);
     }
 
     [Route(HttpVerbs.Post, "/sign-out")]
     public Task SignOut()
     {
-        return AccountService.AuthenticationService.SignOut(ActiveUiContext.RequiredContext);
+        return AccountService.AuthenticationService.SignOut(AppUiContext.RequiredContext);
     }
 
     [Route(HttpVerbs.Get, "/subscriptions/{subscriptionId}/access-keys")]

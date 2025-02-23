@@ -80,13 +80,12 @@ public class AndroidUiProvider : IAppUiProvider
     public SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext)
     {
         var appUiContext = (AndroidUiContext)uiContext;
-        var insets = appUiContext.Activity.Window?.DecorView.RootWindowInsets;
-
-        return insets == null
+        var rect = appUiContext.Activity.Window?.DecorView.RootWindowInsets?.GetInsets(WindowInsets.Type.SystemBars());
+        return rect == null
             ? SystemBarsInfo.Default
             : new SystemBarsInfo {
-                TopHeight = insets.GetInsets(WindowInsets.Type.StatusBars()).Top,
-                BottomHeight = insets.GetInsets(WindowInsets.Type.NavigationBars()).Bottom
+                TopHeight = rect.Top,
+                BottomHeight = rect.Bottom
             };
     }
 

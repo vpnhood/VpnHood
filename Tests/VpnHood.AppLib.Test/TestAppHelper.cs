@@ -1,5 +1,7 @@
-﻿using System.Security.Cryptography;
+﻿using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Net;
@@ -12,41 +14,39 @@ namespace VpnHood.AppLib.Test;
 
 public class TestAppHelper : TestHelper
 {
-    public static Task WaitForAppState(VpnHoodApp app, AppConnectionState connectionSate, int timeout = 5000)
+    public AppOptions CreateAppOptions()
     {
-        return VhTestUtil.AssertEqualsWait(connectionSate, () => app.State.ConnectionState,
-            "App state didn't reach the expected value.", timeout);
-    }
-
-    public static AppOptions CreateAppOptions()
-    {
-        var tracker = new TestTrackerProvider();
         var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode: true) {
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
             SessionTimeout = TimeSpan.FromSeconds(2),
-            EventWatcherInterval = TimeSpan.FromMilliseconds(100), // no SPA in test, so we need to use event watcher
+            EventWatcherInterval = TimeSpan.FromMilliseconds(200), // no SPA in test, so we need to use event watcher
             Ga4MeasurementId = null,
-            Tracker = tracker,
+            TrackerFactory = new TestTrackerFactory(),
             UseInternalLocationService = false,
             UseExternalLocationService = false,
             AllowEndPointTracker = true,
-            LogVerbose = LogVerbose,
             ServerQueryTimeout = TimeSpan.FromSeconds(2),
             AutoDiagnose = false,
-            SingleLineConsoleLog = false,
             CanExtendByRewardedAdThreshold = TimeSpan.Zero,
+            DisconnectOnDispose = true,
+            ConnectTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(5),
             AdOptions = new AppAdOptions {
                 ShowAdPostDelay = TimeSpan.Zero,
                 LoadAdPostDelay = TimeSpan.Zero
+            },
+            LogOptions = {
+                LogLevel = LogVerbose ? LogLevel.Trace : LogLevel.Debug,
+                SingleLineConsole = false
             }
         };
+
         return appOptions;
     }
 
-    public static VpnHoodApp CreateClientApp(AppOptions? appOptions = null, IDevice? device = null)
+    public VpnHoodApp CreateClientApp(AppOptions? appOptions = null, IDevice? device = null)
     {
         appOptions ??= CreateAppOptions();
-        device ??= new TestDevice(() => new TestNullVpnAdapter());
+        device ??= new TestDevice(this, () => new TestNullVpnAdapter());
 
         //create app
         var clientApp = VpnHoodApp.Init(device, appOptions);
@@ -54,11 +54,11 @@ public class TestAppHelper : TestHelper
         clientApp.Diagnoser.NsTimeout = 2000;
         clientApp.UserSettings.UseVpnAdapterIpFilter = true;
         clientApp.UserSettings.UseAppIpFilter = true;
-        clientApp.SettingsService.IpFilterSettings.VpnAdapterIpFilterIncludes =
+        clientApp.SettingsService.IpFilterSettings.AdapterIpFilterIncludes =
             TestIpAddresses.Select(x => new IpRange(x)).ToText();
         clientApp.UserSettings.LogAnonymous = false;
         clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
-        ActiveUiContext.Context = new TestAppUiContext();
+        AppUiContext.Context = new TestAppUiContext();
 
         return clientApp;
     }
@@ -77,7 +77,7 @@ public class TestAppHelper : TestHelper
         return result.ToString();
     }
 
-    public static string BuildAccessCode()
+    public string BuildAccessCode()
     {
         return AccessCodeUtils.Build(GenerateSecureRandomDigits(18));
     }

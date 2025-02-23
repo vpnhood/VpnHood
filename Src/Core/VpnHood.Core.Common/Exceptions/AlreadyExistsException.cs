@@ -9,6 +9,14 @@ public sealed class AlreadyExistsException : Exception
         Data["HttpStatusCode"] = 409;
     }
 
+    public AlreadyExistsException(string collectionName, Exception innerException) :
+        base($"Object already exists in {collectionName}.", innerException)
+    {
+        CollectionName = collectionName;
+        Data["HttpStatusCode"] = 409;
+    }
+
+
     public string CollectionName { get; }
 
     public static bool Is(Exception ex)

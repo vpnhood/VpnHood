@@ -6,6 +6,7 @@ using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
+using VpnHood.Core.Client.Device.Droid.Utils;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;
 
@@ -21,6 +22,9 @@ public class AndroidAppWebViewMainActivityHandler(
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
+
+        // set window insets listener
+        ActivityEvent.Activity.Window?.DecorView.SetOnApplyWindowInsetsListener(new WebViewWindowInsetsListener());
 
         // initialize web view
         InitLoadingPage();
@@ -43,7 +47,7 @@ public class AndroidAppWebViewMainActivityHandler(
     {
         base.OnPause();
 
-        if (!ActiveUiContext.IsPartialIntentRunning)
+        if (!AppUiContext.IsPartialIntentRunning)
             WebView?.OnPause();
 
         // temporarily stop the server to find is the crash belong to embed-io

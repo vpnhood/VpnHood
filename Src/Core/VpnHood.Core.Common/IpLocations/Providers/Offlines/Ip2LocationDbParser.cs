@@ -43,7 +43,7 @@ public class Ip2LocationDbParser
         var countryIpRanges = await ParseIp2LocationCrv(crvStream).VhConfigureAwait();
 
         // Building the IpGroups directory structure
-        VhLogger.Instance.LogTrace("Building the optimized Ip2Location archive...");
+        VhLogger.Instance.LogDebug("Building the optimized Ip2Location archive...");
         await using var outputStream = File.Create(outputZipFile);
         using var newArchive = new ZipArchive(outputStream, ZipArchiveMode.Create, leaveOpen: true);
         foreach (var countryIpRange in countryIpRanges) {
@@ -59,7 +59,7 @@ public class Ip2LocationDbParser
         var countries = await ParseIp2LocationCrv(crvStream).VhConfigureAwait();
 
         // Building the IpGroups directory structure
-        VhLogger.Instance.LogTrace("Building the optimized Ip2Location archive...");
+        VhLogger.Instance.LogDebug("Building the optimized Ip2Location archive...");
         var ipRangeInfos = new List<LocalIpLocationProvider.IpRangeInfo>();
         foreach (var country in countries)
             ipRangeInfos.AddRange(

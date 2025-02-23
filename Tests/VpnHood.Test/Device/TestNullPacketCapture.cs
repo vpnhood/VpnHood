@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Client.Device;
+﻿using VpnHood.Core.Client.Device.Adapters;
 
 namespace VpnHood.Test.Device;
 

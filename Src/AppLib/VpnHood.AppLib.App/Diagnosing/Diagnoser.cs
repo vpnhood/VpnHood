@@ -1,17 +1,15 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client;
-using VpnHood.Core.Client.Exceptions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Utils;
+using VpnHood.Core.ToolKit;
 
 namespace VpnHood.AppLib.Diagnosing;
 
 public class Diagnoser
 {
-    private bool _isWorking;
-
     public IPAddress[] TestPingIpAddresses { get; set; } = [
         IPAddressUtil.KidsSafeCloudflareDnsServers.First(x => x.IsV4()),
         IPAddressUtil.GoogleDnsServers.First(x => x.IsV4())
@@ -27,41 +25,24 @@ public class Diagnoser
 
     public int HttpTimeout { get; set; } = 10 * 1000;
     public int NsTimeout { get; set; } = 10 * 1000;
-    public event EventHandler? StateChanged;
 
+    public event EventHandler? StateChanged;
+    
+    private bool _isWorking;
     public bool IsWorking {
         get => _isWorking;
         private set {
             if (value == _isWorking) return;
             _isWorking = value;
-            StateChanged?.Invoke(this, EventArgs.Empty);
-        }
-    }
-
-    public async Task Connect(VpnHoodClient vpnHoodClient, CancellationToken cancellationToken)
-    {
-        try {
-            await vpnHoodClient.Connect(cancellationToken).VhConfigureAwait();
-        }
-        catch (OperationCanceledException) {
-            throw;
-        }
-        catch (Exception) {
-            VhLogger.Instance.LogInformation("Checking the Internet connection...");
-            IsWorking = true;
-            if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true,
-                    cancellationToken: cancellationToken).VhConfigureAwait())
-                throw new NoInternetException();
-
-            throw;
-        }
-        finally {
-            IsWorking = false;
+            Task.Run(()=>StateChanged?.Invoke(this, EventArgs.Empty));
         }
     }
 
     public async Task CheckEndPoints(IPEndPoint[] ipEndPoints, CancellationToken cancellationToken)
     {
+        IsWorking = true;
+        using var workScope = new AutoDispose(() => IsWorking = false);
+
         // check if there is any endpoint
         if (ipEndPoints.Length == 0)
             throw new ArgumentException("There are no endpoints.", nameof(ipEndPoints));
@@ -87,38 +68,27 @@ public class Diagnoser
 
     public async Task CheckPureNetwork(CancellationToken cancellationToken)
     {
-        try {
-            VhLogger.Instance.LogInformation("Checking the Internet connection...");
-            IsWorking = true;
-            if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true, cancellationToken)
-                    .VhConfigureAwait())
-                throw new NoInternetException();
-        }
-        finally {
-            IsWorking = false;
-        }
+        VhLogger.Instance.LogInformation("Checking the Internet connection...");
+        if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true, cancellationToken)
+                .VhConfigureAwait())
+            throw new NoInternetException();
     }
 
     public async Task CheckVpnNetwork(CancellationToken cancellationToken)
     {
-        try {
-            VhLogger.Instance.LogInformation("Checking the Vpn Connection...");
-            IsWorking = true;
-            await Task.Delay(2000, cancellationToken)
-                .VhConfigureAwait(); // connections can not be established on android immediately
-            if (!await NetworkCheck(successOnAny: false, checkPing: true, checkUdp: true, cancellationToken)
-                    .VhConfigureAwait())
-                throw new NoStableVpnException();
-            VhLogger.Instance.LogInformation("VPN has been established and tested successfully.");
-        }
-        finally {
-            IsWorking = false;
-        }
+        VhLogger.Instance.LogInformation("Checking the Vpn Connection...");
+        await Task.Delay(2000, cancellationToken).VhConfigureAwait(); // connections can not be established on android immediately
+        if (!await NetworkCheck(successOnAny: false, checkPing: true, checkUdp: true, cancellationToken).VhConfigureAwait())
+            throw new NoStableVpnException();
+        VhLogger.Instance.LogInformation("VPN has been established and tested successfully.");
     }
 
     private async Task<bool> NetworkCheck(bool successOnAny, bool checkPing, bool checkUdp,
         CancellationToken cancellationToken)
     {
+        IsWorking = true;
+        using var workScope = new AutoDispose(() => IsWorking = false);
+
         var taskPing = checkPing
             ? DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout, cancellationToken)
             : Task.FromResult<Exception?>(null);

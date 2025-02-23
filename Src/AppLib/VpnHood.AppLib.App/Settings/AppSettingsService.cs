@@ -17,7 +17,7 @@ public class AppSettingsService
     public AppSettingsService(string storagePath)
     {
         _storagePath = storagePath;
-        AppSettings = VhUtil.JsonDeserializeFile<AppSettings>(AppSettingsFilePath) ?? new AppSettings();
+        AppSettings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsFilePath) ?? new AppSettings();
         AppSettings.AppSettingsService = this;
         IpFilterSettings = new IpFilterSettings(Path.Combine(storagePath, "ip_filters"));
     }

@@ -9,12 +9,11 @@ public class TestAssembly
     [AssemblyInitialize]
     public static void AssemblyInit(TestContext _)
     {
-        TestHelper.Init();
     }
 
     [AssemblyCleanup]
     public static void AssemblyCleanup()
     {
-        TestHelper.Cleanup();
+        TestHelper.AssemblyCleanup();
     }
 }

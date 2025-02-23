@@ -1,10 +1,12 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Converters;
+using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Access.Configurations;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 
 public class FileAccessManagerOptions : ServerConfig
 {
@@ -23,10 +25,10 @@ public class FileAccessManagerOptions : ServerConfig
     public string? ServerTokenUrl {
         get => ServerTokenUrls.FirstOrDefault();
         set {
-            if (VhUtil.IsNullOrEmpty(ServerTokenUrls))
+            if (VhUtils.IsNullOrEmpty(ServerTokenUrls))
                 ServerTokenUrls = value != null ? [value] : [];
 
-            Console.WriteLine("Warning: ServerTokenUrl is obsoleted. Use ServerTokenUrls.");
+            VhLogger.Instance.LogWarning("Warning: ServerTokenUrl is obsoleted. Use ServerTokenUrls.");
         }
     }
 }

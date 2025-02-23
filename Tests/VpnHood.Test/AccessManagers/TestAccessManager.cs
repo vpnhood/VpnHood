@@ -4,7 +4,7 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Configurations;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 using VpnHood.Core.Server.Access.Messaging;
 
 namespace VpnHood.Test.AccessManagers;

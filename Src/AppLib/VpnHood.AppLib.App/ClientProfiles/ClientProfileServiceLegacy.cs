@@ -28,9 +28,9 @@ internal static class ClientProfileServiceLegacy
 
         try {
             var legacyClientProfiles =
-                VhUtil.JsonDeserialize<ClientProfileLegacy[]>(File.ReadAllText(legacyProfilesFilePath));
+                JsonUtils.Deserialize<ClientProfileLegacy[]>(File.ReadAllText(legacyProfilesFilePath));
 #pragma warning disable CS0618 // Type or member is obsolete
-            var tokens = VhUtil.JsonDeserialize<TokenV3[]>(File.ReadAllText(legacyTokensFilePath))
+            var tokens = JsonUtils.Deserialize<TokenV3[]>(File.ReadAllText(legacyTokensFilePath))
                 .Select(x => x.ToToken()).ToArray();
 #pragma warning restore CS0618 // Type or member is obsolete
             var clientProfiles = new List<ClientProfile>();

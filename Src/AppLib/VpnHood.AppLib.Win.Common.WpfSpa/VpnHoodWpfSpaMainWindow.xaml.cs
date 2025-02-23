@@ -46,7 +46,7 @@ public partial class VpnHoodWpfSpaMainWindow : Window
 
         // initialize tray icon
         VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => Dispatcher.Invoke(UpdateIcon);
-        ActiveUiContext.Context = new WinUiContext(this);
+        AppUiContext.Context = new WinUiContext(this);
     }
 
 

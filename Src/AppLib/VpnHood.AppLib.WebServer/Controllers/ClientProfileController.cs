@@ -38,7 +38,7 @@ internal class ClientProfileController : WebApiController, IClientProfileControl
     public async Task Delete(Guid clientProfileId)
     {
         if (clientProfileId == App.CurrentClientProfileInfo?.ClientProfileId)
-            await App.Disconnect(true).VhConfigureAwait();
+            await App.Disconnect().VhConfigureAwait();
 
         App.ClientProfileService.Delete(clientProfileId);
     }

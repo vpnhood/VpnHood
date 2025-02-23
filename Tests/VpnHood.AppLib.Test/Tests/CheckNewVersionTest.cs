@@ -1,15 +1,13 @@
 ﻿using System.Text.Json;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Common.Utils;
-using VpnHood.Test;
-using VpnHood.Test.Tests;
 
 namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
-public class CheckNewVersionTest : TestBase
+public class CheckNewVersionTest : TestAppBase
 {
-    private static void SetNewRelease(Version version, DateTime releaseDate, TimeSpan? notificationDelay = null,
+    private void SetNewRelease(Version version, DateTime releaseDate, TimeSpan? notificationDelay = null,
         Version? deprecatedVersion = null)
     {
         deprecatedVersion ??= new Version(1, 0, 0);
@@ -143,7 +141,7 @@ public class CheckNewVersionTest : TestBase
         SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
             DateTime.UtcNow, TimeSpan.Zero);
         await app.Connect(clientProfile.ClientProfileId);
-        await TestAppHelper.WaitForAppState(app, AppConnectionState.Connected);
+        await app.WaitForState( AppConnectionState.Connected);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.State.VersionStatus);
     }
 }

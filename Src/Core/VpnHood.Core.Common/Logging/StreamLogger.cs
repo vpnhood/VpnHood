@@ -3,8 +3,9 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Core.Common.Logging;
 
-public class StreamLogger(Stream stream, bool includeScopes = true, bool leaveOpen = false, bool autoFlush = false)
-    : TextLogger(includeScopes)
+public class StreamLogger(Stream stream, bool includeScopes = true, bool leaveOpen = false, bool autoFlush = false, 
+    string? globalScope = null)
+    : TextLogger(includeScopes, globalScope)
 {
     private const int DefaultBufferSize = 1024;
     private StreamWriter? _streamWriter = new(stream, Encoding.UTF8, DefaultBufferSize, leaveOpen);

@@ -28,7 +28,7 @@ public class TcpDatagramChannelTest : TestBase
     public async Task AutoCloseChannel()
     {
         // create server tcp listener
-        var tcpEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
+        var tcpEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
         var tcpListener = new TcpListener(tcpEndPoint);
         tcpListener.Start();
         var listenerTask = tcpListener.AcceptTcpClientAsync();

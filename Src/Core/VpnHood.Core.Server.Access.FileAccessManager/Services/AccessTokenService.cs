@@ -5,9 +5,9 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Utils;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement.Services;
 
 public class AccessTokenService
 {
@@ -104,11 +104,11 @@ public class AccessTokenService
 
         // try read token
         var tokenJson = await File.ReadAllTextAsync(tokenFileName).VhConfigureAwait();
-        var accessToken = VhUtil.JsonDeserialize<AccessToken>(tokenJson);
+        var accessToken = JsonUtils.Deserialize<AccessToken>(tokenJson);
 
         // try read usage
         var usageFileName = GetAccessTokenUsageFileName(tokenId);
-        var usage = VhUtil.JsonDeserializeFile<AccessTokenUsage>(usageFileName) ??
+        var usage = JsonUtils.TryDeserializeFile<AccessTokenUsage>(usageFileName) ??
                     new AccessTokenUsage { Version = 2 };
 
         // for backward compatibility

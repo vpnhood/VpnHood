@@ -51,7 +51,7 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         try {
             return await base.HttpSendAsync<T>(urlPart, parameters, request, cancellationToken).VhConfigureAwait();
         }
-        catch (Exception ex) when (VhUtil.IsConnectionRefusedException(ex)) {
+        catch (Exception ex) when (VhUtils.IsConnectionRefusedException(ex)) {
             IsMaintenanceMode = true;
             throw new MaintenanceException();
         }

@@ -37,7 +37,7 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnCreate(Bundle? savedInstanceState)
     {
-        ActiveUiContext.Context = new AndroidUiContext(ActivityEvent);
+        AppUiContext.Context = new AndroidUiContext(ActivityEvent);
 
         // process intent
         ProcessIntent(ActivityEvent.Activity.Intent);
@@ -134,6 +134,6 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnDestroy()
     {
-        ActiveUiContext.Context = null;
+        AppUiContext.Context = null;
     }
 }

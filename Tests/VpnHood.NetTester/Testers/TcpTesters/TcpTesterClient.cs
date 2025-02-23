@@ -16,7 +16,7 @@ public class TcpTesterClient(IPEndPoint serverEp) : IStreamTesterClient
         // start multi uploaders
         VhLogger.Instance.LogInformation("\n--------");
         VhLogger.Instance.LogInformation(
-            $"Tcp => Start Uploading {VhUtil.FormatBytes(upSize)}, Connections: {connectionCount}");
+            $"Tcp => Start Uploading {VhUtils.FormatBytes(upSize)}, Connections: {connectionCount}");
         using (var speedometer = new Speedometer("Up")) {
             for (var i = 0; i < connectionCount; i++)
                 uploadTasks[i] = StartUpload(serverEp, upSize: upSize / connectionCount,
@@ -29,7 +29,7 @@ public class TcpTesterClient(IPEndPoint serverEp) : IStreamTesterClient
         // start multi downloaders
         VhLogger.Instance.LogInformation("\n--------");
         VhLogger.Instance.LogInformation(
-            $"Tcp => Start Downloading {VhUtil.FormatBytes(downSize)}, Connections: {connectionCount}");
+            $"Tcp => Start Downloading {VhUtils.FormatBytes(downSize)}, Connections: {connectionCount}");
         using (var speedometer = new Speedometer("Down")) {
             var downloadTasks = new Task[connectionCount];
             for (var i = 0; i < connectionCount; i++)

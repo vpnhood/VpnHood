@@ -33,7 +33,7 @@ public static class VhLogger
         }
     }
 
-    public static ILogger CreateConsoleLogger(bool verbose = false, bool singleLine = false)
+    public static ILogger CreateConsoleLogger(LogLevel logLevel = LogLevel.Information, bool singleLine = false)
     {
         using var loggerFactory = LoggerFactory.Create(builder => {
             builder.AddSimpleConsole(configure => {
@@ -41,7 +41,6 @@ public static class VhLogger
                 configure.IncludeScopes = true;
                 configure.SingleLine = singleLine;
             });
-            builder.SetMinimumLevel(verbose ? LogLevel.Trace : LogLevel.Information);
         });
         var logger = loggerFactory.CreateLogger("");
         return new SyncLogger(logger);
@@ -66,7 +65,7 @@ public static class VhLogger
     public static string Format(IPAddress? ipAddress)
     {
         if (ipAddress == null) return "<null>";
-        return IsAnonymousMode ? VhUtil.RedactIpAddress(ipAddress) : ipAddress.ToString();
+        return IsAnonymousMode ? VhUtils.RedactIpAddress(ipAddress) : ipAddress.ToString();
     }
 
     public static string Format(IpNetwork? ipNetwork)
@@ -105,7 +104,7 @@ public static class VhLogger
         if (IPEndPointConverter.TryParse(dnsName, out var ipEndPoint))
             return Format(ipEndPoint);
 
-        return IsAnonymousMode ? VhUtil.RedactHostName(dnsName) : dnsName;
+        return IsAnonymousMode ? VhUtils.RedactHostName(dnsName) : dnsName;
     }
 
     public static string FormatIpPacket(string ipPacketText)
@@ -158,7 +157,7 @@ public static class VhLogger
     public static void LogError(EventId eventId, Exception ex, string message, params object?[] args)
     {
         if (IsSocketCloseException(ex)) {
-            Instance.LogTrace(TcpCloseEventId, message + $" Message: {ex.Message}", args);
+            Instance.LogDebug(TcpCloseEventId, message + $" Message: {ex.Message}", args);
             return;
         }
 

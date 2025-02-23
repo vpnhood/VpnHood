@@ -23,6 +23,6 @@ internal class BillingController : WebApiController, IBillingController
     [Route(HttpVerbs.Post, "/purchase")]
     public Task<string> Purchase([QueryField] string planId)
     {
-        return BillingService.Purchase(ActiveUiContext.RequiredContext, planId);
+        return BillingService.Purchase(AppUiContext.RequiredContext, planId);
     }
 }

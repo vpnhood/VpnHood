@@ -26,7 +26,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     {
         _spaZipStream = options.SpaZipStream;
         Url = options.Url ??
-              new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, options.DefaultPort ?? 9090)}");
+              new Uri($"http://{VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, options.DefaultPort ?? 9090)}");
         _listenOnAllIps = options.ListenOnAllIps;
     }
 

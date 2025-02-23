@@ -118,7 +118,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
     {
         // auto connect
         if (ConnectAfterStart && VpnHoodApp.Instance.CurrentClientProfileInfo != null)
-            _ = VpnHoodApp.Instance.Connect(VpnHoodApp.Instance.CurrentClientProfileInfo.ClientProfileId);
+            _ = VpnHoodApp.Instance.Connect();
 
         // create notification icon
         InitNotifyIcon();
@@ -144,7 +144,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         _connectMenuItemId =
             _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Connect, (_, _) => ConnectClicked());
         _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Disconnect,
-            (_, _) => _ = VpnHoodApp.Instance.Disconnect(true));
+            (_, _) => _ = VpnHoodApp.Instance.Disconnect());
         _sysTray.ContextMenu.AddMenuSeparator();
         _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Exit, (_, _) => Exit());
 
@@ -207,15 +207,17 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
 
     private void ConnectClicked()
     {
-        if (VpnHoodApp.Instance.UserSettings.ClientProfileId != null) {
-            try {
-                _ = VpnHoodApp.Instance.Connect(VpnHoodApp.Instance.UserSettings.ClientProfileId.Value);
-            }
-            catch {
-                OpenMainWindow();
-            }
+        // open main window if no profile is selected
+        if (VpnHoodApp.Instance.UserSettings.ClientProfileId == null) {
+            OpenMainWindow();
+            return;
         }
-        else {
+
+        // connect
+        try {
+            _ = VpnHoodApp.Instance.Connect();
+        }
+        catch {
             OpenMainWindow();
         }
     }
@@ -295,7 +297,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         // check default ip
         IPEndPoint? freeLocalEndPoint = null;
         try {
-            freeLocalEndPoint = VhUtil.GetFreeTcpEndPoint(hostEndPoint.Address, hostEndPoint.Port);
+            freeLocalEndPoint = VhUtils.GetFreeTcpEndPoint(hostEndPoint.Address, hostEndPoint.Port);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError("Could not find free port local host. LocalIp:{LocalIp}, Message: {Message}",
@@ -305,7 +307,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         // check 127.0.0.1
         if (freeLocalEndPoint == null) {
             try {
-                freeLocalEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, 9090);
+                freeLocalEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, 9090);
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError("Could not find free port local host. LocalIp:{LocalIp}, Message: {Message}",

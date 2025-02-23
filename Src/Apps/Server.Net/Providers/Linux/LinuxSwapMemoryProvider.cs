@@ -28,7 +28,7 @@ public class LinuxSwapMemoryProvider(ILogger logger)
     public async Task SetAppSwapMemorySize(long size)
     {
         logger.LogInformation("Configuring swap file. File: {SwapFilePath}, Size: {Size}.", SwapFilePath,
-            VhUtil.FormatBytes(size));
+            VhUtils.FormatBytes(size));
 
         // Disable the current swap file
         if (File.Exists($"{SwapFilePath}")) {

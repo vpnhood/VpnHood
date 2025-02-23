@@ -1,10 +1,9 @@
 ﻿using Android.Content;
-using Android.Graphics;
-using Android.Graphics.Drawables;
 using Android.Net;
 using Android.OS;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
+using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 
@@ -14,69 +13,17 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 {
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
     private const int RequestVpnPermissionId = 20100;
-    private AndroidDeviceNotification? _deviceNotification;
 
-    public event EventHandler? StartedAsService;
+    public bool IsBindProcessToVpnSupported => true;
     public bool IsExcludeAppsSupported => true;
     public bool IsIncludeAppsSupported => true;
     public bool IsAlwaysOnSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
     public string OsInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
-
-    private AndroidDevice()
-    {
-    }
+    public string VpnServiceConfigFolder => AndroidVpnService.VpnServiceConfigFolder;
 
     public static AndroidDevice Create()
     {
         return new AndroidDevice();
-    }
-
-    public void InitNotification(AndroidDeviceNotification deviceNotification)
-    {
-        _deviceNotification = deviceNotification;
-    }
-
-    private static AndroidDeviceNotification CreateDefaultNotification()
-    {
-        const string channelId = "1000";
-        var context = Application.Context;
-        var notificationManager = context.GetSystemService(Context.NotificationService) as NotificationManager
-                                  ?? throw new Exception("Could not resolve NotificationManager.");
-
-        Notification.Builder notificationBuilder;
-        if (OperatingSystem.IsAndroidVersionAtLeast(26)) {
-            var channel = new NotificationChannel(channelId, "VPN", NotificationImportance.Low);
-            channel.EnableVibration(false);
-            channel.EnableLights(false);
-            channel.SetShowBadge(false);
-            channel.LockscreenVisibility = NotificationVisibility.Public;
-            notificationManager.CreateNotificationChannel(channel);
-            notificationBuilder = new Notification.Builder(context, channelId);
-        }
-        else {
-            notificationBuilder = new Notification.Builder(context);
-        }
-
-        // get default icon
-        var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
-        if (context.Resources == null) throw new Exception("Could not retrieve context.Resources.");
-        var iconId = appInfo.Icon;
-        if (iconId == 0)
-            iconId = context.Resources.GetIdentifier("@mipmap/notification", "drawable", context.PackageName);
-        if (iconId == 0)
-            iconId = context.Resources.GetIdentifier("@mipmap/ic_launcher", "drawable", context.PackageName);
-        if (iconId == 0) iconId = context.Resources.GetIdentifier("@mipmap/appicon", "drawable", context.PackageName);
-        if (iconId == 0) throw new Exception("Could not retrieve default icon.");
-
-        var notification = notificationBuilder
-            .SetSmallIcon(iconId)
-            .SetOngoing(true)
-            .Build();
-
-        return new AndroidDeviceNotification {
-            Notification = notification,
-            NotificationId = 3500
-        };
     }
 
     public DeviceAppInfo[] InstalledApps {
@@ -102,7 +49,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
                 var deviceAppInfo = new DeviceAppInfo {
                     AppId = appId,
                     AppName = appName,
-                    IconPng = EncodeToBase64(icon, 100)
+                    IconPng = icon.DrawableEncodeToBase64(100)
                 };
                 deviceAppInfos.Add(deviceAppInfo);
             }
@@ -111,10 +58,10 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         }
     }
 
-    private async Task PrepareVpnService(IActivityEvent? activityEvent)
+    private async Task PrepareVpnService(IActivityEvent? activityEvent, TimeSpan userIntentTimeout, CancellationToken cancellationToken)
     {
         // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
-        VhLogger.Instance.LogTrace("Preparing VpnService...");
+        VhLogger.Instance.LogDebug("Preparing VpnService...");
         using var prepareIntent = VpnService.Prepare(activityEvent?.Activity ?? Application.Context);
         if (prepareIntent == null)
             return; // already prepared
@@ -125,9 +72,9 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         _grantPermissionTaskSource = new TaskCompletionSource<bool>();
         activityEvent.ActivityResultEvent += Activity_OnActivityResult;
         try {
-            VhLogger.Instance.LogTrace("Requesting user consent...");
+            VhLogger.Instance.LogDebug("Requesting user consent...");
             activityEvent.Activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
-            await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(TimeSpan.FromMinutes(2)))
+            await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(userIntentTimeout, cancellationToken))
                 .VhConfigureAwait();
 
             if (!_grantPermissionTaskSource.Task.IsCompletedSuccessfully)
@@ -141,75 +88,27 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         }
     }
 
-    public async Task<IVpnAdapter> CreateVpnAdapter(IUiContext? uiContext)
+    public Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
     {
         // prepare vpn service
         var androidUiContext = (AndroidUiContext?)uiContext;
-        await PrepareVpnService(androidUiContext?.ActivityEvent);
+        return PrepareVpnService(androidUiContext?.ActivityEvent, timeout, cancellationToken);
+    }
+
+    public async Task StartVpnService(CancellationToken cancellationToken)
+    {
+        // throw exception if not prepared
+        await PrepareVpnService(null, TimeSpan.FromSeconds(0), cancellationToken);
 
         // start service
-        var intent = new Intent(Application.Context, typeof(AndroidVpnAdapter));
+        var intent = new Intent(Application.Context, typeof(AndroidVpnService));
         intent.PutExtra("manual", true);
-        AndroidVpnAdapter.StartServiceTaskCompletionSource = new TaskCompletionSource<AndroidVpnAdapter>();
         if (OperatingSystem.IsAndroidVersionAtLeast(26)) {
             Application.Context.StartForegroundService(intent.SetAction("connect"));
         }
         else {
             Application.Context.StartService(intent.SetAction("connect"));
         }
-
-        // check is service started
-        try {
-            var vpnAdapter =
-                await AndroidVpnAdapter.StartServiceTaskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            return vpnAdapter;
-        }
-        catch (Exception ex) {
-            AndroidVpnAdapter.StartServiceTaskCompletionSource.TrySetCanceled();
-            throw new Exception("Could not create VpnService in given time.", ex);
-        }
-    }
-
-
-    internal void OnServiceStartCommand(AndroidVpnAdapter vpnAdapter, Intent? intent)
-    {
-        // set foreground
-        _deviceNotification ??= CreateDefaultNotification();
-        vpnAdapter.StartForeground(_deviceNotification.NotificationId, _deviceNotification.Notification);
-
-        // fire AutoCreate for always on
-        var manual = intent?.GetBooleanExtra("manual", false) ?? false;
-        if (!manual) {
-            try {
-                StartedAsService?.Invoke(this, EventArgs.Empty);
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogError(ex, "Could not start service.");
-            }
-        }
-    }
-
-    private static string EncodeToBase64(Drawable drawable, int quality)
-    {
-        var bitmap = DrawableToBitmap(drawable);
-        var stream = new MemoryStream();
-        if (!bitmap.Compress(Bitmap.CompressFormat.Png!, quality, stream))
-            throw new Exception("Could not compress bitmap to png.");
-        return Convert.ToBase64String(stream.ToArray());
-    }
-
-    private static Bitmap DrawableToBitmap(Drawable drawable)
-    {
-        if (drawable is BitmapDrawable { Bitmap: not null } drawable1)
-            return drawable1.Bitmap;
-
-        //var bitmap = CreateBitmap(drawable.IntrinsicWidth, drawable.IntrinsicHeight, Config.Argb8888);
-        var bitmap = Bitmap.CreateBitmap(32, 32, Bitmap.Config.Argb8888!);
-        var canvas = new Canvas(bitmap);
-        drawable.SetBounds(0, 0, canvas.Width, canvas.Height);
-        drawable.Draw(canvas);
-
-        return bitmap;
     }
 
     private void Activity_OnActivityResult(object? sender, ActivityResultEventArgs e)
@@ -237,9 +136,47 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         }
     }
 
-    public void Dispose()
+    private static IEnumerable<(Network, NetworkCapabilities)> GetNetworkWithCapabilities(ConnectivityManager connectivityManager)
     {
-        _deviceNotification?.Notification.Dispose();
+        var networks = connectivityManager.GetAllNetworks();
+        foreach (var network in networks) {
+            var capabilities = connectivityManager.GetNetworkCapabilities(network);
+            if (capabilities != null &&
+                capabilities.HasCapability(NetCapability.Internet) &&
+                capabilities.HasCapability(NetCapability.Validated) &&
+                capabilities.HasCapability(NetCapability.NotVpn))
+                yield return (network, capabilities);
+        }
+    }
+
+    public void BindProcessToVpn(bool value)
+    {
+        var connectivityManager = (ConnectivityManager?)Application.Context.GetSystemService(Context.ConnectivityService)!;
+
+        // null is system default which is VPN if connected to VPN otherwise it is the default network
+        if (value) {
+            VhLogger.Instance.LogDebug("Binding process to the default network...");
+            connectivityManager.BindProcessToNetwork(null);
+            return;
+        }
+
+        VhLogger.Instance.LogDebug("Binding process to a non VPN network...");
+        var netCaps = GetNetworkWithCapabilities(connectivityManager).ToArray();
+        var network =
+            netCaps.FirstOrDefault(x => x.Item2.HasTransport(TransportType.Ethernet)).Item1 ??
+            netCaps.FirstOrDefault(x => x.Item2.HasTransport(TransportType.Wifi)).Item1 ??
+            netCaps.FirstOrDefault(x => x.Item2.HasTransport(TransportType.Usb)).Item1 ??
+            netCaps.FirstOrDefault(x => x.Item2.HasTransport(TransportType.Satellite)).Item1 ??
+            netCaps.FirstOrDefault(x => x.Item2.HasTransport(TransportType.Bluetooth)).Item1 ??
+            netCaps.FirstOrDefault(x => x.Item2.HasTransport(TransportType.Cellular)).Item1 ??
+            throw new Exception("Could not find any non VPN network.");
+
+        connectivityManager.BindProcessToNetwork(network);
+    }
+
+    public ValueTask DisposeAsync()
+    {
         DisposeSingleton();
+        return default;
     }
 }

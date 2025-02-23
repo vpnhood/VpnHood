@@ -1,5 +1,6 @@
 ﻿using Android;
 using Android.Content;
+using Android.Views;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Droid;
@@ -74,6 +75,19 @@ public class AndroidUiProvider : IAppUiProvider
         var appUiContext = (AndroidUiContext)context;
         var intent = new Intent(Android.Provider.Settings.ActionVpnSettings);
         appUiContext.Activity.StartActivity(intent);
+    }
+
+    public SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext)
+    {
+        var appUiContext = (AndroidUiContext)uiContext;
+        var insets = appUiContext.Activity.Window?.DecorView.RootWindowInsets;
+
+        return insets == null
+            ? SystemBarsInfo.Default
+            : new SystemBarsInfo {
+                TopHeight = insets.GetInsets(WindowInsets.Type.StatusBars()).Top,
+                BottomHeight = insets.GetInsets(WindowInsets.Type.NavigationBars()).Bottom
+            };
     }
 
     private void OnRequestPermissionsResult(object? sender, RequestPermissionsResultArgs e)

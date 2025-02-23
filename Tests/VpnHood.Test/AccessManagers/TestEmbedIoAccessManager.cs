@@ -40,7 +40,7 @@ public class TestEmbedIoAccessManager : IDisposable
         }
 
         BaseAccessManager = baseAccessManager;
-        BaseUri = new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)}");
+        BaseUri = new Uri($"http://{VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback)}");
         _webServer = CreateServer(BaseUri);
         if (autoStart) {
             _webServer.Start();

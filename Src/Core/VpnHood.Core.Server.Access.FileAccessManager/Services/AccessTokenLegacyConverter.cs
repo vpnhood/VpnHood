@@ -2,9 +2,9 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement.Services;
 
 internal class AccessTokenLegacyConverter
 {
@@ -22,7 +22,7 @@ internal class AccessTokenLegacyConverter
 
             foreach (var file in files) {
                 try {
-                    var accessTokenLegacy = VhUtil.JsonDeserializeFile<AccessTokenLegacy>(file);
+                    var accessTokenLegacy = JsonUtils.TryDeserializeFile<AccessTokenLegacy>(file);
                     if (!string.IsNullOrEmpty(accessTokenLegacy?.Token.TokenId)) {
                         var accessToken = new AccessToken {
                             TokenId = accessTokenLegacy.Token.TokenId,

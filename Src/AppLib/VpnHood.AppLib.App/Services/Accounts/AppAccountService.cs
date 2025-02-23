@@ -41,7 +41,7 @@ public class AppAccountService
 
         // Get from local cache
         if (useCache) {
-            _appAccount ??= VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
+            _appAccount ??= JsonUtils.TryDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
             if (_appAccount != null)
                 return _appAccount;
         }

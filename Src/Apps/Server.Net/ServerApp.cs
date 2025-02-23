@@ -16,11 +16,10 @@ using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Managers;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 using VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
 using VpnHood.Core.Server.SystemInformation;
 using VpnHood.Core.Tunneling;
-using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace VpnHood.App.Server;
 
@@ -40,8 +39,9 @@ public class ServerApp : IDisposable
     public FileAccessManager? FileAccessManager => AccessManager as FileAccessManager;
     public static string AppName => "VpnHoodServer";
 
-    public static string AppFolderPath => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ??
-                                          throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
+    public static string AppFolderPath => 
+        Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ??
+        throw new Exception($"Could not acquire {nameof(AppFolderPath)}.");
 
     public AppSettings AppSettings { get; }
     public static string StoragePath => Directory.GetCurrentDirectory();
@@ -69,7 +69,7 @@ public class ServerApp : IDisposable
         if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(StoragePath, "appsettings.json");
         if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
         AppSettings = File.Exists(appSettingsFilePath)
-            ? VhUtil.JsonDeserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
+            ? JsonUtils.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
             : new AppSettings();
 
         // Init File Logger before starting server
@@ -108,8 +108,6 @@ public class ServerApp : IDisposable
         if (File.Exists(configFilePath)) {
             using var loggerFactory = LoggerFactory.Create(builder => {
                 builder.AddNLog(configFilePath);
-                if (AppSettings.IsDiagnoseMode)
-                    builder.SetMinimumLevel(LogLevel.Trace);
             });
             LogManager.Configuration.Variables["mydir"] = storagePath;
             VhLogger.Instance = loggerFactory.CreateLogger("NLog");
@@ -176,7 +174,7 @@ public class ServerApp : IDisposable
 
     private void CommandListener_CommandReceived(object? sender, CommandReceivedEventArgs e)
     {
-        if (!VhUtil.IsNullOrEmpty(e.Arguments) && e.Arguments[0] == "stop") {
+        if (!VhUtils.IsNullOrEmpty(e.Arguments) && e.Arguments[0] == "stop") {
             VhLogger.Instance.LogInformation("I have received the stop command!");
             _vpnHoodServer?.Dispose();
         }
@@ -243,7 +241,7 @@ public class ServerApp : IDisposable
 
             // run server
             var virtualIpNetworkV4 = TunnelDefaults.VirtualIpNetworkV4;
-            var virtualIpNetworkV6 = TunnelDefaults.VirtualIpNetworkV4;
+            var virtualIpNetworkV6 = TunnelDefaults.VirtualIpNetworkV6;
             _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions {
                 Tracker = _tracker,
                 TunProvider = CreateTunProvider(virtualIpNetworkV4, virtualIpNetworkV6),

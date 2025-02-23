@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using SharpPcap;
 using SharpPcap.WinDivert;
+using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Net;
 using ProtocolType = PacketDotNet.ProtocolType;
@@ -17,7 +18,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr LoadLibrary(string lpFileName);
 
-    private readonly SharpPcap.WinDivert.WinDivertDevice _device;
+    private readonly WinDivertDevice _device;
     private bool _disposed;
     private WinDivertHeader? _lastCaptureHeader;
     private PacketReceivedEventArgs? _packetReceivedEventArgs;
@@ -26,9 +27,9 @@ public class WinDivertVpnAdapter : IVpnAdapter
     private IPAddress? _clientInternalIpV4;
     private IPAddress? _clientInternalIpV6;
 
-
     public const short ProtectedTtl = 111;
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
+    public event EventHandler? Disposed;
     public event EventHandler? Stopped;
     public bool Started => _device.Started;
     public virtual bool CanSendPacketToOutbound => true;
@@ -45,7 +46,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
     public WinDivertVpnAdapter()
     {
         // initialize devices
-        _device = new SharpPcap.WinDivert.WinDivertDevice { Flags = 0 };
+        _device = new WinDivertDevice { Flags = 0 };
         _device.OnPacketArrival += Device_OnPacketArrival;
 
         // manage WinDivert file
@@ -174,14 +175,13 @@ public class WinDivertVpnAdapter : IVpnAdapter
         SetInternalIp(ipPacket.SourceAddress);
         var virtualIp = GetVirtualIp(ipPacket.Version);
         if (virtualIp == null) {
-            VhLogger.Instance.LogTrace("The device arrival packet is not supported: {Packet}",
+            VhLogger.Instance.LogDebug("The device arrival packet is not supported: {Packet}",
                 VhLogger.FormatIpPacket(ipPacket.ToString()!));
             return;
         }
 
         ipPacket.SourceAddress = virtualIp;
-        if (ipPacket is IPv4Packet ipV4Packet)
-            ipV4Packet.UpdateIPChecksum();
+        UpdateIpPacket(ipPacket);
         // end trying to simulate tun
 
         ProcessPacketReceivedFromInbound(ipPacket);
@@ -217,13 +217,26 @@ public class WinDivertVpnAdapter : IVpnAdapter
         else
             ipPacket.DestinationAddress = internalIp;
 
-        if (ipPacket is IPv4Packet ipV4Packet)
-            ipV4Packet.UpdateIPChecksum();
+        UpdateIpPacket(ipPacket);
         // end trying to simulate tun
 
         // send by a device
         _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
         _device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
+    }
+
+    private static void UpdateIpPacket(IPPacket ipPacket)
+    {
+        if (ipPacket.Protocol is ProtocolType.Icmp)
+            ipPacket.Extract<IcmpV4Packet>()?.UpdateIcmpChecksum();
+
+        if (ipPacket.Protocol is ProtocolType.IcmpV6)
+            ipPacket.Extract<IcmpV6Packet>()?.UpdateIcmpChecksum();
+
+        if (ipPacket is IPv4Packet ipV4Packet)
+            ipV4Packet.UpdateIPChecksum();
+
+        ipPacket.UpdateCalculatedValues();
     }
 
     // Note: System may load WinDivert driver into memory and lock it, so we'd better to copy it into a temporary folder 
@@ -254,5 +267,6 @@ public class WinDivertVpnAdapter : IVpnAdapter
 
         _device.Dispose();
         _disposed = true;
+        Disposed?.Invoke(this, EventArgs.Empty);
     }
 }

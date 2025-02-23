@@ -49,7 +49,7 @@ internal class UdpProxy : ITimeoutItem
             await _sendSemaphore.WaitAsync().VhConfigureAwait();
 
             if (VhLogger.IsDiagnoseMode)
-                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
+                VhLogger.Instance.LogTrace(GeneralEventId.Udp,
                     "Sending all udp bytes to host. Requested: DataLength: {DataLength}, Source: {Source}, Destination: {Destination}",
                     datagram.Length, VhLogger.Format(LocalEndPoint), VhLogger.Format(ipEndPoint));
 

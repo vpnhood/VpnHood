@@ -1,86 +1,134 @@
 ﻿using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using VpnHood.Core.Common.ApiClients;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Utils;
 
 namespace VpnHood.AppLib;
 
-internal class AppPersistState
+internal class AppPersistState(string filePath)
 {
     private readonly object _saveLock = new();
+    private readonly Data _data = JsonUtils.TryDeserializeFile<Data>(filePath) ?? new Data();
 
-    [JsonIgnore] public string FilePath { get; private set; } = null!;
-
-    // prop
-    private ApiError? _lastError;
+    private class Data
+    {
+        public ApiError? LastError { get; set; }
+        public ApiError? LastClearedError { get; set; }
+        public DateTime UpdateIgnoreTime { get; set; } = DateTime.MinValue;
+        public string? ClientCountryCode { get; set; }
+        public string? ClientCountryCodeByServer { get; set; }
+        public bool HasDisconnectedByUser { get; set; }
+        public DateTime? ConnectRequestTime { get; set; }
+        public bool HasDiagnoseRequested { get; set; }
+    }
 
     public ApiError? LastError {
-        get => _lastError;
+        get => _data.LastError;
         set {
-            _lastError = value;
+            if (Equals(_data.LastError, value))
+                return;
+
+            _data.LastError = value;
             Save();
         }
     }
 
-    // prop
-    private DateTime _updateIgnoreTime = DateTime.MinValue;
+    public ApiError? LastClearedError {
+        get => _data.LastClearedError;
+        set {
+            if (Equals(_data.LastClearedError, value))
+                return;
+
+            _data.LastClearedError = value;
+            Save();
+        }
+    }
+    public bool HasDiagnoseRequested {
+        get => _data.HasDiagnoseRequested;
+        set {
+            if (HasDiagnoseRequested==value)
+                return;
+
+            _data.HasDiagnoseRequested = value;
+            Save();
+        }
+    }
 
     public DateTime UpdateIgnoreTime {
-        get => _updateIgnoreTime;
+        get => _data.UpdateIgnoreTime;
         set {
-            _updateIgnoreTime = value;
+            if (_data.UpdateIgnoreTime == value)
+                return;
+
+            _data.UpdateIgnoreTime = value;
             Save();
         }
     }
-
-    // prop
-    private string? _clientCountryCode;
 
     public string? ClientCountryCode {
-        get => _clientCountryCode;
+        get => _data.ClientCountryCode;
         set {
-            if (_clientCountryCode == value)
+            if (string.Equals(_data.ClientCountryCode, value, StringComparison.OrdinalIgnoreCase))
                 return;
 
             // set country code and its name
-            _clientCountryCode = value?.ToUpper();
+            _data.ClientCountryCode = value?.ToUpper();
             Save();
         }
     }
 
-    // prop
-    private string? _clientCountryCodeByServer;
-
     public string? ClientCountryCodeByServer {
-        get => _clientCountryCodeByServer;
+        get => _data.ClientCountryCodeByServer;
         set {
-            if (_clientCountryCodeByServer == value)
+            if (string.Equals(_data.ClientCountryCodeByServer, value, StringComparison.OrdinalIgnoreCase))
                 return;
 
             // set country code and its name
-            _clientCountryCodeByServer = value?.ToUpper();
+            _data.ClientCountryCodeByServer = value?.ToUpper();
+            Save();
+        }
+    }
+
+    public bool HasDisconnectedByUser
+    {
+        get => _data.HasDisconnectedByUser;
+        set
+        {
+            if (_data.HasDisconnectedByUser == value)
+                return;
+
+            _data.HasDisconnectedByUser = value;
+            Save();
+        }
+    }
+
+    public DateTime? ConnectRequestTime
+    {
+        get => _data.ConnectRequestTime;
+        set
+        {
+            if (_data.ConnectRequestTime == value)
+                return;
+
+            _data.ConnectRequestTime = value;
             Save();
         }
     }
 
     internal static AppPersistState Load(string filePath)
     {
-        var ret = VhUtil.JsonDeserializeFile<AppPersistState>(filePath, logger: VhLogger.Instance) ??
-                  new AppPersistState();
-        ret.FilePath = filePath;
+        var ret = new AppPersistState(filePath);
         return ret;
     }
 
     private void Save()
     {
         lock (_saveLock) {
-            if (string.IsNullOrEmpty(FilePath))
+            if (string.IsNullOrEmpty(filePath))
                 return; // loading
 
-            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(FilePath, json, Encoding.UTF8);
+            var json = JsonSerializer.Serialize(_data, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(filePath, json, Encoding.UTF8);
         }
     }
 }

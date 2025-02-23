@@ -43,7 +43,7 @@ public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : 
         responseMessage.EnsureSuccessStatusCode();
         var json = await responseMessage.Content.ReadAsStringAsync().VhConfigureAwait();
 
-        var apiLocation = VhUtil.JsonDeserialize<ApiLocation>(json);
+        var apiLocation = JsonUtils.Deserialize<ApiLocation>(json);
         var ipLocation = new IpLocation {
             IpAddress = apiLocation.Ip,
             CountryName = new RegionInfo(apiLocation.CountryCode).EnglishName,

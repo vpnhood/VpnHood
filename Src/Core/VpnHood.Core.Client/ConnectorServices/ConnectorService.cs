@@ -4,9 +4,9 @@ using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Sockets;
 using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.Factory;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
 
@@ -24,7 +24,7 @@ internal class ConnectorService(
         where T : SessionResponse
     {
         var eventId = GetRequestEventId(request);
-        VhLogger.Instance.LogTrace(eventId,
+        VhLogger.Instance.LogDebug(eventId,
             "Sending a request. RequestCode: {RequestCode}, RequestId: {RequestId}",
             (RequestCode)request.RequestCode, request.RequestId);
 
@@ -37,11 +37,11 @@ internal class ConnectorService(
         await using var mem = new MemoryStream();
         mem.WriteByte(1);
         mem.WriteByte(request.RequestCode);
-        await StreamUtil.WriteJsonAsync(mem, request, cancellationToken).VhConfigureAwait();
+        await StreamUtils.WriteObjectAsync(mem, request, cancellationToken).VhConfigureAwait();
         var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, cancellationToken).VhConfigureAwait();
 
         // log the response
-        VhLogger.Instance.LogTrace(eventId, "Received a response... ErrorCode: {ErrorCode}.", ret.Response.ErrorCode);
+        VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.", ret.Response.ErrorCode);
 
         lock (Stat) Stat.RequestCount++;
         return ret;
@@ -54,7 +54,7 @@ internal class ConnectorService(
         // try reuse
         var clientStream = GetFreeClientStream();
         if (clientStream != null) {
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}, LocalEp: {LocalEp}",
                 clientStream.ClientStreamId, clientStream.IpEndPointPair.LocalEndPoint);
 
@@ -89,8 +89,7 @@ internal class ConnectorService(
             // parse the HTTP request
             if (clientStream.RequireHttpResponse) {
                 clientStream.RequireHttpResponse = false;
-                var responseMessage =
-                    await HttpUtil.ReadResponse(clientStream.Stream, cancellationToken).VhConfigureAwait();
+                var responseMessage = await HttpUtil.ReadResponse(clientStream.Stream, cancellationToken).VhConfigureAwait();
                 if (responseMessage.StatusCode == HttpStatusCode.Unauthorized)
                     throw new UnauthorizedAccessException();
 
@@ -113,15 +112,15 @@ internal class ConnectorService(
     private static async Task<T> ReadSessionResponse<T>(Stream stream, CancellationToken cancellationToken)
         where T : SessionResponse
     {
-        var message = await StreamUtil.ReadMessage(stream, cancellationToken).VhConfigureAwait();
+        var message = await StreamUtils.ReadMessage(stream, cancellationToken).VhConfigureAwait();
         try {
-            var response = VhUtil.JsonDeserialize<T>(message);
+            var response = JsonUtils.Deserialize<T>(message);
             ProcessResponseException(response);
             return response;
         }
         catch (Exception ex) when (ex is not SessionException && typeof(T) != typeof(SessionResponse)) {
             // try to deserialize as a SessionResponse (base)
-            var sessionResponse = VhUtil.JsonDeserialize<SessionResponse>(message);
+            var sessionResponse = JsonUtils.Deserialize<SessionResponse>(message);
             ProcessResponseException(sessionResponse);
             throw;
         }

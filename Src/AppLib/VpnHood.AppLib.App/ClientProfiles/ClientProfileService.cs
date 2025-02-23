@@ -196,7 +196,7 @@ public class ClientProfileService
         try {
             var token = GetToken(tokenId);
             var newToken = Token.FromAccessKey(accessKey);
-            if (VhUtil.JsonEquals(token, newToken))
+            if (JsonUtils.JsonEquals(token, newToken))
                 return false;
 
             if (token.TokenId != newToken.TokenId)
@@ -217,7 +217,7 @@ public class ClientProfileService
     {
         // run update for all urls asynchronously and return true if any of them is successful
         var urls = token.ServerToken.Urls;
-        if (VhUtil.IsNullOrEmpty(urls) || token.ServerToken.Secret == null)
+        if (VhUtils.IsNullOrEmpty(urls) || token.ServerToken.Secret == null)
             return false;
 
         using var httpClient = new HttpClient();
@@ -241,7 +241,7 @@ public class ClientProfileService
     private async Task<bool> UpdateServerTokenByUrl(Token token, string url,
         HttpClient httpClient, CancellationTokenSource cts)
     {
-        if (VhUtil.IsNullOrEmpty(token.ServerToken.Urls) || token.ServerToken.Secret == null)
+        if (VhUtils.IsNullOrEmpty(token.ServerToken.Urls) || token.ServerToken.Secret == null)
             return false;
 
         // update token
@@ -249,7 +249,7 @@ public class ClientProfileService
             VhLogger.FormatHostName(url));
 
         try {
-            var encryptedServerToken = await VhUtil
+            var encryptedServerToken = await VhUtils
                 .RunTask(httpClient.GetStringAsync(url), TimeSpan.FromSeconds(20), cts.Token)
                 .VhConfigureAwait();
 
@@ -265,7 +265,7 @@ public class ClientProfileService
                 }
 
                 //update store
-                token = VhUtil.JsonClone(token);
+                token = JsonUtils.JsonClone(token);
                 token.ServerToken = newServerToken;
                 ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: true);
                 VhLogger.Instance.LogInformation("ServerToken has been updated from url.");
@@ -298,7 +298,7 @@ public class ClientProfileService
     {
         try {
             var json = File.ReadAllText(ClientProfilesFilePath);
-            var clientProfiles = VhUtil.JsonDeserialize<ClientProfile[]>(json);
+            var clientProfiles = JsonUtils.Deserialize<ClientProfile[]>(json);
             return clientProfiles;
         }
         catch {

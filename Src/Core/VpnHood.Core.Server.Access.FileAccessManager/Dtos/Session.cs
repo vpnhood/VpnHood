@@ -4,7 +4,7 @@ using VpnHood.Core.Common.Converters;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Utils;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
 
 public class Session
 {

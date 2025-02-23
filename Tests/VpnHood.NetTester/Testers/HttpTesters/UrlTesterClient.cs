@@ -14,7 +14,7 @@ public class UrlTesterClient(Uri url, IPAddress? serverIp, TimeSpan? timeout = n
         VhLogger.Instance.LogInformation("\n--------");
         VhLogger.Instance.LogInformation(
             "Url => Start Downloading. Size: {Size}, Connections: {Connections}, Url: {Url}, serverIp: {serverIp}",
-            VhUtil.FormatBytes(downSize), connectionCount, url, serverIp);
+            VhUtils.FormatBytes(downSize), connectionCount, url, serverIp);
 
         // start multi downloader
         using var speedometer = new Speedometer("Down");

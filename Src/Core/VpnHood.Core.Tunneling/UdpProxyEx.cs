@@ -53,7 +53,7 @@ internal class UdpProxyEx : ITimeoutItem
             await _sendSemaphore.WaitAsync().VhConfigureAwait();
 
             if (VhLogger.IsDiagnoseMode)
-                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
+                VhLogger.Instance.LogTrace(GeneralEventId.Udp,
                     $"Sending all udp bytes to host. Requested: {datagram.Length}, From: {VhLogger.Format(LocalEndPoint)}, To: {VhLogger.Format(ipEndPoint)}");
 
             // IpV4 fragmentation

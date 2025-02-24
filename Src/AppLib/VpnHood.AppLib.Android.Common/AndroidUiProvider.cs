@@ -76,17 +76,20 @@ public class AndroidUiProvider : IAppUiProvider
         var intent = new Intent(Android.Provider.Settings.ActionVpnSettings);
         appUiContext.Activity.StartActivity(intent);
     }
-
     public SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext)
     {
-        var appUiContext = (AndroidUiContext)uiContext;
-        var insets = appUiContext.Activity.Window?.DecorView.RootWindowInsets;
+        // check is request supported for WindowInsets.Type.SystemBars()
+        if (!OperatingSystem.IsAndroidVersionAtLeast(30))
+            return SystemBarsInfo.Default;
 
-        return insets == null
+        // get system bars info
+        var appUiContext = (AndroidUiContext)uiContext;
+        var rect = appUiContext.Activity.Window?.DecorView.RootWindowInsets?.GetInsets(WindowInsets.Type.SystemBars());
+        return rect == null
             ? SystemBarsInfo.Default
             : new SystemBarsInfo {
-                TopHeight = insets.GetInsets(WindowInsets.Type.StatusBars()).Top,
-                BottomHeight = insets.GetInsets(WindowInsets.Type.NavigationBars()).Bottom
+                TopHeight = rect.Top,
+                BottomHeight = rect.Bottom
             };
     }
 

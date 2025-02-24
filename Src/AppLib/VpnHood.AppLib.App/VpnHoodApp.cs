@@ -59,7 +59,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly VpnServiceManager _vpnServiceManager;
     private readonly ITrackerFactory _trackerFactory;
     private readonly IDevice _device;
-
     private bool _isLoadingCountryIpRange;
     private bool _isFindingCountryCode;
     private AppConnectionState _lastConnectionState;
@@ -314,7 +313,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var connectionInfo = ConnectionInfo;
             var connectionState = ConnectionState;
             var uiContext = AppUiContext.Context;
-
             var appState = new AppState {
                 ConfigTime = Settings.ConfigTime,
                 SessionStatus = connectionInfo.SessionStatus?.ToAppDto(),
@@ -338,7 +336,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LastPublishInfo = _versionCheckResult?.GetNewerPublishInfo(),
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
                 LastError = IsIdle ? LastError?.ToAppDto() : null,
-                SystemBarsInfo = uiContext != null ? Services.UiProvider.GetSystemBarsInfo(uiContext) : SystemBarsInfo.Default
+                SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
+                    ? Services.UiProvider.GetSystemBarsInfo(uiContext) 
+                    : SystemBarsInfo.Default
             };
 
             return appState;

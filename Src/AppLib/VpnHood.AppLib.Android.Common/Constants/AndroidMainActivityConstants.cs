@@ -11,15 +11,14 @@ public static class AndroidMainActivityConstants
 
     public const bool Exported = true;
 
-    public const SoftInput WindowSoftInputMode = SoftInput.AdjustResize; // resize app when keyboard is shown
+    // resize app when keyboard is shown
+    public const SoftInput WindowSoftInputMode = SoftInput.AdjustResize; 
 
-    public const ScreenOrientation
-        ScreenOrientation = Android.Content.PM.ScreenOrientation.Unspecified; // required for TV
+    // required for TV
+    public const ScreenOrientation ScreenOrientation = Android.Content.PM.ScreenOrientation.Unspecified; 
 
-    public const LaunchMode
-        LaunchMode =
-            Android.Content.PM.LaunchMode
-                .Multiple; //if SingleInstance, reopening the app after minimizing will not show the ad activity
+    // if SingleInstance, reopening the app after minimizing will not show the ad activity
+    public const LaunchMode LaunchMode = Android.Content.PM.LaunchMode.Multiple; 
 
     public const ConfigChanges ConfigChanges =
         Android.Content.PM.ConfigChanges.Orientation | Android.Content.PM.ConfigChanges.ScreenSize |

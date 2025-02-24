@@ -6,7 +6,7 @@ using Android.Views;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;
 
-public static class WebViewUpdaterPage
+internal static class WebViewUpdaterPage
 {
     public static void InitPage(Activity activity, Exception ex)
     {

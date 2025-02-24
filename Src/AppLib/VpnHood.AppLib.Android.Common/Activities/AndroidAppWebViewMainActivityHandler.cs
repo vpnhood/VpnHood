@@ -24,7 +24,8 @@ public class AndroidAppWebViewMainActivityHandler(
         base.OnCreate(savedInstanceState);
 
         // set window insets listener
-        ActivityEvent.Activity.Window?.DecorView.SetOnApplyWindowInsetsListener(new WebViewWindowInsetsListener());
+        if (OperatingSystem.IsAndroidVersionAtLeast(35))
+            ActivityEvent.Activity.Window?.DecorView.SetOnApplyWindowInsetsListener(new WebViewWindowInsetsListener());
 
         // initialize web view
         InitLoadingPage();
@@ -126,12 +127,17 @@ public class AndroidAppWebViewMainActivityHandler(
 
     private static int GetWebViewVersion(WebView webView)
     {
+        // get version name
         var versionName = OperatingSystem.IsAndroidVersionAtLeast(26)
-            ? WebView.CurrentWebViewPackage?.VersionName
-            : GetChromeVersionFromUserAgent(webView.Settings.UserAgentString);
+            ? WebView.CurrentWebViewPackage?.VersionName : null;
 
-        var parts = versionName?.Split('.');
-        return parts?.Length > 0 ? int.Parse(parts[0]) : 0;
+        // fallback to user agent
+        if (string.IsNullOrWhiteSpace(versionName))
+            versionName = GetChromeVersionFromUserAgent(webView.Settings.UserAgentString);
+
+        // parse version
+        var parts = versionName.Split('.');
+        return parts.Length > 0 ? int.Parse(parts[0]) : 0;
     }
 
     private string GetLaunchUrl(WebView webView)

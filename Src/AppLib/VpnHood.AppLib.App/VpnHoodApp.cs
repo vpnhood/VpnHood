@@ -772,7 +772,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async Task<string> GetCurrentCountryAsync(bool ignoreCache, CancellationToken cancellationToken)
     {
-        return _appPersistState.ClientCountryCode ?? RegionInfo.CurrentRegion.Name;
         _isFindingCountryCode = true;
         using var workScope = new AutoDispose(() => { _isFindingCountryCode = false; FireConnectionStateChanged(); });
         FireConnectionStateChanged();

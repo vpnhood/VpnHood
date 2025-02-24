@@ -109,7 +109,7 @@ internal class ClientHost(
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
             var ipPacket = ipPackets[i];
-            var loopbackAddress = ipPacket.Version == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
+            var catcherAddress = ipPacket.Version == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
             var localEndPoint = ipPacket.Version == IPVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
             TcpPacket? tcpPacket = null;
 
@@ -125,7 +125,7 @@ internal class ClientHost(
                     throw new ObjectDisposedException(GetType().Name);
 
                 // redirect to inbound
-                if (Equals(ipPacket.DestinationAddress, loopbackAddress)) {
+                if (Equals(ipPacket.DestinationAddress, catcherAddress)) {
                     var natItem = (NatItemEx?)vpnHoodClient.Nat.Resolve(ipPacket.Version, ipPacket.Protocol,
                                       tcpPacket.DestinationPort)
                                   ?? throw new Exception("Could not find incoming tcp destination in NAT.");
@@ -152,7 +152,7 @@ internal class ClientHost(
 
                     tcpPacket.SourcePort = natItem.NatId; // 1
                     ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
-                    ipPacket.SourceAddress = loopbackAddress; //3
+                    ipPacket.SourceAddress = catcherAddress; //3
                     tcpPacket.DestinationPort = (ushort)localEndPoint.Port; //4
                 }
 
@@ -251,8 +251,8 @@ internal class ClientHost(
             VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel, "New TcpProxy Request.");
 
             // check invalid income
-            var loopbackAddress = ipVersion == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
-            if (!Equals(orgRemoteEndPoint.Address, loopbackAddress))
+            var catcherAddress = ipVersion == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
+            if (!Equals(orgRemoteEndPoint.Address, catcherAddress))
                 throw new Exception("TcpProxy rejected an outbound connection!");
 
             // Filter by SNI

@@ -22,7 +22,7 @@ public class VpnServiceManager : IJob, IDisposable
     private readonly TimeSpan _startVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(15);
     private readonly TimeSpan _connectionInfoTimeSpan = TimeSpan.FromSeconds(1);
     private readonly IDevice _device;
-    private readonly IAdService _adService;
+    private readonly IAdService? _adService;
     private readonly string _vpnConfigFilePath;
     private readonly string _vpnStatusFilePath;
     private ConnectionInfo _connectionInfo;
@@ -33,7 +33,7 @@ public class VpnServiceManager : IJob, IDisposable
     public event EventHandler? StateChanged;
     public string LogFilePath => Path.Combine(_device.VpnServiceConfigFolder, ClientOptions.VpnLogFileName);
     public JobSection JobSection { get; }
-    public VpnServiceManager(IDevice device, IAdService adService, TimeSpan? eventWatcherInterval)
+    public VpnServiceManager(IDevice device, IAdService? adService, TimeSpan? eventWatcherInterval)
     {
         Directory.CreateDirectory(device.VpnServiceConfigFolder);
         _vpnConfigFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnConfigFileName);
@@ -134,7 +134,7 @@ public class VpnServiceManager : IJob, IDisposable
         while (connectionInfo == null || connectionInfo.ClientState is ClientState.None or ClientState.Initializing) {
             cancellationToken.ThrowIfCancellationRequested();
             if (timeoutCts.IsCancellationRequested)
-              throw new TimeoutException($"VpnService did not respond within {_startVpnServiceTimeout.TotalSeconds} seconds.");
+                throw new TimeoutException($"VpnService did not respond within {_startVpnServiceTimeout.TotalSeconds} seconds.");
 
             await Task.Delay(1000, cancellationToken);
             connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
@@ -284,10 +284,10 @@ public class VpnServiceManager : IJob, IDisposable
     /// Stop the VPN service and disconnect from the server if running. This method is idempotent.
     /// No exception will be thrown
     /// </summary>
-    public async Task Stop(TimeSpan? timeSpan = null)
+    public async Task Stop(TimeSpan? timeout = null)
     {
         using var timeoutCts = new CancellationTokenSource(
-            Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(5));
+            Debugger.IsAttached ? Timeout.InfiniteTimeSpan : timeout ?? TimeSpan.FromSeconds(5));
 
         // stop the service
         if (!ConnectionInfo.IsStarted())
@@ -340,6 +340,9 @@ public class VpnServiceManager : IJob, IDisposable
     private async Task ShowAd(AdRequest adRequest, CancellationToken cancellationToken)
     {
         try {
+            if (_adService == null)
+                throw new NotSupportedException("There is no AdService available in this app.");
+
             var adRequestResult = adRequest.AdRequestType switch {
                 AdRequestType.Rewarded => await _adService.ShowRewarded(AppUiContext.RequiredContext,
                     adRequest.SessionId, cancellationToken),

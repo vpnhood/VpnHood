@@ -1678,7 +1678,6 @@ export interface IAppData {
 
 export class AppFeatures implements IAppFeatures {
     appId!: string;
-    version!: string;
     isExcludeAppsSupported!: boolean;
     isIncludeAppsSupported!: boolean;
     updateInfoUrl?: string | null;
@@ -1697,6 +1696,8 @@ export class AppFeatures implements IAppFeatures {
     isDebugMode!: boolean;
     debugCommands!: string[];
     isLocalNetworkSupported!: boolean;
+    adjustForSystemBars!: boolean;
+    version!: string;
 
     constructor(data?: IAppFeatures) {
         if (data) {
@@ -1713,7 +1714,6 @@ export class AppFeatures implements IAppFeatures {
     init(_data?: any) {
         if (_data) {
             this.appId = _data["appId"] !== undefined ? _data["appId"] : <any>null;
-            this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
             this.isExcludeAppsSupported = _data["isExcludeAppsSupported"] !== undefined ? _data["isExcludeAppsSupported"] : <any>null;
             this.isIncludeAppsSupported = _data["isIncludeAppsSupported"] !== undefined ? _data["isIncludeAppsSupported"] : <any>null;
             this.updateInfoUrl = _data["updateInfoUrl"] !== undefined ? _data["updateInfoUrl"] : <any>null;
@@ -1739,6 +1739,8 @@ export class AppFeatures implements IAppFeatures {
                 this.debugCommands = <any>null;
             }
             this.isLocalNetworkSupported = _data["isLocalNetworkSupported"] !== undefined ? _data["isLocalNetworkSupported"] : <any>null;
+            this.adjustForSystemBars = _data["adjustForSystemBars"] !== undefined ? _data["adjustForSystemBars"] : <any>null;
+            this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
         }
     }
 
@@ -1752,7 +1754,6 @@ export class AppFeatures implements IAppFeatures {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["appId"] = this.appId !== undefined ? this.appId : <any>null;
-        data["version"] = this.version !== undefined ? this.version : <any>null;
         data["isExcludeAppsSupported"] = this.isExcludeAppsSupported !== undefined ? this.isExcludeAppsSupported : <any>null;
         data["isIncludeAppsSupported"] = this.isIncludeAppsSupported !== undefined ? this.isIncludeAppsSupported : <any>null;
         data["updateInfoUrl"] = this.updateInfoUrl !== undefined ? this.updateInfoUrl : <any>null;
@@ -1775,13 +1776,14 @@ export class AppFeatures implements IAppFeatures {
                 data["debugCommands"].push(item);
         }
         data["isLocalNetworkSupported"] = this.isLocalNetworkSupported !== undefined ? this.isLocalNetworkSupported : <any>null;
+        data["adjustForSystemBars"] = this.adjustForSystemBars !== undefined ? this.adjustForSystemBars : <any>null;
+        data["version"] = this.version !== undefined ? this.version : <any>null;
         return data;
     }
 }
 
 export interface IAppFeatures {
     appId: string;
-    version: string;
     isExcludeAppsSupported: boolean;
     isIncludeAppsSupported: boolean;
     updateInfoUrl?: string | null;
@@ -1800,6 +1802,8 @@ export interface IAppFeatures {
     isDebugMode: boolean;
     debugCommands: string[];
     isLocalNetworkSupported: boolean;
+    adjustForSystemBars: boolean;
+    version: string;
 }
 
 export class AppSettings implements IAppSettings {
@@ -2134,8 +2138,8 @@ export interface IAppSettingsService {
 export class IpFilterSettings implements IIpFilterSettings {
     appIpFilterIncludes!: string;
     appIpFilterExcludes!: string;
-    vpnAdapterIpFilterIncludes!: string;
-    vpnAdapterIpFilterExcludes!: string;
+    adapterIpFilterIncludes!: string;
+    adapterIpFilterExcludes!: string;
 
     constructor(data?: IIpFilterSettings) {
         if (data) {
@@ -2150,8 +2154,8 @@ export class IpFilterSettings implements IIpFilterSettings {
         if (_data) {
             this.appIpFilterIncludes = _data["appIpFilterIncludes"] !== undefined ? _data["appIpFilterIncludes"] : <any>null;
             this.appIpFilterExcludes = _data["appIpFilterExcludes"] !== undefined ? _data["appIpFilterExcludes"] : <any>null;
-            this.vpnAdapterIpFilterIncludes = _data["vpnAdapterIpFilterIncludes"] !== undefined ? _data["vpnAdapterIpFilterIncludes"] : <any>null;
-            this.vpnAdapterIpFilterExcludes = _data["vpnAdapterIpFilterExcludes"] !== undefined ? _data["vpnAdapterIpFilterExcludes"] : <any>null;
+            this.adapterIpFilterIncludes = _data["adapterIpFilterIncludes"] !== undefined ? _data["adapterIpFilterIncludes"] : <any>null;
+            this.adapterIpFilterExcludes = _data["adapterIpFilterExcludes"] !== undefined ? _data["adapterIpFilterExcludes"] : <any>null;
         }
     }
 
@@ -2166,8 +2170,8 @@ export class IpFilterSettings implements IIpFilterSettings {
         data = typeof data === 'object' ? data : {};
         data["appIpFilterIncludes"] = this.appIpFilterIncludes !== undefined ? this.appIpFilterIncludes : <any>null;
         data["appIpFilterExcludes"] = this.appIpFilterExcludes !== undefined ? this.appIpFilterExcludes : <any>null;
-        data["vpnAdapterIpFilterIncludes"] = this.vpnAdapterIpFilterIncludes !== undefined ? this.vpnAdapterIpFilterIncludes : <any>null;
-        data["vpnAdapterIpFilterExcludes"] = this.vpnAdapterIpFilterExcludes !== undefined ? this.vpnAdapterIpFilterExcludes : <any>null;
+        data["adapterIpFilterIncludes"] = this.adapterIpFilterIncludes !== undefined ? this.adapterIpFilterIncludes : <any>null;
+        data["adapterIpFilterExcludes"] = this.adapterIpFilterExcludes !== undefined ? this.adapterIpFilterExcludes : <any>null;
         return data;
     }
 }
@@ -2175,8 +2179,8 @@ export class IpFilterSettings implements IIpFilterSettings {
 export interface IIpFilterSettings {
     appIpFilterIncludes: string;
     appIpFilterExcludes: string;
-    vpnAdapterIpFilterIncludes: string;
-    vpnAdapterIpFilterExcludes: string;
+    adapterIpFilterIncludes: string;
+    adapterIpFilterExcludes: string;
 }
 
 export class AppState implements IAppState {
@@ -2192,7 +2196,6 @@ export class AppState implements IAppState {
     logExists!: boolean;
     hasDiagnoseRequested!: boolean;
     hasDisconnectedByUser!: boolean;
-    hasProblemDetected!: boolean;
     clientCountryCode?: string | null;
     clientCountryName?: string | null;
     versionStatus!: VersionStatus;
@@ -2203,6 +2206,7 @@ export class AppState implements IAppState {
     currentUiCultureInfo!: UiCultureInfo;
     systemUiCultureInfo!: UiCultureInfo;
     purchaseState?: BillingPurchaseState | null;
+    systemBarsInfo!: SystemBarsInfo;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -2214,6 +2218,7 @@ export class AppState implements IAppState {
         if (!data) {
             this.currentUiCultureInfo = new UiCultureInfo();
             this.systemUiCultureInfo = new UiCultureInfo();
+            this.systemBarsInfo = new SystemBarsInfo();
         }
     }
 
@@ -2231,7 +2236,6 @@ export class AppState implements IAppState {
             this.logExists = _data["logExists"] !== undefined ? _data["logExists"] : <any>null;
             this.hasDiagnoseRequested = _data["hasDiagnoseRequested"] !== undefined ? _data["hasDiagnoseRequested"] : <any>null;
             this.hasDisconnectedByUser = _data["hasDisconnectedByUser"] !== undefined ? _data["hasDisconnectedByUser"] : <any>null;
-            this.hasProblemDetected = _data["hasProblemDetected"] !== undefined ? _data["hasProblemDetected"] : <any>null;
             this.clientCountryCode = _data["clientCountryCode"] !== undefined ? _data["clientCountryCode"] : <any>null;
             this.clientCountryName = _data["clientCountryName"] !== undefined ? _data["clientCountryName"] : <any>null;
             this.versionStatus = _data["versionStatus"] !== undefined ? _data["versionStatus"] : <any>null;
@@ -2242,6 +2246,7 @@ export class AppState implements IAppState {
             this.currentUiCultureInfo = _data["currentUiCultureInfo"] ? UiCultureInfo.fromJS(_data["currentUiCultureInfo"]) : new UiCultureInfo();
             this.systemUiCultureInfo = _data["systemUiCultureInfo"] ? UiCultureInfo.fromJS(_data["systemUiCultureInfo"]) : new UiCultureInfo();
             this.purchaseState = _data["purchaseState"] !== undefined ? _data["purchaseState"] : <any>null;
+            this.systemBarsInfo = _data["systemBarsInfo"] ? SystemBarsInfo.fromJS(_data["systemBarsInfo"]) : new SystemBarsInfo();
         }
     }
 
@@ -2266,7 +2271,6 @@ export class AppState implements IAppState {
         data["logExists"] = this.logExists !== undefined ? this.logExists : <any>null;
         data["hasDiagnoseRequested"] = this.hasDiagnoseRequested !== undefined ? this.hasDiagnoseRequested : <any>null;
         data["hasDisconnectedByUser"] = this.hasDisconnectedByUser !== undefined ? this.hasDisconnectedByUser : <any>null;
-        data["hasProblemDetected"] = this.hasProblemDetected !== undefined ? this.hasProblemDetected : <any>null;
         data["clientCountryCode"] = this.clientCountryCode !== undefined ? this.clientCountryCode : <any>null;
         data["clientCountryName"] = this.clientCountryName !== undefined ? this.clientCountryName : <any>null;
         data["versionStatus"] = this.versionStatus !== undefined ? this.versionStatus : <any>null;
@@ -2277,6 +2281,7 @@ export class AppState implements IAppState {
         data["currentUiCultureInfo"] = this.currentUiCultureInfo ? this.currentUiCultureInfo.toJSON() : <any>null;
         data["systemUiCultureInfo"] = this.systemUiCultureInfo ? this.systemUiCultureInfo.toJSON() : <any>null;
         data["purchaseState"] = this.purchaseState !== undefined ? this.purchaseState : <any>null;
+        data["systemBarsInfo"] = this.systemBarsInfo ? this.systemBarsInfo.toJSON() : <any>null;
         return data;
     }
 }
@@ -2294,7 +2299,6 @@ export interface IAppState {
     logExists: boolean;
     hasDiagnoseRequested: boolean;
     hasDisconnectedByUser: boolean;
-    hasProblemDetected: boolean;
     clientCountryCode?: string | null;
     clientCountryName?: string | null;
     versionStatus: VersionStatus;
@@ -2305,12 +2309,14 @@ export interface IAppState {
     currentUiCultureInfo: UiCultureInfo;
     systemUiCultureInfo: UiCultureInfo;
     purchaseState?: BillingPurchaseState | null;
+    systemBarsInfo: SystemBarsInfo;
 }
 
 export enum AppConnectionState {
     None = "None",
     Initializing = "Initializing",
     Waiting = "Waiting",
+    WaitingForAd = "WaitingForAd",
     Diagnosing = "Diagnosing",
     Connecting = "Connecting",
     Connected = "Connected",
@@ -3205,6 +3211,46 @@ export enum BillingPurchaseState {
     Processing = "Processing",
 }
 
+export class SystemBarsInfo implements ISystemBarsInfo {
+    topHeight!: number;
+    bottomHeight!: number;
+
+    constructor(data?: ISystemBarsInfo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.topHeight = _data["topHeight"] !== undefined ? _data["topHeight"] : <any>null;
+            this.bottomHeight = _data["bottomHeight"] !== undefined ? _data["bottomHeight"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): SystemBarsInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new SystemBarsInfo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["topHeight"] = this.topHeight !== undefined ? this.topHeight : <any>null;
+        data["bottomHeight"] = this.bottomHeight !== undefined ? this.bottomHeight : <any>null;
+        return data;
+    }
+}
+
+export interface ISystemBarsInfo {
+    topHeight: number;
+    bottomHeight: number;
+}
+
 export class ClientProfileInfo implements IClientProfileInfo {
     clientProfileId!: string;
     clientProfileName!: string;
@@ -3454,10 +3500,10 @@ export interface IAppStrings {
 }
 
 export class IpFilters implements IIpFilters {
-    vpnAdapterIpFilterInclude!: string;
-    vpnAdapterIpFilterExclude!: string;
-    appIpFilterInclude!: string;
-    appIpFilterExclude!: string;
+    adapterIpFilterIncludes!: string;
+    adapterIpFilterExcludes!: string;
+    appIpFilterIncludes!: string;
+    appIpFilterExcludes!: string;
 
     constructor(data?: IIpFilters) {
         if (data) {
@@ -3470,10 +3516,10 @@ export class IpFilters implements IIpFilters {
 
     init(_data?: any) {
         if (_data) {
-            this.vpnAdapterIpFilterInclude = _data["vpnAdapterIpFilterInclude"] !== undefined ? _data["vpnAdapterIpFilterInclude"] : <any>null;
-            this.vpnAdapterIpFilterExclude = _data["vpnAdapterIpFilterExclude"] !== undefined ? _data["vpnAdapterIpFilterExclude"] : <any>null;
-            this.appIpFilterInclude = _data["appIpFilterInclude"] !== undefined ? _data["appIpFilterInclude"] : <any>null;
-            this.appIpFilterExclude = _data["appIpFilterExclude"] !== undefined ? _data["appIpFilterExclude"] : <any>null;
+            this.adapterIpFilterIncludes = _data["adapterIpFilterIncludes"] !== undefined ? _data["adapterIpFilterIncludes"] : <any>null;
+            this.adapterIpFilterExcludes = _data["adapterIpFilterExcludes"] !== undefined ? _data["adapterIpFilterExcludes"] : <any>null;
+            this.appIpFilterIncludes = _data["appIpFilterIncludes"] !== undefined ? _data["appIpFilterIncludes"] : <any>null;
+            this.appIpFilterExcludes = _data["appIpFilterExcludes"] !== undefined ? _data["appIpFilterExcludes"] : <any>null;
         }
     }
 
@@ -3486,19 +3532,19 @@ export class IpFilters implements IIpFilters {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["vpnAdapterIpFilterInclude"] = this.vpnAdapterIpFilterInclude !== undefined ? this.vpnAdapterIpFilterInclude : <any>null;
-        data["vpnAdapterIpFilterExclude"] = this.vpnAdapterIpFilterExclude !== undefined ? this.vpnAdapterIpFilterExclude : <any>null;
-        data["appIpFilterInclude"] = this.appIpFilterInclude !== undefined ? this.appIpFilterInclude : <any>null;
-        data["appIpFilterExclude"] = this.appIpFilterExclude !== undefined ? this.appIpFilterExclude : <any>null;
+        data["adapterIpFilterIncludes"] = this.adapterIpFilterIncludes !== undefined ? this.adapterIpFilterIncludes : <any>null;
+        data["adapterIpFilterExcludes"] = this.adapterIpFilterExcludes !== undefined ? this.adapterIpFilterExcludes : <any>null;
+        data["appIpFilterIncludes"] = this.appIpFilterIncludes !== undefined ? this.appIpFilterIncludes : <any>null;
+        data["appIpFilterExcludes"] = this.appIpFilterExcludes !== undefined ? this.appIpFilterExcludes : <any>null;
         return data;
     }
 }
 
 export interface IIpFilters {
-    vpnAdapterIpFilterInclude: string;
-    vpnAdapterIpFilterExclude: string;
-    appIpFilterInclude: string;
-    appIpFilterExclude: string;
+    adapterIpFilterIncludes: string;
+    adapterIpFilterExcludes: string;
+    appIpFilterIncludes: string;
+    appIpFilterExcludes: string;
 }
 
 export enum ConnectPlanId {

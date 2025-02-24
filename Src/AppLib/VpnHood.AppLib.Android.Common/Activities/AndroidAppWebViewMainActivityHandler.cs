@@ -24,7 +24,8 @@ public class AndroidAppWebViewMainActivityHandler(
         base.OnCreate(savedInstanceState);
 
         // set window insets listener
-        ActivityEvent.Activity.Window?.DecorView.SetOnApplyWindowInsetsListener(new WebViewWindowInsetsListener());
+        if (OperatingSystem.IsAndroidVersionAtLeast(35))
+            ActivityEvent.Activity.Window?.DecorView.SetOnApplyWindowInsetsListener(new WebViewWindowInsetsListener());
 
         // initialize web view
         InitLoadingPage();

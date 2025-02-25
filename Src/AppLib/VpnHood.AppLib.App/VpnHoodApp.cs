@@ -26,7 +26,6 @@ using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
-using VpnHood.Core.Toolkit;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Common.IpLocations;

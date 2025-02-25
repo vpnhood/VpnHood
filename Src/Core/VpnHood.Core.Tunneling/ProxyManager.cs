@@ -3,9 +3,9 @@ using System.Net;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels;
+using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
 

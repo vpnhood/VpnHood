@@ -1,6 +1,6 @@
 ﻿using System.Net.Sockets;
 
-namespace VpnHood.Core.Common.Sockets;
+namespace VpnHood.Core.Tunneling.Sockets;
 
 public interface ISocketFactory
 {

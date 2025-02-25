@@ -5,9 +5,9 @@ using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Sockets;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 

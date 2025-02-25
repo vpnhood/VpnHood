@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Logging;
 
-namespace VpnHood.Core.Common.Sockets;
+namespace VpnHood.Core.Tunneling.Sockets;
 
 public class SocketFactory : ISocketFactory
 {

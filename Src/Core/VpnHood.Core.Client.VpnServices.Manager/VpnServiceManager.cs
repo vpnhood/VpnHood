@@ -8,7 +8,6 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Toolkit;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Utils;

@@ -6,12 +6,12 @@ using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Sockets;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Client;
 

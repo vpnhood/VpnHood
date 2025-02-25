@@ -1,7 +1,7 @@
 ﻿using Ga4.Trackers;
-using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client;
 

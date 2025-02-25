@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Dtos;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test;
 

@@ -4,8 +4,9 @@ using Android.OS;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Client.Device.Droid.Utils;
+using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Device.Droid;
 

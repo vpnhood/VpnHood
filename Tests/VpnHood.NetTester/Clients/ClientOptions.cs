@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Common.Converters;
 using VpnHood.Core.Server.Access;
+using VpnHood.Core.Toolkit.Converters;
 using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Clients;

@@ -6,9 +6,9 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using SharpPcap;
 using SharpPcap.WinDivert;
-using VpnHood.Core.Client.Device.Adapters;
+using VpnHood.Core.Adapters.Abstractions;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Net;
+using VpnHood.Core.Toolkit.Net;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Client.Device.WinDivert;
@@ -35,13 +35,6 @@ public class WinDivertVpnAdapter : IVpnAdapter
     public virtual bool CanSendPacketToOutbound => true;
     public virtual bool IsDnsServersSupported => false;
     public bool IsMtuSupported => false;
-
-    public bool CanDetectInProcessPacket => false;
-
-    public bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
-    {
-        throw new NotSupportedException("This device can not detect IsInProcessPacket.");
-    }
 
     public WinDivertVpnAdapter()
     {

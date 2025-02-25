@@ -1,8 +1,8 @@
 ﻿using VpnHood.AppLib.Dtos;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
-using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib.DtoConverters;
 

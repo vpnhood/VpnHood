@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Core.Client.Device;
+﻿using VpnHood.Core.Client.Device.UiContexts;
+
+namespace VpnHood.Core.Client.Device;
 
 public interface IDevice : IAsyncDisposable
 {

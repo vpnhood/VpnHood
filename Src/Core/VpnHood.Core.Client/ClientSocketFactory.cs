@@ -1,8 +1,7 @@
-﻿using System.Net;
-using System.Net.Sockets;
-using VpnHood.Core.Client.Device.Adapters;
-using VpnHood.Core.Common.Sockets;
-using VpnHood.Core.Common.Utils;
+﻿using System.Net.Sockets;
+using VpnHood.Core.Adapters.Abstractions;
+using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Client;
 
@@ -37,13 +36,5 @@ internal class ClientSocketFactory(
     public void SetKeepAlive(Socket socket, bool enable)
     {
         socketFactory.SetKeepAlive(socket, enable);
-    }
-
-    public bool CanDetectInProcessPacket => vpnAdapter.CanDetectInProcessPacket;
-
-    public bool IsInProcessPacket(PacketDotNet.ProtocolType protocol, IPEndPoint localEndPoint,
-        IPEndPoint remoteEndPoint)
-    {
-        return vpnAdapter.IsInProcessPacket(protocol, localEndPoint, remoteEndPoint);
     }
 }

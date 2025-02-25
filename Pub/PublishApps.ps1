@@ -27,8 +27,9 @@ Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 
 # rebuild libraries
 if ($nugets) {
-	& "$solutionDir/Src/Core/VpnHood.Core.ToolKit/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Toolkit/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Common/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Adapters.Abstractions/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.SocksProxy/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Tunneling/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Abstractions/_publish.ps1";

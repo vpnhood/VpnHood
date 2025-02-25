@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Core.Common.Net;
 using VpnHood.Core.Server.Access.Configurations;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Test.Device;
 
 namespace VpnHood.Test.Tests;

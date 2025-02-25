@@ -4,7 +4,7 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test.Device;
 

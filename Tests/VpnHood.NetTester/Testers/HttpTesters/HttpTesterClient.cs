@@ -2,7 +2,7 @@
 using System.Net.Http.Headers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Testers.HttpTesters;

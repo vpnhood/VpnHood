@@ -2,10 +2,11 @@
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.IpLocations;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Ads;
 
@@ -28,9 +29,13 @@ public class AppAdService(
     public bool CanShowRewarded => adProviderItems.Any(x => x.AdProvider.AdType == AppAdType.RewardedAd);
     public bool IsPreloadAdEnabled => adOptions.PreloadAd;
 
-    public Task LoadInterstitialAdAd(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task LoadInterstitialAdAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        return LoadAd(_compositeInterstitialAdService, uiContext, cancellationToken);
+        // don't use VPN for loading ad
+        device.TryBindProcessToVpn(false);
+        using var autoDispose = new AutoDispose(() => _ = device.TryBindProcessToVpn(true, adOptions.ShowAdPostDelay, cancellationToken));
+
+        await LoadAd(_compositeInterstitialAdService, uiContext, cancellationToken);
     }
 
     public Task<AdResult> ShowInterstitial(IUiContext uiContext, string sessionId,
@@ -51,7 +56,8 @@ public class AppAdService(
     private async Task LoadAd(AppCompositeAdService appCompositeAdService, IUiContext uiContext, CancellationToken cancellationToken)
     {
         var countryCode = await regionProvider.GetCurrentCountryAsync(cancellationToken).VhConfigureAwait();
-        await appCompositeAdService.LoadAd(uiContext, countryCode: countryCode,
+        await appCompositeAdService.LoadAd(
+                uiContext, countryCode: countryCode,
                 forceReload: false, loadAdTimeout: adOptions.LoadAdTimeout, cancellationToken)
             .VhConfigureAwait();
 
@@ -78,22 +84,26 @@ public class AppAdService(
             };
 
             var trackEvent = AppTrackerBuilder.BuildShowAdStatus(networkName);
-            _ = tracker?.Track(trackEvent);
+            _ = RestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
 
             //wait for finishing trackers
             return showAdResult;
         }
         catch (Exception ex) {
             var trackEvent = AppTrackerBuilder.BuildShowAdStatus("all", ex.Message);
-            _ = tracker?.Track(trackEvent);
-
+            _ = RestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
+            
             if (ex is UiContextNotAvailableException)
                 throw new ShowAdNoUiException();
 
             throw;
         }
-        finally {
-            _ = device.TryBindProcessToVpn(true, adOptions.ShowAdPostDelay, cancellationToken);
-        }
+    }
+
+    private async Task RestoreProcessVpn(TrackEvent trackEvent, TimeSpan delay, CancellationToken cancellationToken)
+    {
+        await device.TryBindProcessToVpn(true, delay, cancellationToken);
+        if (tracker!=null)
+            await tracker.Track(trackEvent);
     }
 }

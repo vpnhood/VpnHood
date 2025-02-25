@@ -2,8 +2,8 @@
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
-using VpnHood.Core.Client.Device;
-using VpnHood.Core.Client.Device.Adapters;
+using VpnHood.Core.Adapters.Abstractions;
+using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
@@ -154,7 +154,7 @@ public class AdTest : TestAppBase
         var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
-        var device = new TestDevice(TestHelper,() => new NullVpnAdapter { CanDetectInProcessPacket = true });
+        var device = new TestDevice(TestHelper,() => new NullVpnAdapter());
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
 
         // create access token
@@ -185,35 +185,6 @@ public class AdTest : TestAppBase
     [TestMethod]
     [DataRow(true)]
     [DataRow(false)]
-    public async Task RewardedAd_should_toggle_by_canDetectInProcessPacket(bool canDetectInProcessPacket)
-    {
-        using var accessManager = TestHelper.CreateAccessManager();
-        await using var server = await TestHelper.CreateServer(accessManager);
-        accessManager.CanExtendPremiumByAd = true;
-
-        // create client app
-        var appOptions = TestAppHelper.CreateAppOptions();
-        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
-        appOptions.AdProviderItems = [adProviderItem];
-        var device = new TestDevice(TestHelper, () => new NullVpnAdapter { CanDetectInProcessPacket = canDetectInProcessPacket });
-        await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
-
-        // create token
-        var token = accessManager.CreateToken();
-        token.IsPublic = true;
-
-        // connect
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByTrial);
-
-        // asserts
-        Assert.AreEqual(canDetectInProcessPacket, app.State.SessionStatus?.CanExtendByRewardedAd);
-    }
-
-
-    [TestMethod]
-    [DataRow(true)]
-    [DataRow(false)]
     public async Task RewardedAd_should_toggle_by_access_manager(bool enable)
     {
         // create server
@@ -225,7 +196,7 @@ public class AdTest : TestAppBase
         var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
-        var device = new TestDevice(TestHelper, () => new NullVpnAdapter { CanDetectInProcessPacket = true });
+        var device = new TestDevice(TestHelper, () => new NullVpnAdapter());
         await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
 
         // create token
@@ -273,4 +244,40 @@ public class AdTest : TestAppBase
         await app.Connect(clientProfile.ClientProfileId);
         Assert.IsTrue(isAdLoadingStatusMet);
     }
+
+    [TestMethod]
+    public async Task RewardedAd_should_call_BindProcessToVpn()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        accessManager.CanExtendPremiumByAd = true;
+
+        // create client app
+        var appOptions = TestAppHelper.CreateAppOptions();
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
+        appOptions.AdOptions.PreloadAd = false;
+        appOptions.AdOptions.LoadAdPostDelay = TimeSpan.FromSeconds(1);
+        appOptions.AdProviderItems = [adProviderItem];
+        var device = new TestDevice(TestHelper, () => new NullVpnAdapter());
+        await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
+
+        // create token
+        var token = accessManager.CreateToken();
+        token.IsPublic = true;
+
+        Assert.AreEqual(0, device.BindProcessToVpnFalseCount);
+        Assert.AreEqual(0, device.BindProcessToVpnTrueCount);
+        Assert.AreEqual(false, device.LastBindProcessToVpnValue);
+
+        // connect
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd);
+
+        // asserts
+        await Task.Delay(1000);
+        Assert.AreEqual(1, device.BindProcessToVpnTrueCount);
+        Assert.AreEqual(1, device.BindProcessToVpnFalseCount);
+        Assert.AreEqual(true, device.LastBindProcessToVpnValue);
+    }
+
 }

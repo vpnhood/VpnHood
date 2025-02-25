@@ -2,7 +2,7 @@ using Firebase;
 using Firebase.Analytics;
 using Firebase.Crashlytics;
 using Ga4.Trackers;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.App.Client.Droid.Google.FirebaseUtils;
 

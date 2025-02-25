@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Common.ApiClients;
+﻿using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 

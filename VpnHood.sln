@@ -123,7 +123,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Server", "Server", "{9FC065
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Core.Client.Abstractions", "Src\Core\VpnHood.Core.Client.Abstractions\VpnHood.Core.Client.Abstractions.csproj", "{2A96E11D-166E-4454-9016-0EB6D7E1D5E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Core.ToolKit", "Src\Core\VpnHood.Core.ToolKit\VpnHood.Core.ToolKit.csproj", "{DA65C4CA-F380-473B-A74A-4347F3FD3E6B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Core.Toolkit", "Src\Core\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj", "{DA65C4CA-F380-473B-A74A-4347F3FD3E6B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Core.SocksProxy", "Src\Core\VpnHood.Core.SocksProxy\VpnHood.Core.SocksProxy.csproj", "{884D8630-564C-7957-AFE0-A6D9870B1025}"
 EndProject
@@ -132,6 +132,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Core.Client.VpnServices.Host", "Src\Core\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj", "{45F01BB3-5BBF-9FBB-FFEB-94CDC9BB3AD8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Core.Client.VpnServices.Manager", "Src\Core\VpnHood.Core.Client.VpnServices.Manager\VpnHood.Core.Client.VpnServices.Manager.csproj", "{03A56BE1-B713-D1A0-00A5-6AB0ADA8ACE2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Core.Adapters.Abstractions", "Src\Core\VpnHood.Core.Adapters.Abstractions\VpnHood.Core.Adapters.Abstractions.csproj", "{6A75362F-14BA-446E-9F32-CFE041024DE6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -947,6 +949,26 @@ Global
 		{03A56BE1-B713-D1A0-00A5-6AB0ADA8ACE2}.Release|x64.Build.0 = Release|Any CPU
 		{03A56BE1-B713-D1A0-00A5-6AB0ADA8ACE2}.Release|x86.ActiveCfg = Release|Any CPU
 		{03A56BE1-B713-D1A0-00A5-6AB0ADA8ACE2}.Release|x86.Build.0 = Release|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Debug|ARM.Build.0 = Debug|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Debug|x64.Build.0 = Debug|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Debug|x86.Build.0 = Debug|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Release|ARM.ActiveCfg = Release|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Release|ARM.Build.0 = Release|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Release|ARM64.Build.0 = Release|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Release|x64.ActiveCfg = Release|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Release|x64.Build.0 = Release|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Release|x86.ActiveCfg = Release|Any CPU
+		{6A75362F-14BA-446E-9F32-CFE041024DE6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -998,6 +1020,7 @@ Global
 		{D3F89B23-B53C-EC6A-E92D-617497B22088} = {CD65BE88-FB2C-4A0A-94EE-405F77BCF311}
 		{45F01BB3-5BBF-9FBB-FFEB-94CDC9BB3AD8} = {CD65BE88-FB2C-4A0A-94EE-405F77BCF311}
 		{03A56BE1-B713-D1A0-00A5-6AB0ADA8ACE2} = {CD65BE88-FB2C-4A0A-94EE-405F77BCF311}
+		{6A75362F-14BA-446E-9F32-CFE041024DE6} = {CD65BE88-FB2C-4A0A-94EE-405F77BCF311}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19BAEB35-FD38-4E41-9963-46313AF87C41}

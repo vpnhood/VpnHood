@@ -1,11 +1,9 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Core.Common.Logging;
 using ProtocolType = PacketDotNet.ProtocolType;
 
-namespace VpnHood.Core.Client.Device.Adapters;
+namespace VpnHood.Core.Adapters.Abstractions;
 
 public class NullVpnAdapter : IVpnAdapter
 {
@@ -18,15 +16,9 @@ public class NullVpnAdapter : IVpnAdapter
     public virtual bool CanSendPacketToOutbound { get; set; }
     public bool CanDetectInProcessPacket { get; set; } = true;
 
-    public NullVpnAdapter()
-    {
-        VhLogger.Instance.LogInformation("A NullVpnAdapter has been created.");
-    }
 
     public virtual void StartCapture(VpnAdapterOptions options)
     {
-        VhLogger.Instance.LogInformation("The null adapter has been started. No packet will go through the VPN.");
-
         Started = true;
         _ = PacketReceivedFromInbound; //prevent not used warning
     }

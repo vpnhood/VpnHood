@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Client.Device.Adapters;
+﻿using VpnHood.Core.Adapters.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Test.Providers;

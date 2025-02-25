@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using PacketDotNet;
 
-namespace VpnHood.Core.Client.Device.Adapters;
+namespace VpnHood.Core.Adapters.Abstractions;
 
 public interface IVpnAdapter : IDisposable
 {

@@ -1,4 +1,5 @@
-﻿using Android.Content.Res;
+﻿using System.Web;
+using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
@@ -143,14 +144,22 @@ public class AndroidAppWebViewMainActivityHandler(
     private string GetLaunchUrl(WebView webView)
     {
         var mainUrl = $"{VpnHoodAppWebServer.Instance.Url}?nocache={VpnHoodAppWebServer.Instance.SpaHash}";
-        if (GetWebViewVersion(webView) >= options.WebViewRequiredVersion || options.WebViewUpgradeUrl == null)
+        var currentVersion = GetWebViewVersion(webView);
+        if (currentVersion >= options.WebViewRequiredVersion || options.WebViewUpgradeUrl == null)
             return mainUrl;
 
         var upgradeUrl = options.WebViewUpgradeUrl.IsAbsoluteUri
             ? options.WebViewUpgradeUrl
             : new Uri(VpnHoodAppWebServer.Instance.Url, options.WebViewUpgradeUrl);
 
-        return upgradeUrl.ToString();
+        // add current webview version to query string
+        var uriBuilder = new UriBuilder(upgradeUrl);
+        var query = HttpUtility.ParseQueryString(uriBuilder.Query);
+        query["current-version"] = currentVersion.ToString();
+        query["required-version"] = options.WebViewRequiredVersion.ToString();
+        uriBuilder.Query = query.ToString();
+
+        return uriBuilder.ToString();
     }
 
     private void InitWebUi()

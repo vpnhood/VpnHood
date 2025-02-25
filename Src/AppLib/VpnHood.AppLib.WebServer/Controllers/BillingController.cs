@@ -4,7 +4,7 @@ using EmbedIO.WebApi;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.WebServer.Api;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.UiContexts;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 

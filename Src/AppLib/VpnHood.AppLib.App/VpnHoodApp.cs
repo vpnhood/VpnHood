@@ -18,6 +18,7 @@ using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Client.VpnServices.Manager;

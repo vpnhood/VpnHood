@@ -5,6 +5,7 @@ using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
 

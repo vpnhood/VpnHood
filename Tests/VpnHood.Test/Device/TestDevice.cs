@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Adapters;
+using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Logging;
 
 namespace VpnHood.Test.Device;

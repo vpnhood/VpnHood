@@ -1,5 +1,5 @@
 ﻿using PacketDotNet;
-using VpnHood.Core.Client.Device.Adapters;
+using VpnHood.Core.Adapters.Abstractions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;

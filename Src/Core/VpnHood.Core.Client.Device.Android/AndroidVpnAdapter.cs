@@ -5,7 +5,7 @@ using Java.IO;
 using Java.Net;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Core.Client.Device.Adapters;
+using VpnHood.Core.Adapters.Abstractions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;

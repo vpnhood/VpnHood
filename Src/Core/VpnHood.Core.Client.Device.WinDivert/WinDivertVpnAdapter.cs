@@ -8,7 +8,7 @@ using SharpPcap;
 using SharpPcap.WinDivert;
 using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Net;
+using VpnHood.Core.Toolkit.Net;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Client.Device.WinDivert;

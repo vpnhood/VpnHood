@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using PacketDotNet.Utils;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Net;
+using VpnHood.Core.Toolkit.Net;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 // ReSharper disable UnusedMember.Global

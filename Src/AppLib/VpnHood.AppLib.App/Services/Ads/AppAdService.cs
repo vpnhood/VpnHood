@@ -5,7 +5,7 @@ using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.IpLocations;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Ads;
 

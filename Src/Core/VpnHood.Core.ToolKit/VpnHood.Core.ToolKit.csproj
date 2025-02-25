@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-        <Description>VpnHood ToolKit Library can be used in any project</Description>
+        <Description>VpnHood Toolkit Library can be used in any project</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
 	</PropertyGroup>
 
@@ -19,7 +19,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>6.0.658</Version>
+		<Version>6.0.661</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
@@ -37,7 +37,6 @@
 
 	<ItemGroup>
 		<Folder Include="Resources\" />
-		<Folder Include="Utils\" />
 	</ItemGroup>
 
 </Project>

@@ -6,7 +6,7 @@ using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.ClientStreams;

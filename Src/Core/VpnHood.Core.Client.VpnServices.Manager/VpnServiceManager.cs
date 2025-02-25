@@ -6,13 +6,13 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
-using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
-using VpnHood.Core.ToolKit;
-using FastDateTime = VpnHood.Core.Common.Utils.FastDateTime;
+using VpnHood.Core.Toolkit;
+using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Utils;
+using FastDateTime = VpnHood.Core.Toolkit.Utils.FastDateTime;
 
 namespace VpnHood.Core.Client.VpnServices.Manager;
 

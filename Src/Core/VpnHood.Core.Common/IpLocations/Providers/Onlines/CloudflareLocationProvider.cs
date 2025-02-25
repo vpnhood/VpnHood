@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 using System.Net;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.IpLocations.Providers;
 

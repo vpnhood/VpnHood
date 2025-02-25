@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.Core.Common.Collections;
+using VpnHood.Core.Toolkit.Collections;
 
 namespace VpnHood.Core.Server;
 

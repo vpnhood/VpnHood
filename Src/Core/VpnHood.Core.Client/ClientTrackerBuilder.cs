@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Ga4.Trackers;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Net;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Client;
 

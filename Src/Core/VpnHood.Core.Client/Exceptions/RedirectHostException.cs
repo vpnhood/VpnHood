@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Exceptions;
 

@@ -2,8 +2,8 @@
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.NetTester.Servers;
 using VpnHood.NetTester.Testers;
 using VpnHood.NetTester.Testers.HttpTesters;

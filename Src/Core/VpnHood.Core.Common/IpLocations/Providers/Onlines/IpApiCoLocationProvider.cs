@@ -1,8 +1,8 @@
 ﻿using System.Globalization;
 using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Common.Converters;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Converters;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.IpLocations.Providers;
 

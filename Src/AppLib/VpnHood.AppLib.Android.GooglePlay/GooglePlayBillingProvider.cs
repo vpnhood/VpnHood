@@ -7,7 +7,7 @@ using VpnHood.AppLib.Droid.GooglePlay.Exceptions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Droid.GooglePlay;
 

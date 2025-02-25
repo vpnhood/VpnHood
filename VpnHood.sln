@@ -123,7 +123,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Server", "Server", "{9FC065
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Core.Client.Abstractions", "Src\Core\VpnHood.Core.Client.Abstractions\VpnHood.Core.Client.Abstractions.csproj", "{2A96E11D-166E-4454-9016-0EB6D7E1D5E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Core.ToolKit", "Src\Core\VpnHood.Core.ToolKit\VpnHood.Core.ToolKit.csproj", "{DA65C4CA-F380-473B-A74A-4347F3FD3E6B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Core.Toolkit", "Src\Core\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj", "{DA65C4CA-F380-473B-A74A-4347F3FD3E6B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Core.SocksProxy", "Src\Core\VpnHood.Core.SocksProxy\VpnHood.Core.SocksProxy.csproj", "{884D8630-564C-7957-AFE0-A6D9870B1025}"
 EndProject

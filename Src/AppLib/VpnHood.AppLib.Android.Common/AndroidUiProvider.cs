@@ -5,7 +5,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 using Permission = Android.Content.PM.Permission;
 
 namespace VpnHood.AppLib.Droid.Common;

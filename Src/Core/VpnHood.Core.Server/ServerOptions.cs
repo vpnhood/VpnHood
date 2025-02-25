@@ -1,9 +1,9 @@
 ﻿using Ga4.Trackers;
-using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Sockets;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.SystemInformation;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Tunneling;
 
 namespace VpnHood.Core.Server;

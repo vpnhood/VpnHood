@@ -1,6 +1,6 @@
 ﻿using VpnHood.Core.Common.Exceptions;
 
-namespace VpnHood.Core.Client.Device;
+namespace VpnHood.Core.Client.Device.UiContexts;
 
 public static class AppUiContext
 {

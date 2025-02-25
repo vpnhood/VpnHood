@@ -4,8 +4,8 @@ using Microsoft.Extensions.Logging;
 using Org.Apache.Http.Authentication;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Droid.GooglePlay.Exceptions;
-using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Droid;
+using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Toolkit.Utils;
 

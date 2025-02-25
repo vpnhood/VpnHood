@@ -1,5 +1,5 @@
 ﻿using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Test.AccessManagers;
 

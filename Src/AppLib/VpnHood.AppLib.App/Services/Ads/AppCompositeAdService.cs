@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Toolkit.Utils;

@@ -3,9 +3,9 @@ using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
 using VpnHood.AppLib.ClientProfiles;
-using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
+using VpnHood.Core.Client.Device.UiContexts;
 using Permission = Android.Content.PM.Permission;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;

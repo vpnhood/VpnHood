@@ -36,13 +36,6 @@ public class WinDivertVpnAdapter : IVpnAdapter
     public virtual bool IsDnsServersSupported => false;
     public bool IsMtuSupported => false;
 
-    public bool CanDetectInProcessPacket => false;
-
-    public bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
-    {
-        throw new NotSupportedException("This device can not detect IsInProcessPacket.");
-    }
-
     public WinDivertVpnAdapter()
     {
         // initialize devices

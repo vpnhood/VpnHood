@@ -10,6 +10,8 @@ public class TestDevice(TestHelper testHelper, Func<IVpnAdapter> vpnAdapterFacto
 {
     private readonly CancellationTokenSource _disposeCancellationTokenSource = new();
     private TestVpnService? _vpnService;
+    public int BindProcessToVpnFalseCount { get; private set; }
+    public int BindProcessToVpnTrueCount { get; private set; }
     public bool LastBindProcessToVpnValue { get; private set; }
     public bool IsBindProcessToVpnSupported => true;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
@@ -37,6 +39,10 @@ public class TestDevice(TestHelper testHelper, Func<IVpnAdapter> vpnAdapterFacto
     public void BindProcessToVpn(bool value)
     {
         LastBindProcessToVpnValue = value;
+        if (value) 
+            BindProcessToVpnTrueCount++;
+        else 
+            BindProcessToVpnFalseCount++;
     }
 
     private async Task SimulateStartService()

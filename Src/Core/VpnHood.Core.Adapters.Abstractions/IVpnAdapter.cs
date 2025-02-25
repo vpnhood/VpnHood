@@ -1,5 +1,4 @@
-﻿using System.Net;
-using PacketDotNet;
+﻿using PacketDotNet;
 
 namespace VpnHood.Core.Adapters.Abstractions;
 
@@ -12,7 +11,6 @@ public interface IVpnAdapter : IDisposable
     bool IsMtuSupported { get; }
     bool CanProtectSocket { get; }
     bool CanSendPacketToOutbound { get; }
-    bool CanDetectInProcessPacket { get; }
     void StartCapture(VpnAdapterOptions adapterOptions);
     void StopCapture();
     void ProtectSocket(System.Net.Sockets.Socket socket);
@@ -20,5 +18,4 @@ public interface IVpnAdapter : IDisposable
     void SendPacketToInbound(IList<IPPacket> packets);
     void SendPacketToOutbound(IPPacket ipPacket);
     void SendPacketToOutbound(IList<IPPacket> ipPackets);
-    bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint);
 }

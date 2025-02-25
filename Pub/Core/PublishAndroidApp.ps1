@@ -34,7 +34,7 @@ $keystore = Join-Path "$solutionDir/../.user/" $credentials.$nodeName.KeyStoreFi
 $keystorePass = $credentials.$nodeName.KeyStorePass
 $keystoreAlias = $credentials.$nodeName.KeyStoreAlias
 $manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";
-$appIconXml = Join-Path $projectDir "Resources/mipmap-anydpi-v26/appicon.xml";
+$appIconXml = Join-Path $projectDir "Resources/mipmap-anydpi-v26/ic_launcher.xml";
 $appIconXmlDoc = [xml](Get-Content $appIconXml);
 $appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
 
@@ -78,7 +78,7 @@ if ($apk)
 if ($aab)
 {
 	# set app icon
-	$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background");
+	$appIconXmlNode.SetAttribute("android:drawable", "@drawable/ic_launcher_background");
 	$appIconXmlDoc.save($appIconXml);
 
 	# update variables

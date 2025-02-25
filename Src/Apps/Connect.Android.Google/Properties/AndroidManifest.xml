@@ -1,4 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-  <application android:localeConfig="@xml/locales_config"/>
+  <application 
+          android:localeConfig="@xml/locales_config" 
+          android:banner="@mipmap/ic_banner"
+          android:icon="@mipmap/ic_launcher"/>
 </manifest>

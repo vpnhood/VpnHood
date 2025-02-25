@@ -1,7 +1,7 @@
 using System.Net;
 using NJsonSchema;
 using NJsonSchema.Generation.TypeMappers;
-using VpnHood.Core.Common.Net;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.AppLib.Swagger;
 

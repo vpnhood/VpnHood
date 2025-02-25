@@ -1,6 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Settings;
 

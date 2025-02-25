@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
-using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.Core.Common.Exceptions;
 

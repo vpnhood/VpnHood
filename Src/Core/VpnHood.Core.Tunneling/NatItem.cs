@@ -2,7 +2,7 @@
 using System.Net;
 using PacketDotNet;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;

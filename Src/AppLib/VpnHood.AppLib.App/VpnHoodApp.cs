@@ -21,17 +21,19 @@ using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Client.VpnServices.Manager;
-using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.IpLocations;
-using VpnHood.Core.Common.IpLocations.Providers;
-using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
-using VpnHood.Core.ToolKit;
+using VpnHood.Core.Toolkit;
+using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Core.Toolkit.Exceptions;
+using VpnHood.Core.Common.IpLocations;
+using VpnHood.Core.Common.IpLocations.Providers;
+using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib;
 

@@ -6,7 +6,7 @@ using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 

@@ -3,9 +3,9 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Device;
-using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Store.Api;
 
 namespace VpnHood.AppLib.Store;

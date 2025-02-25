@@ -2,7 +2,7 @@
 using System.Net.Sockets;
 using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Common.Sockets;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client;
 

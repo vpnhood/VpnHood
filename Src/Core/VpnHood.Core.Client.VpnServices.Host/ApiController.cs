@@ -3,9 +3,9 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
-using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 

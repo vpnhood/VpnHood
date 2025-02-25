@@ -1,6 +1,6 @@
 ﻿using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.VpnServices.Abstractions;
-using VpnHood.Core.Common.ApiClients;
+using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 

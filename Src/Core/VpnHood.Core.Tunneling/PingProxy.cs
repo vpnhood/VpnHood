@@ -1,8 +1,8 @@
 ﻿using System.Net.NetworkInformation;
 using PacketDotNet;
 using PacketDotNet.Utils;
-using VpnHood.Core.Common.Collections;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Collections;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using EmbedIO;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.WebServer;
 

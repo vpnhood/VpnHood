@@ -7,8 +7,8 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Net;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Device.Droid;
 

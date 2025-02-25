@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 using WinNative;
 
 namespace VpnHood.AppLib.Win.Common;

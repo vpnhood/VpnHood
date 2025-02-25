@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Dtos;
-using VpnHood.Core.Common.ApiClients;
+using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib;
 

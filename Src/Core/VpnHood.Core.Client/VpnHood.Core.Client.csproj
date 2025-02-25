@@ -20,7 +20,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>6.0.662</Version>
+		<Version>6.0.663</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
@@ -32,7 +32,6 @@
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Adapters.Abstractions\VpnHood.Core.Adapters.Abstractions.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Client.Abstractions\VpnHood.Core.Client.Abstractions.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.Client.Device\VpnHood.Core.Client.Device.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
 	</ItemGroup>

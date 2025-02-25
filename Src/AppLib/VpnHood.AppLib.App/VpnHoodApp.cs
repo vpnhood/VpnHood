@@ -61,6 +61,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly VpnServiceManager _vpnServiceManager;
     private readonly ITrackerFactory _trackerFactory;
     private readonly IDevice _device;
+    private bool _isDisconnecting;
     private bool _isLoadingCountryIpRange;
     private bool _isFindingCountryCode;
     private AppConnectionState _lastConnectionState;
@@ -355,6 +356,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppConnectionState ConnectionState {
         get {
             var clientState = ConnectionInfo.ClientState;
+            
+            if (clientState == ClientState.Disconnecting || _isDisconnecting)
+                return AppConnectionState.None; // treat as none. let's service disconnect on background
+
             if (_isLoadingCountryIpRange || _isFindingCountryCode || clientState == ClientState.Initializing)
                 return AppConnectionState.Initializing;
 
@@ -369,9 +374,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             if (clientState == ClientState.Connected)
                 return AppConnectionState.Connected;
-
-            if (clientState == ClientState.Disconnecting)
-                return AppConnectionState.None; // treat as none. let's service disconnect on background
 
             // must be at end because _isConnecting overrides clientState
             if (clientState == ClientState.Connecting || _isConnecting)
@@ -819,7 +821,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public async Task Disconnect()
     {
         VhLogger.Instance.LogInformation("User requested to disconnect.");
-
+        _isDisconnecting = true;
+        using var workScope = new AutoDispose(() => { _isDisconnecting = false; FireConnectionStateChanged(); });
         _appPersistState.HasDisconnectedByUser = true;
         _connectCts.Cancel();
         await _vpnServiceManager.Stop();
@@ -837,6 +840,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private readonly AsyncLock _versionCheckLock = new();
+
     public async Task VersionCheck(bool force = false, TimeSpan? delay = null)
     {
         using var lockAsync = await _versionCheckLock.LockAsync().VhConfigureAwait();

@@ -4,7 +4,6 @@ using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Sockets;
 
 namespace VpnHood.AppLib;
 
@@ -17,7 +16,6 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public bool IsDebugMode => isDebugMode;
     public string StorageFolderPath { get; set; } = BuildStorageFolderPath(storageFolderName);
     public TimeSpan SessionTimeout { get; set; } = ClientOptions.Default.SessionTimeout;
-    public ISocketFactory? SocketFactory { get; set; }
     public TimeSpan VersionCheckInterval { get; set; } = TimeSpan.FromHours(24);
     public string? UpdateInfoUrl { get; set; }
     public bool UseInternalLocationService { get; set; } = true;

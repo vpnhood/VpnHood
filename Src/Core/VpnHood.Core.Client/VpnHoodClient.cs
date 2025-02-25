@@ -5,28 +5,27 @@ using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Core.Adapters.Abstractions;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.ConnectorServices;
-using VpnHood.Core.Client.Device.Adapters;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Net;
-using VpnHood.Core.Common.Sockets;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Trackers;
-using VpnHood.Core.Common.Utils;
-using VpnHood.Core.ToolKit;
+using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.Utils;
-using FastDateTime = VpnHood.Core.Common.Utils.FastDateTime;
-using PacketReceivedEventArgs = VpnHood.Core.Client.Device.Adapters.PacketReceivedEventArgs;
+using FastDateTime = VpnHood.Core.Toolkit.Utils.FastDateTime;
+using PacketReceivedEventArgs = VpnHood.Core.Adapters.Abstractions.PacketReceivedEventArgs;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Client;
@@ -215,7 +214,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             accessUsage is { CanExtendByRewardedAd: true, ExpirationTime: not null } &&
             accessUsage.ExpirationTime > FastDateTime.UtcNow + _canExtendByRewardedAdThreshold &&
             _allowRewardedAd &&
-            _vpnAdapter.CanDetectInProcessPacket &&
             Token.IsPublic;
     }
 
@@ -451,8 +449,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
                         // Udp
                         else if (ipPacket.Protocol == ProtocolType.Udp && udpPacket != null) {
-                            if (!IsInIpRange(ipPacket.DestinationAddress) || _clientHost.ShouldPassthru(ipPacket,
-                                    udpPacket.SourcePort, udpPacket.DestinationPort))
+                            if (!IsInIpRange(ipPacket.DestinationAddress))
                                 proxyPackets.Add(ipPacket);
                             else if (!ShouldTunnelUdpPacket(udpPacket))
                                 droppedPackets.Add(ipPacket);

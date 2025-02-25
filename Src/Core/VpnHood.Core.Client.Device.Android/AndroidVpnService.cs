@@ -4,11 +4,11 @@ using Android.Content.PM;
 using Android.Net;
 using Android.Runtime;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.Device.Adapters;
+using VpnHood.Core.Adapters.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Sockets;
+using VpnHood.Core.Tunneling.Sockets;
 using Environment = System.Environment;
 
 namespace VpnHood.Core.Client.Device.Droid;

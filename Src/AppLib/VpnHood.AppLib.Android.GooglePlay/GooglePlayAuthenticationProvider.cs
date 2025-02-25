@@ -1,8 +1,8 @@
 using System.Security.Authentication;
 using AndroidX.Credentials;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Droid;
+using VpnHood.Core.Client.Device.UiContexts;
 using Xamarin.GoogleAndroid.Libraries.Identity.GoogleId;
 using GetCredentialRequest = AndroidX.Credentials.GetCredentialRequest;
 

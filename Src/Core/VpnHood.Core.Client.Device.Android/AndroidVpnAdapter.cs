@@ -2,13 +2,12 @@
 using Android.Net;
 using Android.OS;
 using Java.IO;
-using Java.Net;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Core.Client.Device.Adapters;
+using VpnHood.Core.Adapters.Abstractions;
 using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Net;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Device.Droid;
 
@@ -17,7 +16,6 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
     private FileInputStream? _inStream; // Packets to be sent are queued in this input stream.
     private ParcelFileDescriptor? _mInterface;
     private FileOutputStream? _outStream; // Packets received need to be written to this output stream.
-    private readonly ConnectivityManager? _connectivityManager = ConnectivityManager.FromContext(Application.Context);
     private PacketReceivedEventArgs? _packetReceivedEventArgs;
     private bool _stopRequested;
 
@@ -27,25 +25,7 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
     public bool CanSendPacketToOutbound => false;
     public bool IsMtuSupported => true;
     public bool IsDnsServersSupported => true;
-    public bool CanDetectInProcessPacket => OperatingSystem.IsAndroidVersionAtLeast(29);
     public bool CanProtectSocket => true;
-
-    public bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
-    {
-        // check if the packet is in process
-        if (!CanDetectInProcessPacket || !OperatingSystem.IsAndroidVersionAtLeast(29))
-            throw new NotSupportedException("IsInProcessPacket is not supported on this device.");
-
-        // check if the packet is from the current app
-        var localAddress = new InetSocketAddress(InetAddress.GetByAddress(localEndPoint.Address.GetAddressBytes()),
-            localEndPoint.Port);
-        var remoteAddress = new InetSocketAddress(InetAddress.GetByAddress(remoteEndPoint.Address.GetAddressBytes()),
-            remoteEndPoint.Port);
-
-        // Android 10 and above
-        var uid = _connectivityManager?.GetConnectionOwnerUid((int)protocol, localAddress, remoteAddress);
-        return uid == Process.MyUid();
-    }
 
     protected void ProcessPacket(IPPacket ipPacket)
     {

@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Common.Utils;
+﻿using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Maui.Common;
 

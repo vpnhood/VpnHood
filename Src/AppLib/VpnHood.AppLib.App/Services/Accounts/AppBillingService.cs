@@ -1,6 +1,6 @@
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Client.Device;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Accounts;
 

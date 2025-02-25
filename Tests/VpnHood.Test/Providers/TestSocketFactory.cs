@@ -1,6 +1,6 @@
 ﻿using System.Net.Sockets;
 using VpnHood.Core.Client.Device.WinDivert;
-using VpnHood.Core.Common.Sockets;
+using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Test.Providers;
 

@@ -2,7 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Tokens.TokenLegacy;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 // ReSharper disable StringLiteralTypo
 

@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using VpnHood.Core.Common.Converters;
+using VpnHood.Core.Toolkit.Converters;
 
 namespace VpnHood.Test;
 

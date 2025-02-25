@@ -1,5 +1,5 @@
 ﻿using System.Text.RegularExpressions;
-using VpnHood.Core.Common.Net;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.AppLib;
 

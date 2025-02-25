@@ -214,7 +214,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             accessUsage is { CanExtendByRewardedAd: true, ExpirationTime: not null } &&
             accessUsage.ExpirationTime > FastDateTime.UtcNow + _canExtendByRewardedAdThreshold &&
             _allowRewardedAd &&
-            _vpnAdapter.CanDetectInProcessPacket &&
             Token.IsPublic;
     }
 
@@ -450,8 +449,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
                         // Udp
                         else if (ipPacket.Protocol == ProtocolType.Udp && udpPacket != null) {
-                            if (!IsInIpRange(ipPacket.DestinationAddress) || _clientHost.ShouldPassthru(ipPacket,
-                                    udpPacket.SourcePort, udpPacket.DestinationPort))
+                            if (!IsInIpRange(ipPacket.DestinationAddress))
                                 proxyPackets.Add(ipPacket);
                             else if (!ShouldTunnelUdpPacket(udpPacket))
                                 droppedPackets.Add(ipPacket);

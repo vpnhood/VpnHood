@@ -176,16 +176,6 @@ internal class ClientHost(
         return ret.ToArray(); //it is a shared buffer; to ToArray is necessary
     }
 
-    public bool ShouldPassthru(IPPacket ipPacket, int sourcePort, int destinationPort)
-    {
-        return
-            IsPassthruInProcessPacketsEnabled &&
-            vpnHoodClient.SocketFactory.CanDetectInProcessPacket &&
-            vpnHoodClient.SocketFactory.IsInProcessPacket(ipPacket.Protocol,
-                new IPEndPoint(ipPacket.SourceAddress, sourcePort),
-                new IPEndPoint(ipPacket.DestinationAddress, destinationPort));
-    }
-
     private SyncCustomData? ProcessOutgoingSyncPacket(IPPacket ipPacket, TcpPacket tcpPacket)
     {
         var sync = tcpPacket is { Synchronize: true, Acknowledgment: false };
@@ -193,7 +183,6 @@ internal class ClientHost(
             return null;
 
         var syncCustomData = new SyncCustomData {
-            Passthru = ShouldPassthru(ipPacket, tcpPacket.SourcePort, tcpPacket.DestinationPort),
             IsInIpRange = vpnHoodClient.IsInIpRange(ipPacket.DestinationAddress)
         };
 
@@ -270,8 +259,7 @@ internal class ClientHost(
 
             // Filter by IP
             var isInIpRange = syncCustomData?.IsInIpRange ?? vpnHoodClient.IsInIpRange(natItem.DestinationAddress);
-            if (syncCustomData?.Passthru == true ||
-                filterResult.Action == DomainFilterAction.Exclude ||
+            if (filterResult.Action == DomainFilterAction.Exclude ||
                 (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
                 var channelId = Guid.NewGuid() + ":client";
                 await vpnHoodClient.AddPassthruTcpStream(
@@ -349,7 +337,6 @@ internal class ClientHost(
 
     public struct SyncCustomData
     {
-        public required bool? Passthru { get; init; }
         public required bool IsInIpRange { get; init; }
     }
 }

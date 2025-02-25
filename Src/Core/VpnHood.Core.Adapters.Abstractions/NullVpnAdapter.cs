@@ -1,7 +1,5 @@
-﻿using System.Net;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using PacketDotNet;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Adapters.Abstractions;
 
@@ -14,8 +12,6 @@ public class NullVpnAdapter : IVpnAdapter
     public virtual bool IsMtuSupported { get; set; } = true;
     public virtual bool CanProtectSocket { get; set; } = true;
     public virtual bool CanSendPacketToOutbound { get; set; }
-    public bool CanDetectInProcessPacket { get; set; } = true;
-
 
     public virtual void StartCapture(VpnAdapterOptions options)
     {
@@ -51,14 +47,6 @@ public class NullVpnAdapter : IVpnAdapter
     public virtual void SendPacketToOutbound(IList<IPPacket> ipPackets)
     {
         // nothing
-    }
-
-    public bool IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
-    {
-        if (!CanDetectInProcessPacket)
-            throw new NotSupportedException("This device can not detect IsInProcessPacket.");
-
-        return false;
     }
 
     private bool _disposed;

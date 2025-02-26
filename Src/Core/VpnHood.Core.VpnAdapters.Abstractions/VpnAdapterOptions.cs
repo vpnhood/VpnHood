@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.Core.Adapters.Abstractions;
+namespace VpnHood.Core.VpnAdapters.Abstractions;
 
 public class VpnAdapterOptions
 {

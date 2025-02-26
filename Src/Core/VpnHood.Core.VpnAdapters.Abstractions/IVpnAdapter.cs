@@ -1,6 +1,6 @@
 ﻿using PacketDotNet;
 
-namespace VpnHood.Core.Adapters.Abstractions;
+namespace VpnHood.Core.VpnAdapters.Abstractions;
 
 public interface IVpnAdapter : IDisposable
 {
@@ -8,11 +8,10 @@ public interface IVpnAdapter : IDisposable
     event EventHandler? Disposed;
     bool Started { get; }
     bool IsDnsServersSupported { get; }
-    bool IsMtuSupported { get; }
     bool CanProtectSocket { get; }
     bool CanSendPacketToOutbound { get; }
-    void StartCapture(VpnAdapterOptions adapterOptions);
-    void StopCapture();
+    Task StartCapture(VpnAdapterOptions adapterOptions);
+    Task StopCapture();
     void ProtectSocket(System.Net.Sockets.Socket socket);
     void SendPacketToInbound(IPPacket ipPacket);
     void SendPacketToInbound(IList<IPPacket> packets);

@@ -5,7 +5,6 @@ using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Core.Adapters.Abstractions;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
@@ -24,8 +23,9 @@ using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Core.VpnAdapters.Abstractions;
 using FastDateTime = VpnHood.Core.Toolkit.Utils.FastDateTime;
-using PacketReceivedEventArgs = VpnHood.Core.Adapters.Abstractions.PacketReceivedEventArgs;
+using PacketReceivedEventArgs = VpnHood.Core.VpnAdapters.Abstractions.PacketReceivedEventArgs;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Client;
@@ -870,7 +870,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 ExcludeApps = _excludeApps,
                 IncludeApps = _includeApps
             };
-            _vpnAdapter.StartCapture(adapterOptions);
+            await _vpnAdapter.StartCapture(adapterOptions);
 
             // Preparing tunnel
             VhLogger.Instance.LogInformation("Configuring Datagram Channels...");

@@ -33,8 +33,8 @@ public class AndroidAppWebViewMainActivityHandler(
 
         // Initialize UI
         if (!VpnHoodAppWebServer.IsInit) {
-            ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resource.SpaZipData);
-            using var spaZipStream = new MemoryStream(VpnHoodApp.Instance.Resource.SpaZipData);
+            ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
+            using var spaZipStream = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
             VpnHoodAppWebServer.Init(new WebServerOptions {
                 SpaZipStream = spaZipStream,
                 DefaultPort = options.SpaDefaultPort,
@@ -75,7 +75,7 @@ public class AndroidAppWebViewMainActivityHandler(
             ActivityEvent.Activity.FindViewById<LinearLayout>(_Microsoft.Android.Resource.Designer.Resource.Id
                 .myLayout);
 
-        var backgroundColor = VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor?.ToAndroidColor();
+        var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
         if (linearLayout != null && backgroundColor != null) {
             try {
                 linearLayout.SetBackgroundColor(backgroundColor.Value);
@@ -100,7 +100,7 @@ public class AndroidAppWebViewMainActivityHandler(
         }
 
         // set progressbar color
-        var progressBarColor = VpnHoodApp.Instance.Resource.Colors.ProgressBarColor?.ToAndroidColor();
+        var progressBarColor = VpnHoodApp.Instance.Resources.Colors.ProgressBarColor?.ToAndroidColor();
         var progressBar =
             ActivityEvent.Activity.FindViewById<ProgressBar>(_Microsoft.Android.Resource.Designer.Resource.Id
                 .progressBar);
@@ -171,8 +171,8 @@ public class AndroidAppWebViewMainActivityHandler(
             WebView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
             WebView.Settings.SetSupportMultipleWindows(true);
             // WebView.SetLayerType(LayerType.Hardware, null); // it may cause poor performance if forced
-            if (VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor != null)
-                WebView.SetBackgroundColor(VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor.Value
+            if (VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor != null)
+                WebView.SetBackgroundColor(VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value
                     .ToAndroidColor());
 
             var webViewClient = new AndroidAppWebViewClient();
@@ -197,8 +197,8 @@ public class AndroidAppWebViewMainActivityHandler(
         ActivityEvent.Activity.SetContentView(WebView);
         _isWeViewVisible = true;
 
-        if (VpnHoodApp.Instance.Resource.Colors.NavigationBarColor != null)
-            ActivityEvent.Activity.Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resource.Colors.NavigationBarColor
+        if (VpnHoodApp.Instance.Resources.Colors.NavigationBarColor != null)
+            ActivityEvent.Activity.Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resources.Colors.NavigationBarColor
                 .Value.ToAndroidColor());
     }
 

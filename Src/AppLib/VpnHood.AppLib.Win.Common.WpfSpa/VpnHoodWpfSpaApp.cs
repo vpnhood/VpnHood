@@ -33,8 +33,8 @@ public abstract class VpnHoodWpfSpaApp : Application
             VpnHoodApp.Init(new WinDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode), appOptions);
 
             // initialize SPA
-            ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resource.SpaZipData);
-            using var spaResource = new MemoryStream(VpnHoodApp.Instance.Resource.SpaZipData);
+            ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
+            using var spaResource = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
             var localSpaUrl = !string.IsNullOrEmpty(appOptions.LocalSpaHostName)
                 ? VpnHoodWinApp.RegisterLocalDomain(
                     new IPEndPoint(IPAddress.Parse("127.10.10.10"), SpaDefaultPort ?? 80), appOptions.LocalSpaHostName)

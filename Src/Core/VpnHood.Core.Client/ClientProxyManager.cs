@@ -1,9 +1,9 @@
 ﻿using PacketDotNet;
-using VpnHood.Core.Adapters.Abstractions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client;
 

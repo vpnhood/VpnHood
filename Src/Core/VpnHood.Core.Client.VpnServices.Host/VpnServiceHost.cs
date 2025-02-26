@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Diagnostics;
-using VpnHood.Core.Adapters.Abstractions;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
@@ -8,6 +7,7 @@ using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 

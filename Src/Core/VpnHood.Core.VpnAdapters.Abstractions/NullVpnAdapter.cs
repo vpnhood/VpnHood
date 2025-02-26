@@ -1,7 +1,7 @@
 ﻿using System.Net.Sockets;
 using PacketDotNet;
 
-namespace VpnHood.Core.Adapters.Abstractions;
+namespace VpnHood.Core.VpnAdapters.Abstractions;
 
 public class NullVpnAdapter : IVpnAdapter
 {
@@ -9,19 +9,20 @@ public class NullVpnAdapter : IVpnAdapter
     public event EventHandler? Disposed;
     public virtual bool Started { get; set; }
     public virtual bool IsDnsServersSupported { get; set; } = true;
-    public virtual bool IsMtuSupported { get; set; } = true;
     public virtual bool CanProtectSocket { get; set; } = true;
     public virtual bool CanSendPacketToOutbound { get; set; }
 
-    public virtual void StartCapture(VpnAdapterOptions options)
+    public virtual Task StartCapture(VpnAdapterOptions options)
     {
         Started = true;
         _ = PacketReceivedFromInbound; //prevent not used warning
+        return Task.CompletedTask;
     }
 
-    public virtual void StopCapture()
+    public virtual Task StopCapture()
     {
-        Started = false;
+        Started = false;    
+        return Task.CompletedTask;
     }
 
     public virtual void ProtectSocket(Socket socket)

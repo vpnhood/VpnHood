@@ -164,7 +164,7 @@ internal class ClientHost(
                     ret.Add(PacketUtil.CreateTcpResetReply(ipPacket, true));
                     PacketUtil.LogPacket(ipPacket,
                         "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.",
-                        LogLevel.Error, ex);
+                        LogLevel.Debug, ex);
                 }
                 else {
                     PacketUtil.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet.",

@@ -29,7 +29,7 @@ Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 if ($nugets) {
 	& "$solutionDir/Src/Core/VpnHood.Core.Toolkit/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Common/_publish.ps1";
-	& "$solutionDir/Src/Core/VpnHood.Core.Adapters.Abstractions/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.Abstractions/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.SocksProxy/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Tunneling/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Abstractions/_publish.ps1";
@@ -46,7 +46,7 @@ if ($nugets) {
 
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Abstractions/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.App/_publish.ps1";
-	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Resources/_publish.ps1";
+	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Assets/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.WebServer/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Store/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Android.Common/_publish.ps1";

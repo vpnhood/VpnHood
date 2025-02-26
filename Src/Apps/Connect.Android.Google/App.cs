@@ -4,13 +4,13 @@ using Microsoft.Extensions.Logging;
 using VpnHood.App.Client.Droid.Google.FirebaseUtils;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.Droid.Ads.VhAdMob;
 using VpnHood.AppLib.Droid.Ads.VhChartboost;
 using VpnHood.AppLib.Droid.Ads.VhInMobi;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
-using VpnHood.AppLib.Resources;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Store;
 using VpnHood.Core.Common.Logging;
@@ -41,7 +41,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         // load app settings and resources
         var storageFolderPath = AppOptions.BuildStorageFolderPath("VpnHoodConnect");
-        var resources = DefaultAppResource.Resources;
+        var resources = DefaultAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
@@ -50,7 +50,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         return new AppOptions(appId: PackageName!, "VpnHoodConnect", AppConfigs.IsDebugMode) {
             StorageFolderPath = storageFolderPath,
             AccessKeys = [appConfigs.DefaultAccessKey],
-            Resource = resources,
+            Resources = resources,
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,

@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using SharpPcap;
 using SharpPcap.WinDivert;
-using VpnHood.Core.Adapters.Abstractions;
+using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Toolkit.Net;
 using ProtocolType = PacketDotNet.ProtocolType;
@@ -34,7 +34,6 @@ public class WinDivertVpnAdapter : IVpnAdapter
     public bool Started => _device.Started;
     public virtual bool CanSendPacketToOutbound => true;
     public virtual bool IsDnsServersSupported => false;
-    public bool IsMtuSupported => false;
 
     public WinDivertVpnAdapter()
     {
@@ -86,7 +85,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
         return ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
     }
 
-    public void StartCapture(VpnAdapterOptions options)
+    public Task StartCapture(VpnAdapterOptions options)
     {
         _virtualIpV4 = options.VirtualIpNetworkV4?.Prefix;
         _virtualIpV6 = options.VirtualIpNetworkV6?.Prefix;
@@ -126,15 +125,18 @@ public class WinDivertVpnAdapter : IVpnAdapter
                     ex);
             throw;
         }
+
+        return Task.CompletedTask;
     }
 
-    public void StopCapture()
+    public Task StopCapture()
     {
         if (!Started)
-            return;
+            return Task.CompletedTask;
 
         _device.StopCapture();
         Stopped?.Invoke(this, EventArgs.Empty);
+        return Task.CompletedTask;
     }
 
     private void SetInternalIp(IPAddress address)

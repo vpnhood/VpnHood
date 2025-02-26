@@ -1,9 +1,9 @@
 ﻿using Android.Runtime;
 using VpnHood.AppLib;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
-using VpnHood.AppLib.Resources;
 
 namespace VpnHood.App.Client.Droid.Google;
 
@@ -21,11 +21,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         var appConfigs = AppConfigs.Load();
 
-        var resources = DefaultAppResource.Resources;
+        var resources = DefaultAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
 
         return new AppOptions(PackageName!, "VpnHood", AppConfigs.IsDebugMode) {
-            Resource = resources,
+            Resources = resources,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             IsAddAccessKeySupported = true,

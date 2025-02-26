@@ -46,7 +46,7 @@ if ($nugets) {
 
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Abstractions/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.App/_publish.ps1";
-	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Resources/_publish.ps1";
+	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Assets/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.WebServer/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Store/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Android.Common/_publish.ps1";

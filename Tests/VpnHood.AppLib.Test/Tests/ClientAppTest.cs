@@ -28,7 +28,7 @@ public class ClientAppTest : TestAppBase
     {
         // update current ipLocation in app project after a week
         var solutionFolder = TestHelper.GetParentDirectory(Directory.GetCurrentDirectory(), 5);
-        var ipLocationFile = Path.Combine(solutionFolder, "Src/AppLib/VpnHood.AppLib.App/Resources", "IpLocations.zip");
+        var ipLocationFile = Path.Combine(solutionFolder, "Src/AppLib/VpnHood.AppLib.Assets/Resources", "IpLocations.zip");
 
         // find token
         var userSecretFile = Path.Combine(Path.GetDirectoryName(solutionFolder)!, ".user", "credentials.json");

@@ -17,16 +17,16 @@ public partial class VpnHoodWpfSpaMainWindow : Window
     public VpnHoodWpfSpaMainWindow()
     {
         InitializeComponent();
-        var backgroundColor = VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor;
+        var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor;
 
         // initialize main window
-        Title = VpnHoodApp.Instance.Resource.Strings.AppName;
+        Title = VpnHoodApp.Instance.Resources.Strings.AppName;
         if (backgroundColor != null)
             Background = new SolidColorBrush(Color.FromArgb(backgroundColor.Value.A, backgroundColor.Value.R,
                 backgroundColor.Value.G, backgroundColor.Value.B));
         Visibility = VpnHoodWinApp.Instance.ShowWindowAfterStart ? Visibility.Visible : Visibility.Hidden;
-        Width = VpnHoodApp.Instance.Resource.WindowSize.Width;
-        Height = VpnHoodApp.Instance.Resource.WindowSize.Height;
+        Width = VpnHoodApp.Instance.Resources.WindowSize.Width;
+        Height = VpnHoodApp.Instance.Resources.WindowSize.Height;
         ResizeMode = ResizeMode.CanMinimize;
         StateChanged += (_, _) => {
             if (WindowState == WindowState.Minimized) Hide();
@@ -80,9 +80,9 @@ public partial class VpnHoodWpfSpaMainWindow : Window
     {
         // update icon and text
         var icon = VpnHoodApp.Instance.State.ConnectionState switch {
-            AppConnectionState.Connected => VpnHoodApp.Instance.Resource.Icons.BadgeConnectedIcon,
+            AppConnectionState.Connected => VpnHoodApp.Instance.Resources.Icons.BadgeConnectedIcon,
             AppConnectionState.None => null,
-            _ => VpnHoodApp.Instance.Resource.Icons.BadgeConnectingIcon
+            _ => VpnHoodApp.Instance.Resources.Icons.BadgeConnectingIcon
         };
 
         // remove overlay

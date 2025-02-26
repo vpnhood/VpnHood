@@ -120,13 +120,6 @@
   <data name="AppName" xml:space="preserve">
     <value>VpnHood!</value>
   </data>
-  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="BadgeConnectedIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Icons\BadgeConnected.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="BadgeConnectingIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Icons\BadgeConnecting.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="Connect" xml:space="preserve">
     <value>Connect</value>
   </data>
@@ -163,10 +156,10 @@
   <data name="OpenInBrowser" xml:space="preserve">
     <value>Open in Browser</value>
   </data>
-  <data name="IpLocations" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\IpLocations.zip;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  <data name="BadgeConnectedIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+	  <value>Resources\Icons\BadgeConnected.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="String1" xml:space="preserve">
-    <value>d</value>
+  <data name="BadgeConnectingIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+	  <value>Resources\Icons\BadgeConnecting.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

@@ -49,10 +49,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Resources\VpnHood.AppLib.Resources.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Win.Common.WpfSpa\VpnHood.AppLib.Win.Common.WpfSpa.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Win.Common\VpnHood.AppLib.Win.Common.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Assets\VpnHood.AppLib.Assets.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

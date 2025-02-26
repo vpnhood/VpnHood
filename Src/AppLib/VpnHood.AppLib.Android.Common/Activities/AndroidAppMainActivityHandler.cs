@@ -64,7 +64,7 @@ public class AndroidAppMainActivityHandler
             // check mime
             var mimeType = ActivityEvent.Activity.ContentResolver.GetType(uri);
             if (!_accessKeyMimes.Contains(mimeType, StringComparer.OrdinalIgnoreCase)) {
-                Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resource.Strings.MsgUnsupportedContent,
+                Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resources.Strings.MsgUnsupportedContent,
                     ToastLength.Long)?.Show();
                 return false;
             }
@@ -84,7 +84,7 @@ public class AndroidAppMainActivityHandler
             ImportAccessKey(accessKey);
         }
         catch {
-            Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resource.Strings.MsgCantReadAccessKey,
+            Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resources.Strings.MsgCantReadAccessKey,
                 ToastLength.Long)?.Show();
         }
 
@@ -99,8 +99,8 @@ public class AndroidAppMainActivityHandler
 
         var isNew = profiles.Any(x => x.ClientProfileId == profileInfo.ClientProfileId);
         var message = isNew
-            ? string.Format(VpnHoodApp.Instance.Resource.Strings.MsgAccessKeyAdded, profileInfo.ClientProfileName)
-            : string.Format(VpnHoodApp.Instance.Resource.Strings.MsgAccessKeyUpdated, profileInfo.ClientProfileName);
+            ? string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyAdded, profileInfo.ClientProfileName)
+            : string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyUpdated, profileInfo.ClientProfileName);
 
         Toast.MakeText(ActivityEvent.Activity, message, ToastLength.Long)?.Show();
     }

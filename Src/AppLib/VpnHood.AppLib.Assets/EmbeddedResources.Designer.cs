@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace VpnHood.AppLib.Resources {
+namespace VpnHood.AppLib.Assets {
     using System;
     
     
@@ -22,14 +22,14 @@ namespace VpnHood.AppLib.Resources {
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class EmbeddedResource {
+    internal class EmbeddedResources {
         
         private static global::System.Resources.ResourceManager resourceMan;
         
         private static global::System.Globalization.CultureInfo resourceCulture;
         
         [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-        internal EmbeddedResource() {
+        internal EmbeddedResources() {
         }
         
         /// <summary>
@@ -39,7 +39,7 @@ namespace VpnHood.AppLib.Resources {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("VpnHood.AppLib.Resources.EmbeddedResource", typeof(EmbeddedResource).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("VpnHood.AppLib.Assets.EmbeddedResources", typeof(EmbeddedResources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -63,19 +63,20 @@ namespace VpnHood.AppLib.Resources {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static byte[] SPA {
+        internal static byte[] IpLocations {
             get {
-                object obj = ResourceManager.GetObject("SPA", resourceCulture);
+                object obj = ResourceManager.GetObject("IpLocations", resourceCulture);
                 return ((byte[])(obj));
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to ss.
+        ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static string String1 {
+        internal static byte[] SPA {
             get {
-                return ResourceManager.GetString("String1", resourceCulture);
+                object obj = ResourceManager.GetObject("SPA", resourceCulture);
+                return ((byte[])(obj));
             }
         }
         

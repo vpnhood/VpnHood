@@ -1,4 +1,4 @@
-# v6.0.665
+# v6.0.669
 * Feature: Android: Run VPN in a separate process
 * Feature: Android: Using separate process for VPN service
 * Fix: Android: Menu goes beneath system tray

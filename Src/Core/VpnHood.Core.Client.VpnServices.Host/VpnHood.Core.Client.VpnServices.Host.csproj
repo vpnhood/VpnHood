@@ -31,9 +31,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-   <ProjectReference Include="..\VpnHood.Core.Adapters.Abstractions\VpnHood.Core.Adapters.Abstractions.csproj" />
    <ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Abstractions\VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
    <ProjectReference Include="..\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
+   <ProjectReference Include="..\VpnHood.Core.VpnAdapters.Abstractions\VpnHood.Core.VpnAdapters.Abstractions.csproj" />
 	</ItemGroup>
 
 </Project>

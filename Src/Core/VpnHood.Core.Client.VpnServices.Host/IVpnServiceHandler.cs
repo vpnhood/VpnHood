@@ -1,5 +1,5 @@
-﻿using VpnHood.Core.Adapters.Abstractions;
-using VpnHood.Core.Client.VpnServices.Abstractions;
+﻿using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 

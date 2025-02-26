@@ -1,7 +1,7 @@
-﻿using VpnHood.Core.Adapters.Abstractions;
-using VpnHood.Core.Client.VpnServices.Abstractions;
+﻿using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client.Device.WinDivert;
 

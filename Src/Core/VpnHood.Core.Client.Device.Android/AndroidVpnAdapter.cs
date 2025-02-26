@@ -4,10 +4,10 @@ using Android.OS;
 using Java.IO;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Core.Adapters.Abstractions;
 using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client.Device.Droid;
 
@@ -23,7 +23,6 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
     public event EventHandler? Disposed;
     public bool Started => _mInterface != null;
     public bool CanSendPacketToOutbound => false;
-    public bool IsMtuSupported => true;
     public bool IsDnsServersSupported => true;
     public bool CanProtectSocket => true;
 

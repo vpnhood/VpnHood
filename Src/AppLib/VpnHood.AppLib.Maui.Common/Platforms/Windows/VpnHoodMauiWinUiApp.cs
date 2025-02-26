@@ -1,11 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Windows.UI.Notifications;
-using Microsoft.Maui.Controls.PlatformConfiguration;
 using Microsoft.Maui.Platform;
 using Microsoft.UI.Windowing;
-using SharpPcap.WinDivert;
-using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Win.Common;
 using VpnHood.Core.Client.Device.WinDivert;
 
@@ -44,7 +41,7 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
                 AppWindow.TitleBar.IconShowOptions = IconShowOptions.HideIconAndSystemMenu;
                 AppWindow.Closing += AppWindow_Closing;
 
-                var bgColorResource = vpnHoodApp.Resource.Colors.WindowBackgroundColor;
+                var bgColorResource = vpnHoodApp.Resources.Colors.WindowBackgroundColor;
                 if (bgColorResource != null)
                 {
                     var bgColor = Windows.UI.Color.FromArgb(bgColorResource.Value.A, bgColorResource.Value.R,

@@ -41,7 +41,7 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
         }
     }
 
-    public void StartCapture(VpnAdapterOptions options)
+    public Task StartCapture(VpnAdapterOptions options)
     {
         if (Started)
             StopCapture();
@@ -95,14 +95,15 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
         _outStream = new FileOutputStream(_mInterface.FileDescriptor);
 
         Task.Run(ReadingPacketTask);
+        return Task.CompletedTask;
     }
 
     private readonly Lock _stopCaptureLock = new();
-    public void StopCapture()
+    public Task StopCapture()
     {
         using var lockScope = _stopCaptureLock.EnterScope();
 
-        if (_mInterface == null || _stopRequested) return;
+        if (_mInterface == null || _stopRequested) return Task.CompletedTask;
         _stopRequested = true;
 
         VhLogger.Instance.LogDebug("Stopping the adapter...");
@@ -133,6 +134,7 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
         }
 
         _mInterface = null;
+        return Task.CompletedTask;
     }
 
     public void SendPacketToInbound(IPPacket ipPacket)

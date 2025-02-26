@@ -85,7 +85,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
         return ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
     }
 
-    public void StartCapture(VpnAdapterOptions options)
+    public Task StartCapture(VpnAdapterOptions options)
     {
         _virtualIpV4 = options.VirtualIpNetworkV4?.Prefix;
         _virtualIpV6 = options.VirtualIpNetworkV6?.Prefix;
@@ -125,15 +125,18 @@ public class WinDivertVpnAdapter : IVpnAdapter
                     ex);
             throw;
         }
+
+        return Task.CompletedTask;
     }
 
-    public void StopCapture()
+    public Task StopCapture()
     {
         if (!Started)
-            return;
+            return Task.CompletedTask;
 
         _device.StopCapture();
         Stopped?.Invoke(this, EventArgs.Empty);
+        return Task.CompletedTask;
     }
 
     private void SetInternalIp(IPAddress address)

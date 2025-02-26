@@ -12,15 +12,17 @@ public class NullVpnAdapter : IVpnAdapter
     public virtual bool CanProtectSocket { get; set; } = true;
     public virtual bool CanSendPacketToOutbound { get; set; }
 
-    public virtual void StartCapture(VpnAdapterOptions options)
+    public virtual Task StartCapture(VpnAdapterOptions options)
     {
         Started = true;
         _ = PacketReceivedFromInbound; //prevent not used warning
+        return Task.CompletedTask;
     }
 
-    public virtual void StopCapture()
+    public virtual Task StopCapture()
     {
-        Started = false;
+        Started = false;    
+        return Task.CompletedTask;
     }
 
     public virtual void ProtectSocket(Socket socket)

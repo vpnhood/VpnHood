@@ -1,6 +1,6 @@
 ﻿using PacketDotNet;
 
-namespace VpnHood.Core.Adapters.Abstractions;
+namespace VpnHood.Core.VpnAdapters.Abstractions;
 
 public sealed class PacketReceivedEventArgs(IList<IPPacket> ipPackets, IVpnAdapter vpnAdapter) : EventArgs
 {

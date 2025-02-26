@@ -1,6 +1,6 @@
-﻿using VpnHood.Core.Adapters.Abstractions;
-using VpnHood.Core.Client.VpnServices.Abstractions;
+﻿using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Host;
+using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Device;

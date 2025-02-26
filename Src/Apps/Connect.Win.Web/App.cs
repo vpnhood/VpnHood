@@ -1,6 +1,6 @@
 ﻿using System.Drawing;
 using VpnHood.AppLib;
-using VpnHood.AppLib.Resources;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.Win.Common;
 using VpnHood.AppLib.Win.Common.WpfSpa;
 
@@ -23,7 +23,7 @@ public class App : VpnHoodWpfSpaApp
         var appConfigs = AppConfigs.Load();
 
         // load app settings and resources
-        var resources = DefaultAppResource.Resources;
+        var resources = DefaultAppResources.Resources;
         resources.Strings.AppName = appConfigs.AppName;
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
@@ -31,7 +31,7 @@ public class App : VpnHoodWpfSpaApp
 
         return new AppOptions("com.vpnhood.connect.windows", "VpnHoodConnect", AppConfigs.IsDebugMode) {
             UiName = "VpnHoodConnect",
-            Resource = resources,
+            Resources = resources,
             AccessKeys = [appConfigs.DefaultAccessKey],
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             UpdaterProvider = new AdvancedInstallerUpdaterProvider(),

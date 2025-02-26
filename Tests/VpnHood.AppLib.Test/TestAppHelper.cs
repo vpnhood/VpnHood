@@ -2,6 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
@@ -31,6 +32,7 @@ public class TestAppHelper : TestHelper
             CanExtendByRewardedAdThreshold = TimeSpan.Zero,
             DisconnectOnDispose = true,
             ConnectTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(5),
+            Resources = DefaultAppResources.Resources,
             AdOptions = new AppAdOptions {
                 ShowAdPostDelay = TimeSpan.Zero,
                 LoadAdPostDelay = TimeSpan.Zero

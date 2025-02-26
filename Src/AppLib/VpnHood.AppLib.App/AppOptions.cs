@@ -11,7 +11,6 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
 {
     public static string BuildStorageFolderPath(string subFolder) =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), subFolder);
-
     public string AppId => appId;
     public bool IsDebugMode => isDebugMode;
     public string StorageFolderPath { get; set; } = BuildStorageFolderPath(storageFolderName);
@@ -20,7 +19,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public string? UpdateInfoUrl { get; set; }
     public bool UseInternalLocationService { get; set; } = true;
     public bool UseExternalLocationService { get; set; } = true;
-    public AppResource Resource { get; set; } = new();
+    public AppResources Resources { get; set; } = new();
     public string? Ga4MeasurementId { get; set; } = "G-4LE99XKZYE";
     public string? UiName { get; set; }
     public bool IsAddAccessKeySupported { get; set; } = true;

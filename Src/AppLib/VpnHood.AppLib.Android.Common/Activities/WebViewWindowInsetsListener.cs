@@ -8,7 +8,7 @@ internal class WebViewWindowInsetsListener : Java.Lang.Object, View.IOnApplyWind
     public WindowInsets OnApplyWindowInsets(View v, WindowInsets insets)
     {
         // Set the background color
-        var backgroundColor = VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor?.ToAndroidColor();
+        var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
         if (backgroundColor != null)
             v.SetBackgroundColor(backgroundColor.Value);
 

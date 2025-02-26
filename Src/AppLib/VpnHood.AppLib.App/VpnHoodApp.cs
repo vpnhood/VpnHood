@@ -59,6 +59,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly LogOptions _logOptions;
     private readonly AppPersistState _appPersistState;
     private readonly VpnServiceManager _vpnServiceManager;
+    private readonly LocalIpRangeLocationProvider? _ipRangeLocationProvider;
     private readonly ITrackerFactory _trackerFactory;
     private readonly IDevice _device;
     private bool _isDisconnecting;
@@ -76,7 +77,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
     public event EventHandler? ConnectionStateChanged;
     public event EventHandler? UiHasChanged;
-    public LocalIpRangeLocationProvider IpRangeLocationProvider { get; }
     public bool IsIdle => ConnectionState.IsIdle();
     public string StorageFolderPath { get; }
     public AppSettings Settings => SettingsService.AppSettings;
@@ -87,18 +87,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public JobSection JobSection { get; }
     public TimeSpan TcpTimeout { get; set; } = ClientOptions.Default.ConnectTimeout;
     public LogService LogService { get; }
-    public AppResource Resource { get; }
+    public AppResources Resources { get; }
     public AppServices Services { get; }
     public AppSettingsService SettingsService { get; }
     public DeviceAppInfo[] InstalledApps => _device.InstalledApps;
+    public LocalIpRangeLocationProvider IpRangeLocationProvider =>
+        _ipRangeLocationProvider ?? throw new NotSupportedException("IpRangeLocationProvider is not supported.");
 
     private VpnHoodApp(IDevice device, AppOptions options)
     {
         Directory.CreateDirectory(options.StorageFolderPath); //make sure directory exists
-        Resource = options.Resource;
+        Resources = options.Resources;
         _device = device;
-        StorageFolderPath = options.StorageFolderPath ??
-                            throw new ArgumentNullException(nameof(options.StorageFolderPath));
+        StorageFolderPath = options.StorageFolderPath ?? throw new ArgumentNullException(nameof(options.StorageFolderPath));
         SettingsService = new AppSettingsService(StorageFolderPath);
         SettingsService.BeforeSave += SettingsBeforeSave;
         _oldUserSettings = JsonUtils.JsonClone(UserSettings);
@@ -118,14 +119,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _disconnectOnDispose = options.DisconnectOnDispose;
         _logOptions = options.LogOptions;
         _trackerFactory = options.TrackerFactory ?? new BuiltInTrackerFactory();
-        Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
-
         _sessionTimeout = options.SessionTimeout;
-        LogService = new LogService(Path.Combine(StorageFolderPath, FileNameLog));
+
+        // IpRangeLocationProvider
+        if (options.UseInternalLocationService) {
+            if (options.Resources.IpLocationZipData == null) throw new ArgumentException("Internal location service needs IpLocationZipData.");
+            _ipRangeLocationProvider = new LocalIpRangeLocationProvider(
+                () => new ZipArchive(new MemoryStream(options.Resources.IpLocationZipData)),
+                () => _appPersistState.ClientCountryCode);
+        }
+
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
-        IpRangeLocationProvider = new LocalIpRangeLocationProvider(
-            () => new ZipArchive(new MemoryStream(AppLib.Resource.IpLocations)),
-            () => _appPersistState.ClientCountryCode);
+        LogService = new LogService(Path.Combine(StorageFolderPath, FileNameLog));
+        Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
 
         // configure update job section
         JobSection = new JobSection(new JobOptions {
@@ -340,7 +346,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
                 LastError = IsIdle ? LastError?.ToAppDto() : null,
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
-                    ? Services.UiProvider.GetSystemBarsInfo(uiContext) 
+                    ? Services.UiProvider.GetSystemBarsInfo(uiContext)
                     : SystemBarsInfo.Default
             };
 
@@ -356,7 +362,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppConnectionState ConnectionState {
         get {
             var clientState = ConnectionInfo.ClientState;
-            
+
             if (clientState == ClientState.Disconnecting || _isDisconnecting)
                 return AppConnectionState.None; // treat as none. let's service disconnect on background
 
@@ -788,6 +794,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     new CloudflareLocationProvider(httpClient, userAgent),
                     new IpLocationIoProvider(httpClient, userAgent, apiKey: null)
                 };
+
+                // InternalLocationService needs current ip from external service, so it is inside the if block
                 if (_useInternalLocationService)
                     providers.Add(IpRangeLocationProvider);
 

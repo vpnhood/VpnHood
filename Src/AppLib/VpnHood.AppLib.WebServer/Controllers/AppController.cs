@@ -21,7 +21,7 @@ internal class AppController : WebApiController, IAppController
     {
         configParams = await HttpContext.GetRequestDataAsync<ConfigParams>().VhConfigureAwait();
         App.Services.CultureProvider.AvailableCultures = configParams.AvailableCultures;
-        if (configParams.Strings != null) App.Resource.Strings = configParams.Strings;
+        if (configParams.Strings != null) App.Resources.Strings = configParams.Strings;
 
         App.UpdateUi();
         return await GetConfig().VhConfigureAwait();

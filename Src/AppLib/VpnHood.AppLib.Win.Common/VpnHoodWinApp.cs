@@ -132,34 +132,34 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
 
     private void InitNotifyIcon()
     {
-        _sysTray = new SystemTray(VpnHoodApp.Instance.Resource.Strings.AppName, _appIcon.Handle);
+        _sysTray = new SystemTray(VpnHoodApp.Instance.Resources.Strings.AppName, _appIcon.Handle);
         _sysTray.Clicked += (_, _) => OpenMainWindow();
         _sysTray.ContextMenu = new ContextMenu();
         _openMainWindowMenuItemId =
-            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Open, (_, _) => OpenMainWindow());
+            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Open, (_, _) => OpenMainWindow());
         _openMainWindowInBrowserMenuItemId =
-            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.OpenInBrowser,
+            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.OpenInBrowser,
                 (_, _) => OpenMainWindowInBrowser());
         _sysTray.ContextMenu.AddMenuSeparator();
         _connectMenuItemId =
-            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Connect, (_, _) => ConnectClicked());
-        _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Disconnect,
+            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Connect, (_, _) => ConnectClicked());
+        _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Disconnect,
             (_, _) => _ = VpnHoodApp.Instance.Disconnect());
         _sysTray.ContextMenu.AddMenuSeparator();
-        _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Exit, (_, _) => Exit());
+        _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Exit, (_, _) => Exit());
 
         // initialize icons
-        if (VpnHoodApp.Instance.Resource.Icons.SystemTrayConnectingIcon != null)
+        if (VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectingIcon != null)
             _connectingIcon =
-                new Icon(new MemoryStream(VpnHoodApp.Instance.Resource.Icons.SystemTrayConnectingIcon.Data));
+                new Icon(new MemoryStream(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectingIcon.Data));
 
-        if (VpnHoodApp.Instance.Resource.Icons.SystemTrayConnectedIcon != null)
+        if (VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectedIcon != null)
             _connectedIcon =
-                new Icon(new MemoryStream(VpnHoodApp.Instance.Resource.Icons.SystemTrayConnectedIcon.Data));
+                new Icon(new MemoryStream(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectedIcon.Data));
 
-        if (VpnHoodApp.Instance.Resource.Icons.SystemTrayDisconnectedIcon != null)
+        if (VpnHoodApp.Instance.Resources.Icons.SystemTrayDisconnectedIcon != null)
             _disconnectedIcon =
-                new Icon(new MemoryStream(VpnHoodApp.Instance.Resource.Icons.SystemTrayDisconnectedIcon.Data));
+                new Icon(new MemoryStream(VpnHoodApp.Instance.Resources.Icons.SystemTrayDisconnectedIcon.Data));
     }
 
     private void UpdateNotifyIcon()
@@ -169,7 +169,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
 
         // update icon and text
         var stateName = VpnHoodApp.Instance.State.ConnectionState == AppConnectionState.None
-            ? VpnHoodApp.Instance.Resource.Strings.Disconnected
+            ? VpnHoodApp.Instance.Resources.Strings.Disconnected
             : VpnHoodApp.Instance.State.ConnectionState.ToString();
 
         var icon = _connectingIcon;
@@ -177,7 +177,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         else if (VpnHoodApp.Instance.IsIdle) icon = _disconnectedIcon;
         icon ??= _appIcon;
 
-        _sysTray.Update($@"{VpnHoodApp.Instance.Resource.Strings.AppName} - {stateName}", icon.Handle);
+        _sysTray.Update($@"{VpnHoodApp.Instance.Resources.Strings.AppName} - {stateName}", icon.Handle);
         _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VpnHoodApp.Instance.IsIdle);
         _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VpnHoodApp.Instance.IsIdle);
         _sysTray.ContextMenu?.EnableMenuItem(_disconnectMenuItemId,

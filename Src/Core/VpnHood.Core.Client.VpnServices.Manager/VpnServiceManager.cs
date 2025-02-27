@@ -19,7 +19,7 @@ namespace VpnHood.Core.Client.VpnServices.Manager;
 public class VpnServiceManager : IJob, IDisposable
 {
     private readonly TimeSpan _requestVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(120);
-    private readonly TimeSpan _startVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(15);
+    private readonly TimeSpan _startVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(20);
     private readonly TimeSpan _connectionInfoTimeSpan = TimeSpan.FromSeconds(1);
     private readonly IDevice _device;
     private readonly IAdService? _adService;

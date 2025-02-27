@@ -144,10 +144,10 @@ public class AndroidAppWebViewMainActivityHandler(
     private string GetLaunchUrl(WebView webView)
     {
         var mainUrl = $"{VpnHoodAppWebServer.Instance.Url}?nocache={VpnHoodAppWebServer.Instance.SpaHash}";
-        return mainUrl;
-
         var currentVersion = GetWebViewVersion(webView);
-        if (currentVersion >= options.WebViewRequiredVersion || options.WebViewUpgradeUrl == null)
+        if (currentVersion >= options.WebViewRequiredVersion ||
+            currentVersion < 50 || // ignore OS with wrong version report such as HarmonyOS
+            options.WebViewUpgradeUrl == null)
             return mainUrl;
 
         var upgradeUrl = options.WebViewUpgradeUrl.IsAbsoluteUri

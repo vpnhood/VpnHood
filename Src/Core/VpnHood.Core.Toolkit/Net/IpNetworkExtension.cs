@@ -20,4 +20,15 @@ public static class IpNetworkExtension
     {
         return ipNetworks.SequenceEqual(IpNetwork.All);
     }
+
+    public static bool IsAllV4(this IOrderedEnumerable<IpNetwork> ipNetworks)
+    {
+        return ipNetworks.SequenceEqual([IpNetwork.AllV4]);
+    }
+
+    public static bool IsAllV6(this IOrderedEnumerable<IpNetwork> ipNetworks)
+    {
+        return ipNetworks.SequenceEqual([IpNetwork.AllV6]);
+    }
+
 }

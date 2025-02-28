@@ -5,6 +5,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -15,6 +16,12 @@ public class AccessCodeTest : TestAppBase
     public async Task AaFoo()
     {
         await Task.Delay(100);
+
+        var allV6 = new[] { IpNetwork.Parse("::/1"), IpNetwork.Parse("8000::/1") };
+        var allV4 = new[] { IpNetwork.Parse("0.0.0.0/1"), IpNetwork.Parse("128.0.0.0/1") };
+        Console.WriteLine(allV4.ToIpRanges().IsAllV4());
+        Console.WriteLine(allV6.ToIpRanges().IsAllV6());
+
     }
 
     [TestMethod]

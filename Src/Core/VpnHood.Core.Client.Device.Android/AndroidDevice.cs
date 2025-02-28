@@ -96,10 +96,9 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         return PrepareVpnService(androidUiContext?.ActivityEvent, timeout, cancellationToken);
     }
 
-    public async Task StartVpnService(CancellationToken cancellationToken)
+    public Task StartVpnService(CancellationToken cancellationToken)
     {
-        // throw exception if not prepared
-        await PrepareVpnService(null, TimeSpan.FromSeconds(0), cancellationToken);
+        // do not call RequestVpnService for NullCapture. It will close other VPN connections.
 
         // start service
         var intent = new Intent(Application.Context, typeof(AndroidVpnService));
@@ -110,6 +109,8 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         else {
             Application.Context.StartService(intent.SetAction("connect"));
         }
+
+        return Task.CompletedTask;
     }
 
     private void Activity_OnActivityResult(object? sender, ActivityResultEventArgs e)

@@ -85,7 +85,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
         return ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
     }
 
-    public Task StartCapture(VpnAdapterOptions options)
+    public Task StartCapture(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         _virtualIpV4 = options.VirtualIpNetworkV4?.Prefix;
         _virtualIpV6 = options.VirtualIpNetworkV6?.Prefix;
@@ -129,7 +129,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
         return Task.CompletedTask;
     }
 
-    public Task StopCapture()
+    public Task StopCapture(CancellationToken cancellationToken)
     {
         if (!Started)
             return Task.CompletedTask;
@@ -185,7 +185,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
     protected virtual void ProcessPacketReceivedFromInbound(IPPacket ipPacket)
     {
         // create the event args. for performance, we will reuse the same instance
-        _packetReceivedEventArgs ??= new PacketReceivedEventArgs(new IPPacket[1], this);
+        _packetReceivedEventArgs ??= new PacketReceivedEventArgs(new IPPacket[1]);
 
         try {
             _packetReceivedEventArgs.IpPackets[0] = ipPacket;
@@ -258,7 +258,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
             return;
 
         if (_device.Started)
-            StopCapture();
+            StopCapture(CancellationToken.None);
 
         _device.Dispose();
         _disposed = true;

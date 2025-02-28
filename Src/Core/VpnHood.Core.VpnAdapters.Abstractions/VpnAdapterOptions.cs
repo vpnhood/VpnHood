@@ -13,4 +13,5 @@ public class VpnAdapterOptions
     public required string[]? IncludeApps { get; init; }
     public required string? SessionName { get; init; }
     public int? Mtu { get; init; }
+    public int Metric { get; init; }
 }

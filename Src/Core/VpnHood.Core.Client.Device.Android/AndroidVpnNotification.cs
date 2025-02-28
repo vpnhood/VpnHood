@@ -66,6 +66,7 @@ public sealed class AndroidVpnNotification : IDisposable
         //  disconnect intent
         var disconnectIntent = new Intent(context, typeof(AndroidVpnService));
         disconnectIntent.SetAction(DisconnectAction);
+        disconnectIntent.PutExtra("manual", true);
         pendingIntent = PendingIntent.GetService(context, 2, disconnectIntent, intentFlags);
         notificationBuilder.AddAction(new Notification.Action.Builder(null, serviceLocalization.Disconnect, pendingIntent).Build());
 

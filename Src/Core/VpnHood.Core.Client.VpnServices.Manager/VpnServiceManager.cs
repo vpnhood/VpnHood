@@ -97,8 +97,9 @@ public class VpnServiceManager : IJob, IDisposable
 
             // prepare vpn service
             VhLogger.Instance.LogInformation("Requesting VpnService...");
-            await _device.RequestVpnService(AppUiContext.Context, _requestVpnServiceTimeout, cancellationToken)
-                .VhConfigureAwait();
+            if (!clientOptions.UseNullCapture)
+                await _device.RequestVpnService(AppUiContext.Context, _requestVpnServiceTimeout, cancellationToken)
+                    .VhConfigureAwait();
 
             // start vpn service
             VhLogger.Instance.LogInformation("Starting VpnService...");

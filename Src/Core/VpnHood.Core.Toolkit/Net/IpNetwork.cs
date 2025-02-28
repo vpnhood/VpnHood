@@ -33,9 +33,10 @@ public class IpNetwork
 
     public IPAddress Prefix { get; }
     public int PrefixLength { get; }
+    public IPAddress SubnetMask => CidrToSubnetMask(PrefixLength, Prefix.AddressFamily);
     public AddressFamily AddressFamily => Prefix.AddressFamily;
-    public bool IsIpV4 => Prefix.AddressFamily == AddressFamily.InterNetwork;
-    public bool IsIpV6 => Prefix.AddressFamily == AddressFamily.InterNetworkV6;
+    public bool IsV4 => Prefix.AddressFamily == AddressFamily.InterNetwork;
+    public bool IsV6 => Prefix.AddressFamily == AddressFamily.InterNetworkV6;
     public IPAddress FirstIpAddress { get; }
     public IPAddress LastIpAddress { get; }
     public BigInteger Total => _lastIpAddressValue - _firstIpAddressValue + 1;
@@ -94,6 +95,30 @@ public class IpNetwork
         }
     }
 
+    private static IPAddress CidrToSubnetMask(int prefixLength, AddressFamily addressFamily)
+    {
+        switch (addressFamily) {
+            case AddressFamily.InterNetwork:
+                if (prefixLength is < 0 or > 32)
+                    throw new ArgumentOutOfRangeException(nameof(prefixLength), "Invalid CIDR prefix length for IPv4.");
+
+                var mask = uint.MaxValue << (32 - prefixLength);
+                return new IPAddress(BitConverter.GetBytes(mask).Reverse().ToArray());
+
+            case AddressFamily.InterNetworkV6:
+                if (prefixLength is < 0 or > 128)
+                    throw new ArgumentOutOfRangeException(nameof(prefixLength), "Invalid CIDR prefix length for IPv6.");
+
+                var maskBytes = new byte[16];
+                for (var i = 0; i < prefixLength / 8; i++) maskBytes[i] = 0xFF;
+                if (prefixLength % 8 > 0) maskBytes[prefixLength / 8] = (byte)(0xFF << (8 - (prefixLength % 8)));
+                return new IPAddress(maskBytes);
+
+            default:
+                throw new ArgumentException("Invalid Address Family. Use InterNetwork (IPv4) or InterNetworkV6 (IPv6).");
+        }
+    }
+
     public IOrderedEnumerable<IpNetwork> Invert()
     {
         return new[] { this }
@@ -131,7 +156,6 @@ public class IpNetwork
                FirstIpAddress.Equals(ipNetwork.FirstIpAddress) &&
                LastIpAddress.Equals(ipNetwork.LastIpAddress);
     }
-
     public override int GetHashCode()
     {
         return HashCode.Combine(FirstIpAddress, LastIpAddress);

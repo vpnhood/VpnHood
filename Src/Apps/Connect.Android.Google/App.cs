@@ -58,6 +58,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AccountProvider = CreateAppAccountProvider(appConfigs, storageFolderPath),
             AdProviderItems = CreateAppAdProviderItems(appConfigs),
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
+            AdjustForSystemBars = false,
             TrackerFactory = new FirebaseAnalyticsTrackerFactory(),
             AdOptions = new AppAdOptions {
                 PreloadAd = true

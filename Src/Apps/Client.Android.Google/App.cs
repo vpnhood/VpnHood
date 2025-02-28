@@ -30,6 +30,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             IsAddAccessKeySupported = true,
             IsLocalNetworkSupported = true,
+            AdjustForSystemBars = false,
             UpdaterProvider = new GooglePlayAppUpdaterProvider()
         };
     }

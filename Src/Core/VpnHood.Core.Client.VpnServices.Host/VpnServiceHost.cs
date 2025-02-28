@@ -76,7 +76,7 @@ public class VpnServiceHost : IAsyncDisposable
     }
 
     private readonly object _connectLock = new();
-    public bool Connect()
+    public bool Connect(bool forceReconnect = false)
     {
         if (_isDisposed)
             throw new ObjectDisposedException(nameof(VpnServiceHost));
@@ -87,7 +87,7 @@ public class VpnServiceHost : IAsyncDisposable
             // handle previous client
             var client = Client;
             if (client != null) {
-                if (client is { State: ClientState.Connected or ClientState.Connecting or ClientState.Waiting }) {
+                if (!forceReconnect && client is { State: ClientState.Connected or ClientState.Connecting or ClientState.Waiting }) {
                     VhLogger.Instance.LogWarning("VpnService connection is already in progress.");
                     return true; // user must disconnect first
                 }

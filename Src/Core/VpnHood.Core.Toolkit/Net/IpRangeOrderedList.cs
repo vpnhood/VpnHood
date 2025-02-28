@@ -79,6 +79,22 @@ public class IpRangeOrderedList :
             .SequenceEqual(this);
     }
 
+    public bool IsAllV4()
+    {
+        // use ToIpRanges for All to improve performance
+        return new [] {IpNetwork.AllV4}
+            .ToIpRanges()
+            .SequenceEqual(this);
+    }
+
+    public bool IsAllV6()
+    {
+        // use ToIpRanges for All to improve performance
+        return new[] { IpNetwork.AllV6 }
+            .ToIpRanges()
+            .SequenceEqual(this);
+    }
+
     public bool IsInRange(IPAddress ipAddress)
     {
         if (ipAddress.IsIPv4MappedToIPv6) ipAddress = ipAddress.MapToIPv4();

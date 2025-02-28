@@ -29,7 +29,7 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
     protected void ProcessPacket(IPPacket ipPacket)
     {
         // create the event args. for performance, we will reuse the same instance
-        _packetReceivedEventArgs ??= new PacketReceivedEventArgs(new IPPacket[1], this);
+        _packetReceivedEventArgs ??= new PacketReceivedEventArgs(new IPPacket[1]);
 
         try {
             _packetReceivedEventArgs.IpPackets[0] = ipPacket;
@@ -41,10 +41,10 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
         }
     }
 
-    public Task StartCapture(VpnAdapterOptions options)
+    public Task StartCapture(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         if (Started)
-            StopCapture();
+            StopCapture(cancellationToken);
 
         // reset the stop request
         _stopRequested = false;
@@ -83,7 +83,7 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
             appPackageName: appPackageName);
 
         // DNS Servers
-        AddDnsServers(builder, options.DnsServers, options.IncludeNetworks.Any(x => x.IsIpV6));
+        AddDnsServers(builder, options.DnsServers, options.IncludeNetworks.Any(x => x.IsV6));
 
         // try to establish the connection
         _mInterface = builder.Establish() ?? throw new Exception("Could not establish VpnService.");
@@ -94,12 +94,12 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
         //Packets received need to be written to this output stream.
         _outStream = new FileOutputStream(_mInterface.FileDescriptor);
 
-        Task.Run(ReadingPacketTask);
+        Task.Run(ReadingPacketTask, CancellationToken.None);
         return Task.CompletedTask;
     }
 
     private readonly Lock _stopCaptureLock = new();
-    public Task StopCapture()
+    public Task StopCapture(CancellationToken cancellationToken)
     {
         using var lockScope = _stopCaptureLock.EnterScope();
 
@@ -239,7 +239,7 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
         if (_disposed) return;
         _disposed = true;
 
-        StopCapture();
+        StopCapture(CancellationToken.None);
         Disposed?.Invoke(this, EventArgs.Empty);
     }
 }

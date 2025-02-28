@@ -10,8 +10,8 @@ public interface IVpnAdapter : IDisposable
     bool IsDnsServersSupported { get; }
     bool CanProtectSocket { get; }
     bool CanSendPacketToOutbound { get; }
-    Task StartCapture(VpnAdapterOptions adapterOptions);
-    Task StopCapture();
+    Task StartCapture(VpnAdapterOptions adapterOptions, CancellationToken cancellationToken);
+    Task StopCapture(CancellationToken cancellationToken);
     void ProtectSocket(System.Net.Sockets.Socket socket);
     void SendPacketToInbound(IPPacket ipPacket);
     void SendPacketToInbound(IList<IPPacket> packets);

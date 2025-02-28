@@ -12,14 +12,14 @@ public class NullVpnAdapter : IVpnAdapter
     public virtual bool CanProtectSocket { get; set; } = true;
     public virtual bool CanSendPacketToOutbound { get; set; }
 
-    public virtual Task StartCapture(VpnAdapterOptions options)
+    public virtual Task StartCapture(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         Started = true;
         _ = PacketReceivedFromInbound; //prevent not used warning
         return Task.CompletedTask;
     }
 
-    public virtual Task StopCapture()
+    public virtual Task StopCapture(CancellationToken cancellationToken)
     {
         Started = false;    
         return Task.CompletedTask;
@@ -56,7 +56,7 @@ public class NullVpnAdapter : IVpnAdapter
         if (_disposed) return;
         _disposed = true;
 
-        StopCapture();
+        StopCapture(CancellationToken.None);
         Disposed?.Invoke(this, EventArgs.Empty);
     }
 }

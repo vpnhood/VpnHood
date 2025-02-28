@@ -36,10 +36,13 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     public override StartCommandResult OnStartCommand(Intent? intent,
         [GeneratedEnum] StartCommandFlags flags, int startId)
     {
-        switch (intent?.Action) {
+        var action = intent?.Action;
+
+        // get "manual" in 
+        switch (action) {
             // signal start command
-            case "connect":
-                return _vpnServiceHost.Connect()
+            case null or "android.net.VpnService" or "connect":
+                return _vpnServiceHost.Connect(forceReconnect: action == "connect")
                     ? StartCommandResult.Sticky
                     : StartCommandResult.NotSticky;
 

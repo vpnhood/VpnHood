@@ -2,8 +2,7 @@
 
 namespace VpnHood.Core.VpnAdapters.Abstractions;
 
-public sealed class PacketReceivedEventArgs(IList<IPPacket> ipPackets, IVpnAdapter vpnAdapter) : EventArgs
+public sealed class PacketReceivedEventArgs(IList<IPPacket> ipPackets) : EventArgs
 {
     public IList<IPPacket> IpPackets { get; } = ipPackets;
-    public IVpnAdapter VpnAdapter { get; } = vpnAdapter;
 }

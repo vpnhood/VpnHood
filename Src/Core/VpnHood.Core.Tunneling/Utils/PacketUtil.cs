@@ -131,22 +131,25 @@ public static class PacketUtil
         return ipPacket;
     }
 
-    public static IPPacket CreateIcmpV4Packet(IPAddress sourceAddress, IPAddress destinationAddress,
-        byte[] payloadData, bool calculateCheckSum = true)
+    public static IPPacket CreateIcmpEchoRequestV4(IPAddress sourceAddress, IPAddress destinationAddress,
+        byte[] payloadData, ushort id = 0, ushort sequence = 0, bool calculateCheckSum = true)
     {
-        // todo: not tested
-        // create packet for audience
+        // ICMP echo request
         var buffer = new byte[8 + payloadData.Length];
         var icmpPacket = new IcmpV4Packet(new ByteArraySegment(buffer)) {
             TypeCode = IcmpV4TypeCode.EchoRequest,
-            Data = payloadData
+            Data = payloadData,
+            Sequence = sequence,
+            Id = id
         };
 
+        // IP packet
         var ipPacket = new IPv4Packet(sourceAddress, destinationAddress) {
             Protocol = ProtocolType.Icmp,
             PayloadPacket = icmpPacket
         };
 
+        // Update checksums
         if (calculateCheckSum) {
             icmpPacket.UpdateIcmpChecksum();
             ipPacket.UpdateIPChecksum();
@@ -154,32 +157,6 @@ public static class PacketUtil
         }
 
         return ipPacket;
-    }
-
-    public static IcmpV4Packet CreateIcmpV4EchoRequest(ushort id, ushort sequence, byte[] data,
-        bool updateChecksum, IPPacket? parentPacket = null)
-    {
-        // packet is too big
-        const int headerSize = 8;
-        var icmpDataLen = data.Length;
-        var buffer = new byte[headerSize + icmpDataLen];
-        Array.Copy(data, 0, buffer, headerSize, icmpDataLen);
-        var icmpPacket = parentPacket != null
-            ? new IcmpV4Packet(new ByteArraySegment(buffer))
-            : new IcmpV4Packet(new ByteArraySegment(buffer), parentPacket);
-
-        icmpPacket.TypeCode = IcmpV4TypeCode.EchoRequest;
-        icmpPacket.Id = id;
-        icmpPacket.Sequence = sequence;
-
-        if (updateChecksum) {
-            // Create the ICMP packet
-            // Calculate and set the checksum
-            icmpPacket.UpdateIcmpChecksum();
-            icmpPacket.UpdateCalculatedValues();
-        }
-
-        return icmpPacket;
     }
 
 
@@ -373,72 +350,6 @@ public static class PacketUtil
         }
     }
 
-    public static IPPacket CreateIcmpV6NeighborAdvertisement2(IPPacket ipPacket)
-    {
-        var buffer = new byte[24];
-        buffer[4] = 0xE0;
-        var target = ipPacket.DestinationAddress.GetAddressBytes();
-        Array.Copy(target, 0, buffer, 8, 16);
-        var icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer)) {
-            Type = IcmpV6Type.NeighborAdvertisement,
-            Code = 0
-        };
-
-        var newIpPacket = CreateIpPacket(IPAddress.Parse("fd00::1001"), ipPacket.SourceAddress);
-        newIpPacket.PayloadPacket = icmpPacket;
-        UpdateIpPacket(newIpPacket);
-
-        return newIpPacket;
-    }
-
-    public static IPPacket CreateIcmpV6NeighborAdvertisement(IPPacket ipPacket)
-    {
-        var buffer = new byte[24];
-        buffer[4] = 0xE0;
-
-        //buffer[24] = 2; // option type 2
-        //buffer[25] = 1; // option length
-        //buffer[26] = 0x02;
-        //buffer[27] = 0x1c;
-        //buffer[28] = 0x93;
-        //buffer[29] = 0xa9;
-        //buffer[30] = 0xc8;
-        //buffer[31] = 0x64;
-
-        var target = ipPacket.SourceAddress.GetAddressBytes();
-        Array.Copy(target, 0, buffer, 8, 16);
-        var icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer)) {
-            Type = IcmpV6Type.NeighborAdvertisement,
-            Code = 0
-        };
-
-        var newIpPacket = CreateIpPacket(ipPacket.DestinationAddress, ipPacket.SourceAddress);
-        newIpPacket.PayloadPacket = icmpPacket;
-        UpdateIpPacket(newIpPacket);
-
-        return newIpPacket;
-    }
-
-    public static IPPacket CreateIcmpV6RouterAdvertisement(IPPacket ipPacket)
-    {
-        var buffer = new byte[16];
-        buffer[4] = 0xFF; // Cur Hop Limit
-        buffer[6] = 0x00; // Router Lifetime 0. 0 is unspecified
-        buffer[7] = 0x00; // Router Lifetime 0
-
-        var icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer)) {
-            Type = IcmpV6Type.RouterAdvertisement,
-            Code = 0
-        };
-
-        var router = IPAddress.Parse("fd00::1010");
-        var newIpPacket = CreateIpPacket(router, ipPacket.SourceAddress);
-        newIpPacket.PayloadPacket = icmpPacket;
-        UpdateIpPacket(newIpPacket);
-
-        return newIpPacket;
-    }
-
     public static string Format(IPPacket ipPacket)
     {
         return VhLogger.FormatIpPacket(ipPacket.ToString()!);
@@ -464,39 +375,6 @@ public static class PacketUtil
             new IPEndPoint(ipPacket.SourceAddress, 0),
             new IPEndPoint(ipPacket.DestinationAddress, 0));
     }
-
-    public static bool IsQuicHandshake(UdpPacket udpPacket)
-    {
-        var payload = udpPacket.PayloadData;
-        // Ensure the packet has enough data to analyze for QUIC
-        if (payload.Length < 6)
-            return false;
-
-        // Check the first byte to verify it’s a long header (0xC0 or above)
-        var firstByte = payload[0];
-        if ((firstByte & 0xC0) != 0xC0)
-            return false;
-
-        // Check if it's an Initial packet (0b1100xxx)
-        if ((firstByte & 0x30) != 0x00)
-            return false;
-
-        // Optionally check Token Length and Length fields in Initial packets for further verification
-        const int tokenLengthIndex = 6; // Assuming fixed-size header, adjust as needed based on your data
-        int tokenLength = payload[tokenLengthIndex];
-
-        // Extract the length field for more validation
-        var lengthFieldIndex = tokenLengthIndex + tokenLength + 1;
-        if (lengthFieldIndex >= payload.Length)
-            return false;
-
-        // Check QUIC version (bytes 1-4)
-        var version = BitConverter.ToInt32(payload, 1);
-
-        // Optional: further checks or more version conditions
-        return version == 0x00000001; // Most common initial version
-    }
-
 
     public static bool IsQuicPort(UdpPacket udpPacket)
     {

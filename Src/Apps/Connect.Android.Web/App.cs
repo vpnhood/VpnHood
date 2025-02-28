@@ -37,7 +37,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             IsAddAccessKeySupported = false,
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
-            Ga4MeasurementId = appConfigs.Ga4MeasurementId
+            Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            AdjustForSystemBars = false
         };
     }
 }

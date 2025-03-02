@@ -19,7 +19,8 @@ public static class AppConnectionStateExtensions
             return false;
 
         return connectionState is 
-            AppConnectionState.Connected or AppConnectionState.Connecting or 
+            AppConnectionState.Connected or 
+            AppConnectionState.Connecting or 
             AppConnectionState.None;
     }
 
@@ -27,7 +28,10 @@ public static class AppConnectionStateExtensions
     {
         return connectionState is 
             AppConnectionState.Initializing or
-            AppConnectionState.Connected or AppConnectionState.Connecting or 
-            AppConnectionState.Diagnosing or AppConnectionState.Waiting;
+            AppConnectionState.Connected or 
+            AppConnectionState.Connecting or 
+            AppConnectionState.Diagnosing or 
+            AppConnectionState.Waiting or 
+            AppConnectionState.WaitingForAd;
     }
 }

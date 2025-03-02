@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using System.Net.Sockets;
 using System.Text;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
 

@@ -3,7 +3,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Droid.GooglePlay.Utils;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.UiContexts;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Toolkit.Logging;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
 using Xamarin.Google.Android.Play.Core.Install.Model;
 

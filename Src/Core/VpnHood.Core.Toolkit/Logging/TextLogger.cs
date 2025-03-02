@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using Microsoft.Extensions.Logging;
 
-namespace VpnHood.Core.Common.Logging;
+namespace VpnHood.Core.Toolkit.Logging;
 
 public abstract class TextLogger(bool includeScopes, string? globalScope) : ILogger, ILoggerProvider
 {

@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.NetTester.Clients;
 using VpnHood.NetTester.Servers;
 using VpnHood.NetTester.Utils;

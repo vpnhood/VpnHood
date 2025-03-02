@@ -5,6 +5,7 @@ using VpnHood.App.Client.Droid.Google.FirebaseUtils;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Assets;
+using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.Droid.Ads.VhAdMob;
 using VpnHood.AppLib.Droid.Ads.VhChartboost;
 using VpnHood.AppLib.Droid.Ads.VhInMobi;
@@ -13,7 +14,7 @@ using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Store;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.App.Client.Droid.Google;
 
@@ -43,6 +44,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         var storageFolderPath = AppOptions.BuildStorageFolderPath("VpnHoodConnect");
         var resources = DefaultAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
+        resources.IpLocationZipData = Ip2LocationLiteDb.ZipData;
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);

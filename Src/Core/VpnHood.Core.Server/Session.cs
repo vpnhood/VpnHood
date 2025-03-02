@@ -2,7 +2,6 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
@@ -10,6 +9,7 @@ using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Core.Server.Exceptions;
 using VpnHood.Core.Server.Utils;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;

@@ -1,6 +1,6 @@
 ﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 

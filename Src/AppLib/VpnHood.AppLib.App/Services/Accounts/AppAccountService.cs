@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Accounts;

@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Diagnosing;
 using VpnHood.AppLib.DtoConverters;
@@ -23,7 +24,6 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Utils;
@@ -32,6 +32,7 @@ using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Common.IpLocations;
 using VpnHood.Core.Common.IpLocations.Providers;
 using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -56,7 +57,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly TimeSpan _connectTimeout;
     private readonly TimeSpan _canExtendByRewardedAdThreshold;
     private readonly TimeSpan _sessionTimeout;
-    private readonly LogOptions _logOptions;
+    private readonly LogServiceOptions _logServiceOptions;
     private readonly AppPersistState _appPersistState;
     private readonly VpnServiceManager _vpnServiceManager;
     private readonly LocalIpRangeLocationProvider? _ipRangeLocationProvider;
@@ -117,7 +118,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _allowEndPointTracker = options.AllowEndPointTracker;
         _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
         _disconnectOnDispose = options.DisconnectOnDispose;
-        _logOptions = options.LogOptions;
+        _logServiceOptions = options.LogServiceOptions;
         _trackerFactory = options.TrackerFactory ?? new BuiltInTrackerFactory();
         _sessionTimeout = options.SessionTimeout;
 
@@ -411,20 +412,20 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _appPersistState.HasDiagnoseRequested = false;
     }
 
-    private LogOptions GetLogOptions()
+    private LogServiceOptions GetLogOptions()
     {
-        var logLevel = _logOptions.LogLevel;
+        var logLevel = _logServiceOptions.LogLevel;
         if (HasDebugCommand(DebugCommands.LogDebug)) logLevel = LogLevel.Debug;
         if (HasDebugCommand(DebugCommands.LogTrace)) logLevel = LogLevel.Trace;
-        var logOptions = new LogOptions {
+        var logOptions = new LogServiceOptions {
             LogLevel = logLevel,
-            LogAnonymous = !Features.IsDebugMode && (_logOptions.LogAnonymous == true || UserSettings.LogAnonymous),
-            LogEventNames = LogService.GetLogEventNames(_logOptions.LogEventNames, UserSettings.DebugData1 ?? "").ToArray(),
-            SingleLineConsole = _logOptions.SingleLineConsole,
-            LogToConsole = _logOptions.LogToConsole,
-            LogToFile = _logOptions.LogToFile,
-            AutoFlush = _logOptions.AutoFlush,
-            GlobalScope = _logOptions.GlobalScope
+            LogAnonymous = !Features.IsDebugMode && (_logServiceOptions.LogAnonymous == true || UserSettings.LogAnonymous),
+            LogEventNames = LogService.GetLogEventNames(_logServiceOptions.LogEventNames, UserSettings.DebugData1 ?? "").ToArray(),
+            SingleLineConsole = _logServiceOptions.SingleLineConsole,
+            LogToConsole = _logServiceOptions.LogToConsole,
+            LogToFile = _logServiceOptions.LogToFile,
+            AutoFlush = _logServiceOptions.AutoFlush,
+            GlobalScope = _logServiceOptions.GlobalScope
         };
         return logOptions;
     }
@@ -638,7 +639,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ExcludeApps = UserSettings.AppFiltersMode == FilterMode.Exclude ? UserSettings.AppFilters : null,
             IncludeApps = UserSettings.AppFiltersMode == FilterMode.Include ? UserSettings.AppFilters : null,
             SessionName = CurrentClientProfileInfo?.ClientProfileName,
-            LogOptions = GetLogOptions(),
+            LogServiceOptions = GetLogOptions(),
             Ga4MeasurementId = _ga4MeasurementId,
             Version = Features.Version,
             TrackerFactoryAssemblyQualifiedName = _trackerFactory.GetType().AssemblyQualifiedName,

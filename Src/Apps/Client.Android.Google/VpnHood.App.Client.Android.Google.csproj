@@ -42,6 +42,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.673" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<AndroidResource Update="Resources\xml\locales_config.xml">
 			<SubType>Designer</SubType>
 			<Generator>MSBuild:UpdateGeneratedFiles</Generator>

@@ -1,6 +1,7 @@
 ﻿using System.Drawing;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Assets;
+using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.Win.Common;
 using VpnHood.AppLib.Win.Common.WpfSpa;
 
@@ -25,6 +26,7 @@ public class App : VpnHoodWpfSpaApp
         // load app settings and resources
         var resources = DefaultAppResources.Resources;
         resources.Strings.AppName = appConfigs.AppName;
+        resources.IpLocationZipData = Ip2LocationLiteDb.ZipData;
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
@@ -39,7 +41,7 @@ public class App : VpnHoodWpfSpaApp
             LocalSpaHostName = "my-vpnhood-connect",
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
-            LogOptions = {
+            LogServiceOptions = {
                 SingleLineConsole = false
             }
         };

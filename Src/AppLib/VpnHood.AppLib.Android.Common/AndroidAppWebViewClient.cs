@@ -1,7 +1,7 @@
 ﻿using Android.Content;
 using Android.Webkit;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.Droid.Common;
 

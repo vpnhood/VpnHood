@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using Microsoft.Extensions.Logging;
 
-namespace VpnHood.Core.Common.Logging;
+namespace VpnHood.Core.Toolkit.Logging;
 
 public class StreamLogger(Stream stream, bool includeScopes = true, bool leaveOpen = false, bool autoFlush = false, 
     string? globalScope = null)

@@ -1,6 +1,7 @@
 # v6.0.669
 * Feature: Android: Run VPN in a separate process
 * Feature: Android: Using separate process for VPN service
+* Feature: Android: Edge to Edge UI
 * Fix: Android: Menu goes beneath system tray
 * Fix: Some ANR and crashes
 * Improve: virtual ip allocation

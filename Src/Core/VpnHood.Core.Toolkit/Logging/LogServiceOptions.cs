@@ -1,9 +1,9 @@
 ﻿using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 
-namespace VpnHood.Core.Common.Logging;
+namespace VpnHood.Core.Toolkit.Logging;
 
-public class LogOptions
+public class LogServiceOptions
 {
     public bool LogToConsole { get; set; } = true;
     public bool LogToFile { get; set; } = true;

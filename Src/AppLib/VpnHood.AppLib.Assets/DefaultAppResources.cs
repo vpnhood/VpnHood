@@ -1,12 +1,10 @@
 ﻿using System.Drawing;
-using VpnHood.AppLib.Abstractions;
 
 namespace VpnHood.AppLib.Assets;
 
 public static class DefaultAppResources
 {
     private static readonly Lazy<AppResources> LazyResource = new(() => new AppResources {
-        IpLocationZipData = EmbeddedResources.IpLocations,
         SpaZipData = EmbeddedResources.SPA,
         Colors = new AppResources.AppColors {
             NavigationBarColor = Color.FromArgb(18, 34, 114),

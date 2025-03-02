@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace VpnHood.AppLib.Abstractions {
+namespace VpnHood.AppLib.Assets {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace VpnHood.AppLib.Abstractions {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("VpnHood.AppLib.Abstractions.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("VpnHood.AppLib.Assets.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -194,6 +194,36 @@ namespace VpnHood.AppLib.Abstractions {
         internal static string OpenInBrowser {
             get {
                 return ResourceManager.GetString("OpenInBrowser", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] VpnConnectedIcon {
+            get {
+                object obj = ResourceManager.GetObject("VpnConnectedIcon", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] VpnConnectingIcon {
+            get {
+                object obj = ResourceManager.GetObject("VpnConnectingIcon", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] VpnDisconnectedIcon {
+            get {
+                object obj = ResourceManager.GetObject("VpnDisconnectedIcon", resourceCulture);
+                return ((byte[])(obj));
             }
         }
     }

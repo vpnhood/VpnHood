@@ -1,9 +1,10 @@
 ﻿using System.Diagnostics;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib;
 
@@ -45,6 +46,6 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public TimeSpan CanExtendByRewardedAdThreshold { get; set; } = TimeSpan.FromMinutes(5);
     public TimeSpan? EventWatcherInterval { get; set; } // set if you don't call State periodically
     public bool DisconnectOnDispose { get; set; }
-    public LogOptions LogOptions { get; set; } = new();
+    public LogServiceOptions LogServiceOptions { get; set; } = new();
     public bool AdjustForSystemBars { get; set; } = true;
 }

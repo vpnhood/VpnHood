@@ -63,16 +63,6 @@ namespace VpnHood.AppLib.Assets {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static byte[] IpLocations {
-            get {
-                object obj = ResourceManager.GetObject("IpLocations", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
         internal static byte[] SPA {
             get {
                 object obj = ResourceManager.GetObject("SPA", resourceCulture);

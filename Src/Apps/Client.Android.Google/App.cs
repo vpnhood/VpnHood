@@ -1,6 +1,7 @@
 ﻿using Android.Runtime;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Assets;
+using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
@@ -23,6 +24,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         var resources = DefaultAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
+        resources.IpLocationZipData = Ip2LocationLiteDb.ZipData;
 
         return new AppOptions(PackageName!, "VpnHood", AppConfigs.IsDebugMode) {
             Resources = resources,

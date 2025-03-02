@@ -1,24 +1,23 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using VpnHood.Core.Toolkit.Converters;
-using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Common.Logging;
+namespace VpnHood.Core.Toolkit.Logging;
 
 public static class VhLogger
 {
     private static bool _isDiagnoseMode;
-    private static ILogger _instance = NullLogger.Instance;
+
+    private static readonly VhLoggerDecorator InstanceDecorator = new ();
 
     public static ILogger Instance {
-        get => _instance;
+        get => InstanceDecorator;
         set {
-            _instance = value;
-            JobRunner.Default.Logger = value;
+            // use the decorator to prevent previous assignments losing the instance
+            InstanceDecorator.Logger = value is VhLoggerDecorator vhLoggerDecorator ? vhLoggerDecorator.Logger : value;
         }
     }
 
@@ -41,6 +40,7 @@ public static class VhLogger
                 configure.IncludeScopes = true;
                 configure.SingleLine = singleLine;
             });
+            builder.SetMinimumLevel(logLevel);
         });
         var logger = loggerFactory.CreateLogger("");
         return new SyncLogger(logger);
@@ -73,7 +73,6 @@ public static class VhLogger
         if (ipNetwork == null) return "<null>";
         return $"{Format(ipNetwork.Prefix)}/{ipNetwork.PrefixLength}";
     }
-
 
     public static string FormatType(object? obj)
     {
@@ -163,4 +162,14 @@ public static class VhLogger
 
         Instance.LogError(eventId, ex, message, args);
     }
+
+    private class VhLoggerDecorator : ILogger
+    {
+        public ILogger Logger { get; set; } = CreateConsoleLogger();
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            => Logger.Log(logLevel, eventId, state, exception, formatter);
+        public bool IsEnabled(LogLevel logLevel) => Logger.IsEnabled(logLevel);
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => Logger.BeginScope(state);
+    }
+
 }

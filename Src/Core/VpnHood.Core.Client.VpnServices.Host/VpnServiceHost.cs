@@ -3,8 +3,8 @@ using System.Diagnostics;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
@@ -102,11 +102,11 @@ public class VpnServiceHost : IAsyncDisposable
             try {
                 // read client options and start log service
                 var clientOptions = Context.ReadClientOptions();
-                _logService?.Start(clientOptions.LogOptions);
+                _logService?.Start(clientOptions.LogServiceOptions);
                 
                 // sni is sensitive, must be explicitly enabled
                 clientOptions.ForceLogSni |=
-                    clientOptions.LogOptions.LogEventNames.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase);
+                    clientOptions.LogServiceOptions.LogEventNames.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase);
 
                 // create tracker
                 var trackerFactory = TryCreateTrackerFactory(clientOptions.TrackerFactoryAssemblyQualifiedName);

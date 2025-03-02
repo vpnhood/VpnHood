@@ -7,7 +7,7 @@ using Java.Lang;
 using Java.Util.Functions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device.Droid.Utils;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Toolkit.Logging;
 using Exception = System.Exception;
 using Object = Java.Lang.Object;
 

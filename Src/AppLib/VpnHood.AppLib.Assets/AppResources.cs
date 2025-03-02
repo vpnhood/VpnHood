@@ -1,6 +1,6 @@
 ﻿using System.Drawing;
 
-namespace VpnHood.AppLib.Abstractions;
+namespace VpnHood.AppLib.Assets;
 
 public class AppResources
 {
@@ -38,9 +38,9 @@ public class AppResources
     {
         public IconData? BadgeConnectedIcon { get; set; } = new(Resources.BadgeConnectedIcon);
         public IconData? BadgeConnectingIcon { get; set; } = new(Resources.BadgeConnectingIcon);
-        public IconData? SystemTrayConnectedIcon { get; set; }
-        public IconData? SystemTrayConnectingIcon { get; set; }
-        public IconData? SystemTrayDisconnectedIcon { get; set; }
+        public IconData? SystemTrayConnectedIcon { get; set; } = new(Resources.VpnConnectedIcon);
+        public IconData? SystemTrayConnectingIcon { get; set; } = new(Resources.VpnConnectingIcon);
+        public IconData? SystemTrayDisconnectedIcon { get; set; } = new(Resources.VpnDisconnectedIcon);
     }
 
     public class IconData(byte[] data)

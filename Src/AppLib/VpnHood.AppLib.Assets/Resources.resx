@@ -162,4 +162,13 @@
   <data name="BadgeConnectingIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
 	  <value>Resources\Icons\BadgeConnecting.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="VpnConnectedIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+	  <value>Resources\Icons\VpnConnected.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="VpnConnectingIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+	  <value>Resources\Icons\VpnConnecting.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="VpnDisconnectedIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+	  <value>Resources\Icons\VpnDisconnected.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
 </root>

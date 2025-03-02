@@ -2,7 +2,7 @@
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Common.Logging;
+namespace VpnHood.Core.Toolkit.Logging;
 
 public class EventReporter : IDisposable, IJob
 {

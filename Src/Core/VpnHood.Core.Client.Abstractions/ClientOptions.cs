@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Converters;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Client.Abstractions;
@@ -61,7 +61,7 @@ public class ClientOptions
     public string[]? ExcludeApps { get; set; }
     public string[]? IncludeApps { get; set; }
     public bool UseNullCapture { get; set; }
-    public LogOptions LogOptions { get; set; } = new ();
+    public LogServiceOptions LogServiceOptions { get; set; } = new ();
     public string? Ga4MeasurementId { get; set; }
     public string? TrackerFactoryAssemblyQualifiedName { get; set; }
 

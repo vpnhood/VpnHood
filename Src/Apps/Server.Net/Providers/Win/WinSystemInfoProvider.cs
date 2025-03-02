@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Server.SystemInformation;
+using VpnHood.Core.Toolkit.Logging;
 
 #pragma warning disable CA1416
 

@@ -5,6 +5,8 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Logging;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Toolkit.Utils;
 
@@ -422,6 +424,30 @@ public static class VhUtils
         }
         catch (Exception) {
             return null;
+        }
+    }
+
+    public static void InvokeIgnoreException(string actionName, Action action)
+    {
+        try {
+            action.Invoke();
+        }
+        catch (Exception ex) {
+            if (!string.IsNullOrEmpty(actionName))
+                VhLogger.Instance.LogDebug(ex, "Could not invoke {actionName}.", actionName);
+        }
+    }
+
+    public static T? InvokeIgnoreException<T>(string actionName, Func<T> func, T? defaultValue = default)
+    {
+        try {
+            return func();
+        }
+        catch (Exception ex) {
+            if (!string.IsNullOrEmpty(actionName))
+                VhLogger.Instance.LogDebug(ex, "Could not invoke {actionName}.", actionName);
+
+            return defaultValue;
         }
     }
 }

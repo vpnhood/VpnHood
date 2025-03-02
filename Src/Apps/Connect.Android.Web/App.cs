@@ -2,6 +2,7 @@
 using Android.Runtime;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Assets;
+using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.Core.Client.Device.Droid.Utils;
@@ -25,6 +26,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         var resources = DefaultAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
+        resources.IpLocationZipData = Ip2LocationLiteDb.ZipData;
         resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
         resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);

@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Assets;
 
 namespace VpnHood.AppLib.WebServer.Api;
 

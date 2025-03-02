@@ -31,14 +31,15 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<Compile Update="EmbeddedResources.Designer.cs">
 			<DesignTime>True</DesignTime>
 			<AutoGen>True</AutoGen>
 			<DependentUpon>EmbeddedResources.resx</DependentUpon>
+		</Compile>
+		<Compile Update="Resources.Designer.cs">
+		  <DependentUpon>Resources.resx</DependentUpon>
+		  <DesignTime>True</DesignTime>
+		  <AutoGen>True</AutoGen>
 		</Compile>
 	</ItemGroup>
 
@@ -47,6 +48,11 @@
 			<SubType>Designer</SubType>
 			<Generator>ResXFileCodeGenerator</Generator>
 			<LastGenOutput>EmbeddedResources.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+		<EmbeddedResource Update="Resources.resx">
+		  <SubType>Designer</SubType>
+		  <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+		  <Generator>ResXFileCodeGenerator</Generator>
 		</EmbeddedResource>
 	</ItemGroup>
 

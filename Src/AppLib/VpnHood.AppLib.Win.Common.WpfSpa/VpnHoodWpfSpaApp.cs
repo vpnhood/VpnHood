@@ -5,7 +5,7 @@ using System.Windows;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Device.WinDivert;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.Win.Common.WpfSpa;
 

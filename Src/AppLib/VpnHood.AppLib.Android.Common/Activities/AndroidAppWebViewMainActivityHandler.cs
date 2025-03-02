@@ -8,6 +8,7 @@ using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;
 
@@ -23,10 +24,6 @@ public class AndroidAppWebViewMainActivityHandler(
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-
-        // set window insets listener
-        if (OperatingSystem.IsAndroidVersionAtLeast(30))
-            ActivityEvent.Activity.Window?.DecorView.SetOnApplyWindowInsetsListener(new WebViewWindowInsetsListener());
 
         // initialize web view
         InitLoadingPage();
@@ -71,47 +68,22 @@ public class AndroidAppWebViewMainActivityHandler(
         ActivityEvent.Activity.SetContentView(_Microsoft.Android.Resource.Designer.Resource.Layout.progressbar);
 
         // set window background color
-        var linearLayout =
-            ActivityEvent.Activity.FindViewById<LinearLayout>(_Microsoft.Android.Resource.Designer.Resource.Id
-                .myLayout);
+        var linearLayout = ActivityEvent.Activity.FindViewById<LinearLayout>(
+                _Microsoft.Android.Resource.Designer.Resource.Id.myLayout);
 
         var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
-        if (linearLayout != null && backgroundColor != null) {
-            try {
-                linearLayout.SetBackgroundColor(backgroundColor.Value);
-            }
-            catch {
-                /* ignore */
-            }
-
-            try {
-                ActivityEvent.Activity.Window?.SetStatusBarColor(backgroundColor.Value);
-            }
-            catch {
-                /* ignore */
-            }
-
-            try {
-                ActivityEvent.Activity.Window?.SetNavigationBarColor(backgroundColor.Value);
-            }
-            catch {
-                /* ignore */
-            }
-        }
+        if (linearLayout != null && backgroundColor != null)
+            VhUtils.InvokeIgnoreException("linearLayout.SetBackgroundColor", () =>
+                linearLayout.SetBackgroundColor(backgroundColor.Value));
 
         // set progressbar color
         var progressBarColor = VpnHoodApp.Instance.Resources.Colors.ProgressBarColor?.ToAndroidColor();
-        var progressBar =
-            ActivityEvent.Activity.FindViewById<ProgressBar>(_Microsoft.Android.Resource.Designer.Resource.Id
-                .progressBar);
-        if (progressBar != null && progressBarColor != null) {
-            try {
-                progressBar.IndeterminateTintList = ColorStateList.ValueOf(progressBarColor.Value);
-            }
-            catch {
-                /* ignore */
-            }
-        }
+        var progressBar = ActivityEvent.Activity.FindViewById<ProgressBar>(
+                _Microsoft.Android.Resource.Designer.Resource.Id.progressBar);
+        
+        if (progressBar != null && progressBarColor != null) 
+            VhUtils.InvokeIgnoreException("progressBar.IndeterminateTintList", () =>
+                progressBar.IndeterminateTintList = ColorStateList.ValueOf(progressBarColor.Value));
     }
 
     private static string GetChromeVersionFromUserAgent(string? userAgent)

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace VpnHood.Core.Common.Logging;
+namespace VpnHood.Core.Toolkit.Logging;
 
 public class VhConsoleLogger(bool includeScopes = true, bool singleLine = true, string? globalScope = null)
     : TextLogger(includeScopes, globalScope)

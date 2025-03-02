@@ -50,7 +50,7 @@ public static class DnsResolver
         return hostEntry;
     }
 
-    private static byte[] BuildDnsQuery(ushort queryId, string host)
+    public static byte[] BuildDnsQuery(ushort queryId, string host)
     {
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream);
@@ -76,7 +76,7 @@ public static class DnsResolver
         return stream.ToArray();
     }
 
-    private static IPHostEntry ParseDnsResponse(byte[] response, ushort queryId)
+    public static IPHostEntry ParseDnsResponse(byte[] response, ushort queryId)
     {
         using var stream = new MemoryStream(response);
         using var reader = new BinaryReader(stream);

@@ -3,8 +3,9 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using PacketDotNet.Utils;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 // ReSharper disable UnusedMember.Global
@@ -115,6 +116,13 @@ public static class PacketUtil
         };
     }
 
+    public static IPPacket CreateDnsPacket(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint, string host, ushort? queryId = null)
+    {
+        queryId ??= (ushort)new Random().Next(ushort.MaxValue);
+        var query = DnsResolver.BuildDnsQuery(queryId.Value, host);
+        var dnsPacket = CreateUdpPacket(sourceEndPoint, destinationEndPoint, query);
+        return dnsPacket;
+    }
 
     public static IPPacket CreateUdpPacket(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
         byte[] payloadData, bool calculateCheckSum = true)

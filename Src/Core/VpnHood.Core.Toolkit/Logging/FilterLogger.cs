@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace VpnHood.Core.Common.Logging;
+namespace VpnHood.Core.Toolkit.Logging;
 
 public class FilterLogger(ILogger logger, Func<EventId, bool> eventFilter) : ILogger
 {

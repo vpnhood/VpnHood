@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Common.Logging;
+﻿namespace VpnHood.Core.Toolkit.Logging;
 
 public interface ISelfLog
 {

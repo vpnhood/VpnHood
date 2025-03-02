@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Common.Logging;
+﻿using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Tunneling;
 

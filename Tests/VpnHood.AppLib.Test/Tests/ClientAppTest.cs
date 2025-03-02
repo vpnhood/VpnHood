@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using EmbedIO;
@@ -8,9 +9,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.IpLocations.Providers;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -27,16 +28,34 @@ public class ClientAppTest : TestAppBase
     private async Task UpdateIp2LocationFile()
     {
         // update current ipLocation in app project after a week
-        var solutionFolder = TestHelper.GetParentDirectory(Directory.GetCurrentDirectory(), 5);
-        var ipLocationFile = Path.Combine(solutionFolder, "Src/AppLib/VpnHood.AppLib.Assets/Resources", "IpLocations.zip");
+        var vhFolder = TestHelper.GetParentDirectory(Directory.GetCurrentDirectory(), 6);
+        var solutionFolder = Path.Combine(vhFolder, "VpnHood.AppLib.Assets.IpLocations");
+        var projectFolder = Path.Combine(solutionFolder, "VpnHood.AppLib.Assets.Ip2LocationLite");
+        var ipLocationFile = Path.Combine(projectFolder, "Resources", "IpLocations.zip");
+        VhLogger.Instance.LogInformation("ipLocationFile: {ipLocationFile}", ipLocationFile);
+        if (!Directory.Exists(projectFolder))
+            throw new DirectoryNotFoundException("Ip2Location Project was not found.");
 
         // find token
-        var userSecretFile = Path.Combine(Path.GetDirectoryName(solutionFolder)!, ".user", "credentials.json");
+        var userSecretFile = Path.Combine(vhFolder, ".user", "credentials.json");
         var document = JsonDocument.Parse(await File.ReadAllTextAsync(userSecretFile));
         var ip2LocationToken = document.RootElement.GetProperty("Ip2LocationToken").GetString();
         ArgumentException.ThrowIfNullOrWhiteSpace(ip2LocationToken);
 
         await Ip2LocationDbParser.UpdateLocalDb(ipLocationFile, ip2LocationToken, forIpRange: true);
+
+        // commit project and sync
+        try {
+            var gitBase = $"--git-dir=\"{solutionFolder}/.git\" --work-tree=\"{solutionFolder}\"";
+            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} commit -a -m Publish", CancellationToken.None);
+            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} pull", CancellationToken.None);
+            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} push", CancellationToken.None);
+
+        }
+        catch (ExternalException ex) when(ex.ErrorCode == 1) {
+            VhLogger.Instance.LogInformation("Nothing has been updated.");
+        }
+
     }
 
     [TestMethod]

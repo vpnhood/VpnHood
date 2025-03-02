@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Server.Abstractions;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 
 namespace VpnHood.Test.Providers;

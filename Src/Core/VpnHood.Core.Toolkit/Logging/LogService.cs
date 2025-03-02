@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace VpnHood.Core.Common.Logging;
+namespace VpnHood.Core.Toolkit.Logging;
 
 public class LogService(string logFilePath) : IDisposable
 {
@@ -10,17 +10,17 @@ public class LogService(string logFilePath) : IDisposable
     public string[] LogEvents { get; private set; } = [];
     public bool Exists => File.Exists(LogFilePath);
     public bool IsStarted => _streamLogger != null;
-    public void Start(LogOptions logOptions)
+    public void Start(LogServiceOptions options)
     {
         Stop();
 
-        VhLogger.IsAnonymousMode = logOptions.LogAnonymous is null or true;
-        VhLogger.IsDiagnoseMode = logOptions.LogEventNames.Contains("*");
-        VhLogger.Instance = CreateLogger(logOptions);
-        LogEvents = logOptions.LogEventNames;
-        if (logOptions.LogLevel == LogLevel.Trace) {
+        VhLogger.IsAnonymousMode = options.LogAnonymous is null or true;
+        VhLogger.IsDiagnoseMode = options.LogEventNames.Contains("*");
+        VhLogger.Instance = CreateLogger(options);
+        LogEvents = options.LogEventNames;
+        if (options.LogLevel == LogLevel.Trace) {
             VhLogger.IsDiagnoseMode = true;
-            if (!logOptions.LogEventNames.Contains("*"))
+            if (!options.LogEventNames.Contains("*"))
                 LogEvents = LogEvents.Concat(["*"]).ToArray();
         }
     }
@@ -32,22 +32,22 @@ public class LogService(string logFilePath) : IDisposable
         _streamLogger = null;
     }
 
-    private ILogger CreateLogger(LogOptions logOptions)
+    private ILogger CreateLogger(LogServiceOptions logServiceOptions)
     {
-        var logger = CreateLoggerInternal(logOptions);
+        var logger = CreateLoggerInternal(logServiceOptions);
 
         logger = new FilterLogger(logger, eventId => {
-            if (logOptions.LogEventNames.Contains(eventId.Name, StringComparer.OrdinalIgnoreCase))
+            if (logServiceOptions.LogEventNames.Contains(eventId.Name, StringComparer.OrdinalIgnoreCase))
                 return true;
 
-            return eventId.Id == 0 || logOptions.LogEventNames.Contains("*");
+            return eventId.Id == 0 || logServiceOptions.LogEventNames.Contains("*");
         });
 
         logger = new SyncLogger(logger);
         return logger;
     }
 
-    private ILogger CreateLoggerInternal(LogOptions logOptions)
+    private ILogger CreateLoggerInternal(LogServiceOptions logServiceOptions)
     {
         // delete last lgo
         if (File.Exists(LogFilePath))
@@ -55,17 +55,17 @@ public class LogService(string logFilePath) : IDisposable
 
         using var loggerFactory = LoggerFactory.Create(builder => {
             // console
-            if (logOptions.LogToConsole) // AddSimpleConsole does not support event id
+            if (logServiceOptions.LogToConsole) // AddSimpleConsole does not support event id
                 builder.AddProvider(new VhConsoleLogger(includeScopes: true, singleLine:
-                    logOptions.SingleLineConsole, globalScope: logOptions.GlobalScope));
+                    logServiceOptions.SingleLineConsole, globalScope: logServiceOptions.GlobalScope));
 
-            if (logOptions.LogToFile) {
+            if (logServiceOptions.LogToFile) {
                 var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                _streamLogger = new StreamLogger(fileStream, autoFlush: logOptions.AutoFlush, globalScope: logOptions.GlobalScope);
+                _streamLogger = new StreamLogger(fileStream, autoFlush: logServiceOptions.AutoFlush, globalScope: logServiceOptions.GlobalScope);
                 builder.AddProvider(_streamLogger);
             }
 
-            builder.SetMinimumLevel(logOptions.LogLevel);
+            builder.SetMinimumLevel(logServiceOptions.LogLevel);
         });
 
         var logger = loggerFactory.CreateLogger("");

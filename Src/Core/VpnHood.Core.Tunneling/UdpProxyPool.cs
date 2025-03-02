@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using PacketDotNet;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.Utils;

@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Toolkit.Jobs;
@@ -33,7 +33,7 @@ public class JobRunner
     {
         _currentMaxDegreeOfParallelism = MaxDegreeOfParallelism;
         _semaphore = new SemaphoreSlim(MaxDegreeOfParallelism);
-        Logger = logger ?? NullLogger.Instance;
+        Logger = logger ?? VhLogger.Instance;
         if (start)
             Start();
     }

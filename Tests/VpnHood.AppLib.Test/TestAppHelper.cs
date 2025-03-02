@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Assets;
+using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
@@ -37,12 +38,13 @@ public class TestAppHelper : TestHelper
                 ShowAdPostDelay = TimeSpan.Zero,
                 LoadAdPostDelay = TimeSpan.Zero
             },
-            LogOptions = {
+            LogServiceOptions = {
                 LogLevel = LogVerbose ? LogLevel.Trace : LogLevel.Debug,
                 SingleLineConsole = false
             }
         };
 
+        appOptions.Resources.IpLocationZipData = Ip2LocationLiteDb.ZipData;
         return appOptions;
     }
 

@@ -76,7 +76,7 @@
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.GooglePlay\VpnHood.AppLib.Android.GooglePlay.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Store\VpnHood.AppLib.Store.csproj" />
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Assets\VpnHood.AppLib.Assets.csproj" />
+		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

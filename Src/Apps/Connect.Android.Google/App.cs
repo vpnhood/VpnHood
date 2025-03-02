@@ -1,11 +1,8 @@
-﻿using System.Drawing;
-using Android.Runtime;
+﻿using Android.Runtime;
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client.Droid.Google.FirebaseUtils;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Assets;
-using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.Droid.Ads.VhAdMob;
 using VpnHood.AppLib.Droid.Ads.VhChartboost;
 using VpnHood.AppLib.Droid.Ads.VhInMobi;
@@ -39,15 +36,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         // load app configs
         var appConfigs = AppConfigs.Load();
+        var storageFolderPath = AppOptions.BuildStorageFolderPath("VpnHoodConnect");
 
         // load app settings and resources
-        var storageFolderPath = AppOptions.BuildStorageFolderPath("VpnHoodConnect");
-        var resources = DefaultAppResources.Resources;
+        var resources = ConnectAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
-        resources.IpLocationZipData = Ip2LocationLiteDb.ZipData;
-        resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
-        resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
-        resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
 
         return new AppOptions(appId: PackageName!, "VpnHoodConnect", AppConfigs.IsDebugMode) {
             StorageFolderPath = storageFolderPath,

@@ -1,7 +1,5 @@
 ﻿using System.Security.Principal;
 using VpnHood.AppLib;
-using VpnHood.AppLib.Assets;
-using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.Win.Common;
 using VpnHood.AppLib.Win.Common.WpfSpa;
 
@@ -23,14 +21,13 @@ public class App : VpnHoodWpfSpaApp
     {
         var appConfigs = AppConfigs.Load();
 
-        var resources = DefaultAppResources.Resources;
-        resources.Strings.AppName = appConfigs.AppName;
-        resources.IpLocationZipData = Ip2LocationLiteDb.ZipData;
-        
+        var resources = ClientAppResources.Resources;
+        resources.Strings.AppName = AppConfigs.AppName;
+
         return new AppOptions(appConfigs.AppId, appConfigs.StorageFolderName, AppConfigs.IsDebugMode) {
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             Resources = resources,
-            AccessKeys = AppConfigs.IsDebugMode ? [appConfigs.DefaultAccessKey] : [],
+            AccessKeys = AppConfigs.IsDebug ? [appConfigs.DefaultAccessKey] : [],
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             UpdaterProvider = new AdvancedInstallerUpdaterProvider(),
             IsAddAccessKeySupported = true,

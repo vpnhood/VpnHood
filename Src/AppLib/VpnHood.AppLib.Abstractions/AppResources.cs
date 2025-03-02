@@ -1,6 +1,6 @@
 ﻿using System.Drawing;
 
-namespace VpnHood.AppLib.Assets;
+namespace VpnHood.AppLib.Abstractions;
 
 public class AppResources
 {

@@ -10,15 +10,15 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
 {
     public const string AppName = IsDebugMode ? "VpnHOOD! CLIENT (DEBUG)" : "VpnHood! CLIENT";
 
-    public string? UpdateInfoUrl { get; init; } =
+    public string? UpdateInfoUrl { get; set; } =
         "https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android-web.json";
 
-    public int? SpaDefaultPort { get; init; } = IsDebugMode ? 9581 : 9580;
-    public bool SpaListenToAllIps { get; init; } = IsDebugMode;
+    public int? SpaDefaultPort { get; set; } = IsDebugMode ? 9581 : 9580;
+    public bool SpaListenToAllIps { get; set; } = IsDebugMode;
 
     // SampleAccessKey is a test access key, you should replace it with your own access key.
     // It is limited and can not be used in production.
-    public string? DefaultAccessKey { get; init; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
+    public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
 
     public static AppConfigs Load()
     {

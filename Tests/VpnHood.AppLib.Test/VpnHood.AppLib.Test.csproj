@@ -24,7 +24,6 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\..\Src\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
-	  <ProjectReference Include="..\..\Src\AppLib\VpnHood.AppLib.Assets\VpnHood.AppLib.Assets.csproj" />
 	  <ProjectReference Include="..\VpnHood.Test\VpnHood.Test.csproj" />
 	</ItemGroup>
 

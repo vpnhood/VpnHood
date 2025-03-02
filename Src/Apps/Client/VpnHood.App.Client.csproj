@@ -1,8 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
 	<PropertyGroup>
-		<Description>VpnHood App Abstractions</Description>
+		<Description>Shared Code between client apps</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
-		<RootNamespace>VpnHood.AppLib.Abstractions</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -25,30 +25,23 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Device\VpnHood.Core.Client.Device.csproj" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.676" />
+	</ItemGroup>
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==false">
+		<PackageReference Include="zzVpnHood.AppLib.Assets.ClassicSpa" Version="6.0.678" />
+	</ItemGroup>
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==true">
+		<Reference Include="VpnHood.AppLib.Assets.ClassicSpa">
+			<HintPath>..\..\..\..\VpnHood.AppLib.Assets.ClassicSpa\VpnHood.AppLib.Assets.ClassicSpa\bin\Release\netstandard2.1\VpnHood.AppLib.Assets.ClassicSpa.dll</HintPath>
+		</Reference>	
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+	  
 	</ItemGroup>
 
-	<ItemGroup>
-		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
-			<Pack>True</Pack>
-			<PackagePath></PackagePath>
-		</None>
-	</ItemGroup>
 
-	<ItemGroup>
-	  <Compile Update="Resources.Designer.cs">
-	    <DependentUpon>Resources.resx</DependentUpon>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <EmbeddedResource Update="Resources.resx">
-	    <SubType>Designer</SubType>
-	    <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-	    <Generator>ResXFileCodeGenerator</Generator>
-	  </EmbeddedResource>
-	</ItemGroup>
 
 </Project>

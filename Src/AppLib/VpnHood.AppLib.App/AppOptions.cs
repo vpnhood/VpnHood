@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;

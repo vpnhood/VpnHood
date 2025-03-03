@@ -574,7 +574,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             if (udpPacket.DestinationPort == 53) //53 is DNS port
             {
                 var dnsServer = dnsServers[0];
-                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Dns,
+                VhLogger.Instance.LogDebug(GeneralEventId.Dns,
                     $"DNS request from {VhLogger.Format(ipPacket.SourceAddress)}:{udpPacket.SourcePort} to {VhLogger.Format(ipPacket.DestinationAddress)}, Map to: {VhLogger.Format(dnsServer)}");
                 udpPacket.SourcePort = Nat.GetOrAdd(ipPacket).NatId;
                 ipPacket.DestinationAddress = dnsServer;
@@ -588,7 +588,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             var udpPacket = PacketUtil.ExtractUdp(ipPacket);
             var natItem = (NatItemEx?)Nat.Resolve(ipPacket.Version, ProtocolType.Udp, udpPacket.DestinationPort);
             if (natItem != null) {
-                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Dns,
+                VhLogger.Instance.LogDebug(GeneralEventId.Dns,
                     $"DNS reply to {VhLogger.Format(natItem.SourceAddress)}:{natItem.SourcePort}");
                 ipPacket.SourceAddress = natItem.DestinationAddress;
                 udpPacket.DestinationPort = natItem.SourcePort;

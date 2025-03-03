@@ -167,7 +167,7 @@ public class Tunnel : IJob, IAsyncDisposable
             if (!_streamProxyChannels.Add(channel))
                 throw new Exception($"Could not add {channel.GetType()}. ChannelId: {channel.ChannelId}");
 
-        VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel,
+        VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
             "A StreamProxyChannel has been added. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}",
             channel.ChannelId, StreamProxyChannelCount);
     }
@@ -180,14 +180,14 @@ public class Tunnel : IJob, IAsyncDisposable
         lock (_channelListLock) {
             if (channel is IDatagramChannel datagramChannel) {
                 _datagramChannels.Remove(datagramChannel);
-                VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
+                VhLogger.Instance.LogDebug(GeneralEventId.DatagramChannel,
                     "A DatagramChannel has been removed. Channel: {Channel}, ChannelId: {ChannelId}, " +
                     "ChannelCount: {ChannelCount}, Connected: {Connected}",
                     VhLogger.FormatType(channel), channel.ChannelId, _datagramChannels.Count, channel.Connected);
             }
             else if (channel is StreamProxyChannel streamProxyChannel) {
                 _streamProxyChannels.Remove(streamProxyChannel);
-                VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel,
+                VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
                     "A StreamProxyChannel has been removed. Channel: {Channel}, ChannelId: {ChannelId}, " +
                     "ChannelCount: {ChannelCount}, Connected: {Connected}",
                     VhLogger.FormatType(channel), channel.ChannelId, _streamProxyChannels.Count, channel.Connected);

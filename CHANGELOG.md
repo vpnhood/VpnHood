@@ -1,4 +1,4 @@
-# v6.0.669
+# v6.0.672
 * Feature: Android: Run VPN in a separate process
 * Feature: Android: Using separate process for VPN service
 * Feature: Android: Edge to Edge UI

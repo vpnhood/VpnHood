@@ -29,7 +29,7 @@ public static class OsUtils
 
         process.WaitForExit();
         if (process.ExitCode != 0)
-            throw new Exception(error);
+            throw new ExternalException(error, process.ExitCode);
 
         return output;
     }

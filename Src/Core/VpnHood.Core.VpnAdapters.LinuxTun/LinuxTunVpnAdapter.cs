@@ -45,7 +45,7 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions linuxAdapterOptions) :
         PrimaryAdapterIpV6 = GetWanAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV6()), 53));
         AdapterIpNetworkV4 = adapterOptions.VirtualIpNetworkV4;
         AdapterIpNetworkV6 = adapterOptions.VirtualIpNetworkV6;
-        _useNat = linuxAdapterOptions.UseNat;
+        _useNat = adapterOptions.UseNat;
 
         // start the adapter
         if (Started)
@@ -106,10 +106,10 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions linuxAdapterOptions) :
             // add NAT
             if (_useNat) {
                 _logger.LogDebug("Adding NAT...");
-                if (adapterOptions.VirtualIpNetworkV4 != null)
+                if (adapterOptions.VirtualIpNetworkV4 != null && PrimaryAdapterIpV4 != null)
                     await AddNat(adapterOptions.VirtualIpNetworkV4, cancellationToken).VhConfigureAwait();
 
-                if (adapterOptions.VirtualIpNetworkV6 != null)
+                if (adapterOptions.VirtualIpNetworkV6 != null && PrimaryAdapterIpV4 != null)
                     await AddNat(adapterOptions.VirtualIpNetworkV6, cancellationToken).VhConfigureAwait();
             }
 
@@ -160,17 +160,6 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions linuxAdapterOptions) :
         return mainInterface;
     }
 
-    private static void NatRemove(string mainAdapter, IpNetwork ipNetwork)
-    {
-        // Remove NAT rule. try until no rule found
-        var res = "ok";
-        while (!string.IsNullOrEmpty(res)) {
-            var iptables = ipNetwork.IsV4 ? "iptables" : "ip6tables";
-            res = VhUtils.TryInvoke("Remove NAT rule", () =>
-                ExecuteCommand($"{iptables} -t nat -D POSTROUTING -s {ipNetwork} -o {mainAdapter} -j MASQUERADE"));
-        }
-    }
-
     private async Task Init(CancellationToken cancellationToken)
     {
         // make sure the adapter is not already started
@@ -194,10 +183,22 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions linuxAdapterOptions) :
     {
         // Configure NAT with iptables
         var mainInterface = await GetMainAdapterAsync(cancellationToken).VhConfigureAwait();
-        _logger.LogDebug("Setting up NAT with iptables...");
+        _logger.LogDebug("Setting up NAT...");
         var iptables = ipNetwork.IsV4 ? "iptables" : "ip6tables";
         await ExecuteCommandAsync($"{iptables} -t nat -A POSTROUTING -s {ipNetwork} -o {mainInterface} -j MASQUERADE", cancellationToken).VhConfigureAwait();
     }
+
+    private static void RemoveNat(string mainAdapter, IpNetwork ipNetwork)
+    {
+        // Remove NAT rule. try until no rule found
+        var res = "ok";
+        while (!string.IsNullOrEmpty(res)) {
+            var iptables = ipNetwork.IsV4 ? "iptables" : "ip6tables";
+            res = VhUtils.TryInvoke("Remove NAT rule", () =>
+                ExecuteCommand($"{iptables} -t nat -D POSTROUTING -s {ipNetwork} -o {mainAdapter} -j MASQUERADE"));
+        }
+    }
+
     private async Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         await ExecuteCommandAsync($"ip addr add {ipNetwork} dev {AdapterName}", cancellationToken).VhConfigureAwait();
@@ -207,7 +208,10 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions linuxAdapterOptions) :
         var command = ipNetwork.IsV4
             ? $"ip route add {ipNetwork} dev {AdapterName} via {gatewayIp}"
             : $"ip -6 route add {ipNetwork} dev {AdapterName} via {gatewayIp}";
-        
+
+        if (_metric != null)
+            command += $" metric {_metric}";
+
         await ExecuteCommandAsync(command, cancellationToken).VhConfigureAwait();
     }
 
@@ -493,10 +497,10 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions linuxAdapterOptions) :
             var mainAdapter = GetMainAdapter();
             _logger.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...", AdapterName);
             if (AdapterIpNetworkV4 != null)
-                NatRemove(mainAdapter, AdapterIpNetworkV4);
+                RemoveNat(mainAdapter, AdapterIpNetworkV4);
 
             if (AdapterIpNetworkV6 != null)
-                NatRemove(mainAdapter, AdapterIpNetworkV6);
+                RemoveNat(mainAdapter, AdapterIpNetworkV6);
         }
 
     }

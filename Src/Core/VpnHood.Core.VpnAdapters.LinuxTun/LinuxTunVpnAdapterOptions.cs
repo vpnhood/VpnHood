@@ -9,5 +9,4 @@ public class LinuxTunVpnAdapterOptions
     public ILogger Logger { get; init; } = VhLogger.Instance;
     public int MaxPacketCount { get; init; } = 255;
     public TimeSpan MaxPacketSendDelay { get; init; } = TimeSpan.FromMilliseconds(500);
-    public bool UseNat { get; init; }
 }

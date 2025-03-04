@@ -433,8 +433,7 @@ public static class VhUtils
             await task().VhConfigureAwait();
         }
         catch (Exception ex) {
-            if (!string.IsNullOrEmpty(actionName))
-                VhLogger.Instance.LogDebug(ex, "Could not invoke {actionName}", actionName);
+            LogInvokeError(ex, actionName);
         }
     }
 
@@ -444,9 +443,7 @@ public static class VhUtils
             return await task().VhConfigureAwait();
         }
         catch (Exception ex) {
-            if (!string.IsNullOrEmpty(actionName))
-                VhLogger.Instance.LogDebug(ex, "Could not invoke {actionName}", actionName);
-
+            LogInvokeError(ex, actionName);
             return defaultValue;
         }
     }
@@ -457,8 +454,7 @@ public static class VhUtils
             action.Invoke();
         }
         catch (Exception ex) {
-            if (!string.IsNullOrEmpty(actionName))
-                VhLogger.Instance.LogDebug(ex, "Could not invoke {actionName}", actionName);
+            LogInvokeError(ex, actionName);
         }
     }
 
@@ -468,10 +464,14 @@ public static class VhUtils
             return func();
         }
         catch (Exception ex) {
-            if (!string.IsNullOrEmpty(actionName))
-                VhLogger.Instance.LogDebug(ex, "Could not invoke {actionName}", actionName);
-
+            LogInvokeError(ex, actionName);
             return defaultValue;
         }
+    }
+
+    private static void LogInvokeError(Exception ex, string actionDesc)
+    {
+        if (!string.IsNullOrEmpty(actionDesc))
+            VhLogger.Instance.LogDebug(ex, "Could not invoke {ActionDesc}", actionDesc);
     }
 }

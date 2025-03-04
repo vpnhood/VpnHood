@@ -14,90 +14,114 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions linuxAdapterOptions) :
 {
     private readonly int _maxPacketSendDelayMs = (int)linuxAdapterOptions.MaxPacketSendDelay.TotalMilliseconds;
     private readonly ILogger _logger = linuxAdapterOptions.Logger;
-    private int _disposed;
+    private bool _disposed;
     private int _tunAdapterFd;
     private IPAddress? _gatewayIpV4;
     private IPAddress? _gatewayIpV6;
     private int _mtu = 0xFFFF;
+    private bool _useNat;
+    private int? _metric;
     public string AdapterName { get; } = linuxAdapterOptions.AdapterName;
     public IPAddress? PrimaryAdapterIpV4 { get; private set; }
     public IPAddress? PrimaryAdapterIpV6 { get; private set; }
+    public IpNetwork? AdapterIpNetworkV4 { get; private set; }
+    public IpNetwork? AdapterIpNetworkV6 { get; private set; }
+
     public bool Started { get; private set; }
+    public bool IsNatSupported => true;
     public bool IsDnsServersSupported => true;
     public bool CanProtectSocket => true;
     public bool CanSendPacketToOutbound => false;
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Disposed;
 
-    public async Task StartCapture(VpnAdapterOptions adapterOptions, CancellationToken cancellationToken)
+    public async Task Start(VpnAdapterOptions adapterOptions, CancellationToken cancellationToken)
     {
-        if (_disposed == 1)
+        if (_disposed)
             throw new ObjectDisposedException(nameof(LinuxTunVpnAdapter));
 
+        // get the WAN adapter IP
+        PrimaryAdapterIpV4 = GetWanAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV4()), 53));
+        PrimaryAdapterIpV6 = GetWanAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV6()), 53));
+        AdapterIpNetworkV4 = adapterOptions.VirtualIpNetworkV4;
+        AdapterIpNetworkV6 = adapterOptions.VirtualIpNetworkV6;
+        _useNat = linuxAdapterOptions.UseNat;
+
+        // start the adapter
         if (Started)
-            await StopCapture(cancellationToken);
+            Stop();
 
         try {
-            // get the WAN adapter IP
-            PrimaryAdapterIpV4 = GetWanAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV4()), 53));
-            PrimaryAdapterIpV6 = GetWanAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV6()), 53));
+            // create tun adapter
+            _logger.LogInformation("Initializing {AdapterName} TUN adapter...", AdapterName);
+            await Init(cancellationToken).VhConfigureAwait();
 
-            // create WinTun adapter
-            _logger.LogInformation("Initializing WinTun Adapter...");
-            _tunAdapterFd = OpenTunDevice(AdapterName, false);
-
-            // create an event object to wait for packets
-            _logger.LogDebug("Creating event object for WinTun...");
+            // Open TUN Adapter
+            _logger.LogDebug("Open TUN adapter...");
+            _tunAdapterFd = OpenTunAdapter(AdapterName, false);
 
             // Private IP Networks
-            _logger.LogDebug("Adding private IP networks...");
+            _logger.LogDebug("Adding private networks...");
             if (adapterOptions.VirtualIpNetworkV4 != null) {
                 _gatewayIpV4 = BuildGatewayFromFromNetwork(adapterOptions.VirtualIpNetworkV4);
-                await AddAddress(adapterOptions.VirtualIpNetworkV4, cancellationToken);
+                await AddAddress(adapterOptions.VirtualIpNetworkV4, cancellationToken).VhConfigureAwait();
             }
 
             if (adapterOptions.VirtualIpNetworkV6 != null) {
                 _gatewayIpV6 = BuildGatewayFromFromNetwork(adapterOptions.VirtualIpNetworkV6);
-                await AddAddress(adapterOptions.VirtualIpNetworkV6, cancellationToken);
+                await AddAddress(adapterOptions.VirtualIpNetworkV6, cancellationToken).VhConfigureAwait();
             }
 
             // set metric
             _logger.LogDebug("Setting metric...");
-            await SetMetric(adapterOptions.Metric, IPVersion.IPv4, cancellationToken);
-            await SetMetric(adapterOptions.Metric, IPVersion.IPv6, cancellationToken);
+            if (adapterOptions.Metric != null) {
+                await SetMetric(adapterOptions.Metric.Value,
+                    ipV4: adapterOptions.VirtualIpNetworkV4 != null,
+                    ipV6: adapterOptions.VirtualIpNetworkV6 != null,
+                    cancellationToken).VhConfigureAwait();
+            }
 
             // set mtu
             if (adapterOptions.Mtu != null) {
                 _logger.LogDebug("Setting MTU...");
                 _mtu = adapterOptions.Mtu.Value;
-                if (adapterOptions.VirtualIpNetworkV4 != null)
-                    await SetMtu(adapterOptions.Mtu.Value, IPVersion.IPv4, cancellationToken);
-
-                if (adapterOptions.VirtualIpNetworkV6 != null)
-                    await SetMtu(adapterOptions.Mtu.Value, IPVersion.IPv6, cancellationToken);
+                await SetMtu(adapterOptions.Mtu.Value,
+                    ipV4: adapterOptions.VirtualIpNetworkV4 != null,
+                    ipV6: adapterOptions.VirtualIpNetworkV6 != null,
+                    cancellationToken).VhConfigureAwait();
             }
 
             // set DNS servers
             _logger.LogDebug("Setting DNS servers...");
-            foreach (var dnsServer in adapterOptions.DnsServers)
-                await AddDns(dnsServer, cancellationToken);
+            await SetDnsServers(adapterOptions.DnsServers, cancellationToken).VhConfigureAwait();
 
             // add routes
             _logger.LogDebug("Adding routes...");
             foreach (var network in adapterOptions.IncludeNetworks) {
                 var gateway = network.IsV4 ? _gatewayIpV4 : _gatewayIpV6;
                 if (gateway != null)
-                    await AddRoute(network, gateway, cancellationToken);
+                    await AddRoute(network, gateway, cancellationToken).VhConfigureAwait();
+            }
+
+            // add NAT
+            if (_useNat) {
+                _logger.LogDebug("Adding NAT...");
+                if (adapterOptions.VirtualIpNetworkV4 != null)
+                    await AddNat(adapterOptions.VirtualIpNetworkV4, cancellationToken).VhConfigureAwait();
+
+                if (adapterOptions.VirtualIpNetworkV6 != null)
+                    await AddNat(adapterOptions.VirtualIpNetworkV6, cancellationToken).VhConfigureAwait();
             }
 
             // start reading packets
             _ = Task.Run(ReadingPacketTask, CancellationToken.None);
 
             Started = true;
-            _logger.LogInformation("WinTun adapter started.");
+            _logger.LogInformation("TUN adapter started.");
         }
-        catch {
-            await StopCapture(cancellationToken);
+        catch (ExternalException ex) {
+            _logger.LogError(ex, "Failed to start TUN adapter.");
+            Stop();
             throw;
         }
     }
@@ -116,43 +140,94 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions linuxAdapterOptions) :
         }
     }
 
-    private async Task SetMetric(int metric, IPVersion ipVersion, CancellationToken cancellationToken)
+    private static string GetMainAdapter()
     {
-        var ipVersionStr = ipVersion == IPVersion.IPv4 ? "ipv4" : "ipv6";
-        var command = $"interface {ipVersionStr} set interface \"{AdapterName}\" metric={metric}";
-        await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
+        var mainInterface = ExecuteCommand("ip route | grep default | awk '{print $5}'");
+        mainInterface = mainInterface.Trim();
+        if (string.IsNullOrEmpty(mainInterface))
+            throw new InvalidOperationException("No active network interface found.");
+
+        return mainInterface;
     }
 
+    private static async Task<string> GetMainAdapterAsync(CancellationToken cancellationToken)
+    {
+        var mainInterface = await ExecuteCommandAsync("ip route | grep default | awk '{print $5}'", cancellationToken).VhConfigureAwait();
+        mainInterface = mainInterface.Trim();
+        if (string.IsNullOrEmpty(mainInterface))
+            throw new InvalidOperationException("No active network interface found.");
+
+        return mainInterface;
+    }
+
+    private static void NatRemove(string mainAdapter, IpNetwork ipNetwork)
+    {
+        // Remove NAT rule. try until no rule found
+        var res = "ok";
+        while (!string.IsNullOrEmpty(res)) {
+            var iptables = ipNetwork.IsV4 ? "iptables" : "ip6tables";
+            res = VhUtils.TryInvoke("Remove NAT rule", () =>
+                ExecuteCommand($"{iptables} -t nat -D POSTROUTING -s {ipNetwork} -o {mainAdapter} -j MASQUERADE"));
+        }
+    }
+
+    private async Task Init(CancellationToken cancellationToken)
+    {
+        // make sure the adapter is not already started
+        ReleaseUnmanagedResources(); // release previous resources if any
+
+        // Create and configure tun interface
+        _logger.LogDebug("Creating tun adapter ...");
+        await ExecuteCommandAsync($"ip tuntap add dev {AdapterName} mode tun", cancellationToken).VhConfigureAwait();
+
+        // Enable IP forwarding
+        _logger.LogDebug("Enabling IP forwarding...");
+        await ExecuteCommandAsync("sysctl -w net.ipv4.ip_forward=1", cancellationToken).VhConfigureAwait();
+        await ExecuteCommandAsync("sysctl -w net.ipv6.conf.all.forwarding=1", cancellationToken).VhConfigureAwait();
+
+        // Bring up the interface
+        _logger.LogDebug("Bringing up the TUN...");
+        await ExecuteCommandAsync($"ip link set {AdapterName} up", cancellationToken).VhConfigureAwait();
+    }
+
+    private async Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
+    {
+        // Configure NAT with iptables
+        var mainInterface = await GetMainAdapterAsync(cancellationToken).VhConfigureAwait();
+        _logger.LogDebug("Setting up NAT with iptables...");
+        var iptables = ipNetwork.IsV4 ? "iptables" : "ip6tables";
+        await ExecuteCommandAsync($"{iptables} -t nat -A POSTROUTING -s {ipNetwork} -o {mainInterface} -j MASQUERADE", cancellationToken).VhConfigureAwait();
+    }
     private async Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        var command = ipNetwork.IsV4
-            ? $"interface ipv4 set address \"{AdapterName}\" static {ipNetwork}"
-            : $"interface ipv6 set address \"{AdapterName}\" {ipNetwork}";
-
-        await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
+        await ExecuteCommandAsync($"ip addr add {ipNetwork} dev {AdapterName}", cancellationToken).VhConfigureAwait();
     }
-
-
     private async Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken)
     {
         var command = ipNetwork.IsV4
-            ? $"interface ipv4 add route {ipNetwork} \"{AdapterName}\" {gatewayIp}"
-            : $"interface ipv6 add route {ipNetwork} \"{AdapterName}\" {gatewayIp}";
-
-        await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
+            ? $"ip route add {ipNetwork} dev {AdapterName} via {gatewayIp}"
+            : $"ip -6 route add {ipNetwork} dev {AdapterName} via {gatewayIp}";
+        
+        await ExecuteCommandAsync(command, cancellationToken).VhConfigureAwait();
     }
 
-    private async Task SetMtu(int mtu, IPVersion ipVersion, CancellationToken cancellationToken)
+    protected Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
-        var ipVersionStr = ipVersion == IPVersion.IPv4 ? "ipv4" : "ipv6";
-        var command = $"interface {ipVersionStr} set subinterface \"{AdapterName}\" mtu={mtu}";
-        await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
+        _metric = metric;
+        return Task.CompletedTask;
+    }
+    protected async Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
+    {
+        var command = $"ip link set dev {AdapterName} mtu {mtu}";
+        await ExecuteCommandAsync(command, cancellationToken).VhConfigureAwait();
     }
 
-    private async Task AddDns(IPAddress ipAddress, CancellationToken cancellationToken)
+    private async Task SetDnsServers(IPAddress[] ipAddresses, CancellationToken cancellationToken)
     {
-        var command = $"interface ip add dns \"{AdapterName}\" {ipAddress}";
-        await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
+        var allDns = string.Join(" ", ipAddresses.Select(x => x.ToString()));
+        var command = $"resolvectl dns {AdapterName} {allDns}";
+        await ExecuteCommandAsync(command, cancellationToken).VhConfigureAwait();
+        await ExecuteCommandAsync($"resolvectl domain {AdapterName} \"~.\"", cancellationToken).VhConfigureAwait();
     }
     private static IPAddress? BuildGatewayFromFromNetwork(IpNetwork ipNetwork)
     {
@@ -162,36 +237,31 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions linuxAdapterOptions) :
             : IPAddressUtil.Increment(ipNetwork.FirstIpAddress);
     }
 
-    public Task StopCapture(CancellationToken cancellationToken)
+    public void Stop()
     {
-        if (!Started)
-            return Task.CompletedTask;
-
-        _logger.LogInformation("Stopping WinTun adapter...");
+        _logger.LogInformation("Stopping {AdapterName} adapter.", AdapterName);
+        ReleaseUnmanagedResources();
+        _logger.LogInformation("TUN adapter stopped.");
         Started = false;
-        ReleaseSessionUnmanagedResources();
-        _logger.LogInformation("WinTun adapter stopped.");
-        return Task.CompletedTask;
     }
 
-    private Task ReadingPacketTask()
+    private void ReadingPacketTask()
     {
         var packetList = new List<IPPacket>(linuxAdapterOptions.MaxPacketCount);
 
-        // Read packets from Tun adapter
+        // Read packets from TUN adapter
         try {
-            while (Started && _disposed == 0) {
+            while (Started && !_disposed) {
                 ReadFromTun(packetList, _mtu);
                 InvokeReadPackets(packetList);
                 WaitForTunRead();
             }
         }
         catch (Exception ex) {
-            _logger.LogError(ex, "Error in reading packets from WinTun adapter.");
+            _logger.LogError(ex, "Error in reading packets from TUN adapter.");
         }
 
-        _ = StopCapture(CancellationToken.None);
-        return Task.CompletedTask;
+        Stop();
     }
     private void WaitForTunRead()
     {
@@ -263,31 +333,29 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions linuxAdapterOptions) :
 
     private void ReadFromTun(List<IPPacket> packetList, int mtu)
     {
-        while (Started) {
-            // Non-blocking read loop
+        while (Started && packetList.Count < packetList.Capacity) {
             var buffer = new byte[mtu];
             var bytesRead = LinuxAPI.read(_tunAdapterFd, buffer, buffer.Length);
-            if (bytesRead > 0) {
 
-                var ipPacket = Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>();
-                packetList.Add(ipPacket);
-                if (packetList.Count >= packetList.Capacity)
-                    break;
+            // check for errors
+            if (bytesRead <= 0) {
+                var errorCode = Marshal.GetLastWin32Error();
+                switch (errorCode) {
+                    // No data available, wait
+                    case LinuxAPI.EAGAIN: return;
+
+                    // Interrupted, retry
+                    case LinuxAPI.EINTR:
+                        continue;
+
+                    default:
+                        throw new PInvokeException("Could not read from TUN.", errorCode);
+                }
             }
 
-            var errorCode = Marshal.GetLastWin32Error();
-            switch (errorCode) {
-                // No data available, wait
-                case LinuxAPI.EAGAIN:
-                    return;
-
-                // Interrupted, retry
-                case LinuxAPI.EINTR:
-                    continue;
-
-                default:
-                    throw new PInvokeException("Could not read to TUN.", errorCode);
-            }
+            // Parse the packet and add to the list
+            var ipPacket = Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>();
+            packetList.Add(ipPacket);
         }
     }
     public void ProtectSocket(Socket socket)
@@ -314,7 +382,7 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions linuxAdapterOptions) :
         };
     }
 
-    private static int OpenTunDevice(string adapterName, bool blockingMode)
+    private static int OpenTunAdapter(string adapterName, bool blockingMode)
     {
         // Open the TUN device file
         var tunDeviceFd = LinuxAPI.open("/dev/net/tun", LinuxAPI.ORdwr);
@@ -344,28 +412,28 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions linuxAdapterOptions) :
     }
     public void SendPacketToInbound(IPPacket ipPacket)
     {
-        throw new NotImplementedException();
+        SendPacket(ipPacket); //todo
     }
 
     public void SendPacketToInbound(IList<IPPacket> packets)
     {
-        throw new NotImplementedException();
+        SendPacket(packets); //todo
     }
 
     public void SendPacketToOutbound(IPPacket ipPacket)
     {
-        throw new NotImplementedException();
+        SendPacket(ipPacket); //todo
     }
 
     public void SendPacketToOutbound(IList<IPPacket> ipPackets)
     {
-        throw new NotImplementedException();
+        SendPacket(ipPackets); //todo
     }
 
     public void SendPacket(IPPacket ipPacket)
     {
         if (!Started)
-            throw new InvalidOperationException("WinTun adapter is not started.");
+            throw new InvalidOperationException("TUN adapter is not started.");
 
         WaitForTunWrite();
         WriteToTun(ipPacket.Bytes);
@@ -394,35 +462,66 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions linuxAdapterOptions) :
     public async Task SendPacketAsync(IList<IPPacket> packets)
     {
         foreach (var packet in packets)
-            await SendPacketAsync(packet);
+            await SendPacketAsync(packet).VhConfigureAwait();
     }
 
-    private void ReleaseSessionUnmanagedResources()
+    private static string ExecuteCommand(string command)
     {
-        LinuxAPI.close(_tunAdapterFd);
-        _tunAdapterFd = 0;
+        return OsUtils.ExecuteCommand("/bin/bash", $"-c \"{command}\"");
+    }
+
+    private static Task<string> ExecuteCommandAsync(string command, CancellationToken cancellationToken)
+    {
+        return OsUtils.ExecuteCommandAsync("/bin/bash", $"-c \"{command}\"", cancellationToken);
+    }
+
+    private void ReleaseUnmanagedResources()
+    {
+        if (_tunAdapterFd != 0) {
+            LinuxAPI.close(_tunAdapterFd);
+            _tunAdapterFd = 0;
+        }
+
+        // Remove existing tun interface
+        _logger.LogDebug("Removing existing {AdapterName} TUN adapter (if any)...", AdapterName);
+        VhUtils.TryInvoke($"remove existing {AdapterName} TUN adapter", () =>
+            ExecuteCommand($"ip link delete {AdapterName}"));
+
+
+        // Remove previous NAT iptables record
+        if (_useNat) {
+            var mainAdapter = GetMainAdapter();
+            _logger.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...", AdapterName);
+            if (AdapterIpNetworkV4 != null)
+                NatRemove(mainAdapter, AdapterIpNetworkV4);
+
+            if (AdapterIpNetworkV6 != null)
+                NatRemove(mainAdapter, AdapterIpNetworkV6);
+        }
+
     }
 
     protected virtual void Dispose(bool disposing)
     {
-        if (Interlocked.Exchange(ref _disposed, 1) == 1)
-            return;
+        _disposed = true;
 
         // release managed resources when disposing
         if (disposing) {
             // if started, close the adapter
             if (Started)
-                _ = StopCapture(CancellationToken.None);
+                Stop();
 
             // notify the subscribers that the adapter is disposed
             Disposed?.Invoke(this, EventArgs.Empty);
         }
 
-        ReleaseSessionUnmanagedResources();
+        ReleaseUnmanagedResources();
     }
 
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
         Dispose(true);
         GC.SuppressFinalize(this);
     }

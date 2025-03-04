@@ -870,7 +870,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 ExcludeApps = _excludeApps,
                 IncludeApps = _includeApps
             };
-            await _vpnAdapter.StartCapture(adapterOptions, cancellationToken);
+            await _vpnAdapter.Start(adapterOptions, cancellationToken);
 
             // Preparing tunnel
             VhLogger.Instance.LogInformation("Configuring Datagram Channels...");

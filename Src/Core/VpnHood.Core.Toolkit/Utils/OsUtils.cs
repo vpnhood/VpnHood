@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Toolkit.Utils;
 
@@ -7,6 +9,7 @@ public static class OsUtils
 {
     public static string ExecuteCommand(string fileName, string command)
     {
+        VhLogger.Instance.LogDebug($"Executing: {fileName} {command}");
         var processInfo = new ProcessStartInfo
         {
             FileName = fileName,
@@ -33,6 +36,7 @@ public static class OsUtils
 
     public static async Task<string> ExecuteCommandAsync(string fileName, string command, CancellationToken cancellationToken)
     {
+        VhLogger.Instance.LogDebug($"Executing: {fileName} {command}");
         var processInfo = new ProcessStartInfo
         {
             FileName = fileName,

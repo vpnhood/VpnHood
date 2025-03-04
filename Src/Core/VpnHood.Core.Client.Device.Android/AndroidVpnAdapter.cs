@@ -23,6 +23,7 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
     public event EventHandler? Disposed;
     public bool Started => _mInterface != null;
     public bool CanSendPacketToOutbound => false;
+    public bool IsNatSupported => true;
     public bool IsDnsServersSupported => true;
     public bool CanProtectSocket => true;
 
@@ -41,10 +42,13 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
         }
     }
 
-    public Task StartCapture(VpnAdapterOptions options, CancellationToken cancellationToken)
+    public Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         if (Started)
-            StopCapture(cancellationToken);
+            Stop();
+
+        if (options.UseNat)
+            throw new NotSupportedException("NAT is not supported in Android VPN.");
 
         // reset the stop request
         _stopRequested = false;
@@ -99,11 +103,11 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
     }
 
     private readonly Lock _stopCaptureLock = new();
-    public Task StopCapture(CancellationToken cancellationToken)
+    public void Stop()
     {
         using var lockScope = _stopCaptureLock.EnterScope();
 
-        if (_mInterface == null || _stopRequested) return Task.CompletedTask;
+        if (_mInterface == null || _stopRequested) return;
         _stopRequested = true;
 
         VhLogger.Instance.LogDebug("Stopping the adapter...");
@@ -134,7 +138,6 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
         }
 
         _mInterface = null;
-        return Task.CompletedTask;
     }
 
     public void SendPacketToInbound(IPPacket ipPacket)
@@ -212,6 +215,7 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
         try {
             var buf = new byte[short.MaxValue];
             int read;
+            // ReSharper disable once MethodHasAsyncOverload
             while (!_stopRequested && (read = _inStream.Read(buf)) > 0) {
                 var packetBuffer = buf[..read]; // copy buffer for packet
                 var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer)?.Extract<IPPacket>();
@@ -226,10 +230,7 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
                 VhLogger.Instance.LogError(ex, "Error occurred in Android ReadingPacketTask.");
         }
 
-        // if not requested to stop, dispose the adapter which means critical error
-        if (!_stopRequested)
-            Dispose();
-
+        Stop();
         return Task.CompletedTask;
     }
 
@@ -239,7 +240,7 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
         if (_disposed) return;
         _disposed = true;
 
-        StopCapture(CancellationToken.None);
+        Stop();
         Disposed?.Invoke(this, EventArgs.Empty);
     }
 }

@@ -34,6 +34,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
     public bool Started => _device.Started;
     public virtual bool CanSendPacketToOutbound => true;
     public virtual bool IsDnsServersSupported => false;
+    public virtual bool IsNatSupported => false;
 
     public WinDivertVpnAdapter()
     {
@@ -85,16 +86,19 @@ public class WinDivertVpnAdapter : IVpnAdapter
         return ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
     }
 
-    public Task StartCapture(VpnAdapterOptions options, CancellationToken cancellationToken)
+    public Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
-        _virtualIpV4 = options.VirtualIpNetworkV4?.Prefix;
-        _virtualIpV6 = options.VirtualIpNetworkV6?.Prefix;
-
         if (_disposed)
             throw new ObjectDisposedException(VhLogger.FormatType(this));
 
         if (Started)
             throw new InvalidOperationException("VpnAdapter has been already started.");
+
+        if (options.UseNat)
+            throw new NotSupportedException("WinDivert does not support NAT.");
+
+        _virtualIpV4 = options.VirtualIpNetworkV4?.Prefix;
+        _virtualIpV6 = options.VirtualIpNetworkV6?.Prefix;
 
         // create include and exclude phrases
         var phraseX = "true";
@@ -129,14 +133,13 @@ public class WinDivertVpnAdapter : IVpnAdapter
         return Task.CompletedTask;
     }
 
-    public Task StopCapture(CancellationToken cancellationToken)
+    public void Stop()
     {
         if (!Started)
-            return Task.CompletedTask;
+            return;
 
         _device.StopCapture();
         Stopped?.Invoke(this, EventArgs.Empty);
-        return Task.CompletedTask;
     }
 
     private void SetInternalIp(IPAddress address)
@@ -254,14 +257,13 @@ public class WinDivertVpnAdapter : IVpnAdapter
 
     public void Dispose()
     {
-        if (_disposed)
-            return;
+        if (_disposed) return;
+        _disposed = true;
 
-        if (_device.Started)
-            StopCapture(CancellationToken.None);
+        // stop the device
+        Stop();
 
         _device.Dispose();
-        _disposed = true;
         Disposed?.Invoke(this, EventArgs.Empty);
     }
 }

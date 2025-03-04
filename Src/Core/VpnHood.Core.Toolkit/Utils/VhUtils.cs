@@ -427,25 +427,49 @@ public static class VhUtils
         }
     }
 
-    public static void InvokeIgnoreException(string actionName, Action action)
+    public static async Task TryInvokeAsync(string actionName, Func<Task> task)
+    {
+        try {
+            await task().VhConfigureAwait();
+        }
+        catch (Exception ex) {
+            if (!string.IsNullOrEmpty(actionName))
+                VhLogger.Instance.LogDebug(ex, "Could not invoke {actionName}", actionName);
+        }
+    }
+
+    public static async Task<T?> TryInvokeAsync<T>(string actionName, Func<Task<T>> task, T? defaultValue = default)
+    {
+        try {
+            return await task().VhConfigureAwait();
+        }
+        catch (Exception ex) {
+            if (!string.IsNullOrEmpty(actionName))
+                VhLogger.Instance.LogDebug(ex, "Could not invoke {actionName}", actionName);
+
+            return defaultValue;
+        }
+    }
+
+    public static void TryInvoke(string actionName, Action action)
     {
         try {
             action.Invoke();
         }
         catch (Exception ex) {
             if (!string.IsNullOrEmpty(actionName))
-                VhLogger.Instance.LogDebug(ex, "Could not invoke {actionName}.", actionName);
+                VhLogger.Instance.LogDebug(ex, "Could not invoke {actionName}", actionName);
         }
     }
 
-    public static T? InvokeIgnoreException<T>(string actionName, Func<T> func, T? defaultValue = default)
+    public static T? TryInvoke<T>(string actionName, Func<T> func, T? defaultValue = default)
     {
         try {
             return func();
         }
         catch (Exception ex) {
             if (!string.IsNullOrEmpty(actionName))
-                VhLogger.Instance.LogDebug(ex, "Could not invoke {actionName}.", actionName);
+                VhLogger.Instance.LogDebug(ex, "Could not invoke {actionName}", actionName);
 
             return defaultValue;
         }

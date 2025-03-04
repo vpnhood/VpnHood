@@ -18,7 +18,7 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
     private readonly int _ringCapacity = adapterOptions.RingCapacity;
     private readonly int _maxPacketSendDelayMs = (int)adapterOptions.MaxPacketSendDelay.TotalMilliseconds;
     private readonly ILogger _logger = adapterOptions.Logger;
-    private int _disposed;
+    private bool _disposed;
     private IntPtr _readEvent;
     private IntPtr _tunAdapter;
     private IntPtr _tunSession;
@@ -31,19 +31,20 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
     public IPAddress? PrimaryAdapterIpV4 { get; private set; }
     public IPAddress? PrimaryAdapterIpV6 { get; private set; }
     public bool Started { get; private set; }
+    public bool IsNatSupported => false;
     public bool IsDnsServersSupported => true;
     public bool CanProtectSocket => false;
     public bool CanSendPacketToOutbound => false;
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Disposed;
 
-    public async Task StartCapture(VpnAdapterOptions adapterOptions, CancellationToken cancellationToken)
+    public async Task Start(VpnAdapterOptions adapterOptions, CancellationToken cancellationToken)
     {
-        if (_disposed == 1)
+        if (_disposed)
             throw new ObjectDisposedException(nameof(WinTunVpnAdapter));
 
         if (Started)
-            await StopCapture(cancellationToken);
+            Stop();
 
         try
         {
@@ -83,8 +84,10 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
 
             // set metric
             _logger.LogDebug("Setting metric...");
-            await SetMetric(adapterOptions.Metric, IPVersion.IPv4, cancellationToken);
-            await SetMetric(adapterOptions.Metric, IPVersion.IPv6, cancellationToken);
+            if (adapterOptions.Metric != null) {
+                await SetMetric(adapterOptions.Metric.Value, IPVersion.IPv4, cancellationToken);
+                await SetMetric(adapterOptions.Metric.Value, IPVersion.IPv6, cancellationToken);
+            }
 
             // set mtu
             if (adapterOptions.Mtu != null)
@@ -119,7 +122,7 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
         }
         catch
         {
-            await StopCapture(cancellationToken);
+            Stop();
             throw;
         }
     }
@@ -186,16 +189,15 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
             : IPAddressUtil.Increment(ipNetwork.FirstIpAddress);
     }
 
-    public Task StopCapture(CancellationToken cancellationToken)
+    public void Stop()
     {
         if (!Started)
-            return Task.CompletedTask;
+            return;
 
         _logger.LogInformation("Stopping WinTun adapter...");
         Started = false;
-        ReleaseSessionUnmanagedResources();
+        ReleaseUnmanagedResources();
         _logger.LogInformation("WinTun adapter stopped.");
-        return Task.CompletedTask;
     }
 
     private Task ReadingPacketTask()
@@ -205,7 +207,7 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
             using var waitHandle = new AutoResetEvent(false);
             waitHandle.SafeWaitHandle = new SafeWaitHandle(_readEvent, false);
 
-            while (Started && _disposed == 0)
+            while (Started && !_disposed)
             {
                 // Wait until a packet is available
                 waitHandle.WaitOne();
@@ -217,7 +219,7 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
             _logger.LogError(ex, "Error in reading packets from WinTun adapter.");
         }
 
-        _  = StopCapture(CancellationToken.None);
+        Stop();
         return Task.CompletedTask;
     }
 
@@ -326,24 +328,23 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
 
     public void SendPacketToInbound(IPPacket ipPacket)
     {
-        throw new NotImplementedException();
+        SendPacket(ipPacket); //todo
     }
 
     public void SendPacketToInbound(IList<IPPacket> packets)
     {
-        throw new NotImplementedException();
+        SendPacket(packets); //todo
     }
 
     public void SendPacketToOutbound(IPPacket ipPacket)
     {
-        throw new NotImplementedException();
+        SendPacket(ipPacket); //todo
     }
 
     public void SendPacketToOutbound(IList<IPPacket> ipPackets)
     {
-        throw new NotImplementedException();
+        SendPacket(ipPackets); //todo
     }
-
     public void SendPacket(IPPacket ipPacket)
     {
         if (!Started)
@@ -409,7 +410,7 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
             await SendPacketAsync(packet);
     }
 
-    private void ReleaseSessionUnmanagedResources()
+    protected void ReleaseUnmanagedResources()
     {
         if (_tunSession != IntPtr.Zero)
         {
@@ -430,21 +431,19 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
 
     protected virtual void Dispose(bool disposing)
     {
-        if (Interlocked.Exchange(ref _disposed, 1) == 1)
-            return;
+        _disposed = true;
 
         // release managed resources when disposing
-        if (disposing)
-        {
+        if (disposing) {
             // if started, close the adapter
             if (Started)
-                _ = StopCapture(CancellationToken.None);
+                Stop();
 
             // notify the subscribers that the adapter is disposed
             Disposed?.Invoke(this, EventArgs.Empty);
         }
 
-        ReleaseSessionUnmanagedResources();
+        ReleaseUnmanagedResources();
     }
 
     public void Dispose()

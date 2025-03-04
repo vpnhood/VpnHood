@@ -21,7 +21,6 @@ public class AccessCodeTest : TestAppBase
         var allV4 = new[] { IpNetwork.Parse("0.0.0.0/1"), IpNetwork.Parse("128.0.0.0/1") };
         Console.WriteLine(allV4.ToIpRanges().IsAllV4());
         Console.WriteLine(allV6.ToIpRanges().IsAllV6());
-
     }
 
     [TestMethod]

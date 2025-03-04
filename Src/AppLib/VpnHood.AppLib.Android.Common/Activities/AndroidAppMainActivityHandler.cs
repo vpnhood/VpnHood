@@ -53,10 +53,10 @@ public class AndroidAppMainActivityHandler
         // set window colors such as status bar and navigation bar
         var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
         if (backgroundColor != null) {
-            VhUtils.InvokeIgnoreException("SetStatusBarColor", () =>
+            VhUtils.TryInvoke("SetStatusBarColor", () =>
                 ActivityEvent.Activity.Window?.SetStatusBarColor(backgroundColor.Value));
             
-            VhUtils.InvokeIgnoreException("SetNavigationBarColor", () =>
+            VhUtils.TryInvoke("SetNavigationBarColor", () =>
                 ActivityEvent.Activity.Window?.SetNavigationBarColor(backgroundColor.Value));
         }
 

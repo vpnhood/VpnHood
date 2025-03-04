@@ -73,7 +73,7 @@ public class AndroidAppWebViewMainActivityHandler(
 
         var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
         if (linearLayout != null && backgroundColor != null)
-            VhUtils.InvokeIgnoreException("linearLayout.SetBackgroundColor", () =>
+            VhUtils.TryInvoke("linearLayout.SetBackgroundColor", () =>
                 linearLayout.SetBackgroundColor(backgroundColor.Value));
 
         // set progressbar color
@@ -82,7 +82,7 @@ public class AndroidAppWebViewMainActivityHandler(
                 _Microsoft.Android.Resource.Designer.Resource.Id.progressBar);
         
         if (progressBar != null && progressBarColor != null) 
-            VhUtils.InvokeIgnoreException("progressBar.IndeterminateTintList", () =>
+            VhUtils.TryInvoke("progressBar.IndeterminateTintList", () =>
                 progressBar.IndeterminateTintList = ColorStateList.ValueOf(progressBarColor.Value));
     }
 

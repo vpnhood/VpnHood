@@ -5,24 +5,26 @@ namespace VpnHood.Core.VpnAdapters.Abstractions;
 
 public class NullVpnAdapter : IVpnAdapter
 {
+    private bool _disposed;
+
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Disposed;
     public virtual bool Started { get; set; }
     public virtual bool IsDnsServersSupported { get; set; } = true;
+    public virtual bool IsNatSupported { get; set; } = true;
     public virtual bool CanProtectSocket { get; set; } = true;
     public virtual bool CanSendPacketToOutbound { get; set; }
 
-    public virtual Task StartCapture(VpnAdapterOptions options, CancellationToken cancellationToken)
+    public virtual Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         Started = true;
         _ = PacketReceivedFromInbound; //prevent not used warning
         return Task.CompletedTask;
     }
 
-    public virtual Task StopCapture(CancellationToken cancellationToken)
+    public virtual void Stop()
     {
         Started = false;    
-        return Task.CompletedTask;
     }
 
     public virtual void ProtectSocket(Socket socket)
@@ -35,7 +37,7 @@ public class NullVpnAdapter : IVpnAdapter
         // nothing
     }
 
-    public virtual void SendPacketToInbound(IList<IPPacket> packets)
+    public virtual void SendPacketToInbound(IList<IPPacket> ipPackets)
     {
         // nothing
     }
@@ -50,13 +52,12 @@ public class NullVpnAdapter : IVpnAdapter
         // nothing
     }
 
-    private bool _disposed;
-    public virtual void Dispose()
+    public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
 
-        StopCapture(CancellationToken.None);
+        Stop();
         Disposed?.Invoke(this, EventArgs.Empty);
     }
 }

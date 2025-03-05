@@ -11,7 +11,7 @@ public interface IVpnAdapter : IDisposable
     bool IsNatSupported { get; }
     bool CanProtectSocket { get; }
     bool CanSendPacketToOutbound { get; }
-    Task Start(VpnAdapterOptions adapterOptions, CancellationToken cancellationToken);
+    Task Start(VpnAdapterOptions options, CancellationToken cancellationToken);
     void Stop();
     void ProtectSocket(System.Net.Sockets.Socket socket);
     void SendPacketToInbound(IPPacket ipPacket);

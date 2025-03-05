@@ -1,10 +1,9 @@
 ﻿using System.ComponentModel;
 using System.Net;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
-using Microsoft.Win32.SafeHandles;
 using PacketDotNet;
+using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
@@ -12,156 +11,48 @@ using VpnHood.Core.VpnAdapters.WinTun.WinNative;
 
 namespace VpnHood.Core.VpnAdapters.WinTun;
 
-public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdapter
+public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions)
+    : TunVpnAdapter(adapterOptions)
 {
-    private readonly List<IPPacket> _packetList = new(adapterOptions.MaxPacketCount);
     private readonly int _ringCapacity = adapterOptions.RingCapacity;
-    private readonly int _maxPacketSendDelayMs = (int)adapterOptions.MaxPacketSendDelay.TotalMilliseconds;
-    private readonly ILogger _logger = adapterOptions.Logger;
-    private bool _disposed;
-    private IntPtr _readEvent;
     private IntPtr _tunAdapter;
     private IntPtr _tunSession;
-    private IPAddress? _gatewayIpV4;
-    private IPAddress? _gatewayIpV6;
-    protected bool UseNat { get; private set; }
+    private IntPtr _readEvent;
 
     public const int MinRingCapacity = 0x20000; // 128kiB
     public const int MaxRingCapacity = 0x4000000; // 64MiB
-    public string AdapterName { get; } = adapterOptions.AdapterName;
-    public IPAddress? PrimaryAdapterIpV4 { get; private set; }
-    public IPAddress? PrimaryAdapterIpV6 { get; private set; }
-    public IpNetwork? AdapterIpNetworkV4 { get; private set; }
-    public IpNetwork? AdapterIpNetworkV6 { get; private set; }
-    public bool Started { get; private set; }
-    public bool IsNatSupported => false;
-    public bool IsDnsServersSupported => true;
-    public bool CanProtectSocket => false;
-    public bool CanSendPacketToOutbound => false;
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
-    public event EventHandler? Disposed;
+    public override bool IsNatSupported => true;
 
-    public async Task Start(VpnAdapterOptions adapterOptions, CancellationToken cancellationToken)
+    protected override Task OpenAdapter(CancellationToken cancellationToken)
     {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(WinTunVpnAdapter));
+        Logger.LogInformation("Initializing WinTun Adapter...");
+        _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "WinTun", IntPtr.Zero);
+        if (_tunAdapter == IntPtr.Zero)
+            throw new Win32Exception("Failed to create WinTun adapter.");
 
-        if (Started)
-            Stop();
+        // start WinTun session
+        Logger.LogInformation("Starting WinTun session...");
+        _tunSession = WinTunApi.WintunStartSession(_tunAdapter, _ringCapacity);
+        if (_tunSession == IntPtr.Zero)
+            throw new Win32Exception("Failed to start WinTun session.");
 
-        // get the WAN adapter IP
-        // get the WAN adapter IP
-        PrimaryAdapterIpV4 = GetWanAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV4()), 53));
-        PrimaryAdapterIpV6 = GetWanAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV6()), 53));
-        AdapterIpNetworkV4 = adapterOptions.VirtualIpNetworkV4;
-        AdapterIpNetworkV6 = adapterOptions.VirtualIpNetworkV6;
-        UseNat = adapterOptions.UseNat;
+        // create an event object to wait for packets
+        Logger.LogDebug("Creating event object for WinTun...");
+        _readEvent = WinTunApi.WintunGetReadWaitEvent(_tunSession); // do not close this handle by documentation
 
-        try {
-            ReleaseUnmanagedResources(); // release previous resources if any
-
-            // create WinTun adapter
-            _logger.LogInformation("Initializing WinTun Adapter...");
-            _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "WinTun", IntPtr.Zero);
-            if (_tunAdapter == IntPtr.Zero)
-                throw new Win32Exception("Failed to create WinTun adapter.");
-
-            // start WinTun session
-            _logger.LogInformation("Starting WinTun session...");
-            _tunSession = WinTunApi.WintunStartSession(_tunAdapter, _ringCapacity);
-            if (_tunSession == IntPtr.Zero)
-                throw new Win32Exception("Failed to start WinTun session.");
-
-            // create an event object to wait for packets
-            _logger.LogDebug("Creating event object for WinTun...");
-            _readEvent = WinTunApi.WintunGetReadWaitEvent(_tunSession); // do not close this handle by documentation
-
-            // Private IP Networks
-            _logger.LogDebug("Adding private IP networks...");
-            if (adapterOptions.VirtualIpNetworkV4 != null) {
-                _gatewayIpV4 = BuildGatewayFromFromNetwork(adapterOptions.VirtualIpNetworkV4);
-                await AddAddress(adapterOptions.VirtualIpNetworkV4, cancellationToken);
-            }
-
-            if (adapterOptions.VirtualIpNetworkV6 != null) {
-                _gatewayIpV6 = BuildGatewayFromFromNetwork(adapterOptions.VirtualIpNetworkV6);
-                await AddAddress(adapterOptions.VirtualIpNetworkV6, cancellationToken);
-            }
-
-            // set metric
-            _logger.LogDebug("Setting metric...");
-            if (adapterOptions.Metric != null) {
-                await SetMetric(adapterOptions.Metric.Value, IPVersion.IPv4, cancellationToken);
-                await SetMetric(adapterOptions.Metric.Value, IPVersion.IPv6, cancellationToken);
-            }
-
-            // set mtu
-            if (adapterOptions.Mtu != null) {
-                _logger.LogDebug("Setting MTU...");
-                if (adapterOptions.VirtualIpNetworkV4 != null)
-                    await SetMtu(adapterOptions.Mtu.Value, IPVersion.IPv4, cancellationToken);
-
-                if (adapterOptions.VirtualIpNetworkV6 != null)
-                    await SetMtu(adapterOptions.Mtu.Value, IPVersion.IPv6, cancellationToken);
-            }
-
-            // set DNS servers
-            _logger.LogDebug("Setting DNS servers...");
-            foreach (var dnsServer in adapterOptions.DnsServers)
-                await AddDns(dnsServer, cancellationToken);
-
-            // add routes
-            _logger.LogDebug("Adding routes...");
-            foreach (var network in adapterOptions.IncludeNetworks) {
-                var gateway = network.IsV4 ? _gatewayIpV4 : _gatewayIpV6;
-                if (gateway != null)
-                    await AddRoute(network, gateway, cancellationToken);
-            }
-
-            // add NAT
-            if (UseNat) {
-                _logger.LogDebug("Adding NAT...");
-                if (adapterOptions.VirtualIpNetworkV4 != null && PrimaryAdapterIpV4 != null)
-                    await AddNat(adapterOptions.VirtualIpNetworkV4, cancellationToken).VhConfigureAwait();
-
-                if (adapterOptions.VirtualIpNetworkV6 != null && PrimaryAdapterIpV4 != null)
-                    await AddNat(adapterOptions.VirtualIpNetworkV6, cancellationToken).VhConfigureAwait();
-            }
-
-            // start reading packets
-            _ = Task.Run(ReadingPacketTask, CancellationToken.None);
-
-            Started = true;
-            _logger.LogInformation("WinTun adapter started.");
-        }
-        catch {
-            Stop();
-            throw;
-        }
+        return Task.CompletedTask;
     }
 
-    private IPAddress? GetWanAdapterIp(IPEndPoint remoteEndPoint)
+    protected override async Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
-        try {
-            using var udpClient = new UdpClient();
-            udpClient.Connect(remoteEndPoint);
-            return (udpClient.Client.LocalEndPoint as IPEndPoint)?.Address;
-        }
-        catch (Exception) {
-            _logger.LogDebug("Failed to get WAN adapter IP. RemoteEndPoint: {RemoteEndPoint}",
-                remoteEndPoint);
-            return null;
-        }
+        if (ipV4)
+            await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv4 set interface \"{AdapterName}\" metric={metric}", cancellationToken);
+
+        if (ipV6)
+            await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv6 set interface \"{AdapterName}\" metric={metric}", cancellationToken);
     }
 
-    private async Task SetMetric(int metric, IPVersion ipVersion, CancellationToken cancellationToken)
-    {
-        var ipVersionStr = ipVersion == IPVersion.IPv4 ? "ipv4" : "ipv6";
-        var command = $"interface {ipVersionStr} set interface \"{AdapterName}\" metric={metric}";
-        await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
-    }
-
-    private async Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
+    protected override async Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         var command = ipNetwork.IsV4
             ? $"interface ipv4 set address \"{AdapterName}\" static {ipNetwork}"
@@ -170,8 +61,7 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
         await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
     }
 
-
-    private async Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken)
+    protected override async Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken)
     {
         var command = ipNetwork.IsV4
             ? $"interface ipv4 add route {ipNetwork} \"{AdapterName}\" {gatewayIp}"
@@ -180,38 +70,43 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
         await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
     }
 
-    private async Task SetMtu(int mtu, IPVersion ipVersion, CancellationToken cancellationToken)
+    protected override async Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
-        var ipVersionStr = ipVersion == IPVersion.IPv4 ? "ipv4" : "ipv6";
-        var command = $"interface {ipVersionStr} set subinterface \"{AdapterName}\" mtu={mtu}";
-        await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
+        if (ipV4)
+            await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv4 set subinterface \"{AdapterName}\" mtu={mtu}", cancellationToken);
+
+        if (ipV4)
+            await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv6 set subinterface \"{AdapterName}\" mtu={mtu}", cancellationToken);
     }
 
-    private async Task AddDns(IPAddress ipAddress, CancellationToken cancellationToken)
+    protected override async Task SetDnsServers(IPAddress[] ipAddresses, CancellationToken cancellationToken)
     {
-        var command = $"interface ip add dns \"{AdapterName}\" {ipAddress}";
-        await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
+        foreach (var ipAddress in ipAddresses) {
+            var command = $"interface ip add dns \"{AdapterName}\" {ipAddress}";
+            await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
+        }
     }
 
-    private async Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
+    protected override async Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
+        // Remove previous NAT if any
+        TryRemoveNat(ipNetwork);
+
         // Configure NAT with iptables
         if (ipNetwork.IsV4) {
             // let's throw error in ipv4
-            _logger.LogDebug("Configuring NAT for IPv4...");
             await ExecutePowerShellCommandAsync($"New-NetNat -Name {AdapterName}Nat -InternalIPInterfaceAddressPrefix {ipNetwork}",
                 cancellationToken).VhConfigureAwait();
         }
         else {
             // ignore exception in ipv6 on windows
-            _logger.LogDebug("Configuring NAT for IPv6...");
             await VhUtils.TryInvokeAsync("Configuring NAT for IPv6", () =>
                 ExecutePowerShellCommandAsync($"New-NetNat -Name {AdapterName}NatIpV6 -InternalIPInterfaceAddressPrefix {ipNetwork}",
                     cancellationToken));
         }
     }
-    
-    private static void RemoveNat(string mainAdapter, IpNetwork ipNetwork)
+
+    private static void TryRemoveNat(IpNetwork ipNetwork)
     {
         // Remove NAT rule. try until no rule found
         VhUtils.TryInvoke("Remove NAT rule", () =>
@@ -231,52 +126,23 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
         return OsUtils.ExecuteCommand("powershell.exe", ps);
     }
 
-
-    private static IPAddress? BuildGatewayFromFromNetwork(IpNetwork ipNetwork)
+    protected override void WaitForTunRead()
     {
-        // Check for small subnets (IPv4: /31, /32 | IPv6: /128)
-        return ipNetwork is { IsV4: true, PrefixLength: >= 31 } or { IsV6: true, PrefixLength: 128 }
-            ? null
-            : IPAddressUtil.Increment(ipNetwork.FirstIpAddress);
-    }
-
-    public void Stop()
-    {
-        if (!Started)
+        var result = Kernel32.WaitForSingleObject(_readEvent, Kernel32.Infinite);
+        if (result == Kernel32.WaitObject0)
             return;
 
-        _logger.LogInformation("Stopping WinTun adapter...");
-        Started = false;
-        ReleaseUnmanagedResources();
-        _logger.LogInformation("WinTun adapter stopped.");
+        throw result == Kernel32.WaitFailed 
+            ? new Win32Exception() 
+            : new PInvokeException("Unexpected result from WaitForSingleObject", (int)result);
     }
 
-    private Task ReadingPacketTask()
-    {
-        try {
-            using var waitHandle = new AutoResetEvent(false);
-            waitHandle.SafeWaitHandle = new SafeWaitHandle(_readEvent, false);
 
-            while (Started && !_disposed) {
-                // Wait until a packet is available
-                waitHandle.WaitOne();
-                ReadingWinTunPackets();
-            }
-        }
-        catch (Exception ex) {
-            _logger.LogError(ex, "Error in reading packets from WinTun adapter.");
-        }
-
-        Stop();
-        return Task.CompletedTask;
-    }
-
-    private void ReadingWinTunPackets()
+    protected override void ReadPackets(List<IPPacket> packetList, int mtu)
     {
         const int maxErrorCount = 10;
         var errorCount = 0;
-        _packetList.Clear();
-        while (Started) {
+        while (Started && packetList.Count < packetList.Capacity) {
             var tunReceivePacket = WinTunApi.WintunReceivePacket(_tunSession, out var size);
             var lastError = (WintunReceivePacketError)Marshal.GetLastWin32Error();
             if (tunReceivePacket != IntPtr.Zero) {
@@ -286,21 +152,13 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
                     var buffer = new byte[size];
                     Marshal.Copy(tunReceivePacket, buffer, 0, size);
                     var ipPacket = Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>();
-                    _packetList.Add(ipPacket);
-
-                    // if the packet list is full, send it
-                    if (_packetList.Count == _packetList.Capacity)
-                        InvokeReadPackets();
-
+                    packetList.Add(ipPacket);
                 }
                 finally {
                     WinTunApi.WintunReleaseReceivePacket(_tunSession, tunReceivePacket);
                 }
                 continue;
             }
-
-            // flush remaining packets on any error
-            InvokeReadPackets();
 
             switch (lastError) {
                 case WintunReceivePacketError.NoMoreItems:
@@ -312,13 +170,13 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
                     return;
 
                 case WintunReceivePacketError.InvalidData:
-                    _logger.LogWarning("Invalid data received from WinTun adapter.");
+                    Logger.LogWarning("Invalid data received from WinTun adapter.");
                     if (errorCount++ > maxErrorCount)
                         throw new InvalidOperationException("Too many invalid data received from WinTun adapter."); // read the next packet
                     continue; // read the next packet
 
                 default:
-                    _logger.LogDebug("Unknown error in reading packet from WinTun. LastError: {lastError}", lastError);
+                    Logger.LogDebug("Unknown error in reading packet from WinTun. LastError: {lastError}", lastError);
                     if (errorCount++ > maxErrorCount)
                         throw new InvalidOperationException("Too many errors in reading packet from WinTun."); // read the next packet
                     continue; // read the next packet
@@ -326,124 +184,30 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
         }
     }
 
-    private void InvokeReadPackets()
+    protected override void WaitForTunWrite()
     {
-        try {
-            if (_packetList.Count > 0)
-                PacketReceivedFromInbound?.Invoke(this, new PacketReceivedEventArgs(_packetList));
-        }
-        catch (Exception ex) {
-            _logger.LogError(ex, "Error in invoking packet received event.");
-        }
-        finally {
-            _packetList.Clear();
-        }
+        Thread.Sleep(1);
     }
 
-    public void ProtectSocket(Socket socket)
+    protected override bool WritePacket(IPPacket ipPacket)
     {
-        throw new NotImplementedException();
-    }
-
-    public UdpClient CreateProtectedUdpClient(int port, AddressFamily addressFamily)
-    {
-        return addressFamily switch {
-            AddressFamily.InterNetwork when PrimaryAdapterIpV4 != null => new UdpClient(new IPEndPoint(PrimaryAdapterIpV4, port)),
-            AddressFamily.InterNetworkV6 when PrimaryAdapterIpV6 != null => new UdpClient(new IPEndPoint(PrimaryAdapterIpV6, port)),
-            _ => new UdpClient(port, addressFamily)
-        };
-    }
-
-    public TcpClient CreateProtectedTcpClient(int port, AddressFamily addressFamily)
-    {
-        return addressFamily switch {
-            AddressFamily.InterNetwork when PrimaryAdapterIpV4 != null => new TcpClient(new IPEndPoint(PrimaryAdapterIpV4, port)),
-            AddressFamily.InterNetworkV6 when PrimaryAdapterIpV6 != null => new TcpClient(new IPEndPoint(PrimaryAdapterIpV6, port)),
-            _ => throw new InvalidOperationException(
-                "Could not create a protected TCP client because the primary adapter IP is not available.")
-        };
-    }
-
-    public void SendPacketToInbound(IPPacket ipPacket)
-    {
-        SendPacket(ipPacket); //todo
-    }
-
-    public void SendPacketToInbound(IList<IPPacket> packets)
-    {
-        SendPacket(packets); //todo
-    }
-
-    public void SendPacketToOutbound(IPPacket ipPacket)
-    {
-        SendPacket(ipPacket); //todo
-    }
-
-    public void SendPacketToOutbound(IList<IPPacket> ipPackets)
-    {
-        SendPacket(ipPackets); //todo
-    }
-    public void SendPacket(IPPacket ipPacket)
-    {
-        if (!Started)
-            throw new InvalidOperationException("WinTun adapter is not started.");
+        var packetBytes = ipPacket.Bytes;
 
         // Allocate memory for the packet inside WinTun ring buffer
-        var sent = false;
-        var delay = 5;
-        while (true) {
-            var packetBytes = ipPacket.Bytes;
-            var packetMemory = WinTunApi.WintunAllocateSendPacket(_tunSession, packetBytes.Length); // thread-safe
-            if (packetMemory != IntPtr.Zero) {
-                // Copy the raw packet data into WinTun memory
-                Marshal.Copy(packetBytes, 0, packetMemory, packetBytes.Length);
+        var packetMemory = WinTunApi.WintunAllocateSendPacket(_tunSession, packetBytes.Length); // thread-safe
+        if (packetMemory == IntPtr.Zero) 
+            return false;
 
-                // Send the packet through WinTun
-                WinTunApi.WintunSendPacket(_tunSession, packetMemory); // thread-safe
-                sent = true;
-                break;
-            }
 
-            // if failed to send, drop the packet
-            if (delay > _maxPacketSendDelayMs)
-                break;
+        // Copy the raw packet data into WinTun memory
+        Marshal.Copy(packetBytes, 0, packetMemory, packetBytes.Length);
 
-            // wait and try again
-            Thread.Sleep(delay);
-            delay *= 2;
-        }
-
-        // log if failed to send
-        if (!sent)
-            _logger.LogWarning("Failed to send packet via WinTun adapter.");
+        // Send the packet through WinTun
+        WinTunApi.WintunSendPacket(_tunSession, packetMemory); // thread-safe
+        return true;
     }
 
-    public void SendPacket(IList<IPPacket> packets)
-    {
-        foreach (var packet in packets)
-            SendPacket(packet);
-    }
-
-    private readonly SemaphoreSlim _sendPacketSemaphoreSlim = new(1, 1);
-    public Task SendPacketAsync(IPPacket ipPacket)
-    {
-        return _sendPacketSemaphoreSlim.WaitAsync().ContinueWith(_ => {
-            try {
-                SendPacket(ipPacket);
-            }
-            finally {
-                _sendPacketSemaphoreSlim.Release();
-            }
-        });
-    }
-
-    public async Task SendPacketAsync(IList<IPPacket> packets)
-    {
-        foreach (var packet in packets)
-            await SendPacketAsync(packet);
-    }
-
-    protected void ReleaseUnmanagedResources()
+    protected override void CloseAdapter()
     {
         if (_tunSession != IntPtr.Zero) {
             WinTunApi.WintunEndSession(_tunSession);
@@ -461,40 +225,22 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions) : IVpnAdap
 
         // Remove previous NAT iptables record
         if (UseNat) {
-            _logger.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...", AdapterName);
+            Logger.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...", AdapterName);
             if (AdapterIpNetworkV4 != null)
-                RemoveNat("", AdapterIpNetworkV4);
+                TryRemoveNat(AdapterIpNetworkV4);
 
             if (AdapterIpNetworkV6 != null)
-                RemoveNat("", AdapterIpNetworkV6);
+                TryRemoveNat(AdapterIpNetworkV6);
         }
     }
 
-    protected virtual void Dispose(bool disposing)
+    protected override void Dispose(bool disposing)
     {
-        _disposed = true;
+        base.Dispose(disposing);
 
-        // release managed resources when disposing
-        if (disposing) {
-            // if started, close the adapter
-            if (Started)
-                Stop();
-
-            // notify the subscribers that the adapter is disposed
-            Disposed?.Invoke(this, EventArgs.Empty);
-        }
-
-        ReleaseUnmanagedResources();
+        // The adapter is an unmanaged resource; it must be closed if it is open
+        if (_tunAdapter != IntPtr.Zero)
+            CloseAdapter();
     }
 
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    ~WinTunVpnAdapter()
-    {
-        Dispose(false);
-    }
 }

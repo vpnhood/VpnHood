@@ -5,7 +5,7 @@ namespace VpnHood.Test.Device;
 
 public class TestVpnAdapter(TestVpnAdapterOptions vpnAdapterOptions) : WinDivertVpnAdapter
 {
-    public override bool IsDnsServersSupported => vpnAdapterOptions.IsDnsServerSupported;
+    public override bool IsDnsServerSupported => vpnAdapterOptions.IsDnsServerSupported;
 
     public override bool CanSendPacketToOutbound => vpnAdapterOptions.CanSendPacketToOutbound;
 

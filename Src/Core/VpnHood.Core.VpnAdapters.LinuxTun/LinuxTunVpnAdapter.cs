@@ -17,6 +17,14 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions tunAdapterOptions)
     private int? _metric;
     private string? _primaryAdapterName;
     public override bool IsNatSupported => true;
+    public override bool IsDnsServerSupported => true;
+    public override bool IsAppFilterSupported => false;
+    protected override string? AppPackageId => null;
+    protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken) =>
+        throw new NotSupportedException("App filtering is not supported on Linux.");
+
+    protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken) =>
+        throw new NotSupportedException("App filtering is not supported on Linux.");
 
     private static async Task<string> GetPrimaryAdapterName(CancellationToken cancellationToken)
     {
@@ -28,7 +36,7 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions tunAdapterOptions)
         return mainInterface;
     }
 
-    protected override async Task OpenAdapter(CancellationToken cancellationToken)
+    protected override async Task AdapterAdd(CancellationToken cancellationToken)
     {
         // Get the primary adapter name
         Logger.LogDebug("Getting the primary adapter name...");
@@ -37,7 +45,7 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions tunAdapterOptions)
 
         // delete existing tun interface
         Logger.LogDebug("Clean previous tun adapter...");
-        CloseAdapter();
+        AdapterRemove();
 
         // Create and configure tun interface
         Logger.LogDebug("Creating tun adapter...");
@@ -51,10 +59,50 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions tunAdapterOptions)
         // Bring up the interface
         Logger.LogDebug("Bringing up the TUN...");
         await ExecuteCommandAsync($"ip link set {AdapterName} up", cancellationToken).VhConfigureAwait();
+    }
 
+    protected override void AdapterRemove()
+    {
+        // close if open
+        AdapterClose();
+
+        var tunAdapterExists = NetworkInterface
+            .GetAllNetworkInterfaces()
+            .Any(x => x.Name.Equals(AdapterName, StringComparison.OrdinalIgnoreCase));
+
+        // Remove existing tun interface
+        if (tunAdapterExists) {
+            Logger.LogDebug("Removing existing {AdapterName} TUN adapter (if any)...", AdapterName);
+            VhUtils.TryInvoke($"remove existing {AdapterName} TUN adapter", () =>
+                ExecuteCommand($"ip link delete {AdapterName}"));
+        }
+
+        // Remove previous NAT iptables record
+        if (UseNat) {
+            Logger.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...", AdapterName);
+            if (AdapterIpNetworkV4 != null)
+                TryRemoveNat(AdapterIpNetworkV4);
+
+            if (AdapterIpNetworkV6 != null)
+                TryRemoveNat(AdapterIpNetworkV6);
+        }
+    }
+
+    protected override Task AdapterOpen(CancellationToken cancellationToken)
+    {
         // Open TUN Adapter
         Logger.LogDebug("Opening the TUN adapter...");
         _tunAdapterFd = OpenTunAdapter(AdapterName, false);
+        return Task.CompletedTask;
+    }
+
+    protected override void AdapterClose()
+    {
+        // Close the TUN adapter if it is open
+        if (_tunAdapterFd != 0) {
+            LinuxAPI.close(_tunAdapterFd);
+            _tunAdapterFd = 0;
+        }
     }
 
     protected override async Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
@@ -102,51 +150,25 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions tunAdapterOptions)
         _metric = metric;
         return Task.CompletedTask;
     }
+
+    protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
+    {
+        // Not supported. Ignore
+        return Task.CompletedTask;
+    }
+
     protected override async Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         var command = $"ip link set dev {AdapterName} mtu {mtu}";
         await ExecuteCommandAsync(command, cancellationToken).VhConfigureAwait();
     }
 
-    protected override async Task SetDnsServers(IPAddress[] ipAddresses, CancellationToken cancellationToken)
+    protected override async Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
     {
-        var allDns = string.Join(" ", ipAddresses.Select(x => x.ToString()));
+        var allDns = string.Join(" ", dnsServers.Select(x => x.ToString()));
         var command = $"resolvectl dns {AdapterName} {allDns}";
         await ExecuteCommandAsync(command, cancellationToken).VhConfigureAwait();
         await ExecuteCommandAsync($"resolvectl domain {AdapterName} \"~.\"", cancellationToken).VhConfigureAwait();
-    }
-
-    private bool IsTunAdapterExists()
-    {
-        return NetworkInterface
-            .GetAllNetworkInterfaces()
-            .Any(x => x.Name.Equals(AdapterName, StringComparison.OrdinalIgnoreCase));
-    }
-
-    protected override void CloseAdapter()
-    {
-        // Close the TUN adapter if it is open
-        if (_tunAdapterFd != 0) {
-            LinuxAPI.close(_tunAdapterFd);
-            _tunAdapterFd = 0;
-        }
-
-        // Remove existing tun interface
-        if (IsTunAdapterExists()) {
-            Logger.LogDebug("Removing existing {AdapterName} TUN adapter (if any)...", AdapterName);
-            VhUtils.TryInvoke($"remove existing {AdapterName} TUN adapter", () =>
-                ExecuteCommand($"ip link delete {AdapterName}"));
-        }
-
-        // Remove previous NAT iptables record
-        if (UseNat) {
-            Logger.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...", AdapterName);
-            if (AdapterIpNetworkV4 != null)
-                TryRemoveNat(AdapterIpNetworkV4);
-
-            if (AdapterIpNetworkV6 != null)
-                TryRemoveNat(AdapterIpNetworkV6);
-        }
     }
 
     protected override void WaitForTunRead()
@@ -210,32 +232,33 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions tunAdapterOptions)
         return true;
     }
 
-    protected override void ReadPackets(List<IPPacket> packetList, int mtu)
+    protected override IPPacket? ReadPacket(int mtu)
     {
-        while (Started && packetList.Count < packetList.Capacity) {
-            var buffer = new byte[mtu];
+        var buffer = new byte[mtu];
+        while (Started) {
             var bytesRead = LinuxAPI.read(_tunAdapterFd, buffer, buffer.Length);
+            if (bytesRead > 0)
+                return Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>();
 
             // check for errors
-            if (bytesRead <= 0) {
-                var errorCode = Marshal.GetLastWin32Error();
-                switch (errorCode) {
-                    // No data available, wait
-                    case LinuxAPI.EAGAIN: return;
+            var errorCode = Marshal.GetLastWin32Error();
+            switch (errorCode) {
+                // No data available, wait
+                case LinuxAPI.EAGAIN:
+                    return null;
 
-                    // Interrupted, retry
-                    case LinuxAPI.EINTR:
+                // Interrupted, retry
+                case LinuxAPI.EINTR: {
+                        Logger.LogTrace("Read from TUN was interrupted. Retrying...");
                         continue;
+                    }
 
-                    default:
-                        throw new PInvokeException("Could not read from TUN.", errorCode);
-                }
+                default:
+                    throw new PInvokeException("Could not read from TUN.", errorCode);
             }
-
-            // Parse the packet and add to the list
-            var ipPacket = Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>();
-            packetList.Add(ipPacket);
         }
+
+        return null;
     }
 
     private static int OpenTunAdapter(string adapterName, bool blockingMode)
@@ -282,7 +305,8 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterOptions tunAdapterOptions)
         base.Dispose(disposing);
 
         // The adapter is an unmanaged resource; it must be closed if it is open
-        if (_tunAdapterFd != 0)
-            CloseAdapter();
+        if (_tunAdapterFd != 0) {
+            AdapterRemove();
+        }
     }
 }

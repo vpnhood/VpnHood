@@ -16,9 +16,9 @@ namespace VpnHood.Core.Client.Device.Droid;
 [Service(
     Permission = Manifest.Permission.BindVpnService,
     Exported = false,
-//#if !DEBUG
+#if !DEBUG //todo
     Process = ":vpnhood_process",
-//#endif
+#endif
     ForegroundServiceType = ForegroundService.TypeSystemExempted)]
 [IntentFilter(["android.net.VpnService"])]
 public class AndroidVpnService : VpnService, IVpnServiceHandler
@@ -59,7 +59,9 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 
     public IVpnAdapter CreateAdapter()
     {
-        return new AndroidVpnAdapter(this);
+        return new AndroidVpnAdapter(this, new AndroidVpnAdapterOptions {
+            AdapterName = "VpnHood", 
+        });
     }
 
     public void ShowNotification(ConnectionInfo connectionInfo)

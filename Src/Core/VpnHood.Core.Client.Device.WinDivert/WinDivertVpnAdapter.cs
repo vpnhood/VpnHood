@@ -33,7 +33,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
     public event EventHandler? Stopped;
     public bool Started => _device.Started;
     public virtual bool CanSendPacketToOutbound => true;
-    public virtual bool IsDnsServersSupported => false;
+    public virtual bool IsDnsServerSupported => false;
     public virtual bool IsNatSupported => false;
 
     public WinDivertVpnAdapter()

@@ -1,116 +1,67 @@
 ﻿using System.Net;
+using System.Runtime.InteropServices;
 using Android.Net;
 using Android.OS;
 using Java.IO;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Core.Client.Device.Droid.LinuxNative;
+using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client.Device.Droid;
 
-public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
+public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterOptions vpnAdapterOptions)
+    : TunVpnAdapter(vpnAdapterOptions)
 {
-    private FileInputStream? _inStream; // Packets to be sent are queued in this input stream.
-    private ParcelFileDescriptor? _mInterface;
-    private FileOutputStream? _outStream; // Packets received need to be written to this output stream.
-    private PacketReceivedEventArgs? _packetReceivedEventArgs;
-    private bool _stopRequested;
+    private ParcelFileDescriptor? _parcelFileDescriptor;
+    private int _tunAdapterFd;
+    private VpnService.Builder? _builder;
+    private FileInputStream? _inStream;
+    private FileOutputStream? _outStream;
 
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
-    public event EventHandler? Disposed;
-    public bool Started => _mInterface != null;
-    public bool CanSendPacketToOutbound => false;
-    public bool IsNatSupported => true;
-    public bool IsDnsServersSupported => true;
-    public bool CanProtectSocket => true;
+    public override bool IsDnsServerSupported => false;
+    public override bool IsNatSupported => false;
+    public override bool IsAppFilterSupported => true;
 
-    protected void ProcessPacket(IPPacket ipPacket)
+    protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
-        // create the event args. for performance, we will reuse the same instance
-        _packetReceivedEventArgs ??= new PacketReceivedEventArgs(new IPPacket[1]);
-
-        try {
-            _packetReceivedEventArgs.IpPackets[0] = ipPacket;
-            PacketReceivedFromInbound?.Invoke(this, _packetReceivedEventArgs);
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Error in processing packet. Packet: {Packet}",
-                VhLogger.FormatIpPacket(ipPacket.ToString()!));
-        }
-    }
-
-    public Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
-    {
-        if (Started)
-            Stop();
-
-        if (options.UseNat)
-            throw new NotSupportedException("NAT is not supported in Android VPN.");
-
-        // reset the stop request
-        _stopRequested = false;
-
-        VhLogger.Instance.LogDebug("Starting the adapter...");
-        
-        var builder = new VpnService.Builder(vpnService)
-            .SetBlocking(true);
-
-        // Private IP Networks
-        if (options.VirtualIpNetworkV4 != null)
-            builder.AddAddress(options.VirtualIpNetworkV4.Prefix.ToString(), options.VirtualIpNetworkV4.PrefixLength);
-
-        if (options.VirtualIpNetworkV6 != null)
-            builder.AddAddress(options.VirtualIpNetworkV6.Prefix.ToString(), options.VirtualIpNetworkV6.PrefixLength);
+        _builder = new VpnService.Builder(vpnService)
+            .SetBlocking(false);
 
         // Android 10 and above
         if (OperatingSystem.IsAndroidVersionAtLeast(29))
-            builder.SetMetered(false);
+            _builder.SetMetered(false);
 
-        // Session Name
-        if (!string.IsNullOrWhiteSpace(options.SessionName))
-            builder.SetSession(options.SessionName.Trim());
-
-        // MTU
-        if (options.Mtu != null)
-            builder.SetMtu(options.Mtu.Value);
-
-        // Add Routes
-        foreach (var network in options.IncludeNetworks)
-            builder.AddRoute(network.Prefix.ToString(), network.PrefixLength);
-
-        // AppFilter
-        var appPackageName = vpnService.ApplicationContext?.PackageName ?? throw new Exception("Could not get the app PackageName!");
-        AddAppFilter(builder, includeApps: options.IncludeApps, excludeApps: options.ExcludeApps,
-            appPackageName: appPackageName);
-
-        // DNS Servers
-        AddDnsServers(builder, options.DnsServers, options.IncludeNetworks.Any(x => x.IsV6));
-
-        // try to establish the connection
-        _mInterface = builder.Establish() ?? throw new Exception("Could not establish VpnService.");
-
-        //Packets to be sent are queued in this input stream.
-        _inStream = new FileInputStream(_mInterface.FileDescriptor);
-
-        //Packets received need to be written to this output stream.
-        _outStream = new FileOutputStream(_mInterface.FileDescriptor);
-
-        Task.Run(ReadingPacketTask, CancellationToken.None);
         return Task.CompletedTask;
     }
 
-    private readonly Lock _stopCaptureLock = new();
-    public void Stop()
+    protected override void AdapterRemove()
     {
-        using var lockScope = _stopCaptureLock.EnterScope();
+        AdapterClose();
+    }
 
-        if (_mInterface == null || _stopRequested) return;
-        _stopRequested = true;
+    protected override Task AdapterOpen(CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(_builder);
+        _parcelFileDescriptor = _builder.Establish() ?? throw new Exception("Could not establish VpnService.");
+        _tunAdapterFd = _parcelFileDescriptor.Fd;
 
-        VhLogger.Instance.LogDebug("Stopping the adapter...");
+        //Packets to be sent are queued in this input stream.
+        _inStream = new FileInputStream(_parcelFileDescriptor.FileDescriptor);
+
+        //Packets received need to be written to this output stream.
+        _outStream = new FileOutputStream(_parcelFileDescriptor.FileDescriptor);
+
+        return Task.CompletedTask;
+    }
+
+    protected override void AdapterClose()
+    {
+        if (_parcelFileDescriptor == null)
+            return;
 
         // close in streams
         try {
@@ -128,119 +79,164 @@ public class AndroidVpnAdapter(VpnService vpnService) : IVpnAdapter
             VhLogger.Instance.LogError(ex, "Error while closing the VpnService streams.");
         }
 
-        // close VpnService
+        // close the vpn
         try {
-            _mInterface?.Close(); //required to close the vpn. dispose is not enough
-            _mInterface?.Dispose();
+            _parcelFileDescriptor?.Close(); //required to close the vpn. dispose is not enough
+            _parcelFileDescriptor?.Dispose();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error while closing the VpnService.");
         }
 
-        _mInterface = null;
+        _parcelFileDescriptor = null;
     }
 
-    public void SendPacketToInbound(IPPacket ipPacket)
-    {
-        _outStream?.Write(ipPacket.Bytes);
-    }
-
-    public void SendPacketToInbound(IList<IPPacket> ipPackets)
-    {
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++) {
-            SendPacketToInbound(ipPackets[i]);
-        }
-    }
-
-    public void SendPacketToOutbound(IList<IPPacket> ipPackets)
-    {
-        throw new NotSupportedException();
-    }
-
-    public void SendPacketToOutbound(IPPacket ipPacket)
-    {
-        throw new NotSupportedException();
-    }
-
-    public void ProtectSocket(System.Net.Sockets.Socket socket)
+    public override void ProtectSocket(System.Net.Sockets.Socket socket)
     {
         if (!vpnService.Protect(socket.Handle.ToInt32()))
             throw new Exception("Could not protect socket!");
     }
 
-    private static void AddDnsServers(VpnService.Builder builder, IPAddress[] dnsServers, bool isIpV6Supported)
+    protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        if (!isIpV6Supported)
-            dnsServers = dnsServers.Where(x => x.IsV4()).ToArray();
-
-        foreach (var dnsServer in dnsServers)
-            builder.AddDnsServer(dnsServer.ToString());
-    }
-
-    private static void AddAppFilter(VpnService.Builder builder, string appPackageName,
-        string[]? includeApps, string[]? excludeApps)
-    {
-        // Applications Filter
-        if (includeApps != null) {
-            builder.AddAllowedApplication(appPackageName);
-
-            // make sure not to add current app to allowed apps
-            foreach (var app in includeApps.Where(x => x != appPackageName))
-                try {
-                    builder.AddAllowedApplication(app);
-                }
-                catch (Exception ex) {
-                    VhLogger.Instance.LogError(ex, "Could not add an allowed app. App: {app}", app);
-                }
-        }
-
-        if (excludeApps != null) {
-            // make sure not to add current app to disallowed apps
-            foreach (var app in excludeApps.Where(x => x != appPackageName))
-                try {
-                    builder.AddDisallowedApplication(app);
-                }
-                catch (Exception ex) {
-                    VhLogger.Instance.LogError(ex, "Could not add a disallowed app. App: {app}", app);
-                }
-        }
-    }
-
-    private Task ReadingPacketTask()
-    {
-        if (_inStream == null)
-            throw new ArgumentNullException(nameof(_inStream));
-
-        try {
-            var buf = new byte[short.MaxValue];
-            int read;
-            // ReSharper disable once MethodHasAsyncOverload
-            while (!_stopRequested && (read = _inStream.Read(buf)) > 0) {
-                var packetBuffer = buf[..read]; // copy buffer for packet
-                var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer)?.Extract<IPPacket>();
-                if (ipPacket != null)
-                    ProcessPacket(ipPacket);
-            }
-        }
-        catch (ObjectDisposedException) {
-        }
-        catch (Exception ex) {
-            if (!VhUtils.IsSocketClosedException(ex))
-                VhLogger.Instance.LogError(ex, "Error occurred in Android ReadingPacketTask.");
-        }
-
-        Stop();
+        ArgumentNullException.ThrowIfNull(_builder);
+        _builder.AddAddress(ipNetwork.Prefix.ToString(), ipNetwork.PrefixLength);
         return Task.CompletedTask;
     }
 
-    private bool _disposed;
-    public void Dispose()
+    protected override Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken)
     {
-        if (_disposed) return;
-        _disposed = true;
+        ArgumentNullException.ThrowIfNull(_builder);
+        _builder.AddRoute(ipNetwork.Prefix.ToString(), ipNetwork.PrefixLength);
+        return Task.CompletedTask;
+    }
 
-        Stop();
-        Disposed?.Invoke(this, EventArgs.Empty);
+    protected override Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
+    {
+        throw new NotSupportedException("Android does not support NAT.");
+    }
+
+    protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(_builder);
+        _builder.SetSession(sessionName);
+        return Task.CompletedTask;
+    }
+
+    protected override Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
+    {
+        // ignore metric
+        return Task.CompletedTask;
+    }
+
+    protected override Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(_builder);
+        _builder.SetMtu(mtu);
+        return Task.CompletedTask;
+    }
+
+    protected override Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(_builder);
+        foreach (var dnsServer in dnsServers)
+            _builder.AddDnsServer(dnsServer.ToString());
+
+        return Task.CompletedTask;
+    }
+
+    protected override string AppPackageId =>
+        vpnService.ApplicationContext?.PackageName ?? throw new Exception("Could not get the app PackageName!");
+
+    protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(_builder);
+        foreach (var packageId in packageIds)
+            try {
+                _builder.AddAllowedApplication(packageId);
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "Could not add an allowed app. PackageId: {PackageId}", packageId);
+            }
+
+        return Task.CompletedTask;
+    }
+
+    protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(_builder);
+        foreach (var packageId in packageIds)
+            try {
+                _builder.AddDisallowedApplication(packageId);
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "Could not add an disallowed app. PackageId: {PackageId}", packageId);
+            }
+
+        return Task.CompletedTask;
+    }
+
+    protected override void WaitForTunRead()
+    {
+        WaitForTun(PollEvent.In);
+    }
+    protected override void WaitForTunWrite()
+    {
+        WaitForTun(PollEvent.Out);
+    }
+
+    private void WaitForTun(PollEvent pollEvent)
+    {
+        var pollFd = new PollFD {
+            fd = _tunAdapterFd,
+            events = (short)pollEvent
+        };
+
+        while (true) {
+            var result = LinuxAPI.poll([pollFd], 1, -1); // Blocks until data arrives
+            if (result >= 0)
+                break; // Success, exit loop
+
+            var errorCode = Marshal.GetLastWin32Error();
+            if (errorCode == LinuxAPI.EINTR)
+                continue; // Poll was interrupted, retry
+
+            throw new PInvokeException("Failed to poll the TUN device for new data.", errorCode);
+        }
+    }
+    protected override bool WritePacket(IPPacket ipPacket)
+    {
+        if (_outStream == null)
+            throw new InvalidOperationException("Adapter is not open.");
+
+        var packetBytes = ipPacket.Bytes;
+        _outStream.Write(packetBytes);
+        return true;
+    }
+
+    protected override IPPacket? ReadPacket(int mtu)
+    {
+        if (_inStream == null)
+            throw new InvalidOperationException("Adapter is not open.");
+
+        var buffer = new byte[mtu];
+        var bytesRead = _inStream.Read(buffer);
+        return bytesRead switch {
+            // no more packet
+            0 => null,
+            // Parse the packet and add to the list
+            > 0 => Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>(),
+            // error
+            < 0 => throw new System.IO.IOException("Could not read from TUN.")
+        };
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+
+        // The adapter is an unmanaged resource; it must be closed if it is open
+        if (_parcelFileDescriptor != null)
+            AdapterRemove();
     }
 }

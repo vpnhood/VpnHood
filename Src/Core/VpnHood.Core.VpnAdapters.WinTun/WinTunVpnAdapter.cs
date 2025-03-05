@@ -22,13 +22,45 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions)
     public const int MinRingCapacity = 0x20000; // 128kiB
     public const int MaxRingCapacity = 0x4000000; // 64MiB
     public override bool IsNatSupported => true;
+    public override bool IsDnsServerSupported => true;
+    public override bool IsAppFilterSupported => false;
+    protected override string? AppPackageId => null;
+    protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken) =>
+        throw new NotSupportedException("App filtering is not supported on Linux.");
 
-    protected override Task OpenAdapter(CancellationToken cancellationToken)
+    protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken) =>
+        throw new NotSupportedException("App filtering is not supported on Linux.");
+
+    protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
-        Logger.LogInformation("Initializing WinTun Adapter...");
         _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "WinTun", IntPtr.Zero);
         if (_tunAdapter == IntPtr.Zero)
             throw new Win32Exception("Failed to create WinTun adapter.");
+
+        return Task.CompletedTask;
+    }
+
+    protected override void AdapterRemove()
+    {
+        // close the adapter
+        if (_tunAdapter != IntPtr.Zero) {
+            WinTunApi.WintunCloseAdapter(_tunAdapter);
+            _tunAdapter = IntPtr.Zero;
+        }
+
+        // Remove previous NAT iptables record
+        if (UseNat) {
+            Logger.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...", AdapterName);
+            if (AdapterIpNetworkV4 != null)
+                TryRemoveNat(AdapterIpNetworkV4);
+
+            if (AdapterIpNetworkV6 != null)
+                TryRemoveNat(AdapterIpNetworkV6);
+        }
+    }
+
+    protected override Task AdapterOpen(CancellationToken cancellationToken)
+    {
 
         // start WinTun session
         Logger.LogInformation("Starting WinTun session...");
@@ -40,6 +72,23 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions)
         Logger.LogDebug("Creating event object for WinTun...");
         _readEvent = WinTunApi.WintunGetReadWaitEvent(_tunSession); // do not close this handle by documentation
 
+        return Task.CompletedTask;
+    }
+
+    protected override void AdapterClose()
+    {
+        if (_tunSession != IntPtr.Zero) {
+            WinTunApi.WintunEndSession(_tunSession);
+            _tunSession = IntPtr.Zero;
+        }
+
+        // do not close this handle by documentation
+        _readEvent = IntPtr.Zero;
+    }
+
+    protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
+    {
+        // not supported. ignore
         return Task.CompletedTask;
     }
 
@@ -79,9 +128,9 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions)
             await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv6 set subinterface \"{AdapterName}\" mtu={mtu}", cancellationToken);
     }
 
-    protected override async Task SetDnsServers(IPAddress[] ipAddresses, CancellationToken cancellationToken)
+    protected override async Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
     {
-        foreach (var ipAddress in ipAddresses) {
+        foreach (var ipAddress in dnsServers) {
             var command = $"interface ip add dns \"{AdapterName}\" {ipAddress}";
             await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
         }
@@ -132,56 +181,53 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions)
         if (result == Kernel32.WaitObject0)
             return;
 
-        throw result == Kernel32.WaitFailed 
-            ? new Win32Exception() 
+        throw result == Kernel32.WaitFailed
+            ? new Win32Exception()
             : new PInvokeException("Unexpected result from WaitForSingleObject", (int)result);
     }
 
 
-    protected override void ReadPackets(List<IPPacket> packetList, int mtu)
+    protected override IPPacket? ReadPacket(int mtu)
     {
         const int maxErrorCount = 10;
         var errorCount = 0;
-        while (Started && packetList.Count < packetList.Capacity) {
+        while (Started) {
             var tunReceivePacket = WinTunApi.WintunReceivePacket(_tunSession, out var size);
             var lastError = (WintunReceivePacketError)Marshal.GetLastWin32Error();
             if (tunReceivePacket != IntPtr.Zero) {
-                errorCount = 0; // reset the error count
                 try {
                     // read the packet
                     var buffer = new byte[size];
                     Marshal.Copy(tunReceivePacket, buffer, 0, size);
-                    var ipPacket = Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>();
-                    packetList.Add(ipPacket);
+                    return Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>();
                 }
                 finally {
                     WinTunApi.WintunReleaseReceivePacket(_tunSession, tunReceivePacket);
                 }
-                continue;
             }
 
             switch (lastError) {
                 case WintunReceivePacketError.NoMoreItems:
-                    return;
+                    return null;
 
                 case WintunReceivePacketError.HandleEof:
-                    if (Started)
-                        throw new InvalidOperationException("WinTun adapter has been closed.");
-                    return;
+                    throw new IOException("WinTun adapter has been closed.");
 
                 case WintunReceivePacketError.InvalidData:
                     Logger.LogWarning("Invalid data received from WinTun adapter.");
-                    if (errorCount++ > maxErrorCount)
+                    if (++errorCount > maxErrorCount)
                         throw new InvalidOperationException("Too many invalid data received from WinTun adapter."); // read the next packet
                     continue; // read the next packet
 
                 default:
                     Logger.LogDebug("Unknown error in reading packet from WinTun. LastError: {lastError}", lastError);
-                    if (errorCount++ > maxErrorCount)
+                    if (++errorCount > maxErrorCount)
                         throw new InvalidOperationException("Too many errors in reading packet from WinTun."); // read the next packet
                     continue; // read the next packet
             }
         }
+
+        return null;
     }
 
     protected override void WaitForTunWrite()
@@ -195,7 +241,7 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions)
 
         // Allocate memory for the packet inside WinTun ring buffer
         var packetMemory = WinTunApi.WintunAllocateSendPacket(_tunSession, packetBytes.Length); // thread-safe
-        if (packetMemory == IntPtr.Zero) 
+        if (packetMemory == IntPtr.Zero)
             return false;
 
 
@@ -207,32 +253,6 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions)
         return true;
     }
 
-    protected override void CloseAdapter()
-    {
-        if (_tunSession != IntPtr.Zero) {
-            WinTunApi.WintunEndSession(_tunSession);
-            _tunSession = IntPtr.Zero;
-        }
-
-        // do not close this handle by documentation
-        _readEvent = IntPtr.Zero;
-
-        // close the adapter
-        if (_tunAdapter != IntPtr.Zero) {
-            WinTunApi.WintunCloseAdapter(_tunAdapter);
-            _tunAdapter = IntPtr.Zero;
-        }
-
-        // Remove previous NAT iptables record
-        if (UseNat) {
-            Logger.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...", AdapterName);
-            if (AdapterIpNetworkV4 != null)
-                TryRemoveNat(AdapterIpNetworkV4);
-
-            if (AdapterIpNetworkV6 != null)
-                TryRemoveNat(AdapterIpNetworkV6);
-        }
-    }
 
     protected override void Dispose(bool disposing)
     {
@@ -240,7 +260,7 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions)
 
         // The adapter is an unmanaged resource; it must be closed if it is open
         if (_tunAdapter != IntPtr.Zero)
-            CloseAdapter();
+            AdapterRemove();
     }
 
 }

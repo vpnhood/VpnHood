@@ -10,7 +10,7 @@ public class NullVpnAdapter : IVpnAdapter
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Disposed;
     public virtual bool Started { get; set; }
-    public virtual bool IsDnsServersSupported { get; set; } = true;
+    public virtual bool IsDnsServerSupported { get; set; } = true;
     public virtual bool IsNatSupported { get; set; } = true;
     public virtual bool CanProtectSocket { get; set; } = true;
     public virtual bool CanSendPacketToOutbound { get; set; }

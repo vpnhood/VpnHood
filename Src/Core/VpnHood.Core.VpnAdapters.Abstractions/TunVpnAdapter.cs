@@ -14,25 +14,31 @@ public abstract class TunVpnAdapter(TunVpnAdapterOptions tunAdapterOptions) : IV
     private int _mtu = 0xFFFF;
     private readonly int _maxAutoRestartCount = tunAdapterOptions.MaxAutoRestartCount;
     private int _autoRestartCount;
+    private bool _started;
 
     protected bool IsDisposed { get; private set; }
     protected ILogger Logger { get; } = tunAdapterOptions.Logger;
     protected bool UseNat { get; private set; }
+    public abstract bool IsAppFilterSupported { get; }
+    public abstract bool IsDnsServerSupported { get; }
+    public abstract bool IsNatSupported { get; }
+    protected abstract string? AppPackageId { get; }
     protected abstract Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken);
     protected abstract Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken);
-    protected abstract Task SetDnsServers(IPAddress[] ipAddresses, CancellationToken cancellationToken);
+    protected abstract Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken);
     protected abstract Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken);
     protected abstract Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken);
     protected abstract Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken);
-
-    public virtual void ProtectSocket(Socket socket)
-    {
-    } //todo
-
-    protected abstract void CloseAdapter();
+    protected abstract Task SetSessionName(string sessionName, CancellationToken cancellationToken);
+    protected abstract Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken);
+    protected abstract Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken);
+    protected abstract Task AdapterAdd(CancellationToken cancellationToken);
+    protected abstract void AdapterRemove();
+    protected abstract Task AdapterOpen(CancellationToken cancellationToken);
+    protected abstract void AdapterClose();
     protected abstract void WaitForTunWrite();
     protected abstract void WaitForTunRead();
-    protected abstract void ReadPackets(List<IPPacket> packetList, int mtu);
+    protected abstract IPPacket? ReadPacket(int mtu);
     protected abstract bool WritePacket(IPPacket ipPacket);
 
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
@@ -45,9 +51,7 @@ public abstract class TunVpnAdapter(TunVpnAdapterOptions tunAdapterOptions) : IV
     public IpNetwork? AdapterIpNetworkV6 { get; private set; }
     public IPAddress? GatewayIpV4 { get; private set; }
     public IPAddress? GatewayIpV6 { get; private set; }
-    public bool Started { get; private set; }
-    public virtual bool IsDnsServersSupported => true;
-    public abstract bool IsNatSupported { get; }
+    public bool Started => _started && !IsDisposed;
     public bool CanProtectSocket => true; //todo
 
     public async Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
@@ -74,7 +78,7 @@ public abstract class TunVpnAdapter(TunVpnAdapterOptions tunAdapterOptions) : IV
         try {
             // create tun adapter
             Logger.LogInformation("Initializing TUN adapter...");
-            await OpenAdapter(cancellationToken).VhConfigureAwait();
+            await AdapterAdd(cancellationToken).VhConfigureAwait();
 
             // Private IP Networks
             Logger.LogDebug("Adding private networks...");
@@ -108,7 +112,12 @@ public abstract class TunVpnAdapter(TunVpnAdapterOptions tunAdapterOptions) : IV
 
             // set DNS servers
             Logger.LogDebug("Setting DNS servers...");
-            await SetDnsServers(options.DnsServers, cancellationToken).VhConfigureAwait();
+            var dnsServers = options.DnsServers;
+            if (options.VirtualIpNetworkV4 == null)
+                dnsServers = dnsServers.Where(x => !x.IsV4()).ToArray();
+            if (options.VirtualIpNetworkV6 == null)
+                dnsServers = dnsServers.Where(x => !x.IsV6()).ToArray();
+            await SetDnsServers(dnsServers, cancellationToken).VhConfigureAwait();
 
             // add routes
             Logger.LogDebug("Adding routes...");
@@ -128,10 +137,18 @@ public abstract class TunVpnAdapter(TunVpnAdapterOptions tunAdapterOptions) : IV
                     await AddNat(options.VirtualIpNetworkV6, cancellationToken).VhConfigureAwait();
             }
 
+            // add app filter
+            if (IsAppFilterSupported)
+                await SetAppFilters(options.IncludeApps, options.ExcludeApps, cancellationToken);
+
+            // open the adapter
+            Logger.LogInformation("Initializing TUN adapter...");
+            await AdapterOpen(cancellationToken).VhConfigureAwait();
+
             // start reading packets
             _ = Task.Run(ReadingPacketTask, CancellationToken.None);
 
-            Started = true;
+            _started = true;
             Logger.LogInformation("TUN adapter started.");
         }
         catch (ExternalException ex) {
@@ -141,17 +158,49 @@ public abstract class TunVpnAdapter(TunVpnAdapterOptions tunAdapterOptions) : IV
         }
     }
 
-    protected abstract Task OpenAdapter(CancellationToken cancellationToken);
+    private async Task SetAppFilters(string[]? includeApps, string[]? excludeApps, CancellationToken cancellationToken)
+    {
+        var appPackageId = AppPackageId;
+
+        // validate the app filter
+        if (appPackageId == null)
+            throw new InvalidOperationException("AppPackageId must be available when AppFilter is supported.");
+
+        if (!VhUtils.IsNullOrEmpty(includeApps) && !VhUtils.IsNullOrEmpty(excludeApps))
+            throw new InvalidOperationException("Both include and exclude apps cannot be set at the same time.");
+
+        // make sure current app is in the allowed list
+        if (includeApps != null) {
+            includeApps = includeApps.Concat([appPackageId]).Distinct().ToArray();
+            await SetAllowedApps(includeApps, cancellationToken);
+        }
+
+        // make sure current app is not in the disallowed list
+        if (excludeApps != null) {
+            excludeApps = excludeApps.Where(x => x != appPackageId).Distinct().ToArray();
+            await SetDisallowedApps(excludeApps, cancellationToken);
+        }
+    }
+
+    private readonly object _stopLock = new();
 
     public void Stop()
     {
-        if (Started)
-            return;
+        lock (_stopLock) {
 
-        Logger.LogInformation("Stopping {AdapterName} adapter.", AdapterName);
-        CloseAdapter();
-        Logger.LogInformation("TUN adapter stopped.");
-        Started = false;
+            if (_started) return;
+            _started = false;
+
+            Logger.LogInformation("Stopping {AdapterName} adapter.", AdapterName);
+            AdapterClose();
+            AdapterRemove();
+            Logger.LogInformation("TUN adapter stopped.");
+        }
+    }
+
+    public virtual void ProtectSocket(Socket socket)
+    {
+        //todo
     }
 
     public virtual UdpClient CreateProtectedUdpClient(int port, AddressFamily addressFamily)
@@ -235,7 +284,7 @@ public abstract class TunVpnAdapter(TunVpnAdapterOptions tunAdapterOptions) : IV
             _autoRestartCount = 0;
         }
         catch (Exception ex) {
-            if (_autoRestartCount <= _maxAutoRestartCount) {
+            if (_autoRestartCount < _maxAutoRestartCount) {
                 Logger.LogError(ex, "Failed to send packet via TUN adapter.");
                 RestartAdapter();
             }
@@ -300,30 +349,54 @@ public abstract class TunVpnAdapter(TunVpnAdapterOptions tunAdapterOptions) : IV
         var packetList = new List<IPPacket>(tunAdapterOptions.MaxPacketCount);
 
         // Read packets from TUN adapter
-        while (Started && !IsDisposed) {
+        while (Started) {
             try {
-                ReadPackets(packetList, _mtu);
-                InvokeReadPackets(packetList);
-                WaitForTunRead();
-                _autoRestartCount = 0;
+                // read packets from the adapter until the list is full
+                while (packetList.Count < packetList.Capacity) {
+                    var packet = ReadPacket(_mtu);
+                    if (packet == null)
+                        break;
+
+                    // add the packets to the list
+                    packetList.Add(packet);
+                    _autoRestartCount = 0; // reset the auto restart count
+                }
+
+                // break if the adapter is stopped or disposed
+                if (!Started)
+                    break;
+
+                // invoke the packet received event
+                if (packetList.Count > 0)
+                    InvokeReadPackets(packetList);
+                else
+                    WaitForTunRead();
             }
             catch (Exception ex) {
                 Logger.LogError(ex, "Error in reading packets from TUN adapter.");
-                if (_autoRestartCount >= _maxAutoRestartCount)
+                if (!Started || _autoRestartCount >= _maxAutoRestartCount)
                     break;
                 RestartAdapter();
             }
         }
 
+        // stop the adapter if it is not stopped
         Stop();
     }
 
     private void RestartAdapter()
     {
+        Logger.LogWarning("Restarting the adapter. RestartCount: {RestartCount}", _autoRestartCount + 1);
+
+        if (IsDisposed)
+            throw new ObjectDisposedException(GetType().Name);
+
+        if (!Started)
+            throw new InvalidOperationException("Cannot restart the adapter when it is stopped.");
+
         _autoRestartCount++;
-        Logger.LogWarning("Restarting the adapter. RestartCount: {RestartCount}", _autoRestartCount);
-        CloseAdapter();
-        OpenAdapter(CancellationToken.None);
+        AdapterClose();
+        AdapterOpen(CancellationToken.None);
     }
 
     private void InvokeReadPackets(List<IPPacket> packetList)

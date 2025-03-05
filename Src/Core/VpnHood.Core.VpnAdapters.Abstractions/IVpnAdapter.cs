@@ -7,7 +7,7 @@ public interface IVpnAdapter : IDisposable
     event EventHandler<PacketReceivedEventArgs> PacketReceivedFromInbound;
     event EventHandler? Disposed;
     bool Started { get; }
-    bool IsDnsServersSupported { get; }
+    bool IsDnsServerSupported { get; }
     bool IsNatSupported { get; }
     bool CanProtectSocket { get; }
     bool CanSendPacketToOutbound { get; }

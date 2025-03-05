@@ -342,7 +342,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
     {
         // manually manage DNS reply if DNS does not supported by _vpnAdapter
-        if (!_vpnAdapter.IsDnsServersSupported)
+        if (!_vpnAdapter.IsDnsServerSupported)
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < e.IpPackets.Count; i++) {
                 var ipPacket = e.IpPackets[i];
@@ -386,7 +386,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                             droppedPackets.Add(ipPacket);
                         }
                         else {
-                            if (!_vpnAdapter.IsDnsServersSupported)
+                            if (!_vpnAdapter.IsDnsServerSupported)
                                 UpdateDnsRequest(ipPacket, true);
 
                             tunnelPackets.Add(ipPacket);

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.IO.Compression;
 using System.Net;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
@@ -11,10 +12,10 @@ using VpnHood.Core.VpnAdapters.WinTun.WinNative;
 
 namespace VpnHood.Core.VpnAdapters.WinTun;
 
-public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions)
-    : TunVpnAdapter(adapterOptions)
+public class WinTunVpnAdapter(WinTunVpnAdapterSettings adapterSettings)
+    : TunVpnAdapter(adapterSettings)
 {
-    private readonly int _ringCapacity = adapterOptions.RingCapacity;
+    private readonly int _ringCapacity = adapterSettings.RingCapacity;
     private IntPtr _tunAdapter;
     private IntPtr _tunSession;
     private IntPtr _readEvent;
@@ -33,6 +34,10 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions)
 
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
+        // Load the WinTun DLL
+        LoadWinTunDll();
+
+        // create the adapter
         _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "WinTun", IntPtr.Zero);
         if (_tunAdapter == IntPtr.Zero)
             throw new Win32Exception("Failed to create WinTun adapter.");
@@ -144,13 +149,16 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions)
         // Configure NAT with iptables
         if (ipNetwork.IsV4) {
             // let's throw error in ipv4
-            await ExecutePowerShellCommandAsync($"New-NetNat -Name {AdapterName}Nat -InternalIPInterfaceAddressPrefix {ipNetwork}",
+            var natName = $"{AdapterName}Nat";
+            await ExecutePowerShellCommandAsync($"New-NetNat -Name {natName} -InternalIPInterfaceAddressPrefix {ipNetwork}",
                 cancellationToken).VhConfigureAwait();
         }
         else {
+            var natName = $"{AdapterName}NatIpV6";
+
             // ignore exception in ipv6 on windows
             await VhUtils.TryInvokeAsync("Configuring NAT for IPv6", () =>
-                ExecutePowerShellCommandAsync($"New-NetNat -Name {AdapterName}NatIpV6 -InternalIPInterfaceAddressPrefix {ipNetwork}",
+                ExecutePowerShellCommandAsync($"New-NetNat -Name {natName} -InternalIPInterfaceAddressPrefix {ipNetwork}",
                     cancellationToken));
         }
     }
@@ -253,6 +261,30 @@ public class WinTunVpnAdapter(WinTunVpnAdapterOptions adapterOptions)
         return true;
     }
 
+    // Note: System may load driver into memory and lock it, so we'd better to copy it into a temporary folder 
+    private static void LoadWinTunDll()
+    {
+        var isWin = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+        var cpuArchitecture = RuntimeInformation.OSArchitecture switch {
+            Architecture.Arm64 when isWin => "arm64",
+            Architecture.X64 when isWin => "x64",
+            _ => throw new NotSupportedException("WinTun is not supported on this OS.")
+        };
+
+        var destinationFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinTun", "0.14.1");
+        var requiredFiles = new[] { Path.Combine("bin", cpuArchitecture, "wintun.dll") };
+        var checkFiles = requiredFiles.Select(x => Path.Combine(destinationFolder, x));
+        if (checkFiles.Any(x => !File.Exists(x))) {
+            using var memStream = new MemoryStream(Resources.WinTunZip);
+            using var zipArchive = new ZipArchive(memStream);
+            zipArchive.ExtractToDirectory(destinationFolder, true);
+        }
+
+        // Load the DLL
+        var dllFile = Path.Combine(destinationFolder, "bin", cpuArchitecture, "wintun.dll");
+        if (Kernel32.LoadLibrary(dllFile) == IntPtr.Zero)
+            throw new Win32Exception("Failed to load WinTun DLL.");
+    }
 
     protected override void Dispose(bool disposing)
     {

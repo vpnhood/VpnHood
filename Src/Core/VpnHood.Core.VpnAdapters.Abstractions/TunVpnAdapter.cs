@@ -8,16 +8,16 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.VpnAdapters.Abstractions;
 
-public abstract class TunVpnAdapter(TunVpnAdapterOptions tunAdapterOptions) : IVpnAdapter
+public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVpnAdapter
 {
-    private readonly int _maxPacketSendDelayMs = (int)tunAdapterOptions.MaxPacketSendDelay.TotalMilliseconds;
+    private readonly int _maxPacketSendDelayMs = (int)adapterSettings.MaxPacketSendDelay.TotalMilliseconds;
     private int _mtu = 0xFFFF;
-    private readonly int _maxAutoRestartCount = tunAdapterOptions.MaxAutoRestartCount;
+    private readonly int _maxAutoRestartCount = adapterSettings.MaxAutoRestartCount;
     private int _autoRestartCount;
     private bool _started;
 
     protected bool IsDisposed { get; private set; }
-    protected ILogger Logger { get; } = tunAdapterOptions.Logger;
+    protected ILogger Logger { get; } = adapterSettings.Logger;
     protected bool UseNat { get; private set; }
     public abstract bool IsAppFilterSupported { get; }
     public abstract bool IsDnsServerSupported { get; }
@@ -43,7 +43,7 @@ public abstract class TunVpnAdapter(TunVpnAdapterOptions tunAdapterOptions) : IV
 
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Disposed;
-    public string AdapterName { get; } = tunAdapterOptions.AdapterName;
+    public string AdapterName { get; } = adapterSettings.AdapterName;
     public bool CanSendPacketToOutbound => UseNat;
     public IPAddress? PrimaryAdapterIpV4 { get; private set; }
     public IPAddress? PrimaryAdapterIpV6 { get; private set; }
@@ -346,7 +346,7 @@ public abstract class TunVpnAdapter(TunVpnAdapterOptions tunAdapterOptions) : IV
 
     private void ReadingPacketTask()
     {
-        var packetList = new List<IPPacket>(tunAdapterOptions.MaxPacketCount);
+        var packetList = new List<IPPacket>(adapterSettings.MaxPacketCount);
 
         // Read packets from TUN adapter
         while (Started) {

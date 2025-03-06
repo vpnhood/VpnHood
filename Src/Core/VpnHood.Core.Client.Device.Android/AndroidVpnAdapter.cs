@@ -13,8 +13,8 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client.Device.Droid;
 
-public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterOptions vpnAdapterOptions)
-    : TunVpnAdapter(vpnAdapterOptions)
+public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings vpnAdapterSettings)
+    : TunVpnAdapter(vpnAdapterSettings)
 {
     private ParcelFileDescriptor? _parcelFileDescriptor;
     private int _tunAdapterFd;

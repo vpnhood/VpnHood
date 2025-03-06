@@ -59,7 +59,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 
     public IVpnAdapter CreateAdapter()
     {
-        return new AndroidVpnAdapter(this, new AndroidVpnAdapterOptions {
+        return new AndroidVpnAdapter(this, new AndroidVpnAdapterSettings {
             AdapterName = "VpnHood", 
         });
     }

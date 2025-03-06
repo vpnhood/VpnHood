@@ -2,4 +2,4 @@
 
 namespace VpnHood.Core.Client.Device.Droid;
 
-public class AndroidVpnAdapterOptions : TunVpnAdapterOptions;
+public class AndroidVpnAdapterSettings : TunVpnAdapterSettings;

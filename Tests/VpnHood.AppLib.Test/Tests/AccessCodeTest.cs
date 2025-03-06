@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PacketDotNet;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -15,8 +16,6 @@ public class AccessCodeTest : TestAppBase
     [TestMethod]
     public async Task AaFoo()
     {
-        await Task.Delay(100);
-
         var allV6 = new[] { IpNetwork.Parse("::/1"), IpNetwork.Parse("8000::/1") };
         var allV4 = new[] { IpNetwork.Parse("0.0.0.0/1"), IpNetwork.Parse("128.0.0.0/1") };
         Console.WriteLine(allV4.ToIpRanges().IsAllV4());

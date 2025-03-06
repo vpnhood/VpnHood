@@ -9,6 +9,7 @@ using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Core.VpnAdapters.AndroidTun;
 using Environment = System.Environment;
 
 namespace VpnHood.Core.Client.Device.Droid;

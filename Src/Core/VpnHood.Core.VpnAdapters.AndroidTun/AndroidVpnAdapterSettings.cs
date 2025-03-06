@@ -1,5 +1,5 @@
 ﻿using VpnHood.Core.VpnAdapters.Abstractions;
 
-namespace VpnHood.Core.Client.Device.Droid;
+namespace VpnHood.Core.VpnAdapters.AndroidTun;
 
 public class AndroidVpnAdapterSettings : TunVpnAdapterSettings;

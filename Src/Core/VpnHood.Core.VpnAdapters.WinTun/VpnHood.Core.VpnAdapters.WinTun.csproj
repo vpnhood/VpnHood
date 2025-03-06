@@ -24,6 +24,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
 	  <ProjectReference Include="..\VpnHood.Core.VpnAdapters.Abstractions\VpnHood.Core.VpnAdapters.Abstractions.csproj" />
 	</ItemGroup>
 

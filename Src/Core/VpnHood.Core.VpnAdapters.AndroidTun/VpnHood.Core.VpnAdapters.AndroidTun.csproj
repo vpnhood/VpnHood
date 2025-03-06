@@ -1,9 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Android Client App Common Library for Google Core</Description>
+		<Description>VpnHood VpnAdapter for Android</Description>
 		<TargetFramework>net9.0-android35.0</TargetFramework>
-		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.AppLib.Droid.GooglePlay</RootNamespace>
+		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -23,7 +22,6 @@
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<Version>6.0.673</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
-		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -34,12 +32,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Xamarin.Google.Android.Play.Core" Version="1.10.3.16" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
-	  <ProjectReference Include="..\..\Core\VpnHood.Core.Client.Device.Android\VpnHood.Core.Client.Device.Android.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.Abstractions\VpnHood.Core.VpnAdapters.Abstractions.csproj" />
 	</ItemGroup>
 
 </Project>

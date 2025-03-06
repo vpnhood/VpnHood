@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
-namespace VpnHood.Core.Client.Device.Droid.LinuxNative;
+namespace VpnHood.Core.VpnAdapters.AndroidTun.LinuxNative;
 
 [SuppressMessage("ReSharper", "IdentifierTypo")]
 [SuppressMessage("ReSharper", "InconsistentNaming")]

@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Client.Device.Droid.LinuxNative;
+﻿namespace VpnHood.Core.VpnAdapters.AndroidTun.LinuxNative;
 internal enum PollEvent : short
 {
     In = 0x001,

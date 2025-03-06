@@ -5,13 +5,13 @@ using Android.OS;
 using Java.IO;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Core.Client.Device.Droid.LinuxNative;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Core.VpnAdapters.AndroidTun.LinuxNative;
 
-namespace VpnHood.Core.Client.Device.Droid;
+namespace VpnHood.Core.VpnAdapters.AndroidTun;
 
 public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings vpnAdapterSettings)
     : TunVpnAdapter(vpnAdapterSettings)

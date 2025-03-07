@@ -306,20 +306,17 @@ public class ClientServerTest : TestBase
         var oldServerSentByteCount = serverSession.Tunnel.Traffic.Sent;
         var oldServerReceivedByteCount = serverSession.Tunnel.Traffic.Received;
 
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Invalid Https request.");
         using var httpClient = new HttpClient();
-        try {
-            await httpClient.GetStringAsync($"http://{TestConstants.NsEndPoint1}",
-                new CancellationTokenSource(2000).Token);
-            Assert.Fail("Exception expected!");
-        }
-        catch {
-            // ignored
-        }
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
+            httpClient.GetStringAsync(TestConstants.HttpsRefusedUri));
 
+        Assert.AreEqual(HttpRequestError.SecureConnectionError, ex.HttpRequestError);
         Assert.AreEqual(ClientState.Connected, client.State);
 
         // ************
-        // *** TEST ***: TCP (TLS) by quad9
+        // *** TEST ***: TCP (TLS)
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Https");
         await TestHelper.Test_Https();
 
         // check some data has been sent
@@ -339,6 +336,7 @@ public class ClientServerTest : TestBase
         oldServerSentByteCount = serverSession.Tunnel.Traffic.Sent;
         oldServerReceivedByteCount = serverSession.Tunnel.Traffic.Received;
 
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Udp");
         await TestHelper.Test_Udp();
 
         Assert.AreNotEqual(oldClientSentByteCount, client.GetSessionStatus().SessionTraffic.Sent, 500,
@@ -357,6 +355,7 @@ public class ClientServerTest : TestBase
         oldServerSentByteCount = serverSession.Tunnel.Traffic.Sent;
         oldServerReceivedByteCount = serverSession.Tunnel.Traffic.Received;
 
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Ping IPv4");
         await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
 
         Assert.AreNotEqual(oldClientSentByteCount, client.GetSessionStatus().SessionTraffic.Sent, 500,
@@ -369,6 +368,7 @@ public class ClientServerTest : TestBase
             "Not enough data has been received through the server.");
 
         if (await TestHelper.IsIpV6Supported()) {
+            VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Ping IPv6");
             await TestHelper.Test_Ping(ipAddress: TestConstants.PingV6Address1);
 
             Assert.AreNotEqual(oldClientSentByteCount, client.GetSessionStatus().SessionTraffic.Sent, 500,
@@ -425,7 +425,7 @@ public class ClientServerTest : TestBase
             /* ignored */
         }
 
-        await client.WaitForState( ClientState.Disposed);
+        await client.WaitForState(ClientState.Disposed);
         await client.DisposeAsync();
     }
 
@@ -463,7 +463,7 @@ public class ClientServerTest : TestBase
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
-        using TcpClient tcpClient = new(TestConstants.HttpsUri1.Host, 443);
+        using TcpClient tcpClient = new(TestConstants.HttpsExternalUri1.Host, 443);
         await using var stream = tcpClient.GetStream();
 
         // create client
@@ -509,7 +509,7 @@ public class ClientServerTest : TestBase
             // ignored
         }
 
-        await client.WaitForState( ClientState.Disposed);
+        await client.WaitForState(ClientState.Disposed);
     }
 
     [TestMethod]
@@ -547,7 +547,7 @@ public class ClientServerTest : TestBase
         // ----------
         accessManager.EmbedIoAccessManager.Start();
         await using var client2 = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
-        await client2.WaitForState( ClientState.Connected);
+        await client2.WaitForState(ClientState.Connected);
 
         // ----------
         // Check: Go Maintenance mode after server started by stopping the server
@@ -583,7 +583,7 @@ public class ClientServerTest : TestBase
         // ----------
         accessManager.EmbedIoAccessManager.HttpException = null;
         await using var client6 = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
-        await client6.WaitForState( ClientState.Connected);
+        await client6.WaitForState(ClientState.Connected);
     }
 
     [TestMethod]
@@ -605,14 +605,19 @@ public class ClientServerTest : TestBase
     [TestMethod]
     public async Task Server_limit_by_Max_TcpConnectWait()
     {
+        // create vpn adapter
+        var vpnAdapter = TestHelper.CreateTestVpnAdapter();
+        var socketFactory = TestHelper.CreateTestSocketFactory(vpnAdapter);
+
         // create access server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.SessionOptions.MaxTcpConnectWaitCount = 2;
-        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, socketFactory: socketFactory);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(token);
+        await using var client = await TestHelper.CreateClient(token, vpnAdapter: vpnAdapter);
+
 
         using var httpClient = new HttpClient();
         _ = httpClient.GetStringAsync($"https://{TestConstants.InvalidIp}:4441");
@@ -773,7 +778,7 @@ public class ClientServerTest : TestBase
 
         // create app
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
-        await client.WaitForState( ClientState.Connected);
+        await client.WaitForState(ClientState.Connected);
 
         Assert.IsTrue(client.DnsServers is { Length: > 0 });
     }

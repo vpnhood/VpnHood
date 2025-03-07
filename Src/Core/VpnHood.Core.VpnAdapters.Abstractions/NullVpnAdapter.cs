@@ -11,7 +11,6 @@ public class NullVpnAdapter : IVpnAdapter
     public virtual bool IsDnsServerSupported { get; set; } = true;
     public virtual bool IsNatSupported { get; set; } = true;
     public virtual bool CanProtectClient { get; set; } = true;
-    public virtual bool CanSendPacketToOutbound { get; set; }
 
     public virtual Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {

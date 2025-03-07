@@ -46,7 +46,6 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
     public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public event EventHandler? Disposed;
     public virtual bool CanProtectClient => true;
-    public virtual bool CanSendPacketToOutbound => UseNat;
     public string AdapterName { get; } = adapterSettings.AdapterName;
     public IPAddress? PrimaryAdapterIpV4 { get; private set; }
     public IPAddress? PrimaryAdapterIpV6 { get; private set; }

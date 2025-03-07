@@ -10,7 +10,6 @@ public interface IVpnAdapter : IDisposable
     bool Started { get; }
     bool IsDnsServerSupported { get; }
     bool IsNatSupported { get; }
-    bool CanSendPacketToOutbound { get; }
     bool CanProtectClient { get; }
     Task Start(VpnAdapterOptions options, CancellationToken cancellationToken);
     void Stop();

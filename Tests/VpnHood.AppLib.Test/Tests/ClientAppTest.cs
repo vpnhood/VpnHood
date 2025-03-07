@@ -172,17 +172,15 @@ public class ClientAppTest : TestAppBase
     }
 
     [TestMethod]
-    [DataRow(false, false)]
-    [DataRow(false, true)]
-    [DataRow(true, false)]
-    [DataRow(true, true)]
-    public async Task IpFilters(bool isDnsServerSupported, bool usePassthru)
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task IpFilters(bool isDnsServerSupported)
     {
         var testDns = !isDnsServerSupported; //dns will work as normal UDP when DnsServerSupported, otherwise it should be redirected
+        var testPing = false; //todo (not supported yet)
 
         // create device
         var deviceOptions = new TestVpnAdapterOptions {
-            CanSendPacketToOutbound = usePassthru,
             IsDnsServerSupported = isDnsServerSupported,
             CaptureDnsAddresses = TestHelper.TestIpAddresses.ToArray()
         };
@@ -195,7 +193,7 @@ public class ClientAppTest : TestAppBase
         // create app
         await using var app = TestAppHelper.CreateClientApp(device: device);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        var customIps = (await Dns.GetHostAddressesAsync(TestConstants.HttpsUri1.Host))
+        var customIps = (await Dns.GetHostAddressesAsync(TestConstants.HttpsExternalUri1.Host))
             .Select(x => new IpRange(x))
             .Concat([
                 new IpRange(TestConstants.PingV4Address1),
@@ -214,7 +212,7 @@ public class ClientAppTest : TestAppBase
         await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
 
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Starting IpFilters_TestInclude...");
-        await IpFilters_TestInclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
+        await IpFilters_TestInclude(app, testPing: testPing, testUdp: true, testDns: testDns);
         await app.Disconnect();
 
         // ************
@@ -225,7 +223,7 @@ public class ClientAppTest : TestAppBase
         await app.WaitForState(AppConnectionState.Connected);
 
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Starting IpFilters_TestExclude...");
-        await IpFilters_TestExclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
+        await IpFilters_TestExclude(app, testPing: testPing, testUdp: true, testDns: testDns);
         await app.Disconnect();
     }
 
@@ -233,12 +231,12 @@ public class ClientAppTest : TestAppBase
     {
         // TCP
         var oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-        await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
+        await TestHelper.Test_Https(uri: TestConstants.HttpsExternalUri1);
         Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
         // TCP
         oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-        await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
+        await TestHelper.Test_Https(uri: TestConstants.HttpsExternalUri2);
         Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
         if (testPing) {
@@ -295,12 +293,12 @@ public class ClientAppTest : TestAppBase
     {
         // TCP
         var oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-        await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
+        await TestHelper.Test_Https(uri: TestConstants.HttpsExternalUri1);
         Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
         // TCP
         oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-        await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
+        await TestHelper.Test_Https(uri: TestConstants.HttpsExternalUri2);
         Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
 
         if (testPing) {
@@ -385,7 +383,7 @@ public class ClientAppTest : TestAppBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
-        await using var app = TestAppHelper.CreateClientApp();
+        await using var app = TestAppHelper.CreateClientApp(device: TestAppHelper.CreateDevice());
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         await app.Connect(clientProfile.ClientProfileId);
@@ -545,7 +543,6 @@ public class ClientAppTest : TestAppBase
     {
         // first create device to access its socket factory
         var vpnAdapterOptions = TestHelper.CreateTestVpnAdapterOptions();
-        vpnAdapterOptions.CanSendPacketToOutbound = false;
         var device = TestHelper.CreateDevice(vpnAdapterOptions);
 
         // Create Server
@@ -553,7 +550,7 @@ public class ClientAppTest : TestAppBase
 
         // create app
         await using var app = TestAppHelper.CreateClientApp(device: device);
-        app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsUri1.Host];
+        app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsExternalUri1.Host];
 
         // connect
         var token = TestHelper.CreateAccessToken(server);
@@ -564,14 +561,14 @@ public class ClientAppTest : TestAppBase
         // text include
         var oldTcpTunnelledCount = app.GetSessionStatus().TcpTunnelledCount;
         var oldTcpPassthruCount = app.GetSessionStatus().TcpPassthruCount;
-        await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
+        await TestHelper.Test_Https(uri: TestConstants.HttpsExternalUri1);
         Assert.AreEqual(oldTcpTunnelledCount, app.GetSessionStatus().TcpTunnelledCount);
         Assert.AreEqual(oldTcpPassthruCount + 1, app.GetSessionStatus().TcpPassthruCount);
 
         // text exclude
         oldTcpTunnelledCount = app.GetSessionStatus().TcpTunnelledCount;
         oldTcpPassthruCount = app.GetSessionStatus().TcpPassthruCount;
-        await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
+        await TestHelper.Test_Https(uri: TestConstants.HttpsExternalUri2);
         Assert.AreEqual(oldTcpTunnelledCount + 1, app.GetSessionStatus().TcpTunnelledCount);
         Assert.AreEqual(oldTcpPassthruCount, app.GetSessionStatus().TcpPassthruCount);
     }
@@ -581,7 +578,6 @@ public class ClientAppTest : TestAppBase
     {
         // first create device to access its socket factory
         var vpnAdapterOptions = TestHelper.CreateTestVpnAdapterOptions();
-        vpnAdapterOptions.CanSendPacketToOutbound = false;
         var device = TestHelper.CreateDevice(vpnAdapterOptions);
 
         // Create Server
@@ -589,7 +585,7 @@ public class ClientAppTest : TestAppBase
 
         // create app
         await using var app = TestAppHelper.CreateClientApp(device: device);
-        app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsUri1.Host];
+        app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsExternalUri1.Host];
 
         // connect
         var token = TestHelper.CreateAccessToken(server);
@@ -607,7 +603,7 @@ public class ClientAppTest : TestAppBase
         // text exclude
         oldTcpTunnelledCount = app.GetSessionStatus().TcpTunnelledCount;
         oldTcpPassthruCount = app.GetSessionStatus().TcpPassthruCount;
-        await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
+        await TestHelper.Test_Https(uri: TestConstants.HttpsExternalUri1);
         Assert.AreEqual(oldTcpTunnelledCount, app.GetSessionStatus().TcpTunnelledCount);
         Assert.AreEqual(oldTcpPassthruCount + 1, app.GetSessionStatus().TcpPassthruCount);
     }

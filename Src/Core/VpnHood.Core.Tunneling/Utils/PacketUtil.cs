@@ -166,8 +166,7 @@ public static class PacketUtil
 
         return ipPacket;
     }
-
-
+    
     public static IcmpV4Packet ExtractIcmp(IPPacket ipPacket)
     {
         return ipPacket.Extract<IcmpV4Packet>() ??

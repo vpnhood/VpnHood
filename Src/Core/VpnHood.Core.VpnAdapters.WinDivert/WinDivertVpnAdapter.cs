@@ -32,7 +32,6 @@ public class WinDivertVpnAdapter : IVpnAdapter
     public event EventHandler? Disposed;
     public event EventHandler? Stopped;
     public bool Started => _device.Started;
-    public virtual bool CanSendPacketToOutbound => true;
     public virtual bool IsDnsServerSupported => false;
     public virtual bool IsNatSupported => false;
     public virtual bool CanProtectClient => true;
@@ -194,10 +193,10 @@ public class WinDivertVpnAdapter : IVpnAdapter
         UpdateIpPacket(ipPacket);
         // end trying to simulate tun
 
-        ProcessPacketReceivedFromInbound(ipPacket);
+        ProcessPacketReceived(ipPacket);
     }
 
-    protected virtual void ProcessPacketReceivedFromInbound(IPPacket ipPacket)
+    protected virtual void ProcessPacketReceived(IPPacket ipPacket)
     {
         // create the event args. for performance, we will reuse the same instance
         _packetReceivedEventArgs ??= new PacketReceivedEventArgs(new IPPacket[1]);

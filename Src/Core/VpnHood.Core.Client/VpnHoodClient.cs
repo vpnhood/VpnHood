@@ -74,7 +74,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
     internal Nat Nat { get; }
     internal Tunnel Tunnel { get; }
-    internal ISocketFactory SocketFactory { get; }
+    public ISocketFactory SocketFactory { get; }
     public JobSection JobSection { get; } = new();
     public event EventHandler? StateChanged;
     public bool IsIpV6SupportedByServer { get; private set; }
@@ -181,7 +181,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         // init vpnAdapter events
         vpnAdapter.Disposed += (_, _) => _ = DisposeAsync();
-        vpnAdapter.PacketReceived += VpnAdapter_OnPacketReceivedFromInbound;
+        vpnAdapter.PacketReceived += VpnAdapter_OnPacketReceived;
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
@@ -354,7 +354,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     }
 
     // WARNING: Performance Critical!
-    private void VpnAdapter_OnPacketReceivedFromInbound(object sender, PacketReceivedEventArgs e)
+    private void VpnAdapter_OnPacketReceived(object sender, PacketReceivedEventArgs e)
     {
         // stop traffic if the client has been disposed
         if (_disposed || _initConnectedTime is null)
@@ -367,7 +367,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 _sendingPackets.Clear(); // prevent reallocation in this intensive event
                 var tunnelPackets = _sendingPackets.TunnelPackets;
                 var tcpHostPackets = _sendingPackets.TcpHostPackets;
-                var passthruPackets = _sendingPackets.PassthruPackets;
                 var proxyPackets = _sendingPackets.ProxyPackets;
                 var droppedPackets = _sendingPackets.DroppedPackets;
 
@@ -393,72 +392,42 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                         }
                     }
 
-                    else if (_vpnAdapter.CanSendPacketToOutbound) {
-                        if (!IsInIpRange(ipPacket.DestinationAddress))
-                            passthruPackets.Add(ipPacket);
-
-                        // Drop IPv6 if not support
-                        else if (isIpV6 && !IsIpV6SupportedByServer)
-                            droppedPackets.Add(ipPacket);
-
-                        else if (ipPacket.Protocol == ProtocolType.Tcp) {
-                            if (_isTunProviderSupported && UseTcpOverTun)
-                                tunnelPackets.Add(ipPacket);
-                            else
-                                tcpHostPackets.Add(ipPacket);
-                        }
-
-                        else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6) {
-                            if (IsIcmpControlMessage(ipPacket))
-                                droppedPackets.Add(ipPacket);
-                            else
-                                tunnelPackets.Add(ipPacket);
-                        }
-
-                        else if (ipPacket.Protocol is ProtocolType.Udp && ShouldTunnelUdpPacket(udpPacket!))
+                    // tcp already check for InInRange and IpV6 and Proxy
+                    if (ipPacket.Protocol == ProtocolType.Tcp) {
+                        if (_isTunProviderSupported && UseTcpOverTun && IsInIpRange(ipPacket.DestinationAddress))
                             tunnelPackets.Add(ipPacket);
+                        else
+                            tcpHostPackets.Add(ipPacket);
+                    }
 
+                    // Drop IPv6 if not support
+                    else if (isIpV6 && !IsIpV6SupportedByServer) {
+                        if (!IsInIpRange(ipPacket.DestinationAddress))
+                            proxyPackets.Add(ipPacket);
                         else
                             droppedPackets.Add(ipPacket);
                     }
-                    else {
-                        // tcp already check for InInRange and IpV6 and Proxy
-                        if (ipPacket.Protocol == ProtocolType.Tcp) {
-                            if (_isTunProviderSupported && UseTcpOverTun && IsInIpRange(ipPacket.DestinationAddress))
-                                tunnelPackets.Add(ipPacket);
-                            else
-                                tcpHostPackets.Add(ipPacket);
-                        }
 
-                        // Drop IPv6 if not support
-                        else if (isIpV6 && !IsIpV6SupportedByServer) {
-                            if (!IsInIpRange(ipPacket.DestinationAddress))
-                                proxyPackets.Add(ipPacket);
-                            else
-                                droppedPackets.Add(ipPacket);
-                        }
-
-                        // ICMP packet must go through tunnel because PingProxy does not support protect socket
-                        else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6) {
-                            if (IsIcmpControlMessage(ipPacket))
-                                droppedPackets
-                                    .Add(ipPacket); // ICMP can not be proxied so we don't need to check InInRange
-                            else
-                                tunnelPackets.Add(ipPacket);
-                        }
-
-                        // Udp
-                        else if (ipPacket.Protocol == ProtocolType.Udp && udpPacket != null) {
-                            if (!IsInIpRange(ipPacket.DestinationAddress))
-                                proxyPackets.Add(ipPacket);
-                            else if (!ShouldTunnelUdpPacket(udpPacket))
-                                droppedPackets.Add(ipPacket);
-                            else
-                                tunnelPackets.Add(ipPacket);
-                        }
+                    // ICMP packet must go through tunnel because PingProxy does not support protect socket
+                    else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6) {
+                        if (IsIcmpControlMessage(ipPacket))
+                            droppedPackets
+                                .Add(ipPacket); // ICMP can not be proxied so we don't need to check InInRange
                         else
-                            droppedPackets.Add(ipPacket);
+                            tunnelPackets.Add(ipPacket);
                     }
+
+                    // Udp
+                    else if (ipPacket.Protocol == ProtocolType.Udp && udpPacket != null) {
+                        if (!IsInIpRange(ipPacket.DestinationAddress))
+                            proxyPackets.Add(ipPacket);
+                        else if (!ShouldTunnelUdpPacket(udpPacket))
+                            droppedPackets.Add(ipPacket);
+                        else
+                            tunnelPackets.Add(ipPacket);
+                    }
+                    else
+                        droppedPackets.Add(ipPacket);
                 }
 
                 // Stop tunnel traffics if the client is paused and unpause after AutoPauseTimeout
@@ -475,9 +444,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
                 if (tunnelPackets.Count > 0)
                     Tunnel.SendPackets(tunnelPackets, _cancellationTokenSource.Token);
-
-                if (passthruPackets.Count > 0)
-                    _vpnAdapter.SendPacketToOutbound(passthruPackets);
 
                 if (proxyPackets.Count > 0)
                     _proxyManager.SendPackets(proxyPackets).Wait(_cancellationTokenSource.Token);
@@ -1079,7 +1045,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         State = ClientState.Disconnecting;
 
         // disposing VpnAdapter
-        _vpnAdapter.PacketReceived -= VpnAdapter_OnPacketReceivedFromInbound;
+        _vpnAdapter.PacketReceived -= VpnAdapter_OnPacketReceived;
         if (_autoDisposeVpnAdapter) {
             VhLogger.Instance.LogDebug("Disposing the VpnAdapter...");
             _vpnAdapter.Dispose();
@@ -1129,7 +1095,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
     private class SendingPackets
     {
-        public readonly List<IPPacket> PassthruPackets = [];
         public readonly List<IPPacket> ProxyPackets = [];
         public readonly List<IPPacket> TcpHostPackets = [];
         public readonly List<IPPacket> TunnelPackets = [];
@@ -1138,7 +1103,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         public void Clear()
         {
             TunnelPackets.Clear();
-            PassthruPackets.Clear();
             TcpHostPackets.Clear();
             ProxyPackets.Clear();
             DroppedPackets.Clear();

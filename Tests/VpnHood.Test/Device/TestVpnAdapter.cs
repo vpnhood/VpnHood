@@ -1,5 +1,4 @@
 ﻿using PacketDotNet;
-using VpnHood.Core.Client.Device.WinDivert;
 using VpnHood.Core.VpnAdapters.WinDivert;
 
 namespace VpnHood.Test.Device;
@@ -7,10 +6,7 @@ namespace VpnHood.Test.Device;
 public class TestVpnAdapter(TestVpnAdapterOptions vpnAdapterOptions) : WinDivertVpnAdapter
 {
     public override bool IsDnsServerSupported => vpnAdapterOptions.IsDnsServerSupported;
-
-    public override bool CanSendPacketToOutbound => vpnAdapterOptions.CanSendPacketToOutbound;
-
-    protected override void ProcessPacketReceivedFromInbound(IPPacket ipPacket)
+    protected override void ProcessPacketReceived(IPPacket ipPacket)
     {
         var ignore = false;
 
@@ -23,6 +19,6 @@ public class TestVpnAdapter(TestVpnAdapterOptions vpnAdapterOptions) : WinDivert
         if (ignore)
             SendPacketToOutbound(ipPacket);
         else
-            base.ProcessPacketReceivedFromInbound(ipPacket);
+            base.ProcessPacketReceived(ipPacket);
     }
 }

@@ -281,7 +281,7 @@ public class WinTunVpnAdapter(WinTunVpnAdapterSettings adapterSettings)
             _ => throw new NotSupportedException("WinTun is not supported on this OS.")
         };
 
-        var destinationFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinTun", "0.14.1");
+        var destinationFolder = Path.Combine(Path.GetTempPath(), "VpnHood", "WinTun", "0.14.1");
         var requiredFiles = new[] { Path.Combine("bin", cpuArchitecture, "wintun.dll") };
         var checkFiles = requiredFiles.Select(x => Path.Combine(destinationFolder, x));
         if (checkFiles.Any(x => !File.Exists(x))) {

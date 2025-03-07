@@ -35,7 +35,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
     public virtual bool CanSendPacketToOutbound => true;
     public virtual bool IsDnsServerSupported => false;
     public virtual bool IsNatSupported => false;
-    public virtual bool CanProtectClient => false;
+    public virtual bool CanProtectClient => true;
     
     public WinDivertVpnAdapter()
     {
@@ -258,7 +258,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
     private static void SetWinDivertDllFolder()
     {
         // I got sick trying to add it to nuget as a native library in (x86/x64) folder, OOF!
-        var destinationFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinDivertDevice", "2.2.2");
+        var destinationFolder = Path.Combine(Path.GetTempPath(), "VpnHood", "WinDivert", "2.2.2");
         var requiredFiles = new[] { "WinDivert.dll", "WinDivert64.sys" };
 
         // extract WinDivert

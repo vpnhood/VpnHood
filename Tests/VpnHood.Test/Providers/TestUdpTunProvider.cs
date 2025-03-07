@@ -4,6 +4,7 @@ using PacketDotNet;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Test.Providers;
 
@@ -16,7 +17,7 @@ public class TestUdpTunProvider : ITunProvider, IPacketProxyReceiver
 
     public TestUdpTunProvider()
     {
-        _proxyPool = new UdpProxyPool(this, new TestSocketFactory(), udpTimeout: null, maxClientCount: null);
+        _proxyPool = new UdpProxyPool(this, new SocketFactory(), udpTimeout: null, maxClientCount: null);
     }
 
     public async Task SendPacket(IPPacket ipPacket)

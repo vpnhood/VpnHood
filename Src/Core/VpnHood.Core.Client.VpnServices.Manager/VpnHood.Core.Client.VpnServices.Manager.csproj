@@ -36,10 +36,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Resources\" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <ProjectReference Include="..\VpnHood.Core.Client.Device\VpnHood.Core.Client.Device.csproj" />
 	  <ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Abstractions\VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
 	</ItemGroup>

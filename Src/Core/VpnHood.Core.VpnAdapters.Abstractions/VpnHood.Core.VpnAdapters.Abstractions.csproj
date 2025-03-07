@@ -25,10 +25,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="PacketDotNet" Version="1.4.7" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
 			<PackagePath></PackagePath>
@@ -36,7 +32,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Resources\" />
+		<PackageReference Include="PacketDotNet" Version="1.4.7" />
 	</ItemGroup>
 
 	<ItemGroup>

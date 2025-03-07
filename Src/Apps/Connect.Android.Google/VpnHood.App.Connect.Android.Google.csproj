@@ -63,8 +63,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.AppLib.Android.Ads.Chartboost" Version="5.0.569" />
-		<PackageReference Include="VpnHood.AppLib.Android.Ads.InMobi" Version="5.0.577" />
+		<PackageReference Include="VpnHood.AppLib.Android.Ads.Chartboost" Version="6.0.570" />
+		<PackageReference Include="VpnHood.AppLib.Android.Ads.InMobi" Version="6.0.581" />
 		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.677" />
 		<PackageReference Include="Xamarin.Firebase.Analytics" Version="122.2.0" />
 		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="119.4.0" />

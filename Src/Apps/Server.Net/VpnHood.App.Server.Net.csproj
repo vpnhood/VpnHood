@@ -58,7 +58,5 @@
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
 	</ItemGroup>
-	<ItemGroup>
-		<Folder Include="Resources\" />
-	</ItemGroup>
+
 </Project>

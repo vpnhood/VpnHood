@@ -24,6 +24,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.2" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.2" />
 		<PackageReference Include="PacketDotNet" Version="1.4.7" />
@@ -31,19 +38,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Resources\" />
-		<Folder Include="Properties\PublishProfiles\" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
-			<Pack>True</Pack>
-			<PackagePath></PackagePath>
-		</None>
 	</ItemGroup>
 
 </Project>

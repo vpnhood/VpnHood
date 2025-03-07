@@ -218,7 +218,6 @@ internal class ClientHost(
             cancellationToken.ThrowIfCancellationRequested();
 
             // config tcpOrgClient
-            vpnHoodClient.SocketFactory.SetKeepAlive(orgTcpClient.Client, true);
             VhUtils.ConfigTcpClient(orgTcpClient, null, null);
 
             // get original remote from NAT

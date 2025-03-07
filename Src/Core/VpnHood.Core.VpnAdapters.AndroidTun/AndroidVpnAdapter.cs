@@ -25,6 +25,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     public override bool IsDnsServerSupported => false;
     public override bool IsNatSupported => false;
     public override bool IsAppFilterSupported => true;
+    protected override bool CanProtectSocket => true;
 
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
@@ -91,7 +92,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         _parcelFileDescriptor = null;
     }
 
-    public override void ProtectSocket(System.Net.Sockets.Socket socket)
+    protected override void ProtectSocket(System.Net.Sockets.Socket socket)
     {
         if (!vpnService.Protect(socket.Handle.ToInt32()))
             throw new Exception("Could not protect socket!");

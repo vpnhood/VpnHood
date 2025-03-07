@@ -2,6 +2,7 @@
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Core.VpnAdapters.WinTun;
 
 namespace VpnHood.Core.Client.Device.WinDivert;
 
@@ -28,7 +29,10 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
 
     public IVpnAdapter CreateAdapter()
     {
-        return new WinDivertVpnAdapter();
+        // return new WinDivertVpnAdapter();
+        return new WinTunVpnAdapter(new WinTunVpnAdapterSettings {
+            AdapterName = "VpnHood",
+        });
     }
 
     public void ShowNotification(ConnectionInfo connectionInfo)

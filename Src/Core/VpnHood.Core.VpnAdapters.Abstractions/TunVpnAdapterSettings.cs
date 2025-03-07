@@ -9,5 +9,5 @@ public class TunVpnAdapterSettings
     public ILogger Logger { get; init; } = VhLogger.Instance;
     public int MaxPacketCount { get; init; } = 255;
     public TimeSpan MaxPacketSendDelay { get; init; } = TimeSpan.FromMilliseconds(500);
-    public int MaxAutoRestartCount { get; init; } = 0;
+    public int MaxAutoRestartCount { get; init; }
 }

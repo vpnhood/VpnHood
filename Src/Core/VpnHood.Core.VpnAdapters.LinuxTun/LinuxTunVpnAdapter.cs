@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -19,12 +20,16 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterSettings adapterSettings)
     public override bool IsNatSupported => true;
     public override bool IsDnsServerSupported => true;
     public override bool IsAppFilterSupported => false;
+    protected override bool CanProtectSocket => false;
     protected override string? AppPackageId => null;
     protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("App filtering is not supported on Linux.");
+        throw new NotSupportedException("App filtering is not supported on LinuxTun.");
 
     protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("App filtering is not supported on Linux.");
+        throw new NotSupportedException("App filtering is not supported on LinuxTun.");
+
+    protected override void ProtectSocket(Socket socket)
+        =>  throw new NotSupportedException("Socket protection is not supported on LinuxTun.");
 
     private static async Task<string> GetPrimaryAdapterName(CancellationToken cancellationToken)
     {

@@ -37,6 +37,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Client.Device\VpnHood.Core.Client.Device.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.WinTun\VpnHood.Core.VpnAdapters.WinTun.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

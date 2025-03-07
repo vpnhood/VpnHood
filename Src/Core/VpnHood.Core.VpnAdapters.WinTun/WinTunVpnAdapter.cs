@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.IO.Compression;
 using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -25,12 +26,16 @@ public class WinTunVpnAdapter(WinTunVpnAdapterSettings adapterSettings)
     public override bool IsNatSupported => true;
     public override bool IsDnsServerSupported => true;
     public override bool IsAppFilterSupported => false;
+    protected override bool CanProtectSocket => false;
     protected override string? AppPackageId => null;
     protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("App filtering is not supported on Linux.");
+        throw new NotSupportedException("App filtering is not supported on WinTun.");
 
     protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("App filtering is not supported on Linux.");
+        throw new NotSupportedException("App filtering is not supported on WinTun.");
+
+    protected override void ProtectSocket(Socket socket) =>
+        throw new NotSupportedException("ProtectSocket is not supported on WinTun.");
 
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
@@ -136,7 +141,9 @@ public class WinTunVpnAdapter(WinTunVpnAdapterSettings adapterSettings)
     protected override async Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
     {
         foreach (var ipAddress in dnsServers) {
-            var command = $"interface ip add dns \"{AdapterName}\" {ipAddress}";
+            var command = ipAddress.IsV4()
+                ? $"interface ipv4 add dns \"{AdapterName}\" {ipAddress}"
+                : $"interface ipv6 add dns \"{AdapterName}\" {ipAddress}";
             await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
         }
     }
@@ -207,7 +214,10 @@ public class WinTunVpnAdapter(WinTunVpnAdapterSettings adapterSettings)
                     // read the packet
                     var buffer = new byte[size];
                     Marshal.Copy(tunReceivePacket, buffer, 0, size);
-                    return Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>();
+                    var packet = Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>();
+                    if (packet.SourceAddress.Equals(PrimaryAdapterIpV4) || packet.SourceAddress.Equals(PrimaryAdapterIpV6))
+                        continue; // skip the packet
+                    return packet;
                 }
                 finally {
                     WinTunApi.WintunReleaseReceivePacket(_tunSession, tunReceivePacket);

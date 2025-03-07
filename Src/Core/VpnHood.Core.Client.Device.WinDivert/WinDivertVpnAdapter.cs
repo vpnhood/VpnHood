@@ -22,13 +22,13 @@ public class WinDivertVpnAdapter : IVpnAdapter
     private bool _disposed;
     private WinDivertHeader? _lastCaptureHeader;
     private PacketReceivedEventArgs? _packetReceivedEventArgs;
-    private IPAddress? _virtualIpV4;
-    private IPAddress? _virtualIpV6;
-    private IPAddress? _clientInternalIpV4;
-    private IPAddress? _clientInternalIpV6;
+    private IPAddress? _adapterIpV4;
+    private IPAddress? _adapterIpV6;
+    private IPAddress? _primaryAdapterIpV4;
+    private IPAddress? _primaryAdapterIpV6;
 
     public const short ProtectedTtl = 111;
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
+    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public event EventHandler? Disposed;
     public event EventHandler? Stopped;
     public bool Started => _device.Started;
@@ -46,11 +46,25 @@ public class WinDivertVpnAdapter : IVpnAdapter
         SetWinDivertDllFolder();
     }
 
-    public virtual bool CanProtectSocket => true;
+    public virtual bool CanProtectClient => false;
 
-    public virtual void ProtectSocket(Socket socket)
+    private static void ProtectSocket(Socket socket)
     {
         socket.Ttl = ProtectedTtl;
+    }
+
+    public TcpClient CreateProtectedTcpClient(AddressFamily addressFamily)
+    {
+        var tcpClient = new TcpClient(addressFamily);
+        ProtectSocket(tcpClient.Client);
+        return tcpClient;
+    }
+
+    public UdpClient CreateProtectedUdpClient(AddressFamily addressFamily)
+    {
+        var udpClient = new UdpClient(addressFamily);
+        ProtectSocket(udpClient.Client);
+        return udpClient;
     }
 
     public void SendPacketToInbound(IList<IPPacket> ipPackets)
@@ -97,8 +111,8 @@ public class WinDivertVpnAdapter : IVpnAdapter
         if (options.UseNat)
             throw new NotSupportedException("WinDivert does not support NAT.");
 
-        _virtualIpV4 = options.VirtualIpNetworkV4?.Prefix;
-        _virtualIpV6 = options.VirtualIpNetworkV6?.Prefix;
+        _adapterIpV4 = options.VirtualIpNetworkV4?.Prefix;
+        _adapterIpV6 = options.VirtualIpNetworkV6?.Prefix;
 
         // create include and exclude phrases
         var phraseX = "true";
@@ -142,22 +156,22 @@ public class WinDivertVpnAdapter : IVpnAdapter
         Stopped?.Invoke(this, EventArgs.Empty);
     }
 
-    private void SetInternalIp(IPAddress address)
+    private void SetPrimaryAdapterIp(IPAddress address)
     {
         if (address.AddressFamily == AddressFamily.InterNetwork)
-            _clientInternalIpV4 = address;
+            _primaryAdapterIpV4 = address;
         else
-            _clientInternalIpV6 = address;
+            _primaryAdapterIpV6 = address;
     }
 
-    private IPAddress? GetInternalIp(IPVersion ipVersion)
+    private IPAddress? GetPrimaryAdapterIp(IPVersion ipVersion)
     {
-        return ipVersion == IPVersion.IPv4 ? _clientInternalIpV4 : _clientInternalIpV6;
+        return ipVersion == IPVersion.IPv4 ? _primaryAdapterIpV4 : _primaryAdapterIpV6;
     }
 
-    private IPAddress? GetVirtualIp(IPVersion ipVersion)
+    private IPAddress? GetAdapterIp(IPVersion ipVersion)
     {
-        return ipVersion == IPVersion.IPv4 ? _virtualIpV4 : _virtualIpV6;
+        return ipVersion == IPVersion.IPv4 ? _adapterIpV4 : _adapterIpV6;
     }
 
 
@@ -170,8 +184,8 @@ public class WinDivertVpnAdapter : IVpnAdapter
         _lastCaptureHeader = (WinDivertHeader)e.Header;
 
         // start trying to simulate tun
-        SetInternalIp(ipPacket.SourceAddress);
-        var virtualIp = GetVirtualIp(ipPacket.Version);
+        SetPrimaryAdapterIp(ipPacket.SourceAddress);
+        var virtualIp = GetAdapterIp(ipPacket.Version);
         if (virtualIp == null) {
             VhLogger.Instance.LogDebug("The device arrival packet is not supported: {Packet}",
                 VhLogger.FormatIpPacket(ipPacket.ToString()!));
@@ -192,12 +206,17 @@ public class WinDivertVpnAdapter : IVpnAdapter
 
         try {
             _packetReceivedEventArgs.IpPackets[0] = ipPacket;
-            PacketReceivedFromInbound?.Invoke(this, _packetReceivedEventArgs);
+            PacketReceived?.Invoke(this, _packetReceivedEventArgs);
         }
         catch (Exception ex) {
             VhLogger.Instance.Log(LogLevel.Error, ex,
                 "Error in processing packet Packet: {Packet}", VhLogger.FormatIpPacket(ipPacket.ToString()!));
         }
+    }
+
+    public void SendPacket(IPPacket ipPacket)
+    {
+        SendPacket(ipPacket, ipPacket.SourceAddress.Equals(GetPrimaryAdapterIp(ipPacket.Version)));
     }
 
     private void SendPacket(IPPacket ipPacket, bool outbound)
@@ -206,7 +225,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
             throw new InvalidOperationException("Could not send any data without receiving a packet.");
 
         // start trying to simulate tun
-        var internalIp = GetInternalIp(ipPacket.Version);
+        var internalIp = GetPrimaryAdapterIp(ipPacket.Version);
         if (internalIp == null)
             throw new InvalidOperationException("Could not send packet to inbound. there is no internal IP.");
 

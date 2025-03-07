@@ -5,20 +5,18 @@ namespace VpnHood.Core.VpnAdapters.Abstractions;
 
 public class NullVpnAdapter : IVpnAdapter
 {
-    private bool _disposed;
-
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
+    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public event EventHandler? Disposed;
     public virtual bool Started { get; set; }
     public virtual bool IsDnsServerSupported { get; set; } = true;
     public virtual bool IsNatSupported { get; set; } = true;
-    public virtual bool CanProtectSocket { get; set; } = true;
+    public virtual bool CanProtectClient { get; set; } = true;
     public virtual bool CanSendPacketToOutbound { get; set; }
 
     public virtual Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         Started = true;
-        _ = PacketReceivedFromInbound; //prevent not used warning
+        _ = PacketReceived; //prevent not used warning
         return Task.CompletedTask;
     }
 
@@ -30,6 +28,16 @@ public class NullVpnAdapter : IVpnAdapter
     public virtual void ProtectSocket(Socket socket)
     {
         // nothing
+    }
+
+    public TcpClient CreateProtectedTcpClient(AddressFamily addressFamily)
+    {
+        return new TcpClient(addressFamily);
+    }
+
+    public UdpClient CreateProtectedUdpClient(AddressFamily addressFamily)
+    {
+        return new UdpClient(addressFamily);
     }
 
     public virtual void SendPacketToInbound(IPPacket ipPacket)
@@ -52,6 +60,12 @@ public class NullVpnAdapter : IVpnAdapter
         // nothing
     }
 
+    public virtual void SendPacket(IPPacket ipPacket)
+    {
+        // nothing
+    }
+
+    private bool _disposed;
     public void Dispose()
     {
         if (_disposed) return;

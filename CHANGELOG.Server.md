@@ -1,6 +1,9 @@
+# Upcoming 
+* Fix: Pause server while configuring swap file on Linux
+
 # v6.0.656
-* Update: Improve virtual ip allocation
-* Fix: Some android devices could not open website after connect
+* Update: Improve virtual IP allocation
+* Fix: Some Android devices could not open website after connect
 
 # v5.1.647
 * Fix: Ping IPv6 
@@ -13,5 +16,3 @@
 
 # v5.0.629
 Old log: https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md
-
-

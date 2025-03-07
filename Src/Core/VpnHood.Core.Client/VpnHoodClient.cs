@@ -181,7 +181,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         // init vpnAdapter events
         vpnAdapter.Disposed += (_, _) => _ = DisposeAsync();
-        vpnAdapter.PacketReceivedFromInbound += VpnAdapter_OnPacketReceivedFromInbound;
+        vpnAdapter.PacketReceived += VpnAdapter_OnPacketReceivedFromInbound;
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
@@ -321,8 +321,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         // Start with user VpnAdapterIncludeIpRanges
         var includeIpRanges = VpnAdapterIncludeIpRanges;
 
-        // exclude server if ProtectSocket is not supported to prevent loop
-        if (!_vpnAdapter.CanProtectSocket)
+        // exclude server if ProtectClient is not supported to prevent loop
+        if (!_vpnAdapter.CanProtectClient)
             includeIpRanges = includeIpRanges.Exclude(hostIpAddress);
 
         // exclude local networks
@@ -1076,7 +1076,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         State = ClientState.Disconnecting;
 
         // disposing VpnAdapter
-        _vpnAdapter.PacketReceivedFromInbound -= VpnAdapter_OnPacketReceivedFromInbound;
+        _vpnAdapter.PacketReceived -= VpnAdapter_OnPacketReceivedFromInbound;
         if (_autoDisposeVpnAdapter) {
             VhLogger.Instance.LogDebug("Disposing the VpnAdapter...");
             _vpnAdapter.Dispose();

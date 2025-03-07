@@ -23,6 +23,7 @@ public abstract class VpnHoodWpfSpaApp : Application
             // initialize Ain App
             var appOptions = CreateAppOptions();
             appOptions.DeviceId ??= WindowsIdentity.GetCurrent().User?.Value;
+            appOptions.EventWatcherInterval ??= TimeSpan.FromSeconds(1);
 
             VpnHoodWinApp.Init(appOptions.AppId, appOptions.StorageFolderPath);
 

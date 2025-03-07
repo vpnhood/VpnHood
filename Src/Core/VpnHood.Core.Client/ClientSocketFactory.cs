@@ -12,24 +12,22 @@ internal class ClientSocketFactory(
 {
     public TcpClient CreateTcpClient(AddressFamily addressFamily)
     {
-        var tcpClient = socketFactory.CreateTcpClient(addressFamily);
+        var tcpClient = vpnAdapter.CanProtectClient
+            ? vpnAdapter.CreateProtectedTcpClient(addressFamily)
+            : socketFactory.CreateTcpClient(addressFamily);
 
         // config for client
         socketFactory.SetKeepAlive(tcpClient.Client, true);
         VhUtils.ConfigTcpClient(tcpClient, null, null);
-
-        // auto protect
-        if (vpnAdapter.CanProtectSocket)
-            vpnAdapter.ProtectSocket(tcpClient.Client);
-
         return tcpClient;
     }
 
     public UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
-        var ret = socketFactory.CreateUdpClient(addressFamily);
-        if (vpnAdapter.CanProtectSocket)
-            vpnAdapter.ProtectSocket(ret.Client);
+        var ret = vpnAdapter.CanProtectClient 
+            ? vpnAdapter.CreateProtectedUdpClient(addressFamily)
+            : socketFactory.CreateUdpClient(addressFamily);
+
         return ret;
     }
 

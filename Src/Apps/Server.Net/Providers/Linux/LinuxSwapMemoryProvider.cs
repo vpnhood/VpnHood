@@ -45,7 +45,7 @@ public class LinuxSwapMemoryProvider(ILogger logger)
             }
 
             // Delete the existing swap file
-            await LinuxUtils.ExecuteCommandAsync($"rm {SwapFilePath}");
+            File.Delete(SwapFilePath);
         }
 
         // ignore if size is zero

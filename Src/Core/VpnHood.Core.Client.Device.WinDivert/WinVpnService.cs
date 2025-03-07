@@ -29,7 +29,7 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
 
     public IVpnAdapter CreateAdapter()
     {
-        // return new WinDivertVpnAdapter();
+        return new WinDivertVpnAdapter();
         return new WinTunVpnAdapter(new WinTunVpnAdapterSettings {
             AdapterName = "VpnHood",
         });

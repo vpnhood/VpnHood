@@ -15,7 +15,7 @@ public class SocketFactory : ISocketFactory
 
     public virtual UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
-        return new UdpClient(0, addressFamily);
+        return new UdpClient(addressFamily);
     }
 
     public virtual void SetKeepAlive(Socket socket, bool enable)

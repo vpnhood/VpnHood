@@ -178,21 +178,22 @@ public class ClientAppTest : TestAppBase
     [DataRow(true, true)]
     public async Task IpFilters(bool isDnsServerSupported, bool usePassthru)
     {
-        var testDns =
-            !isDnsServerSupported; //dns will work as normal UDP when DnsServerSupported, otherwise it should be redirected
+        var testDns = !isDnsServerSupported; //dns will work as normal UDP when DnsServerSupported, otherwise it should be redirected
 
-        // Create Server
-        await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
-
-        // create app
+        // create device
         var deviceOptions = new TestVpnAdapterOptions {
             CanSendPacketToOutbound = usePassthru,
             IsDnsServerSupported = isDnsServerSupported,
             CaptureDnsAddresses = TestHelper.TestIpAddresses.ToArray()
         };
+        var device = TestHelper.CreateDevice(deviceOptions);
 
-        await using var app = TestAppHelper.CreateClientApp(device: TestHelper.CreateDevice(deviceOptions));
+        // Create Server
+        await using var server = await TestHelper.CreateServer(socketFactory: device.SocketFactory);
+        var token = TestHelper.CreateAccessToken(server);
+
+        // create app
+        await using var app = TestAppHelper.CreateClientApp(device: device);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         var customIps = (await Dns.GetHostAddressesAsync(TestConstants.HttpsUri1.Host))
             .Select(x => new IpRange(x))
@@ -542,13 +543,16 @@ public class ClientAppTest : TestAppBase
     [TestMethod]
     public async Task IncludeDomains()
     {
-        // Create Server
-        await using var server = await TestHelper.CreateServer();
-
-        // create app
+        // first create device to access its socket factory
         var vpnAdapterOptions = TestHelper.CreateTestVpnAdapterOptions();
         vpnAdapterOptions.CanSendPacketToOutbound = false;
-        await using var app = TestAppHelper.CreateClientApp(device: TestHelper.CreateDevice(vpnAdapterOptions));
+        var device = TestHelper.CreateDevice(vpnAdapterOptions);
+
+        // Create Server
+        await using var server = await TestHelper.CreateServer(socketFactory: device.SocketFactory);
+
+        // create app
+        await using var app = TestAppHelper.CreateClientApp(device: device);
         app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsUri1.Host];
 
         // connect
@@ -575,13 +579,16 @@ public class ClientAppTest : TestAppBase
     [TestMethod]
     public async Task ExcludeDomains()
     {
-        // Create Server
-        await using var server = await TestHelper.CreateServer();
-
-        // create app
+        // first create device to access its socket factory
         var vpnAdapterOptions = TestHelper.CreateTestVpnAdapterOptions();
         vpnAdapterOptions.CanSendPacketToOutbound = false;
-        await using var app = TestAppHelper.CreateClientApp(device: TestHelper.CreateDevice(vpnAdapterOptions));
+        var device = TestHelper.CreateDevice(vpnAdapterOptions);
+
+        // Create Server
+        await using var server = await TestHelper.CreateServer(socketFactory: device.SocketFactory);
+
+        // create app
+        await using var app = TestAppHelper.CreateClientApp(device: device);
         app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsUri1.Host];
 
         // connect

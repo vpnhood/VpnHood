@@ -1,5 +1,6 @@
 ﻿using PacketDotNet;
 using VpnHood.Core.Client.Device.WinDivert;
+using VpnHood.Core.VpnAdapters.WinDivert;
 
 namespace VpnHood.Test.Device;
 

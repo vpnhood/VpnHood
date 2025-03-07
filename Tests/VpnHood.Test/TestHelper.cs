@@ -20,6 +20,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
@@ -276,27 +277,38 @@ public class TestHelper : IDisposable
 
     public Task<VpnHoodServer> CreateServer(
         IAccessManager? accessManager = null,
-        bool autoStart = true, TimeSpan? configureInterval = null, bool useHttpAccessManager = true,
+        bool autoStart = true, 
+        TimeSpan? configureInterval = null, 
+        bool useHttpAccessManager = true,
         INetConfigurationProvider? netConfigurationProvider = null,
-        ISwapMemoryProvider? swapMemoryProvider = null)
+        ISwapMemoryProvider? swapMemoryProvider = null,
+        ISocketFactory? socketFactory = null)
     {
         return CreateServer(accessManager, null,
             autoStart: autoStart,
             configureInterval: configureInterval,
             useHttpAccessManager: useHttpAccessManager,
             netConfigurationProvider: netConfigurationProvider,
-            swapMemoryProvider: swapMemoryProvider);
+            swapMemoryProvider: swapMemoryProvider,
+            socketFactory: socketFactory);
     }
 
-    public Task<VpnHoodServer> CreateServer(FileAccessManagerOptions? options, bool autoStart = true,
-        TimeSpan? configureInterval = null, bool useHttpAccessManager = true,
-        ITunProvider? tunProvider = null)
+    public Task<VpnHoodServer> CreateServer(
+        FileAccessManagerOptions? options, 
+        bool autoStart = true,
+        TimeSpan? configureInterval = null, 
+        bool useHttpAccessManager = true,
+        ITunProvider? tunProvider = null,
+        ISocketFactory? socketFactory = null)
     {
-        return CreateServer(null, options,
+        return CreateServer(
+            accessManager: null, 
+            fileAccessManagerOptions: options,
             autoStart: autoStart,
             configureInterval: configureInterval,
             useHttpAccessManager: useHttpAccessManager,
-            tunProvider: tunProvider);
+            tunProvider: tunProvider,
+            socketFactory: socketFactory);
     }
 
     private async Task<VpnHoodServer> CreateServer(IAccessManager? accessManager,
@@ -304,7 +316,8 @@ public class TestHelper : IDisposable
         bool autoStart, TimeSpan? configureInterval = null, bool useHttpAccessManager = true,
         INetConfigurationProvider? netConfigurationProvider = null,
         ISwapMemoryProvider? swapMemoryProvider = null,
-        ITunProvider? tunProvider = null)
+        ITunProvider? tunProvider = null,
+        ISocketFactory? socketFactory = null)
     {
         if (accessManager != null && fileAccessManagerOptions != null)
             throw new InvalidOperationException(
@@ -325,7 +338,7 @@ public class TestHelper : IDisposable
 
         // ser server options
         var serverOptions = new ServerOptions {
-            SocketFactory = new TestSocketFactory(),
+            SocketFactory = socketFactory ?? new TestSocketFactory(),
             ConfigureInterval = configureInterval ?? new ServerOptions().ConfigureInterval,
             AutoDisposeAccessManager = autoDisposeAccessManager,
             StoragePath = WorkingPath,

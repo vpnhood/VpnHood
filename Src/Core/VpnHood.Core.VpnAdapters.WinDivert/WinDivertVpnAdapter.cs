@@ -7,11 +7,11 @@ using PacketDotNet;
 using SharpPcap;
 using SharpPcap.WinDivert;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.VpnAdapters.Abstractions;
 using ProtocolType = PacketDotNet.ProtocolType;
 
-namespace VpnHood.Core.Client.Device.WinDivert;
+namespace VpnHood.Core.VpnAdapters.WinDivert;
 
 public class WinDivertVpnAdapter : IVpnAdapter
 {
@@ -35,7 +35,8 @@ public class WinDivertVpnAdapter : IVpnAdapter
     public virtual bool CanSendPacketToOutbound => true;
     public virtual bool IsDnsServerSupported => false;
     public virtual bool IsNatSupported => false;
-
+    public virtual bool CanProtectClient => false;
+    
     public WinDivertVpnAdapter()
     {
         // initialize devices
@@ -45,9 +46,6 @@ public class WinDivertVpnAdapter : IVpnAdapter
         // manage WinDivert file
         SetWinDivertDllFolder();
     }
-
-    public virtual bool CanProtectClient => false;
-
     private static void ProtectSocket(Socket socket)
     {
         socket.Ttl = ProtectedTtl;
@@ -266,7 +264,7 @@ public class WinDivertVpnAdapter : IVpnAdapter
         // extract WinDivert
         var checkFiles = requiredFiles.Select(x => Path.Combine(destinationFolder, x));
         if (checkFiles.Any(x => !File.Exists(x))) {
-            using var memStream = new MemoryStream(Resource.WinDivertLibZip);
+            using var memStream = new MemoryStream(Resources.WinDivertLibZip);
             using var zipArchive = new ZipArchive(memStream);
             zipArchive.ExtractToDirectory(destinationFolder, true);
         }

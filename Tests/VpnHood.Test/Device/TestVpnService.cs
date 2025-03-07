@@ -11,6 +11,7 @@ public class TestVpnService
     private readonly Func<IVpnAdapter> _vpnAdapterFactory;
     private readonly VpnServiceHost _vpnServiceHost;
     public bool IsDisposed { get; private set; }
+    public IVpnAdapter? CurrentVpnAdapter { get; private set; }
 
     // config folder should be read from static place in read environment, because service can be started independently
     public TestVpnService(
@@ -34,7 +35,9 @@ public class TestVpnService
 
     public IVpnAdapter CreateAdapter()
     {
-        return _vpnAdapterFactory();
+        CurrentVpnAdapter = _vpnAdapterFactory();
+        CurrentVpnAdapter.Disposed += (_, _) => CurrentVpnAdapter = null;
+        return CurrentVpnAdapter;
     }
 
     public void ShowNotification(ConnectionInfo connectionInfo)

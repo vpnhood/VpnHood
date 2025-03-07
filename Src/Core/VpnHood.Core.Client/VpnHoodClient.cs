@@ -74,7 +74,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
     internal Nat Nat { get; }
     internal Tunnel Tunnel { get; }
-    internal ClientSocketFactory SocketFactory { get; }
+    internal ISocketFactory SocketFactory { get; }
     public JobSection JobSection { get; } = new();
     public event EventHandler? StateChanged;
     public bool IsIpV6SupportedByServer { get; private set; }
@@ -123,8 +123,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 $"{nameof(options.MaxTcpDatagramTimespan)} must be bigger or equal than {nameof(options.MinTcpDatagramTimespan)}.");
 
         var token = Token.FromAccessKey(options.AccessKey);
-        SocketFactory = new ClientSocketFactory(vpnAdapter, socketFactory);
-        socketFactory = SocketFactory;
+        socketFactory = new AdapterSocketFactory(vpnAdapter, socketFactory);
+        SocketFactory = socketFactory;
         DnsServers = options.DnsServers ?? [];
         _allowAnonymousTracker = options.AllowAnonymousTracker;
         _minTcpDatagramLifespan = options.MinTcpDatagramTimespan;
@@ -651,6 +651,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
 
         var udpClient = SocketFactory.CreateUdpClient(HostTcpEndPoint.AddressFamily);
+        var localEndPoint = HostTcpEndPoint.IsV4() ? new IPEndPoint(IPAddress.Any, 0) : new IPEndPoint(IPAddress.IPv6Any, 0);
+        udpClient.Client.Bind(localEndPoint);
+
         var udpChannel = new UdpChannel(SessionId, _sessionKey, false, ConnectorService.ProtocolVersion);
         try {
             var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, ServerSecret);

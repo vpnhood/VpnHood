@@ -5,7 +5,7 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client;
 
-internal class ClientSocketFactory(
+public class AdapterSocketFactory(
     IVpnAdapter vpnAdapter,
     ISocketFactory socketFactory)
     : ISocketFactory
@@ -24,7 +24,7 @@ internal class ClientSocketFactory(
 
     public UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
-        var ret = vpnAdapter.CanProtectClient 
+        var ret = vpnAdapter.CanProtectClient
             ? vpnAdapter.CreateProtectedUdpClient(addressFamily)
             : socketFactory.CreateUdpClient(addressFamily);
 

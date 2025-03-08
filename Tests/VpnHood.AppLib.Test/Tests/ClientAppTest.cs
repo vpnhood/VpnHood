@@ -175,12 +175,7 @@ public class ClientAppTest : TestAppBase
     public async Task IpFilters()
     {
         var testPing = false; //todo (not supported yet)
-
-        // create device
-        var deviceOptions = new TestVpnAdapterOptions {
-            CaptureDnsAddresses = TestHelper.TestIpAddresses.ToArray()
-        };
-        var device = TestHelper.CreateDevice(deviceOptions);
+        var device = TestHelper.CreateDevice();
 
         // Create Server
         await using var server = await TestHelper.CreateServer(socketFactory: device.SocketFactory);

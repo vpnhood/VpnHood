@@ -359,7 +359,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                             tcpHostPackets.Add(ipPacket);
                     }
 
-                    // Drop IPv6 if not support
+                    // Drop IPv6 if not support. It must be TCP, because TcpHost already check the ranges
                     else if (isIpV6 && !IsIpV6SupportedByServer) {
                         if (!IsInIpRange(ipPacket.DestinationAddress))
                             proxyPackets.Add(ipPacket);

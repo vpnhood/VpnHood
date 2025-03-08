@@ -221,6 +221,7 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
         if (socket.LocalEndPoint != null)
             throw new InvalidOperationException("Could not protect an already bound socket.");
 
+        //todo: check for network change
         switch (socket.AddressFamily) {
             case AddressFamily.InterNetwork when PrimaryAdapterIpV4 != null:
                 socket.Bind(new IPEndPoint(PrimaryAdapterIpV4, 0));
@@ -229,9 +230,6 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
             case AddressFamily.InterNetworkV6 when PrimaryAdapterIpV6 != null:
                 socket.Bind(new IPEndPoint(PrimaryAdapterIpV6, 0));
                 break;
-
-            default:
-                throw new NotSupportedException("The address family is not supported.");
         }
     }
 

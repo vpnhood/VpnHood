@@ -144,7 +144,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     protected override Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
-        // todo must be implemented
+        // let be handled by packet too big
         return Task.CompletedTask;
     }
 

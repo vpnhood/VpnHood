@@ -6,90 +6,61 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using SharpPcap;
 using SharpPcap.WinDivert;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.VpnAdapters.WinDivert;
 
-public class WinDivertVpnAdapter : IVpnAdapter
+public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) : 
+    TunVpnAdapter(adapterSettings)
 {
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr LoadLibrary(string lpFileName);
 
-    private readonly WinDivertDevice _device;
-    private bool _disposed;
+    private WinDivertDevice? _device;
     private WinDivertHeader? _lastCaptureHeader;
-    private PacketReceivedEventArgs? _packetReceivedEventArgs;
-    private IPAddress? _adapterIpV4;
-    private IPAddress? _adapterIpV6;
-    private IPAddress? _primaryAdapterIpV4;
-    private IPAddress? _primaryAdapterIpV6;
-    public IpNetwork? AdapterIpNetworkV4 { get; private set; }
-    public IpNetwork? AdapterIpNetworkV6 { get; private set; }
+    private readonly IPPacket[] _ipPackets = new IPPacket[1];
+    private readonly List<IpNetwork> _includeIpNetworks = new();
+    private IPAddress[] _dnsServers = [];
 
     public const short ProtectedTtl = 111;
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
-    public event EventHandler? Disposed;
-    public event EventHandler? Stopped;
-    public bool Started => _device.Started;
-    public virtual bool IsDnsServerSupported => false;
-    public virtual bool IsNatSupported => false;
-    public virtual bool CanProtectClient => true;
-    
-    public WinDivertVpnAdapter()
+    public override bool IsDnsServerSupported => false;
+    public override bool IsAppFilterSupported => false;
+    public override bool IsNatSupported => false;
+    protected override bool CanProtectSocket => true;
+    protected override string? AppPackageId => null;
+
+    protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
         // initialize devices
         _device = new WinDivertDevice { Flags = 0 };
         _device.OnPacketArrival += Device_OnPacketArrival;
 
+        // clean old configs
+        _includeIpNetworks.Clear();
+
         // manage WinDivert file
         SetWinDivertDllFolder();
-    }
-    private static void ProtectSocket(Socket socket)
-    {
-        socket.Ttl = ProtectedTtl;
+        return Task.CompletedTask;
     }
 
-    public TcpClient CreateProtectedTcpClient(AddressFamily addressFamily)
+    protected override void AdapterRemove()
     {
-        var tcpClient = new TcpClient(addressFamily);
-        ProtectSocket(tcpClient.Client);
-        return tcpClient;
+        AdapterClose();
+        _device?.Dispose();
+        _device = null;
     }
 
-    public UdpClient CreateProtectedUdpClient(AddressFamily addressFamily)
+    protected override Task AdapterOpen(CancellationToken cancellationToken)
     {
-        var udpClient = new UdpClient(addressFamily);
-        ProtectSocket(udpClient.Client);
-        return udpClient;
-    }
-
-    private static string Ip(IpRange ipRange)
-    {
-        return ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
-    }
-
-    public Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
-    {
-        if (_disposed)
-            throw new ObjectDisposedException(VhLogger.FormatType(this));
-
-        if (Started)
-            throw new InvalidOperationException("VpnAdapter has been already started.");
-
-        if (options.UseNat)
-            throw new NotSupportedException("WinDivert does not support NAT.");
-
-        _adapterIpV4 = options.VirtualIpNetworkV4?.Prefix;
-        _adapterIpV6 = options.VirtualIpNetworkV6?.Prefix;
-        AdapterIpNetworkV4 = options.VirtualIpNetworkV4;
-        AdapterIpNetworkV6 = options.VirtualIpNetworkV6;
+        if (_device == null)
+            throw new InvalidOperationException("Device is not initialized.");
 
         // create include and exclude phrases
         var phraseX = "true";
-        var ipRanges = options.IncludeNetworks.ToIpRanges();
+        var ipRanges = _includeIpNetworks.ToIpRanges();
         if (!ipRanges.IsAll()) {
             var phrases = ipRanges.Select(x => x.FirstIpAddress.Equals(x.LastIpAddress)
                 ? $"{Ip(x)}.DstAddr=={x.FirstIpAddress}"
@@ -120,36 +91,80 @@ public class WinDivertVpnAdapter : IVpnAdapter
         return Task.CompletedTask;
     }
 
-    public void Stop()
+    protected override void StartReadingPackets()
     {
-        if (!Started)
-            return;
-
-        _device.StopCapture();
-        Stopped?.Invoke(this, EventArgs.Empty);
+        // let device event dispatcher do the job
     }
 
-    private void SetPrimaryAdapterIp(IPAddress address)
+    protected override void AdapterClose()
     {
-        if (address.AddressFamily == AddressFamily.InterNetwork)
-            _primaryAdapterIpV4 = address;
-        else
-            _primaryAdapterIpV6 = address;
+        _device?.StopCapture();
+        _device?.Close();
     }
 
-    private IPAddress? GetPrimaryAdapterIp(IPVersion ipVersion)
+
+    protected override Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
     {
-        return ipVersion == IPVersion.IPv4 ? _primaryAdapterIpV4 : _primaryAdapterIpV6;
+        _dnsServers = dnsServers;
+        return Task.CompletedTask;
     }
 
-    private IPAddress? GetAdapterIp(IPVersion ipVersion)
+    protected override Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken)
     {
-        return ipVersion == IPVersion.IPv4 ? _adapterIpV4 : _adapterIpV6;
+        _includeIpNetworks.Add(ipNetwork);
+        return Task.CompletedTask;
     }
 
-    public IpNetwork? GetIpNetwork(IPVersion ipVersion)
+    protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken) =>
+        throw new NotSupportedException("App filtering is not supported on LinuxTun.");
+
+    protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken) =>
+        throw new NotSupportedException("App filtering is not supported on LinuxTun.");
+
+    protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        return ipVersion == IPVersion.IPv4 ? AdapterIpNetworkV4 : AdapterIpNetworkV6;
+        return Task.CompletedTask; // nothing to do
+    }
+
+    protected override Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask; // nothing to do
+    }
+
+    protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask; // nothing to do
+    }
+
+    protected override Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
+    {
+        throw new NotSupportedException("NAT is not supported on LinuxTun.");
+    }
+
+    protected override Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
+    {
+        // todo must be implemented
+        return Task.CompletedTask; 
+    }
+
+    protected override IPPacket ReadPacket(int mtu)
+    {
+        throw new NotSupportedException("ReadPacket is not supported on WinDivert.");
+    }
+
+    protected override void WaitForTunRead()
+    {
+        throw new NotSupportedException("ReadPacket is not supported on WinDivert and override by StartReadingPacket.");
+    }
+
+    protected override void ProtectSocket(Socket socket)
+    {
+        socket.Ttl = ProtectedTtl;
+    }
+
+    private static string Ip(IpRange ipRange)
+    {
+        return ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
     }
 
     private void Device_OnPacketArrival(object sender, PacketCapture e)
@@ -161,16 +176,15 @@ public class WinDivertVpnAdapter : IVpnAdapter
         _lastCaptureHeader = (WinDivertHeader)e.Header;
 
         // start trying to simulate tun
-        SetPrimaryAdapterIp(ipPacket.SourceAddress);
-        var virtualIp = GetAdapterIp(ipPacket.Version);
-        if (virtualIp == null) {
+        var adapterIp = GetIpNetwork(ipPacket.Version)?.Prefix;
+        if (adapterIp == null) {
             VhLogger.Instance.LogDebug("The device arrival packet is not supported: {Packet}",
                 VhLogger.FormatIpPacket(ipPacket.ToString()!));
             return;
         }
 
-        ipPacket.SourceAddress = virtualIp;
-        UpdateIpPacket(ipPacket);
+        ipPacket.SourceAddress = adapterIp;
+        ipPacket.UpdateAllChecksums();
         // end trying to simulate tun
 
         ProcessPacketReceived(ipPacket);
@@ -179,69 +193,51 @@ public class WinDivertVpnAdapter : IVpnAdapter
     protected virtual void ProcessPacketReceived(IPPacket ipPacket)
     {
         // create the event args. for performance, we will reuse the same instance
-        _packetReceivedEventArgs ??= new PacketReceivedEventArgs(new IPPacket[1]);
-
-        try {
-            _packetReceivedEventArgs.IpPackets[0] = ipPacket;
-            PacketReceived?.Invoke(this, _packetReceivedEventArgs);
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.Log(LogLevel.Error, ex,
-                "Error in processing packet Packet: {Packet}", VhLogger.FormatIpPacket(ipPacket.ToString()!));
-        }
+        _ipPackets[0] = ipPacket;
+        InvokeReadPackets(_ipPackets);
     }
 
-    public void SendPackets(IList<IPPacket> ipPackets)
-    {
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++)
-            SendPacket(ipPackets[i]);
-    }
 
-    public void SendPacket(IPPacket ipPacket)
+    protected override bool WritePacket(IPPacket ipPacket)
     {
 #if DEBUG
         if (GetIpNetwork(ipPacket.Version)?.Contains(ipPacket.DestinationAddress) is null or false)
             throw new NotSupportedException("This adapter can send packets outside of its network.");
 #endif
         SendPacket(ipPacket, false);
+        return true;
     }
 
+    protected override void WaitForTunWrite()
+    {
+        Thread.Sleep(1);
+    }
+
+    //todo rename to write packet
     protected void SendPacket(IPPacket ipPacket, bool outbound)
     {
         if (_lastCaptureHeader == null)
             throw new InvalidOperationException("Could not send any data without receiving a packet.");
 
+        if (_device == null)
+            throw new InvalidOperationException("Device is not initialized.");
+
         // start trying to simulate tun
-        var internalIp = GetPrimaryAdapterIp(ipPacket.Version);
-        if (internalIp == null)
+        var primaryAdapterIp = GetPrimaryAdapterIp(ipPacket.Version);
+        if (primaryAdapterIp == null)
             throw new InvalidOperationException("Could not send packet to inbound. there is no internal IP.");
 
         if (outbound)
-            ipPacket.SourceAddress = internalIp;
+            ipPacket.SourceAddress = primaryAdapterIp;
         else
-            ipPacket.DestinationAddress = internalIp;
+            ipPacket.DestinationAddress = primaryAdapterIp;
 
-        UpdateIpPacket(ipPacket);
+        ipPacket.UpdateIpChecksum();
         // end trying to simulate tun
 
         // send by a device
         _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
         _device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
-    }
-
-    private static void UpdateIpPacket(IPPacket ipPacket)
-    {
-        if (ipPacket.Protocol is ProtocolType.Icmp)
-            ipPacket.Extract<IcmpV4Packet>()?.UpdateIcmpChecksum();
-
-        if (ipPacket.Protocol is ProtocolType.IcmpV6)
-            ipPacket.Extract<IcmpV6Packet>()?.UpdateIcmpChecksum();
-
-        if (ipPacket is IPv4Packet ipV4Packet)
-            ipV4Packet.UpdateIPChecksum();
-
-        ipPacket.UpdateCalculatedValues();
     }
 
     // Note: System may load WinDivert driver into memory and lock it, so we'd better to copy it into a temporary folder 
@@ -262,15 +258,12 @@ public class WinDivertVpnAdapter : IVpnAdapter
         LoadLibrary(Path.Combine(destinationFolder, "WinDivert.dll"));
     }
 
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        if (_disposed) return;
-        _disposed = true;
+        base.Dispose(disposing);
 
-        // stop the device
-        Stop();
-
-        _device.Dispose();
-        Disposed?.Invoke(this, EventArgs.Empty);
+        // The adapter is an unmanaged resource; it must be closed if it is open
+        if (_device != null)
+            AdapterRemove();
     }
 }

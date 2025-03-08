@@ -3,7 +3,10 @@ using VpnHood.Core.VpnAdapters.WinDivert;
 
 namespace VpnHood.Test.Device;
 
-public class TestVpnAdapter(TestVpnAdapterOptions vpnAdapterOptions) : WinDivertVpnAdapter
+public class TestVpnAdapter(TestVpnAdapterOptions vpnAdapterOptions) 
+    : WinDivertVpnAdapter(new WinDivertVpnAdapterSettings {
+        AdapterName = "VpnHoodTestAdapter"
+    })
 {
     public override bool IsDnsServerSupported => vpnAdapterOptions.IsDnsServerSupported;
     protected override void ProcessPacketReceived(IPPacket ipPacket)

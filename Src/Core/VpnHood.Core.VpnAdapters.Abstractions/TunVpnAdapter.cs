@@ -136,7 +136,7 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
             Logger.LogDebug("Adding routes...");
             foreach (var network in options.IncludeNetworks) {
                 var gateway = network.IsV4 ? GatewayIpV4 : GatewayIpV6;
-                if (gateway != null)
+                if (gateway != null) //todo: remove gateway from this method
                     await AddRoute(network, gateway, cancellationToken).VhConfigureAwait();
             }
 
@@ -417,7 +417,7 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
         AdapterOpen(CancellationToken.None);
     }
 
-    private void InvokeReadPackets(List<IPPacket> packetList)
+    protected void InvokeReadPackets(IList<IPPacket> packetList)
     {
         try {
             if (packetList.Count > 0)
@@ -427,7 +427,8 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
             Logger.LogError(ex, "Error in invoking packet received event.");
         }
         finally {
-            packetList.Clear();
+            if (!packetList.IsReadOnly)
+                packetList.Clear();
         }
     }
 

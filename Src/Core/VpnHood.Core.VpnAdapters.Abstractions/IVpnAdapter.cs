@@ -8,7 +8,6 @@ public interface IVpnAdapter : IDisposable
     event EventHandler<PacketReceivedEventArgs> PacketReceived;
     event EventHandler? Disposed;
     bool Started { get; }
-    bool IsDnsServerSupported { get; }
     bool IsNatSupported { get; }
     bool CanProtectClient { get; }
     Task Start(VpnAdapterOptions options, CancellationToken cancellationToken);

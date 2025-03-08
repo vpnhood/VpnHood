@@ -20,7 +20,6 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
     protected ILogger Logger { get; } = adapterSettings.Logger;
     protected bool UseNat { get; private set; }
     public abstract bool IsAppFilterSupported { get; }
-    public abstract bool IsDnsServerSupported { get; }
     public abstract bool IsNatSupported { get; }
     protected abstract bool CanProtectSocket { get; }
     protected abstract string? AppPackageId { get; }

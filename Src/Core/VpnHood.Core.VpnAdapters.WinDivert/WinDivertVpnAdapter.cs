@@ -30,7 +30,6 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>> _lastDnsServersV6 = new(TimeSpan.FromSeconds(30));
 
     public const short ProtectedTtl = 111;
-    public override bool IsDnsServerSupported => true;
     public override bool IsAppFilterSupported => false;
     public override bool IsNatSupported => false;
     protected override bool CanProtectSocket => true;

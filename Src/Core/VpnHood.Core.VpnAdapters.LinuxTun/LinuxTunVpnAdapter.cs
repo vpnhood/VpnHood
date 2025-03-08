@@ -18,7 +18,6 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterSettings adapterSettings)
     private int? _metric;
     private string? _primaryAdapterName;
     public override bool IsNatSupported => true;
-    public override bool IsDnsServerSupported => true;
     public override bool IsAppFilterSupported => false;
     protected override bool CanProtectSocket => false;
     protected override string? AppPackageId => null;

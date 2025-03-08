@@ -22,7 +22,6 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     private FileInputStream? _inStream;
     private FileOutputStream? _outStream;
 
-    public override bool IsDnsServerSupported => false;
     public override bool IsNatSupported => false;
     public override bool IsAppFilterSupported => true;
     protected override bool CanProtectSocket => true;

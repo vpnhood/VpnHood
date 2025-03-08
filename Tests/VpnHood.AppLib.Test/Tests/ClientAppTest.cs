@@ -178,7 +178,6 @@ public class ClientAppTest : TestAppBase
 
         // create device
         var deviceOptions = new TestVpnAdapterOptions {
-            IsDnsServerSupported = false, //todo
             CaptureDnsAddresses = TestHelper.TestIpAddresses.ToArray()
         };
         var device = TestHelper.CreateDevice(deviceOptions);

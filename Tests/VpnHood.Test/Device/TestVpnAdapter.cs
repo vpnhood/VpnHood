@@ -8,7 +8,6 @@ public class TestVpnAdapter(TestVpnAdapterOptions vpnAdapterOptions)
         AdapterName = "VpnHoodTestAdapter"
     })
 {
-    public override bool IsDnsServerSupported => vpnAdapterOptions.IsDnsServerSupported;
     protected override void ProcessPacketReceived(IPPacket ipPacket)
     {
         var ignore = false;

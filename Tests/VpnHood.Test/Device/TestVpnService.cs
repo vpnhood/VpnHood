@@ -8,7 +8,7 @@ namespace VpnHood.Test.Device;
 public class TestVpnService
     : IVpnServiceHandler, IAsyncDisposable
 {
-    private readonly Func<IVpnAdapter> _vpnAdapterFactory;
+    private readonly Func<VpnAdapterSettings, IVpnAdapter> _vpnAdapterFactory;
     private readonly VpnServiceHost _vpnServiceHost;
     public bool IsDisposed { get; private set; }
     public IVpnAdapter? CurrentVpnAdapter { get; private set; }
@@ -16,7 +16,7 @@ public class TestVpnService
     // config folder should be read from static place in read environment, because service can be started independently
     public TestVpnService(
         string configFolder,
-        Func<IVpnAdapter> vpnAdapterFactory)
+        Func<VpnAdapterSettings, IVpnAdapter> vpnAdapterFactory)
     {
         _vpnAdapterFactory = vpnAdapterFactory;
         _vpnServiceHost = new VpnServiceHost(configFolder, this, new TestSocketFactory(), withLogger: false);
@@ -33,9 +33,9 @@ public class TestVpnService
         _vpnServiceHost.Disconnect();
     }
 
-    public IVpnAdapter CreateAdapter()
+    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings)
     {
-        CurrentVpnAdapter = _vpnAdapterFactory();
+        CurrentVpnAdapter = _vpnAdapterFactory(adapterSettings);
         CurrentVpnAdapter.Disposed += (_, _) => CurrentVpnAdapter = null;
         return CurrentVpnAdapter;
     }

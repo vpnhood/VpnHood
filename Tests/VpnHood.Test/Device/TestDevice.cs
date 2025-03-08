@@ -7,7 +7,10 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Test.Device;
 
-public class TestDevice(TestHelper testHelper, Func<IVpnAdapter> vpnAdapterFactory) : IDevice
+public class TestDevice(
+    TestHelper testHelper, 
+    Func<VpnAdapterSettings, IVpnAdapter> vpnAdapterFactory) : 
+    IDevice
 {
     private readonly CancellationTokenSource _disposeCancellationTokenSource = new();
     public TestVpnService? VpnService { get; private set; }

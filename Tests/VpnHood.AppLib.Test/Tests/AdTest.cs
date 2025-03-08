@@ -6,8 +6,6 @@ using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.VpnAdapters.Abstractions;
-using VpnHood.Test.Device;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -154,7 +152,7 @@ public class AdTest : TestAppBase
         var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
-        var device = new TestDevice(TestHelper,() => new NullVpnAdapter());
+        var device = TestHelper.CreateNullDevice();
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
 
         // create access token
@@ -196,7 +194,7 @@ public class AdTest : TestAppBase
         var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
         appOptions.AdProviderItems = [adProviderItem];
-        var device = new TestDevice(TestHelper, () => new NullVpnAdapter());
+        var device = TestHelper.CreateNullDevice();
         await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
 
         // create token
@@ -258,7 +256,7 @@ public class AdTest : TestAppBase
         appOptions.AdOptions.PreloadAd = false;
         appOptions.AdOptions.LoadAdPostDelay = TimeSpan.FromSeconds(1);
         appOptions.AdProviderItems = [adProviderItem];
-        var device = new TestDevice(TestHelper, () => new NullVpnAdapter());
+        var device = TestHelper.CreateNullDevice();
         await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
 
         // create token

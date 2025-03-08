@@ -51,7 +51,7 @@ public class TestAppHelper : TestHelper
     public VpnHoodApp CreateClientApp(AppOptions? appOptions = null, IDevice? device = null)
     {
         appOptions ??= CreateAppOptions();
-        device ??= new TestDevice(this, () => new TestNullVpnAdapter());
+        device ??= new TestDevice(this, _ => new TestNullVpnAdapter());
 
         //create app
         var clientApp = VpnHoodApp.Init(device, appOptions);

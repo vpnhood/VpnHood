@@ -5,7 +5,7 @@ namespace VpnHood.Core.Client.VpnServices.Host;
 
 public interface IVpnServiceHandler
 {
-    IVpnAdapter CreateAdapter();
+    IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings);
     void ShowNotification(ConnectionInfo connectionInfo);
     void StopNotification();
     void StopSelf();

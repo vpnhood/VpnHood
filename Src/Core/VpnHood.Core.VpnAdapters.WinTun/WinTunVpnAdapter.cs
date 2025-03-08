@@ -2,6 +2,7 @@
 using System.IO.Compression;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Core.Toolkit.Exceptions;
@@ -12,7 +13,7 @@ using VpnHood.Core.VpnAdapters.WinTun.WinNative;
 
 namespace VpnHood.Core.VpnAdapters.WinTun;
 
-public class WinTunVpnAdapter(WinTunVpnAdapterSettings adapterSettings)
+public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     : TunVpnAdapter(adapterSettings)
 {
     private readonly int _ringCapacity = adapterSettings.RingCapacity;
@@ -31,15 +32,36 @@ public class WinTunVpnAdapter(WinTunVpnAdapterSettings adapterSettings)
     protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on WinTun.");
 
+    private static Guid BuildGuidFromName(string adapterName)
+    {
+        adapterName = $"VpnHood.{adapterName}"; // make sure it is unique
+        using var sha1 = SHA1.Create();
+        var hashBytes = sha1.ComputeHash(System.Text.Encoding.UTF8.GetBytes(adapterName));
+
+        // Create 16 bytes array for GUID
+        var guidBytes = new byte[16];
+        Array.Copy(hashBytes, 0, guidBytes, 0, 16);
+
+        // Set UUID version (5: SHA-1-based name-based UUID)
+        guidBytes[7] = (byte)((guidBytes[7] & 0x0F) | 0x50); // set version to 5
+        guidBytes[8] = (byte)((guidBytes[8] & 0x3F) | 0x80); // set variant to RFC 4122
+        
+        var adapterGuid = new Guid(guidBytes);
+        return adapterGuid;
+    }
+
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
         // Load the WinTun DLL
         LoadWinTunDll();
 
+        // create guid from name by using hash
+
+
         // create the adapter
-        _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "WinTun", IntPtr.Zero);
+        _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "VPN", BuildGuidFromName(AdapterName));
         if (_tunAdapter == IntPtr.Zero)
-            throw new Win32Exception("Failed to create WinTun adapter.");
+            throw new Win32Exception("Failed to create WinTun adapter. Make sure the app is running with admin privilege.");
 
         return Task.CompletedTask;
     }

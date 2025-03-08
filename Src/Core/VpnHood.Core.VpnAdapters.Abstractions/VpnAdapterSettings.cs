@@ -3,7 +3,7 @@ using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.VpnAdapters.Abstractions;
 
-public class TunVpnAdapterSettings
+public class VpnAdapterSettings
 {
     public required string AdapterName { get; init; }
     public ILogger Logger { get; init; } = VhLogger.Instance;

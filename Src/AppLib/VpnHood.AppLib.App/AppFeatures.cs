@@ -19,6 +19,7 @@ public class AppFeatures
     public required bool IsQuickLaunchSupported { get; init; }
     public required bool IsNotificationSupported { get; init; }
     public required bool IsAlwaysOnSupported { get; init; }
+    public required bool IsTv { get; init; }
     public required string? GaMeasurementId { get; init; }
     public required string ClientId { get; init; }
     public required bool IsDebugMode { get; init; }

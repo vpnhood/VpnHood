@@ -11,6 +11,7 @@ public class WinDevice(string storageFolder, bool isDebugMode) : IDevice
     public bool IsExcludeAppsSupported => isDebugMode;
     public bool IsAlwaysOnSupported => false;
     public bool IsIncludeAppsSupported => isDebugMode;
+    public bool IsTv => false;
 
     public DeviceMemInfo MemInfo {
         get {

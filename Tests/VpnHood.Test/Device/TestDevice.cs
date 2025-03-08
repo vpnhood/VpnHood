@@ -18,6 +18,7 @@ public class TestDevice(TestHelper testHelper, Func<IVpnAdapter> vpnAdapterFacto
     public bool IsBindProcessToVpnSupported => true;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public string VpnServiceConfigFolder { get; } = Path.Combine(testHelper.WorkingPath, "VpnService");
+    public bool IsTv => false;
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
     public bool IsAlwaysOnSupported => false;

@@ -1,4 +1,5 @@
 ﻿using Android.Content;
+using Android.Content.Res;
 using Android.Net;
 using Android.OS;
 using Microsoft.Extensions.Logging;
@@ -18,9 +19,12 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     public bool IsBindProcessToVpnSupported => true;
     public bool IsExcludeAppsSupported => true;
     public bool IsIncludeAppsSupported => true;
-    public bool IsAlwaysOnSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
-    public string OsInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
+    public bool IsAlwaysOnSupported { get; } = OperatingSystem.IsAndroidVersionAtLeast(24);
+    public string OsInfo { get; } = $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
     public string VpnServiceConfigFolder => AndroidVpnService.VpnServiceConfigFolder;
+    public bool IsTv { get; } = 
+        ((UiModeManager?)Application.Context.GetSystemService(Context.UiModeService))?
+        .CurrentModeType == UiMode.TypeTelevision;
 
     public static AndroidDevice Create()
     {

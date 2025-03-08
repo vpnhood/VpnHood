@@ -16,7 +16,6 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test;
-using VpnHood.Test.Device;
 
 // ReSharper disable DisposeOnUsingVariable
 

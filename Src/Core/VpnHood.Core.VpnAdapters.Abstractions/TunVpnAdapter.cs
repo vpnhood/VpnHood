@@ -354,11 +354,16 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
         });
     }
 
-    public async Task SendPacketAsync(IList<IPPacket> ipPackets)
+    public Task SendPacketsAsync(IList<IPPacket> ipPackets)
     {
-        foreach (var ipPacket in ipPackets)
-            await SendPacketAsync(ipPacket).VhConfigureAwait();
-
+        return _sendPacketSemaphore.WaitAsync().ContinueWith(_ => {
+            try {
+                SendPackets(ipPackets);
+            }
+            finally {
+                _sendPacketSemaphore.Release();
+            }
+        });
     }
 
     protected virtual void StartReadingPackets()

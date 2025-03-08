@@ -23,7 +23,6 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     private WinDivertDevice? _device;
     private WinDivertHeader? _lastCaptureHeader;
-    private readonly IPPacket[] _ipPackets = new IPPacket[1];
     private readonly List<IpNetwork> _includeIpNetworks = new();
     private IPAddress[] _dnsServers = [];
     private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>> _lastDnsServersV4 = new(TimeSpan.FromSeconds(30));
@@ -37,9 +36,11 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
+        if (adapterSettings.MaxPacketCount!=1)
+            throw new InvalidOperationException("WinDivert adapter supports only 1 packet at a time.");
+
         // initialize devices
         _device = new WinDivertDevice { Flags = 0 };
-        _device.OnPacketArrival += Device_OnPacketArrival;
 
         // clean old configs
         _includeIpNetworks.Clear();
@@ -54,6 +55,11 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         AdapterClose();
         _device?.Dispose();
         _device = null;
+    }
+
+    private static string Ip(IpRange ipRange)
+    {
+        return ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
     }
 
     protected override Task AdapterOpen(CancellationToken cancellationToken)
@@ -81,7 +87,6 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         try {
             _device.Filter = filter;
             _device.Open(new DeviceConfiguration());
-            _device.StartCapture();
         }
         catch (Exception ex) {
             if (ex.Message.IndexOf("access is denied", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -94,14 +99,8 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return Task.CompletedTask;
     }
 
-    protected override void StartReadingPackets()
-    {
-        // let device event dispatcher do the job
-    }
-
     protected override void AdapterClose()
     {
-        _device?.StopCapture();
         _device?.Close();
     }
 
@@ -150,47 +149,37 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return Task.CompletedTask;
     }
 
-    protected override IPPacket ReadPacket(int mtu)
+    protected override IPPacket? ReadPacket(int mtu)
     {
-        throw new NotSupportedException("ReadPacket is not supported on WinDivert.");
+        if (_device == null)
+            throw new InvalidOperationException("Device is not initialized.");
+
+        var status = _device.GetNextPacket(out var packetCapture);
+        if (status != GetPacketStatus.PacketRead)
+            return null;
+
+        _lastCaptureHeader = (WinDivertHeader)packetCapture.Header;
+        var rawPacket = packetCapture.GetPacket();
+        var packet = Packet.ParsePacket(rawPacket.LinkLayerType, rawPacket.Data);
+        var ipPacket = packet.Extract<IPPacket>();
+
+        ProcessReadPacket(ipPacket);
+        return ipPacket;
     }
 
-    protected override void WaitForTunRead()
-    {
-        throw new NotSupportedException("ReadPacket is not supported on WinDivert and override by StartReadingPacket.");
-    }
 
     protected override void ProtectSocket(Socket socket)
     {
         socket.Ttl = ProtectedTtl;
     }
 
-    private static string Ip(IpRange ipRange)
-    {
-        return ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
-    }
-
-    private void Device_OnPacketArrival(object sender, PacketCapture e)
-    {
-        var rawPacket = e.GetPacket();
-        var packet = Packet.ParsePacket(rawPacket.LinkLayerType, rawPacket.Data);
-        var ipPacket = packet.Extract<IPPacket>();
-
-        _lastCaptureHeader = (WinDivertHeader)e.Header;
-        ProcessPacketReceived(ipPacket);
-    }
-
-    protected virtual void ProcessPacketReceived(IPPacket ipPacket)
+    protected virtual void ProcessReadPacket(IPPacket ipPacket)
     {
         // simulate adapter network
         SimulateAdapterNetwork(ipPacket, true);
 
         // simulate dns servers
         SimulateDnsServers(ipPacket, true);
-
-        // create the event args. for performance, we will reuse the same instance
-        _ipPackets[0] = ipPacket;
-        InvokeReadPackets(_ipPackets);
     }
 
     //todo rename to write packet
@@ -225,9 +214,14 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return true;
     }
 
+    protected override void WaitForTunRead()
+    {
+        // It is blocking so we set read buffer to 1 and there is no wait
+    }
+
     protected override void WaitForTunWrite()
     {
-        Thread.Sleep(1);
+        // It is blocking, we don't need to block here
     }
 
     private void SimulateAdapterNetwork(IPPacket ipPacket, bool read)
@@ -257,13 +251,13 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     {
         if (ipPacket.Protocol != ProtocolType.Udp || _dnsServers.Length == 0)
             return;
-        
+
         var udpPacket = ipPacket.ExtractUdp();
         var lastDnsServers = ipPacket.Version == IPVersion.IPv4 ? _lastDnsServersV4 : _lastDnsServersV6;
 
         if (read) {
             // check if the packet is a dns query
-            if (udpPacket.DestinationPort !=53) 
+            if (udpPacket.DestinationPort != 53)
                 return;
 
             // update the last dns server
@@ -287,7 +281,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         }
         else {
             // check if the packet is a dns response
-            if (udpPacket.SourcePort !=53) 
+            if (udpPacket.SourcePort != 53)
                 return;
 
             // update the last dns server

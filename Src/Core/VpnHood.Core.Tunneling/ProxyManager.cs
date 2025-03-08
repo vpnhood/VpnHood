@@ -80,7 +80,7 @@ public abstract class ProxyManager : IPacketProxyReceiver
 
         // send packet via proxy
         if (VhLogger.IsDiagnoseMode)
-            PacketUtil.LogPacket(ipPacket, "Delegating packet to host via proxy.");
+            PacketLogger.LogPacket(ipPacket, "Delegating packet to host via proxy.");
 
         try {
             switch (ipPacket.Protocol) {
@@ -103,7 +103,7 @@ public abstract class ProxyManager : IPacketProxyReceiver
         catch (Exception ex) when (ex is ISelfLog) {
         }
         catch (Exception ex) {
-            PacketUtil.LogPacket(ipPacket, "Error in delegating packet via proxy.", LogLevel.Error, ex);
+            PacketLogger.LogPacket(ipPacket, "Error in delegating packet via proxy.", LogLevel.Error, ex);
         }
     }
 

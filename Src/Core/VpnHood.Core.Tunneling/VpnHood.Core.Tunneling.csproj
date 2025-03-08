@@ -39,6 +39,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.Packets\VpnHood.Core.Packets.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -207,7 +207,7 @@ public class Tunnel : IJob, IAsyncDisposable
             return;
 
         if (VhLogger.IsDiagnoseMode)
-            PacketUtil.LogPackets(e.IpPackets, $"Packets received from a channel. ChannelId: {e.Channel.ChannelId}");
+            PacketLogger.LogPackets(e.IpPackets, $"Packets received from a channel. ChannelId: {e.Channel.ChannelId}");
 
         // check datagram message
         // performance critical; don't create another array by linq
@@ -308,7 +308,7 @@ public class Tunnel : IJob, IAsyncDisposable
 
         // ReSharper disable once PossibleMultipleEnumeration
         if (VhLogger.IsDiagnoseMode)
-            PacketUtil.LogPackets(ipPackets, "Packet sent to tunnel queue.");
+            PacketLogger.LogPackets(ipPackets, "Packet sent to tunnel queue.");
     }
 
     private async Task SendPacketTask(IDatagramChannel channel)

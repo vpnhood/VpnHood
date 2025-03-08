@@ -19,9 +19,10 @@ internal class ClientProxyManager(
     public override Task OnPacketReceived(IPPacket ipPacket)
     {
         if (VhLogger.IsDiagnoseMode)
-            PacketUtil.LogPacket(ipPacket, "Delegating packet to host via proxy.");
+            PacketLogger.LogPacket(ipPacket, "Delegating packet to host via proxy.");
 
-        vpnAdapter.SendPacketToInbound(ipPacket);
+        // writing to local adapter is pretty fast so we don't need to await it
+        vpnAdapter.SendPacket(ipPacket);
         return Task.FromResult(0);
     }
 }

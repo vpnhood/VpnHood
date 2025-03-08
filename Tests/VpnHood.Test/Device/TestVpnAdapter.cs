@@ -16,8 +16,9 @@ public class TestVpnAdapter(TestVpnAdapterOptions vpnAdapterOptions) : WinDivert
             vpnAdapterOptions.CaptureDnsAddresses.All(x => !x.Equals(ipPacket.DestinationAddress));
 
         // ignore protected packets
+        // todo: temporary
         if (ignore)
-            SendPacketToOutbound(ipPacket);
+            SendPacket(ipPacket, true);
         else
             base.ProcessPacketReceived(ipPacket);
     }

@@ -26,6 +26,8 @@ public class WinDivertVpnAdapter : IVpnAdapter
     private IPAddress? _adapterIpV6;
     private IPAddress? _primaryAdapterIpV4;
     private IPAddress? _primaryAdapterIpV6;
+    public IpNetwork? AdapterIpNetworkV4 { get; private set; }
+    public IpNetwork? AdapterIpNetworkV6 { get; private set; }
 
     public const short ProtectedTtl = 111;
     public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
@@ -64,34 +66,6 @@ public class WinDivertVpnAdapter : IVpnAdapter
         return udpClient;
     }
 
-    public void SendPacketToInbound(IList<IPPacket> ipPackets)
-    {
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++) {
-            var ipPacket = ipPackets[i];
-            SendPacket(ipPacket, false);
-        }
-    }
-
-    public void SendPacketToInbound(IPPacket ipPacket)
-    {
-        SendPacket(ipPacket, false);
-    }
-
-    public void SendPacketToOutbound(IPPacket ipPacket)
-    {
-        SendPacket(ipPacket, true);
-    }
-
-    public void SendPacketToOutbound(IList<IPPacket> ipPackets)
-    {
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++) {
-            var ipPacket = ipPackets[i];
-            SendPacket(ipPacket, true);
-        }
-    }
-
     private static string Ip(IpRange ipRange)
     {
         return ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
@@ -110,6 +84,8 @@ public class WinDivertVpnAdapter : IVpnAdapter
 
         _adapterIpV4 = options.VirtualIpNetworkV4?.Prefix;
         _adapterIpV6 = options.VirtualIpNetworkV6?.Prefix;
+        AdapterIpNetworkV4 = options.VirtualIpNetworkV4;
+        AdapterIpNetworkV6 = options.VirtualIpNetworkV6;
 
         // create include and exclude phrases
         var phraseX = "true";
@@ -171,6 +147,10 @@ public class WinDivertVpnAdapter : IVpnAdapter
         return ipVersion == IPVersion.IPv4 ? _adapterIpV4 : _adapterIpV6;
     }
 
+    public IpNetwork? GetIpNetwork(IPVersion ipVersion)
+    {
+        return ipVersion == IPVersion.IPv4 ? AdapterIpNetworkV4 : AdapterIpNetworkV6;
+    }
 
     private void Device_OnPacketArrival(object sender, PacketCapture e)
     {
@@ -211,12 +191,23 @@ public class WinDivertVpnAdapter : IVpnAdapter
         }
     }
 
-    public void SendPacket(IPPacket ipPacket)
+    public void SendPackets(IList<IPPacket> ipPackets)
     {
-        SendPacket(ipPacket, ipPacket.SourceAddress.Equals(GetPrimaryAdapterIp(ipPacket.Version)));
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < ipPackets.Count; i++)
+            SendPacket(ipPackets[i]);
     }
 
-    private void SendPacket(IPPacket ipPacket, bool outbound)
+    public void SendPacket(IPPacket ipPacket)
+    {
+#if DEBUG
+        if (GetIpNetwork(ipPacket.Version)?.Contains(ipPacket.DestinationAddress) is null or false)
+            throw new NotSupportedException("This adapter can send packets outside of its network.");
+#endif
+        SendPacket(ipPacket, false);
+    }
+
+    protected void SendPacket(IPPacket ipPacket, bool outbound)
     {
         if (_lastCaptureHeader == null)
             throw new InvalidOperationException("Could not send any data without receiving a packet.");

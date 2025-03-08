@@ -350,7 +350,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             }
 
         // ReSharper disable once ForCanBeConvertedToForeach
-        _vpnAdapter.SendPacketToInbound(e.IpPackets);
+        _vpnAdapter.SendPackets(e.IpPackets);
     }
 
     // WARNING: Performance Critical!
@@ -449,7 +449,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     _proxyManager.SendPackets(proxyPackets).Wait(_cancellationTokenSource.Token);
 
                 if (tcpHostPackets.Count > 0)
-                    _vpnAdapter.SendPacketToInbound(_clientHost.ProcessOutgoingPacket(tcpHostPackets));
+                    _vpnAdapter.SendPackets(_clientHost.ProcessOutgoingPacket(tcpHostPackets));
             }
 
             // set state outside the lock as it may raise an event

@@ -490,7 +490,7 @@ public class SessionManager : IAsyncDisposable, IJob
         if (session == null) {
             // log dropped packet
             if (VhLogger.IsDiagnoseMode)
-                PacketUtil.LogPacket(ipPacket, "Could not find session for packet destination.");
+                PacketLogger.LogPacket(ipPacket, "Could not find session for packet destination.");
             return;
         }
 

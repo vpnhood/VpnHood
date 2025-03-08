@@ -188,7 +188,7 @@ public class Session : IAsyncDisposable
     public Task ProcessInboundPacket(IPPacket ipPacket)
     {
         if (VhLogger.IsDiagnoseMode)
-            PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
+            PacketLogger.LogPacket(ipPacket, "Delegating packet to client via proxy.");
 
         ipPacket = _netFilter.ProcessReply(ipPacket);
 
@@ -223,7 +223,7 @@ public class Session : IAsyncDisposable
             var virtualIp = GetClientVirtualIp(ipPacket.Version);
             if (!virtualIp.Equals(ipPacket.SourceAddress)) {
                 // todo: legacy version. Packet must be dropped if it does not have correct source address
-                // PacketUtil.LogPacket(ipPacket, $"Invalid tunnel packet source ip.");
+                // PacketLogger.LogPacket(ipPacket, $"Invalid tunnel packet source ip.");
                 ipPacket.SourceAddress = virtualIp;
                 PacketUtil.UpdateIpChecksum(ipPacket);
             }

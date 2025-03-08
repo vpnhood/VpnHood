@@ -15,9 +15,6 @@ public interface IVpnAdapter : IDisposable
     void Stop();
     TcpClient CreateProtectedTcpClient(AddressFamily addressFamily);
     UdpClient CreateProtectedUdpClient(AddressFamily addressFamily);
-    void SendPacketToInbound(IPPacket ipPacket);
-    void SendPacketToInbound(IList<IPPacket> ipPackets);
-    void SendPacketToOutbound(IPPacket ipPacket);
-    void SendPacketToOutbound(IList<IPPacket> ipPackets);
     void SendPacket(IPPacket ipPacket);
+    void SendPackets(IList<IPPacket> ipPackets);
 }

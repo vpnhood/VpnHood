@@ -55,6 +55,20 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
     public IPAddress? GatewayIpV6 { get; private set; }
     public bool Started => _started && !IsDisposed;
 
+    public IPAddress? GetPrimaryAdapterIp(IPVersion ipVersion)
+    {
+        return ipVersion == IPVersion.IPv4 ? PrimaryAdapterIpV4 : PrimaryAdapterIpV6;
+    }
+    public IPAddress? GetGatewayIp(IPVersion ipVersion)
+    {
+        return ipVersion == IPVersion.IPv4 ? GatewayIpV4 : GatewayIpV6;
+    }
+
+    public IpNetwork? GetIpNetwork(IPVersion ipVersion)
+    {
+        return ipVersion == IPVersion.IPv4 ? AdapterIpNetworkV4 : AdapterIpNetworkV6;
+    }
+
     public async Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         if (IsDisposed)
@@ -66,10 +80,8 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
         Logger.LogInformation("Starting {AdapterName} adapter.", AdapterName);
 
         // get the WAN adapter IP
-        PrimaryAdapterIpV4 =
-            GetPrimaryAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV4()), 53));
-        PrimaryAdapterIpV6 =
-            GetPrimaryAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV6()), 53));
+        PrimaryAdapterIpV4 = GetPrimaryAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV4()), 53));
+        PrimaryAdapterIpV6 = GetPrimaryAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV6()), 53));
         AdapterIpNetworkV4 = options.VirtualIpNetworkV4;
         AdapterIpNetworkV6 = options.VirtualIpNetworkV6;
         UseNat = options.UseNat;
@@ -147,7 +159,7 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
             await AdapterOpen(cancellationToken).VhConfigureAwait();
 
             // start reading packets
-            _ = Task.Run(ReadingPacketTask, CancellationToken.None);
+            _ = Task.Run(StartReadingPackets, CancellationToken.None);
 
             _started = true;
             Logger.LogInformation("TUN adapter started.");
@@ -279,26 +291,6 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
             : IPAddressUtil.Increment(ipNetwork.FirstIpAddress);
     }
 
-    public void SendPacketToInbound(IPPacket ipPacket)
-    {
-        SendPacket(ipPacket); //todo
-    }
-
-    public void SendPacketToInbound(IList<IPPacket> ipPackets)
-    {
-        SendPacket(ipPackets); //todo
-    }
-
-    public void SendPacketToOutbound(IPPacket ipPacket)
-    {
-        SendPacket(ipPacket); //todo
-    }
-
-    public void SendPacketToOutbound(IList<IPPacket> ipPackets)
-    {
-        SendPacket(ipPackets); //todo
-    }
-
     public void SendPacket(IPPacket ipPacket)
     {
         if (!Started)
@@ -343,7 +335,7 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
             Logger.LogWarning("Failed to send packet via WinTun adapter.");
     }
 
-    public void SendPacket(IList<IPPacket> packets)
+    public void SendPackets(IList<IPPacket> packets)
     {
         foreach (var packet in packets)
             SendPacket(packet);
@@ -370,7 +362,7 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
 
     }
 
-    private void ReadingPacketTask()
+    protected virtual void StartReadingPackets()
     {
         var packetList = new List<IPPacket>(adapterSettings.MaxPacketCount);
 

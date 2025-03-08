@@ -134,6 +134,12 @@ public class IpNetwork
         return new IpRange(FirstIpAddress, LastIpAddress);
     }
 
+    public bool Contains(IPAddress ipAddress)
+    {
+        return IPAddressUtil.Compare(ipAddress, FirstIpAddress) >= 0 &&
+               IPAddressUtil.Compare(ipAddress, LastIpAddress) <= 0;
+    }
+
     public static IpNetwork Parse(string value)
     {
         try {

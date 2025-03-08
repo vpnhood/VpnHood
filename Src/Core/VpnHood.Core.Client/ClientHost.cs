@@ -97,7 +97,8 @@ internal class ClientHost(
     }
 
     // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
-    public IPPacket[] ProcessOutgoingPacket(IList<IPPacket> ipPackets)
+    // Warning: the return array is shared and will be invalid with next call
+    public IList<IPPacket> ProcessOutgoingPacket(IList<IPPacket> ipPackets)
     {
         if (_localEndpointIpV4 == null)
             throw new InvalidOperationException(
@@ -162,18 +163,19 @@ internal class ClientHost(
             catch (Exception ex) {
                 if (tcpPacket != null) {
                     ret.Add(PacketUtil.CreateTcpResetReply(ipPacket, true));
-                    PacketUtil.LogPacket(ipPacket,
+                    PacketLogger.LogPacket(ipPacket,
                         "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.",
                         LogLevel.Debug, ex);
                 }
                 else {
-                    PacketUtil.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet.",
+                    PacketLogger.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet.",
                         LogLevel.Error, ex);
                 }
             }
         }
 
-        return ret.ToArray(); //it is a shared buffer; to ToArray is necessary
+        //it is a shared buffer; to ToArray is necessary
+        return ret; 
     }
 
     private SyncCustomData? ProcessOutgoingSyncPacket(IPPacket ipPacket, TcpPacket tcpPacket)

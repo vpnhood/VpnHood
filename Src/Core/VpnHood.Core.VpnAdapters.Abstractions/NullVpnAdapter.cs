@@ -39,27 +39,12 @@ public class NullVpnAdapter : IVpnAdapter
         return new UdpClient(addressFamily);
     }
 
-    public virtual void SendPacketToInbound(IPPacket ipPacket)
-    {
-        // nothing
-    }
-
-    public virtual void SendPacketToInbound(IList<IPPacket> ipPackets)
-    {
-        // nothing
-    }
-
-    public virtual void SendPacketToOutbound(IPPacket ipPacket)
-    {
-        // nothing
-    }
-
-    public virtual void SendPacketToOutbound(IList<IPPacket> ipPackets)
-    {
-        // nothing
-    }
-
     public virtual void SendPacket(IPPacket ipPacket)
+    {
+        // nothing
+    }
+
+    public virtual void SendPackets(IList<IPPacket> ipPackets)
     {
         // nothing
     }

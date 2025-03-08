@@ -65,7 +65,7 @@ public class PingProxy : ITimeoutItem
         ipPacket.DestinationAddress = ipPacket.SourceAddress;
         ipPacket.SourceAddress = pingReply.Address;
         ipPacket.PayloadPacket = icmpPacket;
-        ipPacket.UpdateIpPacket();
+        ipPacket.UpdateAllChecksums();
         return ipPacket;
     }
 

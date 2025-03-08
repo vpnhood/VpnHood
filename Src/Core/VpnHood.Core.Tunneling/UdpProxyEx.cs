@@ -98,7 +98,7 @@ internal class UdpProxyEx : ITimeoutItem
             };
 
             ipPacket.PayloadPacket = udpPacket;
-            ipPacket.UpdateIpPacket();
+            ipPacket.UpdateAllChecksums();
 
             // send packet to audience
             await _packetReceiver.OnPacketReceived(ipPacket).VhConfigureAwait();

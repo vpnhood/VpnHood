@@ -544,7 +544,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     $"DNS request from {VhLogger.Format(ipPacket.SourceAddress)}:{udpPacket.SourcePort} to {VhLogger.Format(ipPacket.DestinationAddress)}, Map to: {VhLogger.Format(dnsServer)}");
                 udpPacket.SourcePort = Nat.GetOrAdd(ipPacket).NatId;
                 ipPacket.DestinationAddress = dnsServer;
-                ipPacket.UpdateIpPacket();
+                ipPacket.UpdateAllChecksums();
                 return true;
             }
         }
@@ -558,7 +558,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     $"DNS reply to {VhLogger.Format(natItem.SourceAddress)}:{natItem.SourcePort}");
                 ipPacket.SourceAddress = natItem.DestinationAddress;
                 udpPacket.DestinationPort = natItem.SourcePort;
-                ipPacket.UpdateIpPacket();
+                ipPacket.UpdateAllChecksums();
                 return true;
             }
         }

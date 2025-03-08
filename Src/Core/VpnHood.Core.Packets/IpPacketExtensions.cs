@@ -59,7 +59,7 @@ public static class IpPacketExtensions
     {
         // ICMPv6 checksum needs to be updated if IPv6 packet changes
         if (ipPacket.Protocol == ProtocolType.IcmpV6)
-            ipPacket.UpdateIpPacket();
+            ipPacket.UpdateAllChecksums();
 
         // ipv4 packet checksum needs to be updated if IPv4 packet changes
         if (ipPacket is IPv4Packet ipV4Packet) {
@@ -101,7 +101,7 @@ public static class IpPacketExtensions
         }
     }
 
-    public static void UpdateIpPacket(this IPPacket ipPacket, bool throwIfNotSupported = true)
+    public static void UpdateAllChecksums(this IPPacket ipPacket, bool throwIfNotSupported = true)
     {
         ipPacket.UpdatePayloadChecksum(throwIfNotSupported);
         ipPacket.UpdateIpChecksum();

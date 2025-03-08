@@ -46,7 +46,7 @@ public class TestNetFilter : NetFilter
                 if (newEndPoint == null) return null;
                 ipPacket.DestinationAddress = newEndPoint.Address;
                 udpPacket.DestinationPort = (ushort)newEndPoint.Port;
-                ipPacket.UpdateIpPacket();
+                ipPacket.UpdateAllChecksums();
                 return ipPacket;
             }
             case ProtocolType.Tcp: {
@@ -56,14 +56,14 @@ public class TestNetFilter : NetFilter
                 if (newEndPoint == null) return null;
                 ipPacket.DestinationAddress = newEndPoint.Address;
                 tcpPacket.DestinationPort = (ushort)newEndPoint.Port;
-                ipPacket.UpdateIpPacket();
+                ipPacket.UpdateAllChecksums();
                 return ipPacket;
             }
             case ProtocolType.Icmp or ProtocolType.IcmpV6: {
                 var newEndPoint = ProcessRequest(ipPacket.Protocol, new IPEndPoint(ipPacket.DestinationAddress, 0));
                 if (newEndPoint == null) return null;
                 ipPacket.DestinationAddress = newEndPoint.Address;
-                ipPacket.UpdateIpPacket();
+                ipPacket.UpdateAllChecksums();
                 return ipPacket;
             }
             default:
@@ -81,7 +81,7 @@ public class TestNetFilter : NetFilter
                         out var newEndPoint1)) {
                     ipPacket.SourceAddress = newEndPoint1.Address;
                     udpPacket.SourcePort = (ushort)newEndPoint1.Port;
-                    ipPacket.UpdateIpPacket();
+                    ipPacket.UpdateAllChecksums();
                 }
 
                 break;
@@ -94,7 +94,7 @@ public class TestNetFilter : NetFilter
                         out var tcpEndPoint)) {
                     ipPacket.SourceAddress = tcpEndPoint.Address;
                     tcpPacket.SourcePort = (ushort)tcpEndPoint.Port;
-                    ipPacket.UpdateIpPacket();
+                    ipPacket.UpdateAllChecksums();
                 }
 
                 break;
@@ -105,7 +105,7 @@ public class TestNetFilter : NetFilter
                         Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, 0)),
                         out var icmpEndPoint)) {
                     ipPacket.SourceAddress = icmpEndPoint.Address;
-                    ipPacket.UpdateIpPacket();
+                    ipPacket.UpdateAllChecksums();
                 }
 
                 break;

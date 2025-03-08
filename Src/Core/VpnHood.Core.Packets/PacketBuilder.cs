@@ -37,7 +37,7 @@ public static class PacketBuilder
         resetIpPacket.PayloadPacket = resetTcpPacket;
 
         if (updateChecksum)
-            resetIpPacket.UpdateIpPacket();
+            resetIpPacket.UpdateAllChecksums();
         return resetIpPacket;
     }
 
@@ -73,7 +73,7 @@ public static class PacketBuilder
 
         ipPacket.PayloadPacket = udpPacket;
         if (calculateCheckSum)
-            ipPacket.UpdateIpPacket();
+            ipPacket.UpdateAllChecksums();
         return ipPacket;
     }
 
@@ -148,7 +148,7 @@ public static class PacketBuilder
             PayloadPacket = icmpPacket,
             PayloadLength = (ushort)icmpPacket.TotalPacketLength
         };
-        newIpPacket.UpdateIpPacket();
+        newIpPacket.UpdateAllChecksums();
 
         //var restorePacketV6 = Packet.ParsePacket(LinkLayers.Raw, newIpPacket.Bytes).Extract<IPPacket>();
         //var restoreIcmpV6 = restorePacketV6.Extract<IcmpV6Packet>();
@@ -175,7 +175,7 @@ public static class PacketBuilder
             FragmentFlags = 0
         };
 
-        newIpPacket.UpdateIpPacket();
+        newIpPacket.UpdateAllChecksums();
         return newIpPacket;
     }
 }

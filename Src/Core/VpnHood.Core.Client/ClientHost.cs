@@ -158,7 +158,7 @@ internal class ClientHost(
                     tcpPacket.DestinationPort = (ushort)localEndPoint.Port; //4
                 }
 
-                ipPacket.UpdateIpPacket();
+                ipPacket.UpdateAllChecksums();
                 ret.Add(ipPacket);
             }
             catch (Exception ex) {

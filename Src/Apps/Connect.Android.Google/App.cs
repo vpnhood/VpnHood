@@ -4,8 +4,6 @@ using VpnHood.App.Client.Droid.Google.FirebaseUtils;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Droid.Ads.VhAdMob;
-using VpnHood.AppLib.Droid.Ads.VhChartboost;
-using VpnHood.AppLib.Droid.Ads.VhInMobi;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
@@ -63,8 +61,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
     private static AppAdProviderItem[] CreateAppAdProviderItems(AppConfigs appConfigs)
     {
+        // ReSharper disable once UseObjectOrCollectionInitializer
         var items = new List<AppAdProviderItem>();
-        var initializeTimeout = TimeSpan.FromSeconds(5);
 
         items.Add(new AppAdProviderItem {
             AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialAdUnitId),
@@ -72,20 +70,21 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             ProviderName = "AdMob"
         });
 
-        if (InMobiAdProvider.IsAndroidVersionSupported)
-            items.Add(new AppAdProviderItem {
-                AdProvider = InMobiAdProvider.Create(appConfigs.InmobiAccountId, appConfigs.InmobiPlacementId,
-                    initializeTimeout, appConfigs.InmobiIsDebugMode),
-                ProviderName = "InMobi"
-            });
+        //var initializeTimeout = TimeSpan.FromSeconds(5);
+        //if (InMobiAdProvider.IsAndroidVersionSupported)
+        //    items.Add(new AppAdProviderItem {
+        //        AdProvider = InMobiAdProvider.Create(appConfigs.InmobiAccountId, appConfigs.InmobiPlacementId,
+        //            initializeTimeout, appConfigs.InmobiIsDebugMode),
+        //        ProviderName = "InMobi"
+        //    });
 
-        if (ChartboostAdProvider.IsAndroidVersionSupported)
-            items.Add(new AppAdProviderItem {
-                AdProvider = ChartboostAdProvider.Create(appConfigs.ChartboostAppId, appConfigs.ChartboostAppSignature,
-                    appConfigs.ChartboostAdLocation, initializeTimeout),
-                ExcludeCountryCodes = ["IR", "CN"],
-                ProviderName = "Chartboost"
-            });
+        //if (ChartboostAdProvider.IsAndroidVersionSupported)
+        //    items.Add(new AppAdProviderItem {
+        //        AdProvider = ChartboostAdProvider.Create(appConfigs.ChartboostAppId, appConfigs.ChartboostAppSignature,
+        //            appConfigs.ChartboostAdLocation, initializeTimeout),
+        //        ExcludeCountryCodes = ["IR", "CN"],
+        //        ProviderName = "Chartboost"
+        //    });
 
         items.Add(new AppAdProviderItem {
             AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialNoVideoAdUnitId),

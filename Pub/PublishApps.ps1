@@ -44,7 +44,7 @@ if ($nugets) {
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.VpnServices.Manager/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device.Android/_publish.ps1";
-	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device.WinDivert/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device.Win/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Server/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Server.Access/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Server.Access.FileAccessManager/_publish.ps1";

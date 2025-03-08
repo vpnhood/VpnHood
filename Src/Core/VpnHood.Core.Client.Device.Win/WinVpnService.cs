@@ -4,7 +4,7 @@ using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.WinDivert;
 
-namespace VpnHood.Core.Client.Device.WinDivert;
+namespace VpnHood.Core.Client.Device.Win;
 
 public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
 {

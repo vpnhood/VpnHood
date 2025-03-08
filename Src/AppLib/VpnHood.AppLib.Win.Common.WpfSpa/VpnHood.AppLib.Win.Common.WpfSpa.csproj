@@ -41,7 +41,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
 		<ProjectReference Include="..\VpnHood.AppLib.Win.Common\VpnHood.AppLib.Win.Common.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Device.WinDivert\VpnHood.Core.Client.Device.WinDivert.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Device.Win\VpnHood.Core.Client.Device.Win.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

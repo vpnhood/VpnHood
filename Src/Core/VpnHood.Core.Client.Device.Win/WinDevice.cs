@@ -1,6 +1,6 @@
 ﻿using VpnHood.Core.Client.Device.UiContexts;
 
-namespace VpnHood.Core.Client.Device.WinDivert;
+namespace VpnHood.Core.Client.Device.Win;
 
 public class WinDevice(string storageFolder, bool isDebugMode) : IDevice
 {

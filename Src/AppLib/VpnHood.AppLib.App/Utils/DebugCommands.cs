@@ -10,6 +10,7 @@ public static class DebugCommands
     public const string LogTrace = "/log:trace";
     public const string NullCapture = "/null-capture";
     public const string NoTcpReuse = "/no-tcp-reuse";
+    public const string WinTun = "/wintun";
 
     public static string[] All => [
         CaptureContext,
@@ -19,6 +20,7 @@ public static class DebugCommands
         KillSpaServer,
         UseTcpOverTun,
         NoTcpReuse,
-        NullCapture
+        NullCapture,
+        WinTun
     ];
 }

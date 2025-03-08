@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.VpnAdapters.WinTun;
 
-public class WinTunVpnAdapterSettings : TunVpnAdapterSettings
+public class WinVpnAdapterSettings : VpnAdapterSettings
 {
     /// <summary>
     /// Capacity: Rings capacity. Must be between MinRingCapacity and MaxRingCapacity (incl.) Must be a power of two.

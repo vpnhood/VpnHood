@@ -58,10 +58,14 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         }
     }
 
-    public IVpnAdapter CreateAdapter()
+    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings)
     {
         return new AndroidVpnAdapter(this, new AndroidVpnAdapterSettings {
-            AdapterName = "VpnHood", 
+            AdapterName = adapterSettings.AdapterName, 
+            MaxPacketCount = adapterSettings.MaxPacketCount,
+            Logger = adapterSettings.Logger,
+            MaxAutoRestartCount = adapterSettings.MaxAutoRestartCount,
+            MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay
         });
     }
 

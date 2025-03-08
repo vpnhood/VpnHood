@@ -2,4 +2,4 @@
 
 namespace VpnHood.Core.VpnAdapters.AndroidTun;
 
-public class AndroidVpnAdapterSettings : TunVpnAdapterSettings;
+public class AndroidVpnAdapterSettings : VpnAdapterSettings;

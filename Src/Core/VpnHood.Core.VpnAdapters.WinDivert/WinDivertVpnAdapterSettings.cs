@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.VpnAdapters.WinDivert;
 
-public class WinDivertVpnAdapterSettings : TunVpnAdapterSettings
+public class WinDivertVpnAdapterSettings : VpnAdapterSettings
 {
     public WinDivertVpnAdapterSettings()
     {

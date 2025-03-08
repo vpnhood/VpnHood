@@ -611,6 +611,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // create clientOptions
         var clientOptions = new ClientOptions {
+            AppName = Resources.Strings.AppName,
             ClientId = Features.ClientId,
             AccessKey = token.ToAccessKey(),
             SessionTimeout = _sessionTimeout,
@@ -644,6 +645,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             Version = Features.Version,
             TrackerFactoryAssemblyQualifiedName = _trackerFactory.GetType().AssemblyQualifiedName,
             UserAgent = userAgent ?? ClientOptions.Default.UserAgent,
+            DebugData1 = UserSettings.DebugData1,
+            DebugData2 = UserSettings.DebugData2,
         };
 
         try {

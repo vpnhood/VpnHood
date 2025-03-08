@@ -388,15 +388,15 @@ public class TestHelper : IDisposable
     }
 
 
-    public TestDevice CreateDevice(TestVpnAdapterOptions? options = null)
+    public TestDevice CreateDevice(TestVpnAdapterOptions? testVpnAdapterOptions = null)
     {
-        options ??= CreateTestVpnAdapterOptions();
-        return new TestDevice(this, () => new TestVpnAdapter(options));
+        testVpnAdapterOptions ??= CreateTestVpnAdapterOptions();
+        return new TestDevice(this, _ => new TestVpnAdapter(testVpnAdapterOptions));
     }
 
     public TestDevice CreateNullDevice(ITracker? tracker = null)
     {
-        return new TestDevice(this, () => new NullVpnAdapter());
+        return new TestDevice(this, _ => new NullVpnAdapter());
     }
 
 
@@ -404,6 +404,8 @@ public class TestHelper : IDisposable
     public ClientOptions CreateClientOptions(Token token, bool useUdpChannel = false, string? clientId = null)
     {
         return new ClientOptions {
+            AppName = "VpnHoodTester",
+            SessionName = "UnitTestSession",
             ClientId = clientId ?? Guid.NewGuid().ToString(),
             AllowAnonymousTracker = true,
             AllowEndPointTracker = true,
@@ -412,7 +414,6 @@ public class TestHelper : IDisposable
             VpnAdapterIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToArray(),
             IncludeLocalNetwork = true,
             ConnectTimeout = TimeSpan.FromSeconds(3),
-            SessionName = "UnitTestSession",
             AccessKey = token.ToAccessKey()
         };
     }

@@ -8,7 +8,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.VpnAdapters.Abstractions;
 
-public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVpnAdapter
+public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAdapter
 {
     private readonly int _maxPacketSendDelayMs = (int)adapterSettings.MaxPacketSendDelay.TotalMilliseconds;
     private int _mtu = 0xFFFF;

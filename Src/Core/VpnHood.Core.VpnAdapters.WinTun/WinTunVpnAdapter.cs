@@ -12,7 +12,7 @@ using VpnHood.Core.VpnAdapters.WinTun.WinNative;
 
 namespace VpnHood.Core.VpnAdapters.WinTun;
 
-public class WinTunVpnAdapter(WinTunVpnAdapterSettings adapterSettings)
+public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     : TunVpnAdapter(adapterSettings)
 {
     private readonly int _ringCapacity = adapterSettings.RingCapacity;
@@ -39,7 +39,7 @@ public class WinTunVpnAdapter(WinTunVpnAdapterSettings adapterSettings)
         // create the adapter
         _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "WinTun", IntPtr.Zero);
         if (_tunAdapter == IntPtr.Zero)
-            throw new Win32Exception("Failed to create WinTun adapter.");
+            throw new Win32Exception("Failed to create WinTun adapter. Make sure the app is running with admin privilege.");
 
         return Task.CompletedTask;
     }

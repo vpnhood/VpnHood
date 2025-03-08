@@ -10,7 +10,7 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.LinuxTun.LinuxNative;
 
 namespace VpnHood.Core.VpnAdapters.LinuxTun;
-public class LinuxTunVpnAdapter(LinuxTunVpnAdapterSettings adapterSettings)
+public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     : TunVpnAdapter(adapterSettings)
 {
     private int _tunAdapterFd;

@@ -9,7 +9,7 @@ namespace VpnHood.Core.Client.Abstractions;
 
 public class ClientOptions
 {
-    public static ClientOptions Default { get; } = new() { ClientId = string.Empty, AccessKey = SampleAccessKey };
+    public static ClientOptions Default { get; } = new() { ClientId = string.Empty, AccessKey = SampleAccessKey, AppName = "VpnHoodEngine" };
 
     [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
     public IpRange[] IncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
@@ -30,6 +30,7 @@ public class ClientOptions
 
     [JsonConverter(typeof(VersionConverter))]
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
+    public required string AppName { get; set; }
     public required string AccessKey { get; set; }
     public required string ClientId { get; set; }
     public bool AutoDisposeVpnAdapter { get; set; } = true;
@@ -61,9 +62,11 @@ public class ClientOptions
     public string[]? ExcludeApps { get; set; }
     public string[]? IncludeApps { get; set; }
     public bool UseNullCapture { get; set; }
-    public LogServiceOptions LogServiceOptions { get; set; } = new ();
+    public LogServiceOptions LogServiceOptions { get; set; } = new();
     public string? Ga4MeasurementId { get; set; }
     public string? TrackerFactoryAssemblyQualifiedName { get; set; }
+    public string? DebugData1 { get; set; }
+    public string? DebugData2 { get; set; }
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

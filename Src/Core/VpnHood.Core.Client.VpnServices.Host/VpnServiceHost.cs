@@ -22,6 +22,7 @@ public class VpnServiceHost : IAsyncDisposable
     internal VpnHoodClient? Client { get; private set; }
     internal VpnHoodClient RequiredClient => Client ?? throw new InvalidOperationException("Client is not initialized.");
     internal VpnServiceContext Context { get; }
+    public ClientOptions? ClientOptions { get; private set; }
 
     public VpnServiceHost(
         string configFolder,
@@ -102,6 +103,7 @@ public class VpnServiceHost : IAsyncDisposable
             try {
                 // read client options and start log service
                 var clientOptions = Context.ReadClientOptions();
+                ClientOptions = clientOptions;
                 _logService?.Start(clientOptions.LogServiceOptions);
                 
                 // sni is sensitive, must be explicitly enabled
@@ -119,8 +121,11 @@ public class VpnServiceHost : IAsyncDisposable
 
                 // create client
                 VhLogger.Instance.LogDebug("VpnService is creating a new VpnHoodClient.");
+                var adapterSetting = new VpnAdapterSettings {
+                    AdapterName = clientOptions.AppName + " Adapter",
+                };
                 Client = new VpnHoodClient(
-                    vpnAdapter: clientOptions.UseNullCapture ? new NullVpnAdapter() : _vpnServiceHandler.CreateAdapter(),
+                    vpnAdapter: clientOptions.UseNullCapture ? new NullVpnAdapter() : _vpnServiceHandler.CreateAdapter(adapterSetting),
                     tracker: tracker,
                     socketFactory: _socketFactory,
                     options: clientOptions

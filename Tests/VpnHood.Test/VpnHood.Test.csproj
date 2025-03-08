@@ -36,10 +36,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Client.Device.WinDivert\VpnHood.Core.Client.Device.Win.csproj" />
 		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
 		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Server.Access.FileAccessManager\VpnHood.Core.Server.Access.FileAccessManager.csproj" />
 		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
+		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Client.Device.Win\VpnHood.Core.Client.Device.Win.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -43,17 +43,22 @@ internal class VpnServiceContext(string configFolder)
         return JsonUtils.Deserialize<ConnectionInfo>(json);
     }
 
+    private static ConnectionInfo BuildDefaultConnectionInfo(
+        byte[] apiKey, IPEndPoint? apiEndPoint, ClientState clientState = ClientState.None)
+    {
+        return new ConnectionInfo {
+            ClientState = clientState,
+            SessionInfo = null,
+            SessionStatus = null,
+            Error = null,
+            ApiEndPoint = apiEndPoint,
+            ApiKey = apiKey
+        };
+    }
+
     public async Task<ConnectionInfo> ReadConnectionInfoOrDefault(byte[] apiKey, IPEndPoint? apiEndPoint)
     {
-        return await TryReadConnectionInfo() ??
-               new ConnectionInfo {
-                   ClientState = ClientState.None,
-                   SessionInfo = null,
-                   SessionStatus = null,
-                   Error = null,
-                   ApiEndPoint = apiEndPoint,
-                   ApiKey = apiKey
-               };
+        return await TryReadConnectionInfo() ?? BuildDefaultConnectionInfo(apiKey, apiEndPoint);
     }
 
     public async Task<ConnectionInfo?> TryReadConnectionInfo()

@@ -45,9 +45,8 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         switch (action) {
             // signal start command
             case null or "android.net.VpnService" or "connect":
-                return _vpnServiceHost.Connect(forceReconnect: action == "connect")
-                    ? StartCommandResult.Sticky
-                    : StartCommandResult.NotSticky;
+                _vpnServiceHost.Connect(forceReconnect: action == "connect");
+                return StartCommandResult.Sticky;
 
             case "disconnect":
                 _vpnServiceHost.Disconnect();

@@ -5,6 +5,7 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
@@ -76,77 +77,100 @@ public class VpnServiceHost : IAsyncDisposable
         });
     }
 
-    private readonly object _connectLock = new();
-    public bool Connect(bool forceReconnect = false)
+    public void Connect(bool forceReconnect = false)
     {
         if (_isDisposed)
             throw new ObjectDisposedException(nameof(VpnServiceHost));
 
-        lock (_connectLock) {
-            VhLogger.Instance.LogDebug("VpnService is connecting... ProcessId: {ProcessId}", Process.GetCurrentProcess().Id);
+        // handle previous client
+        var client = Client;
+        if (!forceReconnect && client is { State: ClientState.Connected or ClientState.Connecting or ClientState.Waiting }) {
+            VhLogger.Instance.LogWarning("VpnService connection is already in progress.");
+            return; // user must disconnect first
+        }
 
-            // handle previous client
-            var client = Client;
-            if (client != null) {
-                if (!forceReconnect && client is { State: ClientState.Connected or ClientState.Connecting or ClientState.Waiting }) {
-                    VhLogger.Instance.LogWarning("VpnService connection is already in progress.");
-                    return true; // user must disconnect first
-                }
+        var clientOptions = Context.ReadClientOptions();
 
-                // before VpnHoodClient disposed, don't let the old connection overwrite the state or stop the service
-                client.StateChanged -= VpnHoodClient_StateChanged;
-                _ = client.DisposeAsync(); //let dispose in the background
-                Client = null;
-            }
+        // create a connection info for notification
+        var connectInfo = client != null
+            ? client.ToConnectionInfo(_apiController)
+            : new ConnectionInfo {
+                ClientState = ClientState.Initializing,
+                ApiKey = _apiController.ApiKey,
+                ApiEndPoint = _apiController.ApiEndPoint,
+                SessionInfo = null,
+                SessionStatus = null,
+                Error = null,
+                SessionName = clientOptions.SessionName
+            };
 
-            // create service
-            try {
-                // read client options and start log service
-                var clientOptions = Context.ReadClientOptions();
-                ClientOptions = clientOptions;
-                _logService?.Start(clientOptions.LogServiceOptions);
-                
-                // sni is sensitive, must be explicitly enabled
-                clientOptions.ForceLogSni |=
-                    clientOptions.LogServiceOptions.LogEventNames.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase);
+        // show notification as soon as possible
+        _vpnServiceHandler.ShowNotification(connectInfo);
+        
+        // run the connection in background
+        Task.Run(() => ConnectTask(clientOptions));
+    }
 
-                // create tracker
-                var trackerFactory = TryCreateTrackerFactory(clientOptions.TrackerFactoryAssemblyQualifiedName);
-                var tracker = trackerFactory?.TryCreateTracker(new TrackerCreateParams {
-                    ClientId = clientOptions.ClientId,
-                    ClientVersion = clientOptions.Version,
-                    Ga4MeasurementId = clientOptions.Ga4MeasurementId,
-                    UserAgent = clientOptions.UserAgent
-                });
 
-                // create client
-                VhLogger.Instance.LogDebug("VpnService is creating a new VpnHoodClient.");
-                var adapterSetting = new VpnAdapterSettings {
-                    AdapterName = clientOptions.AppName
-                };
-                Client = new VpnHoodClient(
-                    vpnAdapter: clientOptions.UseNullCapture ? new NullVpnAdapter() : _vpnServiceHandler.CreateAdapter(adapterSetting),
-                    tracker: tracker,
-                    socketFactory: _socketFactory,
-                    options: clientOptions
-                );
-                Client.StateChanged += VpnHoodClient_StateChanged;
-                Client.StateChanged += VpnHoodClient_StateChangedForDisposal;
+    private readonly AsyncLock _connectLock = new();
+    private async Task ConnectTask(ClientOptions clientOptions)
+    {
+        using var connectLock = await _connectLock.LockAsync();
+        VhLogger.Instance.LogDebug("VpnService is connecting... ProcessId: {ProcessId}", Process.GetCurrentProcess().Id);
 
-                // show notification. start foreground service
-                _vpnServiceHandler.ShowNotification(Client.ToConnectionInfo(_apiController));
+        // handle previous client
+        var client = Client;
+        if (client != null) {
+            // before VpnHoodClient disposed, don't let the old connection overwrite the state or stop the service
+            client.StateChanged -= VpnHoodClient_StateChanged;
+            _ = client.DisposeAsync(); //let dispose in the background
+            Client = null;
+        }
 
-                // let connect in the background
-                // ignore cancellation because it will be cancelled by disconnect or dispose
-                _ = Client.Connect(CancellationToken.None);
-                return true;
-            }
-            catch (Exception ex) {
-                _ = Context.WriteConnectionInfo(BuildConnectionInfo(ClientState.Disposed, ex));
-                _vpnServiceHandler.StopNotification();
-                _vpnServiceHandler.StopSelf();
-                return false;
-            }
+        // create service
+        try {
+            // read client options and start log service
+            ClientOptions = clientOptions;
+            _logService?.Start(clientOptions.LogServiceOptions);
+
+            // sni is sensitive, must be explicitly enabled
+            clientOptions.ForceLogSni |=
+                clientOptions.LogServiceOptions.LogEventNames.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase);
+
+            // create tracker
+            var trackerFactory = TryCreateTrackerFactory(clientOptions.TrackerFactoryAssemblyQualifiedName);
+            var tracker = trackerFactory?.TryCreateTracker(new TrackerCreateParams {
+                ClientId = clientOptions.ClientId,
+                ClientVersion = clientOptions.Version,
+                Ga4MeasurementId = clientOptions.Ga4MeasurementId,
+                UserAgent = clientOptions.UserAgent
+            });
+
+            // create client
+            VhLogger.Instance.LogDebug("VpnService is creating a new VpnHoodClient.");
+            var adapterSetting = new VpnAdapterSettings {
+                AdapterName = clientOptions.AppName
+            };
+            Client = new VpnHoodClient(
+                vpnAdapter: clientOptions.UseNullCapture ? new NullVpnAdapter() : _vpnServiceHandler.CreateAdapter(adapterSetting),
+                tracker: tracker,
+                socketFactory: _socketFactory,
+                options: clientOptions
+            );
+            Client.StateChanged += VpnHoodClient_StateChanged;
+            Client.StateChanged += VpnHoodClient_StateChangedForDisposal;
+
+            // show notification. start foreground service
+            _vpnServiceHandler.ShowNotification(Client.ToConnectionInfo(_apiController));
+
+            // let connect in the background
+            // ignore cancellation because it will be cancelled by disconnect or dispose
+            await Client.Connect(CancellationToken.None);
+        }
+        catch (Exception ex) {
+            _ = Context.WriteConnectionInfo(BuildConnectionInfo(ClientState.Disposed, ex));
+            _vpnServiceHandler.StopNotification();
+            _vpnServiceHandler.StopSelf();
         }
     }
 

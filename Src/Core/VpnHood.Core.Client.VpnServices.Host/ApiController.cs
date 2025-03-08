@@ -72,7 +72,6 @@ internal class ApiController : IDisposable
         }
     }
 
-
     private async Task<ConnectionInfo> GetConnectionInfoOrDefault()
     {
         return _vpnHoodService.Client?.ToConnectionInfo(this) ??

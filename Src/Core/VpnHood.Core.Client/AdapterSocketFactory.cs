@@ -12,9 +12,9 @@ public class AdapterSocketFactory(
 {
     public TcpClient CreateTcpClient(AddressFamily addressFamily)
     {
-        var tcpClient = vpnAdapter.CanProtectClient
-            ? vpnAdapter.CreateProtectedTcpClient(addressFamily)
-            : socketFactory.CreateTcpClient(addressFamily);
+        var tcpClient = socketFactory.CreateTcpClient(addressFamily);
+        if (vpnAdapter.CanProtectSocket)
+            vpnAdapter.ProtectSocket(tcpClient.Client);
 
         // config for client
         socketFactory.SetKeepAlive(tcpClient.Client, true);
@@ -24,11 +24,11 @@ public class AdapterSocketFactory(
 
     public UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
-        var ret = vpnAdapter.CanProtectClient
-            ? vpnAdapter.CreateProtectedUdpClient(addressFamily)
-            : socketFactory.CreateUdpClient(addressFamily);
+        var udpClient = socketFactory.CreateUdpClient(addressFamily);
+        if (vpnAdapter.CanProtectSocket)
+            vpnAdapter.ProtectSocket(udpClient.Client);
 
-        return ret;
+        return udpClient;
     }
 
     public void SetKeepAlive(Socket socket, bool enable)

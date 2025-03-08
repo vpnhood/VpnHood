@@ -19,16 +19,12 @@ public class LinuxTunVpnAdapter(LinuxTunVpnAdapterSettings adapterSettings)
     private string? _primaryAdapterName;
     public override bool IsNatSupported => true;
     public override bool IsAppFilterSupported => false;
-    protected override bool CanProtectSocket => false;
     protected override string? AppPackageId => null;
     protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on LinuxTun.");
 
     protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on LinuxTun.");
-
-    protected override void ProtectSocket(Socket socket)
-        =>  throw new NotSupportedException("Socket protection is not supported on LinuxTun.");
 
     private static async Task<string> GetPrimaryAdapterName(CancellationToken cancellationToken)
     {

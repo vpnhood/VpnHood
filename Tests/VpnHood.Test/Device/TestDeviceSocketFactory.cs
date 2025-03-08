@@ -9,16 +9,20 @@ public class TestDeviceSocketFactory(TestDevice testDevice) : ISocketFactory
     private readonly TestSocketFactory _socketFactory = new();
     public TcpClient CreateTcpClient(AddressFamily addressFamily)
     {
-        return testDevice.VpnService?.CurrentVpnAdapter!=null 
-            ? testDevice.VpnService.CurrentVpnAdapter.CreateProtectedTcpClient(addressFamily) 
-            : _socketFactory.CreateTcpClient(addressFamily);
+        var tcpClient = _socketFactory.CreateTcpClient(addressFamily);
+        if (testDevice.VpnService?.CurrentVpnAdapter?.CanProtectSocket == true)
+            testDevice.VpnService?.CurrentVpnAdapter.ProtectSocket(tcpClient.Client);
+
+        return tcpClient;
     }
 
     public UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
-        return testDevice.VpnService?.CurrentVpnAdapter != null
-            ? testDevice.VpnService.CurrentVpnAdapter.CreateProtectedUdpClient(addressFamily)
-            : _socketFactory.CreateUdpClient(addressFamily);
+        var udpClient = _socketFactory.CreateUdpClient(addressFamily);
+        if (testDevice.VpnService?.CurrentVpnAdapter?.CanProtectSocket == true)
+            testDevice.VpnService?.CurrentVpnAdapter.ProtectSocket(udpClient.Client);
+
+        return udpClient;
     }
 
     public void SetKeepAlive(Socket socket, bool enable)

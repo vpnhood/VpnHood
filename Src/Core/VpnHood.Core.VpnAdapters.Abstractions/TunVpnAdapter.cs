@@ -21,7 +21,7 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
     protected bool UseNat { get; private set; }
     public abstract bool IsAppFilterSupported { get; }
     public abstract bool IsNatSupported { get; }
-    protected abstract bool CanProtectSocket { get; }
+    public virtual bool CanProtectSocket => true;
     protected abstract string? AppPackageId { get; }
     protected abstract Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken);
     protected abstract Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken);
@@ -40,11 +40,9 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
     protected abstract void WaitForTunRead();
     protected abstract IPPacket? ReadPacket(int mtu);
     protected abstract bool WritePacket(IPPacket ipPacket);
-    protected abstract void ProtectSocket(Socket socket);
 
     public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public event EventHandler? Disposed;
-    public virtual bool CanProtectClient => true;
     public string AdapterName { get; } = adapterSettings.AdapterName;
     public IPAddress? PrimaryAdapterIpV4 { get; private set; }
     public IPAddress? PrimaryAdapterIpV6 { get; private set; }
@@ -218,54 +216,23 @@ public abstract class TunVpnAdapter(TunVpnAdapterSettings adapterSettings) : IVp
         }
     }
 
-    public virtual UdpClient CreateProtectedUdpClient(AddressFamily addressFamily)
+    public virtual void ProtectSocket(Socket socket)
     {
-        if (CanProtectSocket) {
-            var udpClient = new UdpClient(addressFamily);
-            ProtectSocket(udpClient.Client);
-            return udpClient;
+        if (socket.LocalEndPoint != null)
+            throw new InvalidOperationException("Could not protect an already bound socket.");
+
+        switch (socket.AddressFamily) {
+            case AddressFamily.InterNetwork when PrimaryAdapterIpV4 != null:
+                socket.Bind(new IPEndPoint(PrimaryAdapterIpV4, 0));
+                break;
+
+            case AddressFamily.InterNetworkV6 when PrimaryAdapterIpV6 != null:
+                socket.Bind(new IPEndPoint(PrimaryAdapterIpV6, 0));
+                break;
+
+            default:
+                throw new NotSupportedException("The address family is not supported.");
         }
-
-        return addressFamily switch {
-            AddressFamily.InterNetwork when PrimaryAdapterIpV4 != null =>
-                new UdpClient(new IPEndPoint(PrimaryAdapterIpV4, 0)),
-
-            AddressFamily.InterNetwork when PrimaryAdapterIpV4 == null =>
-                new UdpClient(addressFamily),
-
-            AddressFamily.InterNetworkV6 when PrimaryAdapterIpV6 != null =>
-                new UdpClient(new IPEndPoint(PrimaryAdapterIpV6, 0)),
-
-            AddressFamily.InterNetworkV6 when PrimaryAdapterIpV6 == null =>
-                new UdpClient(addressFamily),
-
-            _ => throw new NotSupportedException("The address family is not supported.")
-        };
-    }
-
-    public virtual TcpClient CreateProtectedTcpClient(AddressFamily addressFamily)
-    {
-        if (CanProtectSocket) {
-            var tcpClient = new TcpClient(addressFamily);
-            ProtectSocket(tcpClient.Client);
-            return tcpClient;
-        }
-
-        return addressFamily switch {
-            AddressFamily.InterNetwork when PrimaryAdapterIpV4 != null =>
-                new TcpClient(new IPEndPoint(PrimaryAdapterIpV4, 0)),
-
-            AddressFamily.InterNetwork when PrimaryAdapterIpV4 == null =>
-                new TcpClient(addressFamily),
-
-            AddressFamily.InterNetworkV6 when PrimaryAdapterIpV6 != null =>
-                new TcpClient(new IPEndPoint(PrimaryAdapterIpV6, 0)),
-
-            AddressFamily.InterNetworkV6 when PrimaryAdapterIpV6 == null =>
-                new TcpClient(addressFamily),
-
-            _ => throw new NotSupportedException("The address family is not supported.")
-        };
     }
 
     private IPAddress? GetPrimaryAdapterIp(IPEndPoint remoteEndPoint)

@@ -25,16 +25,12 @@ public class WinTunVpnAdapter(WinTunVpnAdapterSettings adapterSettings)
     public const int MaxRingCapacity = 0x4000000; // 64MiB
     public override bool IsNatSupported => true;
     public override bool IsAppFilterSupported => false;
-    protected override bool CanProtectSocket => false;
     protected override string? AppPackageId => null;
     protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on WinTun.");
 
     protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on WinTun.");
-
-    protected override void ProtectSocket(Socket socket) =>
-        throw new NotSupportedException("ProtectSocket is not supported on WinTun.");
 
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {

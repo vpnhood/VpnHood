@@ -23,7 +23,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     private WinDivertDevice? _device;
     private WinDivertHeader? _lastCaptureHeader;
-    private readonly List<IpNetwork> _includeIpNetworks = new();
+    private readonly List<IpNetwork> _includeIpNetworks = [];
     private IPAddress[] _dnsServers = [];
     private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>> _lastDnsServersV4 = new(TimeSpan.FromSeconds(30));
     private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>> _lastDnsServersV6 = new(TimeSpan.FromSeconds(30));

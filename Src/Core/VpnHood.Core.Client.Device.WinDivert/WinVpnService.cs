@@ -3,7 +3,6 @@ using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.WinDivert;
-using VpnHood.Core.VpnAdapters.WinTun;
 
 namespace VpnHood.Core.Client.Device.WinDivert;
 

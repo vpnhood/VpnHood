@@ -33,6 +33,7 @@ internal class ClientHost(
     private int _processingCount;
     private readonly ClientHostStat _stat = new();
     private int _passthruInProcessPacketsCounter;
+    private readonly Nat _nat = new(true);
 
 
     public IPAddress CatcherAddressIpV4 { get; } = catcherAddressIpV4;
@@ -128,7 +129,7 @@ internal class ClientHost(
 
                 // redirect to inbound
                 if (Equals(ipPacket.DestinationAddress, catcherAddress)) {
-                    var natItem = (NatItemEx?)vpnHoodClient.Nat.Resolve(ipPacket.Version, ipPacket.Protocol,
+                    var natItem = (NatItemEx?)_nat.Resolve(ipPacket.Version, ipPacket.Protocol,
                                       tcpPacket.DestinationPort)
                                   ?? throw new Exception("Could not find incoming tcp destination in NAT.");
 
@@ -144,8 +145,8 @@ internal class ClientHost(
 
                     // add to nat if it is sync packet
                     var natItem = syncCustomData != null
-                        ? vpnHoodClient.Nat.Add(ipPacket, true)
-                        : vpnHoodClient.Nat.Get(ipPacket) ??
+                        ? _nat.Add(ipPacket, true)
+                        : _nat.Get(ipPacket) ??
                           throw new Exception("Could not find outgoing tcp destination in NAT.");
 
                     // set customData
@@ -230,7 +231,7 @@ internal class ClientHost(
                 : IPVersion.IPv6;
 
             var natItem =
-                (NatItemEx?)vpnHoodClient.Nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port) ??
+                (NatItemEx?)_nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port) ??
                 throw new Exception(
                     $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
 
@@ -327,7 +328,7 @@ internal class ClientHost(
         _cancellationTokenSource.Cancel();
         _tcpListenerIpV4?.Stop();
         _tcpListenerIpV6?.Stop();
-
+        _nat.Dispose();
         return default;
     }
 

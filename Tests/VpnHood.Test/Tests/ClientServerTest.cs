@@ -780,6 +780,6 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
         await client.WaitForState(ClientState.Connected);
 
-        Assert.IsTrue(client.DnsServers is { Length: > 0 });
+        Assert.IsTrue(client.SessionInfo?.DnsServers is { Length: > 0 });
     }
 }

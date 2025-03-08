@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Net;
-using System.Net.Sockets;
 using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
@@ -13,7 +12,6 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Trackers;
-using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -47,9 +45,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private readonly bool _allowAnonymousTracker;
-    private IPAddress[] _dnsServersIpV4 = [];
-    private IPAddress[] _dnsServersIpV6 = [];
-    private IPAddress[] _dnsServers = [];
     private ClientUsageTracker? _clientUsageTracker;
     private DateTime? _initConnectedTime;
     private DateTime? _lastConnectionErrorTime;
@@ -70,9 +65,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private readonly string[]? _includeApps;
     private readonly string[]? _excludeApps;
     private ClientSessionStatus? _sessionStatus;
-
+    private IPAddress[] _dnsServers;
+    
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
-    internal Nat Nat { get; }
     internal Tunnel Tunnel { get; }
     public ISocketFactory SocketFactory { get; }
     public JobSection JobSection { get; } = new();
@@ -125,7 +120,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         var token = Token.FromAccessKey(options.AccessKey);
         socketFactory = new AdapterSocketFactory(vpnAdapter, socketFactory);
         SocketFactory = socketFactory;
-        DnsServers = options.DnsServers ?? [];
+        _dnsServers = options.DnsServers ?? [];
         _allowAnonymousTracker = options.AllowAnonymousTracker;
         _minTcpDatagramLifespan = options.MinTcpDatagramTimespan;
         _maxTcpDatagramLifespan = options.MaxTcpDatagramTimespan;
@@ -160,16 +155,13 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         DropUdp = options.DropUdp;
         DropQuic = options.DropQuic;
         UseTcpOverTun = options.UseTcpOverTun;
-        var dnsRange = DnsServers.Select(x => new IpRange(x)).ToArray();
+        var dnsRange = options.DnsServers?.Select(x => new IpRange(x)).ToArray() ?? [];
         VpnAdapterIncludeIpRanges = options.VpnAdapterIncludeIpRanges.ToOrderedList().Union(dnsRange);
         IncludeIpRanges = options.IncludeIpRanges.ToOrderedList().Union(dnsRange);
         AdService = new ClientAdService(this);
 
         // SNI is sensitive, must be explicitly enabled
         DomainFilterService = new DomainFilterService(options.DomainFilter, forceLogSni: options.ForceLogSni);
-
-        // NAT
-        Nat = new Nat(true);
 
         // Tunnel
         Tunnel = new Tunnel();
@@ -188,15 +180,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         JobRunner.Default.Add(this);
     }
 
-
-    public IPAddress[] DnsServers {
-        get => _dnsServers;
-        private set {
-            _dnsServersIpV4 = value.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
-            _dnsServersIpV6 = value.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
-            _dnsServers = value;
-        }
-    }
 
     public ClientState State {
         get => _state;
@@ -341,15 +324,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     // WARNING: Performance Critical!
     private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
     {
-        // manually manage DNS reply if DNS does not supported by _vpnAdapter
-        if (!_vpnAdapter.IsDnsServerSupported)
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < e.IpPackets.Count; i++) {
-                var ipPacket = e.IpPackets[i];
-                UpdateDnsRequest(ipPacket, false);
-            }
-
-        // ReSharper disable once ForCanBeConvertedToForeach
         _vpnAdapter.SendPackets(e.IpPackets);
     }
 
@@ -374,23 +348,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 for (var i = 0; i < e.IpPackets.Count; i++) {
                     var ipPacket = e.IpPackets[i];
                     if (_disposed) return;
-                    var isIpV6 = ipPacket.DestinationAddress.IsV6();
+                    var isIpV6 = ipPacket.Version == IPVersion.IPv6;
                     var udpPacket = ipPacket.Protocol == ProtocolType.Udp ? ipPacket.Extract<UdpPacket>() : null;
-                    var isDnsPacket = udpPacket?.DestinationPort == 53;
-
-                    // DNS packet must go through tunnel even if it is not in range
-                    if (isDnsPacket) {
-                        // Drop IPv6 if not support
-                        if (isIpV6 && !IsIpV6SupportedByServer) {
-                            droppedPackets.Add(ipPacket);
-                        }
-                        else {
-                            if (!_vpnAdapter.IsDnsServerSupported)
-                                UpdateDnsRequest(ipPacket, true);
-
-                            tunnelPackets.Add(ipPacket);
-                        }
-                    }
 
                     // tcp already check for InInRange and IpV6 and Proxy
                     if (ipPacket.Protocol == ProtocolType.Tcp) {
@@ -517,53 +476,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         _includeIps.Add(ipAddress, isInRange);
         return isInRange;
-    }
-
-    // ReSharper disable once UnusedMethodReturnValue.Local
-    private bool UpdateDnsRequest(IPPacket ipPacket, bool outgoing)
-    {
-        if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-        if (ipPacket.Protocol != ProtocolType.Udp) return false;
-
-        // find dns server
-        var dnsServers = ipPacket.Version == IPVersion.IPv4 ? _dnsServersIpV4 : _dnsServersIpV6;
-        if (dnsServers.Length == 0) {
-            VhLogger.Instance.LogWarning(
-                "There is no DNS server for this Address Family. AddressFamily : {AddressFamily}",
-                ipPacket.DestinationAddress.AddressFamily);
-            return false;
-        }
-
-        // manage DNS outgoing packet if requested DNS is not VPN DNS
-        if (outgoing && Array.FindIndex(dnsServers, x => x.Equals(ipPacket.DestinationAddress)) == -1) {
-            var udpPacket = ipPacket.ExtractUdp();
-            if (udpPacket.DestinationPort == 53) //53 is DNS port
-            {
-                var dnsServer = dnsServers[0];
-                VhLogger.Instance.LogDebug(GeneralEventId.Dns,
-                    $"DNS request from {VhLogger.Format(ipPacket.SourceAddress)}:{udpPacket.SourcePort} to {VhLogger.Format(ipPacket.DestinationAddress)}, Map to: {VhLogger.Format(dnsServer)}");
-                udpPacket.SourcePort = Nat.GetOrAdd(ipPacket).NatId;
-                ipPacket.DestinationAddress = dnsServer;
-                ipPacket.UpdateAllChecksums();
-                return true;
-            }
-        }
-
-        // manage DNS incoming packet from VPN DNS
-        else if (!outgoing && Array.FindIndex(dnsServers, x => x.Equals(ipPacket.SourceAddress)) != -1) {
-            var udpPacket = ipPacket.ExtractUdp();
-            var natItem = (NatItemEx?)Nat.Resolve(ipPacket.Version, ProtocolType.Udp, udpPacket.DestinationPort);
-            if (natItem != null) {
-                VhLogger.Instance.LogDebug(GeneralEventId.Dns,
-                    $"DNS reply to {VhLogger.Format(natItem.SourceAddress)}:{natItem.SourcePort}");
-                ipPacket.SourceAddress = natItem.DestinationAddress;
-                udpPacket.DestinationPort = natItem.SourcePort;
-                ipPacket.UpdateAllChecksums();
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private bool ShouldManageDatagramChannels {
@@ -732,27 +644,26 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             // set DNS after setting IpFilters
             VhLogger.Instance.LogInformation("Configuring Client DNS servers... DnsServers: {DnsServers}",
-                string.Join(", ", DnsServers.Select(x => x.ToString())));
-            _isDnsServersAccepted =
-                VhUtils.IsNullOrEmpty(DnsServers) || DnsServers.Any(IsInIpRange); // no servers means accept default
+                string.Join(", ", _dnsServers.Select(x => x.ToString())));
+            _isDnsServersAccepted = VhUtils.IsNullOrEmpty(_dnsServers) || _dnsServers.Any(IsInIpRange); // no servers means accept default
             if (!_isDnsServersAccepted)
                 VhLogger.Instance.LogWarning(
                     "Client DNS servers have been ignored because the server does not route them.");
 
-            DnsServers = DnsServers.Where(IsInIpRange).ToArray();
-            if (VhUtils.IsNullOrEmpty(DnsServers)) {
-                DnsServers = VhUtils.IsNullOrEmpty(helloResponse.DnsServers)
+            _dnsServers = _dnsServers.Where(IsInIpRange).ToArray();
+            if (VhUtils.IsNullOrEmpty(_dnsServers)) {
+                _dnsServers = VhUtils.IsNullOrEmpty(helloResponse.DnsServers)
                     ? IPAddressUtil.GoogleDnsServers
                     : helloResponse.DnsServers;
-                IncludeIpRanges = IncludeIpRanges.Union(DnsServers.Select(IpRange.FromIpAddress));
+                IncludeIpRanges = IncludeIpRanges.Union(_dnsServers.Select(IpRange.FromIpAddress));
             }
 
-            if (VhUtils.IsNullOrEmpty(DnsServers?.Where(IsInIpRange)
+            if (VhUtils.IsNullOrEmpty(_dnsServers?.Where(IsInIpRange)
                     .ToArray())) // make sure there is at least one DNS server
                 throw new Exception("Could not specify any DNS server. The server is not configured properly.");
 
             VhLogger.Instance.LogInformation("DnsServers: {DnsServers}",
-                string.Join(", ", DnsServers.Select(VhLogger.Format)));
+                string.Join(", ", _dnsServers.Select(VhLogger.Format)));
 
             // report Suppressed
             if (helloResponse.SuppressedTo == SessionSuppressType.YourSelf)
@@ -768,7 +679,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 ClientCountry = helloResponse.ClientCountry,
                 AccessInfo = helloResponse.AccessInfo ?? new AccessInfo(),
                 IsDnsServersAccepted = _isDnsServersAccepted,
-                DnsServers = DnsServers,
+                DnsServers = _dnsServers,
                 IsPremiumSession = helloResponse.AccessUsage?.IsPremium ?? false,
                 IsUdpChannelSupported = HostUdpEndPoint != null,
                 AccessKey = helloResponse.AccessKey,
@@ -822,8 +733,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             var networkV4 = helloResponse.VirtualIpNetworkV4 ?? new IpNetwork(IPAddress.Parse("10.255.0.2"), 32);
             var networkV6 = helloResponse.VirtualIpNetworkV6 ?? new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
 
-            var longIncludeNetworks =
-                string.Join(", ", VpnAdapterIncludeIpRanges.ToIpNetworks().Select(VhLogger.Format));
+            var longIncludeNetworks = string.Join(", ", VpnAdapterIncludeIpRanges.ToIpNetworks().Select(VhLogger.Format));
             VhLogger.Instance.LogInformation(
                 "Starting VpnAdapter... DnsServers: {DnsServers}, IncludeNetworks: {longIncludeNetworks}",
                 SessionInfo.DnsServers, longIncludeNetworks);
@@ -1067,10 +977,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         VhLogger.Instance.LogDebug("Disposing ProxyManager...");
         await _proxyManager.DisposeAsync().VhConfigureAwait();
-
-        // dispose NAT
-        VhLogger.Instance.LogDebug("Disposing Nat...");
-        Nat.Dispose();
 
         // don't wait for this. It is just for server clean up we should not wait the user for it
         // Sending Bye

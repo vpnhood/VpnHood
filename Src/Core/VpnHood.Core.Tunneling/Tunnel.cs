@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -334,7 +335,9 @@ public class Tunnel : IJob, IAsyncDisposable
                         // drop packet if it is larger than _mtuWithFragment
                         if (packetSize > MtuWithFragment) {
                             VhLogger.Instance.LogWarning(
-                                $"Packet dropped! There is no channel to support this fragmented packet. Fragmented MTU: {MtuWithFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {PacketUtil.Format(ipPacket)}");
+                                "Packet dropped! There is no channel to support this fragmented packet. " +
+                                "Fragmented MTU: {MtuWithFragment}, PacketLength: {PacketLength}, Packet: {Packet}",
+                                MtuWithFragment, ipPacket.TotalLength, PacketLogger.Format(ipPacket));
                             _packetQueue.TryDequeue(out ipPacket);
                             continue;
                         }
@@ -342,9 +345,9 @@ public class Tunnel : IJob, IAsyncDisposable
                         // drop packet if it is larger than _mtuNoFragment
                         if (packetSize > MtuNoFragment && ipPacket is IPv4Packet { FragmentFlags: 2 }) {
                             VhLogger.Instance.LogWarning(
-                                $"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {MtuNoFragment}, Packet: {PacketUtil.Format(ipPacket)}");
+                                $"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {MtuNoFragment}, Packet: {PacketLogger.Format(ipPacket)}");
                             _packetQueue.TryDequeue(out ipPacket);
-                            var replyPacket = PacketUtil.CreatePacketTooBigReply(ipPacket, MtuNoFragment);
+                            var replyPacket = PacketBuilder.BuildPacketTooBigReply(ipPacket, MtuNoFragment);
                             PacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs([replyPacket], channel));
                             continue;
                         }

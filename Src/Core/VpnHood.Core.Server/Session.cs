@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
@@ -197,7 +198,7 @@ public class Session : IAsyncDisposable
         var clientInternalIp = GetClientInternalIp(ipPacket.Version);
         if (clientInternalIp != null && !ipPacket.DestinationAddress.Equals(clientInternalIp)) {
             ipPacket.DestinationAddress = clientInternalIp;
-            PacketUtil.UpdateIpChecksum(ipPacket);
+            ipPacket.UpdateIpChecksum();
         }
 
         return Tunnel.SendPacketAsync(ipPacket, CancellationToken.None);
@@ -225,13 +226,13 @@ public class Session : IAsyncDisposable
                 // todo: legacy version. Packet must be dropped if it does not have correct source address
                 // PacketLogger.LogPacket(ipPacket, $"Invalid tunnel packet source ip.");
                 ipPacket.SourceAddress = virtualIp;
-                PacketUtil.UpdateIpChecksum(ipPacket);
+                ipPacket.UpdateIpChecksum();
             }
 
             // filter
             var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
             if (ipPacket2 == null) {
-                var ipeEndPointPair = PacketUtil.GetPacketEndPoints(ipPacket);
+                var ipeEndPointPair = ipPacket.GetEndPoints();
                 LogTrack(ipPacket.Protocol.ToString(), null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
                 _filterReporter.Raise();
                 continue;

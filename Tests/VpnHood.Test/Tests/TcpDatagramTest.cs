@@ -2,12 +2,12 @@
 using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.DatagramMessaging;
-using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Test.Tests;
 
@@ -61,7 +61,7 @@ public class TcpDatagramChannelTest : TestBase
         // Check sending packet to server
         // ------
         var testPacket =
-            PacketUtil.CreateUdpPacket(IPEndPoint.Parse("1.1.1.1:1"), IPEndPoint.Parse("1.1.1.1:2"), [1, 2, 3]);
+            PacketBuilder.BuildUdpPacket(IPEndPoint.Parse("1.1.1.1:1"), IPEndPoint.Parse("1.1.1.1:2"), [1, 2, 3]);
         await clientTunnel.SendPacketsAsync([testPacket], CancellationToken.None);
         await VhTestUtil.AssertEqualsWait(testPacket.ToString(), () => lastServerReceivedPacket?.ToString());
         await VhTestUtil.AssertEqualsWait(0, () => clientTunnel.DatagramChannelCount);

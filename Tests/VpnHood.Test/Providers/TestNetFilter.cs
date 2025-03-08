@@ -2,8 +2,8 @@
 using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Server;
-using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Test.Providers;
 
@@ -40,30 +40,30 @@ public class TestNetFilter : NetFilter
 
         switch (ipPacket.Protocol) {
             case ProtocolType.Udp: {
-                var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+                var udpPacket = ipPacket.ExtractUdp();
                 var newEndPoint = ProcessRequest(ipPacket.Protocol,
                     new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort));
                 if (newEndPoint == null) return null;
                 ipPacket.DestinationAddress = newEndPoint.Address;
                 udpPacket.DestinationPort = (ushort)newEndPoint.Port;
-                PacketUtil.UpdateIpPacket(ipPacket);
+                ipPacket.UpdateIpPacket();
                 return ipPacket;
             }
             case ProtocolType.Tcp: {
-                var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                var tcpPacket = ipPacket.ExtractTcp();
                 var newEndPoint = ProcessRequest(ipPacket.Protocol,
                     new IPEndPoint(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
                 if (newEndPoint == null) return null;
                 ipPacket.DestinationAddress = newEndPoint.Address;
                 tcpPacket.DestinationPort = (ushort)newEndPoint.Port;
-                PacketUtil.UpdateIpPacket(ipPacket);
+                ipPacket.UpdateIpPacket();
                 return ipPacket;
             }
             case ProtocolType.Icmp or ProtocolType.IcmpV6: {
                 var newEndPoint = ProcessRequest(ipPacket.Protocol, new IPEndPoint(ipPacket.DestinationAddress, 0));
                 if (newEndPoint == null) return null;
                 ipPacket.DestinationAddress = newEndPoint.Address;
-                PacketUtil.UpdateIpPacket(ipPacket);
+                ipPacket.UpdateIpPacket();
                 return ipPacket;
             }
             default:
@@ -75,26 +75,26 @@ public class TestNetFilter : NetFilter
     {
         switch (ipPacket.Protocol) {
             case ProtocolType.Udp: {
-                var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+                var udpPacket = ipPacket.ExtractUdp();
                 if (NetMapR.TryGetValue(
                         Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort)),
                         out var newEndPoint1)) {
                     ipPacket.SourceAddress = newEndPoint1.Address;
                     udpPacket.SourcePort = (ushort)newEndPoint1.Port;
-                    PacketUtil.UpdateIpPacket(ipPacket);
+                    ipPacket.UpdateIpPacket();
                 }
 
                 break;
             }
 
             case ProtocolType.Tcp: {
-                var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                var tcpPacket = ipPacket.ExtractTcp();
                 if (NetMapR.TryGetValue(
                         Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, tcpPacket.SourcePort)),
                         out var tcpEndPoint)) {
                     ipPacket.SourceAddress = tcpEndPoint.Address;
                     tcpPacket.SourcePort = (ushort)tcpEndPoint.Port;
-                    PacketUtil.UpdateIpPacket(ipPacket);
+                    ipPacket.UpdateIpPacket();
                 }
 
                 break;
@@ -105,7 +105,7 @@ public class TestNetFilter : NetFilter
                         Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, 0)),
                         out var icmpEndPoint)) {
                     ipPacket.SourceAddress = icmpEndPoint.Address;
-                    PacketUtil.UpdateIpPacket(ipPacket);
+                    ipPacket.UpdateIpPacket();
                 }
 
                 break;

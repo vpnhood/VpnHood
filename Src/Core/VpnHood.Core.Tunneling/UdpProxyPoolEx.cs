@@ -1,13 +1,13 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using PacketDotNet;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Sockets;
-using VpnHood.Core.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Tunneling;
@@ -59,7 +59,7 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
     public Task SendPacket(IPPacket ipPacket)
     {
         // send packet via proxy
-        var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+        var udpPacket = ipPacket.ExtractUdp();
         bool? noFragment = ipPacket.Protocol == ProtocolType.IPv6 && ipPacket is IPv4Packet ipV4Packet
             ? (ipV4Packet.FragmentFlags & 0x2) != 0
             : null;

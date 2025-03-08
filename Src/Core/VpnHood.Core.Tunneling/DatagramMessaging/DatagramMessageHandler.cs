@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using PacketDotNet;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.DatagramMessaging;
 
@@ -20,7 +20,7 @@ public static class DatagramMessageHandler
         mem.WriteByte(1);
         mem.WriteByte((byte)GetMessageCode(requestMessage));
         StreamUtils.WriteObject(mem, requestMessage);
-        var ipPacket = PacketUtil.CreateUdpPacket(new IPEndPoint(0, 0), new IPEndPoint(0, 0), mem.ToArray(), false);
+        var ipPacket = PacketBuilder.BuildUdpPacket(new IPEndPoint(0, 0), new IPEndPoint(0, 0), mem.ToArray(), false);
         return ipPacket;
     }
 
@@ -34,7 +34,7 @@ public static class DatagramMessageHandler
         if (!IsDatagramMessage(ipPacket))
             throw new ArgumentException("packet is not a Datagram message.", nameof(ipPacket));
 
-        var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+        var udpPacket = ipPacket.ExtractUdp();
 
         // read version and messageCode
         var buffer = new byte[2];

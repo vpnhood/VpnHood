@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using ProtocolType = PacketDotNet.ProtocolType;
 
@@ -28,28 +29,28 @@ public static class PacketLogger
             switch (ipPacket.Protocol) {
                 case ProtocolType.Icmp: {
                         eventId = GeneralEventId.Ping;
-                        var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
+                        var icmpPacket = ipPacket.ExtractIcmp();
                         packetPayload = icmpPacket.PayloadData ?? [];
                         break;
                     }
 
                 case ProtocolType.IcmpV6: {
                         eventId = GeneralEventId.Ping;
-                        var icmpPacket = PacketUtil.ExtractIcmpV6(ipPacket);
+                        var icmpPacket = ipPacket.ExtractIcmpV6();
                         packetPayload = icmpPacket.PayloadData ?? [];
                         break;
                     }
 
                 case ProtocolType.Udp: {
                         eventId = GeneralEventId.Udp;
-                        var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+                        var udpPacket = ipPacket.ExtractUdp();
                         packetPayload = udpPacket.PayloadData ?? [];
                         break;
                     }
 
                 case ProtocolType.Tcp: {
                         eventId = GeneralEventId.Tcp;
-                        var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                        var tcpPacket = ipPacket.ExtractTcp();
                         packetPayload = tcpPacket.PayloadData ?? [];
                         break;
                     }
@@ -57,13 +58,17 @@ public static class PacketLogger
 
             VhLogger.Instance.Log(logLevel, eventId, exception,
                 message + " Packet: {Packet}, PayloadLength: {PayloadLength}, Payload: {Payload}",
-                PacketUtil.Format(ipPacket), packetPayload.Length,
+                Format(ipPacket), packetPayload.Length,
                 BitConverter.ToString(packetPayload, 0, Math.Min(10, packetPayload.Length)));
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.Packet,
                 ex, "Could not extract packet for log. Packet: {Packet}, Message: {Message}, Exception: {Exception}",
-                PacketUtil.Format(ipPacket), message, exception);
+                Format(ipPacket), message, exception);
         }
+    }
+    public static string Format(IPPacket ipPacket)
+    {
+        return VhLogger.FormatIpPacket(ipPacket.ToString()!);
     }
 }

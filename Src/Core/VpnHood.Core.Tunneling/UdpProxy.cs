@@ -2,10 +2,10 @@
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
@@ -83,7 +83,7 @@ internal class UdpProxy : ITimeoutItem
             LastUsedTime = FastDateTime.Now;
 
             // create packet for audience
-            var ipPacket = PacketUtil.CreateUdpPacket(udpResult.RemoteEndPoint, SourceEndPoint, udpResult.Buffer);
+            var ipPacket = PacketBuilder.BuildUdpPacket(udpResult.RemoteEndPoint, SourceEndPoint, udpResult.Buffer);
 
             // send packet to audience
             await _packetReceiver.OnPacketReceived(ipPacket).VhConfigureAwait();

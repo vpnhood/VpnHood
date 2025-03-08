@@ -13,6 +13,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Trackers;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -22,7 +23,6 @@ using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Sockets;
-using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using FastDateTime = VpnHood.Core.Toolkit.Utils.FastDateTime;
 using PacketReceivedEventArgs = VpnHood.Core.VpnAdapters.Abstractions.PacketReceivedEventArgs;
@@ -466,7 +466,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         if (DropUdp)
             return false;
 
-        if (DropQuic && PacketUtil.IsQuicPort(udpPacket))
+        if (DropQuic && udpPacket.DestinationPort is 80 or 443)
             return false;
 
         return true;
@@ -536,7 +536,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         // manage DNS outgoing packet if requested DNS is not VPN DNS
         if (outgoing && Array.FindIndex(dnsServers, x => x.Equals(ipPacket.DestinationAddress)) == -1) {
-            var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+            var udpPacket = ipPacket.ExtractUdp();
             if (udpPacket.DestinationPort == 53) //53 is DNS port
             {
                 var dnsServer = dnsServers[0];
@@ -544,21 +544,21 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     $"DNS request from {VhLogger.Format(ipPacket.SourceAddress)}:{udpPacket.SourcePort} to {VhLogger.Format(ipPacket.DestinationAddress)}, Map to: {VhLogger.Format(dnsServer)}");
                 udpPacket.SourcePort = Nat.GetOrAdd(ipPacket).NatId;
                 ipPacket.DestinationAddress = dnsServer;
-                PacketUtil.UpdateIpPacket(ipPacket);
+                ipPacket.UpdateIpPacket();
                 return true;
             }
         }
 
         // manage DNS incoming packet from VPN DNS
         else if (!outgoing && Array.FindIndex(dnsServers, x => x.Equals(ipPacket.SourceAddress)) != -1) {
-            var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+            var udpPacket = ipPacket.ExtractUdp();
             var natItem = (NatItemEx?)Nat.Resolve(ipPacket.Version, ProtocolType.Udp, udpPacket.DestinationPort);
             if (natItem != null) {
                 VhLogger.Instance.LogDebug(GeneralEventId.Dns,
                     $"DNS reply to {VhLogger.Format(natItem.SourceAddress)}:{natItem.SourcePort}");
                 ipPacket.SourceAddress = natItem.DestinationAddress;
                 udpPacket.DestinationPort = natItem.SourcePort;
-                PacketUtil.UpdateIpPacket(ipPacket);
+                ipPacket.UpdateIpPacket();
                 return true;
             }
         }

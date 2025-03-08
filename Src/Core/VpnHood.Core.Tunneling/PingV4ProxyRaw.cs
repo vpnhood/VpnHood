@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using PacketDotNet;
-using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Core.Packets;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Tunneling;
@@ -32,7 +32,7 @@ public class PingV4ProxyRaw : IDisposable
         if (ipPacket.Protocol != ProtocolType.Icmp)
             throw new InvalidOperationException("Invalid ICMP packet.");
 
-        var icmpV4Packet = PacketUtil.ExtractIcmp(ipPacket);
+        var icmpV4Packet = ipPacket.ExtractIcmp();
         _socket.SendTo(icmpV4Packet.Bytes, new IPEndPoint(ipPacket.DestinationAddress, 0));
     }
 

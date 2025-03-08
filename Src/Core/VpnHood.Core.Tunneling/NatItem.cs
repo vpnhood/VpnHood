@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using PacketDotNet;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
@@ -29,13 +29,13 @@ public class NatItem
 
         switch (ipPacket.Protocol) {
             case ProtocolType.Tcp: {
-                var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                var tcpPacket = ipPacket.ExtractTcp();
                 SourcePort = tcpPacket.SourcePort;
                 break;
             }
 
             case ProtocolType.Udp: {
-                var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+                var udpPacket = ipPacket.ExtractUdp();
                 SourcePort = udpPacket.SourcePort;
                 break;
             }
@@ -59,7 +59,7 @@ public class NatItem
     [SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "<Pending>")]
     private static ushort GetIcmpId(IPPacket ipPacket)
     {
-        var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
+        var icmpPacket = ipPacket.ExtractIcmp();
         var type = (int)icmpPacket.TypeCode >> 8;
         switch (type) {
             // Identifier
@@ -88,7 +88,7 @@ public class NatItem
     //see https://datatracker.ietf.org/doc/html/rfc4443
     private static ushort GetIcmpV6Id(IPPacket ipPacket)
     {
-        var icmpPacket = PacketUtil.ExtractIcmpV6(ipPacket);
+        var icmpPacket = ipPacket.ExtractIcmpV6();
         var type = (int)icmpPacket.Type;
 
         switch (icmpPacket.Type) {

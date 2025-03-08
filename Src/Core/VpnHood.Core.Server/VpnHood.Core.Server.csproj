@@ -32,7 +32,6 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.2" />
-		<PackageReference Include="PacketDotNet" Version="1.4.7" />
 		<PackageReference Include="System.Text.Json" Version="9.0.2" />
 	</ItemGroup>
 

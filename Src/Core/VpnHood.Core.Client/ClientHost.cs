@@ -5,6 +5,7 @@ using PacketDotNet;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -115,7 +116,7 @@ internal class ClientHost(
             TcpPacket? tcpPacket = null;
 
             try {
-                tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                tcpPacket = ipPacket.ExtractTcp();
 
                 // check local endpoint
                 if (localEndPoint == null)
@@ -157,12 +158,12 @@ internal class ClientHost(
                     tcpPacket.DestinationPort = (ushort)localEndPoint.Port; //4
                 }
 
-                PacketUtil.UpdateIpPacket(ipPacket);
+                ipPacket.UpdateIpPacket();
                 ret.Add(ipPacket);
             }
             catch (Exception ex) {
                 if (tcpPacket != null) {
-                    ret.Add(PacketUtil.CreateTcpResetReply(ipPacket, true));
+                    ret.Add(PacketBuilder.BuildTcpResetReply(ipPacket, true));
                     PacketLogger.LogPacket(ipPacket,
                         "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.",
                         LogLevel.Debug, ex);

@@ -101,7 +101,7 @@ public class ServerApp : IDisposable
         };
     }
 
-    private void InitFileLogger(string storagePath)
+    private static void InitFileLogger(string storagePath)
     {
         var configFilePath = Path.Combine(StoragePath, "NLog.config");
         if (!File.Exists(configFilePath)) configFilePath = Path.Combine(AppFolderPath, "NLog.config");
@@ -110,7 +110,7 @@ public class ServerApp : IDisposable
                 builder.AddNLog(configFilePath);
             });
             LogManager.Configuration.Variables["mydir"] = storagePath;
-            VhLogger.Instance = loggerFactory.CreateLogger("NLog");
+            VhLogger.Instance = loggerFactory.CreateLogger("VpnHood");
         }
         else {
             VhLogger.Instance.LogWarning("Could not find NLog file. ConfigFilePath: {configFilePath}", configFilePath);

@@ -5,7 +5,6 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
@@ -14,6 +13,7 @@ namespace VpnHood.Core.Client.VpnServices.Host;
 
 public class VpnServiceHost : IAsyncDisposable
 {
+    private readonly object _connectLock = new();
     private readonly ApiController _apiController;
     private readonly IVpnServiceHandler _vpnServiceHandler;
     private readonly ISocketFactory _socketFactory;
@@ -106,25 +106,29 @@ public class VpnServiceHost : IAsyncDisposable
 
         // show notification as soon as possible
         _vpnServiceHandler.ShowNotification(connectInfo);
-        
+
         // run the connection in background
-        Task.Run(() => ConnectTask(clientOptions));
+        Task.Run(() => {
+            lock (_connectLock) {
+                ConnectTask(clientOptions);
+            }
+        });
     }
 
-
-    private readonly AsyncLock _connectLock = new();
-    private async Task ConnectTask(ClientOptions clientOptions)
+    private void ConnectTask(ClientOptions clientOptions)
     {
-        using var connectLock = await _connectLock.LockAsync();
         VhLogger.Instance.LogDebug("VpnService is connecting... ProcessId: {ProcessId}", Process.GetCurrentProcess().Id);
 
         // handle previous client
         var client = Client;
         if (client != null) {
-            // before VpnHoodClient disposed, don't let the old connection overwrite the state or stop the service
-            client.StateChanged -= VpnHoodClient_StateChanged;
-            _ = client.DisposeAsync(); //let dispose in the background
-            Client = null;
+            lock (client) {
+
+                // before VpnHoodClient disposed, don't let the old connection overwrite the state or stop the service
+                client.StateChanged -= VpnHoodClient_StateChanged;
+                _ = client.DisposeAsync(); //let dispose in the background
+                Client = null;
+            }
         }
 
         // create service
@@ -135,7 +139,8 @@ public class VpnServiceHost : IAsyncDisposable
 
             // sni is sensitive, must be explicitly enabled
             clientOptions.ForceLogSni |=
-                clientOptions.LogServiceOptions.LogEventNames.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase);
+                clientOptions.LogServiceOptions.LogEventNames.Contains(nameof(GeneralEventId.Sni),
+                    StringComparer.OrdinalIgnoreCase);
 
             // create tracker
             var trackerFactory = TryCreateTrackerFactory(clientOptions.TrackerFactoryAssemblyQualifiedName);
@@ -152,7 +157,9 @@ public class VpnServiceHost : IAsyncDisposable
                 AdapterName = clientOptions.AppName
             };
             Client = new VpnHoodClient(
-                vpnAdapter: clientOptions.UseNullCapture ? new NullVpnAdapter() : _vpnServiceHandler.CreateAdapter(adapterSetting),
+                vpnAdapter: clientOptions.UseNullCapture
+                    ? new NullVpnAdapter()
+                    : _vpnServiceHandler.CreateAdapter(adapterSetting),
                 tracker: tracker,
                 socketFactory: _socketFactory,
                 options: clientOptions
@@ -160,12 +167,12 @@ public class VpnServiceHost : IAsyncDisposable
             Client.StateChanged += VpnHoodClient_StateChanged;
             Client.StateChanged += VpnHoodClient_StateChangedForDisposal;
 
-            // show notification. start foreground service
+            // show notification.
             _vpnServiceHandler.ShowNotification(Client.ToConnectionInfo(_apiController));
 
             // let connect in the background
             // ignore cancellation because it will be cancelled by disconnect or dispose
-            await Client.Connect(CancellationToken.None);
+            _ = Client.Connect(CancellationToken.None);
         }
         catch (Exception ex) {
             _ = Context.WriteConnectionInfo(BuildConnectionInfo(ClientState.Disposed, ex));

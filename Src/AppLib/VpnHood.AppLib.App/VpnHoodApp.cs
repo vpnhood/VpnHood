@@ -34,6 +34,7 @@ using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 
 namespace VpnHood.AppLib;
 
@@ -560,7 +561,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // throw OperationCanceledException if user has canceled the connection
             if (_appPersistState.HasDisconnectedByUser) {
-                throw new OperationCanceledException("Connection has been canceled by the user.", ex);
+                throw new UserCanceledException("Connection has been canceled by the user.");
             }
 
             // check no internet connection, use original cancellation token to avoid timeout exception
@@ -687,6 +688,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _ = VersionCheck(delay: Services.AdService.ShowAdPostDelay.Add(TimeSpan.FromSeconds(1)));
         }
         catch (Exception ex) {
+            // update last error if user has exclusively cancelled the operation
+            if (ex is UserCanceledException)
+                _appPersistState.HasDisconnectedByUser = true;
+
             if (ex is SessionException sessionException) {
                 // update access token if AccessKey is set
                 if (!string.IsNullOrWhiteSpace(sessionException.SessionResponse.AccessKey)) {

@@ -5,19 +5,19 @@ namespace VpnHood.Core.Toolkit.Logging;
 
 public class LogService(string logFilePath) : IDisposable
 {
-    private ILoggerFactory? _loggerFactory;
+    private ILogger? _logger;
+    private readonly List<ILoggerProvider> _loggerProviders = [];
     public string LogFilePath { get; } = logFilePath;
     public string[] LogEvents { get; private set; } = [];
     public bool Exists => File.Exists(LogFilePath);
-    public bool IsStarted => _loggerFactory != null;
+    public bool IsStarted => _logger != null;
     public void Start(LogServiceOptions options)
     {
         Stop();
 
-        _loggerFactory = CreateLoggerFactory(options);
         VhLogger.IsAnonymousMode = options.LogAnonymous is null or true;
         VhLogger.IsDiagnoseMode = options.LogEventNames.Contains("*");
-        VhLogger.Instance = CreateLogger(_loggerFactory, options);
+        VhLogger.Instance = _logger = CreateLogger(options);
         LogEvents = options.LogEventNames;
         if (options.LogLevel == LogLevel.Trace) {
             VhLogger.IsDiagnoseMode = true;
@@ -29,12 +29,15 @@ public class LogService(string logFilePath) : IDisposable
     public void Stop()
     {
         VhLogger.Instance = NullLogger.Instance;
-        _loggerFactory?.Dispose();
-        _loggerFactory = null;
+        foreach (var loggerProvider in _loggerProviders)
+            loggerProvider.Dispose();
+        _loggerProviders.Clear();
+        _logger = null;
     }
 
-    private static ILogger CreateLogger(ILoggerFactory loggerFactory, LogServiceOptions logServiceOptions)
+    private ILogger CreateLogger(LogServiceOptions logServiceOptions)
     {
+        using var loggerFactory = CreateLoggerFactory(logServiceOptions);
         var logger = loggerFactory.CreateLogger(logServiceOptions.CategoryName ?? "");
 
         logger = new FilterLogger(logger, eventId => {
@@ -57,11 +60,17 @@ public class LogService(string logFilePath) : IDisposable
         var loggerFactory = LoggerFactory.Create(builder => {
             // console
             if (logServiceOptions.LogToConsole) // AddSimpleConsole does not support event id
-                builder.AddProvider(new VhConsoleLoggerProvider(includeScopes: true, 
-                    singleLine: logServiceOptions.SingleLineConsole));
+            {
+                var provider = new VhConsoleLoggerProvider(includeScopes: true,
+                    singleLine: logServiceOptions.SingleLineConsole);
+                _loggerProviders.Add(provider);
+                builder.AddProvider(provider);
+            }
 
             if (logServiceOptions.LogToFile) {
-                builder.AddProvider(new FileLoggerProvider(LogFilePath, autoFlush: logServiceOptions.AutoFlush));
+                var provider = new FileLoggerProvider(LogFilePath, autoFlush: logServiceOptions.AutoFlush);
+                _loggerProviders.Add(provider);
+                builder.AddProvider(provider);
             }
 
             builder.SetMinimumLevel(logServiceOptions.LogLevel);

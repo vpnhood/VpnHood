@@ -415,7 +415,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private LogServiceOptions GetLogOptions()
     {
         var logLevel = _logServiceOptions.LogLevel;
-        if (HasDebugCommand(DebugCommands.LogDebug)) logLevel = LogLevel.Debug;
+        if (HasDebugCommand(DebugCommands.LogDebug) || Features.IsDebugMode) logLevel = LogLevel.Debug;
         if (HasDebugCommand(DebugCommands.LogTrace)) logLevel = LogLevel.Trace;
         var logOptions = new LogServiceOptions {
             LogLevel = logLevel,
@@ -515,12 +515,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 VhLogger.Instance.LogInformation("CountryCode: {CountryCode}",
                     VhUtils.TryGetCountryName(await GetCurrentCountryAsync(cancellationToken).VhConfigureAwait()));
 
-            VhLogger.Instance.LogInformation("Client is Connecting ...");
 
             // request features for the first time
+            VhLogger.Instance.LogDebug("Requesting Features ...");
             await RequestFeatures(cancellationToken).VhConfigureAwait();
 
             // connect
+            VhLogger.Instance.LogInformation("Client is Connecting ...");
             await ConnectInternal(clientProfile.Token,
                     serverLocation: serverLocation,
                     userAgent: connectOptions.UserAgent,
@@ -725,6 +726,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             Services.UiProvider.IsQuickLaunchSupported &&
             Settings.IsQuickLaunchEnabled is null) {
             try {
+                VhLogger.Instance.LogInformation("Prompting for Quick Launch...");
                 Settings.IsQuickLaunchEnabled =
                     await Services.UiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, cancellationToken)
                         .VhConfigureAwait();
@@ -741,6 +743,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             Services.UiProvider.IsNotificationSupported &&
             Settings.IsNotificationEnabled is null) {
             try {
+                VhLogger.Instance.LogInformation("Prompting for notifications...");
                 Settings.IsNotificationEnabled =
                     await Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, cancellationToken)
                         .VhConfigureAwait();
@@ -753,9 +756,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public CultureInfo SystemUiCulture =>
-        _systemUiCulture ?? new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ??
-                                            CultureInfo.InstalledUICulture.Name);
+    public CultureInfo SystemUiCulture => 
+        _systemUiCulture ?? 
+        new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ??
+                        CultureInfo.InstalledUICulture.Name);
 
     private void InitCulture()
     {

@@ -133,7 +133,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
             Logger.LogDebug("Adding routes...");
             foreach (var network in options.IncludeNetworks) {
                 var gateway = network.IsV4 ? GatewayIpV4 : GatewayIpV6;
-                if (gateway != null) //todo: remove gateway from this method
+                if (gateway != null) 
                     await AddRoute(network, gateway, cancellationToken).VhConfigureAwait();
             }
 

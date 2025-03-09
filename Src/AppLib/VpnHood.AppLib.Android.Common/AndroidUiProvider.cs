@@ -1,5 +1,6 @@
 ﻿using Android;
 using Android.Content;
+using Android.Content.PM;
 using Android.Views;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Device.Droid;
@@ -15,7 +16,9 @@ public class AndroidUiProvider : IAppUiProvider
     private const int RequestPostNotificationId = 11;
     private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
 
-    public bool IsQuickLaunchSupported => OperatingSystem.IsAndroidVersionAtLeast(33);
+    public bool IsQuickLaunchSupported { get; } =
+        OperatingSystem.IsAndroidVersionAtLeast(33) &&
+        Application.Context.PackageManager?.HasSystemFeature(PackageManager.FeatureLeanback) is false;
 
     public async Task<bool> RequestQuickLaunch(IUiContext context, CancellationToken cancellationToken)
     {

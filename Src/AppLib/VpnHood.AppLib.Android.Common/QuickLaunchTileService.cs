@@ -27,6 +27,7 @@ public class QuickLaunchTileService : TileService
     {
         base.OnCreate();
 
+        VhLogger.Instance.LogDebug("QuickLaunchTileService service is created...");
         VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged!;
         Refresh();
     }
@@ -63,6 +64,7 @@ public class QuickLaunchTileService : TileService
 
     public override void OnTileAdded()
     {
+        VhLogger.Instance.LogDebug("OnTileAdded is requested.");
         VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled = true;
         VpnHoodApp.Instance.Settings.Save();
         base.OnTileAdded();
@@ -71,6 +73,7 @@ public class QuickLaunchTileService : TileService
 
     public override void OnTileRemoved()
     {
+        VhLogger.Instance.LogDebug("OnTileRemoved is requested.");
         VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled = false;
         VpnHoodApp.Instance.Settings.Save();
         base.OnTileRemoved();
@@ -79,6 +82,7 @@ public class QuickLaunchTileService : TileService
 
     public override void OnStartListening()
     {
+        VhLogger.Instance.LogDebug("OnStartListening is requested.");
         base.OnStartListening();
         if (VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled == false) {
             VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled = true;
@@ -90,6 +94,8 @@ public class QuickLaunchTileService : TileService
 
     private void Refresh()
     {
+        VhLogger.Instance.LogDebug("Refreshing tile state.");
+
         if (QsTile == null)
             return;
 
@@ -128,8 +134,6 @@ public class QuickLaunchTileService : TileService
 
     public static Task<int> RequestAddTile(Context context)
     {
-        var taskCompletionSource = new TaskCompletionSource<int>();
-
         // get statusBarManager
         if (context.GetSystemService(StatusBarService) is not StatusBarManager statusBarManager) {
             VhLogger.Instance.LogError("Could not retrieve the StatusBarManager.");
@@ -141,15 +145,17 @@ public class QuickLaunchTileService : TileService
             return Task.FromResult(0);
         }
 
+        VhLogger.Instance.LogDebug("Creating Tile...");
         ArgumentNullException.ThrowIfNull(context.PackageManager);
         ArgumentNullException.ThrowIfNull(context.PackageName);
         ArgumentNullException.ThrowIfNull(context.Resources);
-        var appName =
-            context.PackageManager.GetApplicationLabel(
-                context.PackageManager.GetApplicationInfo(context.PackageName, PackageInfoFlags.MetaData));
+        var appName = context.PackageManager.GetApplicationLabel(
+            context.PackageManager.GetApplicationInfo(context.PackageName, PackageInfoFlags.MetaData));
         var iconId = context.Resources.GetIdentifier(IconResourceName, "drawable", context.PackageName);
         var icon = Icon.CreateWithResource(context, iconId);
 
+        VhLogger.Instance.LogDebug("Calling RequestAddTileService API...");
+        var taskCompletionSource = new TaskCompletionSource<int>();
         statusBarManager.RequestAddTileService(
             new ComponentName(context, Class.FromType(typeof(QuickLaunchTileService))),
             appName, icon,

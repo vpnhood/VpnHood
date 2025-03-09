@@ -45,6 +45,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private const string FolderNameProfiles = "profiles";
     private readonly bool _useInternalLocationService;
     private readonly bool _useExternalLocationService;
+    private readonly TimeSpan _locationServiceTimeout;
     private readonly bool _disconnectOnDispose;
     private readonly bool _autoDiagnose;
     private readonly bool _allowEndPointTracker;
@@ -106,6 +107,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
         _useInternalLocationService = options.UseInternalLocationService;
         _useExternalLocationService = options.UseExternalLocationService;
+        _locationServiceTimeout = options.LocationServiceTimeout;
         _ga4MeasurementId = options.Ga4MeasurementId;
         _versionCheckInterval = options.VersionCheckInterval;
         _reconnectTimeout = options.ReconnectTimeout;
@@ -807,7 +809,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 if (_useInternalLocationService)
                     providers.Add(IpRangeLocationProvider);
 
-                var compositeProvider = new CompositeIpLocationProvider(VhLogger.Instance, providers);
+                var compositeProvider = new CompositeIpLocationProvider(VhLogger.Instance, providers, providerTimeout: _locationServiceTimeout);
                 var ipLocation = await compositeProvider.GetCurrentLocation(cancellationToken).VhConfigureAwait();
                 UpdateCurrentCountry(ipLocation.CountryCode);
             }

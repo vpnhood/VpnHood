@@ -37,6 +37,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
         isDebugMode ? false : null; // it follows user's settings if it set to null
     public TimeSpan ServerQueryTimeout { get; set; } = ClientOptions.Default.ServerQueryTimeout;
     public TimeSpan ConnectTimeout { get; set; } = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(60);
+    public TimeSpan LocationServiceTimeout { get; set; } = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(5);
     public bool AutoDiagnose { get; set; } = true;
     public AppAdOptions AdOptions { get; set; } = new();
     public bool AllowEndPointTracker { get; set; }

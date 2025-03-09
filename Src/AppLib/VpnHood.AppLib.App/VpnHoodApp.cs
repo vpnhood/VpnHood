@@ -65,7 +65,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _isDisconnecting;
     private bool _isLoadingCountryIpRange;
     private bool _isFindingCountryCode;
-    private AppConnectionState _lastConnectionState;
+    private AppConnectionState? _lastConnectionState;
     private CancellationTokenSource _connectCts = new();
     private CancellationTokenSource _connectTimeoutCts = new();
     private VersionCheckResult? _versionCheckResult;

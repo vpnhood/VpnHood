@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Jobs;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.Core.Toolkit.Logging;
+namespace VpnHood.Core.Toolkit.Utils;
 
 public class EventReporter : IDisposable, IJob
 {

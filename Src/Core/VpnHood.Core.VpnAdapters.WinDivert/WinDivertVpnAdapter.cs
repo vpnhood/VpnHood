@@ -180,27 +180,6 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         SimulateDnsServers(ipPacket, true);
     }
 
-    //todo rename to write packet
-    protected void SendPacket(IPPacket ipPacket, bool outbound)
-    {
-        if (_lastCaptureHeader == null)
-            throw new InvalidOperationException("Could not send any data without receiving a packet.");
-
-        if (_device == null)
-            throw new InvalidOperationException("Device is not initialized.");
-
-        if (!outbound) {
-            // simulate adapter network
-            SimulateAdapterNetwork(ipPacket, false);
-
-            // simulate dns servers
-            SimulateDnsServers(ipPacket, false);
-        }
-
-        // send by a device
-        _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
-        _device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
-    }
 
     protected override bool WritePacket(IPPacket ipPacket)
     {
@@ -208,8 +187,29 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         if (GetIpNetwork(ipPacket.Version)?.Contains(ipPacket.DestinationAddress) is null or false)
             throw new NotSupportedException("This adapter can send packets outside of its network.");
 #endif
-        SendPacket(ipPacket, false);
+
+        // simulate adapter network
+        SimulateAdapterNetwork(ipPacket, false);
+
+        // simulate dns servers
+        SimulateDnsServers(ipPacket, false);
+
+        // Write packet
+        WritePacketToAdapter(ipPacket, false);
         return true;
+    }
+
+    protected void WritePacketToAdapter(IPPacket ipPacket, bool outbound)
+    {
+        if (_lastCaptureHeader == null)
+            throw new InvalidOperationException("Could not send any data without receiving a packet.");
+
+        if (_device == null)
+            throw new InvalidOperationException("Device is not initialized.");
+
+        // send by a device
+        _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
+        _device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
     }
 
     protected override void WaitForTunRead()

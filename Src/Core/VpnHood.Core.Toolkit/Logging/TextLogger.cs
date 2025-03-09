@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Core.Toolkit.Logging;
 
-public abstract class TextLogger(bool includeScopes, string? globalScope) : ILogger, ILoggerProvider
+public abstract class TextLogger(bool includeScopes, string? categoryName) : ILogger
 {
     private readonly LoggerExternalScopeProvider _scopeProvider = new();
 
@@ -20,11 +20,6 @@ public abstract class TextLogger(bool includeScopes, string? globalScope) : ILog
     public abstract void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter);
 
-    public ILogger CreateLogger(string categoryName)
-    {
-        return this;
-    }
-
     protected void WriteScopeInformation(StringBuilder stringBuilder)
     {
 
@@ -39,23 +34,22 @@ public abstract class TextLogger(bool includeScopes, string? globalScope) : ILog
     protected virtual string FormatLog<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
     {
-        var logBuilder = new StringBuilder();
         var time = DateTime.Now.ToString("HH:mm:ss.ffff");
+        var logBuilder = new StringBuilder();
 
+        // time
+        logBuilder.Append($"{time} | ");
+
+        // category
+        if (!string.IsNullOrEmpty(categoryName))
+            logBuilder.Append($"{categoryName} | ");
+
+        // scopes
         if (includeScopes) {
-            logBuilder.AppendLine();
-            logBuilder.Append($"{time} | ");
             logBuilder.Append(logLevel.ToString()[..4] + " |");
-            if (globalScope != null) {
-                logBuilder.Append(" ");
-                logBuilder.Append(globalScope);
-                logBuilder.Append(" |");
-            }
             WriteScopeInformation(logBuilder);
             logBuilder.AppendLine();
         }
-        else
-            logBuilder.Append($"{time} | ");
 
         // event
         if (!string.IsNullOrEmpty(eventId.Name)) {
@@ -69,9 +63,7 @@ public abstract class TextLogger(bool includeScopes, string? globalScope) : ILog
             message += "\r\nException: " + exception;
 
         logBuilder.Append(message);
+        logBuilder.AppendLine();
         return logBuilder.ToString();
     }
-    public virtual void Dispose()
-    {
-    }
-}
+ }

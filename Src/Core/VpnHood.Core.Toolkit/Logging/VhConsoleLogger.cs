@@ -2,10 +2,11 @@
 
 namespace VpnHood.Core.Toolkit.Logging;
 
-public class VhConsoleLogger(bool includeScopes = true, bool singleLine = true, string? globalScope = null)
-    : TextLogger(includeScopes, globalScope)
+public class VhConsoleLogger(bool includeScopes = true, bool singleLine = true, string? categoryName = null)
+    : TextLogger(includeScopes, categoryName)
 {
     private static bool? _isColorSupported;
+    private readonly object _lock = new();
 
     private static bool IsColorSupported {
         get {
@@ -30,14 +31,16 @@ public class VhConsoleLogger(bool includeScopes = true, bool singleLine = true, 
         if (singleLine)
             text = text.Replace("\n", " ").Replace("\r", "").Trim();
 
-        if (IsColorSupported) {
-            var prevColor = Console.ForegroundColor;
-            Console.ForegroundColor = GetColor(logLevel);
-            Console.WriteLine(text);
-            Console.ForegroundColor = prevColor;
-        }
-        else {
-            Console.WriteLine(text);
+        lock (_lock) {
+            if (IsColorSupported) {
+                var prevColor = Console.ForegroundColor;
+                Console.ForegroundColor = GetColor(logLevel);
+                Console.WriteLine(text);
+                Console.ForegroundColor = prevColor;
+            }
+            else {
+                Console.WriteLine(text);
+            }
         }
     }
 

@@ -425,7 +425,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             LogToConsole = _logServiceOptions.LogToConsole,
             LogToFile = _logServiceOptions.LogToFile,
             AutoFlush = _logServiceOptions.AutoFlush,
-            GlobalScope = _logServiceOptions.GlobalScope
+            CategoryName = _logServiceOptions.CategoryName
         };
         return logOptions;
     }

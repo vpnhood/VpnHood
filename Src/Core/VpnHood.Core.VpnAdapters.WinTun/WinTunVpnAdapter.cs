@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Core.Toolkit.Exceptions;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
@@ -151,12 +152,29 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
             await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv6 set subinterface \"{AdapterName}\" mtu={mtu}", cancellationToken);
     }
 
+
+    //protected override async Task RemoveAllDnsServers(CancellationToken cancellationToken)
+    //{
+    //    var commandV4 = $"interface ipv4 set dns \"{AdapterName}\" dhcp";
+    //    var commandV6 = $"interface ipv6 set dns \"{AdapterName}\" dhcp";
+
+    //    await OsUtils.ExecuteCommandAsync("netsh", commandV4, cancellationToken);
+    //    await OsUtils.ExecuteCommandAsync("netsh", commandV6, cancellationToken);
+    //}
+
     protected override async Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
     {
+        // remove previous DNS servers
+        VhLogger.Instance.LogDebug("Removing previous DNS from the adapter...");
+        await VhUtils.TryInvokeAsync("Remove previous DNS", 
+            () => OsUtils.ExecuteCommandAsync("netsh", $"netsh interface ipv4 delete dns \"{AdapterName}\" all", cancellationToken));
+        
+        VhLogger.Instance.LogDebug("Adding new DNS to the adapter...");
         foreach (var ipAddress in dnsServers) {
             var command = ipAddress.IsV4()
                 ? $"interface ipv4 add dns \"{AdapterName}\" {ipAddress}"
                 : $"interface ipv6 add dns \"{AdapterName}\" {ipAddress}";
+
             await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
         }
     }

@@ -6,7 +6,7 @@ namespace VpnHood.Core.Packets;
 
 public static class IpPacketExtensions
 {
-    public static IPPacket ClonePacket(this IPPacket ipPacket)
+    public static IPPacket Clone(this IPPacket ipPacket)
     {
         return Packet.ParsePacket(LinkLayers.Raw, ipPacket.Bytes).Extract<IPPacket>();
     }
@@ -34,6 +34,17 @@ public static class IpPacketExtensions
                throw new InvalidDataException($"Invalid TCP packet. It is: {ipPacket.Protocol}");
     }
 
+    public static bool IsMulticast(this IPPacket ipPacket)
+    {
+        // only UDP and ICMPv6 packets can use multicast
+        if (ipPacket.Protocol != ProtocolType.Udp && ipPacket.Protocol != ProtocolType.IcmpV6)
+            return false; 
+
+        return
+            (ipPacket.Version == IPVersion.IPv4 && IpNetwork.MulticastNetworkV4.Contains(ipPacket.DestinationAddress)) ||
+            (ipPacket.Version == IPVersion.IPv6 && IpNetwork.MulticastNetworkV6.Contains(ipPacket.DestinationAddress));
+
+    }
     public static IPEndPointPair GetEndPoints(this IPPacket ipPacket)
     {
         if (ipPacket.Protocol == ProtocolType.Tcp) {
@@ -58,12 +69,14 @@ public static class IpPacketExtensions
     public static void UpdateIpChecksum(this IPPacket ipPacket)
     {
         // ICMPv6 checksum needs to be updated if IPv6 packet changes
-        if (ipPacket.Protocol == ProtocolType.IcmpV6)
-            ipPacket.UpdateAllChecksums();
+        if (ipPacket.Protocol == ProtocolType.IcmpV6) {
+            ipPacket.UpdatePayloadChecksum();
+            ipPacket.UpdateCalculatedValues();
+        }
 
         // ipv4 packet checksum needs to be updated if IPv4 packet changes
         if (ipPacket is IPv4Packet ipV4Packet) {
-            ipV4Packet.UpdateIPChecksum();
+            ipV4Packet.UpdateIPChecksum(); // it is not the extension
             ipPacket.UpdateCalculatedValues();
         }
     }
@@ -104,6 +117,11 @@ public static class IpPacketExtensions
     public static void UpdateAllChecksums(this IPPacket ipPacket, bool throwIfNotSupported = true)
     {
         ipPacket.UpdatePayloadChecksum(throwIfNotSupported);
-        ipPacket.UpdateIpChecksum();
+
+        // ipv4 packet checksum needs to be updated if IPv4 packet changes
+        if (ipPacket is IPv4Packet ipV4Packet) {
+            ipV4Packet.UpdateIPChecksum(); // it is not the extension
+            ipV4Packet.UpdateCalculatedValues();
+        }
     }
 }

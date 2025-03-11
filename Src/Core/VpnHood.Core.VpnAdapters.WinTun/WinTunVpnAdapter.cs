@@ -55,9 +55,6 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         // Load the WinTun DLL
         LoadWinTunDll();
 
-        // create guid from name by using hash
-
-
         // create the adapter
         _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "VPN", BuildGuidFromName(AdapterName));
         if (_tunAdapter == IntPtr.Zero)

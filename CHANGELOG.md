@@ -1,5 +1,5 @@
 # Upcoming 
-
+* Fix: Improve security by blocking multicast traffic
 
 # v6.0.672
 * Feature: Android: Run VPN in a separate process

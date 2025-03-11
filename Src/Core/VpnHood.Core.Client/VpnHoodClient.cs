@@ -12,6 +12,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Trackers;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -180,7 +181,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         JobRunner.Default.Add(this);
     }
 
-
     public ClientState State {
         get => _state;
         private set {
@@ -324,6 +324,13 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     // WARNING: Performance Critical!
     private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
     {
+        for (var index = 0; index < e.IpPackets.Count; index++) {
+            e.IpPackets[index] = e.IpPackets[index].Clone();
+            var ipPacket = e.IpPackets[index];
+            if (ipPacket.Protocol== ProtocolType.IcmpV6)
+                ipPacket.UpdateAllChecksums(); //todo remove
+        }
+
         _vpnAdapter.SendPackets(e.IpPackets);
     }
 
@@ -351,8 +358,12 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     var isIpV6 = ipPacket.Version == IPVersion.IPv6;
                     var udpPacket = ipPacket.Protocol == ProtocolType.Udp ? ipPacket.Extract<UdpPacket>() : null;
 
+                    if (ipPacket.IsMulticast()) {
+                        droppedPackets.Add(ipPacket);
+                    }
+
                     // tcp already check for InInRange and IpV6 and Proxy
-                    if (ipPacket.Protocol == ProtocolType.Tcp) {
+                    else if (ipPacket.Protocol == ProtocolType.Tcp) {
                         if (_isTunProviderSupported && UseTcpOverTun && IsInIpRange(ipPacket.DestinationAddress))
                             tunnelPackets.Add(ipPacket);
                         else

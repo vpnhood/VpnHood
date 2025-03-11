@@ -50,6 +50,8 @@ public class IpNetwork
         Parse("169.254.0.0/16")
     ];
 
+    public static IpNetwork MulticastNetworkV4 { get; } = new(IPAddress.Parse("224.0.0.0"), 4);
+    public static IpNetwork MulticastNetworkV6 { get; } = new(IPAddress.Parse("ff00::"), 8);
     public static IpNetwork[] LoopbackNetworksV4 { get; } = [Parse("127.0.0.0/8")];
     public static IpNetwork[] LoopbackNetworksV6 { get; } = [Parse("::1/128")];
     public static IpNetwork[] LoopbackNetworks { get; } = LoopbackNetworksV4.Concat(LoopbackNetworksV6).ToArray();

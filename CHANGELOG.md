@@ -1,4 +1,4 @@
-# Upcoming 
+# v6.0.675
 * Fix: Improve security by blocking multicast traffic
 
 # v6.0.672

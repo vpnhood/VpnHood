@@ -1,7 +1,5 @@
-# Upcoming 
+# v6.0.675
 * Fix: Improve security by blocking multicast traffic
-
-# v6.0.672
 * Feature: Android: Run VPN in a separate process
 * Feature: Android: Using separate process for VPN service
 * Feature: Android: Edge to Edge UI

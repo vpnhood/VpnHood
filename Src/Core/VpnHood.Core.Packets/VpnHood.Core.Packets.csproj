@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>Provides tunnelling classes and protocols shared between VpnHood.Core.Client and VpnHood.Core.Server</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
@@ -19,7 +19,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>6.0.673</Version>
+		<Version>6.0.675</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
@@ -32,7 +32,7 @@
 	
 			<ItemGroup>
 		<PackageReference Include="PacketDotNet" Version="1.4.7" />
-		<PackageReference Include="System.Text.Json" Version="9.0.2" />
+		<PackageReference Include="System.Text.Json" Version="9.0.3" />
 	</ItemGroup>	
 
 	<ItemGroup>

@@ -29,7 +29,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
     public ClientConnectorStat Stat { get; }
     public TimeSpan RequestTimeout { get; private set; }
     public TimeSpan TcpReuseTimeout { get; private set; }
-    public int ProtocolVersion { get; private set; } = 6; // 5 is initial connection version
+    public int ProtocolVersion { get; private set; } = 6; 
 
     public ConnectorServiceBase(ConnectorEndPointInfo endPointInfo, ISocketFactory socketFactory,
         TimeSpan tcpConnectTimeout, bool allowTcpReuse)

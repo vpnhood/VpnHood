@@ -261,7 +261,7 @@ public class ServerHost : IAsyncDisposable, IJob
             var authorization = headers.GetValueOrDefault("Authorization", string.Empty);
 
             // check version; Throw unauthorized to prevent fingerprinting
-            if (protocolVersion < MinProtocolVersion || protocolVersion > MaxProtocolVersion)
+            if (protocolVersion is < MinProtocolVersion or > MaxProtocolVersion)
                 throw new UnauthorizedAccessException();
 
             // read api key
@@ -525,6 +525,9 @@ public class ServerHost : IAsyncDisposable, IJob
 
         var request = await ReadRequest<HelloRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
+        // find best version (for future)
+        var protocolVersion = Math.Min(MaxProtocolVersion, request.ClientInfo.MaxProtocolVersion);
+
         // creating a session
         VhLogger.Instance.LogDebug(GeneralEventId.Session,
             "Creating a session... TokenId: {TokenId}, ClientId: {ClientId}, ClientVersion: {ClientVersion}, UserAgent: {UserAgent}",
@@ -590,7 +593,7 @@ public class ServerHost : IAsyncDisposable, IJob
             GaMeasurementId = sessionResponseEx.GaMeasurementId,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
 #pragma warning disable CS0618 // Type or member is obsolete
-            ServerProtocolVersion = 5,
+            ServerProtocolVersion = protocolVersion,
 #pragma warning restore CS0618 // Type or member is obsolete
             MaxProtocolVersion = MaxProtocolVersion,
             MinProtocolVersion = MinProtocolVersion,

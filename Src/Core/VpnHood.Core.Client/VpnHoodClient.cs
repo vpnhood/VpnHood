@@ -31,7 +31,7 @@ namespace VpnHood.Core.Client;
 
 public class VpnHoodClient : IJob, IAsyncDisposable
 {
-    private const int MaxProtocolVersion = 6;
+    private const int MaxProtocolVersion = 7;
     private const int MinProtocolVersion = 4;
     private bool _disposed;
     private readonly bool _autoDisposeVpnAdapter;
@@ -324,13 +324,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     // WARNING: Performance Critical!
     private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
     {
-        for (var index = 0; index < e.IpPackets.Count; index++) {
-            e.IpPackets[index] = e.IpPackets[index].Clone();
-            var ipPacket = e.IpPackets[index];
-            if (ipPacket.Protocol== ProtocolType.IcmpV6)
-                ipPacket.UpdateAllChecksums(); //todo remove
-        }
-
         _vpnAdapter.SendPackets(e.IpPackets);
     }
 
@@ -579,6 +572,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 ClientId = ClientId,
                 ClientVersion = Version.ToString(3),
                 ProtocolVersion = _connectorService.ProtocolVersion,
+                MinProtocolVersion = MinProtocolVersion,
+                MaxProtocolVersion = MaxProtocolVersion,
                 UserAgent = UserAgent
             };
 

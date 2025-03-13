@@ -2,9 +2,9 @@
 using Android.Gms.Ads.Interstitial;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Exceptions;
-using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.Utils;
+using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 
 namespace VpnHood.AppLib.Droid.Ads.VhAdMob;
@@ -41,7 +41,8 @@ public class AdMobInterstitialAdProvider(string adUnitId) : IAppAdProvider
         var adRequest = new AdRequest.Builder().Build();
 
         // AdMob load ad must call from main thread
-        await AndroidUtil.RunOnUiThread(activity, () => InterstitialAd.Load(activity, adUnitId, adRequest, adLoadCallback))
+        await AndroidUtil.RunOnUiThread(activity,
+                () => InterstitialAd.Load(activity, adUnitId, adRequest, adLoadCallback))
             .WaitAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -112,7 +113,7 @@ public class AdMobInterstitialAdProvider(string adUnitId) : IAppAdProvider
             _dismissedCompletionSource.TrySetResult();
         }
 
-       public override void OnAdFailedToShowFullScreenContent(AdError adError)
+        public override void OnAdFailedToShowFullScreenContent(AdError adError)
         {
             _dismissedCompletionSource.TrySetException(new ShowAdException(adError.Message));
         }

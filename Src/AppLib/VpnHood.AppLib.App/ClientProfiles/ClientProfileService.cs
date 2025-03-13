@@ -1,9 +1,9 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Exceptions;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.ClientProfiles;
 
@@ -94,8 +94,8 @@ public class ClientProfileService
     public ClientProfile Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
         var item = _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
-                            ?? throw new NotExistsException(
-                                "ClientProfile does not exists. ClientProfileId: {clientProfileId}");
+                   ?? throw new NotExistsException(
+                       "ClientProfile does not exists. ClientProfileId: {clientProfileId}");
 
         // update name
         if (updateParams.ClientProfileName != null) {
@@ -118,8 +118,9 @@ public class ClientProfileService
             item.SelectedLocation = updateParams.SelectedLocation;
 
         if (updateParams.AccessCode != null)
-            item.AccessCode = string.IsNullOrEmpty(updateParams.AccessCode.Value) 
-            ? null : AccessCodeUtils.Validate(updateParams.AccessCode.Value);
+            item.AccessCode = string.IsNullOrEmpty(updateParams.AccessCode.Value)
+                ? null
+                : AccessCodeUtils.Validate(updateParams.AccessCode.Value);
 
         Save();
         return item;
@@ -137,12 +138,12 @@ public class ClientProfileService
     }
 
     private readonly object _importLock = new();
+
     // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
     private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn,
         bool isForAccount = false, bool isBuiltIn = false)
     {
         lock (_importLock) {
-
             // make sure no one overwrites built-in tokens
             if (!allowOverwriteBuiltIn && _clientProfiles.Any(x => x.IsBuiltIn && x.Token.TokenId == token.TokenId))
                 throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
@@ -195,7 +196,7 @@ public class ClientProfileService
         try {
             var token = GetToken(tokenId);
             var newToken = Token.FromAccessKey(accessKey);
-            if (VhUtil.JsonEquals(token, newToken))
+            if (JsonUtils.JsonEquals(token, newToken))
                 return false;
 
             if (token.TokenId != newToken.TokenId)
@@ -216,7 +217,7 @@ public class ClientProfileService
     {
         // run update for all urls asynchronously and return true if any of them is successful
         var urls = token.ServerToken.Urls;
-        if (VhUtil.IsNullOrEmpty(urls) || token.ServerToken.Secret == null)
+        if (VhUtils.IsNullOrEmpty(urls) || token.ServerToken.Secret == null)
             return false;
 
         using var httpClient = new HttpClient();
@@ -240,7 +241,7 @@ public class ClientProfileService
     private async Task<bool> UpdateServerTokenByUrl(Token token, string url,
         HttpClient httpClient, CancellationTokenSource cts)
     {
-        if (VhUtil.IsNullOrEmpty(token.ServerToken.Urls) || token.ServerToken.Secret == null)
+        if (VhUtils.IsNullOrEmpty(token.ServerToken.Urls) || token.ServerToken.Secret == null)
             return false;
 
         // update token
@@ -248,9 +249,9 @@ public class ClientProfileService
             VhLogger.FormatHostName(url));
 
         try {
-            var encryptedServerToken = await VhUtil
-                    .RunTask(httpClient.GetStringAsync(url), TimeSpan.FromSeconds(20), cts.Token)
-                    .VhConfigureAwait();
+            var encryptedServerToken = await VhUtils
+                .RunTask(httpClient.GetStringAsync(url), TimeSpan.FromSeconds(20), cts.Token)
+                .VhConfigureAwait();
 
             // update token
             lock (_updateByUrlLock) {
@@ -264,7 +265,7 @@ public class ClientProfileService
                 }
 
                 //update store
-                token = VhUtil.JsonClone(token);
+                token = JsonUtils.JsonClone(token);
                 token.ServerToken = newServerToken;
                 ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: true);
                 VhLogger.Instance.LogInformation("ServerToken has been updated from url.");
@@ -297,7 +298,7 @@ public class ClientProfileService
     {
         try {
             var json = File.ReadAllText(ClientProfilesFilePath);
-            var clientProfiles = VhUtil.JsonDeserialize<ClientProfile[]>(json);
+            var clientProfiles = JsonUtils.Deserialize<ClientProfile[]>(json);
             return clientProfiles;
         }
         catch {
@@ -323,5 +324,4 @@ public class ClientProfileService
         foreach (var accessKey in accessKeys)
             ImportAccessKey(accessKey, true);
     }
-
 }

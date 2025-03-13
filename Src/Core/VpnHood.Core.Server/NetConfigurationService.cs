@@ -1,9 +1,9 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Abstractions;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Server;
 
@@ -58,7 +58,8 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
             _ipAddresses.TryAdd(ipAddress, interfaceName);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not add IP address to system. IP: {IP}, InterfaceName: {interfaceName}",
+            VhLogger.Instance.LogError(ex,
+                "Could not add IP address to system. IP: {IP}, InterfaceName: {interfaceName}",
                 ipAddress, interfaceName);
         }
     }
@@ -66,19 +67,22 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
     private async Task RemoveIpAddress(IPAddress ipAddress)
     {
         if (!_ipAddresses.TryGetValue(ipAddress, out var interfaceName)) {
-            VhLogger.Instance.LogWarning("IP address has not been added by NetConfigurationService. IP: {IP}", ipAddress);
+            VhLogger.Instance.LogWarning("IP address has not been added by NetConfigurationService. IP: {IP}",
+                ipAddress);
             return;
         }
 
         try {
-            VhLogger.Instance.LogInformation("Removing IP address from system. IP: {IP}, InterfaceName: {interfaceName}",
+            VhLogger.Instance.LogInformation(
+                "Removing IP address from system. IP: {IP}, InterfaceName: {interfaceName}",
                 ipAddress, interfaceName);
 
             await netConfigurationProvider.RemoveIpAddress(ipAddress, interfaceName).VhConfigureAwait();
             _ipAddresses.TryRemove(ipAddress, out _);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not remove IP address from system. IP: {IP}, InterfaceName: {interfaceName}",
+            VhLogger.Instance.LogError(ex,
+                "Could not remove IP address from system. IP: {IP}, InterfaceName: {interfaceName}",
                 ipAddress, interfaceName);
         }
     }
@@ -98,7 +102,7 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
     {
         try {
             var tcpCongestionControl = await GetTcpCongestionControl();
-            if (value == tcpCongestionControl || value =="*" || tcpCongestionControl == null)
+            if (value == tcpCongestionControl || value == "*" || tcpCongestionControl == null)
                 return;
 
             await netConfigurationProvider.SetTcpCongestionControl(value);

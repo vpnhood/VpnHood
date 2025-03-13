@@ -1,11 +1,11 @@
 ﻿using System.Net;
-using VpnHood.Core.Common.Collections;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Configurations;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 using VpnHood.Core.Server.Access.Messaging;
+using VpnHood.Core.Toolkit.Collections;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Test.AccessManagers;
 
@@ -52,7 +52,8 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         return base.Server_Configure(serverInfo);
     }
 
-    public override async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    public override async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint,
+        IPAddress? clientIp)
     {
         lock (_lockObject)
             SessionGetCounter++;
@@ -94,6 +95,13 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
                 return ret;
             }
 
+            // just accepted if it is null 
+            if (redirectEndPoint == null) {
+                sessionRequestEx.ServerLocation = null;
+                return ret;
+            }
+
+            // check if location is different
             if (!sessionRequestEx.HostEndPoint.Equals(redirectEndPoint)) {
                 ret.RedirectHostEndPoint = ServerLocations[sessionRequestEx.ServerLocation];
                 ret.ErrorCode = SessionErrorCode.RedirectHost;

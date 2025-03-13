@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Testers.HttpTesters;
@@ -33,7 +33,7 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps,
     {
         VhLogger.Instance.LogInformation("\n--------");
         VhLogger.Instance.LogInformation(
-            $"{Scheme} => Start Uploading {VhUtil.FormatBytes(size)}, Connections: {connectionCount}");
+            $"{Scheme} => Start Uploading {VhUtils.FormatBytes(size)}, Connections: {connectionCount}");
 
         // start multi uploaders
         using var speedometer = new Speedometer("Up");
@@ -49,7 +49,7 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps,
     {
         VhLogger.Instance.LogInformation("\n--------");
         VhLogger.Instance.LogInformation(
-            $"{Scheme} => Start Downloading {VhUtil.FormatBytes(size)}, Connections: {connectionCount}");
+            $"{Scheme} => Start Downloading {VhUtils.FormatBytes(size)}, Connections: {connectionCount}");
 
         // start multi downloader
         using var speedometer = new Speedometer("Down");
@@ -91,7 +91,6 @@ public class HttpTesterClient(IPEndPoint serverEp, string? domain, bool isHttps,
             // read all data from the stream
             await using var streamDiscarder = new StreamDiscarder(speedometer);
             await stream.CopyToAsync(streamDiscarder, cancellationToken);
-
         }
         catch (Exception ex) {
             VhLogger.Instance.LogInformation(ex, "Error in download via HTTP.");

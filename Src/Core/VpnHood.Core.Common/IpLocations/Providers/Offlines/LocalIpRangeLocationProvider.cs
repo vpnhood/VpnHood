@@ -3,10 +3,10 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Net;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Exceptions;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.IpLocations.Providers;
 
@@ -61,7 +61,8 @@ public class LocalIpRangeLocationProvider(
     {
         var ipAddress =
             await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken).VhConfigureAwait() ??
-            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken).VhConfigureAwait() ??
+            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken)
+                .VhConfigureAwait() ??
             throw new Exception("Could not find any public ip address.");
 
         var ipLocation = await GetLocation(ipAddress, cancellationToken);

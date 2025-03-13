@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Readymade Vpn App skeleton for VpnHood clients. You just need to create an UI on it.</Description>
+		<Description>Readymade Vpn App skeleton for VpnHood clients. You just need to create an UI on it</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
 		<RootNamespace>VpnHood.AppLib</RootNamespace>
 	</PropertyGroup>
@@ -20,13 +20,13 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>5.1.640</Version>
+		<Version>6.0.675</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.VpnServices.Manager\VpnHood.Core.Client.VpnServices.Manager.csproj" />
 		<ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -34,18 +34,6 @@
 			<Pack>True</Pack>
 			<PackagePath></PackagePath>
 		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-		<Compile Update="Resource.Designer.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>Resource.resx</DependentUpon>
-		</Compile>
-		<EmbeddedResource Update="Resource.resx">
-			<Generator>ResXFileCodeGenerator</Generator>
-			<LastGenOutput>Resource.Designer.cs</LastGenOutput>
-		</EmbeddedResource>
 	</ItemGroup>
 
 </Project>

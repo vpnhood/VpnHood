@@ -4,14 +4,15 @@ using EmbedIO.WebApi;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.WebServer.Api;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.UiContexts;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
 internal class BillingController : WebApiController, IBillingController
 {
     private static AppBillingService BillingService => VpnHoodApp.Instance.Services.AccountService?.BillingService
-                                                ?? throw new Exception("Billing service is not available at this moment.");
+                                                       ?? throw new Exception(
+                                                           "Billing service is not available at this moment.");
 
     [Route(HttpVerbs.Get, "/subscription-plans")]
     public Task<SubscriptionPlan[]> GetSubscriptionPlans()
@@ -22,6 +23,6 @@ internal class BillingController : WebApiController, IBillingController
     [Route(HttpVerbs.Post, "/purchase")]
     public Task<string> Purchase([QueryField] string planId)
     {
-        return BillingService.Purchase(ActiveUiContext.RequiredContext, planId);
+        return BillingService.Purchase(AppUiContext.RequiredContext, planId);
     }
 }

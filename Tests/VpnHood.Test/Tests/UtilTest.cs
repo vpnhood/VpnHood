@@ -1,7 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Core.Common.Jobs;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Test.Tests;
 

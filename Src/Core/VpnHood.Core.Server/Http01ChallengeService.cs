@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Utils;
 
@@ -68,7 +68,7 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
         VhLogger.Instance.LogInformation(GeneralEventId.DnsChallenge,
             "HTTP Challenge. Request: {request}, IsMatched: {isMatched}", request, isMatched);
 
-        var response = (isMatched)
+        var response = isMatched
             ? HttpResponseBuilder.Http01(keyAuthorization)
             : HttpResponseBuilder.NotFound();
 

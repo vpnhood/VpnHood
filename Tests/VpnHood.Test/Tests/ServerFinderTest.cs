@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Core.Client;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Server;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
@@ -8,7 +8,7 @@ using VpnHood.Test.Providers;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class ServerFinderTest
+public class ServerFinderTest : TestBase
 {
     [TestMethod]
     public async Task Find_reachable()
@@ -35,8 +35,8 @@ public class ServerFinderTest
             await servers[1].DisposeAsync();
 
             // connect
-            var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
-            await TestHelper.WaitForClientState(client, ClientState.Connected);
+            var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
+            await client.WaitForState( ClientState.Connected);
 
             Assert.IsTrue(
                 servers[2].ServerHost.TcpEndPoints.First().Equals(client.HostTcpEndPoint) ||
@@ -88,23 +88,35 @@ public class ServerFinderTest
             await servers[6].DisposeAsync();
 
             // connect
-            var clientOptions = TestHelper.CreateClientOptions();
-            var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture(), clientOptions: clientOptions);
-            await TestHelper.WaitForClientState(client, ClientState.Connected);
+            var clientOptions = TestHelper.CreateClientOptions(token);
+            var client = await TestHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: new TestNullVpnAdapter());
+            await client.WaitForState( ClientState.Connected);
 
             Assert.AreEqual(servers[5].ServerHost.TcpEndPoints.First(), client.HostTcpEndPoint);
 
             // tracker should report unreachable servers
-            var testTracker = (TestTrackerProvider?)clientOptions.Tracker;
+            var testTracker = (TestTracker?)client.Tracker;
             Assert.IsNotNull(testTracker);
-            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[0])?.Parameters["available"] is null or false);
-            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[1])?.Parameters["available"] is null or false);
-            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[2])?.Parameters["available"] is true);
+            Assert.IsTrue(
+                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[0])?.Parameters["available"] is null
+                    or false);
+            Assert.IsTrue(
+                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[1])?.Parameters["available"] is null
+                    or false);
+            Assert.IsTrue(
+                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[2])?.Parameters["available"] is true);
             Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[3]) is null);
-            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[4])?.Parameters["available"] is false);
-            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[5])?.Parameters["available"] is true);
-            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[6])?.Parameters["available"] is null or false);
-            Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[7])?.Parameters["available"] is null or true);
+            Assert.IsTrue(
+                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[4])
+                    ?.Parameters["available"] is false);
+            Assert.IsTrue(
+                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[5])?.Parameters["available"] is true);
+            Assert.IsTrue(
+                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[6])?.Parameters["available"] is null
+                    or false);
+            Assert.IsTrue(
+                testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[7])?.Parameters["available"] is null
+                    or true);
             Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[8]) is null);
             Assert.IsTrue(testTracker.FindEvent("vh_endpoint_status", "ep", serverEndPoints[9]) is null);
         }

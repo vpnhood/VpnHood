@@ -7,7 +7,8 @@ using System.Windows.Media.Imaging;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using VpnHood.AppLib.WebServer;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Win.Common.WpfSpa;
 
@@ -17,16 +18,16 @@ public partial class VpnHoodWpfSpaMainWindow : Window
     public VpnHoodWpfSpaMainWindow()
     {
         InitializeComponent();
-        var backgroundColor = VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor;
+        var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor;
 
         // initialize main window
-        Title = VpnHoodApp.Instance.Resource.Strings.AppName;
+        Title = VpnHoodApp.Instance.Resources.Strings.AppName;
         if (backgroundColor != null)
             Background = new SolidColorBrush(Color.FromArgb(backgroundColor.Value.A, backgroundColor.Value.R,
                 backgroundColor.Value.G, backgroundColor.Value.B));
         Visibility = VpnHoodWinApp.Instance.ShowWindowAfterStart ? Visibility.Visible : Visibility.Hidden;
-        Width = VpnHoodApp.Instance.Resource.WindowSize.Width;
-        Height = VpnHoodApp.Instance.Resource.WindowSize.Height;
+        Width = VpnHoodApp.Instance.Resources.WindowSize.Width;
+        Height = VpnHoodApp.Instance.Resources.WindowSize.Height;
         ResizeMode = ResizeMode.CanMinimize;
         StateChanged += (_, _) => {
             if (WindowState == WindowState.Minimized) Hide();
@@ -37,16 +38,18 @@ public partial class VpnHoodWpfSpaMainWindow : Window
         if (backgroundColor != null) VpnHoodWinApp.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
 
         // initialize MainWebView
-        MainWebView.CreationProperties = new CoreWebView2CreationProperties
-            { UserDataFolder = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp") };
+        MainWebView.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp") };
         MainWebView.CoreWebView2InitializationCompleted += MainWebView_CoreWebView2InitializationCompleted;
         MainWebView.Source = VpnHoodAppWebServer.Instance.Url;
         if (backgroundColor != null) MainWebView.DefaultBackgroundColor = backgroundColor.Value;
         _ = MainWebView.EnsureCoreWebView2Async(null);
 
         // initialize tray icon
-        VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => Dispatcher.Invoke(UpdateIcon);
-        ActiveUiContext.Context = new WinUiContext(this);
+        UpdateIcon();
+        VpnHoodApp.Instance.ConnectionStateChanged += (_, _) =>
+            VhUtils.TryInvoke("UpdatingSystemIcon", () => Dispatcher.Invoke(UpdateIcon));
+
+        AppUiContext.Context = new WinUiContext(this);
     }
 
 
@@ -80,9 +83,9 @@ public partial class VpnHoodWpfSpaMainWindow : Window
     {
         // update icon and text
         var icon = VpnHoodApp.Instance.State.ConnectionState switch {
-            AppConnectionState.Connected => VpnHoodApp.Instance.Resource.Icons.BadgeConnectedIcon,
+            AppConnectionState.Connected => VpnHoodApp.Instance.Resources.Icons.BadgeConnectedIcon,
             AppConnectionState.None => null,
-            _ => VpnHoodApp.Instance.Resource.Icons.BadgeConnectingIcon
+            _ => VpnHoodApp.Instance.Resources.Icons.BadgeConnectingIcon
         };
 
         // remove overlay
@@ -105,4 +108,5 @@ public partial class VpnHoodWpfSpaMainWindow : Window
         e.Cancel = true;
         Hide();
     }
+
 }

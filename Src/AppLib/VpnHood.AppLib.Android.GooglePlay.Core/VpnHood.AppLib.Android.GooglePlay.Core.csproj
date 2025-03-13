@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<Description>VpnHood Android Client App Common Library for Google Core</Description>
 		<TargetFramework>net9.0-android35.0</TargetFramework>
-		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
 		<RootNamespace>VpnHood.AppLib.Droid.GooglePlay</RootNamespace>
 	</PropertyGroup>
 
@@ -21,7 +21,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>5.1.640</Version>
+		<Version>6.0.675</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>

@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood client device provider for Android.</Description>
+		<Description>VpnHood client device provider for Android</Description>
 		<TargetFramework>net9.0-android35.0</TargetFramework>
-		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
 		<RootNamespace>VpnHood.Core.Client.Device.Droid</RootNamespace>
 	</PropertyGroup>
 
@@ -21,7 +21,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>5.1.640</Version>
+		<Version>6.0.675</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
@@ -32,10 +32,11 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.3" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Client.Device\VpnHood.Core.Client.Device.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.AndroidTun\VpnHood.Core.VpnAdapters.AndroidTun.csproj" />
 	</ItemGroup>
 </Project>

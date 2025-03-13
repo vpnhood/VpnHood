@@ -4,13 +4,13 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.Jobs;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Net;
-using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Exceptions;
 using VpnHood.Core.Server.Utils;
+using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
@@ -31,12 +31,12 @@ public class ServerHost : IAsyncDisposable, IJob
     private readonly List<Task> _tcpListenerTasks = [];
     private bool _disposed;
 
-    public const int MaxProtocolVersion =  6;
-    public const int MinProtocolVersion =  4;
-    public int MinClientProtocolVersion { get; set; }  = MinProtocolVersion; // used for tests
+    public const int MaxProtocolVersion = 6;
+    public const int MinProtocolVersion = 4;
+    public int MinClientProtocolVersion { get; set; } = MinProtocolVersion; // used for tests
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
     public bool IsIpV6Supported { get; set; }
-    public IpRange[]? NetFilterPacketCaptureIncludeIpRanges { get; set; }
+    public IpRange[]? NetFilterVpnAdapterIncludeIpRanges { get; set; }
     public IpRange[]? NetFilterIncludeIpRanges { get; set; }
     public IPAddress[]? DnsServers { get; set; }
     public CertificateHostName[] Certificates { get; private set; } = [];
@@ -52,7 +52,7 @@ public class ServerHost : IAsyncDisposable, IJob
     public async Task Configure(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints,
         IPAddress[]? dnsServers, X509Certificate2[] certificates)
     {
-        if (VhUtil.IsNullOrEmpty(certificates))
+        if (VhUtils.IsNullOrEmpty(certificates))
             throw new ArgumentNullException(nameof(certificates), "No certificate has been configured.");
 
         if (_disposed)
@@ -168,7 +168,7 @@ public class ServerHost : IAsyncDisposable, IJob
                 if (_disposed)
                     throw new ObjectDisposedException("ServerHost has been stopped.");
 
-                VhUtil.ConfigTcpClient(tcpClient,
+                VhUtils.ConfigTcpClient(tcpClient,
                     _sessionManager.SessionOptions.TcpKernelSendBufferSize,
                     _sessionManager.SessionOptions.TcpKernelReceiveBufferSize);
 
@@ -207,7 +207,7 @@ public class ServerHost : IAsyncDisposable, IJob
     private async Task<SslStream> AuthenticateAsServerAsync(Stream stream, CancellationToken cancellationToken)
     {
         try {
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating...");
+            VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "TLS Authenticating...");
             var sslStream = new SslStream(stream, true);
             await sslStream.AuthenticateAsServerAsync(
                     new SslServerAuthenticationOptions {
@@ -246,7 +246,7 @@ public class ServerHost : IAsyncDisposable, IJob
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream,
         CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Waiting for request...");
+        VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "Waiting for request...");
         var streamId = Guid.NewGuid() + ":incoming";
 
         // Version 2 is HTTP and starts with POST
@@ -261,17 +261,18 @@ public class ServerHost : IAsyncDisposable, IJob
             var authorization = headers.GetValueOrDefault("Authorization", string.Empty);
 
             // check version; Throw unauthorized to prevent fingerprinting
-            if (protocolVersion < MinProtocolVersion || protocolVersion > MaxProtocolVersion)
+            if (protocolVersion is < MinProtocolVersion or > MaxProtocolVersion)
                 throw new UnauthorizedAccessException();
 
             // read api key
-            if (protocolVersion <= 5 ) {
+            if (protocolVersion <= 5) {
                 if (!CheckApiKeyAuthorization(authorization)) {
                     // process hello without api key
                     if (authorization != "ApiKey")
                         throw new UnauthorizedAccessException();
 
-                    await sslStream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).VhConfigureAwait();
+                    await sslStream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken)
+                        .VhConfigureAwait();
                     return new TcpClientStream(tcpClient, sslStream, streamId);
                 }
 
@@ -285,7 +286,7 @@ public class ServerHost : IAsyncDisposable, IJob
                         streamId, ReuseClientStream) {
                         RequireHttpResponse = false
                     };
-                
+
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 case BinaryStreamType.Standard when protocolVersion == 6:
                     return new TcpClientStream(tcpClient,
@@ -306,7 +307,7 @@ public class ServerHost : IAsyncDisposable, IJob
         }
         catch (Exception ex) {
             //always return BadRequest 
-            if (!VhUtil.IsTcpClientHealthy(tcpClient)) throw;
+            if (!VhUtils.IsTcpClientHealthy(tcpClient)) throw;
             var response = ex is UnauthorizedAccessException
                 ? HttpResponseBuilder.Unauthorized()
                 : HttpResponseBuilder.BadRequest();
@@ -319,7 +320,8 @@ public class ServerHost : IAsyncDisposable, IJob
     {
         // add timeout to cancellationToken
         using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
-        using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
+        using var cancellationTokenSource =
+            CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
         cancellationToken = cancellationTokenSource.Token;
 
         IClientStream? clientStream = null;
@@ -358,7 +360,8 @@ public class ServerHost : IAsyncDisposable, IJob
     {
         lock (_clientStreams) _clientStreams.Add(clientStream);
         using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
-        using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
+        using var cancellationTokenSource =
+            CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
         var cancellationToken = cancellationTokenSource.Token;
 
         // don't add new client in disposing
@@ -369,13 +372,13 @@ public class ServerHost : IAsyncDisposable, IJob
 
         // process incoming client
         try {
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "ServerHost.ReuseClientStream: A shared ClientStream is pending for reuse. ClientStreamId: {ClientStreamId}",
                 clientStream.ClientStreamId);
 
             await ProcessClientStream(clientStream, cancellationToken).VhConfigureAwait();
 
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "ServerHost.ReuseClientStream: A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}",
                 clientStream.ClientStreamId);
         }
@@ -426,7 +429,8 @@ public class ServerHost : IAsyncDisposable, IJob
                     clientStream.ClientStreamId);
 
             // return 401 for ANY non SessionException to keep server's anonymity
-            await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).VhConfigureAwait();
+            await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken)
+                .VhConfigureAwait();
             await clientStream.DisposeAsync(false).VhConfigureAwait();
         }
         finally {
@@ -496,15 +500,15 @@ public class ServerHost : IAsyncDisposable, IJob
         where T : ClientRequest
     {
         // reading request
-        VhLogger.Instance.LogTrace(GeneralEventId.Session,
+        VhLogger.Instance.LogDebug(GeneralEventId.Session,
             "Processing a request. RequestType: {RequestType}.",
             VhLogger.FormatType<T>());
 
-        var request = await StreamUtil.ReadJsonAsync<T>(clientStream.Stream, cancellationToken).VhConfigureAwait();
+        var request = await StreamUtils.ReadObjectAsync<T>(clientStream.Stream, cancellationToken).VhConfigureAwait();
         request.RequestId = request.RequestId.Replace(":client", ":server");
         clientStream.ClientStreamId = request.RequestId;
 
-        VhLogger.Instance.LogTrace(GeneralEventId.Session,
+        VhLogger.Instance.LogDebug(GeneralEventId.Session,
             "Request has been read. RequestType: {RequestType}. RequestId: {RequestId}",
             VhLogger.FormatType<T>(), request.RequestId);
 
@@ -516,13 +520,16 @@ public class ServerHost : IAsyncDisposable, IJob
         var ipEndPointPair = clientStream.IpEndPointPair;
 
         // reading request
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Processing hello request... ClientIp: {ClientIp}",
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Processing hello request... ClientIp: {ClientIp}",
             VhLogger.Format(ipEndPointPair.RemoteEndPoint.Address));
 
         var request = await ReadRequest<HelloRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
+        // find best version (for future)
+        var protocolVersion = Math.Min(MaxProtocolVersion, request.ClientInfo.MaxProtocolVersion);
+
         // creating a session
-        VhLogger.Instance.LogTrace(GeneralEventId.Session,
+        VhLogger.Instance.LogDebug(GeneralEventId.Session,
             "Creating a session... TokenId: {TokenId}, ClientId: {ClientId}, ClientVersion: {ClientVersion}, UserAgent: {UserAgent}",
             VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId),
             request.ClientInfo.ClientVersion, request.ClientInfo.UserAgent);
@@ -549,7 +556,7 @@ public class ServerHost : IAsyncDisposable, IJob
         VhLogger.Instance.LogInformation(GeneralEventId.SessionTrack,
             "SessionId: {SessionId-5}\t{Mode,-5}\tTokenId: {TokenId}\tClientCount: {ClientCount,-3}\tClientId: {ClientId}\tClientIp: {ClientIp-15}\tVersion: {Version}\tOS: {OS}",
             VhLogger.FormatSessionId(session.SessionId), "New", VhLogger.FormatId(request.TokenId),
-            session.SessionResponse.AccessUsage?.ActiveClientCount, VhLogger.FormatId(request.ClientInfo.ClientId),
+            session.SessionResponseEx.AccessUsage?.ActiveClientCount, VhLogger.FormatId(request.ClientInfo.ClientId),
             clientIp, request.ClientInfo.ClientVersion,
             UserAgentParser.GetOperatingSystem(request.ClientInfo.UserAgent));
 
@@ -561,7 +568,7 @@ public class ServerHost : IAsyncDisposable, IJob
         }
 
         // reply hello session
-        VhLogger.Instance.LogTrace(GeneralEventId.Session,
+        VhLogger.Instance.LogDebug(GeneralEventId.Session,
             $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponseEx.SessionId)}");
 
         // find udp port that match to the same tcp local IpAddress
@@ -586,7 +593,7 @@ public class ServerHost : IAsyncDisposable, IJob
             GaMeasurementId = sessionResponseEx.GaMeasurementId,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
 #pragma warning disable CS0618 // Type or member is obsolete
-            ServerProtocolVersion = 5,
+            ServerProtocolVersion = protocolVersion,
 #pragma warning restore CS0618 // Type or member is obsolete
             MaxProtocolVersion = MaxProtocolVersion,
             MinProtocolVersion = MinProtocolVersion,
@@ -594,7 +601,7 @@ public class ServerHost : IAsyncDisposable, IJob
             MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
             ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,
             IncludeIpRanges = NetFilterIncludeIpRanges,
-            PacketCaptureIncludeIpRanges = NetFilterPacketCaptureIncludeIpRanges,
+            VpnAdapterIncludeIpRanges = NetFilterVpnAdapterIncludeIpRanges,
             IsIpV6Supported = IsIpV6Supported,
             IsReviewRequested = sessionResponseEx.IsReviewRequested,
             // client should wait more to get session exception replies
@@ -610,8 +617,9 @@ public class ServerHost : IAsyncDisposable, IJob
             ServerTags = sessionResponseEx.ServerTags,
             AccessInfo = sessionResponseEx.AccessInfo,
             IsTunProviderSupported = _sessionManager.IsTunProviderSupported,
-            VirtualIp = session.VirtualIp,
-            ClientCountry = sessionResponseEx.ClientCountry
+            ClientCountry = sessionResponseEx.ClientCountry,
+            VirtualIpNetworkV4 = new IpNetwork(session.VirtualIps.IpV4, _sessionManager.VirtualIpNetworkV4.PrefixLength),
+            VirtualIpNetworkV6 = new IpNetwork(session.VirtualIps.IpV6, _sessionManager.VirtualIpNetworkV6.PrefixLength)
         };
 
         await clientStream.WriteFinalResponse(helloResponse, cancellationToken).VhConfigureAwait();
@@ -619,7 +627,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessRewardedAdRequest(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the RewardedAd request...");
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading the RewardedAd request...");
         var request = await ReadRequest<RewardedAdRequest>(clientStream, cancellationToken).VhConfigureAwait();
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
         await session.ProcessRewardedAdRequest(request, clientStream, cancellationToken).VhConfigureAwait();
@@ -627,7 +635,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private static async Task ProcessServerStatus(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the ServerStatus request...");
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading the ServerStatus request...");
         var request = await ReadRequest<ServerStatusRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         // Before calling CloseSession. Session must be validated by GetSession
@@ -642,7 +650,7 @@ public class ServerHost : IAsyncDisposable, IJob
     // todo: it must be removed
     private async Task ProcessSessionStatus(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the SessionStatus request...");
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading the SessionStatus request...");
         var request = await ReadRequest<SessionStatusRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         // finding session
@@ -654,7 +662,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessBye(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the Bye request...");
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading the Bye request...");
         var request = await ReadRequest<ByeRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         // finding session
@@ -662,7 +670,8 @@ public class ServerHost : IAsyncDisposable, IJob
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
 
         // Before calling CloseSession. Session must be validated by GetSession
-        await clientStream.WriteFinalResponseUngracefully(new SessionResponse { ErrorCode = SessionErrorCode.Ok }, cancellationToken)
+        await clientStream
+            .WriteFinalResponseUngracefully(new SessionResponse { ErrorCode = SessionErrorCode.Ok }, cancellationToken)
             .VhConfigureAwait();
 
         // must be last
@@ -671,7 +680,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessUdpPacketRequest(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading a UdpPacket request...");
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading a UdpPacket request...");
         var request = await ReadRequest<UdpPacketRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
@@ -681,7 +690,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessTcpDatagramChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel, "Reading the TcpDatagramChannelRequest...");
+        VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel, "Reading the TcpDatagramChannelRequest...");
         var request = await ReadRequest<TcpDatagramChannelRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         // finding session
@@ -711,32 +720,32 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private async Task Stop()
     {
-        VhLogger.Instance.LogTrace("Stopping ServerHost...");
+        VhLogger.Instance.LogDebug("Stopping ServerHost...");
         _cancellationTokenSource.Cancel();
 
         // UDPs
-        VhLogger.Instance.LogTrace("Disposing UdpChannelTransmitters...");
+        VhLogger.Instance.LogDebug("Disposing UdpChannelTransmitters...");
         foreach (var udpChannelClient in _udpChannelTransmitters)
             udpChannelClient.Dispose();
         _udpChannelTransmitters.Clear();
 
         // TCPs
-        VhLogger.Instance.LogTrace("Disposing TcpListeners...");
+        VhLogger.Instance.LogDebug("Disposing TcpListeners...");
         foreach (var tcpListener in _tcpListeners)
             tcpListener.Stop();
         _tcpListeners.Clear();
 
         // dispose clientStreams
-        VhLogger.Instance.LogTrace("Disposing ClientStreams...");
+        VhLogger.Instance.LogDebug("Disposing ClientStreams...");
         Task[] disposeTasks;
         lock (_clientStreams)
             disposeTasks = _clientStreams.Select(x => x.DisposeAsync(false).AsTask()).ToArray();
         await Task.WhenAll(disposeTasks).VhConfigureAwait();
 
         // wait for finalizing all listener tasks
-        VhLogger.Instance.LogTrace("Disposing current processing requests...");
+        VhLogger.Instance.LogDebug("Disposing current processing requests...");
         try {
-            await VhUtil.RunTask(Task.WhenAll(_tcpListenerTasks), TimeSpan.FromSeconds(15)).VhConfigureAwait();
+            await VhUtils.RunTask(Task.WhenAll(_tcpListenerTasks), TimeSpan.FromSeconds(15)).VhConfigureAwait();
         }
         catch (Exception ex) {
             if (ex is TimeoutException)

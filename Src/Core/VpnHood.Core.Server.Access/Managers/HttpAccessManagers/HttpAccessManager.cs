@@ -1,12 +1,12 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
-using VpnHood.Core.Common.ApiClients;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Messaging;
+using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
 
@@ -34,7 +34,8 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
             DefaultAuthorization = authenticationHeaderValue;
     }
 
-    protected override Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken cancellationToken)
+    protected override Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response,
+        CancellationToken cancellationToken)
     {
         // check maintenance mode
         IsMaintenanceMode = response.StatusCode is HttpStatusCode.ServiceUnavailable or HttpStatusCode.Forbidden;
@@ -50,7 +51,7 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         try {
             return await base.HttpSendAsync<T>(urlPart, parameters, request, cancellationToken).VhConfigureAwait();
         }
-        catch (Exception ex) when (VhUtil.IsConnectionRefusedException(ex)) {
+        catch (Exception ex) when (VhUtils.IsConnectionRefusedException(ex)) {
             IsMaintenanceMode = true;
             throw new MaintenanceException();
         }

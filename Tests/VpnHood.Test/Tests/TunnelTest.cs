@@ -5,7 +5,7 @@ using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using VpnHood.Core.Client;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
@@ -27,7 +27,7 @@ public class TunnelTest : TestBase
         }
     }
 
- 
+
     [TestMethod]
     public void UdpChannel_Direct()
     {
@@ -42,8 +42,8 @@ public class TunnelTest : TestBase
         };
 
         // create keys
-        var serverKey = VhUtil.GenerateKey();
-        var sessionKey = VhUtil.GenerateKey();
+        var serverKey = VhUtils.GenerateKey();
+        var sessionKey = VhUtils.GenerateKey();
 
         // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
@@ -94,8 +94,8 @@ public class TunnelTest : TestBase
         };
 
         // create keys
-        var serverKey = VhUtil.GenerateKey();
-        var sessionKey = VhUtil.GenerateKey();
+        var serverKey = VhUtils.GenerateKey();
+        var sessionKey = VhUtils.GenerateKey();
 
         // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));

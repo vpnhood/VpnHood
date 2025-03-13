@@ -24,11 +24,11 @@
 
 	<ItemGroup>
 		<PackageReference Include="EmbedIO" Version="3.5.2" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.3" />
 		<PackageReference Include="Unosquare.Swan.Lite" Version="3.1.0" />
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-		<PackageReference Include="MSTest.TestAdapter" Version="3.7.3" />
-		<PackageReference Include="MSTest.TestFramework" Version="3.7.3" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+		<PackageReference Include="MSTest.TestAdapter" Version="3.8.2" />
+		<PackageReference Include="MSTest.TestFramework" Version="3.8.2" />
 		<PackageReference Include="coverlet.collector" Version="6.0.4">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -36,10 +36,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Client.Device.WinDivert\VpnHood.Core.Client.Device.WinDivert.csproj" />
 		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
 		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Server.Access.FileAccessManager\VpnHood.Core.Server.Access.FileAccessManager.csproj" />
 		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
+		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Client.Device.Win\VpnHood.Core.Client.Device.Win.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

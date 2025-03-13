@@ -1,19 +1,20 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Testers.HttpTesters;
 
-public class UrlTesterClient(Uri url, IPAddress? serverIp, TimeSpan? timeout = null) 
+public class UrlTesterClient(Uri url, IPAddress? serverIp, TimeSpan? timeout = null)
     : IStreamTesterClient
 {
     public async Task Start(long upSize, long downSize, int connectionCount, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation("Url => Start Downloading. Size: {Size}, Connections: {Connections}, Url: {Url}, serverIp: {serverIp}",
-            VhUtil.FormatBytes(downSize), connectionCount, url, serverIp);
+        VhLogger.Instance.LogInformation(
+            "Url => Start Downloading. Size: {Size}, Connections: {Connections}, Url: {Url}, serverIp: {serverIp}",
+            VhUtils.FormatBytes(downSize), connectionCount, url, serverIp);
 
         // start multi downloader
         using var speedometer = new Speedometer("Down");

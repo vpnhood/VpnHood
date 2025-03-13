@@ -1,6 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Settings;
 
@@ -17,7 +17,7 @@ public class AppSettingsService
     public AppSettingsService(string storagePath)
     {
         _storagePath = storagePath;
-        AppSettings = VhUtil.JsonDeserializeFile<AppSettings>(AppSettingsFilePath) ?? new AppSettings();
+        AppSettings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsFilePath) ?? new AppSettings();
         AppSettings.AppSettingsService = this;
         IpFilterSettings = new IpFilterSettings(Path.Combine(storagePath, "ip_filters"));
     }

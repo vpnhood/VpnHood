@@ -1,13 +1,19 @@
-﻿namespace VpnHood.Core.Client.Device;
+﻿using VpnHood.Core.Client.Device.UiContexts;
 
-public interface IDevice : IDisposable
+namespace VpnHood.Core.Client.Device;
+
+public interface IDevice : IAsyncDisposable
 {
-    event EventHandler StartedAsService;
+    string VpnServiceConfigFolder { get; }
+    bool IsTv { get; }
     bool IsExcludeAppsSupported { get; }
     bool IsIncludeAppsSupported { get; }
     bool IsAlwaysOnSupported { get; }
+    bool IsBindProcessToVpnSupported { get; }
     string OsInfo { get; }
     DeviceMemInfo? MemInfo { get; }
     DeviceAppInfo[] InstalledApps { get; }
-    Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext);
+    Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken);
+    Task StartVpnService(CancellationToken cancellationToken);
+    void BindProcessToVpn(bool value);
 }

@@ -43,13 +43,15 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpPost("connect")]
-    public Task Connect(Guid? clientProfileId = null, string? serverLocation = null, ConnectPlanId planId = ConnectPlanId.Normal)
+    public Task Connect(Guid? clientProfileId = null, string? serverLocation = null,
+        ConnectPlanId planId = ConnectPlanId.Normal)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPost("diagnose")]
-    public Task Diagnose(Guid? clientProfileId = null, string? serverLocation = null, ConnectPlanId planId = ConnectPlanId.Normal)
+    public Task Diagnose(Guid? clientProfileId = null, string? serverLocation = null,
+        ConnectPlanId planId = ConnectPlanId.Normal)
     {
         throw new SwaggerOnlyException();
     }
@@ -61,7 +63,7 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpPost("clear-last-error")]
-    public void ClearLastError()
+    public Task ClearLastError()
     {
         throw new SwaggerOnlyException();
     }
@@ -98,13 +100,13 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpPost("version-check-postpone")]
-    public void VersionCheckPostpone()
+    public Task VersionCheckPostpone()
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPost("settings/open-always-on-page")]
-    public void OpenAlwaysOnPage()
+    public Task OpenAlwaysOnPage()
     {
         throw new SwaggerOnlyException();
     }

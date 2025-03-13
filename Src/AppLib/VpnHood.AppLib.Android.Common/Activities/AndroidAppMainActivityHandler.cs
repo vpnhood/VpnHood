@@ -3,9 +3,11 @@ using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
 using VpnHood.AppLib.ClientProfiles;
-using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
+using VpnHood.Core.Client.Device.Droid.Utils;
+using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Toolkit.Utils;
 using Permission = Android.Content.PM.Permission;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;
@@ -37,10 +39,31 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnCreate(Bundle? savedInstanceState)
     {
-        ActiveUiContext.Context = new AndroidUiContext(ActivityEvent);
+        AppUiContext.Context = new AndroidUiContext(ActivityEvent);
+
+        // initialize the window
+        InitWindow();
 
         // process intent
         ProcessIntent(ActivityEvent.Activity.Intent);
+    }
+
+    private void InitWindow()
+    {
+        // set window colors such as status bar and navigation bar
+        var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
+        if (backgroundColor != null) {
+            VhUtils.TryInvoke("SetStatusBarColor", () =>
+                ActivityEvent.Activity.Window?.SetStatusBarColor(backgroundColor.Value));
+            
+            VhUtils.TryInvoke("SetNavigationBarColor", () =>
+                ActivityEvent.Activity.Window?.SetNavigationBarColor(backgroundColor.Value));
+        }
+
+        // set window insets listener
+        if (OperatingSystem.IsAndroidVersionAtLeast(30))
+            ActivityEvent.Activity.Window?.DecorView.SetOnApplyWindowInsetsListener(new WebViewWindowInsetsListener());
+
     }
 
     protected virtual bool OnNewIntent(Intent? intent)
@@ -64,7 +87,7 @@ public class AndroidAppMainActivityHandler
             // check mime
             var mimeType = ActivityEvent.Activity.ContentResolver.GetType(uri);
             if (!_accessKeyMimes.Contains(mimeType, StringComparer.OrdinalIgnoreCase)) {
-                Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resource.Strings.MsgUnsupportedContent,
+                Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resources.Strings.MsgUnsupportedContent,
                     ToastLength.Long)?.Show();
                 return false;
             }
@@ -84,7 +107,7 @@ public class AndroidAppMainActivityHandler
             ImportAccessKey(accessKey);
         }
         catch {
-            Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resource.Strings.MsgCantReadAccessKey,
+            Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resources.Strings.MsgCantReadAccessKey,
                 ToastLength.Long)?.Show();
         }
 
@@ -99,8 +122,8 @@ public class AndroidAppMainActivityHandler
 
         var isNew = profiles.Any(x => x.ClientProfileId == profileInfo.ClientProfileId);
         var message = isNew
-            ? string.Format(VpnHoodApp.Instance.Resource.Strings.MsgAccessKeyAdded, profileInfo.ClientProfileName)
-            : string.Format(VpnHoodApp.Instance.Resource.Strings.MsgAccessKeyUpdated, profileInfo.ClientProfileName);
+            ? string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyAdded, profileInfo.ClientProfileName)
+            : string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyUpdated, profileInfo.ClientProfileName);
 
         Toast.MakeText(ActivityEvent.Activity, message, ToastLength.Long)?.Show();
     }
@@ -134,6 +157,6 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnDestroy()
     {
-        ActiveUiContext.Context = null;
+        AppUiContext.Context = null;
     }
 }

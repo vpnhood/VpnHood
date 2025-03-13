@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Client.Device;
+﻿using VpnHood.Core.Client.Device.UiContexts;
 
 namespace VpnHood.AppLib.Abstractions;
 
@@ -9,5 +9,5 @@ public interface IAppBillingProvider : IDisposable
     /// <returns>Provider Order Id</returns>
     Task<string> Purchase(IUiContext uiContext, string planId);
 
-    BillingPurchaseState PurchaseState { get; } 
+    BillingPurchaseState PurchaseState { get; }
 }

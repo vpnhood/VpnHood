@@ -1,10 +1,12 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Common.Converters;
-using VpnHood.Core.Common.Utils;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Server.Access.Configurations;
+using VpnHood.Core.Toolkit.Converters;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 
 public class FileAccessManagerOptions : ServerConfig
 {
@@ -17,15 +19,16 @@ public class FileAccessManagerOptions : ServerConfig
     public string[] ServerTokenUrls { get; set; } = [];
     public bool ReplyAccessKey { get; set; } = true; // if false, access tokens will only be updated by url
     public bool UseExternalLocationService { get; set; } = true;
+    public bool IsUnitTest { get; init; }
 
     [Obsolete("Use ServerTokenUrls. Version 558 or upper.")]
     public string? ServerTokenUrl {
         get => ServerTokenUrls.FirstOrDefault();
         set {
-            if (VhUtil.IsNullOrEmpty(ServerTokenUrls))
+            if (VhUtils.IsNullOrEmpty(ServerTokenUrls))
                 ServerTokenUrls = value != null ? [value] : [];
 
-            Console.WriteLine("Warning: ServerTokenUrl is obsoleted. Use ServerTokenUrls.");
+            VhLogger.Instance.LogWarning("Warning: ServerTokenUrl is obsoleted. Use ServerTokenUrls.");
         }
     }
 }

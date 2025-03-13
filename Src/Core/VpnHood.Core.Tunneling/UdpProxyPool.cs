@@ -1,12 +1,14 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using PacketDotNet;
-using VpnHood.Core.Common.Collections;
-using VpnHood.Core.Common.Jobs;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Packets;
+using VpnHood.Core.Toolkit.Collections;
+using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Exceptions;
-using VpnHood.Core.Tunneling.Factory;
-using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Core.Tunneling.Sockets;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Tunneling;
@@ -53,7 +55,7 @@ public class UdpProxyPool : IPacketProxyPool, IJob
     public Task SendPacket(IPPacket ipPacket)
     {
         // send packet via proxy
-        var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+        var udpPacket = ipPacket.ExtractUdp();
         bool? noFragment = ipPacket.Protocol == ProtocolType.IPv6 && ipPacket is IPv4Packet ipV4Packet
             ? (ipV4Packet.FragmentFlags & 0x2) != 0
             : null;
@@ -86,8 +88,11 @@ public class UdpProxyPool : IPacketProxyPool, IJob
 
         // Raise new endpoint
         if (isNewLocalEndPoint || isNewRemoteEndPoint)
-            _packetProxyReceiver.OnNewEndPoint(ProtocolType.Udp,
-                udpProxy.LocalEndPoint, destinationEndPoint, isNewLocalEndPoint, isNewRemoteEndPoint);
+            _packetProxyReceiver.OnNewEndPoint(ProtocolType.Udp, 
+                localEndPoint: udpProxy.LocalEndPoint, 
+                remoteEndPoint: destinationEndPoint,
+                isNewLocalEndPoint: isNewLocalEndPoint,
+                isNewRemoteEndPoint: isNewRemoteEndPoint);
 
         var dgram = udpPacket.PayloadData ?? [];
         return udpProxy.SendPacket(destinationEndPoint, dgram, noFragment);
@@ -96,6 +101,9 @@ public class UdpProxyPool : IPacketProxyPool, IJob
     private UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
         var udpClient = _socketFactory.CreateUdpClient(addressFamily);
+        var localEndPoint = addressFamily.IsV4() ? new IPEndPoint(IPAddress.Any, 0) : new IPEndPoint(IPAddress.IPv6Any, 0);
+        udpClient.Client.Bind(localEndPoint); // we need local port to report it
+
         if (_sendBufferSize.HasValue) udpClient.Client.SendBufferSize = _sendBufferSize.Value;
         if (_receiveBufferSize.HasValue) udpClient.Client.ReceiveBufferSize = _receiveBufferSize.Value;
         return udpClient;

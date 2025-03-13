@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Test.Tests;
 
@@ -25,7 +25,7 @@ public class NetScanTest : TestBase
         var tcpClient1 = new TcpClient();
         await tcpClient1.ConnectAsync(TestConstants.TcpEndPoint1);
         try {
-            await VhUtil.RunTask(tcpClient1.GetStream().ReadAsync(new byte[100]).AsTask(), TimeSpan.FromSeconds(2));
+            await VhUtils.RunTask(tcpClient1.GetStream().ReadAsync(new byte[100]).AsTask(), TimeSpan.FromSeconds(2));
         }
         catch (Exception ex) {
             Assert.AreEqual(nameof(TimeoutException), ex.GetType().Name);

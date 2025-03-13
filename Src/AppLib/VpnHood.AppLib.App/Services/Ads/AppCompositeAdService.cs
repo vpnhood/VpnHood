@@ -1,10 +1,9 @@
 ﻿using System.Globalization;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.Device;
-using VpnHood.Core.Client.Device.Exceptions;
+using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Ads;
 
@@ -13,39 +12,42 @@ internal class AppCompositeAdService
     private AppAdProviderItem? _loadedAdProviderItem;
 
     private readonly AppAdProviderItem[] _adProviderItems;
-    private readonly AppAdOptions _adOptions;
 
-    public AppCompositeAdService(AppAdProviderItem[] adProviderItems, AppAdOptions adOptions)
+    public AppCompositeAdService(AppAdProviderItem[] adProviderItems)
     {
         _adProviderItems = adProviderItems;
-        _adOptions = adOptions;
 
         // throw exception if an add has both include and exclude country codes
-        var appAdProviderItems = _adProviderItems.Where(x => x.IncludeCountryCodes.Length > 0 && x.ExcludeCountryCodes.Length > 0).ToArray();
-        if (appAdProviderItems.Any())
-            throw new Exception($"An ad provider cannot have both include and exclude country codes. ProviderName: {appAdProviderItems.First().Name}");
-    }
+        var appAdProviderItems = _adProviderItems
+            .Where(x => x.IncludeCountryCodes.Length > 0 && x.ExcludeCountryCodes.Length > 0)
+            .ToArray();
 
+        if (appAdProviderItems.Any())
+            throw new Exception(
+                $"An ad provider cannot have both include and exclude country codes. ProviderName: {appAdProviderItems.First().Name}");
+    }
 
     private bool ShouldLoadAd()
     {
         return _loadedAdProviderItem?.AdProvider.AdLoadedTime == null ||
-               _loadedAdProviderItem.AdProvider.AdLoadedTime + _loadedAdProviderItem.AdProvider.AdLifeSpan < DateTime.UtcNow;
+               _loadedAdProviderItem.AdProvider.AdLoadedTime + _loadedAdProviderItem.AdProvider.AdLifeSpan <
+               DateTime.UtcNow;
     }
 
     private static bool IsCountrySupported(AppAdProviderItem adProviderItem, string countryCode)
     {
-        if (!VhUtil.IsNullOrEmpty(adProviderItem.IncludeCountryCodes))
+        if (!VhUtils.IsNullOrEmpty(adProviderItem.IncludeCountryCodes))
             return adProviderItem.IncludeCountryCodes.Contains(countryCode, StringComparer.OrdinalIgnoreCase);
 
-        if (!VhUtil.IsNullOrEmpty(adProviderItem.ExcludeCountryCodes))
+        if (!VhUtils.IsNullOrEmpty(adProviderItem.ExcludeCountryCodes))
             return !adProviderItem.ExcludeCountryCodes.Contains(countryCode, StringComparer.OrdinalIgnoreCase);
 
         return true;
     }
 
     private readonly AsyncLock _loadAdLock = new();
-    public async Task LoadAd(IUiContext uiContext, string? countryCode, bool forceReload, CancellationToken cancellationToken)
+    public async Task LoadAd(IUiContext uiContext, string? countryCode, bool forceReload,
+        TimeSpan loadAdTimeout, CancellationToken cancellationToken)
     {
         if (_adProviderItems.Length == 0)
             throw new Exception("There is no AdService registered in this app.");
@@ -66,10 +68,9 @@ internal class AppCompositeAdService
             // find first successful ad network
             try {
                 VhLogger.Instance.LogInformation("Trying to load ad. ItemName: {ItemName}", adProviderItem.Name);
-                using var timeoutCts = new CancellationTokenSource(_adOptions.LoadAdTimeout);
+                using var timeoutCts = new CancellationTokenSource(loadAdTimeout);
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
                 await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).VhConfigureAwait();
-                await Task.Delay(_adOptions.LoadAdPostDelay, cancellationToken).VhConfigureAwait();
                 _loadedAdProviderItem = adProviderItem;
                 return;
             }
@@ -80,16 +81,17 @@ internal class AppCompositeAdService
             // do not catch if parent cancel the operation
             catch (Exception ex) {
                 await VerifyActiveUi().VhConfigureAwait();
-                VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.", adProviderItem.Name);
+                VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.",
+                    adProviderItem.Name);
             }
         }
 
-        throw new LoadAdException($"Could not load any AD. CountryCode: {GetCountryName(countryCode)}");
+        throw new LoadAdException($"Could not load any Ad. CountryCode: {GetCountryName(countryCode)}");
     }
 
     private static async Task VerifyActiveUi(bool immediately = true)
     {
-        if (ActiveUiContext.Context?.IsActive == true)
+        if (AppUiContext.Context?.IsActive == true)
             return;
 
         // throw exception if the UI is not available
@@ -99,14 +101,15 @@ internal class AppCompositeAdService
         // wait for the UI to be active
         for (var i = 0; i < 3; i++) {
             await Task.Delay(250).VhConfigureAwait();
-            if (ActiveUiContext.Context?.IsActive == true)
+            if (AppUiContext.Context?.IsActive == true)
                 return;
         }
 
         throw new ShowAdNoUiException();
     }
 
-    public async Task<string> ShowLoadedAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
+    public async Task<string> ShowLoadedAd(IUiContext uiContext, string? customData,
+        CancellationToken cancellationToken)
     {
         await VerifyActiveUi();
 
@@ -117,10 +120,8 @@ internal class AppCompositeAdService
         try {
             VhLogger.Instance.LogInformation("Trying to show ad. ItemName: {ItemName}", _loadedAdProviderItem.Name);
             await _loadedAdProviderItem.AdProvider.ShowAd(uiContext, customData, cancellationToken).VhConfigureAwait();
-            VhLogger.Instance.LogTrace("Showing ad has been completed. {ItemName}", _loadedAdProviderItem.Name);
+            VhLogger.Instance.LogDebug("Showing ad has been completed. {ItemName}", _loadedAdProviderItem.Name);
             await VerifyActiveUi(false); // some ad provider may not raise exception on minimize
-            await Task.Delay(_adOptions.ShowAdPostDelay, cancellationToken); //wait for finishing trackers
-
             return _loadedAdProviderItem.Name;
         }
         catch (UiContextNotAvailableException) {

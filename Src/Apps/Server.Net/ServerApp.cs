@@ -10,17 +10,16 @@ using VpnHood.App.Server.Providers.Linux;
 using VpnHood.App.Server.Providers.Win;
 using VpnHood.Core.Common;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Net;
-using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Managers;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 using VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
 using VpnHood.Core.Server.SystemInformation;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
-using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace VpnHood.App.Server;
 
@@ -39,8 +38,10 @@ public class ServerApp : IDisposable
     public IAccessManager AccessManager { get; }
     public FileAccessManager? FileAccessManager => AccessManager as FileAccessManager;
     public static string AppName => "VpnHoodServer";
-    public static string AppFolderPath => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ??
-                                          throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
+
+    public static string AppFolderPath => 
+        Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ??
+        throw new Exception($"Could not acquire {nameof(AppFolderPath)}.");
 
     public AppSettings AppSettings { get; }
     public static string StoragePath => Directory.GetCurrentDirectory();
@@ -53,8 +54,7 @@ public class ServerApp : IDisposable
 
         // set storage folder
         var parentAppFolderPath = Path.GetDirectoryName(Path.GetDirectoryName(typeof(ServerApp).Assembly.Location));
-        var storagePath =
-            (parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish)))
+        var storagePath = parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish))
                 ? Path.Combine(parentAppFolderPath, FolderNameStorage)
                 : Path.Combine(Directory.GetCurrentDirectory(), FolderNameStorage);
         Directory.CreateDirectory(storagePath);
@@ -69,7 +69,7 @@ public class ServerApp : IDisposable
         if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(StoragePath, "appsettings.json");
         if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
         AppSettings = File.Exists(appSettingsFilePath)
-            ? VhUtil.JsonDeserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
+            ? JsonUtils.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
             : new AppSettings();
 
         // Init File Logger before starting server
@@ -101,18 +101,16 @@ public class ServerApp : IDisposable
         };
     }
 
-    private void InitFileLogger(string storagePath)
+    private static void InitFileLogger(string storagePath)
     {
         var configFilePath = Path.Combine(StoragePath, "NLog.config");
         if (!File.Exists(configFilePath)) configFilePath = Path.Combine(AppFolderPath, "NLog.config");
         if (File.Exists(configFilePath)) {
             using var loggerFactory = LoggerFactory.Create(builder => {
                 builder.AddNLog(configFilePath);
-                if (AppSettings.IsDiagnoseMode)
-                    builder.SetMinimumLevel(LogLevel.Trace);
             });
             LogManager.Configuration.Variables["mydir"] = storagePath;
-            VhLogger.Instance = loggerFactory.CreateLogger("NLog");
+            VhLogger.Instance = loggerFactory.CreateLogger("VpnHood");
         }
         else {
             VhLogger.Instance.LogWarning("Could not find NLog file. ConfigFilePath: {configFilePath}", configFilePath);
@@ -137,7 +135,6 @@ public class ServerApp : IDisposable
         return serverId;
     }
 
-
     private static FileAccessManager CreateFileAccessManager(string storageFolderPath,
         FileAccessManagerOptions? options)
     {
@@ -150,7 +147,8 @@ public class ServerApp : IDisposable
         return ret;
     }
 
-    private static async Task<IPEndPoint[]> GetDefaultPublicEndPoints(IEnumerable<IPEndPoint> tcpEndPoints, CancellationToken cancellationToken)
+    private static async Task<IPEndPoint[]> GetDefaultPublicEndPoints(IEnumerable<IPEndPoint> tcpEndPoints,
+        CancellationToken cancellationToken)
     {
         var publicIps = await IPAddressUtil.GetPublicIpAddresses(cancellationToken);
         var defaultPublicEps = new List<IPEndPoint>();
@@ -176,7 +174,7 @@ public class ServerApp : IDisposable
 
     private void CommandListener_CommandReceived(object? sender, CommandReceivedEventArgs e)
     {
-        if (!VhUtil.IsNullOrEmpty(e.Arguments) && e.Arguments[0] == "stop") {
+        if (!VhUtils.IsNullOrEmpty(e.Arguments) && e.Arguments[0] == "stop") {
             VhLogger.Instance.LogInformation("I have received the stop command!");
             _vpnHoodServer?.Dispose();
         }
@@ -242,14 +240,18 @@ public class ServerApp : IDisposable
                 : null;
 
             // run server
+            var virtualIpNetworkV4 = TunnelDefaults.VirtualIpNetworkV4;
+            var virtualIpNetworkV6 = TunnelDefaults.VirtualIpNetworkV6;
             _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions {
                 Tracker = _tracker,
-                TunProvider = CreateTunProvider(),
+                TunProvider = CreateTunProvider(virtualIpNetworkV4, virtualIpNetworkV6),
                 SystemInfoProvider = systemInfoProvider,
                 NetConfigurationProvider = configurationProvider,
                 SwapMemoryProvider = swapMemoryProvider,
                 StoragePath = InternalStoragePath,
-                Config = AppSettings.ServerConfig
+                Config = AppSettings.ServerConfig,
+                VirtualIpNetworkV4 = virtualIpNetworkV4,
+                VirtualIpNetworkV6 = virtualIpNetworkV6
             });
 
             // Command listener
@@ -263,9 +265,11 @@ public class ServerApp : IDisposable
         });
     }
 
-    private ITunProvider? CreateTunProvider()
+    private ITunProvider? CreateTunProvider(IpNetwork virtualIpNetworkV4, IpNetwork virtualIpNetworkV6)
     {
         try {
+            _ = virtualIpNetworkV4;
+            _ = virtualIpNetworkV6;
             //return RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
             //    ? LinuxTunProvider.Create()
             //    : null;

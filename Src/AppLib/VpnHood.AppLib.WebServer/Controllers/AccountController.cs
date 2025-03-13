@@ -4,14 +4,15 @@ using EmbedIO.WebApi;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.WebServer.Api;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.UiContexts;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
 internal class AccountController : WebApiController, IAccountController
 {
-    private static AppAccountService AccountService => 
-        VpnHoodApp.Instance.Services.AccountService ?? throw new Exception("Account service is not available at this moment.");
+    private static AppAccountService AccountService =>
+        VpnHoodApp.Instance.Services.AccountService ??
+        throw new Exception("Account service is not available at this moment.");
 
     [Route(HttpVerbs.Get, "/")]
     public Task<AppAccount?> Get()
@@ -39,13 +40,13 @@ internal class AccountController : WebApiController, IAccountController
         if (!AccountService.AuthenticationService.IsSignInWithGoogleSupported)
             throw new NotSupportedException("Sign in with Google is not supported.");
 
-        return AccountService.AuthenticationService.SignInWithGoogle(ActiveUiContext.RequiredContext);
+        return AccountService.AuthenticationService.SignInWithGoogle(AppUiContext.RequiredContext);
     }
 
     [Route(HttpVerbs.Post, "/sign-out")]
     public Task SignOut()
     {
-        return AccountService.AuthenticationService.SignOut(ActiveUiContext.RequiredContext);
+        return AccountService.AuthenticationService.SignOut(AppUiContext.RequiredContext);
     }
 
     [Route(HttpVerbs.Get, "/subscriptions/{subscriptionId}/access-keys")]

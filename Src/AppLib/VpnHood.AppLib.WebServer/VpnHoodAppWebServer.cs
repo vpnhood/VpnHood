@@ -10,7 +10,7 @@ using EmbedIO.Files;
 using EmbedIO.WebApi;
 using Swan.Logging;
 using VpnHood.AppLib.WebServer.Controllers;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.WebServer;
 
@@ -25,7 +25,8 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     private VpnHoodAppWebServer(WebServerOptions options)
     {
         _spaZipStream = options.SpaZipStream;
-        Url = options.Url ?? new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, options.DefaultPort ?? 9090)}");
+        Url = options.Url ??
+              new Uri($"http://{VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, options.DefaultPort ?? 9090)}");
         _listenOnAllIps = options.ListenOnAllIps;
     }
 
@@ -49,7 +50,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     public void Start()
     {
-        if (_server!=null)
+        if (_server != null)
             return;
 
         _server = CreateWebServer();
@@ -70,6 +71,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     }
 
     private string? _spaPath;
+
     private string GetSpaPath()
     {
         if (_spaPath != null)

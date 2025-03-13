@@ -1,9 +1,8 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Common.Converters;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Toolkit.Converters;
 
 namespace VpnHood.AppLib.Dtos;
 
@@ -24,19 +23,4 @@ public class AppSessionInfo
 
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress ClientPublicIpAddress { get; init; }
-
-    public static AppSessionInfo Create(SessionInfo sessionInfo)
-    {
-        return new AppSessionInfo {
-            AccessInfo = sessionInfo.AccessInfo,
-            IsUdpChannelSupported = sessionInfo.IsUdpChannelSupported,
-            IsDnsServersAccepted = sessionInfo.IsDnsServersAccepted,
-            ServerLocationInfo = sessionInfo.ServerLocationInfo,
-            ServerVersion = sessionInfo.ServerVersion,
-            IsPremiumSession = sessionInfo.IsPremiumSession,
-            SuppressedTo = sessionInfo.SuppressedTo,
-            DnsServers = sessionInfo.DnsServers,
-            ClientPublicIpAddress = sessionInfo.ClientPublicIpAddress
-        };
-    }
 }

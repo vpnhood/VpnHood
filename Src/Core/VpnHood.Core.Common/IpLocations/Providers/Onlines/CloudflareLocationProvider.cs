@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 using System.Net;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.IpLocations.Providers;
 
@@ -32,7 +32,7 @@ public class CloudflareLocationProvider(HttpClient httpClient, string userAgent)
             CountryName = new RegionInfo(countryCode).EnglishName,
             CountryCode = countryCode,
             RegionName = null,
-            CityName = null,
+            CityName = null
         };
 
         return ipLocation;

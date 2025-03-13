@@ -1,9 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Core.Common.Jobs;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Packets;
+using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.DatagramMessaging;
 using VpnHood.Core.Tunneling.Utils;
@@ -167,7 +168,7 @@ public class Tunnel : IJob, IAsyncDisposable
             if (!_streamProxyChannels.Add(channel))
                 throw new Exception($"Could not add {channel.GetType()}. ChannelId: {channel.ChannelId}");
 
-        VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel,
+        VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
             "A StreamProxyChannel has been added. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}",
             channel.ChannelId, StreamProxyChannelCount);
     }
@@ -180,14 +181,14 @@ public class Tunnel : IJob, IAsyncDisposable
         lock (_channelListLock) {
             if (channel is IDatagramChannel datagramChannel) {
                 _datagramChannels.Remove(datagramChannel);
-                VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
+                VhLogger.Instance.LogDebug(GeneralEventId.DatagramChannel,
                     "A DatagramChannel has been removed. Channel: {Channel}, ChannelId: {ChannelId}, " +
                     "ChannelCount: {ChannelCount}, Connected: {Connected}",
                     VhLogger.FormatType(channel), channel.ChannelId, _datagramChannels.Count, channel.Connected);
             }
             else if (channel is StreamProxyChannel streamProxyChannel) {
                 _streamProxyChannels.Remove(streamProxyChannel);
-                VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel,
+                VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
                     "A StreamProxyChannel has been removed. Channel: {Channel}, ChannelId: {ChannelId}, " +
                     "ChannelCount: {ChannelCount}, Connected: {Connected}",
                     VhLogger.FormatType(channel), channel.ChannelId, _streamProxyChannels.Count, channel.Connected);
@@ -207,7 +208,7 @@ public class Tunnel : IJob, IAsyncDisposable
             return;
 
         if (VhLogger.IsDiagnoseMode)
-            PacketUtil.LogPackets(e.IpPackets, $"Packets received from a channel. ChannelId: {e.Channel.ChannelId}");
+            PacketLogger.LogPackets(e.IpPackets, $"Packets received from a channel. ChannelId: {e.Channel.ChannelId}");
 
         // check datagram message
         // performance critical; don't create another array by linq
@@ -308,7 +309,7 @@ public class Tunnel : IJob, IAsyncDisposable
 
         // ReSharper disable once PossibleMultipleEnumeration
         if (VhLogger.IsDiagnoseMode)
-            PacketUtil.LogPackets(ipPackets, "Packet sent to tunnel queue.");
+            PacketLogger.LogPackets(ipPackets, "Packet sent to tunnel queue.");
     }
 
     private async Task SendPacketTask(IDatagramChannel channel)
@@ -334,7 +335,9 @@ public class Tunnel : IJob, IAsyncDisposable
                         // drop packet if it is larger than _mtuWithFragment
                         if (packetSize > MtuWithFragment) {
                             VhLogger.Instance.LogWarning(
-                                $"Packet dropped! There is no channel to support this fragmented packet. Fragmented MTU: {MtuWithFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {PacketUtil.Format(ipPacket)}");
+                                "Packet dropped! There is no channel to support this fragmented packet. " +
+                                "Fragmented MTU: {MtuWithFragment}, PacketLength: {PacketLength}, Packet: {Packet}",
+                                MtuWithFragment, ipPacket.TotalLength, PacketLogger.Format(ipPacket));
                             _packetQueue.TryDequeue(out ipPacket);
                             continue;
                         }
@@ -342,9 +345,9 @@ public class Tunnel : IJob, IAsyncDisposable
                         // drop packet if it is larger than _mtuNoFragment
                         if (packetSize > MtuNoFragment && ipPacket is IPv4Packet { FragmentFlags: 2 }) {
                             VhLogger.Instance.LogWarning(
-                                $"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {MtuNoFragment}, Packet: {PacketUtil.Format(ipPacket)}");
+                                $"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {MtuNoFragment}, Packet: {PacketLogger.Format(ipPacket)}");
                             _packetQueue.TryDequeue(out ipPacket);
-                            var replyPacket = PacketUtil.CreatePacketTooBigReply(ipPacket, MtuNoFragment);
+                            var replyPacket = PacketBuilder.BuildPacketTooBigReply(ipPacket, MtuNoFragment);
                             PacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs([replyPacket], channel));
                             continue;
                         }

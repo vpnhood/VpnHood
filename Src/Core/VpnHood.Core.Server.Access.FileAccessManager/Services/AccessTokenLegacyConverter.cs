@@ -1,10 +1,10 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement.Services;
 
 internal class AccessTokenLegacyConverter
 {
@@ -16,14 +16,14 @@ internal class AccessTokenLegacyConverter
 
             var files = Directory.GetFiles(storagePath, "*.token");
             if (files.Length > 0) {
-                VhLogger.Instance.LogInformation("Converting old token1 files to Token2 format. TokenCount: {TokenCount}", files.Length);
+                VhLogger.Instance.LogInformation(
+                    "Converting old token1 files to Token2 format. TokenCount: {TokenCount}", files.Length);
             }
 
             foreach (var file in files) {
                 try {
-                    var accessTokenLegacy = VhUtil.JsonDeserializeFile<AccessTokenLegacy>(file);
+                    var accessTokenLegacy = JsonUtils.TryDeserializeFile<AccessTokenLegacy>(file);
                     if (!string.IsNullOrEmpty(accessTokenLegacy?.Token.TokenId)) {
-
                         var accessToken = new AccessToken {
                             TokenId = accessTokenLegacy.Token.TokenId,
                             IssuedAt = accessTokenLegacy.Token.IssuedAt,
@@ -32,7 +32,7 @@ internal class AccessTokenLegacyConverter
                             ExpirationTime = accessTokenLegacy.ExpirationTime,
                             AdRequirement = accessTokenLegacy.AdRequirement,
                             Secret = accessTokenLegacy.Token.Secret,
-                            Name = accessTokenLegacy.Token.Name,
+                            Name = accessTokenLegacy.Token.Name
                         };
 
                         File.WriteAllText(Path.ChangeExtension(file, token2Extension),
@@ -42,7 +42,6 @@ internal class AccessTokenLegacyConverter
                     var backupPath = Path.Combine(storagePath, "backup-tokens-v1");
                     Directory.CreateDirectory(backupPath);
                     File.Move(file, Path.Combine(backupPath, Path.GetFileName(file)));
-
                 }
                 catch (Exception ex) {
                     VhLogger.Instance.LogError(ex, "Could not convert old token file. FilePath: {FilePath}", file);

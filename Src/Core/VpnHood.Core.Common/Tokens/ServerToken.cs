@@ -2,15 +2,14 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Common.Converters;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Converters;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.Tokens;
 
 public class ServerToken
 {
-    [JsonPropertyName("ct")]
-    public required DateTime CreatedTime { get; set; }
+    [JsonPropertyName("ct")] public required DateTime CreatedTime { get; set; }
 
     [JsonPropertyName("hname")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
@@ -24,24 +23,21 @@ public class ServerToken
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required bool IsValidHostName { get; set; }
 
-    [JsonPropertyName("sec")]
-    public required byte[]? Secret { get; set; }
+    [JsonPropertyName("sec")] public required byte[]? Secret { get; set; }
 
-    [JsonPropertyName("ch")]
-    public byte[]? CertificateHash { get; set; }
+    [JsonPropertyName("ch")] public byte[]? CertificateHash { get; set; }
 
     [JsonPropertyName("url")]
     [Obsolete("Use Urls. Version 558 or upper")]
     public string? Url {
         get => Urls?.FirstOrDefault();
         set {
-            if (VhUtil.IsNullOrEmpty(Urls))
+            if (VhUtils.IsNullOrEmpty(Urls))
                 Urls = value != null ? [value] : null;
         }
     }
 
-    [JsonPropertyName("urls")]
-    public string[]? Urls { get; set; }
+    [JsonPropertyName("urls")] public string[]? Urls { get; set; }
 
     [JsonPropertyName("ep")]
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
@@ -117,26 +113,8 @@ public class ServerToken
         using var streamReader = new StreamReader(csEncrypt);
 
         var json = streamReader.ReadToEnd();
-        var serverToken = VhUtil.JsonDeserialize<ServerToken>(json);
+        var serverToken = JsonUtils.Deserialize<ServerToken>(json);
         return serverToken;
     }
 
-    public bool IsTokenUpdated(ServerToken newServerToken)
-    {
-        // create first server token by removing its created time
-        var serverToken1 = VhUtil.JsonClone(this);
-        serverToken1.CreatedTime = DateTime.MinValue;
-
-        // create second server token by removing its created time
-        var serverToken2 = VhUtil.JsonClone(newServerToken);
-        serverToken2.CreatedTime = DateTime.MinValue;
-
-        // compare
-        if (JsonSerializer.Serialize(serverToken1) == JsonSerializer.Serialize(serverToken2))
-            return false;
-
-        // if token are not equal, check if new token CreatedTime is newer or equal.
-        // If created time is equal assume new token is updated because there is change in token.
-        return newServerToken.CreatedTime >= CreatedTime;
-    }
 }

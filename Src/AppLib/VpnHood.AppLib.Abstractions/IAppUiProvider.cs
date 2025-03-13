@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Client.Device;
+﻿using VpnHood.Core.Client.Device.UiContexts;
 
 namespace VpnHood.AppLib.Abstractions;
 
@@ -12,4 +12,6 @@ public interface IAppUiProvider
 
     bool IsOpenAlwaysOnPageSupported { get; }
     void OpenAlwaysOnPage(IUiContext uiContext);
+    
+    SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext);
 }

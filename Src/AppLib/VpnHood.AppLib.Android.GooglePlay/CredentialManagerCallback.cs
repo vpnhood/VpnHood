@@ -1,9 +1,12 @@
 ﻿using AndroidX.Credentials;
 using GetCredentialResponse = AndroidX.Credentials.GetCredentialResponse;
+
 namespace VpnHood.AppLib.Droid.GooglePlay;
 
-public class CredentialManagerCallback : Java.Lang.Object, ICredentialManagerCallback {
+public class CredentialManagerCallback : Java.Lang.Object, ICredentialManagerCallback
+{
     private readonly TaskCompletionSource<GetCredentialResponse> _taskCompletionSource = new();
+
     public void OnError(Java.Lang.Object e)
     {
         if (e.Class.TypeName.Contains("CancellationException"))

@@ -1,7 +1,7 @@
 ﻿using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels.Streams;
 
@@ -22,7 +22,9 @@ public class BinaryStreamStandard : ChunkStream
     public override int PreserveWriteBufferLength => ChunkHeaderLength;
 
     public BinaryStreamStandard(Stream sourceStream, string streamId, bool useBuffer)
-        : base(useBuffer ? new ReadCacheStream(sourceStream, false, TunnelDefaults.StreamProxyBufferSize) : sourceStream, streamId)
+        : base(
+            useBuffer ? new ReadCacheStream(sourceStream, false, TunnelDefaults.StreamProxyBufferSize) : sourceStream,
+            streamId)
     {
     }
 
@@ -89,8 +91,8 @@ public class BinaryStreamStandard : ChunkStream
     private async Task<int> ReadChunkHeaderAsync(CancellationToken cancellationToken)
     {
         // read chunk header by cryptor
-        if (!await StreamUtil.ReadWaitForFillAsync(SourceStream, _readChunkHeaderBuffer, 0, _readChunkHeaderBuffer.Length,
-                    cancellationToken).VhConfigureAwait()) {
+        if (!await StreamUtils.ReadExactAsync(SourceStream, _readChunkHeaderBuffer, 0, _readChunkHeaderBuffer.Length,
+                cancellationToken).VhConfigureAwait()) {
             if (!_finished && ReadChunkCount > 0)
                 VhLogger.Instance.LogWarning(GeneralEventId.TcpLife, "BinaryStream has been closed unexpectedly.");
             _isConnectionClosed = true;

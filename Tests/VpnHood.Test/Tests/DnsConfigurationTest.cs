@@ -1,13 +1,13 @@
 ﻿using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Core.Common.Net;
 using VpnHood.Core.Server.Access.Configurations;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Test.Device;
 
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class DnsConfigurationTest
+public class DnsConfigurationTest : TestBase
 {
     [TestMethod]
     public async Task Server_specify_dns_servers()
@@ -19,10 +19,10 @@ public class DnsConfigurationTest
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
+        await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
 
-        CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.DnsServers);
-        Assert.IsTrue(client.ConnectionInfo.SessionInfo?.IsDnsServersAccepted);
+        CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.SessionInfo?.DnsServers);
+        Assert.IsTrue(client.SessionInfo?.IsDnsServersAccepted);
     }
 
     [TestMethod]
@@ -35,13 +35,13 @@ public class DnsConfigurationTest
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        var clientOptions = TestHelper.CreateClientOptions();
+        var clientOptions = TestHelper.CreateClientOptions(token: token);
         clientOptions.DnsServers = [IPAddress.Parse("200.0.0.1"), IPAddress.Parse("200.0.0.2")];
-        await using var client = await TestHelper.CreateClient(token, clientOptions: clientOptions,
-            packetCapture: new TestNullPacketCapture());
+        await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
+            vpnAdapter: new TestNullVpnAdapter());
 
-        CollectionAssert.AreEqual(clientOptions.DnsServers, client.DnsServers);
-        Assert.IsTrue(client.ConnectionInfo.SessionInfo?.IsDnsServersAccepted);
+        CollectionAssert.AreEqual(clientOptions.DnsServers, client.SessionInfo?.DnsServers);
+        Assert.IsTrue(client.SessionInfo?.IsDnsServersAccepted);
     }
 
     [TestMethod]
@@ -59,14 +59,14 @@ public class DnsConfigurationTest
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        var clientOptions = TestHelper.CreateClientOptions();
+        var clientOptions = TestHelper.CreateClientOptions(token: token);
         clientOptions.DnsServers = clientDnsServers;
-        await using var client = await TestHelper.CreateClient(token,
+        await using var client = await TestHelper.CreateClient(
             clientOptions: clientOptions,
-            packetCapture: new TestNullPacketCapture());
+            vpnAdapter: new TestNullVpnAdapter());
 
-        CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.DnsServers);
-        Assert.IsFalse(client.ConnectionInfo.SessionInfo?.IsDnsServersAccepted);
+        CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.SessionInfo?.DnsServers);
+        Assert.IsFalse(client.SessionInfo?.IsDnsServersAccepted);
     }
 
     [TestMethod]
@@ -84,10 +84,10 @@ public class DnsConfigurationTest
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
+        await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
 
         foreach (var serverDnsServer in serverDnsServers)
             Assert.IsFalse(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(serverDnsServer));
-        CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.DnsServers);
+        CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.SessionInfo?.DnsServers);
     }
 }

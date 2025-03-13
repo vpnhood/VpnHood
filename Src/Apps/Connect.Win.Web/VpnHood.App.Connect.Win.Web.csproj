@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Product>VpnHood! CONNECT</Product>
-		<Description>VpnHood Windows Client App.</Description>
+		<Description>VpnHood Windows Client App</Description>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net9.0-windows10.0.22621.0</TargetFramework>
 		<UseWPF>true</UseWPF>
@@ -29,15 +29,15 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>5.0.635</Version>
+		<Version>6.0.672</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<StartupObject></StartupObject>
 	</PropertyGroup>
 
-	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\win\appsettings.json')">
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\web\appsettings.json')">
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>AppSettings</_Parameter1>
-			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodConnect\win\appsettings.json"))</_Parameter2>
+			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodConnect\web\appsettings.json"))</_Parameter2>
 		</AssemblyAttribute>
 	</ItemGroup>
 
@@ -49,14 +49,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Resources\VpnHood.AppLib.Resources.csproj" />
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Win.Common.WpfSpa\VpnHood.AppLib.Win.Common.WpfSpa.csproj" />
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Win.Common\VpnHood.AppLib.Win.Common.csproj" />
+		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2957.106" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3124.44" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.678" />
 	</ItemGroup>
 
 

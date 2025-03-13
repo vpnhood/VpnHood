@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using PacketDotNet;
-using VpnHood.Core.Common.Collections;
-using VpnHood.Core.Common.Jobs;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Collections;
+using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;
@@ -32,7 +32,7 @@ public class PingProxyPool : IPacketProxyPool, IJob
         icmpTimeout ??= TimeSpan.FromSeconds(120);
         maxClientCount ??= int.MaxValue;
 
-        _workerMaxCount = (maxClientCount > 0)
+        _workerMaxCount = maxClientCount > 0
             ? maxClientCount.Value
             : throw new ArgumentException($"{nameof(maxClientCount)} must be greater than 0", nameof(maxClientCount));
         _packetProxyReceiver = packetProxyReceiver;
@@ -69,9 +69,10 @@ public class PingProxyPool : IPacketProxyPool, IJob
 
     public async Task SendPacket(IPPacket ipPacket)
     {
-        if ((ipPacket.Version != IPVersion.IPv4 || ipPacket.Extract<IcmpV4Packet>()?.TypeCode != IcmpV4TypeCode.EchoRequest) &&
+        if ((ipPacket.Version != IPVersion.IPv4 ||
+             ipPacket.Extract<IcmpV4Packet>()?.TypeCode != IcmpV4TypeCode.EchoRequest) &&
             (ipPacket.Version != IPVersion.IPv6 || ipPacket.Extract<IcmpV6Packet>()?.Type != IcmpV6Type.EchoRequest))
-            throw new NotSupportedException($"The icmp is not supported. Packet: {PacketUtil.Format(ipPacket)}.");
+            throw new NotSupportedException($"The icmp is not supported. Packet: {PacketLogger.Format(ipPacket)}.");
 
         var destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, 0);
         bool isNewLocalEndPoint;

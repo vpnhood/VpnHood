@@ -27,19 +27,30 @@ Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 
 # rebuild libraries
 if ($nugets) {
+	& "$solutionDir/Src/Core/VpnHood.Core.Toolkit/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Packets/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.Abstractions/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.AndroidTun/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.WinTun/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.LinuxTun/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.WinDivert/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Common/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.SocksProxy/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Tunneling/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Client.Abstractions/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client/_publish.ps1";
-	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device.Android/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Client.VpnServices.Abstractions/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Client.VpnServices.Host/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Client.VpnServices.Manager/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device/_publish.ps1";
-	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device.WinDivert/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device.Android/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Client.Device.Win/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Server/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Server.Access/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Server.Access.FileAccessManager/_publish.ps1";
 
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Abstractions/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.App/_publish.ps1";
-	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Resources/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.WebServer/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Store/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Android.Common/_publish.ps1";

@@ -1,7 +1,8 @@
-﻿namespace VpnHood.AppLib.WebServer.Api;
+﻿using VpnHood.AppLib.Abstractions;
+namespace VpnHood.AppLib.WebServer.Api;
 
 public class ConfigParams
 {
     public string[] AvailableCultures { get; init; } = [];
-    public AppResource.AppStrings? Strings { get; init; }
+    public AppResources.AppStrings? Strings { get; init; }
 }

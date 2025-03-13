@@ -1,9 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Core.Common.Jobs;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.DatagramMessaging;
 
@@ -37,7 +37,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     {
         ChannelId = channelId;
         _clientStream = clientStream ?? throw new ArgumentNullException(nameof(clientStream));
-        if (!VhUtil.IsInfinite(lifespan)) {
+        if (!VhUtils.IsInfinite(lifespan)) {
             _lifeTime = FastDateTime.Now + lifespan;
             JobRunner.Default.Add(this);
         }
@@ -187,7 +187,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
             // send close message to peer
             var ipPacket = DatagramMessageHandler.CreateMessage(new CloseDatagramMessage());
-            VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
+            VhLogger.Instance.LogDebug(GeneralEventId.DatagramChannel,
                 "StreamDatagramChannel sending the close message to the remote. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);
 
@@ -208,7 +208,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     public Task RunJob()
     {
         if (Connected && FastDateTime.Now > _lifeTime) {
-            VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
+            VhLogger.Instance.LogDebug(GeneralEventId.DatagramChannel,
                 "StreamDatagramChannel lifetime ended. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);
 

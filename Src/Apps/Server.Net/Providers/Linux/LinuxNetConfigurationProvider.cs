@@ -1,11 +1,10 @@
 ﻿using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Net;
 using VpnHood.Core.Server.Abstractions;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.App.Server.Providers.Linux;
-
 
 // add & remove ip address for linux server
 public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationProvider

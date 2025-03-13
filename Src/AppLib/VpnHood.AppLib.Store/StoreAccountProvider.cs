@@ -1,5 +1,5 @@
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Store.Api;
 
 namespace VpnHood.AppLib.Store;
@@ -11,8 +11,10 @@ public class StoreAccountProvider(
     : IAppAccountProvider, IDisposable
 {
     public IAppAuthenticationProvider AuthenticationProvider { get; } = authenticationProvider;
-    public IAppBillingProvider? BillingProvider { get; } = billingProvider != null 
-        ? new StoreBillingProvider(storeAppId, authenticationProvider, billingProvider) : null;
+
+    public IAppBillingProvider? BillingProvider { get; } = billingProvider != null
+        ? new StoreBillingProvider(storeAppId, authenticationProvider, billingProvider)
+        : null;
 
     public async Task<AppAccount?> GetAccount()
     {
@@ -39,7 +41,7 @@ public class StoreAccountProvider(
             PriceAmount = subscriptionLastOrder?.PriceAmount,
             PriceCurrency = subscriptionLastOrder?.PriceCurrency,
             IsAutoRenew = subscriptionLastOrder?.IsAutoRenew,
-            ProviderSubscriptionId = subscriptionLastOrder?.ProviderSubscriptionId,
+            ProviderSubscriptionId = subscriptionLastOrder?.ProviderSubscriptionId
         };
 
         return appAccount;

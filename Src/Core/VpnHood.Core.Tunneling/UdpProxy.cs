@@ -2,10 +2,10 @@
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Collections;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
-using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Core.Packets;
+using VpnHood.Core.Toolkit.Collections;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
@@ -49,7 +49,7 @@ internal class UdpProxy : ITimeoutItem
             await _sendSemaphore.WaitAsync().VhConfigureAwait();
 
             if (VhLogger.IsDiagnoseMode)
-                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
+                VhLogger.Instance.LogTrace(GeneralEventId.Udp,
                     "Sending all udp bytes to host. Requested: DataLength: {DataLength}, Source: {Source}, Destination: {Destination}",
                     datagram.Length, VhLogger.Format(LocalEndPoint), VhLogger.Format(ipEndPoint));
 
@@ -83,7 +83,7 @@ internal class UdpProxy : ITimeoutItem
             LastUsedTime = FastDateTime.Now;
 
             // create packet for audience
-            var ipPacket = PacketUtil.CreateUdpPacket(udpResult.RemoteEndPoint, SourceEndPoint, udpResult.Buffer);
+            var ipPacket = PacketBuilder.BuildUdpPacket(udpResult.RemoteEndPoint, SourceEndPoint, udpResult.Buffer);
 
             // send packet to audience
             await _packetReceiver.OnPacketReceived(ipPacket).VhConfigureAwait();

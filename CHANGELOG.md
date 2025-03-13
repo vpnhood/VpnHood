@@ -1,5 +1,17 @@
-# Upcoming
-* Fix IPv6 ping
+# v6.0.675
+* Fix: Improve security by blocking multicast traffic
+* Feature: Android: Run VPN in a separate process
+* Feature: Android: Using separate process for VPN service
+* Feature: Android: Edge to Edge UI
+* Fix: Android: Menu goes beneath system tray
+* Fix: Some ANR and crashes
+* Improve: virtual ip allocation
+* Improve: UI
+
+# v5.1.654
+* Fix: IPv6 ping
+* Fix: Playing animation while login with Google
+* Fix: Connection is already in progress by changing the location
 
 # v5.0.645
 * Improve: Improve performance by reducing memory allocation.
@@ -10,7 +22,7 @@
 * Fix: Sign-out from account
 * Improve: Optimizing CPU and GPU usage during the playback of Ads and animations
 * Feature: Add AppIpFilters to the settings page
-* Feature: Add PacketCaptureIpFilters to the settings page
+* Feature: Add VpnAdapterIpFilters to the settings page
 * Update: Improve ping performance
 * Update: Add Profile Name as session name in android VpnService
 * Update: Automatically disconnect when a change in settings requires reconnection
@@ -593,7 +605,7 @@
 # v2.4.295
 ### Client
 * Update: Tune TCP connections for games
-* Fix: Error when setting PacketCapture include filter
+* Fix: Error when setting VpnAdapter include filter
 
 ### Server
 * Feature: Server sends its last config error to access server
@@ -917,7 +929,7 @@
 
 ### Developer
 * Change: Update TcpDatagramHeader from binary to TcpDatagramChannelRequest json
-* Change: Move IDevice and IPacketCapture to VpnHood.Core.Client.Device module
+* Change: Move IDevice and IVpnAdapter to VpnHood.Core.Client.Device module
 * Developer: Add Simple Sample for Windows Client usage
 * Developer: Fix PublishApps.ps1 scripts to create publish folder when it does not exist
 

@@ -3,10 +3,8 @@ using System.Runtime.InteropServices;
 using Windows.UI.Notifications;
 using Microsoft.Maui.Platform;
 using Microsoft.UI.Windowing;
-using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Win.Common;
-using VpnHood.Core.Client.Device.WinDivert;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.Win;
 
 // ReSharper disable once CheckNamespace
 namespace VpnHood.AppLib.Maui.Common;
@@ -19,11 +17,11 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
     
     protected AppWindow? AppWindow;
     
-    public IDevice Device { get; } = new WinDivertDevice();
-    public IAppCultureProvider? CultureService => null;
-
-    public void Init(VpnHoodApp vpnHoodApp)
+    public VpnHoodApp Init(AppOptions options)
     {
+        var device = new WinDevice(options.StorageFolderPath, options.IsDebugMode);
+        var vpnHoodApp = VpnHoodApp.Init(device, options);
+
         VpnHoodWinApp.Init(vpnHoodApp.Features.AppId, vpnHoodApp.StorageFolderPath);
         VpnHoodWinApp.Instance.PreStart(Environment.GetCommandLineArgs());
         VpnHoodWinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
@@ -43,7 +41,7 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
                 AppWindow.TitleBar.IconShowOptions = IconShowOptions.HideIconAndSystemMenu;
                 AppWindow.Closing += AppWindow_Closing;
 
-                var bgColorResource = vpnHoodApp.Resource.Colors.WindowBackgroundColor;
+                var bgColorResource = vpnHoodApp.Resources.Colors.WindowBackgroundColor;
                 if (bgColorResource != null)
                 {
                     var bgColor = Windows.UI.Color.FromArgb(bgColorResource.Value.A, bgColorResource.Value.R,
@@ -54,6 +52,8 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
                 }
             }
         });
+
+        return vpnHoodApp;
     }
 
     protected virtual void OpenMainWindowRequested(object? sender, EventArgs e)

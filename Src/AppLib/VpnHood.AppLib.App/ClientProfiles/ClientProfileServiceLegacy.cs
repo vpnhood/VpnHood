@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Tokens.TokenLegacy;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.ClientProfiles;
 
@@ -28,9 +28,9 @@ internal static class ClientProfileServiceLegacy
 
         try {
             var legacyClientProfiles =
-                VhUtil.JsonDeserialize<ClientProfileLegacy[]>(File.ReadAllText(legacyProfilesFilePath));
+                JsonUtils.Deserialize<ClientProfileLegacy[]>(File.ReadAllText(legacyProfilesFilePath));
 #pragma warning disable CS0618 // Type or member is obsolete
-            var tokens = VhUtil.JsonDeserialize<TokenV3[]>(File.ReadAllText(legacyTokensFilePath))
+            var tokens = JsonUtils.Deserialize<TokenV3[]>(File.ReadAllText(legacyTokensFilePath))
                 .Select(x => x.ToToken()).ToArray();
 #pragma warning restore CS0618 // Type or member is obsolete
             var clientProfiles = new List<ClientProfile>();
@@ -47,7 +47,8 @@ internal static class ClientProfileServiceLegacy
                     clientProfiles.Add(clientProfile);
                 }
                 catch (Exception ex) {
-                    VhLogger.Instance.LogError(ex, "Could not load token. TokenId: {TokenId}", legacyClientProfile.TokenId);
+                    VhLogger.Instance.LogError(ex, "Could not load token. TokenId: {TokenId}",
+                        legacyClientProfile.TokenId);
                 }
 
             var json = JsonSerializer.Serialize(clientProfiles);
@@ -61,14 +62,16 @@ internal static class ClientProfileServiceLegacy
             File.Move(legacyProfilesFilePath, legacyProfilesFilePath + ".backup");
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could not delete legacy file. FilePath: {FilePath}", legacyProfilesFilePath);
+            VhLogger.Instance.LogWarning(ex, "Could not delete legacy file. FilePath: {FilePath}",
+                legacyProfilesFilePath);
         }
 
         try {
             File.Move(legacyTokensFilePath, legacyTokensFilePath + ".backup");
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could not delete a legacy file. FilePath: {FilePath}", legacyTokensFilePath);
+            VhLogger.Instance.LogWarning(ex, "Could not delete a legacy file. FilePath: {FilePath}",
+                legacyTokensFilePath);
         }
     }
 }

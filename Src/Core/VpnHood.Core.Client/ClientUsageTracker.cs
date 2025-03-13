@@ -1,8 +1,7 @@
 ﻿using Ga4.Trackers;
-using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Common.Jobs;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client;
 
@@ -23,7 +22,7 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
         _tracker = tracker;
         JobRunner.Default.Add(this);
     }
-    
+
     public Task RunJob()
     {
         return Report();

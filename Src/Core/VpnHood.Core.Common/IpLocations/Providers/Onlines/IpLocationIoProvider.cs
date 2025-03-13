@@ -1,8 +1,8 @@
 ﻿using System.Globalization;
 using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Common.Converters;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Converters;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.IpLocations.Providers;
 
@@ -15,20 +15,15 @@ public class IpLocationIoProvider(HttpClient httpClient, string userAgent, strin
         [JsonConverter(typeof(IPAddressConverter))]
         public required IPAddress Ip { get; set; }
 
-        [JsonPropertyName("country_code")]
-        public required string CountryCode { get; set; }
+        [JsonPropertyName("country_code")] public required string CountryCode { get; set; }
 
-        [JsonPropertyName("region_name")]
-        public string? RegionName { get; set; }
+        [JsonPropertyName("region_name")] public string? RegionName { get; set; }
 
-        [JsonPropertyName("city_name")]
-        public string? CityName { get; set; }
+        [JsonPropertyName("city_name")] public string? CityName { get; set; }
 
-        [JsonPropertyName("latitude")]
-        public string? Latitude { get; set; }
+        [JsonPropertyName("latitude")] public string? Latitude { get; set; }
 
-        [JsonPropertyName("longitude")]
-        public string? Longitude { get; set; }
+        [JsonPropertyName("longitude")] public string? Longitude { get; set; }
     }
 
     public Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
@@ -59,8 +54,7 @@ public class IpLocationIoProvider(HttpClient httpClient, string userAgent, strin
             .VhWait(cancellationToken)
             .VhConfigureAwait();
 
-        var apiLocation = VhUtil.JsonDeserialize<ApiLocation>(json);
-
+        var apiLocation = JsonUtils.Deserialize<ApiLocation>(json);
         var regionName = apiLocation.RegionName?.ToUpper() == "NA" || string.IsNullOrEmpty(apiLocation.CityName)
             ? null
             : apiLocation.RegionName;

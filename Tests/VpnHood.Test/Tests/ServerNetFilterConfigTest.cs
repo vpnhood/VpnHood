@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Core.Client;
-using VpnHood.Core.Common.Net;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Test.Device;
 
 namespace VpnHood.Test.Tests;
@@ -10,87 +9,85 @@ namespace VpnHood.Test.Tests;
 public class ServerNetFilterConfigTest : TestBase
 {
     [TestMethod]
-    public async Task PacketCapture_Include()
+    public async Task VpnAdapter_Include()
     {
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
-        serverOptions.NetFilterOptions.PacketCaptureIncludeIpRanges = [IpRange.Parse("230.0.0.100-230.0.0.250")];
+        serverOptions.NetFilterOptions.VpnAdapterIncludeIpRanges = [IpRange.Parse("230.0.0.100-230.0.0.250")];
 
         // Create Server
         await using var server = await TestHelper.CreateServer(serverOptions);
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using var client =
-            new VpnHoodClient(new TestNullPacketCapture(), Guid.NewGuid().ToString(), token, new ClientOptions {
-                PacketCaptureIncludeIpRanges = new IpRangeOrderedList([IpRange.Parse("230.0.0.0-230.0.0.200")])
-            });
+        var clientOptions = TestHelper.CreateClientOptions(token: token);
+        clientOptions.VpnAdapterIncludeIpRanges = [IpRange.Parse("230.0.0.0-230.0.0.200")];
+        await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
+            clientOptions: clientOptions);
 
-        await client.Connect();
-
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.0")));
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.10")));
-        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.100")));
-        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.150")));
-        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.200")));
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.220")));
+        Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.0")));
+        Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.10")));
+        Assert.IsTrue(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.100")));
+        Assert.IsTrue(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.150")));
+        Assert.IsTrue(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.200")));
+        Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.220")));
 
         Assert.IsTrue(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.50")));
     }
 
     [TestMethod]
-    public async Task PacketCapture_Exclude()
+    public async Task VpnAdapter_Exclude()
     {
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
-        serverOptions.NetFilterOptions.PacketCaptureExcludeIpRanges = [IpRange.Parse("230.0.0.100-230.0.0.250")];
+        serverOptions.NetFilterOptions.VpnAdapterExcludeIpRanges = [IpRange.Parse("230.0.0.100-230.0.0.250")];
 
         // Create Server
         await using var server = await TestHelper.CreateServer(serverOptions);
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using var client =
-            new VpnHoodClient(new TestNullPacketCapture(), Guid.NewGuid().ToString(), token, new ClientOptions {
-                PacketCaptureIncludeIpRanges = new IpRangeOrderedList([IpRange.Parse("230.0.0.0-230.0.0.200")])
-            });
+        var clientOptions = TestHelper.CreateClientOptions(token: token);
+        clientOptions.VpnAdapterIncludeIpRanges = [IpRange.Parse("230.0.0.0-230.0.0.200")];
+        await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
+            vpnAdapter: new TestNullVpnAdapter());
 
-        await client.Connect();
+        Assert.IsTrue(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.0")));
+        Assert.IsTrue(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.10")));
+        Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.100")));
+        Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.150")));
+        Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.200")));
 
-        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.0")));
-        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.10")));
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.100")));
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.150")));
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.200")));
-
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.220"))); //block by client
+        Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.220"))); //block by client
         Assert.IsFalse(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.50")));
         Assert.IsTrue(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.220")));
     }
 
     [TestMethod]
-    public async Task PacketCapture_Include_Exclude_LocalNetwork()
+    public async Task VpnAdapter_Include_Exclude_LocalNetwork()
     {
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
         serverOptions.NetFilterOptions.IncludeLocalNetwork = false;
-        serverOptions.NetFilterOptions.PacketCaptureIncludeIpRanges = [IpRange.Parse("000.0.0.000 - 230.0.0.220")];
-        serverOptions.NetFilterOptions.PacketCaptureExcludeIpRanges = [IpRange.Parse("230.0.0.100 - 230.0.0.250")];
+        serverOptions.NetFilterOptions.VpnAdapterIncludeIpRanges = [IpRange.Parse("000.0.0.000 - 230.0.0.220")];
+        serverOptions.NetFilterOptions.VpnAdapterExcludeIpRanges = [IpRange.Parse("230.0.0.100 - 230.0.0.250")];
 
         // Create Server
         await using var server = await TestHelper.CreateServer(serverOptions);
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using var client =
-            new VpnHoodClient(new TestNullPacketCapture(), Guid.NewGuid().ToString(), token, new ClientOptions());
-        await client.Connect();
+        var clientOptions = TestHelper.CreateClientOptions(token: token);
+        clientOptions.VpnAdapterIncludeIpRanges = IpNetwork.All.ToIpRanges().ToArray();
+        clientOptions.IncludeLocalNetwork = false;
+        await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
+            vpnAdapter: new TestNullVpnAdapter());
 
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("192.168.0.100")),
+        Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("192.168.0.100")),
             "LocalNetWorks failed");
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.110")),
+        Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.110")),
             "Excludes failed");
-        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.50")), "Includes failed");
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.240")),
+        Assert.IsTrue(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.50")), "Includes failed");
+        Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.240")),
             "Includes failed");
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.254")),
+        Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.254")),
             "Includes failed");
 
         Assert.IsTrue(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("192.168.0.100")));
@@ -111,9 +108,10 @@ public class ServerNetFilterConfigTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using var client =
-            new VpnHoodClient(new TestNullPacketCapture(), clientId: Guid.NewGuid().ToString(), token: token, options: new ClientOptions());
-        await client.Connect();
+        var clientOptions = TestHelper.CreateClientOptions(token: token);
+        clientOptions.VpnAdapterIncludeIpRanges = IpNetwork.All.ToIpRanges().ToArray();
+        await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
+            vpnAdapter: new TestNullVpnAdapter());
 
         Assert.IsFalse(client.IncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.110")), "Excludes failed");
         Assert.IsTrue(client.IncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.50")), "Includes failed");

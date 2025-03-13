@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Testers.TcpTesters;
@@ -15,10 +15,12 @@ public class TcpTesterClient(IPEndPoint serverEp) : IStreamTesterClient
 
         // start multi uploaders
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"Tcp => Start Uploading {VhUtil.FormatBytes(upSize)}, Connections: {connectionCount}");
+        VhLogger.Instance.LogInformation(
+            $"Tcp => Start Uploading {VhUtils.FormatBytes(upSize)}, Connections: {connectionCount}");
         using (var speedometer = new Speedometer("Up")) {
             for (var i = 0; i < connectionCount; i++)
-                uploadTasks[i] = StartUpload(serverEp, upSize: upSize / connectionCount, downSize: downSize / connectionCount,
+                uploadTasks[i] = StartUpload(serverEp, upSize: upSize / connectionCount,
+                    downSize: downSize / connectionCount,
                     speedometer: speedometer, cancellationToken: cancellationToken);
 
             await Task.WhenAll(uploadTasks);
@@ -26,19 +28,21 @@ public class TcpTesterClient(IPEndPoint serverEp) : IStreamTesterClient
 
         // start multi downloaders
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"Tcp => Start Downloading {VhUtil.FormatBytes(downSize)}, Connections: {connectionCount}");
+        VhLogger.Instance.LogInformation(
+            $"Tcp => Start Downloading {VhUtils.FormatBytes(downSize)}, Connections: {connectionCount}");
         using (var speedometer = new Speedometer("Down")) {
             var downloadTasks = new Task[connectionCount];
             for (var i = 0; i < connectionCount; i++)
                 if ((await uploadTasks[i]).Connected)
-                    downloadTasks[i] = StartDownload((await uploadTasks[i]).GetStream(), downSize / connectionCount, speedometer,
-                    cancellationToken);
+                    downloadTasks[i] = StartDownload((await uploadTasks[i]).GetStream(), downSize / connectionCount,
+                        speedometer,
+                        cancellationToken);
 
             await Task.WhenAll(downloadTasks);
         }
 
         // dispose streams
-        foreach (var uploadTask in uploadTasks.Where(x => x.IsCompletedSuccessfully)) 
+        foreach (var uploadTask in uploadTasks.Where(x => x.IsCompletedSuccessfully))
             (await uploadTask).Dispose();
     }
 
@@ -64,7 +68,6 @@ public class TcpTesterClient(IPEndPoint serverEp) : IStreamTesterClient
             await using var random = new StreamRandomReader(upSize, speedometer);
             await random.CopyToAsync(stream, cancellationToken);
             return tcpClient;
-
         }
         catch (Exception ex) {
             VhLogger.Instance.LogInformation(ex, "Error in upload via TCP.");
@@ -79,7 +82,6 @@ public class TcpTesterClient(IPEndPoint serverEp) : IStreamTesterClient
             // read from server
             await using var discarder = new StreamDiscarder(speedometer);
             await discarder.ReadFromAsync(stream, size: size, cancellationToken: cancellationToken);
-
         }
         catch (Exception ex) {
             VhLogger.Instance.LogInformation(ex, "Error in download via TCP.");

@@ -3,13 +3,14 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Core.Client.ConnectorServices;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Packets;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.ClientStreams;
-using VpnHood.Core.Tunneling.DomainFiltering;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
@@ -30,13 +31,23 @@ internal class ClientHost(
     private IPEndPoint? _localEndpointIpV4;
     private IPEndPoint? _localEndpointIpV6;
     private int _processingCount;
-    private  readonly ClientHostStat _stat = new();
+    private readonly ClientHostStat _stat = new();
+    private int _passthruInProcessPacketsCounter;
+    private readonly Nat _nat = new(true);
 
 
     public IPAddress CatcherAddressIpV4 { get; } = catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 { get; } = catcherAddressIpV6;
-    public bool PassthruInProcessPackets { get; set; }
+    public bool IsPassthruInProcessPacketsEnabled => _passthruInProcessPacketsCounter > 0;
     public IClientHostStat Stat => _stat;
+
+    public void EnablePassthruInProcessPackets(bool value)
+    {
+        if (value)
+            Interlocked.Increment(ref _passthruInProcessPacketsCounter);
+        else
+            Interlocked.Decrement(ref _passthruInProcessPacketsCounter);
+    }
 
     public void Start()
     {
@@ -88,7 +99,8 @@ internal class ClientHost(
     }
 
     // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
-    public IPPacket[] ProcessOutgoingPacket(IList<IPPacket> ipPackets)
+    // Warning: the return array is shared and will be invalid with next call
+    public IList<IPPacket> ProcessOutgoingPacket(IList<IPPacket> ipPackets)
     {
         if (_localEndpointIpV4 == null)
             throw new InvalidOperationException(
@@ -100,12 +112,12 @@ internal class ClientHost(
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
             var ipPacket = ipPackets[i];
-            var loopbackAddress = ipPacket.Version == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
+            var catcherAddress = ipPacket.Version == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
             var localEndPoint = ipPacket.Version == IPVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
             TcpPacket? tcpPacket = null;
 
             try {
-                tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                tcpPacket = ipPacket.ExtractTcp();
 
                 // check local endpoint
                 if (localEndPoint == null)
@@ -116,8 +128,9 @@ internal class ClientHost(
                     throw new ObjectDisposedException(GetType().Name);
 
                 // redirect to inbound
-                if (Equals(ipPacket.DestinationAddress, loopbackAddress)) {
-                    var natItem = (NatItemEx?)vpnHoodClient.Nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
+                if (Equals(ipPacket.DestinationAddress, catcherAddress)) {
+                    var natItem = (NatItemEx?)_nat.Resolve(ipPacket.Version, ipPacket.Protocol,
+                                      tcpPacket.DestinationPort)
                                   ?? throw new Exception("Could not find incoming tcp destination in NAT.");
 
                     ipPacket.SourceAddress = natItem.DestinationAddress;
@@ -132,8 +145,8 @@ internal class ClientHost(
 
                     // add to nat if it is sync packet
                     var natItem = syncCustomData != null
-                        ? vpnHoodClient.Nat.Add(ipPacket, true)
-                        : vpnHoodClient.Nat.Get(ipPacket) ??
+                        ? _nat.Add(ipPacket, true)
+                        : _nat.Get(ipPacket) ??
                           throw new Exception("Could not find outgoing tcp destination in NAT.");
 
                     // set customData
@@ -142,37 +155,29 @@ internal class ClientHost(
 
                     tcpPacket.SourcePort = natItem.NatId; // 1
                     ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
-                    ipPacket.SourceAddress = loopbackAddress; //3
+                    ipPacket.SourceAddress = catcherAddress; //3
                     tcpPacket.DestinationPort = (ushort)localEndPoint.Port; //4
                 }
 
-                PacketUtil.UpdateIpPacket(ipPacket);
+                ipPacket.UpdateAllChecksums();
                 ret.Add(ipPacket);
             }
             catch (Exception ex) {
                 if (tcpPacket != null) {
-                    ret.Add(PacketUtil.CreateTcpResetReply(ipPacket, true));
-                    PacketUtil.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.",
-                        LogLevel.Error, ex);
+                    ret.Add(PacketBuilder.BuildTcpResetReply(ipPacket, true));
+                    PacketLogger.LogPacket(ipPacket,
+                        "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.",
+                        LogLevel.Debug, ex);
                 }
                 else {
-                    PacketUtil.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet.",
+                    PacketLogger.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet.",
                         LogLevel.Error, ex);
                 }
             }
         }
 
-        return ret.ToArray(); //it is a shared buffer; to ToArray is necessary
-    }
-
-    public bool ShouldPassthru(IPPacket ipPacket, int sourcePort, int destinationPort)
-    {
-        return
-            PassthruInProcessPackets &&
-            vpnHoodClient.SocketFactory.CanDetectInProcessPacket &&
-            vpnHoodClient.SocketFactory.IsInProcessPacket(ipPacket.Protocol,
-                new IPEndPoint(ipPacket.SourceAddress, sourcePort),
-                new IPEndPoint(ipPacket.DestinationAddress, destinationPort));
+        //it is a shared buffer; to ToArray is necessary
+        return ret; 
     }
 
     private SyncCustomData? ProcessOutgoingSyncPacket(IPPacket ipPacket, TcpPacket tcpPacket)
@@ -182,7 +187,6 @@ internal class ClientHost(
             return null;
 
         var syncCustomData = new SyncCustomData {
-            Passthru = ShouldPassthru(ipPacket, tcpPacket.SourcePort, tcpPacket.DestinationPort),
             IsInIpRange = vpnHoodClient.IsInIpRange(ipPacket.DestinationAddress)
         };
 
@@ -218,8 +222,7 @@ internal class ClientHost(
             cancellationToken.ThrowIfCancellationRequested();
 
             // config tcpOrgClient
-            vpnHoodClient.SocketFactory.SetKeepAlive(orgTcpClient.Client, true);
-            VhUtil.ConfigTcpClient(orgTcpClient, null, null);
+            VhUtils.ConfigTcpClient(orgTcpClient, null, null);
 
             // get original remote from NAT
             var orgRemoteEndPoint = (IPEndPoint)orgTcpClient.Client.RemoteEndPoint;
@@ -228,19 +231,20 @@ internal class ClientHost(
                 : IPVersion.IPv6;
 
             var natItem =
-                (NatItemEx?)vpnHoodClient.Nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port) ??
-                throw new Exception($"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
+                (NatItemEx?)_nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port) ??
+                throw new Exception(
+                    $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
 
             var syncCustomData = natItem.CustomData as SyncCustomData?;
 
             // create a scope for the logger
             using var scope = VhLogger.Instance.BeginScope("LocalPort: {LocalPort}, RemoteEp: {RemoteEp}",
                 natItem.SourcePort, VhLogger.Format(natItem.DestinationAddress) + ":" + natItem.DestinationPort);
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel, "New TcpProxy Request.");
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel, "New TcpProxy Request.");
 
             // check invalid income
-            var loopbackAddress = ipVersion == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
-            if (!Equals(orgRemoteEndPoint.Address, loopbackAddress))
+            var catcherAddress = ipVersion == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
+            if (!Equals(orgRemoteEndPoint.Address, catcherAddress))
                 throw new Exception("TcpProxy rejected an outbound connection!");
 
             // Filter by SNI
@@ -258,10 +262,8 @@ internal class ClientHost(
 
             // Filter by IP
             var isInIpRange = syncCustomData?.IsInIpRange ?? vpnHoodClient.IsInIpRange(natItem.DestinationAddress);
-            if (syncCustomData?.Passthru == true ||
-                filterResult.Action == DomainFilterAction.Exclude ||
+            if (filterResult.Action == DomainFilterAction.Exclude ||
                 (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
-
                 var channelId = Guid.NewGuid() + ":client";
                 await vpnHoodClient.AddPassthruTcpStream(
                         new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
@@ -279,7 +281,7 @@ internal class ClientHost(
                 SessionId = vpnHoodClient.SessionId,
                 SessionKey = vpnHoodClient.SessionKey,
                 DestinationEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-                CipherKey = VhUtil.GenerateKey(),
+                CipherKey = VhUtils.GenerateKey(),
                 CipherLength = natItem.DestinationPort == 443 ? TunnelDefaults.TlsHandshakeLength : -1
             };
 
@@ -289,7 +291,7 @@ internal class ClientHost(
             var proxyClientStream = requestResult.ClientStream;
 
             // create a StreamProxyChannel
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
                 "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
             var orgTcpClientStream =
                 new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
@@ -326,7 +328,7 @@ internal class ClientHost(
         _cancellationTokenSource.Cancel();
         _tcpListenerIpV4?.Stop();
         _tcpListenerIpV6?.Stop();
-
+        _nat.Dispose();
         return default;
     }
 
@@ -338,7 +340,6 @@ internal class ClientHost(
 
     public struct SyncCustomData
     {
-        public required bool? Passthru { get; init; }
         public required bool IsInIpRange { get; init; }
     }
 }

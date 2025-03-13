@@ -1,4 +1,3 @@
-﻿
-namespace VpnHood.Core.Server;
+﻿namespace VpnHood.Core.Server;
 
 public class SessionExtraData;

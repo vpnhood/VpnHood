@@ -3,10 +3,10 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Core.Common.Collections;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
-using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Core.Packets;
+using VpnHood.Core.Toolkit.Collections;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
@@ -53,7 +53,7 @@ internal class UdpProxyEx : ITimeoutItem
             await _sendSemaphore.WaitAsync().VhConfigureAwait();
 
             if (VhLogger.IsDiagnoseMode)
-                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
+                VhLogger.Instance.LogTrace(GeneralEventId.Udp,
                     $"Sending all udp bytes to host. Requested: {datagram.Length}, From: {VhLogger.Format(LocalEndPoint)}, To: {VhLogger.Format(ipEndPoint)}");
 
             // IpV4 fragmentation
@@ -92,13 +92,13 @@ internal class UdpProxyEx : ITimeoutItem
             }
 
             // create packet for audience
-            var ipPacket = PacketUtil.CreateIpPacket(udpResult.RemoteEndPoint.Address, sourceEndPoint.Value.Address);
+            var ipPacket = PacketBuilder.BuildIpPacket(udpResult.RemoteEndPoint.Address, sourceEndPoint.Value.Address);
             var udpPacket = new UdpPacket((ushort)udpResult.RemoteEndPoint.Port, (ushort)sourceEndPoint.Value.Port) {
                 PayloadData = udpResult.Buffer
             };
 
             ipPacket.PayloadPacket = udpPacket;
-            PacketUtil.UpdateIpPacket(ipPacket);
+            ipPacket.UpdateAllChecksums();
 
             // send packet to audience
             await _packetReceiver.OnPacketReceived(ipPacket).VhConfigureAwait();

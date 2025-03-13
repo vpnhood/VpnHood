@@ -1,6 +1,6 @@
 using VpnHood.AppLib.Droid.GooglePlay.Utils;
-using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Droid;
+using VpnHood.Core.Client.Device.UiContexts;
 using Xamarin.Google.Android.Play.Core.Review;
 using Xamarin.Google.Android.Play.Core.Review.Testing;
 

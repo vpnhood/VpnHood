@@ -35,6 +35,7 @@ public class TestWebServer : IDisposable
         IPEndPoint.Parse("[::1]:20103")
     ];
 
+    public IPEndPoint HttpsV4RefusedEndPoint1 => new (HttpsV4EndPoint1.Address, 9999);
     public IPEndPoint HttpsV4EndPoint1 => HttpsV4EndPoints[0];
     public IPEndPoint HttpsV4EndPoint2 => HttpsV4EndPoints[1];
     public IPEndPoint HttpV4EndPoint1 => HttpV4EndPoints[0];
@@ -82,7 +83,8 @@ public class TestWebServer : IDisposable
 
         // Create web server
         var webServerOptions = new WebServerOptions {
-            Certificate = X509CertificateLoader.LoadPkcs12FromFile("Assets/VpnHood.UnitTest.pfx", null, X509KeyStorageFlags.Exportable),
+            Certificate = X509CertificateLoader.LoadPkcs12FromFile("Assets/VpnHood.UnitTest.pfx", null,
+                X509KeyStorageFlags.Exportable),
             AutoRegisterCertificate = false
         };
 

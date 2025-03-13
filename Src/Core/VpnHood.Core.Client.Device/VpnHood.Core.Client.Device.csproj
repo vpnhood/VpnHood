@@ -19,7 +19,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>5.1.640</Version>
+		<Version>6.0.675</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
@@ -28,11 +28,6 @@
 			<Pack>True</Pack>
 			<PackagePath></PackagePath>
 		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="PacketDotNet" Version="1.4.7" />
-		<PackageReference Include="System.Text.Json" Version="9.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>

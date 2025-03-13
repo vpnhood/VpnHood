@@ -5,15 +5,19 @@
 		<RootNamespace>VpnHood.App.Client.Droid.Google</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.client.android.debug</ApplicationId>
-		<ApplicationVersion>635</ApplicationVersion>
-		<ApplicationDisplayVersion>5.0.635</ApplicationDisplayVersion>
+		<ApplicationVersion>675</ApplicationVersion>
+		<ApplicationDisplayVersion>6.0.675</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
+		<RuntimeIdentifiers>android-arm64;android-x64;android-x86;</RuntimeIdentifiers>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
 		<PublishTrimmed>True</PublishTrimmed>
 		<RunAOTCompilation>True</RunAOTCompilation>
-		<RuntimeIdentifiers>android-arm;android-arm64;android-x64;</RuntimeIdentifiers>
+		<RuntimeIdentifiers>android-arm;android-arm64;android-x64;android-x86;</RuntimeIdentifiers>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -32,10 +36,13 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>5.0.635</Version>
+		<Version>6.0.675</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
+
+	<ItemGroup>
+	</ItemGroup>
 
 	<ItemGroup>
 		<AndroidResource Update="Resources\xml\locales_config.xml">
@@ -46,8 +53,8 @@
 	
 	<ItemGroup>
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Resources\VpnHood.AppLib.Resources.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.GooglePlay.Core\VpnHood.AppLib.Android.GooglePlay.Core.csproj" />
+		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 	</ItemGroup>
 
 </Project>

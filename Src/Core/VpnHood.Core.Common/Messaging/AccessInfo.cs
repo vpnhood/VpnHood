@@ -11,5 +11,5 @@ public class AccessInfo
     public long MaxTotalTraffic { get; set; }
     public int MaxDeviceCount { get; init; }
     public int DeviceLifeSpan { get; init; } // In days
-    public AccessDevicesSummary? DevicesSummary{ get; init; } 
+    public AccessDevicesSummary? DevicesSummary { get; init; }
 }

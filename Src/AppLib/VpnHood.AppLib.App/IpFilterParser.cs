@@ -1,5 +1,5 @@
 ﻿using System.Text.RegularExpressions;
-using VpnHood.Core.Common.Net;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.AppLib;
 
@@ -19,7 +19,7 @@ public static class IpFilterParser
 
         // parse each line
         var ipRanges = lines
-            .Select(x=>IpRange.Parse(x.Trim())).ToArray();
+            .Select(x => IpRange.Parse(x.Trim())).ToArray();
         return ipRanges;
     }
 

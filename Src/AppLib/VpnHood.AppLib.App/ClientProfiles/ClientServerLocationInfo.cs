@@ -14,7 +14,8 @@ public class ClientServerLocationInfo : ServerLocationInfo
         var token = clientProfile.Token;
 
         // get country policy
-        var policy = token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y.Equals(clientCountry, StringComparison.OrdinalIgnoreCase))) ??
+        var policy = token.ClientPolicies?.FirstOrDefault(x =>
+                         x.ClientCountries.Any(y => y.Equals(clientCountry, StringComparison.OrdinalIgnoreCase))) ??
                      token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));
 
         var items = AddCategoryGaps(token.ServerToken.ServerLocations ?? [], policy?.FreeLocations);
@@ -39,8 +40,10 @@ public class ClientServerLocationInfo : ServerLocationInfo
         var tags = Tags ?? [];
         Options = new ServerLocationOptions {
             HasFree = !tags.Contains(ServerRegisteredTags.Premium) || tags.Contains($"~{ServerRegisteredTags.Premium}"),
-            HasPremium = tags.Contains(ServerRegisteredTags.Premium) || tags.Contains($"~{ServerRegisteredTags.Premium}"),
-            HasUnblockable = tags.Contains(ServerRegisteredTags.Unblockable) || tags.Contains($"~{ServerRegisteredTags.Unblockable}")
+            HasPremium = tags.Contains(ServerRegisteredTags.Premium) ||
+                         tags.Contains($"~{ServerRegisteredTags.Premium}"),
+            HasUnblockable = tags.Contains(ServerRegisteredTags.Unblockable) ||
+                             tags.Contains($"~{ServerRegisteredTags.Unblockable}")
         };
 
         if (isPremium) {
@@ -55,14 +58,15 @@ public class ClientServerLocationInfo : ServerLocationInfo
         }
 
         var isBillingSupported = VpnHoodApp.Instance.Features.IsBillingSupported;
+        var isRewardedAdSupported = VpnHoodApp.Instance.Services.AdService.CanShowRewarded;
         Options.Normal = Options.HasFree ? policy.Normal : null;
         Options.PremiumByTrial = Options.HasPremium ? policy.PremiumByTrial : null;
-        Options.PremiumByRewardedAd = Options.HasPremium ? policy.PremiumByRewardedAd : null;
+        Options.PremiumByRewardedAd = Options.HasPremium && isRewardedAdSupported ? policy.PremiumByRewardedAd : null;
         Options.PremiumByPurchase = policy.PremiumByPurchase && isBillingSupported;
         Options.PremiumByCode = policy.PremiumByCode;
 
         Options.Prompt = Options.PremiumByTrial != null || Options.PremiumByRewardedAd != null;
-        Options.CanGoPremium = policy.PremiumByCode || (policy.PremiumByPurchase && isBillingSupported); // can go premium and remove ad
+        Options.CanGoPremium = policy.PremiumByCode || policy.PremiumByPurchase; // can go premium and remove ad
     }
 
     private static ClientServerLocationInfo[] AddCategoryGaps(string[] serverLocations, string[]? freeLocations)
@@ -119,7 +123,9 @@ public class ClientServerLocationInfo : ServerLocationInfo
 
         // set head sub auto items
         foreach (var locationInfo in results.Where(x => !x.IsAuto && x.RegionName == "*")) {
-            locationInfo.Tags = CalcCategoryTags(results.Where(x => x.CountryCode == locationInfo.CountryCode && x.RegionName != "*")).ToArray();
+            locationInfo.Tags =
+                CalcCategoryTags(results.Where(x => x.CountryCode == locationInfo.CountryCode && x.RegionName != "*"))
+                    .ToArray();
         }
 
         // set head the auto after setting all sub auto items. This is to make sure the auto tags are calculated after all sub auto tags are set
@@ -156,7 +162,8 @@ public class ClientServerLocationInfo : ServerLocationInfo
             return tags;
 
         // check if the location is free
-        var isFree = freeLocations.Contains(item.CountryCode, StringComparer.OrdinalIgnoreCase) || freeLocations.Contains("*");
+        var isFree = freeLocations.Contains(item.CountryCode, StringComparer.OrdinalIgnoreCase) ||
+                     freeLocations.Contains("*");
 
         // if the location is not free, add premium tag
         if (!isFree && !tags.Contains(ServerRegisteredTags.Premium))
@@ -164,5 +171,4 @@ public class ClientServerLocationInfo : ServerLocationInfo
 
         return tags;
     }
-
 }

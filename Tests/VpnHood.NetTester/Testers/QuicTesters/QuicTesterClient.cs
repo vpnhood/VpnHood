@@ -4,8 +4,8 @@ using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Testers.QuicTesters;
@@ -20,7 +20,8 @@ public class QuicTesterClient(IPEndPoint serverEp, string domain, TimeSpan? time
 
         // start multi uploaders
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"Quic => Start Uploading {VhUtil.FormatBytes(upSize)}, Connections: {connectionCount}");
+        VhLogger.Instance.LogInformation(
+            $"Quic => Start Uploading {VhUtils.FormatBytes(upSize)}, Connections: {connectionCount}");
         using (var speedometer = new Speedometer("Up")) {
             for (var i = 0; i < connectionCount; i++)
                 uploadTasks.Add(StartUpload(upSize: upSize / connectionCount, downSize: downSize / connectionCount,
@@ -31,11 +32,13 @@ public class QuicTesterClient(IPEndPoint serverEp, string domain, TimeSpan? time
 
         // start multi downloaders
         VhLogger.Instance.LogInformation("\n--------");
-        VhLogger.Instance.LogInformation($"QUIC => Start Downloading {VhUtil.FormatBytes(downSize)}, Connections: {connectionCount}");
+        VhLogger.Instance.LogInformation(
+            $"QUIC => Start Downloading {VhUtils.FormatBytes(downSize)}, Connections: {connectionCount}");
         using (var speedometer = new Speedometer("Down")) {
             var downloadTasks = uploadTasks
                 .Where(x => x is { IsCompletedSuccessfully: true, Result: not null })
-                .Select(x => StartDownload(x.Result!.Stream, downSize / connectionCount, speedometer, cancellationToken))
+                .Select(x =>
+                    StartDownload(x.Result!.Stream, downSize / connectionCount, speedometer, cancellationToken))
                 .ToArray();
 
             await Task.WhenAll(downloadTasks);
@@ -64,7 +67,6 @@ public class QuicTesterClient(IPEndPoint serverEp, string domain, TimeSpan? time
                 EnabledSslProtocols = SslProtocols.Tls13,
                 TargetHost = domain,
                 EncryptionPolicy = EncryptionPolicy.RequireEncryption
-
             },
             IdleTimeout = timeout ?? TimeSpan.FromSeconds(15)
         };
@@ -93,7 +95,6 @@ public class QuicTesterClient(IPEndPoint serverEp, string domain, TimeSpan? time
             };
         }
         catch (Exception ex) {
-
             connection?.DisposeAsync();
             stream?.DisposeAsync();
             VhLogger.Instance.LogInformation(ex, "Error in QUIC transfer.");
@@ -108,7 +109,6 @@ public class QuicTesterClient(IPEndPoint serverEp, string domain, TimeSpan? time
             // read from server
             await using var discarder = new StreamDiscarder(speedometer);
             await discarder.ReadFromAsync(stream, size: size, cancellationToken: cancellationToken);
-
         }
         catch (Exception ex) {
             VhLogger.Instance.LogInformation(ex, "Error in download via QUIC.");
@@ -126,5 +126,4 @@ public class QuicTesterClient(IPEndPoint serverEp, string domain, TimeSpan? time
             await QuicConnection.DisposeAsync();
         }
     }
-
 }

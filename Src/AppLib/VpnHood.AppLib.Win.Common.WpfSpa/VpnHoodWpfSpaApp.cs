@@ -4,8 +4,8 @@ using System.Security.Principal;
 using System.Windows;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.WebServer;
-using VpnHood.Core.Client.Device.WinDivert;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Client.Device.Win;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.Win.Common.WpfSpa;
 
@@ -23,6 +23,7 @@ public abstract class VpnHoodWpfSpaApp : Application
             // initialize Ain App
             var appOptions = CreateAppOptions();
             appOptions.DeviceId ??= WindowsIdentity.GetCurrent().User?.Value;
+            appOptions.EventWatcherInterval ??= TimeSpan.FromSeconds(1);
 
             VpnHoodWinApp.Init(appOptions.AppId, appOptions.StorageFolderPath);
 
@@ -30,15 +31,16 @@ public abstract class VpnHoodWpfSpaApp : Application
             VpnHoodWinApp.Instance.PreStart(e.Args);
 
             // initialize VpnHoodApp
-            VpnHoodApp.Init(new WinDivertDevice(), appOptions);
+            VpnHoodApp.Init(new WinDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode), appOptions);
 
             // initialize SPA
-            ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resource.SpaZipData);
-            using var spaResource = new MemoryStream(VpnHoodApp.Instance.Resource.SpaZipData);
+            ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
+            using var spaResource = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
             var localSpaUrl = !string.IsNullOrEmpty(appOptions.LocalSpaHostName)
-                ? VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), SpaDefaultPort ?? 80), appOptions.LocalSpaHostName)
+                ? VpnHoodWinApp.RegisterLocalDomain(
+                    new IPEndPoint(IPAddress.Parse("127.10.10.10"), SpaDefaultPort ?? 80), appOptions.LocalSpaHostName)
                 : null;
-            
+
             VpnHoodAppWebServer.Init(new WebServerOptions {
                 SpaZipStream = spaResource,
                 DefaultPort = SpaDefaultPort,
@@ -48,7 +50,7 @@ public abstract class VpnHoodWpfSpaApp : Application
 
             // initialize Win
             VpnHoodWinApp.Instance.ExitRequested += (_, _) => Shutdown();
-            VpnHoodWinApp.Instance.OpenMainWindowInBrowserRequested += (_, _) => 
+            VpnHoodWinApp.Instance.OpenMainWindowInBrowserRequested += (_, _) =>
                 VpnHoodWinApp.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
             VpnHoodWinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
             VpnHoodWinApp.Instance.Start();

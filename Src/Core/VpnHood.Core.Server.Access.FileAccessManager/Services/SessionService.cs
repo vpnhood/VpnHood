@@ -2,18 +2,19 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Jobs;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Common.Utils;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
 using VpnHood.Core.Server.Access.Messaging;
+using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement.Services;
 
 public class SessionService : IDisposable, IJob
 {
+    public bool IsUnitTest { get; }
     private const string SessionFileExtension = "session";
     private readonly TimeSpan _sessionPermanentlyTimeout = TimeSpan.FromHours(48);
     private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
@@ -21,13 +22,14 @@ public class SessionService : IDisposable, IJob
     private readonly TimeSpan _trialTimeout = TimeSpan.FromMinutes(10);
     private long _lastSessionId;
     private readonly string _sessionsFolderPath;
-    private readonly ConcurrentDictionary<ulong, bool> _updatedSessionIds = new ();
+    private readonly ConcurrentDictionary<ulong, bool> _updatedSessionIds = new();
     public ConcurrentDictionary<ulong, Session> Sessions { get; }
     public JobSection JobSection { get; } = new();
 
 
-    public SessionService(string sessionsFolderPath)
+    public SessionService(string sessionsFolderPath, bool isUnitTest)
     {
+        IsUnitTest = isUnitTest;
         JobRunner.Default.Add(this);
         _sessionsFolderPath = sessionsFolderPath;
         Directory.CreateDirectory(sessionsFolderPath);
@@ -43,10 +45,10 @@ public class SessionService : IDisposable, IJob
         // read all session from files
         var sessions = new ConcurrentDictionary<ulong, Session>();
         foreach (var filePath in Directory.GetFiles(sessionsFolderPath, $"*.{SessionFileExtension}")) {
-            var session = VhUtil.JsonDeserializeFile<Session>(filePath);
+            var session = JsonUtils.TryDeserializeFile<Session>(filePath);
             if (session == null) {
                 VhLogger.Instance.LogError("Could not load session file. File: {File}", filePath);
-                VhUtil.TryDeleteFile(filePath);
+                VhUtils.TryDeleteFile(filePath);
                 continue;
             }
 
@@ -79,7 +81,7 @@ public class SessionService : IDisposable, IJob
 
         foreach (var item in timeoutSessions) {
             Sessions.TryRemove(item.Key, out _);
-            VhUtil.TryDeleteFile(GetSessionFilePath(item.Key));
+            VhUtils.TryDeleteFile(GetSessionFilePath(item.Key));
         }
     }
 
@@ -100,7 +102,7 @@ public class SessionService : IDisposable, IJob
             ClientInfo = sessionRequestEx.ClientInfo,
             CreatedTime = FastDateTime.Now,
             LastUsedTime = FastDateTime.Now,
-            SessionKey = VhUtil.GenerateKey(),
+            SessionKey = VhUtils.GenerateKey(),
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,
@@ -109,7 +111,16 @@ public class SessionService : IDisposable, IJob
         };
 
         // process plan id
-        var adRequirement = ProcessPlanId(session, accessTokenData, sessionRequestEx.PlanId); 
+        if (!IsUnitTest && sessionRequestEx.PlanId != ConnectPlanId.Normal) {
+            return new SessionResponseEx {
+                ErrorCode = SessionErrorCode.PlanRejected,
+                ErrorMessage = "PlanId is not supported."
+            };
+        }
+
+        var adRequirement = IsUnitTest
+            ? ProcessPlanId(session, accessTokenData, sessionRequestEx.PlanId)
+            : AdRequirement.None;
 
         //create response
         var responseEx = BuildSessionResponse(session, accessTokenData);
@@ -173,7 +184,7 @@ public class SessionService : IDisposable, IJob
         var ret = BuildSessionResponse(session, accessTokenData, isValidAd);
         return ret;
     }
-    
+
     public ulong[] ResetUpdatedSessions()
     {
         lock (_updatedSessionIds) {
@@ -182,7 +193,9 @@ public class SessionService : IDisposable, IJob
             return sessionIds;
         }
     }
-    private SessionResponseEx BuildSessionResponse(Session session, AccessTokenData accessTokenData, bool? isValidAd = null)
+
+    private SessionResponseEx BuildSessionResponse(Session session, AccessTokenData accessTokenData,
+        bool? isValidAd = null)
     {
         // check if the ad is valid. MUST before access usage
         if (isValidAd == true)
@@ -198,7 +211,7 @@ public class SessionService : IDisposable, IJob
 #pragma warning restore CS0618 // Type or member is obsolete
             MaxTraffic = accessToken.MaxTraffic,
             CycleTraffic = new Traffic(accessTokenData.Usage.Sent, accessTokenData.Usage.Received),
-            IsPremium = true, // token is always premium in File Access Manager
+            IsPremium = true // token is always premium in File Access Manager
         };
 
 
@@ -259,7 +272,7 @@ public class SessionService : IDisposable, IJob
             if (accessTokenData.AccessToken.MaxClientCount != 0) {
                 // suppressedTo others by MaxClientCount
                 var otherSessions2 = otherSessions
-                    .Where(x => 
+                    .Where(x =>
                         x.ClientInfo.ClientId != session.ClientInfo.ClientId &&
                         x.SessionId != session.SessionId)
                     .OrderBy(x => x.CreatedTime).ToArray();
@@ -277,7 +290,8 @@ public class SessionService : IDisposable, IJob
             }
 
             // set to session expiration time if session expiration time is shorter than accessUsage.ExpirationTime
-            if (session.ExpirationTime != null && (accessUsage.ExpirationTime == null || session.ExpirationTime < accessUsage.ExpirationTime)) {
+            if (session.ExpirationTime != null && (accessUsage.ExpirationTime == null ||
+                                                   session.ExpirationTime < accessUsage.ExpirationTime)) {
                 accessUsage.ExpirationTime = session.ExpirationTime.Value;
             }
 
@@ -299,7 +313,7 @@ public class SessionService : IDisposable, IJob
             RedirectHostEndPoint = null,
             AdRequirement = accessToken.AdRequirement,
             ExtraData = session.ExtraData,
-            ProtocolVersion = session.ProtocolVersion,
+            ProtocolVersion = session.ProtocolVersion
         };
     }
 
@@ -317,5 +331,4 @@ public class SessionService : IDisposable, IJob
     public void Dispose()
     {
     }
-  
 }

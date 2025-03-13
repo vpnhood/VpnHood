@@ -2,7 +2,6 @@
 using VpnHood.AppLib;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
-using VpnHood.AppLib.Resources;
 
 namespace VpnHood.App.Client.Droid.Web;
 
@@ -20,15 +19,16 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         var appConfigs = AppConfigs.Load();
 
-        var resources = DefaultAppResource.Resources;
+        var resources = ClientAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
 
         return new AppOptions(PackageName!, "VpnHood", AppConfigs.IsDebugMode) {
-            Resource = resources,
+            Resources = resources,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             IsAddAccessKeySupported = true,
             IsLocalNetworkSupported = true,
+            AdjustForSystemBars = false
         };
     }
 }

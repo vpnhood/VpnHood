@@ -1,12 +1,13 @@
 ﻿using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
+using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.WebServer.Api;
-using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
@@ -20,7 +21,7 @@ internal class AppController : WebApiController, IAppController
     {
         configParams = await HttpContext.GetRequestDataAsync<ConfigParams>().VhConfigureAwait();
         App.Services.CultureProvider.AvailableCultures = configParams.AvailableCultures;
-        if (configParams.Strings != null) App.Resource.Strings = configParams.Strings;
+        if (configParams.Strings != null) App.Resources.Strings = configParams.Strings;
 
         App.UpdateUi();
         return await GetConfig().VhConfigureAwait();
@@ -46,10 +47,10 @@ internal class AppController : WebApiController, IAppController
     public Task<IpFilters> GetIpFilters()
     {
         var appIpFilters = new IpFilters {
-            PacketCaptureIpFilterInclude = App.SettingsService.IpFilterSettings.PacketCaptureIpFilterIncludes,
-            PacketCaptureIpFilterExclude = App.SettingsService.IpFilterSettings.PacketCaptureIpFilterExcludes,
-            AppIpFilterInclude = App.SettingsService.IpFilterSettings.AppIpFilterIncludes,
-            AppIpFilterExclude = App.SettingsService.IpFilterSettings.AppIpFilterExcludes,
+            AdapterIpFilterIncludes = App.SettingsService.IpFilterSettings.AdapterIpFilterIncludes,
+            AdapterIpFilterExcludes = App.SettingsService.IpFilterSettings.AdapterIpFilterExcludes,
+            AppIpFilterIncludes = App.SettingsService.IpFilterSettings.AppIpFilterIncludes,
+            AppIpFilterExcludes = App.SettingsService.IpFilterSettings.AppIpFilterExcludes
         };
 
         return Task.FromResult(appIpFilters);
@@ -59,10 +60,10 @@ internal class AppController : WebApiController, IAppController
     public async Task SetIpFilters(IpFilters ipFilters)
     {
         ipFilters = await HttpContext.GetRequestDataAsync<IpFilters>().VhConfigureAwait();
-        App.SettingsService.IpFilterSettings.PacketCaptureIpFilterExcludes = ipFilters.PacketCaptureIpFilterExclude;
-        App.SettingsService.IpFilterSettings.PacketCaptureIpFilterIncludes = ipFilters.PacketCaptureIpFilterInclude;
-        App.SettingsService.IpFilterSettings.AppIpFilterExcludes = ipFilters.AppIpFilterExclude;
-        App.SettingsService.IpFilterSettings.AppIpFilterIncludes = ipFilters.AppIpFilterInclude;
+        App.SettingsService.IpFilterSettings.AdapterIpFilterExcludes = ipFilters.AdapterIpFilterExcludes;
+        App.SettingsService.IpFilterSettings.AdapterIpFilterIncludes = ipFilters.AdapterIpFilterIncludes;
+        App.SettingsService.IpFilterSettings.AppIpFilterExcludes = ipFilters.AppIpFilterExcludes;
+        App.SettingsService.IpFilterSettings.AppIpFilterIncludes = ipFilters.AppIpFilterIncludes;
     }
 
     [Route(HttpVerbs.Get, "/state")]
@@ -72,35 +73,36 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/connect")]
-    public Task Connect([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null, 
+    public Task Connect([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null,
         [QueryField] ConnectPlanId planId = ConnectPlanId.Normal)
     {
         return App.Connect(
-            clientProfileId, 
-            serverLocation: serverLocation, 
-            diagnose: false,
-            userAgent: HttpContext.Request.UserAgent, 
-            planId: planId,
-            throwException: false);
+            new ConnectOptions {
+                ClientProfileId = clientProfileId,
+                ServerLocation = serverLocation,
+                PlanId = planId,
+                UserAgent = HttpContext.Request.UserAgent,
+            });
     }
 
     [Route(HttpVerbs.Post, "/diagnose")]
-    public Task Diagnose([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null, 
+    public Task Diagnose([QueryField] Guid? clientProfileId = null, [QueryField] string? serverLocation = null,
         [QueryField] ConnectPlanId planId = ConnectPlanId.Normal)
     {
         return App.Connect(
-            clientProfileId, 
-            serverLocation: serverLocation, 
-            diagnose: true,
-            planId: planId,
-            userAgent: HttpContext.Request.UserAgent, 
-            throwException: false);
+            new ConnectOptions {
+                ClientProfileId = clientProfileId,
+                ServerLocation = serverLocation,
+                PlanId = planId,
+                UserAgent = HttpContext.Request.UserAgent,
+                Diagnose = true
+            });
     }
 
     [Route(HttpVerbs.Post, "/disconnect")]
     public Task Disconnect()
     {
-        return App.Disconnect(true);
+        return App.Disconnect();
     }
 
     [Route(HttpVerbs.Post, "/version-check")]
@@ -110,15 +112,17 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/version-check-postpone")]
-    public void VersionCheckPostpone()
+    public Task VersionCheckPostpone()
     {
         App.VersionCheckPostpone();
+        return Task.CompletedTask;
     }
 
     [Route(HttpVerbs.Post, "/clear-last-error")]
-    public void ClearLastError()
+    public Task ClearLastError()
     {
         App.ClearLastError();
+        return Task.CompletedTask;
     }
 
     [Route(HttpVerbs.Post, "/extend-by-rewarded-ad")]
@@ -139,35 +143,34 @@ internal class AppController : WebApiController, IAppController
     public async Task<string> Log()
     {
         Response.ContentType = MimeType.PlainText;
-        await using var stream = HttpContext.OpenResponseStream();
-        await using var streamWriter = new StreamWriter(stream);
-        var log = await App.LogService.GetLog().VhConfigureAwait();
-        await streamWriter.WriteAsync(log).VhConfigureAwait();
+        var stream = HttpContext.OpenResponseStream(); // do not dispose, EmbedIO will do it
+        await App.CopyLogToStream(stream).VhConfigureAwait();
         HttpContext.SetHandled();
-        return "";
+        return ""; // already wrote to stream
     }
 
     [Route(HttpVerbs.Get, "/installed-apps")]
     public Task<DeviceAppInfo[]> GetInstalledApps()
     {
-        return Task.FromResult(App.Device.InstalledApps);
+        return Task.FromResult(App.InstalledApps);
     }
 
     [Route(HttpVerbs.Post, "/settings/open-always-on-page")]
-    public void OpenAlwaysOnPage()
+    public Task OpenAlwaysOnPage()
     {
-        App.Services.UiProvider.OpenAlwaysOnPage(ActiveUiContext.RequiredContext);
+        App.Services.UiProvider.OpenAlwaysOnPage(AppUiContext.RequiredContext);
+        return Task.CompletedTask;
     }
 
     [Route(HttpVerbs.Post, "/settings/request-quick-launch")]
     public Task RequestQuickLaunch()
     {
-        return App.Services.UiProvider.RequestQuickLaunch(ActiveUiContext.RequiredContext, CancellationToken.None);
+        return App.Services.UiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, CancellationToken.None);
     }
 
     [Route(HttpVerbs.Post, "/settings/request-notification")]
     public Task RequestNotification()
     {
-        return App.Services.UiProvider.RequestNotification(ActiveUiContext.RequiredContext, CancellationToken.None);
+        return App.Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
     }
 }

@@ -1,28 +1,28 @@
-﻿using System.Security.Cryptography;
-using System.Text;
+﻿using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Common.Utils;
-using VpnHood.Test;
-using VpnHood.Test.Tests;
+using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
-public class AccessCodeTest : TestBase
+public class AccessCodeTest : TestAppBase
 {
-
-
     [TestMethod]
     public async Task AaFoo()
     {
-        await Task.Delay(1);
-        Console.WriteLine(IPAddressUtil.GenerateUlaAddress(0x1001));
+        var allV6 = new[] { IpNetwork.Parse("::/1"), IpNetwork.Parse("8000::/1") };
+        var allV4 = new[] { IpNetwork.Parse("0.0.0.0/1"), IpNetwork.Parse("128.0.0.0/1") };
+        Console.WriteLine(allV4.ToIpRanges().IsAllV4());
+        Console.WriteLine(allV6.ToIpRanges().IsAllV6());
+
+        await Task.CompletedTask;
     }
+
 
     [TestMethod]
     public async Task AccessCode_Accept()
@@ -47,8 +47,8 @@ public class AccessCodeTest : TestBase
 
         // connect
         await app.Connect(clientProfile.ClientProfileId);
-        Assert.AreEqual(6, app.State.SessionInfo?.AccessInfo?.MaxDeviceCount, "token2 must be used instead of token1 due the access code.");
-
+        Assert.AreEqual(6, app.State.SessionInfo?.AccessInfo?.MaxDeviceCount,
+            "token2 must be used instead of token1 due the access code.");
     }
 
     [TestMethod]
@@ -75,8 +75,13 @@ public class AccessCodeTest : TestBase
         Assert.AreEqual(SessionErrorCode.AccessCodeRejected, ex.SessionResponse.ErrorCode);
 
         // code must be removed
-        clientProfile =  app.ClientProfileService.Get(clientProfile.ClientProfileId);
+        clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
+
         Assert.IsNull(clientProfile.AccessCode, "Access code must be removed from profile.");
+
+        // code should not exist any return objects
+        Assert.IsFalse(ex.Data.Contains("AccessCode"));
+        Assert.IsFalse(app.State.LastError?.Data.ContainsKey("AccessCode") == true);
     }
 
     [TestMethod]
@@ -104,7 +109,7 @@ public class AccessCodeTest : TestBase
     public async Task ClientProfile_with_access_code_must_be_premium()
     {
         await using var server = await TestHelper.CreateServer();
-        
+
         // create token
         var defaultPolicy = new ClientPolicy {
             ClientCountries = ["*"],
@@ -134,6 +139,5 @@ public class AccessCodeTest : TestBase
         Assert.IsFalse(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByPurchase);
         Assert.IsNull(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByRewardedAd);
         Assert.IsNull(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByTrial);
-
     }
 }

@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Ga4.Trackers;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Net;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Client;
 
@@ -40,7 +40,7 @@ public static class ClientTrackerBuilder
                 { "ipv6_supported", isIpV6Supported.ToString() },
                 { "redirected", hasRedirected.ToString() },
                 { "ad_network", adNetwork ?? string.Empty },
-                { "endpoint", endPoint?.ToString() ?? string.Empty },
+                { "endpoint", endPoint?.ToString() ?? string.Empty }
             }
         };
     }
@@ -53,18 +53,6 @@ public static class ClientTrackerBuilder
                 { "ep", endPoint },
                 { "ip_v6", endPoint.Address.IsV6() },
                 { "available", available }
-            }
-        };
-    }
-
-    public static TrackEvent BuildShowAdStatus(string adNetwork, string? errorMessage = null)
-    {
-        return new TrackEvent {
-            EventName = "vh_ad_status",
-            Parameters = new Dictionary<string, object> {
-                { "ad_network", adNetwork },
-                { "is_show", errorMessage != null },
-                { "error", errorMessage ?? string.Empty }
             }
         };
     }

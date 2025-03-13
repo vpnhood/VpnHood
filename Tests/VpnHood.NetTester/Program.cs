@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.NetTester.Clients;
 using VpnHood.NetTester.Servers;
 using VpnHood.NetTester.Utils;
@@ -13,7 +13,8 @@ internal class Program
     {
         if (args.Length == 0 || args.Any(x => x is "/?" or "-?" or "--help")) {
             Console.WriteLine("Usage:");
-            Console.WriteLine("nettester /ep 1.2.3.4:44  /server /client /tcp 33700 /http 8080 /https 443 /quic 443 /up 60 /down 60");
+            Console.WriteLine(
+                "nettester /ep 1.2.3.4:44  /server /client /tcp 33700 /http 8080 /https 443 /quic 443 /up 60 /down 60");
             Console.WriteLine("nettester stop");
             return;
         }
@@ -22,7 +23,8 @@ internal class Program
         var reportFile = ArgumentUtils.Get<string?>(args, "/out", null);
         if (File.Exists(reportFile)) File.Delete(reportFile);
         VhLogger.Instance = new SyncLogger(new SimpleLogger(reportFile));
-        VhLogger.Instance.LogInformation("VpnHood NetTester. Version: {Version}", typeof(Program).Assembly.GetName().Version);
+        VhLogger.Instance.LogInformation("VpnHood NetTester. Version: {Version}",
+            typeof(Program).Assembly.GetName().Version);
 
         // stop the server
         if (args.First() == "stop") {

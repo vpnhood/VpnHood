@@ -4,7 +4,7 @@ namespace VpnHood.Test.Providers;
 
 public class TestSwapMemoryProvider : ISwapMemoryProvider
 {
-    public long AppSize { get; set; } 
+    public long AppSize { get; set; }
     public long AppUsed { get; set; }
     public long OtherSize { get; set; }
     public long OtherUsed { get; set; }

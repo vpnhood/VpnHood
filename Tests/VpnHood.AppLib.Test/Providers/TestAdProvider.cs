@@ -1,5 +1,5 @@
 ﻿using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Test.AccessManagers;
 
@@ -10,7 +10,7 @@ public class TestAdProvider(TestAccessManager accessManager, AppAdType adType = 
     public bool FailShow { get; set; }
     public bool FailLoad { get; set; }
     public string NetworkName => "";
-    public AppAdType AdType  => adType;
+    public AppAdType AdType => adType;
     public DateTime? AdLoadedTime { get; private set; }
     public TimeSpan AdLifeSpan { get; } = TimeSpan.FromMinutes(60);
 

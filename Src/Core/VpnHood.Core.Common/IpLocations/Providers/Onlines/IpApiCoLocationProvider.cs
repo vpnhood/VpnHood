@@ -1,8 +1,8 @@
 ﻿using System.Globalization;
 using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Common.Converters;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Converters;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.IpLocations.Providers;
 
@@ -19,7 +19,6 @@ public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : 
         [JsonPropertyName("region")] public string? RegionName { get; set; }
 
         [JsonPropertyName("city")] public string? CityName { get; set; }
-
     }
 
     public Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
@@ -44,13 +43,17 @@ public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : 
         responseMessage.EnsureSuccessStatusCode();
         var json = await responseMessage.Content.ReadAsStringAsync().VhConfigureAwait();
 
-        var apiLocation = VhUtil.JsonDeserialize<ApiLocation>(json);
+        var apiLocation = JsonUtils.Deserialize<ApiLocation>(json);
         var ipLocation = new IpLocation {
             IpAddress = apiLocation.Ip,
             CountryName = new RegionInfo(apiLocation.CountryCode).EnglishName,
             CountryCode = apiLocation.CountryCode,
-            RegionName = apiLocation.RegionName == "NA" || string.IsNullOrEmpty(apiLocation.RegionName) ? null : apiLocation.RegionName,
-            CityName = apiLocation.CityName == "NA" || string.IsNullOrEmpty(apiLocation.RegionName) ? null : apiLocation.CityName,
+            RegionName = apiLocation.RegionName == "NA" || string.IsNullOrEmpty(apiLocation.RegionName)
+                ? null
+                : apiLocation.RegionName,
+            CityName = apiLocation.CityName == "NA" || string.IsNullOrEmpty(apiLocation.RegionName)
+                ? null
+                : apiLocation.CityName
         };
 
         return ipLocation;

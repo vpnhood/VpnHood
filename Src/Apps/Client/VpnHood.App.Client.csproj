@@ -1,0 +1,47 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<Description>Shared Code between client apps</Description>
+		<TargetFramework>netstandard2.1</TargetFramework>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<Version>6.0.668</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.678" />
+	</ItemGroup>
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==false">
+		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="6.0.694" />
+	</ItemGroup>
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==true">
+		<Reference Include="VpnHood.AppLib.Assets.ClassicSpa">
+			<HintPath>..\..\..\..\VpnHood.AppLib.Assets.ClassicSpa\VpnHood.AppLib.Assets.ClassicSpa\bin\Release\netstandard2.1\VpnHood.AppLib.Assets.ClassicSpa.dll</HintPath>
+		</Reference>	
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+	  
+	</ItemGroup>
+
+
+
+</Project>

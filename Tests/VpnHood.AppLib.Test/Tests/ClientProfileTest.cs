@@ -1,16 +1,19 @@
 ﻿using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AppLib.ClientProfiles;
-using VpnHood.Core.Common.Exceptions;
+using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Exceptions;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
-public class ClientProfileTest 
+public class ClientProfileTest : TestAppBase
 {
     private int _lastSupportId;
+
     private Token CreateToken()
     {
         var randomId = Guid.NewGuid();
@@ -37,8 +40,6 @@ public class ClientProfileTest
     [TestMethod]
     public async Task BuiltIn_AccessKeys_initialization()
     {
-        using var testApp = new TestAppHelper();
-
         var appOptions = TestAppHelper.CreateAppOptions();
         var tokens = new[] { CreateToken(), CreateToken() };
         appOptions.AccessKeys = tokens.Select(x => x.ToAccessKey()).ToArray();
@@ -86,7 +87,12 @@ public class ClientProfileTest
     [TestMethod]
     public async Task ClientPolicy()
     {
-        await using var app = TestAppHelper.CreateClientApp();
+        using var accessManager = TestHelper.CreateAccessManager();
+
+        var appOptions = TestAppHelper.CreateAppOptions();
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
+        appOptions.AdProviderItems = [adProviderItem];
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
 
         // test two region in a same country
         var token = CreateToken();
@@ -304,7 +310,8 @@ public class ClientProfileTest
         // if wrong server location is set for two location, it should return auto
         token.ServerToken.ServerLocations = ["US/California", "FR/Paris"];
         Assert.IsTrue(ServerLocationInfo.IsAutoLocation(clientProfile.SelectedLocationInfo?.ServerLocation));
-        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "US/Cal_Wrong" });
+        app.ClientProfileService.Update(clientProfile.ClientProfileId,
+            new ClientProfileUpdateParams { SelectedLocation = "US/Cal_Wrong" });
     }
 
 
@@ -320,27 +327,34 @@ public class ClientProfileTest
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
 
-        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "US/*" });
+        app.ClientProfileService.Update(clientProfile.ClientProfileId,
+            new ClientProfileUpdateParams { SelectedLocation = "US/*" });
         Assert.AreEqual("US/*", app.State.ClientProfile?.SelectedLocationInfo?.ServerLocation);
-        CollectionAssert.AreEquivalent(new[] { "#tag1", "~#tag2" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
+        CollectionAssert.AreEquivalent(new[] { "#tag1", "~#tag2" },
+            app.State.ClientProfile?.SelectedLocationInfo?.Tags);
 
-        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "US/california" });
+        app.ClientProfileService.Update(clientProfile.ClientProfileId,
+            new ClientProfileUpdateParams { SelectedLocation = "US/california" });
         CollectionAssert.AreEquivalent(new[] { "#tag1", "#tag2" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
 
-        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "US/texas" });
-        CollectionAssert.AreEquivalent(new[] { "#tag1", }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
+        app.ClientProfileService.Update(clientProfile.ClientProfileId,
+            new ClientProfileUpdateParams { SelectedLocation = "US/texas" });
+        CollectionAssert.AreEquivalent(new[] { "#tag1" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
 
         // test three regin
         token = CreateToken();
         token.ServerToken.ServerLocations = ["US/texas", "US/california [#z1 #z2]", "FR/paris [#p1 #p2]"];
         clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
-        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "FR/paris" });
+        app.ClientProfileService.Update(clientProfile.ClientProfileId,
+            new ClientProfileUpdateParams { SelectedLocation = "FR/paris" });
         CollectionAssert.AreEquivalent(new[] { "#p1", "#p2" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
 
-        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams { SelectedLocation = "*/*" });
+        app.ClientProfileService.Update(clientProfile.ClientProfileId,
+            new ClientProfileUpdateParams { SelectedLocation = "*/*" });
         app.Settings.Save();
-        CollectionAssert.AreEquivalent(new[] { "~#p1", "~#p2", "~#z1", "~#z2" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
+        CollectionAssert.AreEquivalent(new[] { "~#p1", "~#p2", "~#z1", "~#z2" },
+            app.State.ClientProfile?.SelectedLocationInfo?.Tags);
     }
 
     [TestMethod]
@@ -351,9 +365,9 @@ public class ClientProfileTest
         token.ServerToken.ServerLocations = ["US/texas [#tag1]", "US/california [#tag1]", "CA/toronto [#tag1]"];
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         var serverLocations = clientProfile.ToInfo().LocationInfos.ToArray();
-        var autoLocation = serverLocations.Single(x=>x.IsAuto);
-        Assert.IsTrue(autoLocation.Tags?.Contains("#tag1") );
-        Assert.IsFalse(autoLocation.Tags?.Contains("~#tag1") );
+        var autoLocation = serverLocations.Single(x => x.IsAuto);
+        Assert.IsTrue(autoLocation.Tags?.Contains("#tag1"));
+        Assert.IsFalse(autoLocation.Tags?.Contains("~#tag1"));
     }
 
     [TestMethod]
@@ -424,7 +438,7 @@ public class ClientProfileTest
             PremiumByPurchase = true,
             PremiumByRewardedAd = 20,
             PremiumByTrial = 30,
-            UnblockableOnly = true,
+            UnblockableOnly = true
         };
 
         // test two region in a same country
@@ -434,7 +448,7 @@ public class ClientProfileTest
             "US/texas [#tag1]",
             "US/california [#tag1 #unblockable]",
             "CA/toronto [#tag1]",
-            "UK/london [#unblockable]",
+            "UK/london [#unblockable]"
         ];
 
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());

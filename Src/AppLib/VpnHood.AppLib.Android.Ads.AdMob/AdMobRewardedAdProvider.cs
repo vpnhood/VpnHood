@@ -2,9 +2,9 @@
 using Android.Gms.Ads.Rewarded;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Exceptions;
-using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.Utils;
+using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 
 namespace VpnHood.AppLib.Droid.Ads.VhAdMob;
@@ -128,7 +128,7 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
     private class MyOnUserEarnedRewardListener : Java.Lang.Object, IOnUserEarnedRewardListener
     {
         private readonly TaskCompletionSource<IRewardItem> _earnedRewardCompletionSource = new();
-        
+
         // ReSharper disable once UnusedMember.Local
         public Task<IRewardItem> UserEarnedRewardTask => _earnedRewardCompletionSource.Task;
 

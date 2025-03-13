@@ -2,11 +2,11 @@
 using Android.Gms.Ads;
 using Android.Gms.Ads.Initialization;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Droid.Ads.VhAdMob;
 
-public class AdMobUtil
+public static class AdMobUtil
 {
     private static readonly AsyncLock InitLock = new();
     public static bool IsInitialized { get; private set; }

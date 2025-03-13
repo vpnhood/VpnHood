@@ -1,9 +1,10 @@
-﻿namespace VpnHood.AppLib.WebServer.Api;
+﻿
+namespace VpnHood.AppLib.WebServer.Api;
 
 public class IpFilters
 {
-    public required string PacketCaptureIpFilterInclude { get; set; }
-    public required string PacketCaptureIpFilterExclude { get; set; }
-    public required string AppIpFilterInclude { get; set; }
-    public required string AppIpFilterExclude { get; set; }
+    public required string AdapterIpFilterIncludes { get; set; }
+    public required string AdapterIpFilterExcludes { get; set; }
+    public required string AppIpFilterIncludes { get; set; }
+    public required string AppIpFilterExcludes { get; set; }
 }

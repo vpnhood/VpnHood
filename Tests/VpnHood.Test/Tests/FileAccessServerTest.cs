@@ -1,7 +1,10 @@
 ﻿using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
+using VpnHood.Core.Server.Access.Messaging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Test.Tests;
 
@@ -35,11 +38,11 @@ public class FileAccessManagerTest : TestBase
 
         //add two tokens
         var token1 = accessManager1.CreateToken();
-        var sessionRequestEx1 = TestHelper.CreateSessionRequestEx(token1);
+        var sessionRequestEx1 = CreateSessionRequestEx(token1);
         sessionRequestEx1.ExtraData = "1234";
 
         var token2 = accessManager1.CreateToken();
-        var sessionRequestEx2 = TestHelper.CreateSessionRequestEx(token2);
+        var sessionRequestEx2 = CreateSessionRequestEx(token2);
 
         var token3 = accessManager1.CreateToken();
 
@@ -107,7 +110,7 @@ public class FileAccessManagerTest : TestBase
 
         //add token
         var token = accessManager1.CreateToken();
-        var sessionRequestEx1 = TestHelper.CreateSessionRequestEx(token);
+        var sessionRequestEx1 = CreateSessionRequestEx(token);
 
         // create a session
         var sessionResponse = await accessManager1.Session_Create(sessionRequestEx1);
@@ -153,5 +156,25 @@ public class FileAccessManagerTest : TestBase
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
         Assert.AreEqual(60, response.AccessUsage?.CycleTraffic.Sent);
         Assert.AreEqual(30, response.AccessUsage?.CycleTraffic.Received);
+    }
+
+    public SessionRequestEx CreateSessionRequestEx(Token token, string? clientId = null)
+    {
+        clientId ??= Guid.NewGuid().ToString();
+        return new SessionRequestEx {
+            TokenId = token.TokenId,
+            ClientInfo = new ClientInfo {
+                ClientId = clientId,
+                UserAgent = "Test",
+                ClientVersion = "1.0.0",
+                ProtocolVersion = 5,
+                MinProtocolVersion = 5,
+                MaxProtocolVersion = 6,
+            },
+            HostEndPoint = token.ServerToken.HostEndPoints!.First(),
+            EncryptedClientId = VhUtils.EncryptClientId(clientId, token.Secret),
+            ClientIp = null,
+            ExtraData = null
+        };
     }
 }

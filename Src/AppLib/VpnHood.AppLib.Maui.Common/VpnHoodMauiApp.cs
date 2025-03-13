@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Common.Utils;
+﻿using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Maui.Common;
 
@@ -7,11 +7,7 @@ public class VpnHoodMauiApp : Singleton<VpnHoodMauiApp>
     public static VpnHoodApp Init(AppOptions options)
     {
         var app = CreateApp();
-        options.CultureProvider ??= app.CultureService;
-
-        var vpnHoodApp =  VpnHoodApp.Init(app.Device, options);
-        app.Init(vpnHoodApp);
-        return vpnHoodApp;
+        return app.Init(options);
     }
 
     private static IVpnHoodMauiApp CreateApp()

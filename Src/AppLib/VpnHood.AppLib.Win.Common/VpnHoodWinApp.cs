@@ -5,8 +5,8 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using WinNative;
 
 namespace VpnHood.AppLib.Win.Common;
@@ -35,7 +35,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
     public bool ShowWindowAfterStart { get; private set; }
     public bool ConnectAfterStart { get; private set; }
     public bool EnableOpenMainWindow { get; set; } = true;
-    
+
     [DllImport("DwmApi")]
     private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);
 
@@ -45,7 +45,8 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
         _appId = appId;
         _storageFolder = storageFolder;
-        _appIcon = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly()?.Location ?? throw new Exception("Could not get the location of Assembly."))
+        _appIcon = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly()?.Location ??
+                                              throw new Exception("Could not get the location of Assembly."))
                    ?? throw new Exception("Could not get the icon of the executing assembly.");
 
         //create command Listener
@@ -117,7 +118,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
     {
         // auto connect
         if (ConnectAfterStart && VpnHoodApp.Instance.CurrentClientProfileInfo != null)
-            _ = VpnHoodApp.Instance.Connect(VpnHoodApp.Instance.CurrentClientProfileInfo.ClientProfileId);
+            _ = VpnHoodApp.Instance.Connect();
 
         // create notification icon
         InitNotifyIcon();
@@ -131,34 +132,34 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
 
     private void InitNotifyIcon()
     {
-        _sysTray = new SystemTray(VpnHoodApp.Instance.Resource.Strings.AppName, _appIcon.Handle);
+        _sysTray = new SystemTray(VpnHoodApp.Instance.Resources.Strings.AppName, _appIcon.Handle);
         _sysTray.Clicked += (_, _) => OpenMainWindow();
         _sysTray.ContextMenu = new ContextMenu();
         _openMainWindowMenuItemId =
-            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Open, (_, _) => OpenMainWindow());
+            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Open, (_, _) => OpenMainWindow());
         _openMainWindowInBrowserMenuItemId =
-            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.OpenInBrowser,
+            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.OpenInBrowser,
                 (_, _) => OpenMainWindowInBrowser());
         _sysTray.ContextMenu.AddMenuSeparator();
         _connectMenuItemId =
-            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Connect, (_, _) => ConnectClicked());
-        _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Disconnect,
-            (_, _) => _ = VpnHoodApp.Instance.Disconnect(true));
+            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Connect, (_, _) => ConnectClicked());
+        _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Disconnect,
+            (_, _) => _ = VpnHoodApp.Instance.Disconnect());
         _sysTray.ContextMenu.AddMenuSeparator();
-        _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resource.Strings.Exit, (_, _) => Exit());
+        _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Exit, (_, _) => Exit());
 
         // initialize icons
-        if (VpnHoodApp.Instance.Resource.Icons.SystemTrayConnectingIcon != null)
+        if (VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectingIcon != null)
             _connectingIcon =
-                new Icon(new MemoryStream(VpnHoodApp.Instance.Resource.Icons.SystemTrayConnectingIcon.Data));
+                new Icon(new MemoryStream(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectingIcon.Data));
 
-        if (VpnHoodApp.Instance.Resource.Icons.SystemTrayConnectedIcon != null)
+        if (VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectedIcon != null)
             _connectedIcon =
-                new Icon(new MemoryStream(VpnHoodApp.Instance.Resource.Icons.SystemTrayConnectedIcon.Data));
+                new Icon(new MemoryStream(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectedIcon.Data));
 
-        if (VpnHoodApp.Instance.Resource.Icons.SystemTrayDisconnectedIcon != null)
+        if (VpnHoodApp.Instance.Resources.Icons.SystemTrayDisconnectedIcon != null)
             _disconnectedIcon =
-                new Icon(new MemoryStream(VpnHoodApp.Instance.Resource.Icons.SystemTrayDisconnectedIcon.Data));
+                new Icon(new MemoryStream(VpnHoodApp.Instance.Resources.Icons.SystemTrayDisconnectedIcon.Data));
     }
 
     private void UpdateNotifyIcon()
@@ -168,7 +169,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
 
         // update icon and text
         var stateName = VpnHoodApp.Instance.State.ConnectionState == AppConnectionState.None
-            ? VpnHoodApp.Instance.Resource.Strings.Disconnected
+            ? VpnHoodApp.Instance.Resources.Strings.Disconnected
             : VpnHoodApp.Instance.State.ConnectionState.ToString();
 
         var icon = _connectingIcon;
@@ -176,7 +177,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         else if (VpnHoodApp.Instance.IsIdle) icon = _disconnectedIcon;
         icon ??= _appIcon;
 
-        _sysTray.Update($@"{VpnHoodApp.Instance.Resource.Strings.AppName} - {stateName}", icon.Handle);
+        _sysTray.Update($@"{VpnHoodApp.Instance.Resources.Strings.AppName} - {stateName}", icon.Handle);
         _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VpnHoodApp.Instance.IsIdle);
         _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VpnHoodApp.Instance.IsIdle);
         _sysTray.ContextMenu?.EnableMenuItem(_disconnectMenuItemId,
@@ -206,15 +207,17 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
 
     private void ConnectClicked()
     {
-        if (VpnHoodApp.Instance.UserSettings.ClientProfileId != null) {
-            try {
-                _ = VpnHoodApp.Instance.Connect(VpnHoodApp.Instance.UserSettings.ClientProfileId.Value);
-            }
-            catch {
-                OpenMainWindow();
-            }
+        // open main window if no profile is selected
+        if (VpnHoodApp.Instance.UserSettings.ClientProfileId == null) {
+            OpenMainWindow();
+            return;
         }
-        else {
+
+        // connect
+        try {
+            _ = VpnHoodApp.Instance.Connect();
+        }
+        catch {
             OpenMainWindow();
         }
     }
@@ -294,7 +297,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         // check default ip
         IPEndPoint? freeLocalEndPoint = null;
         try {
-            freeLocalEndPoint = VhUtil.GetFreeTcpEndPoint(hostEndPoint.Address, hostEndPoint.Port);
+            freeLocalEndPoint = VhUtils.GetFreeTcpEndPoint(hostEndPoint.Address, hostEndPoint.Port);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError("Could not find free port local host. LocalIp:{LocalIp}, Message: {Message}",
@@ -304,7 +307,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         // check 127.0.0.1
         if (freeLocalEndPoint == null) {
             try {
-                freeLocalEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, 9090);
+                freeLocalEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, 9090);
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError("Could not find free port local host. LocalIp:{LocalIp}, Message: {Message}",

@@ -1,8 +1,9 @@
 ﻿using System.Net.NetworkInformation;
 using PacketDotNet;
 using PacketDotNet.Utils;
-using VpnHood.Core.Common.Collections;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Packets;
+using VpnHood.Core.Toolkit.Collections;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;
@@ -43,12 +44,12 @@ public class PingProxy : ITimeoutItem
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
         if (ipPacket.Protocol != ProtocolType.Icmp)
             throw new InvalidOperationException(
-                $"Packet is not {ProtocolType.Icmp}! Packet: {PacketUtil.Format(ipPacket)}");
+                $"Packet is not {ProtocolType.Icmp}! Packet: {PacketLogger.Format(ipPacket)}");
 
-        var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
+        var icmpPacket = ipPacket.ExtractIcmp();
         if (icmpPacket.TypeCode != IcmpV4TypeCode.EchoRequest)
             throw new InvalidOperationException(
-                $"The icmp is not {IcmpV4TypeCode.EchoRequest}! Packet: {PacketUtil.Format(ipPacket)}");
+                $"The icmp is not {IcmpV4TypeCode.EchoRequest}! Packet: {PacketLogger.Format(ipPacket)}");
 
         var noFragment = (ipPacket.FragmentFlags & 0x2) != 0;
         var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, noFragment);
@@ -64,7 +65,7 @@ public class PingProxy : ITimeoutItem
         ipPacket.DestinationAddress = ipPacket.SourceAddress;
         ipPacket.SourceAddress = pingReply.Address;
         ipPacket.PayloadPacket = icmpPacket;
-        PacketUtil.UpdateIpPacket(ipPacket);
+        ipPacket.UpdateAllChecksums();
         return ipPacket;
     }
 
@@ -75,10 +76,10 @@ public class PingProxy : ITimeoutItem
             throw new InvalidOperationException($"Packet is not {ProtocolType.IcmpV6}!");
 
         // We should not use Task due its stack usage, this method is called by many session each many times!
-        var icmpPacket = PacketUtil.ExtractIcmpV6(ipPacket);
+        var icmpPacket = ipPacket.ExtractIcmpV6();
         if (icmpPacket.Type != IcmpV6Type.EchoRequest)
             throw new InvalidOperationException(
-                $"The icmp is not {IcmpV6Type.EchoRequest}! Packet: {PacketUtil.Format(ipPacket)}");
+                $"The icmp is not {IcmpV6Type.EchoRequest}! Packet: {PacketLogger.Format(ipPacket)}");
 
         var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, true);
         var pingData = icmpPacket.Bytes[8..];

@@ -1,17 +1,17 @@
 ﻿using System.Net;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
-using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.Logging;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Net;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.Factory;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Client;
 
@@ -39,7 +39,7 @@ public class ServerFinder(
         VhLogger.Instance.LogInformation(GeneralEventId.Session, "Finding a reachable server...");
 
         // get all endpoints from serverToken
-        var hostEndPoints = await ServerTokenHelper.ResolveHostEndPoints(serverToken, cancellationToken);
+        var hostEndPoints = await serverToken.ResolveHostEndPoints(cancellationToken);
 
         // exclude ip v6 if not supported
         if (!IncludeIpV6)
@@ -52,25 +52,30 @@ public class ServerFinder(
             return hostEndPoints.First(x => x.Address.IsV4());
 
         // randomize endpoint 
-        VhUtil.Shuffle(hostEndPoints);
+        VhUtils.Shuffle(hostEndPoints);
 
         // find the best server
-        _hostEndPointStatuses = await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
+        _hostEndPointStatuses =
+            await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
         var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
             "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}",
-            _hostEndPointStatuses.Count(x => x.Available == true), _hostEndPointStatuses.Count(x => x.Available == false), _hostEndPointStatuses.Count(x => x.Available == null));
+            _hostEndPointStatuses.Count(x => x.Available == true),
+            _hostEndPointStatuses.Count(x => x.Available == false),
+            _hostEndPointStatuses.Count(x => x.Available == null));
 
         _ = TrackEndPointsAvailability([], _hostEndPointStatuses).VhConfigureAwait();
         if (res != null)
             return res;
 
-        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation, isIpV6Supported: IncludeIpV6, hasRedirected: false));
+        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
+            isIpV6Supported: IncludeIpV6, hasRedirected: false));
         throw new UnreachableServer(serverLocation: ServerLocation);
     }
 
-    public async Task<IPEndPoint> FindBestRedirectedServerAsync(IPEndPoint[] hostEndPoints, CancellationToken cancellationToken)
+    public async Task<IPEndPoint> FindBestRedirectedServerAsync(IPEndPoint[] hostEndPoints,
+        CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Session, "Finding best server from redirected endpoints...");
 
@@ -91,20 +96,24 @@ public class ServerFinder(
             hostStatus.Available = _hostEndPointStatuses
                 .FirstOrDefault(x => x.TcpEndPoint.Equals(hostStatus.TcpEndPoint))?.Available;
 
-        var endpointStatuses = await VerifyServersStatus(hostEndPoints, byOrder: true, cancellationToken: cancellationToken);
+        var endpointStatuses =
+            await VerifyServersStatus(hostEndPoints, byOrder: true, cancellationToken: cancellationToken);
         var res = endpointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
-            "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}",
-            endpointStatuses.Count(x => x.Available == true), endpointStatuses.Count(x => x.Available == false), endpointStatuses.Count(x => x.Available == null));
+            "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}, Best: {Best}",
+            endpointStatuses.Count(x => x.Available == true), endpointStatuses.Count(x => x.Available == false),
+            endpointStatuses.Count(x => x.Available == null),
+            VhLogger.Format(res));
 
         // track new endpoints availability 
         _ = TrackEndPointsAvailability(_hostEndPointStatuses, endpointStatuses).VhConfigureAwait();
         if (res != null)
             return res;
 
-        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation, isIpV6Supported: IncludeIpV6, hasRedirected: true));
-        
+        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
+            isIpV6Supported: IncludeIpV6, hasRedirected: true));
+
         throw new UnreachableServerLocation(serverLocation: ServerLocation);
     }
 
@@ -140,8 +149,9 @@ public class ServerFinder(
         using var cancellationTokenSource = new CancellationTokenSource();
         try {
             // check all servers
-            using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
-            await VhUtil.ParallelForEachAsync(hostStatuses, async hostStatus => {
+            using var linkedCancellationTokenSource =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
+            await VhUtils.ParallelForEachAsync(hostStatuses, async hostStatus => {
                 var connector = CreateConnector(hostStatus.TcpEndPoint);
 
                 // ReSharper disable once AccessToDisposedClosure
@@ -180,7 +190,7 @@ public class ServerFinder(
         try {
             var requestResult = await connector.SendRequest<SessionResponse>(
                     new ServerCheckRequest {
-                        RequestId = Guid.NewGuid().ToString(),
+                        RequestId = Guid.NewGuid().ToString()
                     },
                     cancellationToken)
                 .VhConfigureAwait();
@@ -214,7 +224,7 @@ public class ServerFinder(
         };
         var connector = new ConnectorService(endPointInfo, socketFactory, serverQueryTimeout, false);
         connector.Init(
-            protocolVersion: connector.ProtocolVersion, tcpRequestTimeout: serverQueryTimeout, serverSecret: null, 
+            protocolVersion: connector.ProtocolVersion, tcpRequestTimeout: serverQueryTimeout, serverSecret: null,
             tcpReuseTimeout: TimeSpan.Zero);
         return connector;
     }

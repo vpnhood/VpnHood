@@ -1,14 +1,14 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Common.Utils;
-using VpnHood.Core.Client.Device;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Store.Api;
 
 namespace VpnHood.AppLib.Store;
 
 internal class StoreBillingProvider(
-    Guid storeAppId, 
+    Guid storeAppId,
     IAppAuthenticationProvider appAuthenticationProvider,
     IAppBillingProvider billingProvider)
     : IAppBillingProvider
@@ -40,7 +40,7 @@ internal class StoreBillingProvider(
         var httpClient = appAuthenticationProvider.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
 
-        for (var counter = 0; ; counter++) {
+        for (var counter = 0;; counter++) {
             try {
                 var subscriptionOrder = await currentVpnUserClient
                     .GetSubscriptionOrderByProviderOrderIdAsync(storeAppId, providerOrderId).VhConfigureAwait();
@@ -61,5 +61,4 @@ internal class StoreBillingProvider(
     {
         billingProvider.Dispose();
     }
-
 }

@@ -16,14 +16,13 @@ namespace VpnHood.App.Connect.Droid.Web;
     ConfigurationChanges = AndroidMainActivityConstants.ConfigChanges)]
 [IntentFilter([Intent.ActionMain], Categories = [Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher])]
 [IntentFilter([TileService.ActionQsTilePreferences])]
-
 public class MainActivity : AndroidAppMainActivity
 {
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions {
             SpaDefaultPort = AppConfigs.Instance.SpaDefaultPort,
-            SpaListenToAllIps = AppConfigs.Instance.SpaListenToAllIps 
+            SpaListenToAllIps = AppConfigs.Instance.SpaListenToAllIps
         });
     }
 }

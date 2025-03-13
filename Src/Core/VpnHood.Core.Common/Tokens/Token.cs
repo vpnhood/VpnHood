@@ -2,7 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Tokens.TokenLegacy;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 // ReSharper disable StringLiteralTypo
 
@@ -28,17 +28,16 @@ public class Token
 
     [JsonPropertyName("iat")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public DateTime IssuedAt { get; set; } = DateTime.MinValue; // for backward compatibility. Default value it is not required
+    public DateTime IssuedAt { get; set; } =
+        DateTime.MinValue; // for backward compatibility. Default value it is not required
 
     [JsonPropertyName("sec")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required byte[] Secret { get; set; }
 
-    [JsonPropertyName("ser")]
-    public required ServerToken ServerToken { get; set; }
+    [JsonPropertyName("ser")] public required ServerToken ServerToken { get; set; }
 
-    [JsonPropertyName("tags")]
-    public string[] Tags { get; set; } = [];
+    [JsonPropertyName("tags")] public string[] Tags { get; set; } = [];
 
     [JsonPropertyName("ispub")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -52,7 +51,7 @@ public class Token
     public string ToAccessKey()
     {
         var json = JsonSerializer.Serialize(this, new JsonSerializerOptions {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
         });
         return "vh://" + Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
     }
@@ -66,14 +65,14 @@ public class Token
                 base64 = base64[prefix.Length..];
 
         // load
-        var json = Encoding.UTF8.GetString(VhUtil.ConvertFromBase64AndFixPadding(base64));
-        var tokenVersion = VhUtil.JsonDeserialize<TokenVersion>(json);
+        var json = Encoding.UTF8.GetString(VhUtils.ConvertFromBase64AndFixPadding(base64));
+        var tokenVersion = JsonUtils.Deserialize<TokenVersion>(json);
 
         return tokenVersion.Version switch {
 #pragma warning disable CS0618 // Type or member is obsolete
-            0 or 1 or 2 or 3 => VhUtil.JsonDeserialize<TokenV3>(json).ToToken(),
+            0 or 1 or 2 or 3 => JsonUtils.Deserialize<TokenV3>(json).ToToken(),
 #pragma warning restore CS0618 // Type or member is obsolete
-            4 => VhUtil.JsonDeserialize<Token>(json),
+            4 => JsonUtils.Deserialize<Token>(json),
             _ => throw new NotSupportedException($"Token version {tokenVersion.Version} is not supported!")
         };
     }

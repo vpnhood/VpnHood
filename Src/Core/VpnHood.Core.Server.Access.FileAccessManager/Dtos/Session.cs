@@ -1,10 +1,10 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Common.Converters;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Converters;
+using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
 
 public class Session
 {

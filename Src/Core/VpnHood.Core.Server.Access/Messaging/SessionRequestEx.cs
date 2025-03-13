@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Common.Converters;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Toolkit.Converters;
 
 namespace VpnHood.Core.Server.Access.Messaging;
 
@@ -24,5 +24,4 @@ public class SessionRequestEx
 
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress? ClientIp { get; set; }
-
 }

@@ -1,5 +1,8 @@
 ﻿using Android.Content;
 using Android.Content.PM;
+using Android.OS;
+using Microsoft.Extensions.Logging;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.Device.Droid.Utils;
 
@@ -55,8 +58,21 @@ public static class AndroidUtil
                 Android.Provider.Settings.Secure.AndroidId);
         }
         catch (Exception ex) {
-            Console.WriteLine($"Could not retrieve android id. Message: {ex}");
+            VhLogger.Instance.LogError(ex, "Could not retrieve android id.");
             return null;
         }
+    }
+
+    public static void ShowToast(string message)
+    {
+        var handler = new Handler(Looper.MainLooper!);
+        handler.Post(() => {
+            try {
+                Toast.MakeText(Application.Context, message, ToastLength.Short)?.Show();
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "Error showing a toast");
+            }
+        });
     }
 }

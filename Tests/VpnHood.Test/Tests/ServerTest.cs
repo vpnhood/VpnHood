@@ -2,12 +2,12 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Core.Client;
-using VpnHood.Core.Common.Logging;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Net;
-using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Access.Configurations;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
@@ -28,7 +28,7 @@ public class ServerTest : TestBase
         Assert.IsNotNull(accessManager.LastServerInfo);
         Assert.IsTrue(accessManager.LastServerInfo.FreeUdpPortV4 > 0);
         Assert.IsTrue(
-            accessManager.LastServerInfo.PrivateIpAddresses.All(x => x.IsV4()) || 
+            accessManager.LastServerInfo.PrivateIpAddresses.All(x => x.IsV4()) ||
             accessManager.LastServerInfo?.FreeUdpPortV6 > 0);
     }
 
@@ -69,7 +69,7 @@ public class ServerTest : TestBase
         // Create client
         var token = TestHelper.CreateAccessToken(server);
         await using var client =
-            await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
+            await TestHelper.CreateClient(clientOptions: TestHelper.CreateClientOptions(token, useUdpChannel: true));
 
         // check usage when usage should be 0
         var sessionResponseEx = await accessManager.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);
@@ -82,7 +82,6 @@ public class ServerTest : TestBase
         await VhTestUtil.AssertEqualsWait(true, async () => {
             sessionResponseEx = await accessManager.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);
             return sessionResponseEx.AccessUsage!.CycleTraffic.Received > 0;
-
         });
     }
 
@@ -94,20 +93,20 @@ public class ServerTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // change tcp end points
-        var newTcpEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
-        VhLogger.Instance.LogTrace(GeneralEventId.Test,
+        var newTcpEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
+        VhLogger.Instance.LogDebug(GeneralEventId.Test,
             "Test: Changing access server TcpEndPoint. TcpEndPoint: {TcpEndPoint}", newTcpEndPoint);
         accessManager.ServerConfig.TcpEndPoints = [newTcpEndPoint];
         accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         await VhTestUtil.AssertEqualsWait(accessManager.ServerConfig.ConfigCode,
             () => accessManager.LastServerStatus!.ConfigCode);
         Assert.AreNotEqual(
-            VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, accessManager.ServerConfig.TcpEndPoints[0].Port),
+            VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, accessManager.ServerConfig.TcpEndPoints[0].Port),
             accessManager.ServerConfig.TcpEndPoints[0]);
 
         // change udp end points
-        var newUdpEndPoint = VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback);
-        VhLogger.Instance.LogTrace(GeneralEventId.Test,
+        var newUdpEndPoint = VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback);
+        VhLogger.Instance.LogDebug(GeneralEventId.Test,
             "Test: Changing access server UdpEndPoint. UdpEndPoint: {UdpEndPoint}", newUdpEndPoint);
         accessManager.ServerConfig.UdpEndPoints = [newUdpEndPoint];
         accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
@@ -115,14 +114,14 @@ public class ServerTest : TestBase
             () => accessManager.LastServerStatus!.ConfigCode);
 
         Assert.AreNotEqual(
-            VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback, accessManager.ServerConfig.UdpEndPoints[0].Port),
+            VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback, accessManager.ServerConfig.UdpEndPoints[0].Port),
             accessManager.ServerConfig.UdpEndPoints[0]);
     }
 
     [TestMethod]
     public async Task Reconfigure()
     {
-        var serverEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
+        var serverEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions(tcpEndPoints: [serverEndPoint]);
         using var accessManager = TestHelper.CreateAccessManager(fileAccessManagerOptions);
         var serverConfig = accessManager.ServerConfig;
@@ -138,7 +137,7 @@ public class ServerTest : TestBase
         serverConfig.SessionOptions.TcpBufferSize = 2076;
         serverConfig.SessionOptions.UdpReceiveBufferSize = 4001;
         serverConfig.SessionOptions.UdpSendBufferSize = 4002;
-        serverConfig.ServerSecret = VhUtil.GenerateKey();
+        serverConfig.ServerSecret = VhUtils.GenerateKey();
 
         var dateTime = DateTime.Now;
         await using var server = await TestHelper.CreateServer(accessManager);
@@ -154,17 +153,22 @@ public class ServerTest : TestBase
         Assert.IsTrue(accessManager.LastConfigureTime > dateTime);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackClientIp);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackLocalPort);
-        Assert.AreEqual(serverConfig.TrackingOptions.TrackClientIp, server.SessionManager.TrackingOptions.TrackClientIp);
-        Assert.AreEqual(serverConfig.TrackingOptions.TrackLocalPort, server.SessionManager.TrackingOptions.TrackLocalPort);
+        Assert.AreEqual(serverConfig.TrackingOptions.TrackClientIp,
+            server.SessionManager.TrackingOptions.TrackClientIp);
+        Assert.AreEqual(serverConfig.TrackingOptions.TrackLocalPort,
+            server.SessionManager.TrackingOptions.TrackLocalPort);
         Assert.AreEqual(serverConfig.SessionOptions.TcpTimeout, server.SessionManager.SessionOptions.TcpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.IcmpTimeout, server.SessionManager.SessionOptions.IcmpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.UdpTimeout, server.SessionManager.SessionOptions.UdpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.Timeout, server.SessionManager.SessionOptions.Timeout);
-        Assert.AreEqual(serverConfig.SessionOptions.MaxDatagramChannelCount, server.SessionManager.SessionOptions.MaxDatagramChannelCount);
+        Assert.AreEqual(serverConfig.SessionOptions.MaxDatagramChannelCount,
+            server.SessionManager.SessionOptions.MaxDatagramChannelCount);
         Assert.AreEqual(serverConfig.SessionOptions.SyncCacheSize, server.SessionManager.SessionOptions.SyncCacheSize);
         Assert.AreEqual(serverConfig.SessionOptions.TcpBufferSize, server.SessionManager.SessionOptions.TcpBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpSendBufferSize, server.SessionManager.SessionOptions.UdpSendBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpReceiveBufferSize, server.SessionManager.SessionOptions.UdpReceiveBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpSendBufferSize,
+            server.SessionManager.SessionOptions.UdpSendBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpReceiveBufferSize,
+            server.SessionManager.SessionOptions.UdpReceiveBufferSize);
         Assert.IsFalse(accessManager.LastServerInfo?.IsRestarted);
     }
 
@@ -177,11 +181,11 @@ public class ServerTest : TestBase
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
+        await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
         Assert.IsTrue(accessManager.SessionService.Sessions.TryGetValue(client.SessionId, out var session));
         await client.DisposeAsync();
 
-        await TestHelper.WaitForClientState(client, ClientState.Disposed);
+        await client.WaitForState( ClientState.Disposed);
         await VhTestUtil.AssertEqualsWait(false, () => session.IsAlive);
     }
 
@@ -231,10 +235,10 @@ public class ServerTest : TestBase
             TestHelper.Test_Https(timeout: 10000, throwError: false)
         );
 
-        Assert.AreEqual(0, accessManager.SessionGetCounter, "session must loaded in startup.");
+        Assert.AreEqual(0, accessManager.SessionGetCounter, "session must be loaded in startup.");
 
         // remove session from access server
-        server2.SessionManager.Sessions.Remove(client.SessionId, out _);
+        server2.SessionManager.RemoveSession(server2.SessionManager.GetSessionById(client.SessionId)!);
 
         // try using recovery
         await Task.WhenAll(
@@ -268,7 +272,7 @@ public class ServerTest : TestBase
         // create server
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
         serverOptions.SessionOptions.SyncCacheSize = 1000000;
-        serverOptions.UpdateStatusInterval = TimeSpan.FromMilliseconds(200);
+        serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
         using var accessManager = TestHelper.CreateAccessManager(serverOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
 
@@ -283,7 +287,7 @@ public class ServerTest : TestBase
             return client.State;
         });
         Assert.AreEqual(ClientState.Disposed, client.State);
-        Assert.AreEqual(SessionErrorCode.AccessError, client.ConnectionInfo.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.AccessError, client.GetLastSessionErrorCode());
     }
 
     [TestMethod]
@@ -299,8 +303,8 @@ public class ServerTest : TestBase
                 BlockIpV6 = true,
                 ExcludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.2")],
                 IncludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.3")],
-                PacketCaptureExcludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.4")],
-                PacketCaptureIncludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.5")],
+                VpnAdapterExcludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.4")],
+                VpnAdapterIncludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.5")],
                 IncludeLocalNetwork = false
             },
             TcpEndPoints = [IPEndPoint.Parse("2.2.2.2:4433")],
@@ -387,10 +391,10 @@ public class ServerTest : TestBase
     {
         // create server
         var swapMemoryProvider = new TestSwapMemoryProvider {
-                AppSize = 100 * VhUtil.Megabytes,
-                AppUsed = 10 * VhUtil.Megabytes,
-                OtherSize = 200 * VhUtil.Megabytes,
-                OtherUsed = 20 * VhUtil.Megabytes
+            AppSize = 100 * VhUtils.Megabytes,
+            AppUsed = 10 * VhUtils.Megabytes,
+            OtherSize = 200 * VhUtils.Megabytes,
+            OtherUsed = 20 * VhUtils.Megabytes
         };
 
         using var accessManager = TestHelper.CreateAccessManager();
@@ -405,25 +409,28 @@ public class ServerTest : TestBase
         Assert.AreEqual(0, swapMemoryProvider.Info.AppSize);
         Assert.AreEqual(swapMemoryProvider.OtherSize - swapMemoryProvider.OtherUsed, serverStatus?.AvailableSwapMemory);
         Assert.AreEqual(swapMemoryProvider.Info.TotalSize, serverStatus?.TotalSwapMemory);
-        Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed, serverStatus?.AvailableSwapMemory);
+        Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed,
+            serverStatus?.AvailableSwapMemory);
 
         // check status after setting app swap memory
-        swapMemoryProvider.AppSize = 50 * VhUtil.Megabytes;
-        swapMemoryProvider.AppUsed = 10 * VhUtil.Megabytes;
+        swapMemoryProvider.AppSize = 50 * VhUtils.Megabytes;
+        swapMemoryProvider.AppUsed = 10 * VhUtils.Megabytes;
 
         await server.RunJob();
         serverStatus = accessManager.LastServerStatus;
         Assert.AreEqual(swapMemoryProvider.Info.TotalSize, accessManager.LastServerStatus?.TotalSwapMemory);
-        Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed, serverStatus?.AvailableSwapMemory);
+        Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed,
+            serverStatus?.AvailableSwapMemory);
 
         // configure by access manager
         accessManager.ServerConfig.SwapMemorySizeMb = 2500;
         accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        swapMemoryProvider.AppUsed = 100 * VhUtil.Megabytes;
+        swapMemoryProvider.AppUsed = 100 * VhUtils.Megabytes;
         await server.RunJob();
         serverStatus = accessManager.LastServerStatus;
-        Assert.AreEqual(swapMemoryProvider.Info.TotalSize, 2500 * VhUtil.Megabytes);
+        Assert.AreEqual(swapMemoryProvider.Info.TotalSize, 2500 * VhUtils.Megabytes);
         Assert.AreEqual(swapMemoryProvider.Info.TotalSize, accessManager.LastServerStatus?.TotalSwapMemory);
-        Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed, serverStatus?.AvailableSwapMemory);
+        Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed,
+            serverStatus?.AvailableSwapMemory);
     }
 }

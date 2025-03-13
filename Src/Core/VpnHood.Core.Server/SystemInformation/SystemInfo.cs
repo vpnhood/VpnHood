@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Common.Utils;
+﻿using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Server.SystemInformation;
 
@@ -12,7 +12,7 @@ public class SystemInfo
 
     public override string ToString()
     {
-        var totalMemory = TotalMemory != null ? VhUtil.FormatBytes(TotalMemory.Value) : "*";
+        var totalMemory = TotalMemory != null ? VhUtils.FormatBytes(TotalMemory.Value) : "*";
         return $"{OsInfo}, TotalMemory: {totalMemory}, Logical Cores: {LogicalCoreCount}";
     }
 }

@@ -1,20 +1,15 @@
-﻿using System.Drawing;
-using Android.Runtime;
-using Firebase.Analytics;
-using Firebase.Crashlytics;
+﻿using Android.Runtime;
 using Microsoft.Extensions.Logging;
+using VpnHood.App.Client.Droid.Google.FirebaseUtils;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Droid.Ads.VhAdMob;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
-using VpnHood.AppLib.Resources;
-using VpnHood.AppLib.Store;
-using VpnHood.AppLib.Droid.Ads.VhChartboost;
-using VpnHood.AppLib.Droid.Ads.VhInMobi;
-using VpnHood.Core.Common.Logging;
 using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.Store;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.App.Client.Droid.Google;
 
@@ -31,28 +26,24 @@ namespace VpnHood.App.Client.Droid.Google;
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
-    private FirebaseAnalytics? _analytics;
-
     protected override AppOptions CreateAppOptions()
     {
-        var appConfigs = AppConfigs.Load();
+        // lets init firebase analytics as single tone as soon as possible
+        if (!FirebaseAnalyticsTracker.IsInit)
+            FirebaseAnalyticsTracker.Init();
 
-        // initialize Firebase services
-        try { _analytics = FirebaseAnalytics.GetInstance(this); } catch { /* ignored*/ }
-        try { FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(Java.Lang.Boolean.True); } catch { /* ignored */ }
+        // load app configs
+        var appConfigs = AppConfigs.Load();
+        var storageFolderPath = AppOptions.BuildStorageFolderPath("VpnHoodConnect");
 
         // load app settings and resources
-        var storageFolderPath = AppOptions.BuildStorageFolderPath("VpnHoodConnect");
-        var resources = DefaultAppResource.Resources;
+        var resources = ConnectAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
-        resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
-        resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
-        resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
 
         return new AppOptions(appId: PackageName!, "VpnHoodConnect", AppConfigs.IsDebugMode) {
             StorageFolderPath = storageFolderPath,
             AccessKeys = [appConfigs.DefaultAccessKey],
-            Resource = resources,
+            Resources = resources,
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
@@ -60,54 +51,51 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AccountProvider = CreateAppAccountProvider(appConfigs, storageFolderPath),
             AdProviderItems = CreateAppAdProviderItems(appConfigs),
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
-            Tracker = _analytics != null ? new AnalyticsTracker(_analytics) : null,
+            AdjustForSystemBars = false,
+            TrackerFactory = new FirebaseAnalyticsTrackerFactory(),
             AdOptions = new AppAdOptions {
                 PreloadAd = true
             }
         };
     }
 
-    // Set the clientId as userId to the analytics
-    public override void OnCreate()
-    {
-        base.OnCreate();
-        _analytics?.SetUserId(VpnHoodApp.Instance.Features.ClientId);
-    }
-
     private static AppAdProviderItem[] CreateAppAdProviderItems(AppConfigs appConfigs)
     {
+        // ReSharper disable once UseObjectOrCollectionInitializer
         var items = new List<AppAdProviderItem>();
-        var initializeTimeout = TimeSpan.FromSeconds(5);
 
         items.Add(new AppAdProviderItem {
             AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialAdUnitId),
             ExcludeCountryCodes = ["CN"],
-            ProviderName = "AdMob",
+            ProviderName = "AdMob"
         });
 
-        if (InMobiAdProvider.IsAndroidVersionSupported)
-            items.Add(new AppAdProviderItem {
-                AdProvider = InMobiAdProvider.Create(appConfigs.InmobiAccountId, appConfigs.InmobiPlacementId, initializeTimeout, appConfigs.InmobiIsDebugMode),
-                ProviderName = "InMobi",
-            });
+        //var initializeTimeout = TimeSpan.FromSeconds(5);
+        //if (InMobiAdProvider.IsAndroidVersionSupported)
+        //    items.Add(new AppAdProviderItem {
+        //        AdProvider = InMobiAdProvider.Create(appConfigs.InmobiAccountId, appConfigs.InmobiPlacementId,
+        //            initializeTimeout, appConfigs.InmobiIsDebugMode),
+        //        ProviderName = "InMobi"
+        //    });
 
-        if (ChartboostAdProvider.IsAndroidVersionSupported)
-            items.Add(new AppAdProviderItem {
-                AdProvider = ChartboostAdProvider.Create(appConfigs.ChartboostAppId, appConfigs.ChartboostAppSignature, appConfigs.ChartboostAdLocation, initializeTimeout),
-                ExcludeCountryCodes = ["IR", "CN"],
-                ProviderName = "Chartboost",
-            });
+        //if (ChartboostAdProvider.IsAndroidVersionSupported)
+        //    items.Add(new AppAdProviderItem {
+        //        AdProvider = ChartboostAdProvider.Create(appConfigs.ChartboostAppId, appConfigs.ChartboostAppSignature,
+        //            appConfigs.ChartboostAdLocation, initializeTimeout),
+        //        ExcludeCountryCodes = ["IR", "CN"],
+        //        ProviderName = "Chartboost"
+        //    });
 
         items.Add(new AppAdProviderItem {
             AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialNoVideoAdUnitId),
             ExcludeCountryCodes = ["CN"],
-            ProviderName = "AdMob-NoVideo",
+            ProviderName = "AdMob-NoVideo"
         });
 
         items.Add(new AppAdProviderItem {
             AdProvider = AdMobRewardedAdProvider.Create(appConfigs.AdMobRewardedAdUnitId),
             ExcludeCountryCodes = ["CN"],
-            ProviderName = "AdMob-Rewarded",
+            ProviderName = "AdMob-Rewarded"
         });
 
         return items.ToArray();
@@ -117,10 +105,13 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         try {
             var authenticationExternalProvider = new GooglePlayAuthenticationProvider(appConfigs.GoogleSignInClientId);
-            var authenticationProvider = new StoreAuthenticationProvider(storageFolderPath, new Uri(appConfigs.StoreBaseUri),
-                appConfigs.StoreAppId, authenticationExternalProvider, ignoreSslVerification: appConfigs.StoreIgnoreSslVerification);
+            var authenticationProvider = new StoreAuthenticationProvider(storageFolderPath,
+                new Uri(appConfigs.StoreBaseUri),
+                appConfigs.StoreAppId, authenticationExternalProvider,
+                ignoreSslVerification: appConfigs.StoreIgnoreSslVerification);
             var googlePlayBillingProvider = new GooglePlayBillingProvider(authenticationProvider);
-            var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider, appConfigs.StoreAppId);
+            var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider,
+                appConfigs.StoreAppId);
             return accountProvider;
         }
         catch (Exception ex) {

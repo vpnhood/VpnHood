@@ -2,9 +2,9 @@
 using System.Net.Sockets;
 using System.Numerics;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Net;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.IpLocations.Providers;
 
@@ -29,7 +29,7 @@ public class Ip2LocationDbParser
         using var ipLocationZipArchive = new ZipArchive(ipLocationZipStream, ZipArchiveMode.Read);
         const string entryName = "IP2LOCATION-LITE-DB1.IPV6.CSV";
         var ipLocationEntry = ipLocationZipArchive.GetEntry(entryName) ??
-            throw new Exception($"{entryName} not found in the zip file!");
+                              throw new Exception($"{entryName} not found in the zip file!");
 
         await using var crvStream = ipLocationEntry.Open();
         if (forIpRange)
@@ -43,7 +43,7 @@ public class Ip2LocationDbParser
         var countryIpRanges = await ParseIp2LocationCrv(crvStream).VhConfigureAwait();
 
         // Building the IpGroups directory structure
-        VhLogger.Instance.LogTrace("Building the optimized Ip2Location archive...");
+        VhLogger.Instance.LogDebug("Building the optimized Ip2Location archive...");
         await using var outputStream = File.Create(outputZipFile);
         using var newArchive = new ZipArchive(outputStream, ZipArchiveMode.Create, leaveOpen: true);
         foreach (var countryIpRange in countryIpRanges) {
@@ -59,9 +59,10 @@ public class Ip2LocationDbParser
         var countries = await ParseIp2LocationCrv(crvStream).VhConfigureAwait();
 
         // Building the IpGroups directory structure
-        VhLogger.Instance.LogTrace("Building the optimized Ip2Location archive...");
+        VhLogger.Instance.LogDebug("Building the optimized Ip2Location archive...");
         var ipRangeInfos = new List<LocalIpLocationProvider.IpRangeInfo>();
-        foreach (var country in countries) ipRangeInfos.AddRange(
+        foreach (var country in countries)
+            ipRangeInfos.AddRange(
                 country.Value.Select(ipRange => new LocalIpLocationProvider.IpRangeInfo {
                     CountryCode = country.Key,
                     IpRanges = ipRange

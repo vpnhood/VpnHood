@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Net;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels.Streams;
 
 namespace VpnHood.Core.Tunneling.ClientStreams;
@@ -24,7 +24,7 @@ public class TcpClientStream : IClientStream
         get => _clientStreamId;
         set {
             if (_clientStreamId != value)
-                VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+                VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                     "ClientStreamId has been changed. ClientStreamId: {ClientStreamId}, NewClientStreamId: {NewClientStreamId}",
                     _clientStreamId, value);
 
@@ -51,15 +51,15 @@ public class TcpClientStream : IClientStream
             (IPEndPoint)TcpClient.Client.RemoteEndPoint);
 
         if (log)
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}, StreamType: {StreamType}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
-                ClientStreamId, stream.GetType().Name, VhLogger.Format(IpEndPointPair.LocalEndPoint),
-                VhLogger.Format(IpEndPointPair.RemoteEndPoint));
+                ClientStreamId, stream.GetType().Name, 
+                VhLogger.Format(IpEndPointPair.LocalEndPoint), VhLogger.Format(IpEndPointPair.RemoteEndPoint));
     }
 
     public bool CheckIsAlive()
     {
-        return VhUtil.IsTcpClientHealthy(TcpClient);
+        return VhUtils.IsTcpClientHealthy(TcpClient);
     }
 
     public ValueTask DisposeAsync()
@@ -81,9 +81,10 @@ public class TcpClientStream : IClientStream
             Stream? newStream = null;
             try {
                 newStream = await chunkStream.CreateReuse().VhConfigureAwait();
-                _ = _reuseCallback.Invoke(new TcpClientStream(TcpClient, newStream, ClientStreamId, _reuseCallback, false));
+                _ = _reuseCallback.Invoke(new TcpClientStream(TcpClient, newStream, ClientStreamId, _reuseCallback,
+                    false));
 
-                VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+                VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                     "A TcpClientStream has been freed. ClientStreamId: {ClientStreamId}", ClientStreamId);
             }
             catch (Exception ex) {
@@ -100,7 +101,7 @@ public class TcpClientStream : IClientStream
             await Stream.DisposeAsync().VhConfigureAwait(); // first close stream 2
             TcpClient.Dispose();
 
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "A TcpClientStream has been disposed. ClientStreamId: {ClientStreamId}",
                 ClientStreamId);
         }

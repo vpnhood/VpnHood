@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using PacketDotNet;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Core.Packets;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Tunneling;
 
@@ -15,13 +15,13 @@ public class NatItemEx : NatItem
 
         switch (ipPacket.Protocol) {
             case ProtocolType.Tcp: {
-                var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                var tcpPacket = ipPacket.ExtractTcp();
                 DestinationPort = tcpPacket.DestinationPort;
                 break;
             }
 
             case ProtocolType.Udp: {
-                var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+                var udpPacket = ipPacket.ExtractUdp();
                 DestinationPort = udpPacket.DestinationPort;
                 break;
             }

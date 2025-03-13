@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Shared library for VpnHood Windows Clients.</Description>
+		<Description>Shared library for VpnHood Windows Clients</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
 		<RootNamespace>VpnHood.AppLib.Win.Common</RootNamespace>
 	</PropertyGroup>
@@ -20,7 +20,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>5.1.640</Version>
+		<Version>6.0.675</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
@@ -32,8 +32,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
-		<PackageReference Include="System.Drawing.Common" Version="9.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.3" />
+		<PackageReference Include="System.Drawing.Common" Version="9.0.3" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -6,13 +6,17 @@ public class ShowAdNoUiException : ShowAdException
 
     public ShowAdNoUiException() : base(Msg)
     {
-        // ReSharper disable once VirtualMemberCallInConstructor
-        Data["LocalizationCode"] = "ERROR_SHOW_AD_APP_NOT_OPEN";
     }
 
     public ShowAdNoUiException(Exception innerException) : base(Msg, innerException)
     {
-        // ReSharper disable once VirtualMemberCallInConstructor
-        Data["LocalizationCode"] = "ERROR_SHOW_AD_APP_NOT_OPEN";
+    }
+
+    public ShowAdNoUiException(string msg) : base(msg)
+    {
+    }
+
+    public ShowAdNoUiException(string msg, Exception innerException) : base(msg, innerException)
+    {
     }
 }

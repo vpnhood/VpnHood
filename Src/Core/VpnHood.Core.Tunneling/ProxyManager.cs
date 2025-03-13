@@ -2,10 +2,10 @@
 using System.Net;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels;
-using VpnHood.Core.Tunneling.Factory;
+using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
 
@@ -52,10 +52,12 @@ public abstract class ProxyManager : IPacketProxyReceiver
             logScope: options.LogScope);
 
         _udpProxyPool = options.UseUdpProxy2
-            ? new UdpProxyPoolEx(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount, logScope: options.LogScope,
+            ? new UdpProxyPoolEx(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount,
+                logScope: options.LogScope,
                 sendBufferSize: options.UdpSendBufferSize, receiveBufferSize: options.UdpReceiveBufferSize)
-            : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount, logScope: options.LogScope,
-                    sendBufferSize: options.UdpSendBufferSize, receiveBufferSize: options.UdpReceiveBufferSize);
+            : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount,
+                logScope: options.LogScope,
+                sendBufferSize: options.UdpSendBufferSize, receiveBufferSize: options.UdpReceiveBufferSize);
     }
 
     public async Task SendPackets(IList<IPPacket> ipPackets)
@@ -78,7 +80,7 @@ public abstract class ProxyManager : IPacketProxyReceiver
 
         // send packet via proxy
         if (VhLogger.IsDiagnoseMode)
-            PacketUtil.LogPacket(ipPacket, "Delegating packet to host via proxy.");
+            PacketLogger.LogPacket(ipPacket, "Delegating packet to host via proxy.");
 
         try {
             switch (ipPacket.Protocol) {
@@ -101,7 +103,7 @@ public abstract class ProxyManager : IPacketProxyReceiver
         catch (Exception ex) when (ex is ISelfLog) {
         }
         catch (Exception ex) {
-            PacketUtil.LogPacket(ipPacket, "Error in delegating packet via proxy.", LogLevel.Error, ex);
+            PacketLogger.LogPacket(ipPacket, "Error in delegating packet via proxy.", LogLevel.Error, ex);
         }
     }
 

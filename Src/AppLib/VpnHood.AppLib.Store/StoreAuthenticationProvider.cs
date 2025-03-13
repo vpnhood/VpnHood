@@ -2,10 +2,10 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Common.ApiClients;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Store.Api;
 
 namespace VpnHood.AppLib.Store;
@@ -43,7 +43,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
         if (ignoreSslVerification) handlerWithoutAuth.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
         _httpClientWithoutAuth = new HttpClient(handlerWithoutAuth) { BaseAddress = storeBaseUrl };
 
-        _apiKey = VhUtil.JsonDeserializeFile<ApiKey>(ApiKeyFilePath, logger: VhLogger.Instance);
+        _apiKey = JsonUtils.TryDeserializeFile<ApiKey>(ApiKeyFilePath, logger: VhLogger.Instance);
     }
 
     private ApiKey? ApiKey {
@@ -93,7 +93,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
             var idToken = _authenticationExternalProvider != null
                 ? await _authenticationExternalProvider.SignIn(uiContext, true).VhConfigureAwait()
                 : null;
-            
+
             if (!string.IsNullOrWhiteSpace(idToken)) {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
                 ApiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken })
@@ -174,7 +174,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            var apiKey = await accountProvider.TryGetApiKey(ActiveUiContext.Context).VhConfigureAwait();
+            var apiKey = await accountProvider.TryGetApiKey(AppUiContext.Context).VhConfigureAwait();
             request.Headers.Authorization = apiKey != null
                 ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value)
                 : null;

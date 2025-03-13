@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Common.Logging;
-using VpnHood.Core.Common.Utils;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Accounts;
 
@@ -16,7 +16,9 @@ public class AppAccountService
         _vpnHoodApp = vpnHoodApp;
         _accountProvider = accountProvider;
         AuthenticationService = new AppAuthenticationService(this, accountProvider.AuthenticationProvider);
-        BillingService = accountProvider.BillingProvider != null ? new AppBillingService(this, accountProvider.BillingProvider) : null;
+        BillingService = accountProvider.BillingProvider != null
+            ? new AppBillingService(this, accountProvider.BillingProvider)
+            : null;
     }
 
     private string AppAccountFilePath => Path.Combine(_vpnHoodApp.StorageFolderPath, "account", "account.json");
@@ -39,7 +41,7 @@ public class AppAccountService
 
         // Get from local cache
         if (useCache) {
-            _appAccount ??= VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
+            _appAccount ??= JsonUtils.TryDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
             if (_appAccount != null)
                 return _appAccount;
         }

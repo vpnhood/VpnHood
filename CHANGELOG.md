@@ -7,6 +7,7 @@
 * Fix: Some ANR and crashes
 * Improve: virtual ip allocation
 * Improve: UI
+* Fix: Connect/Disconnect issues
 
 # v5.1.654
 * Fix: IPv6 ping

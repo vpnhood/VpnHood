@@ -213,7 +213,7 @@ public class ClientProfileService
         }
     }
 
-    public async Task<bool> UpdateServerTokenByUrls(Token token)
+    public async Task<bool> UpdateServerTokenByUrls(Token token, CancellationToken cancellationToken)
     {
         // run update for all urls asynchronously and return true if any of them is successful
         var urls = token.ServerToken.Urls;
@@ -221,7 +221,7 @@ public class ClientProfileService
             return false;
 
         using var httpClient = new HttpClient();
-        using var cts = new CancellationTokenSource();
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var tasks = urls
             .Select(url => UpdateServerTokenByUrl(token, url, httpClient, cts))
             .ToList();

@@ -86,7 +86,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
 
         try {
             // create tun adapter
-            Logger.LogInformation("Initializing TUN adapter...");
+            Logger.LogInformation("Adding TUN adapter...");
             await AdapterAdd(cancellationToken).VhConfigureAwait();
 
             // Private IP Networks
@@ -151,7 +151,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
                 await SetAppFilters(options.IncludeApps, options.ExcludeApps, cancellationToken);
 
             // open the adapter
-            Logger.LogInformation("Initializing TUN adapter...");
+            Logger.LogInformation("Opening TUN adapter...");
             await AdapterOpen(cancellationToken).VhConfigureAwait();
 
             // start reading packets

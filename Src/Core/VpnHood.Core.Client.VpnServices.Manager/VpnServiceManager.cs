@@ -296,6 +296,7 @@ public class VpnServiceManager : IJob, IDisposable
 
         // send disconnect request
         try {
+            VhLogger.Instance.LogDebug("Sending disconnect request...");
             await SendRequest(new ApiDisconnectRequest(), timeoutCts.Token).VhConfigureAwait();
         }
         catch (Exception ex) {

@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -14,7 +15,6 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
     private int _mtu = 0xFFFF;
     private readonly int _maxAutoRestartCount = adapterSettings.MaxAutoRestartCount;
     private int _autoRestartCount;
-    private bool _started;
 
     protected bool IsDisposed { get; private set; }
     protected ILogger Logger { get; } = adapterSettings.Logger;
@@ -50,7 +50,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
     public IpNetwork? AdapterIpNetworkV6 { get; private set; }
     public IPAddress? GatewayIpV4 { get; private set; }
     public IPAddress? GatewayIpV6 { get; private set; }
-    public bool Started => _started && !IsDisposed;
+    public bool Started { get; private set; }
 
     public IPAddress? GetPrimaryAdapterIp(IPVersion ipVersion)
     {
@@ -74,20 +74,23 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
         if (UseNat && !IsNatSupported)
             throw new NotSupportedException("NAT is not supported by this adapter.");
 
-        Logger.LogInformation("Starting {AdapterName} adapter.", AdapterName);
-
-        // get the WAN adapter IP
-        PrimaryAdapterIpV4 = GetPrimaryAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV4()), 53));
-        PrimaryAdapterIpV6 = GetPrimaryAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV6()), 53));
-        AdapterIpNetworkV4 = options.VirtualIpNetworkV4;
-        AdapterIpNetworkV6 = options.VirtualIpNetworkV6;
-        UseNat = options.UseNat;
-        _mtu = options.Mtu ?? _mtu;
-
-
         try {
+            Logger.LogInformation("Starting {AdapterName} adapter.", AdapterName);
+            
+            // We must set the started at first, to let clean-up be done stop via any exception. 
+            // We hope client await the start otherwise we need different state for adapters
+            Started = true;
+
+            // get the WAN adapter IP
+            PrimaryAdapterIpV4 = GetPrimaryAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV4()), 53));
+            PrimaryAdapterIpV6 = GetPrimaryAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV6()), 53));
+            AdapterIpNetworkV4 = options.VirtualIpNetworkV4;
+            AdapterIpNetworkV6 = options.VirtualIpNetworkV6;
+            UseNat = options.UseNat;
+            _mtu = options.Mtu ?? _mtu;
+
             // create tun adapter
-            Logger.LogInformation("Initializing TUN adapter...");
+            Logger.LogInformation("Adding TUN adapter...");
             await AdapterAdd(cancellationToken).VhConfigureAwait();
 
             // Private IP Networks
@@ -133,7 +136,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
             Logger.LogDebug("Adding routes...");
             foreach (var network in options.IncludeNetworks) {
                 var gateway = network.IsV4 ? GatewayIpV4 : GatewayIpV6;
-                if (gateway != null) 
+                if (gateway != null)
                     await AddRoute(network, gateway, cancellationToken).VhConfigureAwait();
             }
 
@@ -152,13 +155,12 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
                 await SetAppFilters(options.IncludeApps, options.ExcludeApps, cancellationToken);
 
             // open the adapter
-            Logger.LogInformation("Initializing TUN adapter...");
+            Logger.LogInformation("Opening TUN adapter...");
             await AdapterOpen(cancellationToken).VhConfigureAwait();
 
             // start reading packets
             _ = Task.Run(StartReadingPackets, CancellationToken.None);
 
-            _started = true;
             Logger.LogInformation("TUN adapter started.");
         }
         catch (ExternalException ex) {
@@ -198,8 +200,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
     {
         lock (_stopLock) {
 
-            if (_started) return;
-            _started = false;
+            if (Started) return;
 
             Logger.LogInformation("Stopping {AdapterName} adapter.", AdapterName);
             AdapterClose();
@@ -211,7 +212,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
             AdapterIpNetworkV6 = null;
             GatewayIpV4 = null;
             GatewayIpV6 = null;
-
+            Started = false;
             Logger.LogInformation("TUN adapter stopped.");
         }
     }
@@ -368,6 +369,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
         }
 
         // stop the adapter if it is not stopped
+        VhLogger.Instance.LogDebug("Finish reading the packets from the TUN adapter.");
         Stop();
     }
 
@@ -403,10 +405,9 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
 
     protected virtual void Dispose(bool disposing)
     {
-        IsDisposed = true;
-
         // release managed resources when disposing
         if (disposing) {
+            IsDisposed = true;
             Stop();
 
             // notify the subscribers that the adapter is disposed

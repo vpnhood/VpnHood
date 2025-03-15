@@ -68,8 +68,7 @@ public class Diagnoser
     public async Task CheckPureNetwork(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("Checking the Internet connection...");
-        if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true, cancellationToken)
-                .VhConfigureAwait())
+        if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true, cancellationToken).VhConfigureAwait())
             throw new NoInternetException();
     }
 

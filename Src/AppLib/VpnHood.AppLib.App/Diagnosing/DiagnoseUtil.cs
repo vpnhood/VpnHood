@@ -51,7 +51,6 @@ public class DiagnoseUtil
                 "Started", uri, timeout);
 
             using var httpClient = new HttpClient();
-            httpClient.Timeout = TimeSpan.FromMilliseconds(timeout);
             var result = await httpClient.GetStringAsync(uri)
                 .VhWait(timeout, cancellationToken)
                 .VhConfigureAwait();
@@ -64,9 +63,6 @@ public class DiagnoseUtil
                 "Succeeded", uri);
 
             return null;
-        }
-        catch (OperationCanceledException) {
-            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(
@@ -99,9 +95,6 @@ public class DiagnoseUtil
 
             return null;
         }
-        catch (OperationCanceledException) {
-            throw;
-        }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex,
                 "UdpTest: {UdpTestStatus}!, DnsName: {DnsName}, NsServer: {NsServer}, Message: {Message}.",
@@ -131,9 +124,6 @@ public class DiagnoseUtil
                 "PingTest: {PingTestStatus}, RemoteAddress: {RemoteAddress}.",
                 "Succeeded", VhLogger.Format(ipAddress));
             return null;
-        }
-        catch (OperationCanceledException) {
-            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex,

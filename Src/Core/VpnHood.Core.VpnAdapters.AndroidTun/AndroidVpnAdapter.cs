@@ -43,6 +43,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
     protected override Task AdapterOpen(CancellationToken cancellationToken)
     {
+        VhLogger.Instance.LogDebug("Establishing Android tun adapter...");
         ArgumentNullException.ThrowIfNull(_builder);
         _parcelFileDescriptor = _builder.Establish() ?? throw new Exception("Could not establish VpnService.");
         _tunAdapterFd = _parcelFileDescriptor.Fd;
@@ -53,6 +54,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         //Packets received need to be written to this output stream.
         _outStream = new FileOutputStream(_parcelFileDescriptor.FileDescriptor);
 
+        VhLogger.Instance.LogDebug("Android tun adapter has been established.");
         return Task.CompletedTask;
     }
 
@@ -63,6 +65,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
         // close in streams
         try {
+            VhLogger.Instance.LogDebug("Closing tun in stream...");
             _inStream?.Dispose();
         }
         catch (Exception ex) {
@@ -71,6 +74,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
         // close out streams
         try {
+            VhLogger.Instance.LogDebug("Closing tun out stream...");
             _outStream?.Dispose();
         }
         catch (Exception ex) {
@@ -79,6 +83,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
         // close the vpn
         try {
+            VhLogger.Instance.LogDebug("Closing tun ParcelFileDescriptor...");
             _parcelFileDescriptor?.Close(); //required to close the vpn. dispose is not enough
             _parcelFileDescriptor?.Dispose();
         }

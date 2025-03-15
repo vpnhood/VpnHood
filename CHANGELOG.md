@@ -1,4 +1,4 @@
-# v6.0.675
+# v6.0.676
 * Fix: Improve security by blocking multicast traffic
 * Feature: Android: Run VPN in a separate process
 * Feature: Android: Using separate process for VPN service

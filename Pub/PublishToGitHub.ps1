@@ -68,10 +68,7 @@ if ($mainRepo) {
 		$releaseRootDir/$packageClientDirName/android-web/VpnHoodClient-android-web.json `
 		$releaseRootDir/$packageClientDirName/windows-web/VpnHoodClient-win-x64.msi  `
 		$releaseRootDir/$packageClientDirName/windows-web/VpnHoodClient-win-x64.txt  `
-		$releaseRootDir/$packageClientDirName/windows-web/VpnHoodClient-win-x64.json `
-		$packagesRootDirLatest/$packageServerDirName/linux-x64/VpnHoodServer-linux-x64.json `
-		$packagesRootDirLatest/$packageServerDirName/linux-arm64/VpnHoodServer-linux-arm64.json `
-		$packagesRootDirLatest/$packageServerDirName/win-x64/VpnHoodServer-win-x64.json;
+		$releaseRootDir/$packageClientDirName/windows-web/VpnHoodClient-win-x64.json;
 
 	Pop-Location
 }

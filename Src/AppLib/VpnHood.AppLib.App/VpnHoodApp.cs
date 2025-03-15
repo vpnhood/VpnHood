@@ -497,7 +497,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // Reset everything
             ClearLastError();
-            _appPersistState.LastClearedError = null; // it is a new connection
 
             // create cancellationToken after disconnecting previous connection
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectTimeoutCts.Token);
@@ -505,6 +504,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // reset connection state
             _isConnecting = true;
+            _appPersistState.LastClearedError = null; // it is a new connection
             _appPersistState.HasDiagnoseRequested = connectOptions.Diagnose;
             _appPersistState.ConnectRequestTime = DateTime.Now;
             FireConnectionStateChanged();

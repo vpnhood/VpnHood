@@ -80,7 +80,12 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 
     public void StopNotification()
     {
+        if (_notification == null)
+            return;
+
+        VhLogger.Instance.LogDebug("Remove VpnService from foreground and stop the notification.");
         StopForeground(StopForegroundFlags.Remove);
+        StopSelf();
 
         // clear notification
         _notification?.Dispose();

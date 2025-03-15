@@ -57,6 +57,7 @@ public class VpnServiceHost : IAsyncDisposable
         // no client in progress, let's stop the service
         // handler is responsible to dispose this service
         if (client.State is ClientState.Disposed or ClientState.Disconnecting) {
+            VhLogger.Instance.LogDebug("VpnServiceHost requests to stop the notification.");
             _vpnServiceHandler.StopNotification();
         }
         else {

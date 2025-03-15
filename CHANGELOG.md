@@ -1,13 +1,13 @@
 # v6.0.676
 * Fix: Improve security by blocking multicast traffic
-* Feature: Android: Run VPN in a separate process
-* Feature: Android: Using separate process for VPN service
-* Feature: Android: Edge to Edge UI
+* Fix: No internet connection on some devices
 * Fix: Android: Menu goes beneath system tray
 * Fix: Some ANR and crashes
+* Fix: Connect/Disconnect issues
+* Feature: Android: Using a separate process for VPN service
+* Feature: Android: Edge-to-Edge UI
 * Improve: virtual ip allocation
 * Improve: UI
-* Fix: Connect/Disconnect issues
 
 # v5.1.654
 * Fix: IPv6 ping

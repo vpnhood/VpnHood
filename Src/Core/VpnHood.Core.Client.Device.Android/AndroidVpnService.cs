@@ -40,6 +40,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         [GeneratedEnum] StartCommandFlags flags, int startId)
     {
         var action = intent?.Action;
+        VhLogger.Instance.LogDebug("AndroidVpnService OnStartCommand. Action: {Action} ", action);
 
         // get "manual" in 
         switch (action) {

@@ -1,4 +1,4 @@
-# Upcoming
+# v6.0.677
 * Fix: Instability on pressing the connect and disconnect button
 
 # v6.0.676

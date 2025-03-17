@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace VpnHood.Core.Toolkit.Logging;
 
@@ -11,6 +10,7 @@ public class LogService(string logFilePath) : IDisposable
     public string[] LogEvents { get; private set; } = [];
     public bool Exists => File.Exists(LogFilePath);
     public bool IsStarted => _logger != null;
+
     public void Start(LogServiceOptions options)
     {
         Stop();
@@ -28,7 +28,7 @@ public class LogService(string logFilePath) : IDisposable
 
     public void Stop()
     {
-        VhLogger.Instance = NullLogger.Instance;
+        VhLogger.Instance = VhLogger.CreateConsoleLogger();
         foreach (var loggerProvider in _loggerProviders)
             loggerProvider.Dispose();
         _loggerProviders.Clear();
@@ -85,6 +85,7 @@ public class LogService(string logFilePath) : IDisposable
             .Concat(GetLogEventNames(debugCommand))
             .Distinct();
     }
+
     public static IEnumerable<string> GetLogEventNames(string debugCommand)
     {
         var names = new List<string> { "*" };

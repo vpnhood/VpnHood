@@ -368,12 +368,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         get {
             var clientState = ConnectionInfo.ClientState;
 
+            if (_isDisconnecting)
+                return AppConnectionState.Disconnecting;
+
             // in diagnose mode, we need either cancel it or wait for it
             if (Diagnoser.IsWorking)
                 return AppConnectionState.Diagnosing;
-
-            if (_isDisconnecting)
-                return AppConnectionState.Disconnecting;
 
             if (clientState == ClientState.Initializing || _isLoadingCountryIpRange || _isFindingCountryCode)
                 return AppConnectionState.Initializing;

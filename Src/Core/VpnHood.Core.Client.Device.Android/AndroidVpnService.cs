@@ -40,7 +40,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         [GeneratedEnum] StartCommandFlags flags, int startId)
     {
         var action = intent?.Action;
-        VhLogger.Instance.LogDebug("AndroidVpnService OnStartCommand. Action: {Action} ", action);
+        VhLogger.Instance.LogInformation("AndroidVpnService OnStartCommand. Action: {Action}", action);
 
         // get "manual" in 
         switch (action) {
@@ -86,7 +86,6 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 
         VhLogger.Instance.LogDebug("Remove VpnService from foreground and stop the notification.");
         StopForeground(StopForegroundFlags.Remove);
-        StopSelf();
 
         // clear notification
         _notification?.Dispose();

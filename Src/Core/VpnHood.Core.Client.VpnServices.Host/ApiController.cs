@@ -32,7 +32,7 @@ internal class ApiController : IDisposable
         try {
             _tcpListener.Start();
             ApiEndPoint = (IPEndPoint)_tcpListener.LocalEndpoint;
-            VhLogger.Instance.LogDebug("VpnService host Listener has been started. EndPoint: {EndPoint}", ApiEndPoint);
+            VhLogger.Instance.LogInformation("VpnService host Listener has started. EndPoint: {EndPoint}", ApiEndPoint);
 
             while (!_cancellationTokenSource.IsCancellationRequested) {
                 var client = await _tcpListener.AcceptTcpClientAsync();
@@ -41,7 +41,7 @@ internal class ApiController : IDisposable
         }
         catch (Exception ex) {
             if (_disposed == 0)
-                VhLogger.Instance.LogError(ex, "VpnService host Listener has been stopped.");
+                VhLogger.Instance.LogError(ex, "VpnService host Listener has stopped.");
         }
         finally {
             _cancellationTokenSource.Cancel();

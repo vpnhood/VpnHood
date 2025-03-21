@@ -53,7 +53,7 @@ public class TcpClientStream : IClientStream
         if (log)
             VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}, StreamType: {StreamType}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
-                ClientStreamId, stream.GetType().Name, 
+                ClientStreamId, stream.GetType().Name,
                 VhLogger.Format(IpEndPointPair.LocalEndPoint), VhLogger.Format(IpEndPointPair.RemoteEndPoint));
     }
 
@@ -75,28 +75,10 @@ public class TcpClientStream : IClientStream
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (Disposed) return;
         Disposed = true;
-
         var chunkStream = Stream as ChunkStream;
-        if (graceful && _reuseCallback != null && CheckIsAlive() && chunkStream?.CanReuse == true) {
-            Stream? newStream = null;
-            try {
-                newStream = await chunkStream.CreateReuse().VhConfigureAwait();
-                _ = _reuseCallback.Invoke(new TcpClientStream(TcpClient, newStream, ClientStreamId, _reuseCallback,
-                    false));
 
-                VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
-                    "A TcpClientStream has been freed. ClientStreamId: {ClientStreamId}", ClientStreamId);
-            }
-            catch (Exception ex) {
-                VhLogger.LogError(GeneralEventId.TcpLife, ex,
-                    "Could not reuse the TcpClientStream. ClientStreamId: {ClientStreamId}", ClientStreamId);
-
-                if (newStream != null) await newStream.DisposeAsync().VhConfigureAwait();
-                await Stream.DisposeAsync().VhConfigureAwait();
-                TcpClient.Dispose();
-            }
-        }
-        else {
+        // dispose the stream if we can't reuse it
+        if (!graceful || _reuseCallback == null || !CheckIsAlive() || chunkStream?.CanReuse != true) {
             // close streams
             await Stream.DisposeAsync().VhConfigureAwait(); // first close stream 2
             TcpClient.Dispose();
@@ -104,6 +86,45 @@ public class TcpClientStream : IClientStream
             VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "A TcpClientStream has been disposed. ClientStreamId: {ClientStreamId}",
                 ClientStreamId);
+            return;
+        }
+
+        // reuse the stream
+        try {
+            await Reuse(chunkStream, TcpClient, _reuseCallback, ClientStreamId).VhConfigureAwait();
+        }
+        catch (Exception ex) {
+            VhLogger.LogError(GeneralEventId.TcpLife, ex,
+                "Could not reuse the TcpClientStream. ClientStreamId: {ClientStreamId}", ClientStreamId);
+
+            await Stream.DisposeAsync().VhConfigureAwait();
+            TcpClient.Dispose();
+        }
+
+    }
+
+    private async Task Reuse(ChunkStream chunkStream, TcpClient tcpClient, 
+        ReuseCallback reuseCallback, string clientStreamId)
+    {
+        VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+            "Reusing a TcpClientStream. ClientStreamId: {ClientStreamId}", ClientStreamId);
+
+        var newStream = await chunkStream.CreateReuse().VhConfigureAwait();
+
+        try {
+            // we don't call SuppressFlow on debug to allow MsTest shows console output in nested task
+            using IDisposable? suppressFlow = IsDebug ? null : ExecutionContext.SuppressFlow();
+            _ = Task.Run(() => reuseCallback.Invoke(new TcpClientStream(tcpClient, newStream, clientStreamId, reuseCallback, false)));
+        }
+        catch (Exception) {
+            await newStream.DisposeAsync().VhConfigureAwait();
+            throw;
         }
     }
+
+#if DEBUG
+    private static bool IsDebug => true;
+#else
+    private static bool IsDebug => false;
+#endif
 }

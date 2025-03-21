@@ -3,7 +3,6 @@ using System.Net;
 using System.Text.Json;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Server.Abstractions;
@@ -19,6 +18,7 @@ using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Server;
 
@@ -26,7 +26,7 @@ public class SessionManager : IAsyncDisposable, IJob
 {
     private readonly IAccessManager _accessManager;
     private readonly ISocketFactory _socketFactory;
-    private readonly ITunProvider? _tunProvider;
+    private readonly IVpnAdapter? _vpnAdapter;
     private byte[] _serverSecret;
     private readonly TimeSpan _deadSessionTimeout;
     private readonly JobSection _heartbeatSection;
@@ -41,7 +41,7 @@ public class SessionManager : IAsyncDisposable, IJob
     public TrackingOptions TrackingOptions { get; set; } = new();
     public SessionOptions SessionOptions { get; set; } = new();
     public ITracker? Tracker { get; }
-    public bool IsTunProviderSupported => _tunProvider != null;
+    public bool IsVpnAdapterSupported => _vpnAdapter != null;
     public IpNetwork VirtualIpNetworkV4 => _virtualIpManager.IpNetworkV4;
     public IpNetwork VirtualIpNetworkV6 => _virtualIpManager.IpNetworkV6;
 
@@ -58,14 +58,14 @@ public class SessionManager : IAsyncDisposable, IJob
         INetFilter netFilter,
         ISocketFactory socketFactory,
         ITracker? tracker,
-        ITunProvider? tunProvider,
+        IVpnAdapter? vpnAdapter,
         Version serverVersion,
         string storagePath,
         SessionManagerOptions options)
     {
         _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
-        _tunProvider = tunProvider;
+        _vpnAdapter = vpnAdapter;
         _serverSecret = VhUtils.GenerateKey(128);
         _deadSessionTimeout = options.DeadSessionTimeout;
         _heartbeatSection = new JobSection(options.HeartbeatInterval);
@@ -77,8 +77,8 @@ public class SessionManager : IAsyncDisposable, IJob
         ApiKey = HttpUtil.GetApiKey(_serverSecret, TunnelDefaults.HttpPassCheck);
         NetFilter = netFilter;
         ServerVersion = serverVersion;
-        if (_tunProvider != null)
-            _tunProvider.OnPacketReceived += TunProvider_OnPacketReceived;
+        if (_vpnAdapter != null)
+            _vpnAdapter.PacketReceived += VpnAdapter_PacketReceived;
 
         JobRunner.Default.Add(this);
     }
@@ -116,7 +116,7 @@ public class SessionManager : IAsyncDisposable, IJob
         // create the session
         var session = new Session(
             accessManager: _accessManager,
-            tunProvider: _tunProvider,
+            vpnAdapter: _vpnAdapter,
             netFilter: NetFilter,
             socketFactory: _socketFactory,
             options: SessionOptions,
@@ -484,17 +484,21 @@ public class SessionManager : IAsyncDisposable, IJob
         _sessionLocalService.Remove(session.SessionId);
     }
 
-    private void TunProvider_OnPacketReceived(object sender, IPPacket ipPacket)
+    private void VpnAdapter_PacketReceived(object sender, PacketReceivedEventArgs e)
     {
-        var session = GetSessionByVirtualIp(ipPacket.DestinationAddress);
-        if (session == null) {
-            // log dropped packet
-            if (VhLogger.IsDiagnoseMode)
-                PacketLogger.LogPacket(ipPacket, "Could not find session for packet destination.");
-            return;
-        }
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < e.IpPackets.Count; i++) {
+            var ipPacket = e.IpPackets[i];
+            var session = GetSessionByVirtualIp(ipPacket.DestinationAddress);
+            if (session == null) {
+                // log dropped packet
+                if (VhLogger.IsDiagnoseMode)
+                    PacketLogger.LogPacket(ipPacket, "Could not find session for packet destination.");
+                return;
+            }
 
-        session.ProcessInboundPacket(ipPacket);
+            session.ProcessInboundPacket(ipPacket);
+        }
     }
 
     public Session? GetSessionByVirtualIp(IPAddress virtualIpAddress)

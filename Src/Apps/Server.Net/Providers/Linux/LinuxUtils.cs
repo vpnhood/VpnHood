@@ -4,6 +4,7 @@ namespace VpnHood.App.Server.Providers.Linux;
 
 internal class LinuxUtils
 {
+    // todo: replace with vhUtils
     public static async Task<string> ExecuteCommandAsync(string command)
     {
         var processInfo = new ProcessStartInfo {

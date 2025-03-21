@@ -52,7 +52,7 @@ fi;
 
 # point to latest version if $installUrl is not set
 if [ "$composeUrl" = "" ]; then
-	composeUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/$composeFile";
+	composeUrl="https://github.com/vpnhood/VpnHood.App.Server/releases/latest/download/VpnHoodServer.docker.yml";
 fi
 
 # install docker & compose

@@ -360,8 +360,7 @@ public class ServerHost : IAsyncDisposable, IJob
     {
         lock (_clientStreams) _clientStreams.Add(clientStream);
         using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
-        using var cancellationTokenSource =
-            CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
+        using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
         var cancellationToken = cancellationTokenSource.Token;
 
         // don't add new client in disposing
@@ -393,8 +392,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessClientStream(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        using var scope =
-            VhLogger.Instance.BeginScope($"RemoteEp: {VhLogger.Format(clientStream.IpEndPointPair.RemoteEndPoint)}");
+        using var scope = VhLogger.Instance.BeginScope($"RemoteEp: {VhLogger.Format(clientStream.IpEndPointPair.RemoteEndPoint)}");
         try {
             await ProcessRequest(clientStream, cancellationToken).VhConfigureAwait();
         }
@@ -616,7 +614,7 @@ public class ServerHost : IAsyncDisposable, IJob
             ServerLocation = sessionResponseEx.ServerLocation,
             ServerTags = sessionResponseEx.ServerTags,
             AccessInfo = sessionResponseEx.AccessInfo,
-            IsTunProviderSupported = _sessionManager.IsTunProviderSupported,
+            IsTunProviderSupported = _sessionManager.IsVpnAdapterSupported,
             ClientCountry = sessionResponseEx.ClientCountry,
             VirtualIpNetworkV4 = new IpNetwork(session.VirtualIps.IpV4, _sessionManager.VirtualIpNetworkV4.PrefixLength),
             VirtualIpNetworkV6 = new IpNetwork(session.VirtualIps.IpV6, _sessionManager.VirtualIpNetworkV6.PrefixLength)

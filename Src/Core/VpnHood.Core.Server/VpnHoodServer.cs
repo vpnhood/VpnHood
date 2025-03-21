@@ -54,6 +54,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         if (options.SocketFactory == null)
             throw new ArgumentNullException(nameof(options.SocketFactory));
 
+        if (options.VpnAdapter is { IsNatSupported: false })
+            throw new InvalidProgramException("VpnAdapter must support NAT to work with VpnServer.");
+
         AccessManager = accessManager;
         _systemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
         JobSection = new JobSection(options.ConfigureInterval);
@@ -61,7 +64,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             options.NetFilter,
             options.SocketFactory,
             options.Tracker,
-            tunProvider: options.TunProvider,
+            vpnAdapter: options.VpnAdapter,
             serverVersion: ServerVersion,
             storagePath: options.StoragePath,
             new SessionManagerOptions {
@@ -104,9 +107,6 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         }
     }
 
-    /// <summary>
-    ///     Start the server
-    /// </summary>
     public async Task Start()
     {
         using var scope = VhLogger.Instance.BeginScope("Server");
@@ -142,7 +142,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             VhLogger.Instance.LogError(ex, "Could not recover old sessions.");
         }
 
-        await RunJob().VhConfigureAwait();
+        // ReSharper disable once DisposeOnUsingVariable
+        scope?.Dispose();
+        await JobRunner.RunNow(this).VhConfigureAwait();
     }
 
     private async Task Configure()

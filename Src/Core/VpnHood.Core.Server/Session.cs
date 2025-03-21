@@ -18,6 +18,7 @@ using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Core.VpnAdapters.Abstractions;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Server;
@@ -71,7 +72,7 @@ public class Session : IAsyncDisposable
     public VirtualIpBundle VirtualIps { get; }
 
     internal Session(IAccessManager accessManager, 
-        ITunProvider? tunProvider,
+        IVpnAdapter? vpnAdapter,
         INetFilter netFilter,
         ISocketFactory socketFactory,
         SessionResponseEx sessionResponseEx,
@@ -86,7 +87,7 @@ public class Session : IAsyncDisposable
 
         _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
-        _proxyManager = new SessionProxyManager(this, socketFactory, tunProvider, new ProxyManagerOptions {
+        _proxyManager = new SessionProxyManager(this, socketFactory, vpnAdapter, new ProxyManagerOptions {
             UdpTimeout = options.UdpTimeoutValue,
             IcmpTimeout = options.IcmpTimeoutValue,
             MaxUdpClientCount = options.MaxUdpClientCountValue,
@@ -467,7 +468,7 @@ public class Session : IAsyncDisposable
     private class SessionProxyManager(
         Session session,
         ISocketFactory socketFactory,
-        ITunProvider? tunProvider,
+        IVpnAdapter? vpnAdapter,
         ProxyManagerOptions options)
         : ProxyManager(socketFactory, options)
     {
@@ -480,8 +481,8 @@ public class Session : IAsyncDisposable
 
         public override Task SendPacket(IPPacket ipPacket)
         {
-            if (tunProvider != null) {
-                tunProvider.SendPacket(ipPacket);
+            if (vpnAdapter != null) {
+                vpnAdapter.SendPacket(ipPacket);
                 return Task.CompletedTask;
             }
 

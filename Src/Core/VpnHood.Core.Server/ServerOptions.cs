@@ -5,6 +5,7 @@ using VpnHood.Core.Server.SystemInformation;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Server;
 
@@ -16,7 +17,7 @@ public class ServerOptions
     public INetFilter NetFilter { get; init; } = new NetFilter();
     public INetConfigurationProvider? NetConfigurationProvider { get; init; }
     public ISwapMemoryProvider? SwapMemoryProvider { get; init; }
-    public ITunProvider? TunProvider { get; init; }
+    public IVpnAdapter? VpnAdapter { get; init; }
     public bool AutoDisposeAccessManager { get; init; } = true;
     public TimeSpan ConfigureInterval { get; init; } = TimeSpan.FromSeconds(60);
     public string StoragePath { get; init; } = Directory.GetCurrentDirectory();

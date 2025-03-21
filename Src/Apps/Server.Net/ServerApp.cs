@@ -20,6 +20,8 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Core.VpnAdapters.LinuxTun;
 
 namespace VpnHood.App.Server;
 
@@ -39,7 +41,7 @@ public class ServerApp : IDisposable
     public FileAccessManager? FileAccessManager => AccessManager as FileAccessManager;
     public static string AppName => "VpnHoodServer";
 
-    public static string AppFolderPath => 
+    public static string AppFolderPath =>
         Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ??
         throw new Exception($"Could not acquire {nameof(AppFolderPath)}.");
 
@@ -244,7 +246,7 @@ public class ServerApp : IDisposable
             var virtualIpNetworkV6 = TunnelDefaults.VirtualIpNetworkV6;
             _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions {
                 Tracker = _tracker,
-                TunProvider = CreateTunProvider(virtualIpNetworkV4, virtualIpNetworkV6),
+                VpnAdapter = await CreateTunProvider(virtualIpNetworkV4, virtualIpNetworkV6, cancellationToken),
                 SystemInfoProvider = systemInfoProvider,
                 NetConfigurationProvider = configurationProvider,
                 SwapMemoryProvider = swapMemoryProvider,
@@ -265,18 +267,29 @@ public class ServerApp : IDisposable
         });
     }
 
-    private ITunProvider? CreateTunProvider(IpNetwork virtualIpNetworkV4, IpNetwork virtualIpNetworkV6)
+    private async Task<IVpnAdapter?> CreateTunProvider(IpNetwork virtualIpNetworkV4, IpNetwork virtualIpNetworkV6, CancellationToken cancellationToken)
     {
         try {
-            _ = virtualIpNetworkV4;
-            _ = virtualIpNetworkV6;
-            //return RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-            //    ? LinuxTunProvider.Create()
-            //    : null;
-            return null;
+            var vpnAdapter = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+                ? new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings { AdapterName = "VpnHoodServer" })
+                : null;
+
+            // start the adapter
+            if (vpnAdapter != null) {
+                VhLogger.Instance.LogInformation("Starting VpnAdapter...");
+                await vpnAdapter.Start(new VpnAdapterOptions {
+                    SessionName = "VpnHoodServer",
+                    Mtu = TunnelDefaults.MtuWithoutFragmentation,
+                    UseNat = true,
+                    VirtualIpNetworkV4 = virtualIpNetworkV4,
+                    VirtualIpNetworkV6 = virtualIpNetworkV6,
+                }, cancellationToken);
+            }
+
+            return vpnAdapter;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not create TunProvider!");
+            VhLogger.Instance.LogError(ex, "Failed to create the VpnAdapter. Using proxy only.");
             return null;
         }
     }

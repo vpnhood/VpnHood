@@ -100,6 +100,9 @@ public class ClientServerTest : TestBase
     [TestMethod]
     public async Task TcpChannel()
     {
+        var clientVpnAdapter = TestHelper.CreateTestVpnAdapter();
+        var testSocketFactory = TestHelper.CreateTestSocketFactory(clientVpnAdapter);
+
         // Create Server
         var serverEp = VhUtils.GetFreeTcpEndPoint(IPAddress.IPv6Loopback);
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
@@ -107,13 +110,13 @@ public class ClientServerTest : TestBase
         fileAccessManagerOptions.PublicEndPoints = [serverEp];
 
         using var accessManager = TestHelper.CreateAccessManager(fileAccessManagerOptions);
-        await using var server = await TestHelper.CreateServer(accessManager);
+        await using var server = await TestHelper.CreateServer(accessManager, socketFactory: testSocketFactory);
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
         var clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.UseUdpChannel = false;
-        await using var client = await TestHelper.CreateClient(clientOptions: clientOptions);
+        await using var client = await TestHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: clientVpnAdapter);
 
         await TestTunnel(server, client);
 
@@ -244,14 +247,17 @@ public class ClientServerTest : TestBase
     public async Task UdpChannel()
     {
         VhLogger.IsDiagnoseMode = true;
+        
+        var clientVpnAdapter = TestHelper.CreateTestVpnAdapter();
+        var testSocketFactory = TestHelper.CreateTestSocketFactory(clientVpnAdapter);
 
         // Create Server
-        await using var server = await TestHelper.CreateServer();
+        await using var server = await TestHelper.CreateServer(socketFactory: testSocketFactory);
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client =
-            await TestHelper.CreateClient(clientOptions: TestHelper.CreateClientOptions(token, useUdpChannel: true));
+        var clientOptions = TestHelper.CreateClientOptions(token, useUdpChannel: true);
+        await using var client = await TestHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: clientVpnAdapter);
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Testing by UdpChannel.");
         Assert.IsTrue(client.UseUdpChannel);
         await TestTunnel(server, client);
@@ -752,13 +758,19 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
-    public async Task TunProvider_by_udp()
+    public async Task ServerVpnAdapter_by_udp()
     {
-        using var tunProvider = new TestUdpTunProvider();
+        using var vpnAdapter = new TestUdpServerVpnAdapter();
+        
+        // check will server use the adapter 
+        var adapterUsed = false;
+        vpnAdapter.PacketReceived += (_, _) => {
+            adapterUsed = true;
+        };
 
         // create access server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, tunProvider: tunProvider);
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, vpnAdapter: vpnAdapter);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
@@ -767,6 +779,7 @@ public class ClientServerTest : TestBase
         // test udp
         await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint1);
         await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint2);
+        Assert.IsTrue(adapterUsed);
     }
 
     [TestMethod]

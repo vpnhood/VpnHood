@@ -306,7 +306,7 @@ public class TestHelper : IDisposable
         bool autoStart = true,
         TimeSpan? configureInterval = null,
         bool useHttpAccessManager = true,
-        ITunProvider? tunProvider = null,
+        IVpnAdapter? vpnAdapter = null,
         ISocketFactory? socketFactory = null)
     {
         return CreateServer(
@@ -315,7 +315,7 @@ public class TestHelper : IDisposable
             autoStart: autoStart,
             configureInterval: configureInterval,
             useHttpAccessManager: useHttpAccessManager,
-            tunProvider: tunProvider,
+            vpnAdapter: vpnAdapter,
             socketFactory: socketFactory);
     }
 
@@ -324,7 +324,7 @@ public class TestHelper : IDisposable
         bool autoStart, TimeSpan? configureInterval = null, bool useHttpAccessManager = true,
         INetConfigurationProvider? netConfigurationProvider = null,
         ISwapMemoryProvider? swapMemoryProvider = null,
-        ITunProvider? tunProvider = null,
+        IVpnAdapter? vpnAdapter = null,
         ISocketFactory? socketFactory = null)
     {
         if (accessManager != null && fileAccessManagerOptions != null)
@@ -353,7 +353,7 @@ public class TestHelper : IDisposable
             NetFilter = NetFilter,
             NetConfigurationProvider = netConfigurationProvider,
             SwapMemoryProvider = swapMemoryProvider,
-            TunProvider = tunProvider,
+            VpnAdapter = vpnAdapter,
             PublicIpDiscovery = false //it slows down our tests
         };
 

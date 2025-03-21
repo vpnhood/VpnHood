@@ -8,9 +8,12 @@ WORKDIR /src
 COPY ["Src/Apps/Server.Net/NLog.xsd", "VpnHood.App.Server.App.Net/"]
 COPY ["Src/Apps/Server.Net/NLog.config", "VpnHood.App.Server.Net/"]
 COPY ["Src/Apps/Server.Net/VpnHood.App.Server.Net.csproj", "VpnHood.App.Server.Net/"]
-COPY ["Src/Core/VpnHood.Core.Server/VpnHood.Core.Server.csproj", "VpnHood.Core.Server/"]
+COPY ["Src/Core/VpnHood.Core.Toolkit/VpnHood.Core.Toolkit.csproj", "VpnHood.Core.Toolkit/"]
+COPY ["Src/Core/VpnHood.Core.VpnAdapters.Abstractions/VpnHood.Core.VpnAdapters.Abstractions.csproj", "VpnHood.Core.VpnAdapters.Abstractions/"]
+COPY ["Src/Core/VpnHood.Core.VpnAdapters.LinuxTun/VpnHood.Core.VpnAdapters.LinuxTun.csproj", "VpnHood.Core.VpnAdapters.LinuxTun/"]
 COPY ["Src/Core/VpnHood.Core.Common/VpnHood.Core.Common.csproj", "VpnHood.Core.Common/"]
 COPY ["Src/Core/VpnHood.Core.Tunneling/VpnHood.Core.Tunneling.csproj", "VpnHood.Core.Tunneling/"]
+COPY ["Src/Core/VpnHood.Core.Server/VpnHood.Core.Server.csproj", "VpnHood.Core.Server/"]
 COPY ["Src/Core/VpnHood.Core.Server.Access/VpnHood.Core.Server.Access.csproj", "VpnHood.Core.Server.Access/"]
 RUN dotnet restore "VpnHood.App.Server.Net/VpnHood.App.Server.Net.csproj"
 COPY . .

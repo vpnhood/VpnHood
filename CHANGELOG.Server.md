@@ -1,5 +1,6 @@
-# Upcoming 
+# v6.0.678
 * Fix: Pause server while configuring swap file on Linux
+* Feature: Use TunAdapter on Linux, improve performance
 
 # v6.0.656
 * Update: Improve virtual IP allocation

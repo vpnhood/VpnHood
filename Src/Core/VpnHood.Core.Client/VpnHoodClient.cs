@@ -220,7 +220,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         cancellationToken = linkedCancellationTokenSource.Token;
 
         // connect to host
-        var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint.AddressFamily);
+        var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint);
         await VhUtils.RunTask(tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port),
             cancellationToken: cancellationToken).VhConfigureAwait();
 
@@ -523,8 +523,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
     private async Task AddUdpChannel()
     {
-        if (HostTcpEndPoint == null)
-            throw new InvalidOperationException($"{nameof(HostTcpEndPoint)} is not initialized!");
+        if (HostTcpEndPoint == null) throw new InvalidOperationException($"{nameof(HostTcpEndPoint)} is not initialized!");
         if (VhUtils.IsNullOrEmpty(ServerSecret)) throw new Exception("ServerSecret has not been set.");
         if (VhUtils.IsNullOrEmpty(_sessionKey)) throw new Exception("Server UdpKey has not been set.");
         if (HostUdpEndPoint == null) {
@@ -533,9 +532,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
 
         var udpClient = SocketFactory.CreateUdpClient(HostTcpEndPoint.AddressFamily);
-        var localEndPoint = HostTcpEndPoint.IsV4() ? new IPEndPoint(IPAddress.Any, 0) : new IPEndPoint(IPAddress.IPv6Any, 0);
-        udpClient.Client.Bind(localEndPoint);
-
         var udpChannel = new UdpChannel(SessionId, _sessionKey, false, ConnectorService.ProtocolVersion);
         try {
             var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, ServerSecret);

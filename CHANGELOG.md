@@ -1,6 +1,7 @@
-# v6.0.677
+# Upcoming
 * Fix: Instability on pressing the connect and disconnect button
-
+* Fix: Up speed and down speed show in wrong place
+* 
 # v6.0.676
 * Fix: Improve security by blocking multicast traffic
 * Fix: No internet connection on some devices

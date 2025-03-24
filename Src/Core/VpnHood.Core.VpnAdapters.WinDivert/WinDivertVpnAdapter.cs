@@ -168,6 +168,13 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     
     public override void ProtectSocket(Socket socket)
     {
+        socket.Bind(new IPEndPoint(IPAddress.Any, 0));
+        socket.Ttl = ProtectedTtl;
+    }
+
+    public override void ProtectSocket(Socket socket, IPAddress ipAddress)
+    {
+        base.ProtectSocket(socket, ipAddress);
         socket.Ttl = ProtectedTtl;
     }
 

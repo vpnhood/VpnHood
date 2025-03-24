@@ -74,7 +74,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
         // Remove previous NAT iptables record
         if (UseNat) {
-            Logger.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...", AdapterName);
+            VhLogger.Instance.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...", AdapterName);
             if (AdapterIpNetworkV4 != null)
                 TryRemoveNat(AdapterIpNetworkV4);
 
@@ -87,13 +87,13 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     {
 
         // start WinTun session
-        Logger.LogInformation("Starting WinTun session...");
+        VhLogger.Instance.LogInformation("Starting WinTun session...");
         _tunSession = WinTunApi.WintunStartSession(_tunAdapter, _ringCapacity);
         if (_tunSession == IntPtr.Zero)
             throw new Win32Exception("Failed to start WinTun session.");
 
         // create an event object to wait for packets
-        Logger.LogDebug("Creating event object for WinTun...");
+        VhLogger.Instance.LogDebug("Creating event object for WinTun...");
         _readEvent = WinTunApi.WintunGetReadWaitEvent(_tunSession); // do not close this handle by documentation
 
         return Task.CompletedTask;
@@ -263,13 +263,13 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
                     throw new IOException("WinTun adapter has been closed.");
 
                 case WintunReceivePacketError.InvalidData:
-                    Logger.LogWarning("Invalid data received from WinTun adapter.");
+                    VhLogger.Instance.LogWarning("Invalid data received from WinTun adapter.");
                     if (++errorCount > maxErrorCount)
                         throw new InvalidOperationException("Too many invalid data received from WinTun adapter."); // read the next packet
                     continue; // read the next packet
 
                 default:
-                    Logger.LogDebug("Unknown error in reading packet from WinTun. LastError: {lastError}", lastError);
+                    VhLogger.Instance.LogDebug("Unknown error in reading packet from WinTun. LastError: {lastError}", lastError);
                     if (++errorCount > maxErrorCount)
                         throw new InvalidOperationException("Too many errors in reading packet from WinTun."); // read the next packet
                     continue; // read the next packet

@@ -1,6 +1,8 @@
-﻿using System.Net.Sockets;
+﻿using System.Net;
+using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Tunneling.Sockets;
 
@@ -8,14 +10,20 @@ public class SocketFactory : ISocketFactory
 {
     private bool _hasKeepAliveError;
 
-    public virtual TcpClient CreateTcpClient(AddressFamily addressFamily)
+    public virtual TcpClient CreateTcpClient(IPEndPoint ipEndPoint)
     {
-        return new TcpClient(addressFamily);
+        var localEndPoint = new IPEndPoint(ipEndPoint.IsV4() ? IPAddress.Any : IPAddress.IPv6Any, 0);
+        var tcpClient = new TcpClient(ipEndPoint.AddressFamily);
+        tcpClient.Client.Bind(localEndPoint);
+        return tcpClient;
     }
 
     public virtual UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
-        return new UdpClient(addressFamily);
+        var localEndPoint = new IPEndPoint(addressFamily.IsV4() ? IPAddress.Any : IPAddress.IPv6Any, 0);
+        var udpClient = new UdpClient(addressFamily);
+        udpClient.Client.Bind(localEndPoint);
+        return udpClient;
     }
 
     public virtual void SetKeepAlive(Socket socket, bool enable)

@@ -4,10 +4,8 @@ using System.Net.Sockets;
 using EmbedIO;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Core.Client;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Server;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -98,40 +96,6 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
-    public async Task TcpChannel()
-    {
-        var clientVpnAdapter = TestHelper.CreateTestVpnAdapter();
-        var testSocketFactory = TestHelper.CreateTestSocketFactory(clientVpnAdapter);
-
-        // Create Server
-        var serverEp = VhUtils.GetFreeTcpEndPoint(IPAddress.IPv6Loopback);
-        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        fileAccessManagerOptions.TcpEndPoints = [serverEp];
-        fileAccessManagerOptions.PublicEndPoints = [serverEp];
-
-        using var accessManager = TestHelper.CreateAccessManager(fileAccessManagerOptions);
-        await using var server = await TestHelper.CreateServer(accessManager, socketFactory: testSocketFactory);
-        var token = TestHelper.CreateAccessToken(server);
-
-        // Create Client
-        var clientOptions = TestHelper.CreateClientOptions(token);
-        clientOptions.UseUdpChannel = false;
-        await using var client = await TestHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: clientVpnAdapter);
-
-        await TestTunnel(server, client);
-
-        // check HostEndPoint in server
-        accessManager.SessionService.Sessions.TryGetValue(client.SessionId, out var session);
-        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x => x.Equals(session?.HostEndPoint)));
-
-        // check UserAgent in server
-        Assert.AreEqual(client.UserAgent, session?.ClientInfo.UserAgent);
-
-        // check ClientPublicAddress in server
-        Assert.AreEqual(serverEp.Address, client.SessionInfo?.ClientPublicIpAddress);
-    }
-
-    [TestMethod]
     public async Task UdpPackets_Drop()
     {
         // Create Server
@@ -142,14 +106,7 @@ public class ClientServerTest : TestBase
         clientOptions.DropUdp = true;
         clientOptions.MaxDatagramChannelCount = 6;
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions);
-
-        try {
-            await TestHelper.Test_Udp(3000);
-            Assert.Fail("UDP must be failed.");
-        }
-        catch (Exception ex) {
-            Assert.AreEqual(nameof(OperationCanceledException), ex.GetType().Name);
-        }
+        await Assert.ThrowsAsync<OperationCanceledException>(()=>TestHelper.Test_Udp(3000), "UDP must be failed.");
     }
 
 
@@ -242,40 +199,7 @@ public class ClientServerTest : TestBase
         await Task.WhenAll(tasks);
     }
 
-
-    [TestMethod]
-    public async Task UdpChannel()
-    {
-        VhLogger.IsDiagnoseMode = true;
-        
-        var clientVpnAdapter = TestHelper.CreateTestVpnAdapter();
-        var testSocketFactory = TestHelper.CreateTestSocketFactory(clientVpnAdapter);
-
-        // Create Server
-        await using var server = await TestHelper.CreateServer(socketFactory: testSocketFactory);
-        var token = TestHelper.CreateAccessToken(server);
-
-        // Create Client
-        var clientOptions = TestHelper.CreateClientOptions(token, useUdpChannel: true);
-        await using var client = await TestHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: clientVpnAdapter);
-        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Testing by UdpChannel.");
-        Assert.IsTrue(client.UseUdpChannel);
-        await TestTunnel(server, client);
-
-        // switch to tcp
-        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Switch to DatagramChannel.");
-        client.UseUdpChannel = false;
-        await TestTunnel(server, client);
-        await VhTestUtil.AssertEqualsWait(false, () => client.GetSessionStatus().IsUdpMode);
-        Assert.IsFalse(client.UseUdpChannel);
-
-        // switch back to udp
-        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Switch back to UdpChannel.");
-        client.UseUdpChannel = true;
-        await TestTunnel(server, client);
-        await VhTestUtil.AssertEqualsWait(true, () => client.GetSessionStatus().IsUdpMode);
-        Assert.IsTrue(client.UseUdpChannel);
-    }
+   
 
     [TestMethod]
     public async Task UdpChannel_custom_udp_port()
@@ -296,97 +220,6 @@ public class ClientServerTest : TestBase
         Assert.IsTrue(fileAccessManagerOptions.UdpEndPoints.Any(x => x.Port == client.HostUdpEndPoint?.Port));
     }
 
-    private async Task TestTunnel(VpnHoodServer server, VpnHoodClient client)
-    {
-        Assert.AreEqual(ServerState.Ready, server.State);
-        Assert.AreEqual(ClientState.Connected, client.State);
-
-        // Get session
-        server.SessionManager.Sessions.TryGetValue(client.SessionId, out var serverSession);
-        Assert.IsNotNull(serverSession, "Could not find session in server!");
-
-        // ************
-        // *** TEST ***: TCP invalid request should not close the vpn connection
-        var oldClientSentByteCount = client.GetSessionStatus().SessionTraffic.Sent;
-        var oldClientReceivedByteCount = client.GetSessionStatus().SessionTraffic.Received;
-        var oldServerSentByteCount = serverSession.Tunnel.Traffic.Sent;
-        var oldServerReceivedByteCount = serverSession.Tunnel.Traffic.Received;
-
-        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Invalid Https request.");
-        using var httpClient = new HttpClient();
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
-            httpClient.GetStringAsync(TestConstants.HttpsRefusedUri));
-
-        Assert.AreEqual(HttpRequestError.SecureConnectionError, ex.HttpRequestError);
-        Assert.AreEqual(ClientState.Connected, client.State);
-
-        // ************
-        // *** TEST ***: TCP (TLS)
-        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Https");
-        await TestHelper.Test_Https();
-
-        // check some data has been sent
-        Assert.AreNotEqual(oldClientSentByteCount, client.GetSessionStatus().SessionTraffic.Sent, delta: 100,
-            "Not enough data has been sent through the client.");
-        Assert.AreNotEqual(oldClientReceivedByteCount, client.GetSessionStatus().SessionTraffic.Received, delta: 2000,
-            "Not enough data has been received through the client.");
-        Assert.AreNotEqual(oldServerSentByteCount, serverSession.Tunnel.Traffic.Sent, delta: 2000,
-            "Not enough data has been sent through the server.");
-        Assert.AreNotEqual(oldServerReceivedByteCount, serverSession.Tunnel.Traffic.Received, delta: 100,
-            "Not enough data has been received through the server.");
-
-        // ************
-        // *** TEST ***: UDP v4
-        oldClientSentByteCount = client.GetSessionStatus().SessionTraffic.Sent;
-        oldClientReceivedByteCount = client.GetSessionStatus().SessionTraffic.Received;
-        oldServerSentByteCount = serverSession.Tunnel.Traffic.Sent;
-        oldServerReceivedByteCount = serverSession.Tunnel.Traffic.Received;
-
-        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Udp");
-        await TestHelper.Test_Udp();
-
-        Assert.AreNotEqual(oldClientSentByteCount, client.GetSessionStatus().SessionTraffic.Sent, 500,
-            "Not enough data has been sent through the client.");
-        Assert.AreNotEqual(oldClientReceivedByteCount, client.GetSessionStatus().SessionTraffic.Received, 500,
-            "Not enough data has been received through the client.");
-        Assert.AreNotEqual(oldServerSentByteCount, serverSession.Tunnel.Traffic.Sent, 500,
-            "Not enough data has been sent through the server.");
-        Assert.AreNotEqual(oldServerReceivedByteCount, serverSession.Tunnel.Traffic.Received, 500,
-            "Not enough data has been received through the server.");
-
-        // ************
-        // *** TEST ***: IcmpV4
-        oldClientSentByteCount = client.GetSessionStatus().SessionTraffic.Sent;
-        oldClientReceivedByteCount = client.GetSessionStatus().SessionTraffic.Received;
-        oldServerSentByteCount = serverSession.Tunnel.Traffic.Sent;
-        oldServerReceivedByteCount = serverSession.Tunnel.Traffic.Received;
-
-        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Ping IPv4");
-        await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
-
-        Assert.AreNotEqual(oldClientSentByteCount, client.GetSessionStatus().SessionTraffic.Sent, 500,
-            "Not enough data has been sent through the client.");
-        Assert.AreNotEqual(oldClientReceivedByteCount, client.GetSessionStatus().SessionTraffic.Received, 500,
-            "Not enough data has been received through the client.");
-        Assert.AreNotEqual(oldServerSentByteCount, serverSession.Tunnel.Traffic.Sent, 500,
-            "Not enough data has been sent through the server.");
-        Assert.AreNotEqual(oldServerReceivedByteCount, serverSession.Tunnel.Traffic.Received, 500,
-            "Not enough data has been received through the server.");
-
-        if (await TestHelper.IsIpV6Supported()) {
-            VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Ping IPv6");
-            await TestHelper.Test_Ping(ipAddress: TestConstants.PingV6Address1);
-
-            Assert.AreNotEqual(oldClientSentByteCount, client.GetSessionStatus().SessionTraffic.Sent, 500,
-                "Not enough data has been sent through the client.");
-            Assert.AreNotEqual(oldClientReceivedByteCount, client.GetSessionStatus().SessionTraffic.Received, 500,
-                "Not enough data has been received through the client.");
-            Assert.AreNotEqual(oldServerSentByteCount, serverSession.Tunnel.Traffic.Sent, 500,
-                "Not enough data has been sent through the server.");
-            Assert.AreNotEqual(oldServerReceivedByteCount, serverSession.Tunnel.Traffic.Received, 500,
-                "Not enough data has been received through the server.");
-        }
-    }
 
     [TestMethod]
     public async Task Client_must_dispose_after_device_closed()

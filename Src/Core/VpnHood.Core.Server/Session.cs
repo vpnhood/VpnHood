@@ -352,7 +352,7 @@ public class Session : IAsyncDisposable
             isTcpConnectIncreased = true;
 
             //set reuseAddress to  true to prevent error only one usage of each socket address is normally permitted
-            tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
+            tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint);
             VhUtils.ConfigTcpClient(tcpClientHost, _tcpKernelSendBufferSize, _tcpKernelReceiveBufferSize);
 
             // connect to requested destination

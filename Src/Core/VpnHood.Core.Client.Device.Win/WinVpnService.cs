@@ -35,13 +35,11 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
             ? new WinTunVpnAdapter(new WinVpnAdapterSettings {
                 AdapterName = adapterSettings.AdapterName,
                 MaxPacketCount = adapterSettings.MaxPacketCount,
-                Logger = adapterSettings.Logger,
                 MaxAutoRestartCount = adapterSettings.MaxAutoRestartCount,
                 MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay
             })
             : new WinDivertVpnAdapter(new WinDivertVpnAdapterSettings {
                 AdapterName = adapterSettings.AdapterName,
-                Logger = adapterSettings.Logger,
                 MaxAutoRestartCount = adapterSettings.MaxAutoRestartCount,
                 MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay
             });

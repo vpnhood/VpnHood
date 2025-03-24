@@ -86,7 +86,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         var hostName = EndPointInfo.HostName;
 
         // create new stream
-        var tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint.AddressFamily);
+        var tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint);
 
         // Client.SessionTimeout does not affect in ConnectAsync
         VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "Establishing a new TCP to the Server... EndPoint: {EndPoint}",

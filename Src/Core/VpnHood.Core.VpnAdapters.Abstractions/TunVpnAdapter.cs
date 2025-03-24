@@ -17,7 +17,6 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
     private int _autoRestartCount;
 
     protected bool IsDisposed { get; private set; }
-    protected ILogger Logger { get; } = adapterSettings.Logger;
     protected bool UseNat { get; private set; }
     public abstract bool IsAppFilterSupported { get; }
     public abstract bool IsNatSupported { get; }
@@ -44,8 +43,8 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
     public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public event EventHandler? Disposed;
     public string AdapterName { get; } = adapterSettings.AdapterName;
-    public IPAddress? PrimaryAdapterIpV4 { get; private set; }
-    public IPAddress? PrimaryAdapterIpV6 { get; private set; }
+    public IPAddress? PrimaryAdapterIpV4 { get; private set; } = DiscoverPrimaryAdapterIp();
+    public IPAddress? PrimaryAdapterIpV6 { get; private set; } = DiscoverPrimaryAdapterIp();
     public IpNetwork? AdapterIpNetworkV4 { get; private set; }
     public IpNetwork? AdapterIpNetworkV6 { get; private set; }
     public IPAddress? GatewayIpV4 { get; private set; }
@@ -56,6 +55,16 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
     {
         return ipVersion == IPVersion.IPv4 ? PrimaryAdapterIpV4 : PrimaryAdapterIpV6;
     }
+
+    public IPAddress? GetPrimaryAdapterIp(AddressFamily addressFamily)
+    {
+        return addressFamily switch {
+            AddressFamily.InterNetwork => GetPrimaryAdapterIp(IPVersion.IPv4),
+            AddressFamily.InterNetworkV6 => GetPrimaryAdapterIp(IPVersion.IPv6),
+            _ => throw new NotSupportedException("Address family is not supported.")
+        };
+    }
+
     public IPAddress? GetGatewayIp(IPVersion ipVersion)
     {
         return ipVersion == IPVersion.IPv4 ? GatewayIpV4 : GatewayIpV6;
@@ -75,26 +84,26 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
             throw new NotSupportedException("NAT is not supported by this adapter.");
 
         try {
-            Logger.LogInformation("Starting {AdapterName} adapter.", AdapterName);
-            
+            VhLogger.Instance.LogInformation("Starting {AdapterName} adapter.", AdapterName);
+
             // We must set the started at first, to let clean-up be done stop via any exception. 
             // We hope client await the start otherwise we need different state for adapters
             Started = true;
 
-            // get the WAN adapter IP
-            PrimaryAdapterIpV4 = GetPrimaryAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV4()), 53));
-            PrimaryAdapterIpV6 = GetPrimaryAdapterIp(new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV6()), 53));
+            // get the WAN adapter IP (lets di it again)
+            PrimaryAdapterIpV4 = DiscoverPrimaryAdapterIp();
+            PrimaryAdapterIpV6 = DiscoverPrimaryAdapterIp();
             AdapterIpNetworkV4 = options.VirtualIpNetworkV4;
             AdapterIpNetworkV6 = options.VirtualIpNetworkV6;
             UseNat = options.UseNat;
             _mtu = options.Mtu ?? _mtu;
 
             // create tun adapter
-            Logger.LogInformation("Adding TUN adapter...");
+            VhLogger.Instance.LogInformation("Adding TUN adapter...");
             await AdapterAdd(cancellationToken).VhConfigureAwait();
 
             // Private IP Networks
-            Logger.LogDebug("Adding private networks...");
+            VhLogger.Instance.LogDebug("Adding private networks...");
             if (options.VirtualIpNetworkV4 != null) {
                 GatewayIpV4 = BuildGatewayFromFromNetwork(options.VirtualIpNetworkV4);
                 await AddAddress(options.VirtualIpNetworkV4, cancellationToken).VhConfigureAwait();
@@ -106,7 +115,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
             }
 
             // set metric
-            Logger.LogDebug("Setting metric...");
+            VhLogger.Instance.LogDebug("Setting metric...");
             if (options.Metric != null) {
                 await SetMetric(options.Metric.Value,
                     ipV4: options.VirtualIpNetworkV4 != null,
@@ -116,7 +125,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
 
             // set mtu
             if (options.Mtu != null) {
-                Logger.LogDebug("Setting MTU...");
+                VhLogger.Instance.LogDebug("Setting MTU...");
                 await SetMtu(options.Mtu.Value,
                     ipV4: options.VirtualIpNetworkV4 != null,
                     ipV6: options.VirtualIpNetworkV6 != null,
@@ -124,7 +133,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
             }
 
             // set DNS servers
-            Logger.LogDebug("Setting DNS servers...");
+            VhLogger.Instance.LogDebug("Setting DNS servers...");
             var dnsServers = options.DnsServers;
             if (options.VirtualIpNetworkV4 == null)
                 dnsServers = dnsServers.Where(x => !x.IsV4()).ToArray();
@@ -133,7 +142,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
             await SetDnsServers(dnsServers, cancellationToken).VhConfigureAwait();
 
             // add routes
-            Logger.LogDebug("Adding routes...");
+            VhLogger.Instance.LogDebug("Adding routes...");
             foreach (var network in options.IncludeNetworks) {
                 var gateway = network.IsV4 ? GatewayIpV4 : GatewayIpV6;
                 if (gateway != null)
@@ -142,7 +151,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
 
             // add NAT
             if (UseNat) {
-                Logger.LogDebug("Adding NAT...");
+                VhLogger.Instance.LogDebug("Adding NAT...");
                 if (options.VirtualIpNetworkV4 != null && PrimaryAdapterIpV4 != null)
                     await AddNat(options.VirtualIpNetworkV4, cancellationToken).VhConfigureAwait();
 
@@ -155,16 +164,16 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
                 await SetAppFilters(options.IncludeApps, options.ExcludeApps, cancellationToken);
 
             // open the adapter
-            Logger.LogInformation("Opening TUN adapter...");
+            VhLogger.Instance.LogInformation("Opening TUN adapter...");
             await AdapterOpen(cancellationToken).VhConfigureAwait();
 
             // start reading packets
             _ = Task.Run(StartReadingPackets, CancellationToken.None);
 
-            Logger.LogInformation("TUN adapter started.");
+            VhLogger.Instance.LogInformation("TUN adapter started.");
         }
         catch (ExternalException ex) {
-            Logger.LogError(ex, "Failed to start TUN adapter.");
+            VhLogger.Instance.LogError(ex, "Failed to start TUN adapter.");
             Stop();
             throw;
         }
@@ -202,7 +211,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
 
             if (Started) return;
 
-            Logger.LogInformation("Stopping {AdapterName} adapter.", AdapterName);
+            VhLogger.Instance.LogInformation("Stopping {AdapterName} adapter.", AdapterName);
             AdapterClose();
             AdapterRemove();
 
@@ -213,7 +222,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
             GatewayIpV4 = null;
             GatewayIpV6 = null;
             Started = false;
-            Logger.LogInformation("TUN adapter stopped.");
+            VhLogger.Instance.LogInformation("TUN adapter stopped.");
         }
     }
 
@@ -222,27 +231,43 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
         if (socket.LocalEndPoint != null)
             throw new InvalidOperationException("Could not protect an already bound socket.");
 
-        //todo: check for network change
-        switch (socket.AddressFamily) {
-            case AddressFamily.InterNetwork when PrimaryAdapterIpV4 != null:
-                socket.Bind(new IPEndPoint(PrimaryAdapterIpV4, 0));
-                break;
+        // get the primary adapter IP
+        var primaryAdapterIp = GetPrimaryAdapterIp(socket.AddressFamily) ??
+                               throw new InvalidOperationException("Could not protect this address family.");
 
-            case AddressFamily.InterNetworkV6 when PrimaryAdapterIpV6 != null:
-                socket.Bind(new IPEndPoint(PrimaryAdapterIpV6, 0));
-                break;
-        }
+        // bind the socket to the primary adapter IP
+        socket.Bind(new IPEndPoint(primaryAdapterIp, 0));
     }
 
-    private IPAddress? GetPrimaryAdapterIp(IPEndPoint remoteEndPoint)
+    public virtual void ProtectSocket(Socket socket, IPAddress remoteAddress)
     {
+        if (socket.LocalEndPoint != null)
+            throw new InvalidOperationException("Could not protect an already bound socket.");
+
+        // get the primary adapter IP
+        var primaryAdapterIp = GetPrimaryAdapterIp(socket.AddressFamily) ??
+                               throw new InvalidOperationException("Could not protect this address family.");
+
+        // could not protect loopback addresses or not needed at all, because loopback can not be routed
+        if (IPAddress.IsLoopback(primaryAdapterIp) != IPAddress.IsLoopback(remoteAddress))
+            return;
+
+        // bind the socket to the primary adapter IP and connect to the remote endpoint
+        socket.Bind(new IPEndPoint(primaryAdapterIp, 0));
+    }
+
+    private static IPAddress? DiscoverPrimaryAdapterIp()
+    {
+        // not matter is it reachable or not, just try to get the primary adapter IP which can route to the internet
+        var remoteEndPoint = new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(x => x.IsV4()), 53);
+
         try {
             using var udpClient = new UdpClient();
             udpClient.Connect(remoteEndPoint);
             return (udpClient.Client.LocalEndPoint as IPEndPoint)?.Address;
         }
         catch (Exception) {
-            Logger.LogDebug("Failed to get primary adapter IP. RemoteEndPoint: {RemoteEndPoint}",
+            VhLogger.Instance.LogDebug("Failed to get primary adapter IP. RemoteEndPoint: {RemoteEndPoint}",
                 remoteEndPoint);
             return null;
         }
@@ -267,7 +292,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
         }
         catch (Exception ex) {
             if (_autoRestartCount < _maxAutoRestartCount) {
-                Logger.LogError(ex, "Failed to send packet via TUN adapter.");
+                VhLogger.Instance.LogError(ex, "Failed to send packet via TUN adapter.");
                 RestartAdapter();
             }
         }
@@ -297,7 +322,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
 
         // log if failed to send
         if (!sent)
-            Logger.LogWarning("Failed to send packet via WinTun adapter.");
+            VhLogger.Instance.LogWarning("Failed to send packet via WinTun adapter.");
     }
 
     public void SendPackets(IList<IPPacket> packets)
@@ -361,7 +386,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
                     WaitForTunRead();
             }
             catch (Exception ex) {
-                Logger.LogError(ex, "Error in reading packets from TUN adapter.");
+                VhLogger.Instance.LogError(ex, "Error in reading packets from TUN adapter.");
                 if (!Started || _autoRestartCount >= _maxAutoRestartCount)
                     break;
                 RestartAdapter();
@@ -375,7 +400,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
 
     private void RestartAdapter()
     {
-        Logger.LogWarning("Restarting the adapter. RestartCount: {RestartCount}", _autoRestartCount + 1);
+        VhLogger.Instance.LogWarning("Restarting the adapter. RestartCount: {RestartCount}", _autoRestartCount + 1);
 
         if (IsDisposed)
             throw new ObjectDisposedException(GetType().Name);
@@ -395,7 +420,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
                 PacketReceived?.Invoke(this, new PacketReceivedEventArgs(packetList));
         }
         catch (Exception ex) {
-            Logger.LogError(ex, "Error in invoking packet received event.");
+            VhLogger.Instance.LogError(ex, "Error in invoking packet received event.");
         }
         finally {
             if (!packetList.IsReadOnly)

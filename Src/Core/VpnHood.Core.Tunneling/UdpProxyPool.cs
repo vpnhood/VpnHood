@@ -5,7 +5,6 @@ using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Sockets;
@@ -101,9 +100,6 @@ public class UdpProxyPool : IPacketProxyPool, IJob
     private UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
         var udpClient = _socketFactory.CreateUdpClient(addressFamily);
-        var localEndPoint = addressFamily.IsV4() ? new IPEndPoint(IPAddress.Any, 0) : new IPEndPoint(IPAddress.IPv6Any, 0);
-        udpClient.Client.Bind(localEndPoint); // we need local port to report it
-
         if (_sendBufferSize.HasValue) udpClient.Client.SendBufferSize = _sendBufferSize.Value;
         if (_receiveBufferSize.HasValue) udpClient.Client.ReceiveBufferSize = _receiveBufferSize.Value;
         return udpClient;

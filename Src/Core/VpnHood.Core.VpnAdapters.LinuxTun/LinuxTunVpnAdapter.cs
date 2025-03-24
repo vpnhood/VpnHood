@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Core.Toolkit.Exceptions;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
@@ -38,25 +39,25 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     protected override async Task AdapterAdd(CancellationToken cancellationToken)
     {
         // Get the primary adapter name
-        Logger.LogDebug("Getting the primary adapter name...");
+        VhLogger.Instance.LogDebug("Getting the primary adapter name...");
         _primaryAdapterName = await GetPrimaryAdapterName(cancellationToken);
-        Logger.LogDebug("Primary adapter name is {PrimaryAdapterName}", _primaryAdapterName);
+        VhLogger.Instance.LogDebug("Primary adapter name is {PrimaryAdapterName}", _primaryAdapterName);
 
         // delete existing tun interface
-        Logger.LogDebug("Clean previous tun adapter...");
+        VhLogger.Instance.LogDebug("Clean previous tun adapter...");
         AdapterRemove();
 
         // Create and configure tun interface
-        Logger.LogDebug("Creating tun adapter...");
+        VhLogger.Instance.LogDebug("Creating tun adapter...");
         await ExecuteCommandAsync($"ip tuntap add dev {AdapterName} mode tun", cancellationToken).VhConfigureAwait();
 
         // Enable IP forwarding
-        Logger.LogDebug("Enabling IP forwarding...");
+        VhLogger.Instance.LogDebug("Enabling IP forwarding...");
         await ExecuteCommandAsync("sysctl -w net.ipv4.ip_forward=1", cancellationToken).VhConfigureAwait();
         await ExecuteCommandAsync("sysctl -w net.ipv6.conf.all.forwarding=1", cancellationToken).VhConfigureAwait();
 
         // Bring up the interface
-        Logger.LogDebug("Bringing up the TUN...");
+        VhLogger.Instance.LogDebug("Bringing up the TUN...");
         await ExecuteCommandAsync($"ip link set {AdapterName} up", cancellationToken).VhConfigureAwait();
     }
 
@@ -71,14 +72,14 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
         // Remove existing tun interface
         if (tunAdapterExists) {
-            Logger.LogDebug("Removing existing {AdapterName} TUN adapter (if any)...", AdapterName);
+            VhLogger.Instance.LogDebug("Removing existing {AdapterName} TUN adapter (if any)...", AdapterName);
             VhUtils.TryInvoke($"remove existing {AdapterName} TUN adapter", () =>
                 ExecuteCommand($"ip link delete {AdapterName}"));
         }
 
         // Remove previous NAT iptables record
         if (UseNat) {
-            Logger.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...", AdapterName);
+            VhLogger.Instance.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...", AdapterName);
             if (AdapterIpNetworkV4 != null)
                 TryRemoveNat(AdapterIpNetworkV4);
 
@@ -90,7 +91,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     protected override Task AdapterOpen(CancellationToken cancellationToken)
     {
         // Open TUN Adapter
-        Logger.LogDebug("Opening the TUN adapter...");
+        VhLogger.Instance.LogDebug("Opening the TUN adapter...");
         _tunAdapterFd = OpenTunAdapter(AdapterName, false);
         return Task.CompletedTask;
     }
@@ -248,7 +249,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
                 // Interrupted, retry
                 case LinuxAPI.EINTR: {
-                        Logger.LogTrace("Read from TUN was interrupted. Retrying...");
+                        VhLogger.Instance.LogTrace("Read from TUN was interrupted. Retrying...");
                         continue;
                     }
 

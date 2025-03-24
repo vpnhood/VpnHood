@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System.Net;
+using System.Net.Sockets;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Test.Providers;
 
@@ -7,9 +8,9 @@ namespace VpnHood.Test.Device;
 public class TestDeviceSocketFactory(TestDevice testDevice) : ISocketFactory
 {
     private readonly TestSocketFactory _socketFactory = new();
-    public TcpClient CreateTcpClient(AddressFamily addressFamily)
+    public TcpClient CreateTcpClient(IPEndPoint ipEndPoint)
     {
-        var tcpClient = _socketFactory.CreateTcpClient(addressFamily);
+        var tcpClient = new TcpClient(ipEndPoint.AddressFamily);
         if (testDevice.VpnService?.CurrentVpnAdapter?.CanProtectSocket == true)
             testDevice.VpnService?.CurrentVpnAdapter.ProtectSocket(tcpClient.Client);
 
@@ -18,7 +19,7 @@ public class TestDeviceSocketFactory(TestDevice testDevice) : ISocketFactory
 
     public UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
-        var udpClient = _socketFactory.CreateUdpClient(addressFamily);
+        var udpClient = new UdpClient(addressFamily);
         if (testDevice.VpnService?.CurrentVpnAdapter?.CanProtectSocket == true)
             testDevice.VpnService?.CurrentVpnAdapter.ProtectSocket(udpClient.Client);
 

@@ -31,7 +31,6 @@ public static class IPAddressExtensions
         return addressFamily == AddressFamily.InterNetwork;
     }
 
-
     public static bool IsV6(this AddressFamily addressFamily)
     {
         return addressFamily == AddressFamily.InterNetworkV6;

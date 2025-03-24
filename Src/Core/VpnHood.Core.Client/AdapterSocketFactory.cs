@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System.Net;
+using System.Net.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
@@ -10,11 +11,11 @@ public class AdapterSocketFactory(
     ISocketFactory socketFactory)
     : ISocketFactory
 {
-    public TcpClient CreateTcpClient(AddressFamily addressFamily)
+    public TcpClient CreateTcpClient(IPEndPoint ipEndPoint)
     {
-        var tcpClient = socketFactory.CreateTcpClient(addressFamily);
+        var tcpClient = new TcpClient(ipEndPoint.AddressFamily);
         if (vpnAdapter.CanProtectSocket)
-            vpnAdapter.ProtectSocket(tcpClient.Client);
+            vpnAdapter.ProtectSocket(tcpClient.Client, ipEndPoint.Address);
 
         // config for client
         socketFactory.SetKeepAlive(tcpClient.Client, true);
@@ -24,7 +25,7 @@ public class AdapterSocketFactory(
 
     public UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
-        var udpClient = socketFactory.CreateUdpClient(addressFamily);
+        var udpClient = new UdpClient(addressFamily);
         if (vpnAdapter.CanProtectSocket)
             vpnAdapter.ProtectSocket(udpClient.Client);
 

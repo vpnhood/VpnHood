@@ -1,4 +1,4 @@
-# v6.0.679
+# v6.0.680
 * Fix: Pause server while configuring swap file on Linux
 * Feature: Use TunAdapter on Linux, improve performance
 

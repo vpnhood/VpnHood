@@ -168,7 +168,8 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     
     public override void ProtectSocket(Socket socket)
     {
-        socket.Bind(new IPEndPoint(IPAddress.Any, 0));
+        var ipAddress = socket.AddressFamily.IsV4() ? IPAddress.Any : IPAddress.IPv6Any;
+        socket.Bind(new IPEndPoint(ipAddress, 0));
         socket.Ttl = ProtectedTtl;
     }
 

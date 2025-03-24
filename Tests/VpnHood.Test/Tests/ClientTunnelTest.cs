@@ -4,7 +4,6 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Toolkit.Utils;
-using System.Net;
 
 namespace VpnHood.Test.Tests;
 
@@ -14,75 +13,36 @@ public class ClientTunnelTest : TestBase
     [TestMethod]
     public async Task TcpChannel()
     {
-        var clientVpnAdapter = TestHelper.CreateTestVpnAdapter();
-        var testSocketFactory = TestHelper.CreateTestSocketFactory(clientVpnAdapter);
-
-        // Create Server
-        var serverEp = VhUtils.GetFreeTcpEndPoint(IPAddress.IPv6Loopback);
-        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        fileAccessManagerOptions.TcpEndPoints = [serverEp];
-        fileAccessManagerOptions.PublicEndPoints = [serverEp];
-
-        using var accessManager = TestHelper.CreateAccessManager(fileAccessManagerOptions);
-        await using var server = await TestHelper.CreateServer(accessManager, socketFactory: testSocketFactory);
-        var token = TestHelper.CreateAccessToken(server);
-
-        // Create Client
-        var clientOptions = TestHelper.CreateClientOptions(token);
-        clientOptions.UseUdpChannel = false;
-        await using var client = await TestHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: clientVpnAdapter);
-        var clientServer = new ClientServer(server, client);
-
-        await AssertTunnel(clientServer);
-
-        // check HostEndPoint in server
-        accessManager.SessionService.Sessions.TryGetValue(client.SessionId, out var session);
-        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x => x.Equals(session?.HostEndPoint)));
-
-        // check UserAgent in server
-        Assert.AreEqual(client.UserAgent, session?.ClientInfo.UserAgent);
-
-        // check ClientPublicAddress in server
-        Assert.AreEqual(serverEp.Address, client.SessionInfo?.ClientPublicIpAddress);
+        await using var clientServerDom =  await ClientServerDom.Create(TestHelper);
+        await AssertTunnel(clientServerDom);
     }
 
     [TestMethod]
     public async Task UdpChannel()
     {
         VhLogger.IsDiagnoseMode = true;
-
-        var clientVpnAdapter = TestHelper.CreateTestVpnAdapter();
-        var testSocketFactory = TestHelper.CreateTestSocketFactory(clientVpnAdapter);
-
-        // Create Server
-        await using var server = await TestHelper.CreateServer(socketFactory: testSocketFactory);
-        var token = TestHelper.CreateAccessToken(server);
-
-        // Create Client
-        var clientOptions = TestHelper.CreateClientOptions(token, useUdpChannel: true);
-        await using var client = await TestHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: clientVpnAdapter);
-        var clientServer = new ClientServer(server, client);
+        await using var clientServerDom = await ClientServerDom.Create(TestHelper, useUdpChannel: true);
 
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Testing by UdpChannel.");
-        Assert.IsTrue(client.UseUdpChannel);
-        await AssertTunnel(clientServer);
+        Assert.IsTrue(clientServerDom.Client.UseUdpChannel);
+        await AssertTunnel(clientServerDom);
 
         // switch to tcp
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Switch to DatagramChannel.");
-        client.UseUdpChannel = false;
-        await AssertTunnel(clientServer);
-        await VhTestUtil.AssertEqualsWait(false, () => client.GetSessionStatus().IsUdpMode);
-        Assert.IsFalse(client.UseUdpChannel);
+        clientServerDom.Client.UseUdpChannel = false;
+        await AssertTunnel(clientServerDom);
+        await VhTestUtil.AssertEqualsWait(false, () => clientServerDom.Client.GetSessionStatus().IsUdpMode);
+        Assert.IsFalse(clientServerDom.Client.UseUdpChannel);
 
         // switch back to udp
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Switch back to UdpChannel.");
-        client.UseUdpChannel = true;
-        await AssertTunnel(clientServer);
-        await VhTestUtil.AssertEqualsWait(true, () => client.GetSessionStatus().IsUdpMode);
-        Assert.IsTrue(client.UseUdpChannel);
+        clientServerDom.Client.UseUdpChannel = true;
+        await AssertTunnel(clientServerDom);
+        await VhTestUtil.AssertEqualsWait(true, () => clientServerDom.Client.GetSessionStatus().IsUdpMode);
+        Assert.IsTrue(clientServerDom.Client.UseUdpChannel);
     }
-    
-    private static async Task AssertInvalidTcpRequest(ClientServer clientServer)
+
+    private static async Task AssertInvalidTcpRequest(ClientServerDom clientServer)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Invalid Https request.");
         using var httpClient = new HttpClient();
@@ -94,7 +54,7 @@ public class ClientTunnelTest : TestBase
 
     }
 
-    private async Task AssertValidTcp(ClientServer clientServer)
+    private async Task AssertValidTcp(ClientServerDom clientServer)
     {
         clientServer.Collect();
 
@@ -105,7 +65,7 @@ public class ClientTunnelTest : TestBase
 
     }
 
-    private async Task AssertValidUdp(ClientServer clientServer)
+    private async Task AssertValidUdp(ClientServerDom clientServer)
     {
         clientServer.Collect();
 
@@ -115,7 +75,7 @@ public class ClientTunnelTest : TestBase
         clientServer.AssertTransfer();
     }
 
-    private async Task AssertValidPingV4(ClientServer clientServer)
+    private async Task AssertValidPingV4(ClientServerDom clientServer)
     {
         clientServer.Collect();
 
@@ -125,7 +85,7 @@ public class ClientTunnelTest : TestBase
         clientServer.AssertTransfer();
     }
 
-    private async Task AssertValidPingV6(ClientServer clientServer)
+    private async Task AssertValidPingV6(ClientServerDom clientServer)
     {
         if (!await TestHelper.IsIpV6Supported())
             return; 
@@ -138,7 +98,7 @@ public class ClientTunnelTest : TestBase
         clientServer.AssertTransfer();
     }
 
-    private async Task AssertTunnel(ClientServer clientServer)
+    private async Task AssertTunnel(ClientServerDom clientServer)
     {
         await AssertInvalidTcpRequest(clientServer);
         await AssertValidTcp(clientServer);

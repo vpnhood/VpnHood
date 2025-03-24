@@ -1,4 +1,4 @@
-# Upcoming
+# v6.0.679
 * Fix: Instability on pressing the connect and disconnect button
 * Fix: Up speed and down speed show in wrong place
 * 

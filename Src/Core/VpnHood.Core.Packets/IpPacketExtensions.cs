@@ -68,10 +68,11 @@ public static class IpPacketExtensions
 
     public static void UpdateIpChecksum(this IPPacket ipPacket)
     {
-        // ICMPv6 checksum needs to be updated if IPv6 packet changes
-        if (ipPacket.Protocol == ProtocolType.IcmpV6) {
+        // ICMPv6 & UDP checksum needs to be updated if IPv6 packet changes because they have pseudo header
+        if (ipPacket.Protocol is ProtocolType.IcmpV6 or ProtocolType.Udp) {
             ipPacket.UpdatePayloadChecksum();
             ipPacket.UpdateCalculatedValues();
+            return;
         }
 
         // ipv4 packet checksum needs to be updated if IPv4 packet changes

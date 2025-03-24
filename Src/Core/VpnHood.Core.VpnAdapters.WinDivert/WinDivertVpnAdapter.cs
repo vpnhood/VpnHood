@@ -282,7 +282,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
             // update the dns server
             if (dnsServer != null) {
                 ipPacket.DestinationAddress = dnsServer;
-                ipPacket.UpdateIpChecksum();
+                ipPacket.UpdateAllChecksums();
             }
         }
         else {
@@ -294,7 +294,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
             if (lastDnsServers.TryGetValue(udpPacket.DestinationPort, out var dnsServer))
                 ipPacket.SourceAddress = dnsServer.Value;
 
-            ipPacket.UpdateIpChecksum();
+            ipPacket.UpdateAllChecksums();
         }
     }
 

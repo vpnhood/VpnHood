@@ -14,7 +14,7 @@ namespace VpnHood.Core.Tunneling;
 public class Tunnel : IJob, IAsyncDisposable
 {
     private readonly object _channelListLock = new();
-    private const int MaxQueueLength = 100;
+    private const int MaxQueueLength = 200;
     private const int MtuNoFragment = TunnelDefaults.MtuWithoutFragmentation;
     private const int MtuWithFragment = TunnelDefaults.MtuWithFragmentation;
     private readonly Queue<IPPacket> _packetQueue = new();
@@ -345,7 +345,10 @@ public class Tunnel : IJob, IAsyncDisposable
                         // drop packet if it is larger than _mtuNoFragment
                         if (packetSize > MtuNoFragment && ipPacket is IPv4Packet { FragmentFlags: 2 }) {
                             VhLogger.Instance.LogWarning(
-                                $"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {MtuNoFragment}, Packet: {PacketLogger.Format(ipPacket)}");
+                                "Packet dropped! There is no channel to support this non fragmented packet. " +
+                                "NoFragmented MTU: {MtuNoFragment}, PacketLength: {PacketLength} Packet: {Packet}",
+                                MtuNoFragment, ipPacket.TotalLength, PacketLogger.Format(ipPacket));
+
                             _packetQueue.TryDequeue(out ipPacket);
                             var replyPacket = PacketBuilder.BuildPacketTooBigReply(ipPacket, MtuNoFragment);
                             PacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs([replyPacket], channel));

@@ -385,10 +385,14 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
                 else
                     WaitForTunRead();
             }
+            catch (Exception) when (!Started || IsDisposed) {
+                break; // normal stop
+            }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Error in reading packets from TUN adapter.");
-                if (!Started || _autoRestartCount >= _maxAutoRestartCount)
+                if (_autoRestartCount >= _maxAutoRestartCount)
                     break;
+
                 RestartAdapter();
             }
         }

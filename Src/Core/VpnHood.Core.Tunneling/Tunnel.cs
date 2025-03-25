@@ -301,7 +301,7 @@ public class Tunnel : IJob, IAsyncDisposable
                 var ipPacket = ipPackets[i];
                 _packetQueue.Enqueue(ipPacket);
             }
-
+            
             var releaseCount = DatagramChannelCount - _packetSenderSemaphore.CurrentCount;
             if (releaseCount > 0)
                 _packetSenderSemaphore.Release(releaseCount); // there are some packets! 
@@ -378,7 +378,7 @@ public class Tunnel : IJob, IAsyncDisposable
                     _packetSentEvent.Release();
 
                     try {
-                        await channel.SendPacket(packets.ToArray()).VhConfigureAwait();
+                        await channel.SendPacket(packets).VhConfigureAwait();
                     }
                     catch {
                         if (!_disposed)

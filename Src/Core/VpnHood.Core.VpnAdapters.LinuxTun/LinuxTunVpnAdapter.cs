@@ -17,6 +17,8 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     private int _tunAdapterFd;
     private int? _metric;
     private string? _primaryAdapterName;
+    private StructPollfd[]? _pollFdReads;
+    private StructPollfd[]? _pollFdWrites;
     public override bool IsNatSupported => true;
     public override bool IsAppFilterSupported => false;
     protected override string? AppPackageId => null;
@@ -93,6 +95,12 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         // Open TUN Adapter
         VhLogger.Instance.LogDebug("Opening the TUN adapter...");
         _tunAdapterFd = OpenTunAdapter(AdapterName, false);
+        _pollFdReads = [new StructPollfd {
+            Fd = _tunAdapterFd, Events = OsConstants.Pollin
+        }];
+        _pollFdWrites = [new StructPollfd {
+            Fd = _tunAdapterFd, Events = OsConstants.Pollout }];
+
         return Task.CompletedTask;
     }
 
@@ -173,22 +181,20 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
     protected override void WaitForTunRead()
     {
-        WaitForTun(PollEvent.In);
+        if (_pollFdReads != null)
+            WaitForTun(_pollFdReads);
     }
     protected override void WaitForTunWrite()
     {
-        WaitForTun(PollEvent.Out);
+        if (_pollFdWrites != null)
+            WaitForTun(_pollFdWrites);
     }
 
-    private void WaitForTun(PollEvent pollEvent)
-    {
-        var pollFd = new PollFD {
-            fd = _tunAdapterFd,
-            events = (short)pollEvent
-        };
 
+    private static void WaitForTun(StructPollfd[] pollFds)
+    {
         while (true) {
-            var result = LinuxAPI.poll([pollFd], 1, -1); // Blocks until data arrives
+            var result = LinuxAPI.poll(pollFds, 1, -1);
             if (result >= 0)
                 break; // Success, exit loop
 
@@ -199,6 +205,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
             throw new PInvokeException("Failed to poll the TUN device for new data.", errorCode);
         }
     }
+
     protected override bool WritePacket(IPPacket ipPacket)
     {
         var packetBytes = ipPacket.Bytes;

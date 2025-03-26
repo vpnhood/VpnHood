@@ -20,7 +20,7 @@ internal static class LinuxAPI
     public static extern int close(int fd);
 
     [DllImport("libc", SetLastError = true)]
-    public static extern int poll([In, Out] PollFD[] fds, int nfds, int timeout);
+    public static extern int poll([In, Out] StructPollfd[] fds, int nfds, int timeout);
     
     [DllImport("libc", SetLastError = true)]
     public static extern int read(int fd, byte[] buffer, int count);

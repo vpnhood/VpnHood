@@ -11,5 +11,7 @@ internal static class OsConstants
     public const int Eintr = 4; // EINTR
     public const int ONonblock = 0x800; // O_NONBLOCK
     public const int FSetfl = 4; // F_SETFL
+    public const short Pollin = 0x001; // POLLIN
+    public const short Pollout = 0x004; // POLLOUT
     public const int Tunsetiff = 0x400454ca; // TUNSETIFF. ioctl request code for TUN device
 }

@@ -4,11 +4,10 @@ using System.Runtime.InteropServices;
 namespace VpnHood.Core.VpnAdapters.LinuxTun.LinuxNative;
 
 [StructLayout(LayoutKind.Sequential)]
-[SuppressMessage("ReSharper", "InconsistentNaming")]
 [SuppressMessage("ReSharper", "IdentifierTypo")]
-internal struct PollFD
+internal struct StructPollfd
 {
-    public int fd;
-    public short events;
-    public short revents;
+    public int Fd;
+    public short Events;
+    public short Revents;
 }

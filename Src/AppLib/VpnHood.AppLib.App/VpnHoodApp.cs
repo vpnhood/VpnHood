@@ -214,7 +214,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // initialize client manager
         _vpnServiceManager = new VpnServiceManager(device, appAdService, options.EventWatcherInterval);
-        _vpnServiceManager.StateChanged += VpnServiceStateChanged;
+        _vpnServiceManager.StateChanged += VpnService_StateChanged;
 
         // Clear last update status if version has changed
         if (_versionCheckResult != null && _versionCheckResult.LocalVersion != Features.Version) {
@@ -441,30 +441,32 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async Task Connect(ConnectOptions? connectOptions = null, CancellationToken cancellationToken = default)
     {
-        connectOptions ??= new ConnectOptions();
-        VhLogger.Instance.LogDebug(
-            "Connection requested. ProfileId: {ProfileId}, ServerLocation: {ServerLocation}, Plan: {Plan}, Diagnose: {Diagnose}",
-            connectOptions.ClientProfileId, connectOptions.ServerLocation, connectOptions.PlanId,
-            connectOptions.Diagnose);
-
-        // protect double call
-        if (!IsIdle) {
-            VhLogger.Instance.LogInformation("Disconnecting due to user request to connect...");
-            await Disconnect().VhConfigureAwait();
-        }
-
-        // wait for previous connection to be disposed
-        using var connectLock = await _connectLock.LockAsync(cancellationToken).VhConfigureAwait();
-
-        // protect double call. Disconnect if still in progress
-        if (!IsIdle)
-            await Disconnect().VhConfigureAwait();
-
-        // create connect cancellation token
-        _connectCts = new CancellationTokenSource();
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectCts.Token);
-
         try {
+            connectOptions ??= new ConnectOptions();
+            _isConnecting = true;
+
+            VhLogger.Instance.LogDebug(
+                "Connection requested. ProfileId: {ProfileId}, ServerLocation: {ServerLocation}, Plan: {Plan}, Diagnose: {Diagnose}",
+                connectOptions.ClientProfileId, connectOptions.ServerLocation, connectOptions.PlanId,
+                connectOptions.Diagnose);
+
+            // protect double call
+            if (!IsIdle) {
+                VhLogger.Instance.LogInformation("Disconnecting due to user request to connect...");
+                await Disconnect().VhConfigureAwait();
+            }
+
+            // wait for previous connection to be disposed
+            using var connectLock = await _connectLock.LockAsync(cancellationToken).VhConfigureAwait();
+
+            // protect double call. Disconnect if still in progress
+            if (!IsIdle)
+                await Disconnect().VhConfigureAwait();
+
+            // create connect cancellation token
+            _connectCts = new CancellationTokenSource();
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectCts.Token);
+
             await ConnectInternal(connectOptions, linkedCts.Token);
         }
         catch (UserCanceledException) {
@@ -477,6 +479,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         catch (Exception ex) {
             _appPersistState.LastError = ex.ToApiError();
             throw;
+        }
+        finally {
+            _isConnecting = false;
+            FireConnectionStateChanged();
         }
     }
 
@@ -503,7 +509,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             cancellationToken = linkedCts.Token;
 
             // reset connection state
-            _isConnecting = true;
             _appPersistState.LastClearedError = null; // it is a new connection
             _appPersistState.HasDiagnoseRequested = connectOptions.Diagnose;
             _appPersistState.ConnectRequestTime = DateTime.Now;
@@ -595,14 +600,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
             // throw ConnectionTimeoutException if timeout
-            if (_connectTimeoutCts.IsCancellationRequested) 
+            if (_connectTimeoutCts.IsCancellationRequested)
                 throw new ConnectionTimeoutException("Could not establish connection in given time.", ex);
 
             throw;
-        }
-        finally {
-            _isConnecting = false;
-            FireConnectionStateChanged();
         }
     }
 
@@ -850,7 +851,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return _appPersistState.ClientCountryCode ?? RegionInfo.CurrentRegion.Name;
     }
 
-    private void VpnServiceStateChanged(object sender, EventArgs e)
+    private void VpnService_StateChanged(object sender, EventArgs e)
     {
         // clear last error when get out of idle state, because it indicates a new connection has started
         if (!IsIdle)
@@ -1062,6 +1063,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // write app log
         try {
             if (File.Exists(LogService.LogFilePath)) {
+                await write.WriteLineAsync("-----------------------");
+                await write.WriteLineAsync("VPN App Log");
+                await write.WriteLineAsync("-----------------------");
+                await write.FlushAsync();
+
                 await using var appLogStream = new FileStream(LogService.LogFilePath,
                     FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 await appLogStream.CopyToAsync(destination);
@@ -1074,14 +1080,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // write vpn service log
-        await write.WriteLineAsync("");
-        await write.WriteLineAsync("-----------------------");
-        await write.WriteLineAsync("VPN Service Log");
-        await write.WriteLineAsync("-----------------------");
-        await write.FlushAsync();
-
         try {
             if (File.Exists(_vpnServiceManager.LogFilePath)) {
+                await write.WriteLineAsync("");
+                await write.WriteLineAsync("-----------------------");
+                await write.WriteLineAsync("VPN Service Log");
+                await write.WriteLineAsync("-----------------------");
+                await write.FlushAsync();
+
                 await using var serviceLogStream = new FileStream(_vpnServiceManager.LogFilePath,
                     FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 await serviceLogStream.CopyToAsync(destination);
@@ -1138,7 +1144,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             await Disconnect().VhConfigureAwait();
 
         _vpnServiceManager.Dispose();
-        _vpnServiceManager.StateChanged -= VpnServiceStateChanged;
+        _vpnServiceManager.StateChanged -= VpnService_StateChanged;
 
         await _device.DisposeAsync();
         LogService.Dispose();

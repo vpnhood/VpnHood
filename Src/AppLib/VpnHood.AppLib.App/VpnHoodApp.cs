@@ -368,8 +368,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         get {
             var clientState = ConnectionInfo.ClientState;
 
+            // let's service disconnect on background and let user connect again if it is disconnecting
             if (_isDisconnecting)
-                return AppConnectionState.Disconnecting;
+                return AppConnectionState.None; 
 
             // in diagnose mode, we need either cancel it or wait for it
             if (Diagnoser.IsWorking)
@@ -443,8 +444,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         try {
             connectOptions ??= new ConnectOptions();
-            _isConnecting = true;
-
             VhLogger.Instance.LogDebug(
                 "Connection requested. ProfileId: {ProfileId}, ServerLocation: {ServerLocation}, Plan: {Plan}, Diagnose: {Diagnose}",
                 connectOptions.ClientProfileId, connectOptions.ServerLocation, connectOptions.PlanId,
@@ -466,6 +465,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // create connect cancellation token
             _connectCts = new CancellationTokenSource();
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectCts.Token);
+            _isConnecting = true; //must be after checking IsIdle
 
             await ConnectInternal(connectOptions, linkedCts.Token);
         }
@@ -505,7 +505,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ClearLastError();
 
             // create cancellationToken after disconnecting previous connection
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectTimeoutCts.Token);
+            using var linkedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectTimeoutCts.Token);
             cancellationToken = linkedCts.Token;
 
             // reset connection state

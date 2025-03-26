@@ -9,5 +9,8 @@ internal struct Ifreq
 {
     [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 16)]
     public string ifr_name; // Interface name
-    public ushort ifr_flags; // Flags (e.g., IFF_TUN)
+    public short ifr_flags; // Flags (e.g., IFF_TUN)
+    
+    [MarshalAs(UnmanagedType.ByValArray, SizeConst = 22)]
+    public byte[] padding;
 }

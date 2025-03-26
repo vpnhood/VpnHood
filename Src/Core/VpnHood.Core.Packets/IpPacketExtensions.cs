@@ -81,7 +81,8 @@ public static class IpPacketExtensions
             ipPacket.UpdateCalculatedValues();
         }
     }
-    public static void UpdatePayloadChecksum(this IPPacket ipPacket, bool throwIfNotSupported = true)
+
+    public static void UpdatePayloadChecksum(this IPPacket ipPacket, bool throwIfNotSupported = false)
     {
         switch (ipPacket.Protocol) {
             case ProtocolType.Tcp:
@@ -110,12 +111,12 @@ public static class IpPacketExtensions
 
             default:
                 if (throwIfNotSupported)
-                    throw new NotSupportedException("Does not support this packet!");
+                    throw new NotSupportedException("Does not support this packet.");
                 break;
         }
     }
 
-    public static void UpdateAllChecksums(this IPPacket ipPacket, bool throwIfNotSupported = true)
+    public static void UpdateAllChecksums(this IPPacket ipPacket, bool throwIfNotSupported = false)
     {
         ipPacket.UpdatePayloadChecksum(throwIfNotSupported);
 

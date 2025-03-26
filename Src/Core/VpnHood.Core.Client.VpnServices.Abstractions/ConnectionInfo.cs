@@ -16,6 +16,6 @@ public class ConnectionInfo
     public required SessionInfo? SessionInfo { get; init; }
     public required SessionStatus? SessionStatus { get; init; }
     public required byte[]? ApiKey { get; init; }
-
+    public required bool HasSetByService { get; init; }
     public bool IsStarted() => ClientState is not (ClientState.None or ClientState.Disposed);
 }

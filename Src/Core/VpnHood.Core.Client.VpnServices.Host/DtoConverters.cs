@@ -15,7 +15,8 @@ internal static class DtoConverters
             ClientState = vpnHoodClient.State,
             Error = vpnHoodClient.LastException?.ToApiError(),
             ApiEndPoint = apiController.ApiEndPoint,
-            ApiKey = apiController.ApiKey
+            ApiKey = apiController.ApiKey,
+            HasSetByService = true
         };
 
         return dto;

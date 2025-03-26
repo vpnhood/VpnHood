@@ -89,8 +89,12 @@ public class VpnServiceHost : IAsyncDisposable
         // handle previous client
         var client = Client;
         if (!forceReconnect && client is { State: ClientState.Connected or ClientState.Connecting or ClientState.Waiting }) {
+            // user must disconnect first
             VhLogger.Instance.LogWarning("VpnService connection is already in progress.");
-            return; // user must disconnect first
+
+            // update last state
+            _ = Context.WriteConnectionInfo(client.ToConnectionInfo(_apiController));
+            return; 
         }
 
         var clientOptions = Context.ReadClientOptions();
@@ -105,7 +109,8 @@ public class VpnServiceHost : IAsyncDisposable
                 SessionInfo = null,
                 SessionStatus = null,
                 Error = null,
-                SessionName = clientOptions.SessionName
+                SessionName = clientOptions.SessionName,
+                HasSetByService = true
             };
 
         // show notification as soon as possible
@@ -193,7 +198,8 @@ public class VpnServiceHost : IAsyncDisposable
             ApiEndPoint = _apiController.ApiEndPoint,
             ApiKey = _apiController.ApiKey,
             ClientState = clientState,
-            Error = ex?.ToApiError()
+            Error = ex?.ToApiError(),
+            HasSetByService = true
         };
 
         return connectionInfo;

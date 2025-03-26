@@ -47,7 +47,6 @@ public class LogService(string logFilePath) : IDisposable
             return eventId.Id == 0 || logServiceOptions.LogEventNames.Contains("*");
         });
 
-        logger = new SyncLogger(logger);
         return logger;
     }
 

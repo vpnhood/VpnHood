@@ -52,7 +52,8 @@ internal class VpnServiceContext(string configFolder)
             SessionStatus = null,
             Error = null,
             ApiEndPoint = apiEndPoint,
-            ApiKey = apiKey
+            ApiKey = apiKey,
+            HasSetByService = true
         };
     }
 

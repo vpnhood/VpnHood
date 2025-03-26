@@ -1,7 +1,8 @@
 # v6.0.679
 * Fix: Instability on pressing the connect and disconnect button
 * Fix: Up speed and down speed show in wrong place
-* 
+* Fix: Android: VpnKey remain connected after disconnect
+
 # v6.0.676
 * Fix: Improve security by blocking multicast traffic
 * Fix: No internet connection on some devices
@@ -19,9 +20,9 @@
 * Fix: Connection is already in progress by changing the location
 
 # v5.0.645
-* Improve: Improve performance by reducing memory allocation.
-* Improve: Improve UI.
-* Feature: Add statistics page.
+* Improve: Improve performance by reducing memory allocation
+* Improve: Improve UI
+* Feature: Add statistics page
 
 # v5.0.635
 * Fix: Sign-out from account

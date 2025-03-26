@@ -193,7 +193,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
                 break; // Success, exit loop
 
             var errorCode = Marshal.GetLastWin32Error();
-            if (errorCode == LinuxAPI.EINTR)
+            if (errorCode == OsConstants.Eintr)
                 continue; // Poll was interrupted, retry
 
             throw new PInvokeException("Failed to poll the TUN device for new data.", errorCode);
@@ -215,13 +215,13 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
             var errorCode = Marshal.GetLastWin32Error();
             switch (errorCode) {
                 // Buffer full, wait
-                case LinuxAPI.EAGAIN:
+                case OsConstants.Eagain:
                     if (offset > 0)
                         throw new SystemException("Partial write to TUN device. System in unstable");
                     return false;
 
                 // Interrupted, retry
-                case LinuxAPI.EINTR:
+                case OsConstants.Eintr:
                     continue;
 
                 default:
@@ -244,11 +244,11 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
             var errorCode = Marshal.GetLastWin32Error();
             switch (errorCode) {
                 // No data available, wait
-                case LinuxAPI.EAGAIN:
+                case OsConstants.Eagain:
                     return null;
 
                 // Interrupted, retry
-                case LinuxAPI.EINTR: {
+                case OsConstants.Eintr: {
                         VhLogger.Instance.LogTrace("Read from TUN was interrupted. Retrying...");
                         continue;
                     }
@@ -264,24 +264,24 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     private static int OpenTunAdapter(string adapterName, bool blockingMode)
     {
         // Open the TUN device file
-        var tunDeviceFd = LinuxAPI.open("/dev/net/tun", LinuxAPI.ORdwr);
+        var tunDeviceFd = LinuxAPI.open("/dev/net/tun", OsConstants.ORdwr);
         if (tunDeviceFd < 0)
             throw new InvalidOperationException("Failed to open TUN device.");
 
         // Configure the device
         var ifr = new Ifreq {
             ifr_name = adapterName,
-            ifr_flags = LinuxAPI.IFF_TUN | LinuxAPI.IFF_NO_PI
+            ifr_flags = (short)(InterfaceFlag.IffTun | InterfaceFlag.IffNoPi)
         };
 
-        var ioctlResult = LinuxAPI.ioctl(tunDeviceFd, LinuxAPI.TUNSETIFF, ref ifr);
+        var ioctlResult = LinuxAPI.ioctl(tunDeviceFd, OsConstants.Tunsetiff, ref ifr);
         if (ioctlResult < 0) {
             LinuxAPI.close(tunDeviceFd);
             throw new PInvokeException($"Failed to configure TUN device. IoctlResult: {ioctlResult}");
         }
 
         if (!blockingMode) {
-            if (LinuxAPI.fcntl(tunDeviceFd, LinuxAPI.F_SETFL, LinuxAPI.O_NONBLOCK) < 0) {
+            if (LinuxAPI.fcntl(tunDeviceFd, OsConstants.FSetfl, OsConstants.ONonblock) < 0) {
                 LinuxAPI.close(tunDeviceFd);
                 throw new PInvokeException("Failed to set TUN device to non-blocking mode.");
             }

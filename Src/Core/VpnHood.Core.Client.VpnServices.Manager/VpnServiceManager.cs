@@ -68,6 +68,7 @@ public class VpnServiceManager : IJob, IDisposable
             SessionStatus = null,
             ApiEndPoint = null,
             ApiKey = null,
+            HasSetByService = false,
             ClientState = clientState,
             Error = ex?.ToApiError()
         };
@@ -119,8 +120,10 @@ public class VpnServiceManager : IJob, IDisposable
             await WaitForVpnService(cancellationToken).VhConfigureAwait();
         }
         catch (Exception ex) {
-            // It looks like the service is not running however UpdateConnectionInfo will recover it if it is running
-            SetConnectionInfo(ClientState.Disposed, ex);
+            // It looks like the service is not running, set the state to disposed if it is still in initializing state
+            var connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
+            if (connectionInfo?.ClientState == ClientState.Initializing)
+                SetConnectionInfo(ClientState.Disposed, ex);
             throw;
         }
         finally {
@@ -208,11 +211,13 @@ public class VpnServiceManager : IJob, IDisposable
         // update from file to make sure there is no error
         // VpnClient always update the file when ConnectionState changes
         // Should send request if service is in initializing state, because SendRequest will set the state to disposed if failed
-        _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath) ?? _connectionInfo;
-        if (_isInitializing || _connectionInfo.Error != null || !_connectionInfo.IsStarted()) {
-            CheckForEvents(_connectionInfo, cancellationToken);
+        var connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath) ?? _connectionInfo;
+        var serviceStopByItself = connectionInfo.HasSetByService && (connectionInfo.Error != null || !connectionInfo.IsStarted());
+        if (_isInitializing || serviceStopByItself) {
+            CheckForEvents(connectionInfo, cancellationToken);
             _connectionInfoTime = FastDateTime.Now;
-            return _connectionInfo;
+            _connectionInfo = connectionInfo;
+            return connectionInfo;
         }
 
         // connect to the server and get the connection info
@@ -225,12 +230,16 @@ public class VpnServiceManager : IJob, IDisposable
             VhLogger.Instance.LogWarning(ex, "Previous UpdateConnection Info has been ignored due to the new service.");
         }
         catch (VpnServiceUnreachableException ex) {
-            // update connection info and set error
-            if (_vpnServiceUnreachableCount >= VpnServiceUnreachableThreshold)
-                _connectionInfo = SetConnectionInfo(ClientState.Disposed, new Exception("VpnService has stopped.", ex));
+            // increment the count to stop the service if it is unreachable for too long
+            _vpnServiceUnreachableCount++; 
 
-            _vpnServiceUnreachableCount++; // increment the count to stop the service if it is unreachable for too long
-            VhLogger.Instance.LogError(ex, "Could not update connection info.");
+            // update connection info and set error
+            if (_vpnServiceUnreachableCount == VpnServiceUnreachableThreshold)
+                _connectionInfo = SetConnectionInfo(ClientState.Disposed, ex: new Exception("VpnService has stopped.", ex));
+
+            // report it first time
+            if (_vpnServiceUnreachableCount == 1)
+                VhLogger.Instance.LogError(ex, "Could not update connection info.");
         }
         catch (Exception ex) {
             _vpnServiceUnreachableCount = 0; // reset the count if it is not VpnServiceUnreachableException

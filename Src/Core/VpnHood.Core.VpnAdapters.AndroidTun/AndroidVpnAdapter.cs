@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using Android.Net;
 using Android.OS;
+using Android.Systems;
 using Java.IO;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -9,7 +10,6 @@ using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using VpnHood.Core.VpnAdapters.AndroidTun.LinuxNative;
 
 namespace VpnHood.Core.VpnAdapters.AndroidTun;
 
@@ -17,10 +17,12 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     : TunVpnAdapter(vpnAdapterSettings)
 {
     private ParcelFileDescriptor? _parcelFileDescriptor;
-    private int _tunAdapterFd;
     private VpnService.Builder? _builder;
     private FileInputStream? _inStream;
     private FileOutputStream? _outStream;
+    private StructPollfd[]? _pollFdReads;
+    private StructPollfd[]? _pollFdWrites;
+
     public override bool IsNatSupported => false;
     public override bool IsAppFilterSupported => true;
 
@@ -46,7 +48,11 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         VhLogger.Instance.LogDebug("Establishing Android tun adapter...");
         ArgumentNullException.ThrowIfNull(_builder);
         _parcelFileDescriptor = _builder.Establish() ?? throw new Exception("Could not establish VpnService.");
-        _tunAdapterFd = _parcelFileDescriptor.Fd;
+        _pollFdReads = [new StructPollfd {
+            Fd = _parcelFileDescriptor.FileDescriptor, Events = (short)OsConstants.Pollin
+        }];
+        _pollFdWrites = [new StructPollfd {
+            Fd = _parcelFileDescriptor.FileDescriptor, Events = (short)OsConstants.Pollout }];
 
         //Packets to be sent are queued in this input stream.
         _inStream = new FileInputStream(_parcelFileDescriptor.FileDescriptor);
@@ -86,15 +92,20 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
             VhLogger.Instance.LogDebug("Closing tun ParcelFileDescriptor...");
             _parcelFileDescriptor?.Close(); //required to close the vpn. dispose is not enough
             _parcelFileDescriptor?.Dispose();
+            _parcelFileDescriptor = null;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error while closing the VpnService.");
         }
-
-        _parcelFileDescriptor = null;
     }
 
     public override void ProtectSocket(System.Net.Sockets.Socket socket)
+    {
+        if (!vpnService.Protect(socket.Handle.ToInt32()))
+            throw new Exception("Could not protect socket!");
+    }
+
+    public override void ProtectSocket(System.Net.Sockets.Socket socket, IPAddress ipAddress)
     {
         if (!vpnService.Protect(socket.Handle.ToInt32()))
             throw new Exception("Could not protect socket!");
@@ -181,32 +192,30 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
     protected override void WaitForTunRead()
     {
-        WaitForTun(PollEvent.In);
+        if (_pollFdReads != null)
+            WaitForTun(_pollFdReads);
     }
     protected override void WaitForTunWrite()
     {
-        WaitForTun(PollEvent.Out);
+        if (_pollFdWrites != null)
+            WaitForTun(_pollFdWrites);
     }
 
-    private void WaitForTun(PollEvent pollEvent)
+    private static void WaitForTun(StructPollfd[] pollFds)
     {
-        var pollFd = new PollFD {
-            fd = _tunAdapterFd,
-            events = (short)pollEvent
-        };
-
         while (true) {
-            var result = LinuxAPI.poll([pollFd], 1, -1); // Blocks until data arrives
+            var result = Os.Poll(pollFds, -1);
             if (result >= 0)
                 break; // Success, exit loop
 
             var errorCode = Marshal.GetLastWin32Error();
-            if (errorCode == LinuxAPI.EINTR)
+            if (errorCode == OsConstants.Eintr)
                 continue; // Poll was interrupted, retry
 
             throw new PInvokeException("Failed to poll the TUN device for new data.", errorCode);
         }
     }
+
     protected override bool WritePacket(IPPacket ipPacket)
     {
         if (_outStream == null)

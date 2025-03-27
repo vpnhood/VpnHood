@@ -17,7 +17,9 @@ public static class ClientProfileExtensions
             IsPremiumLocationSelected = clientProfileInfo.IsPremiumLocationSelected,
             IsPremiumAccount = clientProfileInfo.IsPremiumAccount,
             SelectedLocationInfo = clientProfileInfo.SelectedLocationInfo,
-            HasAccessCode = !string.IsNullOrEmpty(clientProfileInfo.AccessCode)
+            HasAccessCode = !string.IsNullOrEmpty(clientProfileInfo.AccessCode),
+            PurchaseUrl = clientProfileInfo.PurchaseUrl,
+            AlwaysShowPurchaseUrl = clientProfileInfo.AlwaysShowPurchaseUrl
         };
     }
 }

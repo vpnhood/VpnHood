@@ -1,4 +1,6 @@
-﻿namespace VpnHood.AppLib.ClientProfiles;
+﻿using VpnHood.Core.Common.Tokens;
+
+namespace VpnHood.AppLib.ClientProfiles;
 
 public class ClientProfileBaseInfo
 {
@@ -10,4 +12,7 @@ public class ClientProfileBaseInfo
     public required bool IsPremiumAccount { get; init; }
     public required ClientServerLocationInfo? SelectedLocationInfo { get; init; }
     public required bool HasAccessCode { get; set; }
+    public required Uri? PurchaseUrl { get; init; }
+    public required bool AlwaysShowPurchaseUrl { get; init; }
+
 }

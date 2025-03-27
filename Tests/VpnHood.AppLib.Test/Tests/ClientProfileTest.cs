@@ -464,4 +464,49 @@ public class ClientProfileTest : TestAppBase
         Assert.IsFalse(clientProfileInfo.LocationInfos.Any(x => x.ServerLocation == "CA/*"));
         Assert.IsFalse(clientProfileInfo.LocationInfos.Any(x => x.ServerLocation == "CA/toronto"));
     }
+
+    [TestMethod]
+    public async Task ClientPolicy_PurchaseUrl()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+
+        var appOptions = TestAppHelper.CreateAppOptions();
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
+        appOptions.AdProviderItems = [adProviderItem];
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+
+        // test two region in a same country
+        var token = CreateToken();
+        token.IsPublic = true;
+        var defaultPolicy = new ClientPolicy {
+            ClientCountries = ["*"],
+            Normal = 10,
+            PurchaseUrl = new Uri("http://localhost/all")
+        };
+        var caPolicy = new ClientPolicy {
+            ClientCountries = ["CA"],
+            FreeLocations = ["CA"],
+            PremiumByPurchase = true,
+            Normal = 200,
+            PremiumByTrial = 300,
+            AlwaysShowPurchaseUrl = true,
+            PurchaseUrl = new Uri("http://localhost/ca")
+        };
+
+        token.ClientPolicies = [defaultPolicy, caPolicy];
+
+        // test default policy
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var clientProfileInfo = clientProfile.ToInfo();
+
+        // test default policy
+        Assert.IsFalse(clientProfileInfo.AlwaysShowPurchaseUrl);
+        Assert.AreEqual(defaultPolicy.PurchaseUrl, clientProfileInfo.PurchaseUrl);
+
+        // test ca policy
+        app.UpdateCurrentCountry("CA");
+        clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo();
+        Assert.IsTrue(clientProfileInfo.AlwaysShowPurchaseUrl);
+        Assert.AreEqual(caPolicy.PurchaseUrl, clientProfileInfo.PurchaseUrl);
+    }
 }

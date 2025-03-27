@@ -810,8 +810,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         ApplySettings();
     }
 
-    public string GetClientCountry() => _appPersistState.ClientCountryCode ?? RegionInfo.CurrentRegion.Name;
-    public string GetClientCountryByServer() => _appPersistState.ClientCountryCodeByServer ?? GetClientCountry();
+    public string GetClientCountry() => 
+        _appPersistState.ClientCountryCodeByServer ?? 
+        _appPersistState.ClientCountryCode ?? 
+        RegionInfo.CurrentRegion.Name;
 
     public Task<string> GetCurrentCountryAsync(CancellationToken cancellationToken)
     {

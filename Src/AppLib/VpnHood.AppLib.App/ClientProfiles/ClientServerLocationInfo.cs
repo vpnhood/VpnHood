@@ -10,7 +10,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
 
     public static ClientServerLocationInfo[] CreateFromToken(ClientProfile clientProfile)
     {
-        var clientCountry = VpnHoodApp.Instance.GetClientCountryByServer();
+        var clientCountry = VpnHoodApp.Instance.GetClientCountry();
         var token = clientProfile.Token;
 
         // get country policy

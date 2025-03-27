@@ -36,10 +36,14 @@ public class ClientPolicy
 
     [JsonPropertyName("pbp")] 
     public bool PremiumByPurchase { get; init; }
-
-    [JsonPropertyName("pbp_url")] 
-    public Uri? PremiumByPurchaseUrl { get; init; }
     
-    [JsonPropertyName("pbc")] 
+    [JsonPropertyName("pbc")]
     public bool PremiumByCode { get; init; }
+
+    [JsonPropertyName("pur_url")] 
+    public Uri? PurchaseUrl { get; init; }
+
+    [JsonPropertyName("pur_url_f")]
+    public bool AlwaysShowPurchaseUrl { get; init; }
+
 }

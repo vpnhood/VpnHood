@@ -18,6 +18,8 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public bool IsForAccount => clientProfile.IsForAccount;
     public string? AccessCode => AccessCodeUtils.Redact(clientProfile.AccessCode);
     public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile);
+    public Uri? PurchaseUrl => ClientPolicy?.PurchaseUrl;
+    public bool AlwaysShowPurchaseUrl => ClientPolicy?.AlwaysShowPurchaseUrl ?? false;
 
     public ClientServerLocationInfo? SelectedLocationInfo {
         get {
@@ -27,6 +29,15 @@ public class ClientProfileInfo(ClientProfile clientProfile)
                 LocationInfos.FirstOrDefault();
 
             return ret;
+        }
+    }
+
+    private ClientPolicy? ClientPolicy {
+        get {
+            var countryCode = VpnHoodApp.Instance.GetClientCountry();
+            return clientProfile.Token.ClientPolicies?.FirstOrDefault(x => 
+                       x.ClientCountries.Any(y => y.Equals(countryCode, StringComparison.OrdinalIgnoreCase))) ??
+                   clientProfile.Token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));
         }
     }
 

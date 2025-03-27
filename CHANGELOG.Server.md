@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: Calculate UDP checksum and DNS response
+
 # v6.0.680
 * Fix: Pause server while configuring swap file on Linux
 * Feature: Use TunAdapter on Linux, improve performance

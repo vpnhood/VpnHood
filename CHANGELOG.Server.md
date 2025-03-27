@@ -1,4 +1,4 @@
-# Upcoming
+# v6.0.681
 * Fix: Calculate UDP checksum and DNS response
 
 # v6.0.680

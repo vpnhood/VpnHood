@@ -481,7 +481,8 @@ public class ClientProfileTest : TestAppBase
         var defaultPolicy = new ClientPolicy {
             ClientCountries = ["*"],
             Normal = 10,
-            PurchaseUrl = new Uri("http://localhost/all")
+            PurchaseUrl = new Uri("http://localhost/all"),
+            PurchaseUrlMode = PurchaseUrlMode.WhenNoStore,
         };
         var caPolicy = new ClientPolicy {
             ClientCountries = ["CA"],
@@ -489,7 +490,7 @@ public class ClientProfileTest : TestAppBase
             PremiumByPurchase = true,
             Normal = 200,
             PremiumByTrial = 300,
-            AlwaysShowPurchaseUrl = true,
+            PurchaseUrlMode = PurchaseUrlMode.WithStore,
             PurchaseUrl = new Uri("http://localhost/ca")
         };
 
@@ -497,16 +498,16 @@ public class ClientProfileTest : TestAppBase
 
         // test default policy
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        var clientProfileInfo = clientProfile.ToInfo();
+        var clientProfileInfo = clientProfile.ToInfo().ToBaseInfo();
 
         // test default policy
-        Assert.IsFalse(clientProfileInfo.AlwaysShowPurchaseUrl);
+        Assert.AreEqual(defaultPolicy.PurchaseUrlMode, clientProfileInfo.PurchaseUrlMode);
         Assert.AreEqual(defaultPolicy.PurchaseUrl, clientProfileInfo.PurchaseUrl);
 
         // test ca policy
         app.UpdateCurrentCountry("CA");
-        clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo();
-        Assert.IsTrue(clientProfileInfo.AlwaysShowPurchaseUrl);
+        clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo().ToBaseInfo();
+        Assert.AreEqual(caPolicy.PurchaseUrlMode, clientProfileInfo.PurchaseUrlMode);
         Assert.AreEqual(caPolicy.PurchaseUrl, clientProfileInfo.PurchaseUrl);
     }
 }

@@ -37,7 +37,8 @@ public class ServerToken
         }
     }
 
-    [JsonPropertyName("urls")] public string[]? Urls { get; set; }
+    [JsonPropertyName("urls")] 
+    public string[]? Urls { get; set; }
 
     [JsonPropertyName("ep")]
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]

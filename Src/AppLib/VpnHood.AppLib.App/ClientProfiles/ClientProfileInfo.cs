@@ -19,7 +19,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public string? AccessCode => AccessCodeUtils.Redact(clientProfile.AccessCode);
     public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile);
     public Uri? PurchaseUrl => ClientPolicy?.PurchaseUrl;
-    public bool AlwaysShowPurchaseUrl => ClientPolicy?.AlwaysShowPurchaseUrl ?? false;
+    public PurchaseUrlMode PurchaseUrlMode => ClientPolicy?.PurchaseUrlMode ?? PurchaseUrlMode.WhenNoStore;
 
     public ClientServerLocationInfo? SelectedLocationInfo {
         get {

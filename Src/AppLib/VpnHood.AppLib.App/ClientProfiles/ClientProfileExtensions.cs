@@ -19,7 +19,7 @@ public static class ClientProfileExtensions
             SelectedLocationInfo = clientProfileInfo.SelectedLocationInfo,
             HasAccessCode = !string.IsNullOrEmpty(clientProfileInfo.AccessCode),
             PurchaseUrl = clientProfileInfo.PurchaseUrl,
-            AlwaysShowPurchaseUrl = clientProfileInfo.AlwaysShowPurchaseUrl
+            PurchaseUrlMode = clientProfileInfo.PurchaseUrlMode
         };
     }
 }

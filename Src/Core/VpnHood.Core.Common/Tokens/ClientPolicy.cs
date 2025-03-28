@@ -44,6 +44,5 @@ public class ClientPolicy
     public Uri? PurchaseUrl { get; init; }
 
     [JsonPropertyName("pur_url_f")]
-    public bool AlwaysShowPurchaseUrl { get; init; }
-
+    public PurchaseUrlMode PurchaseUrlMode { get; init; }
 }

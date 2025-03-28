@@ -21,6 +21,7 @@ public class BillingController : ControllerBase, IBillingController
         throw new SwaggerOnlyException();
     }
 
+    [HttpGet("purchase-options")]
     public Task<AppPurchaseOptions> GetPurchaseOptions()
     {
         throw new SwaggerOnlyException();

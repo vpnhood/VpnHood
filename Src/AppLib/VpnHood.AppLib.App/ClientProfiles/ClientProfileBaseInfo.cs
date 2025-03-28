@@ -12,7 +12,4 @@ public class ClientProfileBaseInfo
     public required bool IsPremiumAccount { get; init; }
     public required ClientServerLocationInfo? SelectedLocationInfo { get; init; }
     public required bool HasAccessCode { get; set; }
-    public required Uri? PurchaseUrl { get; init; }
-    public required PurchaseUrlMode PurchaseUrlMode { get; init; }
-
 }

@@ -471,8 +471,9 @@ public class ClientProfileTest : TestAppBase
         using var accessManager = TestHelper.CreateAccessManager();
 
         var appOptions = TestAppHelper.CreateAppOptions();
-        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
-        appOptions.AdProviderItems = [adProviderItem];
+        appOptions.AccountProvider = new TestAccountProvider();
+        var billingProvider = (TestBillingProvider)appOptions.AccountProvider.BillingProvider!;
+
         await using var app = TestAppHelper.CreateClientApp(appOptions);
 
         // test two region in a same country
@@ -493,21 +494,59 @@ public class ClientProfileTest : TestAppBase
             PurchaseUrlMode = PurchaseUrlMode.WithStore,
             PurchaseUrl = new Uri("http://localhost/ca")
         };
+        var cnPolicy = new ClientPolicy {
+            ClientCountries = ["CN"],
+            FreeLocations = ["CN"],
+            PremiumByPurchase = true,
+            Normal = 200,
+            PremiumByTrial = 300,
+            PurchaseUrlMode = PurchaseUrlMode.HideStore,
+            PurchaseUrl = new Uri("http://localhost/cn")
+        };
 
-        token.ClientPolicies = [defaultPolicy, caPolicy];
+        token.ClientPolicies = [defaultPolicy, caPolicy, cnPolicy];
 
         // test default policy
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        var clientProfileInfo = clientProfile.ToInfo().ToBaseInfo();
+        app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
+        var clientProfileInfo = clientProfile.ToInfo();
 
-        // test default policy
+        // test default policy (no error)
+        billingProvider.SubscriptionPlanException = null;
+        var purchaseOptions = await app.GetPurchaseOptions();
         Assert.AreEqual(defaultPolicy.PurchaseUrlMode, clientProfileInfo.PurchaseUrlMode);
         Assert.AreEqual(defaultPolicy.PurchaseUrl, clientProfileInfo.PurchaseUrl);
+        Assert.IsNull(purchaseOptions.PurchaseUrl);
+        Assert.AreEqual("Test", purchaseOptions.StoreName);
+        Assert.IsNull(purchaseOptions.StoreError);
+
+        // test default policy (billing error)
+        billingProvider.SubscriptionPlanException = new Exception("Billing Error");
+        purchaseOptions = await app.GetPurchaseOptions();
+        Assert.AreEqual(defaultPolicy.PurchaseUrlMode, clientProfileInfo.PurchaseUrlMode);
+        Assert.AreEqual(defaultPolicy.PurchaseUrl, clientProfileInfo.PurchaseUrl);
+        Assert.AreEqual(defaultPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
+        Assert.AreEqual("Test", purchaseOptions.StoreName);
+        Assert.IsNotNull(purchaseOptions.StoreError);
+        billingProvider.SubscriptionPlanException = null;
 
         // test ca policy
         app.UpdateCurrentCountry("CA");
-        clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo().ToBaseInfo();
+        clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo();
+        purchaseOptions = await app.GetPurchaseOptions();
         Assert.AreEqual(caPolicy.PurchaseUrlMode, clientProfileInfo.PurchaseUrlMode);
         Assert.AreEqual(caPolicy.PurchaseUrl, clientProfileInfo.PurchaseUrl);
+        Assert.AreEqual(caPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
+        Assert.AreEqual("Test", purchaseOptions.StoreName);
+        Assert.IsNull(purchaseOptions.StoreError);
+
+        // test cn policy
+        app.UpdateCurrentCountry("CN");
+        clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo();
+        purchaseOptions = await app.GetPurchaseOptions();
+        Assert.AreEqual(cnPolicy.PurchaseUrlMode, clientProfileInfo.PurchaseUrlMode);
+        Assert.AreEqual(cnPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
+        Assert.IsNull(purchaseOptions.StoreName);
+        Assert.IsNull(purchaseOptions.StoreError);
     }
 }

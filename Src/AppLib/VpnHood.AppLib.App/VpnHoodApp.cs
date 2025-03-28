@@ -370,7 +370,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // let's service disconnect on background and let user connect again if it is disconnecting
             if (_isDisconnecting)
-                return AppConnectionState.None; 
+                return AppConnectionState.None;
 
             // in diagnose mode, we need either cancel it or wait for it
             if (Diagnoser.IsWorking)
@@ -810,9 +810,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         ApplySettings();
     }
 
-    public string GetClientCountry() => 
-        _appPersistState.ClientCountryCodeByServer ?? 
-        _appPersistState.ClientCountryCode ?? 
+    public string GetClientCountry() =>
+        _appPersistState.ClientCountryCodeByServer ??
+        _appPersistState.ClientCountryCode ??
         RegionInfo.CurrentRegion.Name;
 
     public Task<string> GetCurrentCountryAsync(CancellationToken cancellationToken)
@@ -1113,6 +1113,45 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         Services.Tracker?.VhTrackWarningAsync(ex, message, action);
         VhLogger.Instance.LogWarning(ex, message);
+    }
+
+    public async Task<AppPurchaseOptions> GetPurchaseOptions()
+    {
+        var purchaseUrlMode = CurrentClientProfileInfo?.PurchaseUrlMode;
+        var purchaseUrl = CurrentClientProfileInfo?.PurchaseUrl;
+
+        // get subscription plans from store
+        var subscriptionPlans = Array.Empty<SubscriptionPlan>();
+        string? storeName = null;
+        ApiError? apiError = null;
+        if (purchaseUrlMode != PurchaseUrlMode.HideStore) {
+            try {
+                var billingService = Services.AccountService?.BillingService;
+                storeName = billingService?.ProviderName;
+                if (billingService != null)
+                    subscriptionPlans = await billingService.GetSubscriptionPlans();
+            }
+            catch (Exception ex) {
+                apiError = ex.ToApiError();
+            }
+        }
+
+        // calculate purchase url
+        var externalUrl = purchaseUrlMode switch {
+            PurchaseUrlMode.HideStore => purchaseUrl,
+            PurchaseUrlMode.WithStore => purchaseUrl,
+            PurchaseUrlMode.WhenNoStore when apiError is not null => purchaseUrl,
+            _ => null
+        };
+
+        var purchaseOptions = new AppPurchaseOptions {
+            StoreName = storeName,
+            SubscriptionPlans = subscriptionPlans,
+            StoreError = apiError, // no error if purchaseUrl is set
+            PurchaseUrl = externalUrl,
+        };
+
+        return purchaseOptions;
     }
 
     public Task RunJob()

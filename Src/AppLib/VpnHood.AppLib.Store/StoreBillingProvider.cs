@@ -15,6 +15,8 @@ internal class StoreBillingProvider(
 {
     public BillingPurchaseState PurchaseState { get; private set; }
 
+    public string ProviderName => billingProvider.ProviderName;
+
     public Task<SubscriptionPlan[]> GetSubscriptionPlans()
     {
         return billingProvider.GetSubscriptionPlans();

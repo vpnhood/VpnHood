@@ -20,4 +20,9 @@ public class BillingController : ControllerBase, IBillingController
     {
         throw new SwaggerOnlyException();
     }
+
+    public Task<AppPurchaseOptions> GetPurchaseOptions()
+    {
+        throw new SwaggerOnlyException();
+    }
 }

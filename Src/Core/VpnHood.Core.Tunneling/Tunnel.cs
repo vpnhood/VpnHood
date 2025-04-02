@@ -69,9 +69,11 @@ public class Tunnel : IJob, IAsyncDisposable
         get {
             lock (_channelListLock) {
                 return new Traffic {
-                    Sent = _trafficUsage.Sent + _streamProxyChannels.Sum(x => x.Traffic.Sent) +
+                    Sent = _trafficUsage.Sent +
+                           _streamProxyChannels.Sum(x => x.Traffic.Sent) +
                            _datagramChannels.Sum(x => x.Traffic.Sent),
-                    Received = _trafficUsage.Received + _streamProxyChannels.Sum(x => x.Traffic.Received) +
+                    Received = _trafficUsage.Received +
+                               _streamProxyChannels.Sum(x => x.Traffic.Received) +
                                _datagramChannels.Sum(x => x.Traffic.Received)
                 };
             }
@@ -232,6 +234,7 @@ public class Tunnel : IJob, IAsyncDisposable
         }
     }
 
+    //todo: consider to remove this method. new list allocation overhead
     public Task SendPacketAsync(IPPacket ipPacket, CancellationToken cancellationToken)
     {
         return SendPacketsAsync([ipPacket], cancellationToken);
@@ -240,15 +243,81 @@ public class Tunnel : IJob, IAsyncDisposable
     public async Task SendPacketsAsync(IList<IPPacket> ipPackets, CancellationToken cancellationToken)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
-        await WaitForQueueAsync(cancellationToken);
-        EnqueuePackets(ipPackets);
+
+        // flush all packets to the same channel
+        var channel = FindChannelForPackets(ipPackets);
+        if (channel != null) {
+            await channel.SendPacketAsync(ipPackets);
+            return;
+        }
+
+        // Send each packet to the appropriate channel
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < ipPackets.Count; i++) {
+            channel = FindChannelForPacket(ipPackets[i]);
+            await channel.SendPacketAsync(ipPackets[i]);
+        }
     }
 
     public void SendPackets(IList<IPPacket> ipPackets, CancellationToken cancellationToken)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
-        WaitForQueue(cancellationToken);
-        EnqueuePackets(ipPackets);
+
+        if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
+        //WaitForQueue(cancellationToken);
+        //EnqueuePackets(ipPackets);
+        //return;
+
+        // flush all packets to the same channel
+        var channel = FindChannelForPackets(ipPackets);
+        if (channel != null) {
+            channel.SendPacket(ipPackets);
+            return;
+        }
+
+        // Send each packet to the appropriate channel
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < ipPackets.Count; i++) {
+            channel = FindChannelForPacket(ipPackets[i]);
+            channel.SendPacket(ipPackets[i]);
+        }
+    }
+
+    private IDatagramChannel? FindChannelForPackets(IList<IPPacket> ipPackets)
+    {
+        IDatagramChannel? channel = null;
+
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < ipPackets.Count; i++) {
+            var packetChannel = FindChannelForPacket(ipPackets[i]);
+            channel ??= packetChannel;
+            if (channel != packetChannel)
+                return null; // different channels
+        }
+
+        return channel;
+    }
+
+    private IDatagramChannel FindChannelForPacket(IPPacket ipPacket)
+    {
+        // send packets directly if there is only one channel
+        lock (_datagramChannels) {
+            var channelCount = _datagramChannels.Count;
+            return channelCount switch {
+                0 => throw new Exception("There is no DatagramChannel to send packets."),
+                1 => _datagramChannels[0],
+                _ => ipPacket.Protocol switch {
+                    // select channel by tcp source port
+                    ProtocolType.Tcp => _datagramChannels[ipPacket.ExtractTcp().SourcePort % channelCount],
+
+                    // select channel by udp source port
+                    ProtocolType.Udp => _datagramChannels[ipPacket.ExtractUdp().SourcePort % _datagramChannels.Count],
+
+                    // select the first channel for other protocols
+                    _ => _datagramChannels[0]
+                }
+            };
+        }
     }
 
     private async Task WaitForQueueAsync(CancellationToken cancellationToken)
@@ -301,7 +370,7 @@ public class Tunnel : IJob, IAsyncDisposable
                 var ipPacket = ipPackets[i];
                 _packetQueue.Enqueue(ipPacket);
             }
-            
+
             var releaseCount = DatagramChannelCount - _packetSenderSemaphore.CurrentCount;
             if (releaseCount > 0)
                 _packetSenderSemaphore.Release(releaseCount); // there are some packets! 
@@ -378,7 +447,7 @@ public class Tunnel : IJob, IAsyncDisposable
                     _packetSentEvent.Release();
 
                     try {
-                        await channel.SendPacket(packets).VhConfigureAwait();
+                        await channel.SendPacketAsync(packets).VhConfigureAwait();
                     }
                     catch {
                         if (!_disposed)

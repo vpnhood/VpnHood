@@ -57,7 +57,7 @@ public class TunnelTest : TestBase
         var serverReceivedPackets = Array.Empty<IPPacket>();
         serverUdpChannel.PacketReceived += delegate(object? sender, ChannelPacketReceivedEventArgs e) {
             serverReceivedPackets = e.IpPackets.ToArray();
-            _ = serverUdpChannel.SendPacket(e.IpPackets);
+            _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
         };
 
         // Create client
@@ -74,7 +74,7 @@ public class TunnelTest : TestBase
         };
 
         // send packet to server through channel
-        _ = clientUdpChannel.SendPacket(packets.ToArray());
+        _ = clientUdpChannel.SendPacketAsync(packets.ToArray());
         waitHandle.WaitOne(5000);
         Assert.AreEqual(packets.Count, serverReceivedPackets.Length);
         Assert.AreEqual(packets.Count, clientReceivedPackets.Length);
@@ -110,7 +110,7 @@ public class TunnelTest : TestBase
         serverTunnel.AddChannel(serverUdpChannel);
         serverTunnel.PacketReceived += delegate(object? sender, ChannelPacketReceivedEventArgs e) {
             serverReceivedPackets = e.IpPackets.ToArray();
-            _ = serverUdpChannel.SendPacket(e.IpPackets);
+            _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
         };
 
         // Create client

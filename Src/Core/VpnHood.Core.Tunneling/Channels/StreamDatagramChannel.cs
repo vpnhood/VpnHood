@@ -11,14 +11,15 @@ namespace VpnHood.Core.Tunneling.Channels;
 
 public class StreamDatagramChannel : IDatagramChannel, IJob
 {
-    private readonly byte[] _buffer = new byte[0xFFFF];
-    private const int Mtu = 0xFFFF;
+    private readonly byte[] _buffer = new byte[0xFFFF * 4];
     private readonly IClientStream _clientStream;
     private readonly DateTime _lifeTime = DateTime.MaxValue;
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
+    private readonly SemaphoreSlim _sendingSemaphore = new(1, 1);
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private bool _isCloseSent;
     private bool _isCloseReceived;
+    private readonly IPPacket[] _sendingPackets = [null!];
 
     public event EventHandler<ChannelPacketReceivedEventArgs>? PacketReceived;
     public JobSection JobSection { get; } = new();
@@ -26,6 +27,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     public bool Connected { get; private set; }
     public Traffic Traffic { get; } = new();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
+
     public bool IsStream => true;
 
     public StreamDatagramChannel(IClientStream clientStream, string channelId)
@@ -61,27 +63,54 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
             await ReadTask(_cancellationTokenSource.Token).VhConfigureAwait();
             await SendClose().VhConfigureAwait();
         }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex, "StreamDatagramChannel has been stopped unexpectedly.");
+        }
         finally {
             Connected = false;
-            _ = DisposeAsync();
+            await DisposeAsync();
         }
     }
 
-    public Task SendPacket(IList<IPPacket> ipPackets)
+    // it is not thread safe
+    public void SendPacket(IPPacket packet)
     {
-        return SendPacket(ipPackets, false);
+        _sendingPackets[0] = packet;
+        SendPacket(_sendingPackets);
     }
 
-    public async Task SendPacket(IList<IPPacket> ipPackets, bool disconnect)
+    public void SendPacket(IList<IPPacket> ipPackets)
     {
-        if (_disposed)
-            throw new ObjectDisposedException(VhLogger.FormatType(this));
+        SendPacketInternalAsync(ipPackets).Wait();
+    }
+
+    public async Task SendPacketAsync(IPPacket packet)
+    {
+        try {
+            await _sendingSemaphore.WaitAsync();
+            _sendingPackets[0] = packet;
+            await SendPacketAsync(_sendingPackets);
+        }
+        finally {
+            _sendingSemaphore.Release();
+        }
+    }
+
+    public Task SendPacketAsync(IList<IPPacket> ipPackets)
+    {
+        return SendPacketInternalAsync(ipPackets);
+    }
+
+    private async Task SendPacketInternalAsync(IList<IPPacket> ipPackets)
+    {
+        if (_disposed) throw new ObjectDisposedException(VhLogger.FormatType(this));
+        var cancellationToken = _cancellationTokenSource.Token;
 
         try {
-            await _sendSemaphore.WaitAsync(_cancellationTokenSource.Token).VhConfigureAwait();
+            await _sendSemaphore.WaitAsync(cancellationToken).VhConfigureAwait();
 
             // check channel connectivity
-            _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+            cancellationToken.ThrowIfCancellationRequested();
             if (!Connected)
                 throw new Exception($"The StreamDatagramChannel is disconnected. ChannelId: {ChannelId}.");
 
@@ -89,29 +118,39 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
             var buffer = _buffer;
             var bufferIndex = 0;
 
-            var dataLen = 0;
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < ipPackets.Count; i++) {
                 var ipPacket = ipPackets[i];
+                var packetBytes = ipPacket.Bytes;
 
-                // check MTU
-                dataLen += ipPackets[i].TotalPacketLength;
-                if (dataLen > Mtu)
-                    throw new InvalidOperationException(
-                        $"Total packets length is too big for this StreamDatagramChannel. ChannelId {ChannelId}, MaxSize: {Mtu}, Packets Size: {dataLen}");
+                // flush buffer if this packet does not fit
+                if (bufferIndex > 0 && bufferIndex + packetBytes.Length > buffer.Length) {
+                    await _clientStream.Stream.WriteAsync(buffer, 0, bufferIndex, cancellationToken).VhConfigureAwait();
+                    Traffic.Sent += bufferIndex;
+                    bufferIndex = 0;
+                }
 
-                // copy to buffer
-                Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalLength);
-                bufferIndex += ipPacket.TotalLength;
+                // Write the packet directly if it does fit in the buffer
+                if (packetBytes.Length > buffer.Length) {
+                    // send packet
+                    await _clientStream.Stream.WriteAsync(packetBytes, cancellationToken).VhConfigureAwait();
+                    Traffic.Sent += packetBytes.Length;
+                }
+                else {
+                    Buffer.BlockCopy(packetBytes, 0, buffer, bufferIndex, packetBytes.Length);
+                    bufferIndex += packetBytes.Length;
+                }
             }
 
-            await _clientStream.Stream.WriteAsync(buffer, 0, bufferIndex, _cancellationTokenSource.Token)
-                .VhConfigureAwait();
+            // send remaining buffer
+            if (bufferIndex > 0) {
+                await _clientStream.Stream.WriteAsync(buffer, 0, bufferIndex, cancellationToken).VhConfigureAwait();
+                Traffic.Sent += bufferIndex;
+            }
+
             LastActivityTime = FastDateTime.Now;
-            Traffic.Sent += bufferIndex;
         }
         finally {
-            if (disconnect) Connected = false;
             _sendSemaphore.Release();
         }
     }
@@ -121,42 +160,51 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         var stream = _clientStream.Stream;
         var eventArgs = new ChannelPacketReceivedEventArgs([], this);
 
-        try {
-            await using var streamPacketReader = new StreamPacketReader(stream);
-            while (!cancellationToken.IsCancellationRequested && !_isCloseReceived) {
-                var ipPackets = await streamPacketReader.ReadAsync(cancellationToken).VhConfigureAwait();
-                if (ipPackets == null || _disposed)
-                    break;
+        await using var streamPacketReader = new StreamPacketReader(stream);
+        while (!cancellationToken.IsCancellationRequested && !_isCloseReceived && !_disposed) {
+            var ipPackets = await streamPacketReader.ReadAsync(cancellationToken).VhConfigureAwait();
+            if (ipPackets == null)
+                break;
 
-                LastActivityTime = FastDateTime.Now;
-                Traffic.Received += ipPackets.Sum(x => x.TotalLength);
+            LastActivityTime = FastDateTime.Now;
+            Traffic.Received += ipPackets.Sum(x => x.TotalLength);
 
-                // check datagram message
-                List<IPPacket>? processedPackets = null;
-                // ReSharper disable once ForCanBeConvertedToForeach
-                for (var i = 0; i < ipPackets.Count; i++) {
-                    var ipPacket = ipPackets[i];
-                    if (ProcessMessage(ipPacket)) {
-                        processedPackets ??= [];
-                        processedPackets.Add(ipPacket);
-                    }
-                }
+            // check datagram message
+            ProcessMessage(ipPackets);
 
-                // remove all processed packets
-                if (processedPackets != null)
-                    ipPackets = ipPackets.Except(processedPackets).ToArray();
-
-                // fire new packets
-                if (ipPackets.Count > 0) {
+            // fire new packets
+            if (ipPackets.Count > 0) {
+                try {
                     eventArgs.IpPackets = ipPackets;
                     PacketReceived?.Invoke(this, eventArgs);
                 }
+                catch (Exception ex) {
+                    VhLogger.Instance.LogError(GeneralEventId.Packet, ex,
+                        "Could not process the read packets. PacketCount: {PacketCount}", ipPackets.Count);
+                }
             }
         }
-        catch (Exception ex) {
-            VhLogger.LogError(GeneralEventId.Packet, ex, "Could not read packet from StreamDatagram.");
-            throw;
+
+    }
+
+    private void ProcessMessage(IList<IPPacket> ipPackets)
+    {
+        // check datagram message
+        List<IPPacket>? processedPackets = null;
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < ipPackets.Count; i++) {
+            var ipPacket = ipPackets[i];
+            if (ProcessMessage(ipPacket)) {
+                processedPackets ??= [];
+                processedPackets.Add(ipPacket);
+            }
         }
+
+        // remove all processed packets
+        if (processedPackets != null)
+            foreach (var processedPacket in processedPackets) {
+                ipPackets.Remove(processedPacket);
+            }
     }
 
     private bool ProcessMessage(IPPacket ipPacket)
@@ -176,12 +224,13 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         return true;
     }
 
-    private Task SendClose(bool throwException = false)
+    private async Task SendClose()
     {
         try {
             // already send
             if (_isCloseSent)
-                return Task.CompletedTask;
+                return;
+
             _isCloseSent = true;
             _cancellationTokenSource.CancelAfter(TunnelDefaults.TcpGracefulTimeout);
 
@@ -191,17 +240,15 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                 "StreamDatagramChannel sending the close message to the remote. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);
 
-            return SendPacket([ipPacket], true);
+            await SendPacketAsync(ipPacket);
         }
         catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.DatagramChannel, ex,
                 "Could not set the close message to the remote. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);
-
-            if (throwException)
-                throw;
-
-            return Task.CompletedTask;
+        }
+        finally {
+            Connected = false;
         }
     }
 

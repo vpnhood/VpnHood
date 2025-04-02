@@ -15,10 +15,12 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
     private IPEndPoint? _lastRemoteEp;
     private readonly byte[] _buffer = new byte[0xFFFF];
     private UdpChannelTransmitter? _udpChannelTransmitter;
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
+    private readonly SemaphoreSlim _sendingSemaphore = new(1, 1);
     private readonly BufferCryptor _sessionCryptorWriter = new(sessionKey);
     private readonly BufferCryptor _sessionCryptorReader = new(sessionKey);
     private ChannelPacketReceivedEventArgs? _eventArgs;
+    private readonly IPPacket[] _sendingPackets = [null!];
     private bool _disposed;
 
     private readonly long
@@ -47,12 +49,37 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
         LastActivityTime = FastDateTime.Now;
     }
 
-    public async Task SendPacket(IList<IPPacket> ipPackets)
+    // it is not thread safe
+    public void SendPacket(IPPacket packet)
+    {
+        _sendingPackets[0] = packet;
+        SendPacket(_sendingPackets);
+    }
+
+    public void SendPacket(IList<IPPacket> ipPackets)
+    {
+        SendPacketAsync(ipPackets).Wait();
+    }
+
+    public async Task SendPacketAsync(IPPacket packet)
+    {
+        try {
+            await _sendingSemaphore.WaitAsync();
+            _sendingPackets[0] = packet;
+            await SendPacketAsync(_sendingPackets);
+        }
+        finally {
+            _sendingSemaphore.Release();
+        }
+    }
+
+    public async Task SendPacketAsync(IList<IPPacket> ipPackets)
     {
         try {
             // this is shared buffer and client, so we need to sync
             // Using multiple UdpClient will not increase performance
-            await _semaphore.WaitAsync().VhConfigureAwait();
+            // todo: check is it really needed
+            await _sendSemaphore.WaitAsync().VhConfigureAwait();
 
             var bufferIndex = UdpChannelTransmitter.HeaderLength;
 
@@ -86,7 +113,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
                 await DisposeAsync().VhConfigureAwait();
         }
         finally {
-            _semaphore.Release();
+            _sendSemaphore.Release();
         }
     }
 

@@ -1,6 +1,4 @@
-﻿using VpnHood.Core.Common.Tokens;
-
-namespace VpnHood.AppLib.ClientProfiles;
+﻿namespace VpnHood.AppLib.ClientProfiles;
 
 public class ClientProfileBaseInfo
 {

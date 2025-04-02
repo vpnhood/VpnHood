@@ -280,9 +280,7 @@ internal class ClientHost(
                 RequestId = Guid.NewGuid() + ":client",
                 SessionId = vpnHoodClient.SessionId,
                 SessionKey = vpnHoodClient.SessionKey,
-                DestinationEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-                CipherKey = VhUtils.GenerateKey(),
-                CipherLength = natItem.DestinationPort == 443 ? TunnelDefaults.TlsHandshakeLength : -1
+                DestinationEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort)
             };
 
             // read the response

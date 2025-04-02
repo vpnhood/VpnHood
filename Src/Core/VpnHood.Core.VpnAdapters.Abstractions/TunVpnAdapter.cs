@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
@@ -15,6 +16,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
     private int _mtu = 0xFFFF;
     private readonly int _maxAutoRestartCount = adapterSettings.MaxAutoRestartCount;
     private int _autoRestartCount;
+    private readonly PacketReceivedEventArgs _packetReceivedEventArgs = new([]);
 
     protected bool IsDisposed { get; private set; }
     protected bool UseNat { get; private set; }
@@ -420,8 +422,10 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
     protected void InvokeReadPackets(IList<IPPacket> packetList)
     {
         try {
-            if (packetList.Count > 0)
-                PacketReceived?.Invoke(this, new PacketReceivedEventArgs(packetList));
+            if (packetList.Count > 0) {
+                _packetReceivedEventArgs.IpPackets = packetList;
+                PacketReceived?.Invoke(this, _packetReceivedEventArgs);
+            }
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error in invoking packet received event.");

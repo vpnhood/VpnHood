@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -21,7 +22,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     private bool _isCloseReceived;
     private readonly IPPacket[] _sendingPackets = [null!];
 
-    public event EventHandler<ChannelPacketReceivedEventArgs>? PacketReceived;
+    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public JobSection JobSection { get; } = new();
     public string ChannelId { get; }
     public bool Connected { get; private set; }
@@ -158,7 +159,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     private async Task ReadTask(CancellationToken cancellationToken)
     {
         var stream = _clientStream.Stream;
-        var eventArgs = new ChannelPacketReceivedEventArgs([], this);
+        var eventArgs = new PacketReceivedEventArgs([]);
 
         await using var streamPacketReader = new StreamPacketReader(stream);
         while (!cancellationToken.IsCancellationRequested && !_isCloseReceived && !_disposed) {

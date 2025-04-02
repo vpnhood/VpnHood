@@ -38,5 +38,4 @@ public static class PacketUtil
         bufferIndex += packetLength;
         return packet;
     }
-
 }

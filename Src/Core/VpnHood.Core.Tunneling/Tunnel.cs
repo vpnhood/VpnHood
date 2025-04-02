@@ -15,10 +15,6 @@ namespace VpnHood.Core.Tunneling;
 public class Tunnel : IJob, IAsyncDisposable
 {
     private readonly object _channelListLock = new();
-    private const int MaxQueueLength = 200;
-    private const int MtuNoFragment = TunnelDefaults.MtuWithoutFragmentation;
-    private const int MtuWithFragment = TunnelDefaults.MtuWithFragmentation;
-    private readonly Queue<IPPacket> _packetQueue = new();
     private readonly SemaphoreSlim _packetSentEvent = new(0);
     private readonly SemaphoreSlim _packetSenderSemaphore = new(0);
     private readonly HashSet<StreamProxyChannel> _streamProxyChannels = [];
@@ -27,19 +23,28 @@ public class Tunnel : IJob, IAsyncDisposable
     private int _maxDatagramChannelCount;
     private Traffic _lastTraffic = new();
     private readonly Traffic _trafficUsage = new();
-    private readonly TimeSpan _datagramPacketTimeout = TimeSpan.FromSeconds(100);
     private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
     private readonly TimeSpan _speedTestThreshold = TimeSpan.FromSeconds(2);
-    public event EventHandler<ChannelPacketReceivedEventArgs>? PacketReceived;
+    private readonly Channel<IPPacket> _sendChannel;
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
+
+    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public Traffic Speed { get; } = new();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public JobSection JobSection { get; } = new();
-
+    public int Mtu { get; set; } = TunnelDefaults.Mtu;
+    
     public Tunnel(TunnelOptions? options = null)
     {
         options ??= new TunnelOptions();
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _speedMonitorTimer = new Timer(_ => UpdateSpeed(), null, TimeSpan.Zero, _speedTestThreshold);
+        _sendChannel = Channel.CreateBounded<IPPacket>(new BoundedChannelOptions(options.MaxQueueLength) {
+            SingleReader = true,
+            SingleWriter = false,
+            FullMode = BoundedChannelFullMode.DropWrite
+        });
+        _ = SendEnqueuedPacketTask(options.MaxQueueLength);
         JobRunner.Default.Add(this);
     }
 
@@ -153,9 +158,6 @@ public class Tunnel : IJob, IAsyncDisposable
             foreach (var channel in _datagramChannels.Where(x => x.IsStream != datagramChannel.IsStream).ToArray())
                 RemoveChannel(channel);
         }
-
-        //  SendPacketTask after starting the channel and must be outside the lock
-        _ = SendPacketTask(datagramChannel);
     }
 
     public void AddChannel(StreamProxyChannel channel)
@@ -205,13 +207,13 @@ public class Tunnel : IJob, IAsyncDisposable
         channel.DisposeAsync();
     }
 
-    private void Channel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
+    private void Channel_OnPacketReceived(object sender, PacketReceivedEventArgs e)
     {
         if (_disposed)
             return;
 
         if (VhLogger.IsDiagnoseMode)
-            PacketLogger.LogPackets(e.IpPackets, $"Packets received from a channel. ChannelId: {e.Channel.ChannelId}");
+            PacketLogger.LogPackets(e.IpPackets, $"Packets received from a channel. ChannelId: {(sender as IChannel)?.ChannelId}");
 
         // check datagram message
         // performance critical; don't create another array by linq
@@ -220,8 +222,8 @@ public class Tunnel : IJob, IAsyncDisposable
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < e.IpPackets.Count; i++) {
             if (DatagramMessageHandler.IsDatagramMessage(e.IpPackets[i])) {
-                e = new ChannelPacketReceivedEventArgs(
-                    e.IpPackets.Where(x => !DatagramMessageHandler.IsDatagramMessage(x)).ToArray(), e.Channel);
+                e = new PacketReceivedEventArgs(
+                    e.IpPackets.Where(x => !DatagramMessageHandler.IsDatagramMessage(x)).ToArray());
                 break;
             }
         }
@@ -235,27 +237,49 @@ public class Tunnel : IJob, IAsyncDisposable
         }
     }
 
-    Channel<IPPacket> _channel = Channel.CreateUnbounded<IPPacket>();
-    public void EnqueuePacket(IPPacket ipPacket)
+    // Usually server use this method to send packets to the client
+    public void SendPacketEnqueue(IPPacket ipPacket)
     {
-
+        _sendChannel.Writer.TryWrite(ipPacket);
     }
 
-
-    //todo: consider to remove this method. new list allocation overhead
-    public Task SendPacketAsync(IPPacket ipPacket, CancellationToken cancellationToken)
+    private async Task SendEnqueuedPacketTask(int maxQueueLength)
     {
-        return SendPacketsAsync([ipPacket], cancellationToken);
+        var packets = new List<IPPacket>(maxQueueLength);
+        while (!_disposed) {
+            // wait for new packets
+            await _sendChannel.Reader.WaitToReadAsync(_cancellationTokenSource.Token);
+
+            // dequeue all packets
+            while (_sendChannel.Reader.TryRead(out var ipPacket))
+                packets.Add(ipPacket);
+
+            // send packets
+            await SendPacketsAsync(packets);
+        }
     }
 
-    public async Task SendPacketsAsync(IList<IPPacket> ipPackets, CancellationToken cancellationToken)
+    public async Task SendPacketsAsync(IList<IPPacket> ipPackets)
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
+        if (_disposed) 
+            throw new ObjectDisposedException(nameof(Tunnel));
+
+        // check is there any packet larger than MTU
+        CheckMtu(ipPackets);
 
         // flush all packets to the same channel
         var channel = FindChannelForPackets(ipPackets);
         if (channel != null) {
-            await channel.SendPacketAsync(ipPackets);
+            try {
+                await channel.SendPacketAsync(ipPackets);
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex,
+                    "Could not send some packets via a channel. ChannelId: {ChannelId}, PacketCount: {PacketCount}",
+                    channel.ChannelId, ipPackets.Count);
+
+                RemoveChannel(channel);
+            }
             return;
         }
 
@@ -263,18 +287,39 @@ public class Tunnel : IJob, IAsyncDisposable
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
             channel = FindChannelForPacket(ipPackets[i]);
-            await channel.SendPacketAsync(ipPackets[i]);
+            try {
+                await channel.SendPacketAsync(ipPackets[i]);
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex,
+                    "Could not send a packet via a channel. ChannelId: {ChannelId}, PacketCount: {PacketCount}",
+                    channel.ChannelId, ipPackets.Count);
+                RemoveChannel(channel);
+            }
         }
     }
 
-    public void SendPackets(IList<IPPacket> ipPackets, CancellationToken cancellationToken)
+    public void SendPackets(IList<IPPacket> ipPackets)
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(Tunnel));
+
+        // check is there any packet larger than MTU
+        CheckMtu(ipPackets);
 
         // flush all packets to the same channel
         var channel = FindChannelForPackets(ipPackets);
         if (channel != null) {
-            channel.SendPacket(ipPackets);
+            try {
+                channel.SendPacket(ipPackets);
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex,
+                    "Could not send some packets via a channel. ChannelId: {ChannelId}, PacketCount: {PacketCount}",
+                    channel.ChannelId, ipPackets.Count);
+
+                RemoveChannel(channel);
+            }
             return;
         }
 
@@ -282,7 +327,47 @@ public class Tunnel : IJob, IAsyncDisposable
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
             channel = FindChannelForPacket(ipPackets[i]);
-            channel.SendPacket(ipPackets[i]);
+            try {
+                channel.SendPacket(ipPackets[i]);
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex,
+                    "Could not send a packet via a channel. ChannelId: {ChannelId}, PacketCount: {PacketCount}",
+                    channel.ChannelId, ipPackets.Count);
+
+                RemoveChannel(channel);
+            }
+        }
+    }
+
+    private void CheckMtu(IList<IPPacket> ipPackets)
+    {
+        // check is there any packet larger than MTU
+        var found = false;
+        for (var i = 0; i < ipPackets.Count && !found; i++) 
+            found = ipPackets[i].TotalPacketLength > Mtu;
+        
+        // no need to check if there is no large packet
+        if (!found)
+            return;
+
+        // remove large packets and send PacketTooBig replies
+        var bigPackets = ipPackets.Where(x=>x.TotalPacketLength >Mtu);
+        foreach (var bigPacket in bigPackets) {
+            try {
+                ipPackets.Remove(bigPacket);
+                VhLogger.Instance.LogWarning(
+                    "Packet dropped! Packet is too big. " +
+                    "MTU: {Mtu}, PacketLength: {PacketLength} Packet: {Packet}",
+                    Mtu, bigPacket.TotalPacketLength, PacketLogger.Format(bigPacket));
+
+                var replyPacket = PacketBuilder.BuildPacketTooBigReply(bigPacket, (ushort)Mtu);
+                PacketReceived?.Invoke(this, new PacketReceivedEventArgs([replyPacket]));
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex,
+                    "Packets dropped! Error in sending BuildPacketTooBigReply.");
+            }
         }
     }
 
@@ -323,108 +408,6 @@ public class Tunnel : IJob, IAsyncDisposable
         }
     }
 
-    private async Task SendPacketTask(IDatagramChannel channel)
-    {
-        var packets = new List<IPPacket>();
-
-        // ** Warning: This is one of the most busy loop in the app. Performance is critical!
-        try {
-            // ReSharper disable once MergeIntoPattern
-            while (channel.Connected && !_disposed) {
-                if (_disposed)
-                    return;
-
-                //only one thread can dequeue packets to let send buffer with sequential packets
-                // dequeue available packets and add them to list in favor of buffer size
-                lock (_packetQueue) {
-                    var size = 0;
-                    packets.Clear();
-                    while (_packetQueue.TryPeek(out var ipPacket)) {
-                        if (ipPacket == null) throw new Exception("Null packet should not be in the queue.");
-                        var packetSize = ipPacket.TotalPacketLength;
-
-                        // drop packet if it is larger than _mtuWithFragment
-                        if (packetSize > MtuWithFragment) {
-                            VhLogger.Instance.LogWarning(
-                                "Packet dropped! There is no channel to support this fragmented packet. " +
-                                "Fragmented MTU: {MtuWithFragment}, PacketLength: {PacketLength}, Packet: {Packet}",
-                                MtuWithFragment, ipPacket.TotalLength, PacketLogger.Format(ipPacket));
-                            _packetQueue.TryDequeue(out ipPacket);
-                            continue;
-                        }
-
-                        // drop packet if it is larger than _mtuNoFragment
-                        if (packetSize > MtuNoFragment && ipPacket is IPv4Packet { FragmentFlags: 2 }) {
-                            VhLogger.Instance.LogWarning(
-                                "Packet dropped! There is no channel to support this non fragmented packet. " +
-                                "NoFragmented MTU: {MtuNoFragment}, PacketLength: {PacketLength} Packet: {Packet}",
-                                MtuNoFragment, ipPacket.TotalLength, PacketLogger.Format(ipPacket));
-
-                            _packetQueue.TryDequeue(out ipPacket);
-                            var replyPacket = PacketBuilder.BuildPacketTooBigReply(ipPacket, MtuNoFragment);
-                            PacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs([replyPacket], channel));
-                            continue;
-                        }
-
-                        // just send this packet if it is bigger than _mtuNoFragment and there is no more packet in the buffer
-                        // packets should be empty to decrease the chance of missing the other packets by this packet
-                        if (packetSize > MtuNoFragment && packets.Count == 0 && _packetQueue.TryDequeue(out ipPacket)) {
-                            packets.Add(ipPacket);
-                            break;
-                        }
-
-                        // send other packets if this packet makes the buffer too big
-                        if (packetSize + size > MtuNoFragment)
-                            break;
-
-                        size += packetSize;
-                        if (_packetQueue.TryDequeue(out ipPacket))
-                            packets.Add(ipPacket);
-                    }
-                }
-
-                // send selected packets
-                if (packets.Count > 0) {
-                    _packetSenderSemaphore.Release(); // lets the other do the rest (if any)
-                    _packetSentEvent.Release();
-
-                    try {
-                        await channel.SendPacketAsync(packets).VhConfigureAwait();
-                    }
-                    catch {
-                        if (!_disposed)
-                            _ = SendPacketsAsync(packets, CancellationToken.None); //resend packets
-
-                        if (!channel.Connected && !_disposed)
-                            throw; // this channel has error
-                    }
-                }
-                // wait for next new packets
-                else {
-                    await _packetSenderSemaphore.WaitAsync().VhConfigureAwait();
-                }
-            } // while
-        }
-        catch (Exception ex) {
-            VhLogger.LogError(GeneralEventId.DatagramChannel, ex,
-                "Could not send some packets via a channel. ChannelId: {ChannelId}, PacketCount: {PacketCount}",
-                channel.ChannelId, packets.Count);
-        }
-
-        // make sure to remove the channel
-        try {
-            RemoveChannel(channel);
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not remove a datagram channel. ChannelId: {ChannelId}",
-                channel.ChannelId);
-        }
-
-        // lets the others do the rest of the job (if any)
-        _packetSenderSemaphore.Release();
-        _packetSentEvent.Release();
-    }
-
     public Task RunJob()
     {
         // remove disconnected channels
@@ -448,6 +431,7 @@ public class Tunnel : IJob, IAsyncDisposable
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
         _disposed = true;
+        _cancellationTokenSource.Cancel();
 
         // make sure to call RemoveChannel to perform proper clean up such as setting _sentByteCount and _receivedByteCount 
         var disposeTasks = new List<Task>();

@@ -202,10 +202,11 @@ public class Session : IAsyncDisposable
             ipPacket.UpdateIpChecksum();
         }
 
-        return Tunnel.SendPacketAsync(ipPacket, CancellationToken.None);
+        Tunnel.SendPacketEnqueue(ipPacket);
+        return Task.CompletedTask;
     }
 
-    private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
+    private void Tunnel_OnPacketReceived(object sender, PacketReceivedEventArgs e)
     {
         if (IsDisposed)
             return;

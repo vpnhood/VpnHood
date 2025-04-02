@@ -19,7 +19,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
     private readonly SemaphoreSlim _sendingSemaphore = new(1, 1);
     private readonly BufferCryptor _sessionCryptorWriter = new(sessionKey);
     private readonly BufferCryptor _sessionCryptorReader = new(sessionKey);
-    private ChannelPacketReceivedEventArgs? _eventArgs;
+    private PacketReceivedEventArgs? _packetReceivedEventArgs;
     private readonly IPPacket[] _sendingPackets = [null!];
     private bool _disposed;
 
@@ -28,7 +28,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
 
     private readonly List<IPPacket> _receivedIpPackets = [];
 
-    public event EventHandler<ChannelPacketReceivedEventArgs>? PacketReceived;
+    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public string ChannelId { get; } = Guid.NewGuid().ToString();
     public bool IsStream => false;
 
@@ -135,9 +135,9 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
                 _receivedIpPackets.Add(ipPacket);
             }
 
-            _eventArgs ??= new ChannelPacketReceivedEventArgs([], this);
-            _eventArgs.IpPackets = _receivedIpPackets.ToArray();
-            PacketReceived?.Invoke(this, _eventArgs);
+            _packetReceivedEventArgs ??= new PacketReceivedEventArgs([]);
+            _packetReceivedEventArgs.IpPackets = _receivedIpPackets.ToArray();
+            PacketReceived?.Invoke(this, _packetReceivedEventArgs);
             LastActivityTime = FastDateTime.Now;
             _receivedIpPackets.Clear();
         }

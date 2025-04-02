@@ -187,7 +187,7 @@ public class Session : IAsyncDisposable
         return ipVersion == IPVersion.IPv4 ? _clientInternalIpV4 : _clientInternalIpV6;
     }
 
-    public Task ProcessInboundPacket(IPPacket ipPacket)
+    public Task Proxy_OnPacketReceived(IPPacket ipPacket)
     {
         if (VhLogger.IsDiagnoseMode)
             PacketLogger.LogPacket(ipPacket, "Delegating packet to client via proxy.");
@@ -476,7 +476,7 @@ public class Session : IAsyncDisposable
 
         public override Task OnPacketReceived(IPPacket ipPacket)
         {
-            return session.ProcessInboundPacket(ipPacket);
+            return session.Proxy_OnPacketReceived(ipPacket);
         }
 
         public override Task SendPacket(IPPacket ipPacket)

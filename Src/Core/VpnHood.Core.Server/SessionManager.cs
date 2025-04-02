@@ -497,7 +497,7 @@ public class SessionManager : IAsyncDisposable, IJob
                 return;
             }
 
-            session.ProcessInboundPacket(ipPacket);
+            session.Proxy_OnPacketReceived(ipPacket);
         }
     }
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Threading.Channels;
+using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
@@ -234,6 +235,13 @@ public class Tunnel : IJob, IAsyncDisposable
         }
     }
 
+    Channel<IPPacket> _channel = Channel.CreateUnbounded<IPPacket>();
+    public void EnqueuePacket(IPPacket ipPacket)
+    {
+
+    }
+
+
     //todo: consider to remove this method. new list allocation overhead
     public Task SendPacketAsync(IPPacket ipPacket, CancellationToken cancellationToken)
     {
@@ -262,11 +270,6 @@ public class Tunnel : IJob, IAsyncDisposable
     public void SendPackets(IList<IPPacket> ipPackets, CancellationToken cancellationToken)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
-
-        if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
-        //WaitForQueue(cancellationToken);
-        //EnqueuePackets(ipPackets);
-        //return;
 
         // flush all packets to the same channel
         var channel = FindChannelForPackets(ipPackets);
@@ -318,67 +321,6 @@ public class Tunnel : IJob, IAsyncDisposable
                 }
             };
         }
-    }
-
-    private async Task WaitForQueueAsync(CancellationToken cancellationToken)
-    {
-        var dateTime = FastDateTime.Now;
-
-        // waiting for a space in the packetQueue; the Inconsistently is not important. synchronization may lead to deadlock
-        // ReSharper disable once InconsistentlySynchronizedField
-        while (_packetQueue.Count > MaxQueueLength) {
-            var releaseCount = DatagramChannelCount - _packetSenderSemaphore.CurrentCount;
-            if (releaseCount > 0)
-                _packetSenderSemaphore.Release(releaseCount); // there is some packet
-
-            await _packetSentEvent.WaitAsync(1000, cancellationToken)
-                .VhConfigureAwait(); //Wait 1 seconds to prevent deadlock.
-            if (_disposed) return;
-
-            // check timeout
-            if (FastDateTime.Now - dateTime > _datagramPacketTimeout)
-                throw new TimeoutException("Could not send datagram packets.");
-        }
-    }
-
-    private void WaitForQueue(CancellationToken cancellationToken)
-    {
-        var dateTime = FastDateTime.Now;
-
-        // waiting for a space in the packetQueue; the Inconsistently is not important. synchronization may lead to deadlock
-        // ReSharper disable once InconsistentlySynchronizedField
-        while (_packetQueue.Count > MaxQueueLength) {
-            var releaseCount = DatagramChannelCount - _packetSenderSemaphore.CurrentCount;
-            if (releaseCount > 0)
-                _packetSenderSemaphore.Release(releaseCount); // there is some packet
-
-            _packetSentEvent.Wait(1000, cancellationToken); //Wait 1 seconds to prevent deadlock.
-            if (_disposed) return;
-
-            // check timeout
-            if (FastDateTime.Now - dateTime > _datagramPacketTimeout)
-                throw new TimeoutException("Could not send datagram packets.");
-        }
-    }
-
-    private void EnqueuePackets(IList<IPPacket> ipPackets)
-    {
-        // add all packets to the queue
-        lock (_packetQueue) {
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < ipPackets.Count; i++) {
-                var ipPacket = ipPackets[i];
-                _packetQueue.Enqueue(ipPacket);
-            }
-
-            var releaseCount = DatagramChannelCount - _packetSenderSemaphore.CurrentCount;
-            if (releaseCount > 0)
-                _packetSenderSemaphore.Release(releaseCount); // there are some packets! 
-        }
-
-        // ReSharper disable once PossibleMultipleEnumeration
-        if (VhLogger.IsDiagnoseMode)
-            PacketLogger.LogPackets(ipPackets, "Packet sent to tunnel queue.");
     }
 
     private async Task SendPacketTask(IDatagramChannel channel)

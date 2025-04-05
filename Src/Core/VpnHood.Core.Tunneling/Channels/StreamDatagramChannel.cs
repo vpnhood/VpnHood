@@ -15,7 +15,6 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     private readonly byte[] _buffer = new byte[0xFFFF * 4];
     private readonly IClientStream _clientStream;
     private readonly DateTime _lifeTime = DateTime.MaxValue;
-    private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
     private readonly SemaphoreSlim _sendingSemaphore = new(1, 1);
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private bool _isCloseSent;
@@ -73,16 +72,17 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         }
     }
 
-    // it is not thread safe
+    // This is not thread-safe
     public void SendPacket(IPPacket packet)
     {
         _sendingPackets[0] = packet;
-        SendPacket(_sendingPackets);
+        SendPacketInternalAsync(_sendingPackets).GetAwaiter().GetResult();
     }
 
+    // This is not thread-safe
     public void SendPacket(IList<IPPacket> ipPackets)
     {
-        SendPacketInternalAsync(ipPackets).Wait();
+        SendPacketInternalAsync(ipPackets).GetAwaiter().GetResult();
     }
 
     public async Task SendPacketAsync(IPPacket packet)
@@ -90,16 +90,22 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         try {
             await _sendingSemaphore.WaitAsync();
             _sendingPackets[0] = packet;
-            await SendPacketAsync(_sendingPackets);
+            await SendPacketInternalAsync(_sendingPackets);
         }
         finally {
             _sendingSemaphore.Release();
         }
     }
 
-    public Task SendPacketAsync(IList<IPPacket> ipPackets)
+    public async Task SendPacketAsync(IList<IPPacket> ipPackets)
     {
-        return SendPacketInternalAsync(ipPackets);
+        try {
+            await _sendingSemaphore.WaitAsync();
+            await SendPacketInternalAsync(ipPackets);
+        }
+        finally {
+            _sendingSemaphore.Release();
+        }
     }
 
     private async Task SendPacketInternalAsync(IList<IPPacket> ipPackets)
@@ -107,53 +113,46 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         if (_disposed) throw new ObjectDisposedException(VhLogger.FormatType(this));
         var cancellationToken = _cancellationTokenSource.Token;
 
-        try {
-            await _sendSemaphore.WaitAsync(cancellationToken).VhConfigureAwait();
+        // check channel connectivity
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!Connected)
+            throw new Exception($"The StreamDatagramChannel is disconnected. ChannelId: {ChannelId}.");
 
-            // check channel connectivity
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!Connected)
-                throw new Exception($"The StreamDatagramChannel is disconnected. ChannelId: {ChannelId}.");
+        // copy packets to buffer
+        var buffer = _buffer;
+        var bufferIndex = 0;
 
-            // copy packets to buffer
-            var buffer = _buffer;
-            var bufferIndex = 0;
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < ipPackets.Count; i++) {
+            var ipPacket = ipPackets[i];
+            var packetBytes = ipPacket.Bytes;
 
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < ipPackets.Count; i++) {
-                var ipPacket = ipPackets[i];
-                var packetBytes = ipPacket.Bytes;
-
-                // flush buffer if this packet does not fit
-                if (bufferIndex > 0 && bufferIndex + packetBytes.Length > buffer.Length) {
-                    await _clientStream.Stream.WriteAsync(buffer, 0, bufferIndex, cancellationToken).VhConfigureAwait();
-                    Traffic.Sent += bufferIndex;
-                    bufferIndex = 0;
-                }
-
-                // Write the packet directly if it does fit in the buffer
-                if (packetBytes.Length > buffer.Length) {
-                    // send packet
-                    await _clientStream.Stream.WriteAsync(packetBytes, cancellationToken).VhConfigureAwait();
-                    Traffic.Sent += packetBytes.Length;
-                }
-                else {
-                    Buffer.BlockCopy(packetBytes, 0, buffer, bufferIndex, packetBytes.Length);
-                    bufferIndex += packetBytes.Length;
-                }
-            }
-
-            // send remaining buffer
-            if (bufferIndex > 0) {
+            // flush buffer if this packet does not fit
+            if (bufferIndex > 0 && bufferIndex + packetBytes.Length > buffer.Length) {
                 await _clientStream.Stream.WriteAsync(buffer, 0, bufferIndex, cancellationToken).VhConfigureAwait();
                 Traffic.Sent += bufferIndex;
+                bufferIndex = 0;
             }
 
-            LastActivityTime = FastDateTime.Now;
+            // Write the packet directly if it does fit in the buffer
+            if (packetBytes.Length > buffer.Length) {
+                // send packet
+                await _clientStream.Stream.WriteAsync(packetBytes, cancellationToken).VhConfigureAwait();
+                Traffic.Sent += packetBytes.Length;
+            }
+            else {
+                Buffer.BlockCopy(packetBytes, 0, buffer, bufferIndex, packetBytes.Length);
+                bufferIndex += packetBytes.Length;
+            }
         }
-        finally {
-            _sendSemaphore.Release();
+
+        // send remaining buffer
+        if (bufferIndex > 0) {
+            await _clientStream.Stream.WriteAsync(buffer, 0, bufferIndex, cancellationToken).VhConfigureAwait();
+            Traffic.Sent += bufferIndex;
         }
+
+        LastActivityTime = FastDateTime.Now;
     }
 
     private async Task ReadTask(CancellationToken cancellationToken)
@@ -245,7 +244,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         }
         catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.DatagramChannel, ex,
-                "Could not set the close message to the remote. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
+                "Could not send the close message to the remote. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);
         }
         finally {

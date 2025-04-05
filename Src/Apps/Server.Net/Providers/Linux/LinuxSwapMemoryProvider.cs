@@ -38,7 +38,7 @@ public class LinuxSwapMemoryProvider(ILogger logger)
             try {
                 var swapFiles = await ListCurrentSwapFiles();
                 if (swapFiles.Any(x => x.FilePath == SwapFilePath))
-                    await LinuxUtils.ExecuteCommandAsync($"swapoff {SwapFilePath}");
+                    await ExecuteCommandAsync($"swapoff {SwapFilePath}");
             }
             catch (Exception ex) {
                 logger.LogWarning(ex, "Failed to disable the current swap file.");
@@ -56,26 +56,26 @@ public class LinuxSwapMemoryProvider(ILogger logger)
 
         // Create a new swap file with the specified size
         logger.LogInformation("Creating a new swap file.");
-        await LinuxUtils.ExecuteCommandAsync($"fallocate -l {size} {SwapFilePath}");
+        await ExecuteCommandAsync($"fallocate -l {size} {SwapFilePath}");
 
         // Set the correct permissions for the new swap file
         logger.LogInformation("Setting the correct permissions for the new swap file.");
-        await LinuxUtils.ExecuteCommandAsync($"chmod 600 /{SwapFilePath}");
+        await ExecuteCommandAsync($"chmod 600 /{SwapFilePath}");
 
         // Format the file as swap space
         logger.LogInformation("Formatting the file as swap space.");
-        await LinuxUtils.ExecuteCommandAsync($"mkswap {SwapFilePath}");
+        await ExecuteCommandAsync($"mkswap {SwapFilePath}");
 
         // Enable the swap file
         logger.LogInformation("Enabling the swap file.");
-        await LinuxUtils.ExecuteCommandAsync($"swapon {SwapFilePath}");
+        await ExecuteCommandAsync($"swapon {SwapFilePath}");
 
         // Let ignore the following and activate the swap file everytime after reboot
         // Ensure the swap file is listed in /etc/fstab for persistence after reboot
-        //var fstabContent = await LinuxUtils.ExecuteCommandAsync("cat /etc/fstab");
+        //var fstabContent = await ExecuteCommandAsync("cat /etc/fstab");
         //if (!fstabContent.Contains($"{SwapFilePath}")) {
         //    logger.LogInformation("Adding the swap file to /etc/fstab for persistence after reboot.");
-        //    await LinuxUtils.ExecuteCommandAsync($"echo '{SwapFilePath} none swap sw 0 0' | tee -a /etc/fstab");
+        //    await ExecuteCommandAsync($"echo '{SwapFilePath} none swap sw 0 0' | tee -a /etc/fstab");
         //}
     }
 
@@ -102,7 +102,7 @@ public class LinuxSwapMemoryProvider(ILogger logger)
         var swapFiles = new List<SwapFile>();
 
         // ReSharper disable StringLiteralTypo
-        var output = await LinuxUtils.ExecuteCommandAsync("swapon --show --bytes");
+        var output = await ExecuteCommandAsync("swapon --show --bytes");
         var lines = output.Split(['\n'], StringSplitOptions.RemoveEmptyEntries);
 
         // Skip the header row and parse the lines
@@ -116,4 +116,10 @@ public class LinuxSwapMemoryProvider(ILogger logger)
 
         return swapFiles;
     }
+
+    private static Task<string> ExecuteCommandAsync(string command, CancellationToken cancellationToken = default)
+    {
+        return OsUtils.ExecuteCommandAsync("/bin/bash", $"-c \"{command}\"", cancellationToken);
+    }
+
 }

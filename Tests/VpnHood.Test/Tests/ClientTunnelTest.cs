@@ -98,12 +98,12 @@ public class ClientTunnelTest : TestBase
         clientServer.AssertTransfer();
     }
 
-    private async Task AssertTunnel(ClientServerDom clientServer)
+    private async Task AssertTunnel(ClientServerDom clientServerDom)
     {
-        await AssertInvalidTcpRequest(clientServer);
-        await AssertValidTcp(clientServer);
-        await AssertValidUdp(clientServer);
-        await AssertValidPingV4(clientServer);
-        await AssertValidPingV6(clientServer);
+        await AssertInvalidTcpRequest(clientServerDom);
+        await AssertValidTcp(clientServerDom);
+        await AssertValidUdp(clientServerDom);
+        await AssertValidPingV4(clientServerDom);
+        await AssertValidPingV6(clientServerDom);
     }
 }

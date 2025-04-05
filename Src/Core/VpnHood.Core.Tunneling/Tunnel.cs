@@ -33,7 +33,8 @@ public class Tunnel : IJob, IAsyncDisposable
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public JobSection JobSection { get; } = new();
     public int Mtu { get; set; } = TunnelDefaults.Mtu;
-    
+    public int RemoteMtu { get; set; } = TunnelDefaults.MtuRemote;
+
     public Tunnel(TunnelOptions? options = null)
     {
         options ??= new TunnelOptions();
@@ -256,12 +257,13 @@ public class Tunnel : IJob, IAsyncDisposable
 
             // send packets
             await SendPacketsAsync(packets);
+            packets.Clear();
         }
     }
 
     public async Task SendPacketsAsync(IList<IPPacket> ipPackets)
     {
-        if (_disposed) 
+        if (_disposed)
             throw new ObjectDisposedException(nameof(Tunnel));
 
         // check is there any packet larger than MTU
@@ -307,6 +309,7 @@ public class Tunnel : IJob, IAsyncDisposable
         // check is there any packet larger than MTU
         CheckMtu(ipPackets);
 
+
         // flush all packets to the same channel
         var channel = FindChannelForPackets(ipPackets);
         if (channel != null) {
@@ -342,26 +345,29 @@ public class Tunnel : IJob, IAsyncDisposable
 
     private void CheckMtu(IList<IPPacket> ipPackets)
     {
+        // use RemoteMtu if the channel is streamed
+        var mtu = IsUdpMode ? Mtu : RemoteMtu;
+
         // check is there any packet larger than MTU
         var found = false;
-        for (var i = 0; i < ipPackets.Count && !found; i++) 
-            found = ipPackets[i].TotalPacketLength > Mtu;
-        
+        for (var i = 0; i < ipPackets.Count && !found; i++)
+            found = ipPackets[i].TotalPacketLength > mtu;
+
         // no need to check if there is no large packet
         if (!found)
             return;
 
         // remove large packets and send PacketTooBig replies
-        var bigPackets = ipPackets.Where(x=>x.TotalPacketLength >Mtu);
+        var bigPackets = ipPackets.Where(x => x.TotalPacketLength > mtu).ToArray();
         foreach (var bigPacket in bigPackets) {
             try {
                 ipPackets.Remove(bigPacket);
                 VhLogger.Instance.LogWarning(
                     "Packet dropped! Packet is too big. " +
                     "MTU: {Mtu}, PacketLength: {PacketLength} Packet: {Packet}",
-                    Mtu, bigPacket.TotalPacketLength, PacketLogger.Format(bigPacket));
+                    mtu, bigPacket.TotalPacketLength, PacketLogger.Format(bigPacket));
 
-                var replyPacket = PacketBuilder.BuildPacketTooBigReply(bigPacket, (ushort)Mtu);
+                var replyPacket = PacketBuilder.BuildPacketTooBigReply(bigPacket, (ushort)mtu);
                 PacketReceived?.Invoke(this, new PacketReceivedEventArgs([replyPacket]));
             }
             catch (Exception ex) {

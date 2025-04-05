@@ -486,7 +486,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             if (_disposed) return false;
             if (_datagramChannelsSemaphore.CurrentCount == 0) return false;
             if (UseUdpChannel != Tunnel.IsUdpMode) return true;
-            return !UseUdpChannel && Tunnel.DatagramChannelCount < _maxDatagramChannelCount;
+            return !UseUdpChannel && Tunnel.DatagramChannelCount < Tunnel.MaxDatagramChannelCount;
         }
     }
 
@@ -755,6 +755,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             // Preparing tunnel
             VhLogger.Instance.LogInformation("Configuring Datagram Channels...");
             Tunnel.Mtu = adapterOptions.Mtu.Value;
+            Tunnel.RemoteMtu = helloResponse.Mtu;
             Tunnel.MaxDatagramChannelCount = helloResponse.MaxDatagramChannelCount != 0
                 ? Tunnel.MaxDatagramChannelCount =
                     Math.Min(_maxDatagramChannelCount, helloResponse.MaxDatagramChannelCount)

@@ -15,7 +15,6 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     private readonly byte[] _buffer = new byte[0xFFFF * 4];
     private readonly IClientStream _clientStream;
     private readonly DateTime _lifeTime = DateTime.MaxValue;
-    private readonly SemaphoreSlim _sendingSemaphore = new(1, 1);
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private bool _isCloseSent;
     private bool _isCloseReceived;
@@ -73,41 +72,19 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     }
 
     // This is not thread-safe
-    public void SendPacket(IPPacket packet)
+    public Task SendPacketAsync(IPPacket packet)
     {
         _sendingPackets[0] = packet;
-        SendPacketInternalAsync(_sendingPackets).GetAwaiter().GetResult();
+        return SendPacketInternalAsync(_sendingPackets);
     }
 
     // This is not thread-safe
-    public void SendPacket(IList<IPPacket> ipPackets)
+    public Task SendPacketAsync(IList<IPPacket> ipPackets)
     {
-        SendPacketInternalAsync(ipPackets).GetAwaiter().GetResult();
+        return SendPacketInternalAsync(ipPackets);
     }
 
-    public async Task SendPacketAsync(IPPacket packet)
-    {
-        try {
-            await _sendingSemaphore.WaitAsync();
-            _sendingPackets[0] = packet;
-            await SendPacketInternalAsync(_sendingPackets);
-        }
-        finally {
-            _sendingSemaphore.Release();
-        }
-    }
-
-    public async Task SendPacketAsync(IList<IPPacket> ipPackets)
-    {
-        try {
-            await _sendingSemaphore.WaitAsync();
-            await SendPacketInternalAsync(ipPackets);
-        }
-        finally {
-            _sendingSemaphore.Release();
-        }
-    }
-
+    // This is not thread-safe
     private async Task SendPacketInternalAsync(IList<IPPacket> ipPackets)
     {
         if (_disposed) throw new ObjectDisposedException(VhLogger.FormatType(this));

@@ -6,9 +6,11 @@ namespace VpnHood.Core.Tunneling.Channels;
 public interface IDatagramChannel : IChannel
 {
     event EventHandler<PacketReceivedEventArgs> PacketReceived;
-    void SendPacket(IList<IPPacket> packets);
-    void SendPacket(IPPacket packet);
-    Task SendPacketAsync(IList<IPPacket> packets);
-    Task SendPacketAsync(IPPacket packet);
     bool IsStream { get; }
+
+    // it is not thread-safe
+    Task SendPacketAsync(IList<IPPacket> packets);
+
+    // it is not thread-safe
+    Task SendPacketAsync(IPPacket packet);
 }

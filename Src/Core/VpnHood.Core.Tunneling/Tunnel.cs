@@ -238,12 +238,6 @@ public class Tunnel : IJob, IAsyncDisposable
         }
     }
 
-    // Usually server use this method to send packets to the client
-    public void SendPacketEnqueue(IPPacket ipPacket)
-    {
-        _sendChannel.Writer.TryWrite(ipPacket);
-    }
-
     private async Task SendEnqueuedPacketTask(int maxQueueLength)
     {
         var packets = new List<IPPacket>(maxQueueLength);
@@ -261,6 +255,14 @@ public class Tunnel : IJob, IAsyncDisposable
         }
     }
 
+
+    // Usually server use this method to send packets to the client
+    public void SendPacketEnqueue(IPPacket ipPacket)
+    {
+        _sendChannel.Writer.TryWrite(ipPacket);
+    }
+
+    // it is not thread-safe
     public async Task SendPacketsAsync(IList<IPPacket> ipPackets)
     {
         if (_disposed)
@@ -296,48 +298,6 @@ public class Tunnel : IJob, IAsyncDisposable
                 VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex,
                     "Could not send a packet via a channel. ChannelId: {ChannelId}, PacketCount: {PacketCount}",
                     channel.ChannelId, ipPackets.Count);
-                RemoveChannel(channel);
-            }
-        }
-    }
-
-    public void SendPackets(IList<IPPacket> ipPackets)
-    {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(Tunnel));
-
-        // check is there any packet larger than MTU
-        CheckMtu(ipPackets);
-
-
-        // flush all packets to the same channel
-        var channel = FindChannelForPackets(ipPackets);
-        if (channel != null) {
-            try {
-                channel.SendPacket(ipPackets);
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex,
-                    "Could not send some packets via a channel. ChannelId: {ChannelId}, PacketCount: {PacketCount}",
-                    channel.ChannelId, ipPackets.Count);
-
-                RemoveChannel(channel);
-            }
-            return;
-        }
-
-        // Send each packet to the appropriate channel
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++) {
-            channel = FindChannelForPacket(ipPackets[i]);
-            try {
-                channel.SendPacket(ipPackets[i]);
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex,
-                    "Could not send a packet via a channel. ChannelId: {ChannelId}, PacketCount: {PacketCount}",
-                    channel.ChannelId, ipPackets.Count);
-
                 RemoveChannel(channel);
             }
         }

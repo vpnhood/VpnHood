@@ -405,10 +405,10 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     _ = ManageDatagramChannels(_cancellationTokenSource.Token);
 
                 if (tunnelPackets.Count > 0)
-                    Tunnel.SendPackets(tunnelPackets);
+                    Tunnel.SendPacketsAsync(tunnelPackets).GetAwaiter().GetResult();
 
                 if (proxyPackets.Count > 0)
-                    _proxyManager.SendPackets(proxyPackets).Wait(_cancellationTokenSource.Token);
+                    _proxyManager.SendPackets(proxyPackets).GetAwaiter().GetResult();
 
                 if (tcpHostPackets.Count > 0)
                     _vpnAdapter.SendPackets(_clientHost.ProcessOutgoingPacket(tcpHostPackets));

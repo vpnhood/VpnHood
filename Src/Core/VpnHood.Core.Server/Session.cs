@@ -190,7 +190,7 @@ public class Session : IAsyncDisposable
     public Task Proxy_OnPacketReceived(IPPacket ipPacket)
     {
         if (VhLogger.IsDiagnoseMode)
-            PacketLogger.LogPacket(ipPacket, "Delegating packet to client via proxy.");
+            PacketLogger.LogPacket(ipPacket, "Delegating a packet to client.");
 
         ipPacket = _netFilter.ProcessReply(ipPacket);
 

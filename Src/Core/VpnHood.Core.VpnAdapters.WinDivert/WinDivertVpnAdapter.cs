@@ -35,7 +35,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
-        if (adapterSettings.MaxPacketCount!=1)
+        if (adapterSettings.MaxPacketCount != 1)
             throw new InvalidOperationException("WinDivert adapter supports only 1 packet at a time.");
 
         // initialize devices
@@ -165,7 +165,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         ProcessReadPacket(ipPacket);
         return ipPacket;
     }
-    
+
     public override void ProtectSocket(Socket socket)
     {
         var ipAddress = socket.AddressFamily.IsV4() ? IPAddress.Any : IPAddress.IPv6Any;

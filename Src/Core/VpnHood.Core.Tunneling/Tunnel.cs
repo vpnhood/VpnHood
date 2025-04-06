@@ -240,18 +240,18 @@ public class Tunnel : IJob, IAsyncDisposable
 
     private async Task SendEnqueuedPacketTask(int maxQueueLength)
     {
-        var packets = new List<IPPacket>(maxQueueLength);
+        var ipPackets = new List<IPPacket>(maxQueueLength);
         while (!_disposed) {
             // wait for new packets
             await _sendChannel.Reader.WaitToReadAsync(_cancellationTokenSource.Token);
 
             // dequeue all packets
             while (_sendChannel.Reader.TryRead(out var ipPacket))
-                packets.Add(ipPacket);
+                ipPackets.Add(ipPacket);
 
             // send packets
-            await SendPacketsAsync(packets);
-            packets.Clear();
+            await SendPacketsAsync(ipPackets);
+            ipPackets.Clear();
         }
     }
 

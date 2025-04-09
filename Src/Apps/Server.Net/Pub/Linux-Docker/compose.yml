@@ -13,7 +13,7 @@ services:
   watchtower:
     image: containrrr/watchtower
     container_name: VpnHoodUpdater
-    command: VpnHoodUpdater VpnHoodServer
+    command: VpnHoodServer
     restart: always
     volumes:
         - /var/run/docker.sock:/var/run/docker.sock

@@ -9,7 +9,4 @@ public class StreamProxyChannelRequest()
 {
     [JsonConverter(typeof(IPEndPointConverter))]
     public required IPEndPoint DestinationEndPoint { get; set; }
-
-    public required byte[] CipherKey { get; init; }
-    public required long CipherLength { get; init; }
 }

@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;

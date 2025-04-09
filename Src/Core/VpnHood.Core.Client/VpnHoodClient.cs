@@ -24,7 +24,6 @@ using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using FastDateTime = VpnHood.Core.Toolkit.Utils.FastDateTime;
-using PacketReceivedEventArgs = VpnHood.Core.VpnAdapters.Abstractions.PacketReceivedEventArgs;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Client;
@@ -67,7 +66,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private readonly string[]? _excludeApps;
     private ClientSessionStatus? _sessionStatus;
     private IPAddress[] _dnsServers;
-    
+
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
     internal Tunnel Tunnel { get; }
     public ISocketFactory SocketFactory { get; }
@@ -322,7 +321,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     }
 
     // WARNING: Performance Critical!
-    private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
+    private void Tunnel_OnPacketReceived(object sender, PacketReceivedEventArgs e)
     {
         _vpnAdapter.SendPackets(e.IpPackets);
     }
@@ -406,10 +405,10 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     _ = ManageDatagramChannels(_cancellationTokenSource.Token);
 
                 if (tunnelPackets.Count > 0)
-                    Tunnel.SendPackets(tunnelPackets, _cancellationTokenSource.Token);
+                    Tunnel.SendPacketsAsync(tunnelPackets).GetAwaiter().GetResult();
 
                 if (proxyPackets.Count > 0)
-                    _proxyManager.SendPackets(proxyPackets).Wait(_cancellationTokenSource.Token);
+                    _proxyManager.SendPackets(proxyPackets).GetAwaiter().GetResult();
 
                 if (tcpHostPackets.Count > 0)
                     _vpnAdapter.SendPackets(_clientHost.ProcessOutgoingPacket(tcpHostPackets));
@@ -487,7 +486,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             if (_disposed) return false;
             if (_datagramChannelsSemaphore.CurrentCount == 0) return false;
             if (UseUdpChannel != Tunnel.IsUdpMode) return true;
-            return !UseUdpChannel && Tunnel.DatagramChannelCount < _maxDatagramChannelCount;
+            return !UseUdpChannel && Tunnel.DatagramChannelCount < Tunnel.MaxDatagramChannelCount;
         }
     }
 
@@ -745,7 +744,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 DnsServers = SessionInfo.DnsServers,
                 VirtualIpNetworkV4 = networkV4,
                 VirtualIpNetworkV6 = networkV6,
-                Mtu = TunnelDefaults.MtuWithoutFragmentation,
+                Mtu = Math.Min(TunnelDefaults.Mtu, helloResponse.Mtu - TunnelDefaults.MtuOverhead),
                 IncludeNetworks = BuildVpnAdapterIncludeNetworks(_connectorService.EndPointInfo.TcpEndPoint.Address),
                 SessionName = SessionName,
                 ExcludeApps = _excludeApps,
@@ -755,6 +754,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             // Preparing tunnel
             VhLogger.Instance.LogInformation("Configuring Datagram Channels...");
+            Tunnel.Mtu = adapterOptions.Mtu.Value;
+            Tunnel.RemoteMtu = helloResponse.Mtu;
             Tunnel.MaxDatagramChannelCount = helloResponse.MaxDatagramChannelCount != 0
                 ? Tunnel.MaxDatagramChannelCount =
                     Math.Min(_maxDatagramChannelCount, helloResponse.MaxDatagramChannelCount)

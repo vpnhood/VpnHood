@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.App.Client.Droid.Google</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.client.android.debug</ApplicationId>
-		<ApplicationVersion>681</ApplicationVersion>
-		<ApplicationDisplayVersion>6.0.681</ApplicationDisplayVersion>
+		<ApplicationVersion>686</ApplicationVersion>
+		<ApplicationDisplayVersion>6.0.686</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
@@ -28,6 +28,10 @@
 		<DebugSymbols>True</DebugSymbols>
 		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
 	</PropertyGroup>
+	
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<PathMap>$(SolutionDir)=.</PathMap>
+	</PropertyGroup>
 
 	<PropertyGroup>
 		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
@@ -36,7 +40,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>6.0.681</Version>
+		<Version>6.0.686</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>

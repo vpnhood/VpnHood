@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
@@ -15,6 +16,9 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
     private int _mtu = 0xFFFF;
     private readonly int _maxAutoRestartCount = adapterSettings.MaxAutoRestartCount;
     private int _autoRestartCount;
+    private readonly PacketReceivedEventArgs _packetReceivedEventArgs = new([]);
+    private readonly SemaphoreSlim _sendPacketSemaphore = new(1, 1);
+    private readonly bool _autoMetric = adapterSettings.AutoMetric;
 
     protected bool IsDisposed { get; private set; }
     protected bool UseNat { get; private set; }
@@ -143,12 +147,11 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
 
             // add routes
             VhLogger.Instance.LogDebug("Adding routes...");
-            foreach (var network in options.IncludeNetworks) {
-                var gateway = network.IsV4 ? GatewayIpV4 : GatewayIpV6;
-                if (gateway != null)
-                    await AddRoute(network, gateway, cancellationToken).VhConfigureAwait();
-            }
-
+            if (GatewayIpV4!=null)
+                await AddRouteHelper(options.IncludeNetworks, GatewayIpV4, cancellationToken).VhConfigureAwait();
+            if (GatewayIpV6 != null)
+                await AddRouteHelper(options.IncludeNetworks, GatewayIpV6, cancellationToken).VhConfigureAwait();
+            
             // add NAT
             if (UseNat) {
                 VhLogger.Instance.LogDebug("Adding NAT...");
@@ -177,6 +180,30 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
             Stop();
             throw;
         }
+    }
+
+    private async Task AddRouteHelper(IEnumerable<IpNetwork> ipNetworks, IPAddress gatewayIpAddress,
+        CancellationToken cancellationToken)
+    {
+        // remove the local networks
+        ipNetworks = ipNetworks.Where(x => x.AddressFamily == gatewayIpAddress.AddressFamily);
+
+        if (_autoMetric) {
+            // ReSharper disable once PossibleMultipleEnumeration
+            var sortedIpNetworks = ipNetworks.Sort();
+
+            // ReSharper disable once PossibleMultipleEnumeration
+            if (gatewayIpAddress.IsV4() && sortedIpNetworks.IsAllV4())
+                ipNetworks = VpnAdapterOptions.AllVRoutesIpV4;
+
+            // ReSharper disable once PossibleMultipleEnumeration
+            if (gatewayIpAddress.IsV6() && sortedIpNetworks.IsAllV6())
+                ipNetworks = VpnAdapterOptions.AllVRoutesIpV6;
+        }
+
+        // ReSharper disable once PossibleMultipleEnumeration
+        foreach (var network in ipNetworks)
+            await AddRoute(network, gatewayIpAddress, cancellationToken).VhConfigureAwait();
     }
 
     private async Task SetAppFilters(string[]? includeApps, string[]? excludeApps, CancellationToken cancellationToken)
@@ -331,8 +358,6 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
             SendPacket(packet);
     }
 
-    private readonly SemaphoreSlim _sendPacketSemaphore = new(1, 1);
-
     public Task SendPacketAsync(IPPacket ipPacket)
     {
         return _sendPacketSemaphore.WaitAsync().ContinueWith(_ => {
@@ -420,8 +445,10 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
     protected void InvokeReadPackets(IList<IPPacket> packetList)
     {
         try {
-            if (packetList.Count > 0)
-                PacketReceived?.Invoke(this, new PacketReceivedEventArgs(packetList));
+            if (packetList.Count > 0) {
+                _packetReceivedEventArgs.IpPackets = packetList;
+                PacketReceived?.Invoke(this, _packetReceivedEventArgs);
+            }
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error in invoking packet received event.");

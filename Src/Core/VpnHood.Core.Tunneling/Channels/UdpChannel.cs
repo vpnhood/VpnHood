@@ -15,21 +15,17 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
     private IPEndPoint? _lastRemoteEp;
     private readonly byte[] _buffer = new byte[0xFFFF];
     private UdpChannelTransmitter? _udpChannelTransmitter;
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly BufferCryptor _sessionCryptorWriter = new(sessionKey);
     private readonly BufferCryptor _sessionCryptorReader = new(sessionKey);
-    private ChannelPacketReceivedEventArgs? _eventArgs;
+    private PacketReceivedEventArgs? _packetReceivedEventArgs;
+    private readonly IPPacket[] _sendingPackets = [null!];
+    private readonly long _cryptorPosBase = isServer ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
+    private readonly List<IPPacket> _receivedIpPackets = [];
     private bool _disposed;
 
-    private readonly long
-        _cryptorPosBase = isServer ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
-
-    private readonly List<IPPacket> _receivedIpPackets = [];
-
-    public event EventHandler<ChannelPacketReceivedEventArgs>? PacketReceived;
+    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public string ChannelId { get; } = Guid.NewGuid().ToString();
     public bool IsStream => false;
-
     public bool IsClosePending => false;
     public bool Connected { get; private set; }
     public DateTime LastActivityTime { get; private set; }
@@ -47,13 +43,17 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
         LastActivityTime = FastDateTime.Now;
     }
 
-    public async Task SendPacket(IList<IPPacket> ipPackets)
+    // it is not thread safe
+    public Task SendPacketAsync(IPPacket packet)
+    {
+        _sendingPackets[0] = packet;
+        return SendPacketAsync(_sendingPackets);
+    }
+
+    // it is not thread safe
+    public async Task SendPacketAsync(IList<IPPacket> ipPackets)
     {
         try {
-            // this is shared buffer and client, so we need to sync
-            // Using multiple UdpClient will not increase performance
-            await _semaphore.WaitAsync().VhConfigureAwait();
-
             var bufferIndex = UdpChannelTransmitter.HeaderLength;
 
             // copy packets
@@ -85,9 +85,6 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
             if (IsInvalidState(ex))
                 await DisposeAsync().VhConfigureAwait();
         }
-        finally {
-            _semaphore.Release();
-        }
     }
 
     public void SetRemote(UdpChannelTransmitter udpChannelTransmitter, IPEndPoint remoteEndPoint)
@@ -108,9 +105,9 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
                 _receivedIpPackets.Add(ipPacket);
             }
 
-            _eventArgs ??= new ChannelPacketReceivedEventArgs([], this);
-            _eventArgs.IpPackets = _receivedIpPackets.ToArray();
-            PacketReceived?.Invoke(this, _eventArgs);
+            _packetReceivedEventArgs ??= new PacketReceivedEventArgs([]);
+            _packetReceivedEventArgs.IpPackets = _receivedIpPackets.ToArray();
+            PacketReceived?.Invoke(this, _packetReceivedEventArgs);
             LastActivityTime = FastDateTime.Now;
             _receivedIpPackets.Clear();
         }

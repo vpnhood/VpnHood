@@ -12,6 +12,10 @@
 		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
+	
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<PathMap>$(SolutionDir)=.</PathMap>
+	</PropertyGroup>
 
 	<PropertyGroup>
 		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
@@ -25,10 +29,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.680" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.681" />
 	</ItemGroup>
 	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==false">
-		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="6.0.699" />
+		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="6.0.700" />
 	</ItemGroup>
 	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==true">
 		<Reference Include="VpnHood.AppLib.Assets.ClassicSpa">

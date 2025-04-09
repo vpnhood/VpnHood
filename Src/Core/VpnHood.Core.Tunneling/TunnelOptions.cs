@@ -2,5 +2,6 @@
 
 public class TunnelOptions
 {
-    public int MaxDatagramChannelCount { get; set; } = 8;
+    public int MaxDatagramChannelCount { get; init; } = 8;
+    public int MaxQueueLength { get; init; } = 200;
 }

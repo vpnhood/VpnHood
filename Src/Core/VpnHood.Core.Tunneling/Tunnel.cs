@@ -354,6 +354,18 @@ public class Tunnel : IJob, IAsyncDisposable
 
     private IDatagramChannel FindChannelForPacket(IPPacket ipPacket)
     {
+        // remove channel if it is not connected
+        var channel = FindChannelForPacketInternal(ipPacket);
+        if (!channel.Connected) {
+            RemoveChannel(channel);
+            return FindChannelForPacketInternal(ipPacket);
+        }
+
+        return channel;
+    }
+
+    private IDatagramChannel FindChannelForPacketInternal(IPPacket ipPacket)
+    {
         // send packets directly if there is only one channel
         lock (_datagramChannels) {
             var channelCount = _datagramChannels.Count;

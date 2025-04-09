@@ -627,11 +627,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // calculate vpnAdapterIpRanges
         var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
         if (UserSettings.UseVpnAdapterIpFilter) {
-            vpnAdapterIpRanges =
-                vpnAdapterIpRanges.Intersect(
+            vpnAdapterIpRanges = vpnAdapterIpRanges.Intersect(
                     IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.AdapterIpFilterIncludes));
-            vpnAdapterIpRanges =
-                vpnAdapterIpRanges.Exclude(
+            vpnAdapterIpRanges = vpnAdapterIpRanges.Exclude(
                     IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.AdapterIpFilterExcludes));
         }
 
@@ -646,7 +644,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IncludeLocalNetwork = UserSettings.IncludeLocalNetwork && Features.IsLocalNetworkSupported,
             IncludeIpRanges = (await GetIncludeIpRanges(cancellationToken)).ToArray(),
             VpnAdapterIncludeIpRanges = vpnAdapterIpRanges.ToArray(),
-            MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
+            MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount, 
             ConnectTimeout = TcpTimeout,
             ServerQueryTimeout = _serverQueryTimeout,
             UseNullCapture = HasDebugCommand(DebugCommands.NullCapture),

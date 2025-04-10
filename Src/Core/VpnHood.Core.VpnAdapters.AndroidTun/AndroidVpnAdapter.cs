@@ -118,7 +118,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         return Task.CompletedTask;
     }
 
-    protected override Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken)
+    protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(_builder);
         _builder.AddRoute(ipNetwork.Prefix.ToString(), ipNetwork.PrefixLength);

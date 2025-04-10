@@ -110,7 +110,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return Task.CompletedTask;
     }
 
-    protected override Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken)
+    protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         _includeIpNetworks.Add(ipNetwork);
         return Task.CompletedTask;

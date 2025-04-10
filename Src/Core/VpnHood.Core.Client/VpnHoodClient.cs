@@ -618,8 +618,10 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 $"ServerMinProtocolVersion: {helloResponse.MinProtocolVersion}, " +
                 $"ServerMaxProtocolVersion: {helloResponse.MaxProtocolVersion}, " +
                 $"CurrentProtocolVersion: {_connectorService.ProtocolVersion}, " +
-                $"ClientIp: {VhLogger.Format(helloResponse.ClientPublicAddress)}",
-                $"IsTunProviderSupported: {helloResponse.IsTunProviderSupported}",
+                $"ClientIp: {VhLogger.Format(helloResponse.ClientPublicAddress)}, " +
+                $"IsTunProviderSupported: {helloResponse.IsTunProviderSupported}, " +
+                $"NetworkV4: {helloResponse.VirtualIpNetworkV4}, " +
+                $"NetworkV6: {helloResponse.VirtualIpNetworkV6}, " +
                 $"ClientCountry: {helloResponse.ClientCountry}");
 
             // get session id

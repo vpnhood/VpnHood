@@ -154,11 +154,11 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
             cancellationToken).VhConfigureAwait();
     }
 
-    protected override async Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken)
+    protected override async Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         var command = ipNetwork.IsV4
-            ? $"ip route add {ipNetwork} dev {AdapterName} via {gatewayIp}"
-            : $"ip -6 route add {ipNetwork} dev {AdapterName} via {gatewayIp}";
+            ? $"ip route add {ipNetwork} dev {AdapterName}"
+            : $"ip -6 route add {ipNetwork} dev {AdapterName}";
 
         if (_metric != null)
             command += $" metric {_metric}";

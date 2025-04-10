@@ -20,7 +20,9 @@ $samples = $samples -eq "1";
 . "$PSScriptRoot/Core/Common.ps1" -bump $bump
 
 # clean all
-& $msbuild "$solutionDir" /p:Configuration=Release /t:Clean /verbosity:$msverbosity;
+dotnet clean $solutionDir
+dotnet restore $solutionDir
+& $msbuild $solutionDir /p:Configuration=Release /t:Clean /verbosity:$msverbosity;
 $noPushNuget = !$nugets
 
 Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;

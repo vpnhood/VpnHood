@@ -252,34 +252,50 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
         }
     }
 
-    public virtual void ProtectSocket(Socket socket)
+    protected void BindToAny(Socket socket)
+    {
+        var ipAddress = socket.AddressFamily.IsV4() ? IPAddress.Any : IPAddress.IPv6Any;
+        socket.Bind(new IPEndPoint(ipAddress, 0));
+    }
+
+    public virtual bool ProtectSocket(Socket socket)
     {
         if (socket.LocalEndPoint != null)
             throw new InvalidOperationException("Could not protect an already bound socket.");
 
         // get the primary adapter IP
-        var primaryAdapterIp = GetPrimaryAdapterIp(socket.AddressFamily) ??
-                               throw new InvalidOperationException("Could not protect this address family.");
+        var primaryAdapterIp = GetPrimaryAdapterIp(socket.AddressFamily);
+        if (primaryAdapterIp == null) {
+            BindToAny(socket);
+            return false;
+        }
 
         // bind the socket to the primary adapter IP
         socket.Bind(new IPEndPoint(primaryAdapterIp, 0));
+        return true;
     }
 
-    public virtual void ProtectSocket(Socket socket, IPAddress remoteAddress)
+    public virtual bool ProtectSocket(Socket socket, IPAddress remoteAddress)
     {
         if (socket.LocalEndPoint != null)
             throw new InvalidOperationException("Could not protect an already bound socket.");
 
         // get the primary adapter IP
-        var primaryAdapterIp = GetPrimaryAdapterIp(socket.AddressFamily) ??
-                               throw new InvalidOperationException("Could not protect this address family.");
+        var primaryAdapterIp = GetPrimaryAdapterIp(socket.AddressFamily);
+        if (primaryAdapterIp == null) {
+            BindToAny(socket);
+            return false;
+        }
 
         // could not protect loopback addresses or not needed at all, because loopback can not be routed
-        if (IPAddress.IsLoopback(primaryAdapterIp) != IPAddress.IsLoopback(remoteAddress))
-            return;
+        if (IPAddress.IsLoopback(primaryAdapterIp) != IPAddress.IsLoopback(remoteAddress)) {
+            BindToAny(socket);
+            return false;
+        }
 
         // bind the socket to the primary adapter IP and connect to the remote endpoint
         socket.Bind(new IPEndPoint(primaryAdapterIp, 0));
+        return true;
     }
 
     private static IPAddress? DiscoverPrimaryAdapterIp()

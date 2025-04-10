@@ -99,16 +99,14 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         }
     }
 
-    public override void ProtectSocket(System.Net.Sockets.Socket socket)
+    public override bool ProtectSocket(System.Net.Sockets.Socket socket)
     {
-        if (!vpnService.Protect(socket.Handle.ToInt32()))
-            throw new Exception("Could not protect socket!");
+        return vpnService.Protect(socket.Handle.ToInt32());
     }
 
-    public override void ProtectSocket(System.Net.Sockets.Socket socket, IPAddress ipAddress)
+    public override bool ProtectSocket(System.Net.Sockets.Socket socket, IPAddress ipAddress)
     {
-        if (!vpnService.Protect(socket.Handle.ToInt32()))
-            throw new Exception("Could not protect socket!");
+        return vpnService.Protect(socket.Handle.ToInt32());
     }
 
     protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)

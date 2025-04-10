@@ -27,12 +27,8 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyReceiver
     public bool Started { get; private set; }
     public bool IsNatSupported => true;
     public bool CanProtectSocket => false;
-    public void ProtectSocket(Socket socket) =>
-        throw new NotSupportedException("TestUdpVpnAdapter does not support socket protection.");
-
-    public void ProtectSocket(Socket socket, IPAddress ipAddress) =>
-        throw new NotSupportedException("TestUdpVpnAdapter does not support socket protection.");
-
+    public bool ProtectSocket(Socket socket) => false;
+    public bool ProtectSocket(Socket socket, IPAddress ipAddress) => false;
     public Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         Started = true;

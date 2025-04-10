@@ -25,14 +25,14 @@ public class NullVpnAdapter : IVpnAdapter
         Started = false;    
     }
 
-    public virtual void ProtectSocket(Socket socket)
+    public virtual bool ProtectSocket(Socket socket)
     {
-        // nothing
+        return true;
     }
 
-    public virtual void ProtectSocket(Socket socket, IPAddress ipAddress)
+    public virtual bool ProtectSocket(Socket socket, IPAddress ipAddress)
     {
-        // nothing
+        return true;
     }
 
 

@@ -733,6 +733,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 IncludeIpRanges = [];
 
             // prepare packet capture
+            // Set a default to capture & drop the packets if the server does not provide a network
             var networkV4 = helloResponse.VirtualIpNetworkV4 ?? new IpNetwork(IPAddress.Parse("10.255.0.2"), 32);
             var networkV6 = helloResponse.VirtualIpNetworkV6 ?? new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
 

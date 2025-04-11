@@ -17,10 +17,9 @@ public class UdpProxyTest : TestBase
     {
         private IPPacket? LastReceivedPacket { get; set; }
 
-        public Task OnPacketReceived(IPPacket packet)
+        public void OnPacketReceived(IPPacket packet)
         {
             LastReceivedPacket = packet;
-            return Task.CompletedTask;
         }
 
         public async Task WaitForUdpPacket(Func<IPPacket, bool> checkFunc, TimeSpan? timeout = null)

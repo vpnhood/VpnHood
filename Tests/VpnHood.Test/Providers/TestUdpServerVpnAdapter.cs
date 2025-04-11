@@ -57,10 +57,9 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyReceiver
         }
     }
 
-    Task IPacketReceiver.OnPacketReceived(IPPacket ipPacket)
+    public void OnPacketReceived(IPPacket ipPacket)
     {
         PacketReceived?.Invoke(this, new PacketReceivedEventArgs([ipPacket]));
-        return Task.CompletedTask;
     }
 
     public void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint)

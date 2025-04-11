@@ -167,7 +167,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         Tunnel = new Tunnel();
         Tunnel.PacketReceived += Tunnel_OnPacketReceived;
 
-
         // create proxy host
         _clientHost = new ClientHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
 
@@ -960,8 +959,11 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _cancellationTokenSource.Cancel();
         State = ClientState.Disconnecting;
 
-        // disposing VpnAdapter
+        // stop processing tunnel & adapter packets
         _vpnAdapter.PacketReceived -= VpnAdapter_OnPacketReceived;
+        Tunnel.PacketReceived -= Tunnel_OnPacketReceived;
+
+        // disposing VpnAdapter
         if (_autoDisposeVpnAdapter) {
             VhLogger.Instance.LogDebug("Disposing the VpnAdapter...");
             _vpnAdapter.Dispose();
@@ -972,13 +974,12 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         // Anonymous usage tracker
         _ = _clientUsageTracker?.DisposeAsync();
-
+        
         VhLogger.Instance.LogDebug("Disposing ClientHost...");
         await _clientHost.DisposeAsync().VhConfigureAwait();
 
         // Tunnel
         VhLogger.Instance.LogDebug("Disposing Tunnel...");
-        Tunnel.PacketReceived -= Tunnel_OnPacketReceived;
         await Tunnel.DisposeAsync().VhConfigureAwait();
 
         VhLogger.Instance.LogDebug("Disposing ProxyManager...");

@@ -187,8 +187,9 @@ public class Session : IAsyncDisposable
         return ipVersion == IPVersion.IPv4 ? _clientInternalIpV4 : _clientInternalIpV6;
     }
 
-    public Task Proxy_OnPacketReceived(IPPacket ipPacket)
+    public void Proxy_OnPacketReceived(IPPacket ipPacket)
     {
+        if (IsDisposed) return;
         if (VhLogger.IsDiagnoseMode)
             PacketLogger.LogPacket(ipPacket, "Delegating a packet to client.");
 
@@ -203,7 +204,6 @@ public class Session : IAsyncDisposable
         }
 
         Tunnel.SendPacketEnqueue(ipPacket);
-        return Task.CompletedTask;
     }
 
     private void Tunnel_OnPacketReceived(object sender, PacketReceivedEventArgs e)
@@ -475,9 +475,10 @@ public class Session : IAsyncDisposable
     {
         protected override bool IsPingSupported => true;
 
-        public override Task OnPacketReceived(IPPacket ipPacket)
+        public override void OnPacketReceived(IPPacket ipPacket)
         {
-            return session.Proxy_OnPacketReceived(ipPacket);
+            if (session.IsDisposed) return;
+            session.Proxy_OnPacketReceived(ipPacket);
         }
 
         public override Task SendPacket(IPPacket ipPacket)

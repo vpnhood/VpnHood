@@ -306,9 +306,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         if (!_vpnAdapter.CanProtectSocket)
             includeIpRanges = includeIpRanges.Exclude(hostIpAddress);
 
-        // exclude local networks
-        if (!IncludeLocalNetwork)
-            includeIpRanges = includeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
+        // local networks automatically not routed
+        includeIpRanges = includeIpRanges.Union(IpNetwork.LocalNetworks.ToIpRanges());
 
         // Make sure CatcherAddress is included
         includeIpRanges = includeIpRanges.Union([

@@ -334,8 +334,7 @@ public class VpnServiceManager : IJob, IDisposable
         if (!ConnectionInfo.IsStarted())
             return;
 
-        using var cancellationTokenSource = new CancellationTokenSource(
-            Debugger.IsAttached ? Timeout.InfiniteTimeSpan : timeout ?? TimeSpan.FromSeconds(5));
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         // send disconnect request
         try {

@@ -70,6 +70,4 @@ You are always welcome!
 Windows|Linux
 
 ## Special Thanks
-* [SharpPcap](https://github.com/chmorgan/sharppcap): Fully managed, cross platform .NET library for capturing packets from live and file based devices.
-* [WinDivert](https://reqrypt.org/windivert.html): a user-mode packet capture-and-divert package for Windows.
 * [Advanced Installer](https://www.advancedinstaller.com): Installer tools for Windows.

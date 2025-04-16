@@ -35,6 +35,8 @@ public class VpnServiceManager : IJob, IDisposable
     private bool _isInitializing;
     private int _vpnServiceUnreachableCount;
     private CancellationTokenSource _updateConnectionInfoCts = new();
+    private ConnectionInfo? _lastConnectionInfo;
+    private Guid? _lastAdRequestId;
 
     public event EventHandler? StateChanged;
     public string LogFilePath => Path.Combine(_device.VpnServiceConfigFolder, ClientOptions.VpnLogFileName);
@@ -88,16 +90,19 @@ public class VpnServiceManager : IJob, IDisposable
         return _connectionInfo;
     }
 
+    public bool IsStarted => _isInitializing || ConnectionInfo.IsStarted();
+
     public async Task Start(ClientOptions clientOptions, CancellationToken cancellationToken)
     {
         // wait for vpn service
         try {
+            if (IsStarted)
+                await Stop().VhConfigureAwait();
+
             _isInitializing = true;
-            _updateConnectionInfoCts.Cancel();
             _vpnServiceUnreachableCount = 0;
             _tcpClient = null; // reset the tcp client to make sure we create a new one
-
-            using var autoDispose = new AutoDispose(() => _isInitializing = false);
+            _updateConnectionInfoCts.Cancel();
             _updateConnectionInfoCts = new CancellationTokenSource();
 
             _connectionInfo = SetConnectionInfo(ClientState.Initializing);
@@ -125,10 +130,6 @@ public class VpnServiceManager : IJob, IDisposable
             if (connectionInfo?.ClientState == ClientState.Initializing)
                 SetConnectionInfo(ClientState.Disposed, ex);
             throw;
-        }
-        finally {
-            // VpnService may be launched by the system. We should make sure update connection info is running
-            _updateConnectionInfoCts = new CancellationTokenSource();
         }
 
         // wait for connection or error
@@ -231,7 +232,7 @@ public class VpnServiceManager : IJob, IDisposable
         }
         catch (VpnServiceUnreachableException ex) {
             // increment the count to stop the service if it is unreachable for too long
-            _vpnServiceUnreachableCount++; 
+            _vpnServiceUnreachableCount++;
 
             // update connection info and set error
             if (_vpnServiceUnreachableCount == VpnServiceUnreachableThreshold)
@@ -327,17 +328,17 @@ public class VpnServiceManager : IJob, IDisposable
     /// </summary>
     public async Task Stop(TimeSpan? timeout = null)
     {
-        using var timeoutCts = new CancellationTokenSource(
-            Debugger.IsAttached ? Timeout.InfiniteTimeSpan : timeout ?? TimeSpan.FromSeconds(5));
-
         // stop the service
         if (!ConnectionInfo.IsStarted())
             return;
 
+        using var cancellationTokenSource = new CancellationTokenSource(
+            Debugger.IsAttached ? Timeout.InfiniteTimeSpan : timeout ?? TimeSpan.FromSeconds(5));
+
         // send disconnect request
         try {
             VhLogger.Instance.LogDebug("Sending disconnect request...");
-            await SendRequest(new ApiDisconnectRequest(), timeoutCts.Token).VhConfigureAwait();
+            await SendRequest(new ApiDisconnectRequest(), cancellationTokenSource.Token).VhConfigureAwait();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(ex, "Could not send disconnect request.");
@@ -347,8 +348,8 @@ public class VpnServiceManager : IJob, IDisposable
         VhLogger.Instance.LogDebug("Waiting for VpnService to stop.");
         try {
             while (ConnectionInfo.IsStarted()) {
-                await UpdateConnectionInfo(true, timeoutCts.Token);
-                await Task.Delay(200, timeoutCts.Token);
+                await UpdateConnectionInfo(true, cancellationTokenSource.Token);
+                await Task.Delay(200, cancellationTokenSource.Token);
             }
 
             VhLogger.Instance.LogDebug("VpnService has been stopped.");
@@ -357,9 +358,6 @@ public class VpnServiceManager : IJob, IDisposable
             VhLogger.Instance.LogError(ex, "Could not stop the VpnService.");
         }
     }
-
-    private ConnectionInfo? _lastConnectionInfo;
-    private Guid? _lastAdRequestId;
 
     private void CheckForEvents(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
@@ -430,8 +428,8 @@ public class VpnServiceManager : IJob, IDisposable
     public void Dispose()
     {
         // do not stop, lets service keep running until user explicitly stop it
+        JobRunner.Default.Remove(this);
         _updateConnectionInfoCts.Cancel();
         _tcpClient?.Dispose();
-        JobRunner.Default.Remove(this);
     }
 }

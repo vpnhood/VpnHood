@@ -46,7 +46,7 @@ if ($apk)
 {
 	$outputPath = Join-Path $projectDir "bin/Release-$distribution/";
 	$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
-	dotnet build $projectFile /t:SignAndroidPackage /verbosity:$msverbosity `
+	dotnet build $projectFile /t:Clean /t:SignAndroidPackage /verbosity:$msverbosity `
 		/p:SolutionDir=$solutionDir `
 		/p:Configuration=Release `
 		/p:ApplicationId=$packageId `

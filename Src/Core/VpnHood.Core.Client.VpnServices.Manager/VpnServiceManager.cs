@@ -101,7 +101,6 @@ public class VpnServiceManager : IJob, IDisposable
 
             _isInitializing = true;
             _vpnServiceUnreachableCount = 0;
-            _tcpClient = null; // reset the tcp client to make sure we create a new one
             _updateConnectionInfoCts.Cancel();
             _updateConnectionInfoCts = new CancellationTokenSource();
 
@@ -160,7 +159,7 @@ public class VpnServiceManager : IJob, IDisposable
         }
 
         _connectionInfo = connectionInfo;
-
+        _tcpClient = null; // reset the tcp client to make sure we create a new one
         // success
         VhLogger.Instance.LogInformation(
             "VpnService has started. EndPoint: {EndPoint}, ConnectionState: {ConnectionState}",
@@ -295,7 +294,7 @@ public class VpnServiceManager : IJob, IDisposable
         var tcpClient = _tcpClient;
         try {
             // establish and set the api key
-            if (tcpClient is not { Connected: true }) {
+            if (tcpClient is not { Connected: true } || tcpClient.Client.LocalEndPoint.Equals(hostEndPoint) != true) {
                 VhLogger.Instance.LogDebug("Connecting to VpnService Host... EndPoint: {EndPoint}", hostEndPoint);
                 tcpClient?.Dispose();
                 tcpClient = new TcpClient();

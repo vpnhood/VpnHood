@@ -20,8 +20,6 @@ $samples = $samples -eq "1";
 . "$PSScriptRoot/Core/Common.ps1" -bump $bump
 
 # clean all
-dotnet clean $solutionDir
-dotnet restore $solutionDir
 & $msbuild $solutionDir /p:Configuration=Release /t:Clean /verbosity:$msverbosity;
 $noPushNuget = !$nugets
 

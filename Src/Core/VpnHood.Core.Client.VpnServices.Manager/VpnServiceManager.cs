@@ -131,6 +131,9 @@ public class VpnServiceManager : IJob, IDisposable
                 SetConnectionInfo(ClientState.Disposed, ex);
             throw;
         }
+        finally {
+            _isInitializing = false;
+        }
 
         // wait for connection or error
         await WaitForConnection(cancellationToken).VhConfigureAwait();

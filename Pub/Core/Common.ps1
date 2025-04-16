@@ -64,7 +64,7 @@ function UpdateRepoVersionInFile()
 
 function PushMainRepo()
 {
-	Write-Host "*** Commit and push the main repo" -BackgroundColor Blue
+	Write-Host "*** Commit and push the main repo..." -BackgroundColor Blue
 
 	Push-Location -Path "$solutionDir";
 

@@ -1,5 +1,7 @@
 . "$PSScriptRoot/Core/Common.ps1"
 
+Write-Host "*** Update VpnHood! SERVER changelog" -BackgroundColor Blue;
+
 $changeLogFileName = "CHANGELOG.Server.md";
 $changeLogReleaseFileName = "$packageServerDirName/ReleaseNote.txt";
 

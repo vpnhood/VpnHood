@@ -5,6 +5,7 @@ using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Trackers;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
@@ -497,7 +498,7 @@ public class SessionManager : IAsyncDisposable, IJob
                 return;
             }
 
-            session.ProcessInboundPacket(ipPacket);
+            session.Proxy_OnPacketReceived(ipPacket);
         }
     }
 

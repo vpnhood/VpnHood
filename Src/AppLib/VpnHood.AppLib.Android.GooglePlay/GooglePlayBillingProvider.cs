@@ -19,6 +19,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
     private IList<ProductDetails.SubscriptionOfferDetails>? _subscriptionOfferDetails;
     private TaskCompletionSource<string>? _taskCompletionSource;
     public BillingPurchaseState PurchaseState { get; private set; }
+    public string ProviderName => "GooglePlay";
 
     public GooglePlayBillingProvider(IAppAuthenticationProvider authenticationProvider)
     {

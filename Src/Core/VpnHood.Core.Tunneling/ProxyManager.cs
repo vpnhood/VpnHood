@@ -11,16 +11,16 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Tunneling;
 
-public abstract class ProxyManager : IPacketProxyReceiver
+public abstract class ProxyManager : IPacketProxyReceiver, IAsyncDisposable
 {
     private readonly IPAddress[] _blockList = [
         IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play) SSDP (Simple Service Discovery Protocol)
     ];
-
-    private bool _disposed;
     private readonly HashSet<IChannel> _channels = [];
     private readonly IPacketProxyPool _pingProxyPool;
     private readonly IPacketProxyPool _udpProxyPool;
+    protected bool Disposed { get; private set; }
+
 
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public int PingClientCount => _pingProxyPool.ClientCount;
@@ -33,7 +33,7 @@ public abstract class ProxyManager : IPacketProxyReceiver
         }
     }
 
-    public abstract Task OnPacketReceived(IPPacket ipPacket);
+    public abstract void OnPacketReceived(IPPacket ipPacket);
 
     public virtual void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint)
     {
@@ -109,7 +109,7 @@ public abstract class ProxyManager : IPacketProxyReceiver
 
     public void AddChannel(IChannel channel)
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(ProxyManager));
+        if (Disposed) throw new ObjectDisposedException(nameof(ProxyManager));
 
         lock (_channels)
             _channels.Add(channel);
@@ -118,8 +118,8 @@ public abstract class ProxyManager : IPacketProxyReceiver
 
     public async ValueTask DisposeAsync()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (Disposed) return;
+        Disposed = true;
 
         _udpProxyPool.Dispose();
         _pingProxyPool.Dispose();

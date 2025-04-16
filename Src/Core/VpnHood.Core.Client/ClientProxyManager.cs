@@ -16,13 +16,13 @@ internal class ClientProxyManager(
     // VpnAdapter can not protect Ping so PingProxy does not work
     protected override bool IsPingSupported => false;
 
-    public override Task OnPacketReceived(IPPacket ipPacket)
+    public override void OnPacketReceived(IPPacket ipPacket)
     {
+        if (Disposed) return;
         if (VhLogger.IsDiagnoseMode)
             PacketLogger.LogPacket(ipPacket, "Delegating packet to host via proxy.");
 
         // writing to local adapter is pretty fast so we don't need to await it
         vpnAdapter.SendPacket(ipPacket);
-        return Task.FromResult(0);
     }
 }

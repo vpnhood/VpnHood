@@ -101,7 +101,7 @@ internal class UdpProxyEx : ITimeoutItem
             ipPacket.UpdateAllChecksums();
 
             // send packet to audience
-            await _packetReceiver.OnPacketReceived(ipPacket).VhConfigureAwait();
+            _packetReceiver.OnPacketReceived(ipPacket);
         }
     }
 

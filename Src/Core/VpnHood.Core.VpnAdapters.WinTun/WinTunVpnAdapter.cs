@@ -134,11 +134,11 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
     }
 
-    protected override async Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken)
+    protected override async Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         var command = ipNetwork.IsV4
-            ? $"interface ipv4 add route {ipNetwork} \"{AdapterName}\" {gatewayIp}"
-            : $"interface ipv6 add route {ipNetwork} \"{AdapterName}\" {gatewayIp}";
+            ? $"interface ipv4 add route {ipNetwork} \"{AdapterName}\""
+            : $"interface ipv6 add route {ipNetwork} \"{AdapterName}\"";
 
         await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
     }

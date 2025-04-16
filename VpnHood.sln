@@ -48,7 +48,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{DD3D7F84-90A3-42F5-9640-906E47660812}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
-		VpnHood.sln.DotSettings = VpnHood.sln.DotSettings
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{18FA0808-ABCC-481B-A596-F9304363675A}"

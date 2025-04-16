@@ -35,7 +35,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
-        if (adapterSettings.MaxPacketCount!=1)
+        if (adapterSettings.MaxPacketCount != 1)
             throw new InvalidOperationException("WinDivert adapter supports only 1 packet at a time.");
 
         // initialize devices
@@ -110,7 +110,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return Task.CompletedTask;
     }
 
-    protected override Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken)
+    protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         _includeIpNetworks.Add(ipNetwork);
         return Task.CompletedTask;
@@ -165,18 +165,21 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         ProcessReadPacket(ipPacket);
         return ipPacket;
     }
-    
-    public override void ProtectSocket(Socket socket)
+
+    public override bool ProtectSocket(Socket socket)
     {
+        // must works with loopback
         var ipAddress = socket.AddressFamily.IsV4() ? IPAddress.Any : IPAddress.IPv6Any;
         socket.Bind(new IPEndPoint(ipAddress, 0));
         socket.Ttl = ProtectedTtl;
+        return true;
     }
 
-    public override void ProtectSocket(Socket socket, IPAddress ipAddress)
+    public override bool ProtectSocket(Socket socket, IPAddress ipAddress)
     {
         base.ProtectSocket(socket, ipAddress);
         socket.Ttl = ProtectedTtl;
+        return true;
     }
 
     protected virtual void ProcessReadPacket(IPPacket ipPacket)

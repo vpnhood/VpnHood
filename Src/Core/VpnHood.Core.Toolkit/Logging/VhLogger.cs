@@ -34,16 +34,16 @@ public static class VhLogger
 
     public static ILogger CreateConsoleLogger(LogLevel logLevel = LogLevel.Information, bool singleLine = false)
     {
+        // VhConsoleLoggerProvider is compatible with Blazor WebAssembly
+        using var provider = new VhConsoleLoggerProvider(singleLine: singleLine, includeScopes: true);
         using var loggerFactory = LoggerFactory.Create(builder => {
-            builder.AddSimpleConsole(configure => {
-                configure.TimestampFormat = "[HH:mm:ss.ffff] ";
-                configure.IncludeScopes = true;
-                configure.SingleLine = singleLine;
-            });
+            // ReSharper disable once AccessToDisposedClosure
+            builder.AddProvider(provider);
             builder.SetMinimumLevel(logLevel);
         });
+        
         var logger = loggerFactory.CreateLogger("");
-        return new SyncLogger(logger);
+        return logger;
     }
 
     public static string Format(EndPoint? endPoint)

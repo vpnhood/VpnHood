@@ -100,7 +100,7 @@ public class PingProxyPool : IPacketProxyPool, IJob
                 isNewLocalEndPoint, isNewRemoteEndPoint);
 
         var result = await sendTask.VhConfigureAwait();
-        await _packetProxyReceiver.OnPacketReceived(result).VhConfigureAwait();
+        _packetProxyReceiver.OnPacketReceived(result);
     }
 
     public Task RunJob()

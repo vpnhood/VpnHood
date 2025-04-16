@@ -117,6 +117,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         // Report current OS Version
         VhLogger.Instance.LogInformation("Module: {Module}", GetType().Assembly.GetName().FullName);
         VhLogger.Instance.LogInformation("OS: {OS}", _systemInfoProvider.GetSystemInfo());
+        VhLogger.Instance.LogInformation("VirtualNetworkV4: {VirtualIpV4}, VirtualNetworkV6: {VirtualIpV6}", 
+            SessionManager.VirtualIpNetworkV4, SessionManager.VirtualIpNetworkV6);
         VhLogger.Instance.LogInformation("IsDiagnoseMode: {IsDiagnoseMode}", VhLogger.IsDiagnoseMode);
 
         // Report TcpBuffers

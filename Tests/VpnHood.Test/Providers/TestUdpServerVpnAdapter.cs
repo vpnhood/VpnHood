@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;
@@ -26,12 +27,8 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyReceiver
     public bool Started { get; private set; }
     public bool IsNatSupported => true;
     public bool CanProtectSocket => false;
-    public void ProtectSocket(Socket socket) =>
-        throw new NotSupportedException("TestUdpVpnAdapter does not support socket protection.");
-
-    public void ProtectSocket(Socket socket, IPAddress ipAddress) =>
-        throw new NotSupportedException("TestUdpVpnAdapter does not support socket protection.");
-
+    public bool ProtectSocket(Socket socket) => false;
+    public bool ProtectSocket(Socket socket, IPAddress ipAddress) => false;
     public Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         Started = true;
@@ -60,10 +57,9 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyReceiver
         }
     }
 
-    Task IPacketReceiver.OnPacketReceived(IPPacket ipPacket)
+    public void OnPacketReceived(IPPacket ipPacket)
     {
         PacketReceived?.Invoke(this, new PacketReceivedEventArgs([ipPacket]));
-        return Task.CompletedTask;
     }
 
     public void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint)

@@ -21,6 +21,10 @@
 		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
+    
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+	    <PathMap>$(SolutionDir)=.</PathMap>
+    </PropertyGroup>
 
 	<PropertyGroup>
 		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
@@ -29,7 +33,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>6.0.681</Version>
+		<Version>6.0.689</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<AssemblyVersion></AssemblyVersion>
 	</PropertyGroup>
@@ -43,8 +47,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3124.44" />
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.680" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3179.45" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.682" />
 	</ItemGroup>
 
 	<ItemGroup>

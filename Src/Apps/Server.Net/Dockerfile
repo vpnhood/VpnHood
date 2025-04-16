@@ -18,10 +18,10 @@ COPY ["Src/Core/VpnHood.Core.Server.Access/VpnHood.Core.Server.Access.csproj", "
 RUN dotnet restore "VpnHood.App.Server.Net/VpnHood.App.Server.Net.csproj"
 COPY . .
 WORKDIR "/src/Src/Apps/Server.Net"
-RUN dotnet build "VpnHood.App.Server.Net.csproj" -c Release -o /app/build
+RUN dotnet build "VpnHood.App.Server.Net.csproj" -c Release -p:SolutionDir=.  -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "VpnHood.App.Server.Net.csproj" -c Release -o /app/publish
+RUN dotnet publish "VpnHood.App.Server.Net.csproj" -c Release -p:SolutionDir=. -o /app/publish
 
 FROM base AS final
 WORKDIR /app

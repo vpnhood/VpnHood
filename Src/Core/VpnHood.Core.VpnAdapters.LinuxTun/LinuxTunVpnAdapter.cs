@@ -122,17 +122,30 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         var iptables = ipNetwork.IsV4 ? "iptables" : "ip6tables";
         await ExecuteCommandAsync($"{iptables} -t nat -A POSTROUTING -s {ipNetwork} -o {_primaryAdapterName} -j MASQUERADE",
                 cancellationToken).VhConfigureAwait();
+
+        // sudo iptables 
+        await ExecuteCommandAsync($"{iptables} -A FORWARD -i {AdapterName} -o {_primaryAdapterName} -j ACCEPT",
+            cancellationToken).VhConfigureAwait();
+
+        // sudo iptables 
+        await ExecuteCommandAsync($"{iptables} -A FORWARD -i {_primaryAdapterName} -o {AdapterName} -m state --state RELATED,ESTABLISHED -j ACCEPT",
+            cancellationToken).VhConfigureAwait();
     }
 
     private void TryRemoveNat(IpNetwork ipNetwork)
     {
+        var iptables = ipNetwork.IsV4 ? "iptables" : "ip6tables";
+
         // Remove NAT rule. try until no rule found
         var res = "ok";
         while (!string.IsNullOrEmpty(res)) {
-            var iptables = ipNetwork.IsV4 ? "iptables" : "ip6tables";
             res = VhUtils.TryInvoke("Remove NAT rule", () =>
                 ExecuteCommand($"{iptables} -t nat -D POSTROUTING -s {ipNetwork} -o {_primaryAdapterName} -j MASQUERADE"));
         }
+
+        // Remove forwarding rules
+        VhUtils.TryInvoke("Remove NAT forwarding rules...", () =>
+            ExecuteCommand($"{iptables}-save | grep -v -w \"{AdapterName}\" | {iptables}-restore"));
     }
 
     protected override async Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
@@ -141,11 +154,11 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
             cancellationToken).VhConfigureAwait();
     }
 
-    protected override async Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken)
+    protected override async Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         var command = ipNetwork.IsV4
-            ? $"ip route add {ipNetwork} dev {AdapterName} via {gatewayIp}"
-            : $"ip -6 route add {ipNetwork} dev {AdapterName} via {gatewayIp}";
+            ? $"ip route add {ipNetwork} dev {AdapterName}"
+            : $"ip -6 route add {ipNetwork} dev {AdapterName}";
 
         if (_metric != null)
             command += $" metric {_metric}";

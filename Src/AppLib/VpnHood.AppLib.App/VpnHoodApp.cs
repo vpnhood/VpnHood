@@ -368,13 +368,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         get {
             var clientState = ConnectionInfo.ClientState;
 
-            // let's service disconnect on background and let user connect again if it is disconnecting
-            if (_isDisconnecting)
-                return AppConnectionState.None; 
-
             // in diagnose mode, we need either cancel it or wait for it
             if (Diagnoser.IsWorking)
                 return AppConnectionState.Diagnosing;
+
+            // let's service disconnect on background and let user connect again if it is disconnecting
+            if (_isDisconnecting)
+                return AppConnectionState.None;
 
             if (clientState == ClientState.Initializing || _isLoadingCountryIpRange || _isFindingCountryCode)
                 return AppConnectionState.Initializing;
@@ -627,11 +627,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // calculate vpnAdapterIpRanges
         var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
         if (UserSettings.UseVpnAdapterIpFilter) {
-            vpnAdapterIpRanges =
-                vpnAdapterIpRanges.Intersect(
+            vpnAdapterIpRanges = vpnAdapterIpRanges.Intersect(
                     IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.AdapterIpFilterIncludes));
-            vpnAdapterIpRanges =
-                vpnAdapterIpRanges.Exclude(
+            vpnAdapterIpRanges = vpnAdapterIpRanges.Exclude(
                     IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.AdapterIpFilterExcludes));
         }
 
@@ -646,7 +644,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IncludeLocalNetwork = UserSettings.IncludeLocalNetwork && Features.IsLocalNetworkSupported,
             IncludeIpRanges = (await GetIncludeIpRanges(cancellationToken)).ToArray(),
             VpnAdapterIncludeIpRanges = vpnAdapterIpRanges.ToArray(),
-            MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
+            MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount, 
             ConnectTimeout = TcpTimeout,
             ServerQueryTimeout = _serverQueryTimeout,
             UseNullCapture = HasDebugCommand(DebugCommands.NullCapture),
@@ -810,8 +808,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         ApplySettings();
     }
 
-    public string GetClientCountry() => _appPersistState.ClientCountryCode ?? RegionInfo.CurrentRegion.Name;
-    public string GetClientCountryByServer() => _appPersistState.ClientCountryCodeByServer ?? GetClientCountry();
+    public string GetClientCountry() =>
+        _appPersistState.ClientCountryCodeByServer ??
+        _appPersistState.ClientCountryCode ??
+        RegionInfo.CurrentRegion.Name;
 
     public Task<string> GetCurrentCountryAsync(CancellationToken cancellationToken)
     {
@@ -873,7 +873,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         using var workScope = new AutoDispose(() => { _isDisconnecting = false; FireConnectionStateChanged(); });
         _appPersistState.HasDisconnectedByUser = true;
         _connectCts.Cancel();
-        await _vpnServiceManager.Stop();
+        await _vpnServiceManager.Stop().VhConfigureAwait();
     }
 
     public void VersionCheckPostpone()
@@ -1113,6 +1113,45 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         VhLogger.Instance.LogWarning(ex, message);
     }
 
+    public async Task<AppPurchaseOptions> GetPurchaseOptions()
+    {
+        var purchaseUrlMode = CurrentClientProfileInfo?.PurchaseUrlMode;
+        var purchaseUrl = CurrentClientProfileInfo?.PurchaseUrl;
+
+        // get subscription plans from store
+        var subscriptionPlans = Array.Empty<SubscriptionPlan>();
+        string? storeName = null;
+        ApiError? apiError = null;
+        if (purchaseUrlMode != PurchaseUrlMode.HideStore) {
+            try {
+                var billingService = Services.AccountService?.BillingService;
+                storeName = billingService?.ProviderName;
+                if (billingService != null)
+                    subscriptionPlans = await billingService.GetSubscriptionPlans();
+            }
+            catch (Exception ex) {
+                apiError = ex.ToApiError();
+            }
+        }
+
+        // calculate purchase url
+        var externalUrl = purchaseUrlMode switch {
+            PurchaseUrlMode.HideStore => purchaseUrl,
+            PurchaseUrlMode.WithStore => purchaseUrl,
+            PurchaseUrlMode.WhenNoStore when apiError is not null => purchaseUrl,
+            _ => null
+        };
+
+        var purchaseOptions = new AppPurchaseOptions {
+            StoreName = storeName,
+            SubscriptionPlans = subscriptionPlans,
+            StoreError = apiError, // no error if purchaseUrl is set
+            PurchaseUrl = externalUrl,
+        };
+
+        return purchaseOptions;
+    }
+
     public Task RunJob()
     {
         return VersionCheck();
@@ -1147,7 +1186,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _vpnServiceManager.Dispose();
         _vpnServiceManager.StateChanged -= VpnService_StateChanged;
 
-        await _device.DisposeAsync();
+        await _device.DisposeAsync().VhConfigureAwait();
         LogService.Dispose();
         DisposeSingleton();
         AppUiContext.OnChanged -= ActiveUiContext_OnChanged;

@@ -24,7 +24,6 @@ using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using FastDateTime = VpnHood.Core.Toolkit.Utils.FastDateTime;
-using PacketReceivedEventArgs = VpnHood.Core.VpnAdapters.Abstractions.PacketReceivedEventArgs;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Client;
@@ -67,7 +66,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private readonly string[]? _excludeApps;
     private ClientSessionStatus? _sessionStatus;
     private IPAddress[] _dnsServers;
-    
+
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
     internal Tunnel Tunnel { get; }
     public ISocketFactory SocketFactory { get; }
@@ -167,7 +166,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         // Tunnel
         Tunnel = new Tunnel();
         Tunnel.PacketReceived += Tunnel_OnPacketReceived;
-
 
         // create proxy host
         _clientHost = new ClientHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
@@ -322,7 +320,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     }
 
     // WARNING: Performance Critical!
-    private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
+    private void Tunnel_OnPacketReceived(object sender, PacketReceivedEventArgs e)
     {
         _vpnAdapter.SendPackets(e.IpPackets);
     }
@@ -406,10 +404,10 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     _ = ManageDatagramChannels(_cancellationTokenSource.Token);
 
                 if (tunnelPackets.Count > 0)
-                    Tunnel.SendPackets(tunnelPackets, _cancellationTokenSource.Token);
+                    Tunnel.SendPacketsAsync(tunnelPackets).GetAwaiter().GetResult();
 
                 if (proxyPackets.Count > 0)
-                    _proxyManager.SendPackets(proxyPackets).Wait(_cancellationTokenSource.Token);
+                    _proxyManager.SendPackets(proxyPackets).GetAwaiter().GetResult();
 
                 if (tcpHostPackets.Count > 0)
                     _vpnAdapter.SendPackets(_clientHost.ProcessOutgoingPacket(tcpHostPackets));
@@ -487,7 +485,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             if (_disposed) return false;
             if (_datagramChannelsSemaphore.CurrentCount == 0) return false;
             if (UseUdpChannel != Tunnel.IsUdpMode) return true;
-            return !UseUdpChannel && Tunnel.DatagramChannelCount < _maxDatagramChannelCount;
+            return !UseUdpChannel && Tunnel.DatagramChannelCount < Tunnel.MaxDatagramChannelCount;
         }
     }
 
@@ -619,8 +617,10 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 $"ServerMinProtocolVersion: {helloResponse.MinProtocolVersion}, " +
                 $"ServerMaxProtocolVersion: {helloResponse.MaxProtocolVersion}, " +
                 $"CurrentProtocolVersion: {_connectorService.ProtocolVersion}, " +
-                $"ClientIp: {VhLogger.Format(helloResponse.ClientPublicAddress)}",
-                $"IsTunProviderSupported: {helloResponse.IsTunProviderSupported}",
+                $"ClientIp: {VhLogger.Format(helloResponse.ClientPublicAddress)}, " +
+                $"IsTunProviderSupported: {helloResponse.IsTunProviderSupported}, " +
+                $"NetworkV4: {helloResponse.VirtualIpNetworkV4}, " +
+                $"NetworkV6: {helloResponse.VirtualIpNetworkV6}, " +
                 $"ClientCountry: {helloResponse.ClientCountry}");
 
             // get session id
@@ -732,6 +732,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 IncludeIpRanges = [];
 
             // prepare packet capture
+            // Set a default to capture & drop the packets if the server does not provide a network
             var networkV4 = helloResponse.VirtualIpNetworkV4 ?? new IpNetwork(IPAddress.Parse("10.255.0.2"), 32);
             var networkV6 = helloResponse.VirtualIpNetworkV6 ?? new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
 
@@ -745,7 +746,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 DnsServers = SessionInfo.DnsServers,
                 VirtualIpNetworkV4 = networkV4,
                 VirtualIpNetworkV6 = networkV6,
-                Mtu = TunnelDefaults.MtuWithoutFragmentation,
+                Mtu = Math.Min(TunnelDefaults.Mtu, helloResponse.Mtu - TunnelDefaults.MtuOverhead),
                 IncludeNetworks = BuildVpnAdapterIncludeNetworks(_connectorService.EndPointInfo.TcpEndPoint.Address),
                 SessionName = SessionName,
                 ExcludeApps = _excludeApps,
@@ -755,6 +756,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             // Preparing tunnel
             VhLogger.Instance.LogInformation("Configuring Datagram Channels...");
+            Tunnel.Mtu = adapterOptions.Mtu.Value;
+            Tunnel.RemoteMtu = helloResponse.Mtu;
             Tunnel.MaxDatagramChannelCount = helloResponse.MaxDatagramChannelCount != 0
                 ? Tunnel.MaxDatagramChannelCount =
                     Math.Min(_maxDatagramChannelCount, helloResponse.MaxDatagramChannelCount)
@@ -956,8 +959,11 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _cancellationTokenSource.Cancel();
         State = ClientState.Disconnecting;
 
-        // disposing VpnAdapter
+        // stop processing tunnel & adapter packets
         _vpnAdapter.PacketReceived -= VpnAdapter_OnPacketReceived;
+        Tunnel.PacketReceived -= Tunnel_OnPacketReceived;
+
+        // disposing VpnAdapter
         if (_autoDisposeVpnAdapter) {
             VhLogger.Instance.LogDebug("Disposing the VpnAdapter...");
             _vpnAdapter.Dispose();
@@ -968,13 +974,12 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         // Anonymous usage tracker
         _ = _clientUsageTracker?.DisposeAsync();
-
+        
         VhLogger.Instance.LogDebug("Disposing ClientHost...");
         await _clientHost.DisposeAsync().VhConfigureAwait();
 
         // Tunnel
         VhLogger.Instance.LogDebug("Disposing Tunnel...");
-        Tunnel.PacketReceived -= Tunnel_OnPacketReceived;
         await Tunnel.DisposeAsync().VhConfigureAwait();
 
         VhLogger.Instance.LogDebug("Disposing ProxyManager...");

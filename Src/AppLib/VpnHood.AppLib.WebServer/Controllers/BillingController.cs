@@ -25,4 +25,10 @@ internal class BillingController : WebApiController, IBillingController
     {
         return BillingService.Purchase(AppUiContext.RequiredContext, planId);
     }
+
+    [Route(HttpVerbs.Get, "/purchase-options")]
+    public Task<AppPurchaseOptions> GetPurchaseOptions()
+    {
+        return VpnHoodApp.Instance.GetPurchaseOptions();
+    }
 }

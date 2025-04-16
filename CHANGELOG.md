@@ -1,8 +1,11 @@
-# v6.0.681
-* Fix: Instability on pressing the connect and disconnect buttons
+# Upcoming
+* Fix: Instability of pressing the connect and disconnect buttons
 * Fix: Up speed and down speed show in the wrong place
 * Fix: Android: VpnKey remains connected after disconnect
-* Improve: Improve performance and stability
+* Feature: Windows: Use WinTun instead of WinDivert
+* Feature: Windows: Allow use IPv6 even when client does not have IPv6
+* Improve: Watching media streaming
+* Improve: Performance and stability
 
 # v6.0.676
 * Fix: Improve security by blocking multicast traffic

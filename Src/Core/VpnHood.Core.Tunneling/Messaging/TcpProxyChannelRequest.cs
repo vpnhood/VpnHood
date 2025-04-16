@@ -10,6 +10,9 @@ public class StreamProxyChannelRequest()
     [JsonConverter(typeof(IPEndPointConverter))]
     public required IPEndPoint DestinationEndPoint { get; set; }
 
-    public required byte[] CipherKey { get; init; }
-    public required long CipherLength { get; init; }
+    [Obsolete("Will be removed after 688. Required for server compatibility smaller than 688.")]
+    public byte[] CipherKey { get; init; } = [];
+
+    [Obsolete("Will be removed after 688. Required for server compatibility smaller than 688.")]
+    public long CipherLength { get; init; } = 0;
 }

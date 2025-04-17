@@ -303,7 +303,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         var includeIpRanges = VpnAdapterIncludeIpRanges;
 
         // exclude server if ProtectClient is not supported to prevent loop
-        if (!_vpnAdapter.CanProtectSocket)
+        if (!_vpnAdapter.CanProtectSocket) 
             includeIpRanges = includeIpRanges.Exclude(hostIpAddress);
 
         // local networks automatically not routed

@@ -294,7 +294,7 @@ public class VpnServiceManager : IJob, IDisposable
         var tcpClient = _tcpClient;
         try {
             // establish and set the api key
-            if (tcpClient is not { Connected: true } || tcpClient.Client.LocalEndPoint.Equals(hostEndPoint) != true) {
+            if (tcpClient is not { Connected: true }) {
                 VhLogger.Instance.LogDebug("Connecting to VpnService Host... EndPoint: {EndPoint}", hostEndPoint);
                 tcpClient?.Dispose();
                 tcpClient = new TcpClient();

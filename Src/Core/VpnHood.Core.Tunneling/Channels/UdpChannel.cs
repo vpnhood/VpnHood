@@ -20,7 +20,6 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
     private PacketReceivedEventArgs? _packetReceivedEventArgs;
     private readonly IPPacket[] _sendingPackets = [null!];
     private readonly long _cryptorPosBase = isServer ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
-    private readonly List<IPPacket> _receivedIpPackets = [];
     private bool _disposed;
 
     public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
@@ -136,17 +135,17 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
 
         // read all packets
         try {
+            _packetReceivedEventArgs ??= new PacketReceivedEventArgs([]);
+            _packetReceivedEventArgs.IpPackets.Clear();
+
             while (bufferIndex < buffer.Length) {
                 var ipPacket = PacketUtil.ReadNextPacket(buffer, ref bufferIndex);
                 Traffic.Received += ipPacket.TotalLength;
-                _receivedIpPackets.Add(ipPacket);
+                _packetReceivedEventArgs.IpPackets.Add(ipPacket);
             }
 
-            _packetReceivedEventArgs ??= new PacketReceivedEventArgs([]);
-            _packetReceivedEventArgs.IpPackets = _receivedIpPackets.ToArray();
             PacketReceived?.Invoke(this, _packetReceivedEventArgs);
             LastActivityTime = FastDateTime.Now;
-            _receivedIpPackets.Clear();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(GeneralEventId.Udp, ex, "Error in processing packets.");

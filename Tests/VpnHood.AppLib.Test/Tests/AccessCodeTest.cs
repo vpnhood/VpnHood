@@ -14,7 +14,7 @@ public class AccessCodeTest : TestAppBase
     [TestMethod]
     public async Task AaFoo()
     {
-       await Task.CompletedTask;
+        await Task.CompletedTask;
     }
 
 

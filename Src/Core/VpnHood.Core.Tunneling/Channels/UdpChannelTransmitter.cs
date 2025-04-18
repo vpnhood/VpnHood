@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Buffers.Binary;
+using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,7 @@ public abstract class UdpChannelTransmitter : IDisposable
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly BufferCryptor _serverEncryptor;
     private readonly BufferCryptor _serverDecryptor; // decryptor must be different object for thread safety
-    private readonly RNGCryptoServiceProvider _randomGenerator = new();
+    private readonly RandomNumberGenerator _randomGenerator = RandomNumberGenerator.Create();
     private readonly byte[] _sendIv = new byte[8];
     public const int HeaderLength = 32; //IV (8) + Sign (2) + Reserved (6) + SessionId (8) + SessionPos (8)
     private readonly byte[] _sendHeadKeyBuffer = new byte[HeaderLength - 8]; // IV will not be encrypted
@@ -44,8 +45,12 @@ public abstract class UdpChannelTransmitter : IDisposable
 
             buffer[8] = (byte)'O';
             buffer[9] = (byte)'K';
-            BitConverter.GetBytes(sessionId).CopyTo(buffer, 16);
-            BitConverter.GetBytes(sessionCryptoPosition).CopyTo(buffer, 24);
+            //BitConverter.GetBytes(sessionId).CopyTo(buffer, 16);
+            //BitConverter.GetBytes(sessionCryptoPosition).CopyTo(buffer, 24);
+
+            BinaryPrimitives.WriteUInt64LittleEndian(buffer.AsSpan(16, 8), sessionId);
+            BinaryPrimitives.WriteInt64LittleEndian(buffer.AsSpan(24, 8), sessionCryptoPosition);
+
 
             // encrypt session info part. It encrypts the session number and counter by server key and perform bitwise XOR on head.
             // the data is not important, but it removes the signature of our packet by obfuscating the packet head. Also, the counter of session 

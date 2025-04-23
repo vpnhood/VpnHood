@@ -31,6 +31,13 @@ public abstract class UdpChannelTransmitter : IDisposable
         _ = ReadTask();
     }
 
+    public void Configure(int? sendBufferSize, int? receiveBufferSize)
+    {
+        using var udpClient = new UdpClient();
+        _udpClient.Client.ReceiveBufferSize = receiveBufferSize ?? udpClient.Client.ReceiveBufferSize;
+        _udpClient.Client.SendBufferSize = sendBufferSize ?? udpClient.Client.SendBufferSize;
+    }
+
     public IPEndPoint LocalEndPoint => (IPEndPoint)_udpClient.Client.LocalEndPoint;
 
     public async Task<int> SendAsync(IPEndPoint? ipEndPoint, ulong sessionId, long sessionCryptoPosition,

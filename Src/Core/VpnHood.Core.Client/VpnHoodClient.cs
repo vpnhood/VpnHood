@@ -66,6 +66,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private readonly string[]? _excludeApps;
     private ClientSessionStatus? _sessionStatus;
     private IPAddress[] _dnsServers;
+    private readonly int _udpSendBufferSize;
+    private readonly int _udpReceiveBufferSize;
 
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
     internal Tunnel Tunnel { get; }
@@ -136,6 +138,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _excludeApps = options.ExcludeApps;
         _includeApps = options.IncludeApps;
         _allowRewardedAd = options.AllowRewardedAd;
+        _udpReceiveBufferSize = options.UdpReceiveBufferSize ?? TunnelDefaults.ClientUdpReceiveBufferSize;
+        _udpSendBufferSize = options.UdpSendBufferSize ?? TunnelDefaults.ClientUdpSendBufferSize;
         _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
         _serverFinder = new ServerFinder(socketFactory, token.ServerToken,
             serverLocation: options.ServerLocation,
@@ -532,6 +536,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         var udpChannel = new UdpChannel(SessionId, _sessionKey, false, ConnectorService.ProtocolVersion);
         try {
             var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, ServerSecret);
+            udpChannelTransmitter.Configure(sendBufferSize: _udpSendBufferSize, receiveBufferSize: _udpReceiveBufferSize);
             udpChannel.SetRemote(udpChannelTransmitter, HostUdpEndPoint);
             Tunnel.AddChannel(udpChannel);
         }

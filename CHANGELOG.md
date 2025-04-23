@@ -6,6 +6,7 @@
 * Feature: Windows: Allow use IPv6 even when client does not have IPv6
 * Improve: Watching media streaming
 * Improve: Performance and stability
+* Improve: UDP Speed
 
 # v6.0.676
 * Fix: Improve security by blocking multicast traffic

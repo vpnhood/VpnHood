@@ -67,6 +67,8 @@ public class ClientOptions
     public string? TrackerFactoryAssemblyQualifiedName { get; set; }
     public string? DebugData1 { get; set; }
     public string? DebugData2 { get; set; }
+    public int? UdpReceiveBufferSize { get; set; }
+    public int? UdpSendBufferSize { get; set; }
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

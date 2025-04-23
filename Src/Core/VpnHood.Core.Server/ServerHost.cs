@@ -49,11 +49,10 @@ public class ServerHost : IAsyncDisposable, IJob
         JobRunner.Default.Add(this);
     }
 
-    public async Task Configure(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints,
-        IPAddress[]? dnsServers, X509Certificate2[] certificates)
+    internal async Task Configure(ServerHostConfiguration configuration)
     {
-        if (VhUtils.IsNullOrEmpty(certificates))
-            throw new ArgumentNullException(nameof(certificates), "No certificate has been configured.");
+        if (VhUtils.IsNullOrEmpty(configuration.Certificates))
+            throw new ArgumentNullException(nameof(configuration.Certificates), "No certificate has been configured.");
 
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
@@ -62,17 +61,22 @@ public class ServerHost : IAsyncDisposable, IJob
         using var lockResult = await _configureLock.LockAsync(_cancellationTokenSource.Token).VhConfigureAwait();
 
         // reconfigure
-        DnsServers = dnsServers;
-        Certificates = certificates.Select(x => new CertificateHostName(x)).ToArray();
+        DnsServers = configuration.DnsServers;
+        Certificates = configuration.Certificates.Select(x => new CertificateHostName(x)).ToArray();
 
         // Configure
-        await Task.WhenAll(ConfigureUdpListeners(udpEndPoints), ConfigureTcpListeners(tcpEndPoints)).VhConfigureAwait();
+        await Task.WhenAll(
+            ConfigureTcpListeners(configuration.TcpEndPoints),
+            ConfigureUdpListeners(configuration.UdpEndPoints, 
+                configuration.UdpSendBufferSize, 
+                configuration.UdpReceiveBufferSize)
+        ).VhConfigureAwait();
         _tcpListenerTasks.RemoveAll(x => x.IsCompleted);
     }
 
     private readonly AsyncLock _configureLock = new();
 
-    private Task ConfigureUdpListeners(IPEndPoint[] udpEndPoints)
+    private Task ConfigureUdpListeners(IPEndPoint[] udpEndPoints, int? sendBufferSize, int? receiveBufferSize)
     {
         // UDP port zero must be specified in preparation
         if (udpEndPoints.Any(x => x.Port == 0))
@@ -111,6 +115,11 @@ public class ServerHost : IAsyncDisposable, IJob
                 ex.Data.Add("UdpEndPoint", udpEndPoint);
                 throw;
             }
+        }
+
+        // reconfigure all transmitters
+        foreach (var udpChannelTransmitter in _udpChannelTransmitters) {
+            udpChannelTransmitter.Configure(sendBufferSize, receiveBufferSize);
         }
 
         return Task.CompletedTask;

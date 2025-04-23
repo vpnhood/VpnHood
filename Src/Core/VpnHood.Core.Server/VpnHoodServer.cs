@@ -237,10 +237,15 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             }
 
             // Reconfigure server host
-            await ServerHost.Configure(
-                serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue,
-                serverConfig.DnsServersValue, serverConfig.Certificates.Select(x => new X509Certificate2(x.RawData))
-                    .ToArray()).VhConfigureAwait();
+            await ServerHost.Configure(new ServerHostConfiguration
+            {
+                DnsServers = serverConfig.DnsServersValue,
+                TcpEndPoints = serverConfig.TcpEndPointsValue,
+                UdpEndPoints = serverConfig.UdpEndPointsValue,
+                Certificates = serverConfig.Certificates.Select(x => new X509Certificate2(x.RawData)).ToArray(),
+                UdpReceiveBufferSize = serverConfig.SessionOptions.UdpReceiveBufferSizeValue,
+                UdpSendBufferSize = serverConfig.SessionOptions.UdpSendBufferSizeValue,
+            }).VhConfigureAwait();
 
             // Reconfigure dns challenge
             StartDnsChallenge(serverConfig.TcpEndPointsValue.Select(x => x.Address), serverConfig.DnsChallenge);

@@ -92,8 +92,8 @@ public class Session : IAsyncDisposable
             IcmpTimeout = options.IcmpTimeoutValue,
             MaxUdpClientCount = options.MaxUdpClientCountValue,
             MaxIcmpClientCount = options.MaxIcmpClientCountValue,
-            UdpReceiveBufferSize = options.UdpReceiveBufferSize,
-            UdpSendBufferSize = options.UdpSendBufferSize,
+            UdpReceiveBufferSize = options.UdpProxyReceiveBufferSize,
+            UdpSendBufferSize = options.UdpProxySendBufferSize,
             UseUdpProxy2 = options.UseUdpProxy2Value,
             LogScope = logScope
         });

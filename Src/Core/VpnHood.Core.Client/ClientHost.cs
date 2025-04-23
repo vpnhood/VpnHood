@@ -129,8 +129,7 @@ internal class ClientHost(
 
                 // redirect to inbound
                 if (Equals(ipPacket.DestinationAddress, catcherAddress)) {
-                    var natItem = (NatItemEx?)_nat.Resolve(ipPacket.Version, ipPacket.Protocol,
-                                      tcpPacket.DestinationPort)
+                    var natItem = (NatItemEx?)_nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
                                   ?? throw new Exception("Could not find incoming tcp destination in NAT.");
 
                     ipPacket.SourceAddress = natItem.DestinationAddress;

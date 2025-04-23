@@ -86,7 +86,7 @@ internal class UdpProxy : ITimeoutItem
             var ipPacket = PacketBuilder.BuildUdpPacket(udpResult.RemoteEndPoint, SourceEndPoint, udpResult.Buffer);
 
             // send packet to audience
-            await _packetReceiver.OnPacketReceived(ipPacket).VhConfigureAwait();
+            _packetReceiver.OnPacketReceived(ipPacket);
         }
     }
 

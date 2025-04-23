@@ -4,5 +4,5 @@ namespace VpnHood.Core.Tunneling;
 
 public interface IPacketReceiver
 {
-    public Task OnPacketReceived(IPPacket packet);
+    public void OnPacketReceived(IPPacket packet);
 }

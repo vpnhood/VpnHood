@@ -13,18 +13,18 @@ It is available for Windows and Android. The iOS client still needs to be ready!
 <a href="https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Client">Use Alternative Download links.</a>
 
 ## Client Features
-* Easy Installation: Just install and press connect
+* Easy Installation: Install and press connect
 * Undetectable on private IPs
 * Fast
 * Split Tunneling by Apps & Countries
 * Windows (x64) 10, 11 
 * Android, Android TV
-* IPv6*
+* IPv4/IPv6
 
 ## Server Features
 * No Network configuration or knowledge is required
 * No Admin privilege is required
-* Hot Restart (User sessions' will not close on restart)
+* Hot Restart (User sessions will not close on restart)
 * Built-In User Management 
 * Built-in NAT with zero configuration
 * NetScan Protector
@@ -38,15 +38,10 @@ It is available for Windows and Android. The iOS client still needs to be ready!
 * Ads interface. AdMob and Chartboost have been integrated
 * Billing Interface
 * Highly Customizable
-* Easily Embed into your .NET app
+* Easily embed into your .NET app
 * Extendable User Management via REST API
 * Component-based via Nuget packages
 * Open the solution with Visual Studio and build
-
-### IPv6 Support
-VpnHood supports IPv6, but in Windows, you must already be on the IPv6 network, so all your network traffic will be tunneled through VpnHood.
-In Windows, you cannot access IPv6 sites if your network is not already configured to use IPv6.
-In Android, however, you will get an IPV6 address and access to all IPv6 sites regardless of your network configuration.
 
 ### Security Audit
 We are excited to announce that VpnHood has undergone a comprehensive security audit by the Open Tech Fund. The audit results are now available for public review. This audit reaffirms our commitment to providing a secure and reliable VPN service for our users. You can read the full report [here](https://www.opentech.fund/security-safety-audits/vpnhood-security-audit-results/).
@@ -70,7 +65,4 @@ You are always welcome!
 Windows|Linux
 
 ## Special Thanks
-* [SharpPcap](https://github.com/chmorgan/sharppcap): Fully managed, cross platform .NET library for capturing packets from live and file based devices.
-* [WinDivert](https://reqrypt.org/windivert.html): a user-mode packet capture-and-divert package for Windows.
-* [EmbedIO](https://github.com/unosquare/embedio): A tiny, cross-platform, module based web server for .NET.
 * [Advanced Installer](https://www.advancedinstaller.com): Installer tools for Windows.

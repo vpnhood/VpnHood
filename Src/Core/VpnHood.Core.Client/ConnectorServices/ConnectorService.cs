@@ -68,6 +68,10 @@ internal class ConnectorService(
                     ClientStream = clientStream
                 };
             }
+            catch (SessionException) {
+                // let the caller handle the exception. there is no error in connection
+                throw;
+            }
             catch (Exception ex) {
                 // dispose the connection and retry with new connection
                 lock (Stat) Stat.ReusedConnectionFailedCount++;
@@ -103,6 +107,10 @@ internal class ConnectorService(
                 ClientStream = clientStream
             };
         }
+        catch (SessionException) {
+            // let the caller handle the exception. there is no error in connection
+            throw;
+        }
         catch {
             DisposingTasks.Add(clientStream.DisposeAsync(false));
             throw;
@@ -118,8 +126,12 @@ internal class ConnectorService(
             ProcessResponseException(response);
             return response;
         }
-        catch (Exception ex) when (ex is not SessionException && typeof(T) != typeof(SessionResponse)) {
-            // try to deserialize as a SessionResponse (base)
+        // the response is already processed and exception is thrown
+        catch (SessionException) {
+            throw;
+        }
+        // try to deserialize as a SessionResponse (base)
+        catch when (typeof(T) != typeof(SessionResponse)) {
             var sessionResponse = JsonUtils.Deserialize<SessionResponse>(message);
             ProcessResponseException(sessionResponse);
             throw;

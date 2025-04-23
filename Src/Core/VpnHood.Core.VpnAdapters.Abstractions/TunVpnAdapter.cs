@@ -29,7 +29,7 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
     protected abstract Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken);
     protected abstract Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken);
     protected abstract Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken);
-    protected abstract Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken);
+    protected abstract Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken);
     protected abstract Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken);
     protected abstract Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken);
     protected abstract Task SetSessionName(string sessionName, CancellationToken cancellationToken);
@@ -147,10 +147,10 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
 
             // add routes
             VhLogger.Instance.LogDebug("Adding routes...");
-            if (GatewayIpV4!=null)
-                await AddRouteHelper(options.IncludeNetworks, GatewayIpV4, cancellationToken).VhConfigureAwait();
-            if (GatewayIpV6 != null)
-                await AddRouteHelper(options.IncludeNetworks, GatewayIpV6, cancellationToken).VhConfigureAwait();
+            if (AdapterIpNetworkV4!=null)
+                await AddRouteHelper(options.IncludeNetworks, AddressFamily.InterNetwork, cancellationToken).VhConfigureAwait();
+            if (AdapterIpNetworkV6 != null)
+                await AddRouteHelper(options.IncludeNetworks, AddressFamily.InterNetworkV6, cancellationToken).VhConfigureAwait();
             
             // add NAT
             if (UseNat) {
@@ -182,28 +182,27 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
         }
     }
 
-    private async Task AddRouteHelper(IEnumerable<IpNetwork> ipNetworks, IPAddress gatewayIpAddress,
-        CancellationToken cancellationToken)
+    private async Task AddRouteHelper(IEnumerable<IpNetwork> ipNetworks, AddressFamily addressFamily, CancellationToken cancellationToken)
     {
         // remove the local networks
-        ipNetworks = ipNetworks.Where(x => x.AddressFamily == gatewayIpAddress.AddressFamily);
+        ipNetworks = ipNetworks.Where(x => x.AddressFamily == addressFamily);
 
         if (_autoMetric) {
             // ReSharper disable once PossibleMultipleEnumeration
             var sortedIpNetworks = ipNetworks.Sort();
 
             // ReSharper disable once PossibleMultipleEnumeration
-            if (gatewayIpAddress.IsV4() && sortedIpNetworks.IsAllV4())
+            if (addressFamily.IsV4() && sortedIpNetworks.IsAllV4())
                 ipNetworks = VpnAdapterOptions.AllVRoutesIpV4;
 
             // ReSharper disable once PossibleMultipleEnumeration
-            if (gatewayIpAddress.IsV6() && sortedIpNetworks.IsAllV6())
+            if (addressFamily.IsV6() && sortedIpNetworks.IsAllV6())
                 ipNetworks = VpnAdapterOptions.AllVRoutesIpV6;
         }
 
         // ReSharper disable once PossibleMultipleEnumeration
         foreach (var network in ipNetworks)
-            await AddRoute(network, gatewayIpAddress, cancellationToken).VhConfigureAwait();
+            await AddRoute(network, cancellationToken).VhConfigureAwait();
     }
 
     private async Task SetAppFilters(string[]? includeApps, string[]? excludeApps, CancellationToken cancellationToken)
@@ -253,34 +252,50 @@ public abstract class TunVpnAdapter(VpnAdapterSettings adapterSettings) : IVpnAd
         }
     }
 
-    public virtual void ProtectSocket(Socket socket)
+    protected void BindToAny(Socket socket)
+    {
+        var ipAddress = socket.AddressFamily.IsV4() ? IPAddress.Any : IPAddress.IPv6Any;
+        socket.Bind(new IPEndPoint(ipAddress, 0));
+    }
+
+    public virtual bool ProtectSocket(Socket socket)
     {
         if (socket.LocalEndPoint != null)
             throw new InvalidOperationException("Could not protect an already bound socket.");
 
         // get the primary adapter IP
-        var primaryAdapterIp = GetPrimaryAdapterIp(socket.AddressFamily) ??
-                               throw new InvalidOperationException("Could not protect this address family.");
+        var primaryAdapterIp = GetPrimaryAdapterIp(socket.AddressFamily);
+        if (primaryAdapterIp == null) {
+            BindToAny(socket);
+            return false;
+        }
 
         // bind the socket to the primary adapter IP
         socket.Bind(new IPEndPoint(primaryAdapterIp, 0));
+        return true;
     }
 
-    public virtual void ProtectSocket(Socket socket, IPAddress remoteAddress)
+    public virtual bool ProtectSocket(Socket socket, IPAddress remoteAddress)
     {
         if (socket.LocalEndPoint != null)
             throw new InvalidOperationException("Could not protect an already bound socket.");
 
         // get the primary adapter IP
-        var primaryAdapterIp = GetPrimaryAdapterIp(socket.AddressFamily) ??
-                               throw new InvalidOperationException("Could not protect this address family.");
+        var primaryAdapterIp = GetPrimaryAdapterIp(socket.AddressFamily);
+        if (primaryAdapterIp == null) {
+            BindToAny(socket);
+            return false;
+        }
 
         // could not protect loopback addresses or not needed at all, because loopback can not be routed
-        if (IPAddress.IsLoopback(primaryAdapterIp) != IPAddress.IsLoopback(remoteAddress))
-            return;
+        if (IPAddress.IsLoopback(primaryAdapterIp) != IPAddress.IsLoopback(remoteAddress)) {
+            BindToAny(socket);
+            return false;
+        }
 
         // bind the socket to the primary adapter IP and connect to the remote endpoint
         socket.Bind(new IPEndPoint(primaryAdapterIp, 0));
+        return true;
     }
 
     private static IPAddress? DiscoverPrimaryAdapterIp()

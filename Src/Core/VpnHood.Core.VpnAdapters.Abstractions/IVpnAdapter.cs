@@ -12,8 +12,8 @@ public interface IVpnAdapter : IDisposable
     bool Started { get; }
     bool IsNatSupported { get; }
     bool CanProtectSocket { get; }
-    void ProtectSocket(Socket socket);
-    void ProtectSocket(Socket socket, IPAddress ipAddress);
+    bool ProtectSocket(Socket socket);
+    bool ProtectSocket(Socket socket, IPAddress ipAddress);
     Task Start(VpnAdapterOptions options, CancellationToken cancellationToken);
     void Stop();
     void SendPacket(IPPacket ipPacket);

@@ -46,10 +46,20 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         // Set UUID version (5: SHA-1-based name-based UUID)
         guidBytes[7] = (byte)((guidBytes[7] & 0x0F) | 0x50); // set version to 5
         guidBytes[8] = (byte)((guidBytes[8] & 0x3F) | 0x80); // set variant to RFC 4122
-        
+
         var adapterGuid = new Guid(guidBytes);
         return adapterGuid;
     }
+
+    //public static int GetAdapterIndex(Guid adapterId)
+    //{
+    //    var adapter = NetworkInterface.GetAllNetworkInterfaces()
+    //        .Single(x => Guid.TryParse(x.Id, out var id) && id == adapterId);
+
+    //    var ipProps = adapter.GetIPProperties();
+    //    var index = ipProps.GetIPv4Properties()?.Index ?? -1;
+    //    return index;
+    //}
 
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
@@ -134,11 +144,11 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
     }
 
-    protected override async Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken)
+    protected override async Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         var command = ipNetwork.IsV4
-            ? $"interface ipv4 add route {ipNetwork} \"{AdapterName}\" {gatewayIp}"
-            : $"interface ipv6 add route {ipNetwork} \"{AdapterName}\" {gatewayIp}";
+            ? $"interface ipv4 add route {ipNetwork} \"{AdapterName}\""
+            : $"interface ipv6 add route {ipNetwork} \"{AdapterName}\"";
 
         await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
     }
@@ -166,9 +176,9 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     {
         // remove previous DNS servers
         VhLogger.Instance.LogDebug("Removing previous DNS from the adapter...");
-        await VhUtils.TryInvokeAsync("Remove previous DNS", 
+        await VhUtils.TryInvokeAsync("Remove previous DNS",
             () => OsUtils.ExecuteCommandAsync("netsh", $"netsh interface ipv4 delete dns \"{AdapterName}\" all", cancellationToken));
-        
+
         VhLogger.Instance.LogDebug("Adding new DNS to the adapter...");
         foreach (var ipAddress in dnsServers) {
             var command = ipAddress.IsV4()

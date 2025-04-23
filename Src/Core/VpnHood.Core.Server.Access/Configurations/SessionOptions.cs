@@ -27,6 +27,8 @@ public class SessionOptions
     public int? TcpBufferSize { get; set; }
     public int? TcpKernelSendBufferSize { get; set; }
     public int? TcpKernelReceiveBufferSize { get; set; }
+    public int? UdpProxySendBufferSize { get; set; }
+    public int? UdpProxyReceiveBufferSize { get; set; }
     public int? UdpSendBufferSize { get; set; }
     public int? UdpReceiveBufferSize { get; set; }
     public TimeSpan? TcpConnectTimeout { get; set; }
@@ -39,6 +41,8 @@ public class SessionOptions
 
     [JsonIgnore] public TimeSpan TimeoutValue => Timeout ?? TimeSpan.FromMinutes(30);
     [JsonIgnore] public TimeSpan UdpTimeoutValue => UdpTimeout ?? TimeSpan.FromMinutes(1);
+    [JsonIgnore] public int UdpSendBufferSizeValue => UdpSendBufferSize ?? 1024 * 1024 * 4;
+    [JsonIgnore] public int UdpReceiveBufferSizeValue => UdpReceiveBufferSize ?? 1024 * 1024 * 4;
     [JsonIgnore] public TimeSpan TcpTimeoutValue => TcpTimeout ?? TimeSpan.FromMinutes(15);
     [JsonIgnore] public TimeSpan IcmpTimeoutValue => IcmpTimeout ?? TimeSpan.FromSeconds(30);
     [JsonIgnore] public TimeSpan SyncIntervalValue => SyncInterval ?? TimeSpan.FromMinutes(20);
@@ -66,6 +70,8 @@ public class SessionOptions
         if (obj.TcpBufferSize != null) TcpBufferSize = obj.TcpBufferSize;
         if (obj.TcpKernelSendBufferSize != null) TcpKernelSendBufferSize = obj.TcpKernelSendBufferSize;
         if (obj.TcpKernelReceiveBufferSize != null) TcpKernelReceiveBufferSize = obj.TcpKernelReceiveBufferSize;
+        if (obj.UdpProxySendBufferSize != null) UdpProxySendBufferSize = obj.UdpProxySendBufferSize;
+        if (obj.UdpProxyReceiveBufferSize != null) UdpProxyReceiveBufferSize = obj.UdpProxyReceiveBufferSize;
         if (obj.UdpSendBufferSize != null) UdpSendBufferSize = obj.UdpSendBufferSize;
         if (obj.UdpReceiveBufferSize != null) UdpReceiveBufferSize = obj.UdpReceiveBufferSize;
         if (obj.TcpConnectTimeout != null) TcpConnectTimeout = obj.TcpConnectTimeout;
@@ -91,8 +97,10 @@ public class SessionOptions
         TcpBufferSize = TcpBufferSize; //no default
         TcpKernelSendBufferSize = TcpKernelSendBufferSize; //no default
         TcpKernelReceiveBufferSize = TcpKernelReceiveBufferSize; //no default
-        UdpSendBufferSize = UdpSendBufferSize; //no default
-        UdpReceiveBufferSize = UdpReceiveBufferSize; //no default
+        UdpProxySendBufferSize = UdpProxySendBufferSize; //no default
+        UdpProxyReceiveBufferSize = UdpProxyReceiveBufferSize; //no default
+        UdpSendBufferSize = UdpSendBufferSizeValue;
+        UdpReceiveBufferSize = UdpReceiveBufferSizeValue;
         TcpConnectTimeout = TcpConnectTimeoutValue;
         TcpReuseTimeout = TcpReuseTimeoutValue;
         MaxTcpConnectWaitCount = MaxTcpConnectWaitCountValue;

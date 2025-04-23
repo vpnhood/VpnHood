@@ -1,4 +1,8 @@
-# v6.0.688
+# v6.0.690
+* Improve: Watching media streaming
+* Improve: Performance and stability
+
+# v6.0.689
 * Fix: Calculate UDP checksum and DNS response
 
 # v6.0.680

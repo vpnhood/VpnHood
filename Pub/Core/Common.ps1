@@ -64,7 +64,7 @@ function UpdateRepoVersionInFile()
 
 function PushMainRepo()
 {
-	Write-Host "*** Commit and push the main repo" -BackgroundColor Blue
+	Write-Host "*** Commit and push the main repo..." -BackgroundColor Blue
 
 	Push-Location -Path "$solutionDir";
 
@@ -78,6 +78,7 @@ function PushMainRepo()
 	# swtich to main branch
 	if (!$prerelease) {
 		Write-Host "Pushing to main branch..." -ForegroundColor Magenta;
+		git --git-dir=$gitDir --work-tree=$solutionDir pull origin main:development;
 		git --git-dir=$gitDir --work-tree=$solutionDir push origin development:main;
 	}
 

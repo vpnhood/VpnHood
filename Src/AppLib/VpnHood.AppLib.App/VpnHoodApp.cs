@@ -368,13 +368,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         get {
             var clientState = ConnectionInfo.ClientState;
 
-            // let's service disconnect on background and let user connect again if it is disconnecting
-            if (_isDisconnecting)
-                return AppConnectionState.None;
-
             // in diagnose mode, we need either cancel it or wait for it
             if (Diagnoser.IsWorking)
                 return AppConnectionState.Diagnosing;
+
+            // let's service disconnect on background and let user connect again if it is disconnecting
+            if (_isDisconnecting)
+                return AppConnectionState.None;
 
             if (clientState == ClientState.Initializing || _isLoadingCountryIpRange || _isFindingCountryCode)
                 return AppConnectionState.Initializing;
@@ -873,7 +873,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         using var workScope = new AutoDispose(() => { _isDisconnecting = false; FireConnectionStateChanged(); });
         _appPersistState.HasDisconnectedByUser = true;
         _connectCts.Cancel();
-        await _vpnServiceManager.Stop();
+        await _vpnServiceManager.Stop().VhConfigureAwait();
     }
 
     public void VersionCheckPostpone()
@@ -1186,7 +1186,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _vpnServiceManager.Dispose();
         _vpnServiceManager.StateChanged -= VpnService_StateChanged;
 
-        await _device.DisposeAsync();
+        await _device.DisposeAsync().VhConfigureAwait();
         LogService.Dispose();
         DisposeSingleton();
         AppUiContext.OnChanged -= ActiveUiContext_OnChanged;

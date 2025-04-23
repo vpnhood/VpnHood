@@ -110,7 +110,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return Task.CompletedTask;
     }
 
-    protected override Task AddRoute(IpNetwork ipNetwork, IPAddress gatewayIp, CancellationToken cancellationToken)
+    protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         _includeIpNetworks.Add(ipNetwork);
         return Task.CompletedTask;
@@ -166,17 +166,20 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return ipPacket;
     }
 
-    public override void ProtectSocket(Socket socket)
+    public override bool ProtectSocket(Socket socket)
     {
+        // must works with loopback
         var ipAddress = socket.AddressFamily.IsV4() ? IPAddress.Any : IPAddress.IPv6Any;
         socket.Bind(new IPEndPoint(ipAddress, 0));
         socket.Ttl = ProtectedTtl;
+        return true;
     }
 
-    public override void ProtectSocket(Socket socket, IPAddress ipAddress)
+    public override bool ProtectSocket(Socket socket, IPAddress ipAddress)
     {
         base.ProtectSocket(socket, ipAddress);
         socket.Ttl = ProtectedTtl;
+        return true;
     }
 
     protected virtual void ProcessReadPacket(IPPacket ipPacket)

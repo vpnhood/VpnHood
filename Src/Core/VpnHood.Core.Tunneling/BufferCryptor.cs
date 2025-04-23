@@ -1,10 +1,13 @@
-﻿using System.Security.Cryptography;
+﻿using System.Buffers.Binary;
+using System.Security.Cryptography;
 
 namespace VpnHood.Core.Tunneling;
 
 public class BufferCryptor : IDisposable
 {
     private readonly ICryptoTransform _cryptor;
+    private readonly byte[] _cipherBuffer;
+    private readonly byte[] _cipherNonce;
 
     public BufferCryptor(byte[] key)
     {
@@ -15,6 +18,8 @@ public class BufferCryptor : IDisposable
         aes.Padding = PaddingMode.None;
         aes.Key = key;
         _cryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+        _cipherBuffer = new byte[_cryptor.OutputBlockSize];
+        _cipherNonce = new byte[_cryptor.OutputBlockSize];
     }
 
     public void Dispose()
@@ -22,6 +27,7 @@ public class BufferCryptor : IDisposable
         _cryptor.Dispose();
     }
 
+    // not thread-safe
     public void Cipher(byte[] buffer, int offset, int count, long cryptoPos)
     {
         //find block number
@@ -30,21 +36,18 @@ public class BufferCryptor : IDisposable
         var keyPos = (ulong)cryptoPos % blockSizeInByte;
 
         //buffer
-        var outputBuffer = new byte[blockSizeInByte];
-        var nonce = new byte[blockSizeInByte];
         var init = false;
-
         for (var i = offset; i < offset + count; i++) {
             //encrypt the nonce to form next xor buffer (unique key)
             if (!init || keyPos % blockSizeInByte == 0) {
-                BitConverter.GetBytes(blockNumber).CopyTo(nonce, 0);
-                _cryptor.TransformBlock(nonce, 0, nonce.Length, outputBuffer, 0);
+                BinaryPrimitives.WriteUInt64LittleEndian(_cipherNonce.AsSpan(0, 8), blockNumber);
+                _cryptor.TransformBlock(_cipherNonce, 0, _cipherNonce.Length, _cipherBuffer, 0);
                 if (init) keyPos = 0;
                 init = true;
                 blockNumber++;
             }
 
-            buffer[i] ^= outputBuffer[keyPos]; //simple XOR with generated unique key
+            buffer[i] ^= _cipherBuffer[keyPos]; //simple XOR with generated unique key
             keyPos++;
         }
     }

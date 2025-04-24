@@ -23,7 +23,6 @@ using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using FastDateTime = VpnHood.Core.Toolkit.Utils.FastDateTime;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Client;
@@ -678,6 +677,12 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             else if (helloResponse.SuppressedTo == SessionSuppressType.Other)
                 VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
+            // disable UdpChannel if not supported
+            if (HostUdpEndPoint is null) {
+                VhLogger.Instance.LogWarning("Server does not support UDP channel.");
+                _useUdpChannel = false;
+            }
+
             // set the session info
             SessionInfo = new SessionInfo {
                 SessionId = helloResponse.SessionId.ToString(),
@@ -735,11 +740,22 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             if (IncludeIpRanges.IsAll())
                 IncludeIpRanges = [];
 
+            // Preparing tunnel
+            VhLogger.Instance.LogInformation("Configuring Datagram Channels...");
+            Tunnel.Mtu = Math.Min(TunnelDefaults.Mtu, helloResponse.Mtu - TunnelDefaults.MtuOverhead);
+            Tunnel.RemoteMtu = helloResponse.Mtu;
+            Tunnel.MaxDatagramChannelCount = helloResponse.MaxDatagramChannelCount != 0
+                ? Tunnel.MaxDatagramChannelCount =
+                    Math.Min(_maxDatagramChannelCount, helloResponse.MaxDatagramChannelCount)
+                : _maxDatagramChannelCount;
+
+            // manage datagram channels
+            await ManageDatagramChannels(cancellationToken).VhConfigureAwait();
+
             // prepare packet capture
             // Set a default to capture & drop the packets if the server does not provide a network
             var networkV4 = helloResponse.VirtualIpNetworkV4 ?? new IpNetwork(IPAddress.Parse("10.255.0.2"), 32);
             var networkV6 = helloResponse.VirtualIpNetworkV6 ?? new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
-
             var longIncludeNetworks = string.Join(", ", VpnAdapterIncludeIpRanges.ToIpNetworks().Select(VhLogger.Format));
             VhLogger.Instance.LogInformation(
                 "Starting VpnAdapter... DnsServers: {DnsServers}, IncludeNetworks: {longIncludeNetworks}",
@@ -750,25 +766,13 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 DnsServers = SessionInfo.DnsServers,
                 VirtualIpNetworkV4 = networkV4,
                 VirtualIpNetworkV6 = networkV6,
-                Mtu = Math.Min(TunnelDefaults.Mtu, helloResponse.Mtu - TunnelDefaults.MtuOverhead),
+                Mtu = Tunnel.Mtu,
                 IncludeNetworks = BuildVpnAdapterIncludeNetworks(_connectorService.EndPointInfo.TcpEndPoint.Address),
                 SessionName = SessionName,
                 ExcludeApps = _excludeApps,
                 IncludeApps = _includeApps
             };
             await _vpnAdapter.Start(adapterOptions, cancellationToken);
-
-            // Preparing tunnel
-            VhLogger.Instance.LogInformation("Configuring Datagram Channels...");
-            Tunnel.Mtu = adapterOptions.Mtu.Value;
-            Tunnel.RemoteMtu = helloResponse.Mtu;
-            Tunnel.MaxDatagramChannelCount = helloResponse.MaxDatagramChannelCount != 0
-                ? Tunnel.MaxDatagramChannelCount =
-                    Math.Min(_maxDatagramChannelCount, helloResponse.MaxDatagramChannelCount)
-                : _maxDatagramChannelCount;
-
-            // manage datagram channels
-            await ManageDatagramChannels(cancellationToken).VhConfigureAwait();
         }
         catch (RedirectHostException ex) {
             if (!allowRedirect) {

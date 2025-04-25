@@ -29,7 +29,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         // initialize the app flyer
         if (!string.IsNullOrEmpty(appConfigs.AppsFlyerDevKey))
-            InitAppsFlyer(appConfigs.AppsFlyerDevKey);
+            InitAppsFlyer(appConfigs.AppsFlyerDevKey, AppConfigs.IsDebugMode);
 
         // load app settings and resources
         var resources = ConnectAppResources.Resources;
@@ -48,13 +48,15 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         };
     }
 
-    private void InitAppsFlyer(string appsFlyerDevKey)
+    private void InitAppsFlyer(string appsFlyerDevKey, bool enableDebugLog)
     {
         try {
             // Start AppsFlyer if the user's country is China
-            if (!RegionInfo.CurrentRegion.Name.Equals("CN", StringComparison.OrdinalIgnoreCase))
+            var eligibleCountryCode = enableDebugLog ? "US" : "CN";
+            if (!RegionInfo.CurrentRegion.Name.Equals(eligibleCountryCode, StringComparison.OrdinalIgnoreCase))
                 return;
-
+            
+            AppsFlyerLib.Instance.SetDebugLog(enableDebugLog);
             AppsFlyerLib.Instance.Init(appsFlyerDevKey, null, this);
             AppsFlyerLib.Instance.Start(this);
 

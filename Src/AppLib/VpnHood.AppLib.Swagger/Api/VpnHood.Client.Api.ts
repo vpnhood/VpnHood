@@ -1298,6 +1298,54 @@ export class BillingClient {
         }
         return Promise.resolve<string>(null as any);
     }
+
+    getPurchaseOptions( cancelToken?: CancelToken): Promise<AppPurchaseOptions> {
+        let url_ = this.baseUrl + "/api/billing/purchase-options";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetPurchaseOptions(_response);
+        });
+    }
+
+    protected processGetPurchaseOptions(response: AxiosResponse): Promise<AppPurchaseOptions> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = AppPurchaseOptions.fromJS(resultData200);
+            return Promise.resolve<AppPurchaseOptions>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AppPurchaseOptions>(null as any);
+    }
 }
 
 export class ClientProfileClient {
@@ -1691,6 +1739,7 @@ export class AppFeatures implements IAppFeatures {
     isQuickLaunchSupported!: boolean;
     isNotificationSupported!: boolean;
     isAlwaysOnSupported!: boolean;
+    isTv!: boolean;
     gaMeasurementId?: string | null;
     clientId!: string;
     isDebugMode!: boolean;
@@ -1727,6 +1776,7 @@ export class AppFeatures implements IAppFeatures {
             this.isQuickLaunchSupported = _data["isQuickLaunchSupported"] !== undefined ? _data["isQuickLaunchSupported"] : <any>null;
             this.isNotificationSupported = _data["isNotificationSupported"] !== undefined ? _data["isNotificationSupported"] : <any>null;
             this.isAlwaysOnSupported = _data["isAlwaysOnSupported"] !== undefined ? _data["isAlwaysOnSupported"] : <any>null;
+            this.isTv = _data["isTv"] !== undefined ? _data["isTv"] : <any>null;
             this.gaMeasurementId = _data["gaMeasurementId"] !== undefined ? _data["gaMeasurementId"] : <any>null;
             this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
             this.isDebugMode = _data["isDebugMode"] !== undefined ? _data["isDebugMode"] : <any>null;
@@ -1767,6 +1817,7 @@ export class AppFeatures implements IAppFeatures {
         data["isQuickLaunchSupported"] = this.isQuickLaunchSupported !== undefined ? this.isQuickLaunchSupported : <any>null;
         data["isNotificationSupported"] = this.isNotificationSupported !== undefined ? this.isNotificationSupported : <any>null;
         data["isAlwaysOnSupported"] = this.isAlwaysOnSupported !== undefined ? this.isAlwaysOnSupported : <any>null;
+        data["isTv"] = this.isTv !== undefined ? this.isTv : <any>null;
         data["gaMeasurementId"] = this.gaMeasurementId !== undefined ? this.gaMeasurementId : <any>null;
         data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
         data["isDebugMode"] = this.isDebugMode !== undefined ? this.isDebugMode : <any>null;
@@ -1797,6 +1848,7 @@ export interface IAppFeatures {
     isQuickLaunchSupported: boolean;
     isNotificationSupported: boolean;
     isAlwaysOnSupported: boolean;
+    isTv: boolean;
     gaMeasurementId?: string | null;
     clientId: string;
     isDebugMode: boolean;
@@ -3265,6 +3317,8 @@ export class ClientProfileInfo implements IClientProfileInfo {
     isForAccount!: boolean;
     accessCode?: string | null;
     locationInfos!: ClientServerLocationInfo[];
+    purchaseUrl?: string | null;
+    purchaseUrlMode!: PurchaseUrlMode;
     selectedLocationInfo?: ClientServerLocationInfo | null;
 
     constructor(data?: IClientProfileInfo) {
@@ -3309,6 +3363,8 @@ export class ClientProfileInfo implements IClientProfileInfo {
             else {
                 this.locationInfos = <any>null;
             }
+            this.purchaseUrl = _data["purchaseUrl"] !== undefined ? _data["purchaseUrl"] : <any>null;
+            this.purchaseUrlMode = _data["purchaseUrlMode"] !== undefined ? _data["purchaseUrlMode"] : <any>null;
             this.selectedLocationInfo = _data["selectedLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["selectedLocationInfo"]) : <any>null;
         }
     }
@@ -3343,6 +3399,8 @@ export class ClientProfileInfo implements IClientProfileInfo {
             for (let item of this.locationInfos)
                 data["locationInfos"].push(item.toJSON());
         }
+        data["purchaseUrl"] = this.purchaseUrl !== undefined ? this.purchaseUrl : <any>null;
+        data["purchaseUrlMode"] = this.purchaseUrlMode !== undefined ? this.purchaseUrlMode : <any>null;
         data["selectedLocationInfo"] = this.selectedLocationInfo ? this.selectedLocationInfo.toJSON() : <any>null;
         return data;
     }
@@ -3362,7 +3420,15 @@ export interface IClientProfileInfo {
     isForAccount: boolean;
     accessCode?: string | null;
     locationInfos: ClientServerLocationInfo[];
+    purchaseUrl?: string | null;
+    purchaseUrlMode: PurchaseUrlMode;
     selectedLocationInfo?: ClientServerLocationInfo | null;
+}
+
+export enum PurchaseUrlMode {
+    WhenNoStore = 0,
+    WithStore = 1,
+    HideStore = 2,
 }
 
 export class ConfigParams implements IConfigParams {
@@ -3636,6 +3702,68 @@ export class SubscriptionPlan implements ISubscriptionPlan {
 export interface ISubscriptionPlan {
     subscriptionPlanId: string;
     planPrice: string;
+}
+
+export class AppPurchaseOptions implements IAppPurchaseOptions {
+    storeName?: string | null;
+    storeError?: ApiError | null;
+    subscriptionPlans!: SubscriptionPlan[];
+    purchaseUrl?: string | null;
+
+    constructor(data?: IAppPurchaseOptions) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.subscriptionPlans = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.storeName = _data["storeName"] !== undefined ? _data["storeName"] : <any>null;
+            this.storeError = _data["storeError"] ? ApiError.fromJS(_data["storeError"]) : <any>null;
+            if (Array.isArray(_data["subscriptionPlans"])) {
+                this.subscriptionPlans = [] as any;
+                for (let item of _data["subscriptionPlans"])
+                    this.subscriptionPlans!.push(SubscriptionPlan.fromJS(item));
+            }
+            else {
+                this.subscriptionPlans = <any>null;
+            }
+            this.purchaseUrl = _data["purchaseUrl"] !== undefined ? _data["purchaseUrl"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AppPurchaseOptions {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppPurchaseOptions();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["storeName"] = this.storeName !== undefined ? this.storeName : <any>null;
+        data["storeError"] = this.storeError ? this.storeError.toJSON() : <any>null;
+        if (Array.isArray(this.subscriptionPlans)) {
+            data["subscriptionPlans"] = [];
+            for (let item of this.subscriptionPlans)
+                data["subscriptionPlans"].push(item.toJSON());
+        }
+        data["purchaseUrl"] = this.purchaseUrl !== undefined ? this.purchaseUrl : <any>null;
+        return data;
+    }
+}
+
+export interface IAppPurchaseOptions {
+    storeName?: string | null;
+    storeError?: ApiError | null;
+    subscriptionPlans: SubscriptionPlan[];
+    purchaseUrl?: string | null;
 }
 
 export class ClientProfileUpdateParams implements IClientProfileUpdateParams {

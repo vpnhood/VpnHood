@@ -35,7 +35,6 @@ internal class ClientHost(
     private int _passthruInProcessPacketsCounter;
     private readonly Nat _nat = new(true);
 
-
     public IPAddress CatcherAddressIpV4 { get; } = catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 { get; } = catcherAddressIpV6;
     public bool IsPassthruInProcessPacketsEnabled => _passthruInProcessPacketsCounter > 0;
@@ -47,6 +46,14 @@ internal class ClientHost(
             Interlocked.Increment(ref _passthruInProcessPacketsCounter);
         else
             Interlocked.Decrement(ref _passthruInProcessPacketsCounter);
+    }
+    public bool IsOwnPacket(IPPacket ipPacket)
+    {
+        if (ipPacket.Protocol != ProtocolType.Tcp)
+            return false;
+
+        return ipPacket.DestinationAddress.Equals(CatcherAddressIpV4) ||
+               ipPacket.DestinationAddress.Equals(CatcherAddressIpV6);
     }
 
     public void Start()
@@ -339,4 +346,5 @@ internal class ClientHost(
     {
         public required bool IsInIpRange { get; init; }
     }
+   
 }

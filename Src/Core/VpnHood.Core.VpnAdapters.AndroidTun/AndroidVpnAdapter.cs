@@ -25,7 +25,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
     public override bool IsNatSupported => false;
     public override bool IsAppFilterSupported => true;
-
+    protected override bool IsSocketProtectedByBind => false;
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
         _builder = new VpnService.Builder(vpnService)

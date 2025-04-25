@@ -19,6 +19,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     private string? _primaryAdapterName;
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
+    protected override bool IsSocketProtectedByBind => true;
     public override bool IsNatSupported => true;
     public override bool IsAppFilterSupported => false;
     protected override string? AppPackageId => null;

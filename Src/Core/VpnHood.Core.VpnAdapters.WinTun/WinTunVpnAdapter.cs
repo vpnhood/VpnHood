@@ -24,6 +24,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
     public const int MinRingCapacity = 0x20000; // 128kiB
     public const int MaxRingCapacity = 0x4000000; // 64MiB
+    protected override bool IsSocketProtectedByBind => true;
     public override bool IsNatSupported => true;
     public override bool IsAppFilterSupported => false;
     protected override string? AppPackageId => null;

@@ -30,6 +30,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     public const short ProtectedTtl = 111;
     public override bool IsAppFilterSupported => false;
+    protected override bool IsSocketProtectedByBind => false;
     public override bool IsNatSupported => false;
     protected override string? AppPackageId => null;
 

@@ -17,7 +17,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
     public bool SpaListenToAllIps { get; set; } = IsDebugMode;
     public bool AllowEndPointTracker { get; set; } = true;
     public string? Ga4MeasurementId { get; set; }
-    public static string? AppsFlyerDevKey { get; set; } = null;
+    public string? AppsFlyerDevKey { get; set; }
 
     // SampleAccessKey is a test access key, you should replace it with your own access key.
     // It is limited and can not be used in production.

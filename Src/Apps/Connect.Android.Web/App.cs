@@ -1,11 +1,13 @@
 ﻿using System.Globalization;
 using Android.Runtime;
 using Com.Appsflyer;
+using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.Core.Client.Device.Droid.Utils;
+using VpnHood.Core.Toolkit.Logging;
 
 
 namespace VpnHood.App.Connect.Droid.Web;
@@ -21,26 +23,13 @@ namespace VpnHood.App.Connect.Droid.Web;
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
-    public override void OnCreate()
-    {
-        base.OnCreate();
-        
-        // Start AppsFlyer if the user's country is China
-        try {
-            if (RegionInfo.CurrentRegion.Name != "CN" || AppConfigs.AppsFlyerDevKey == null) return;
-            
-            AppsFlyerLib.Instance.Init(AppConfigs.AppsFlyerDevKey, null, this);
-            AppsFlyerLib.Instance.Start(this);
-        }
-        catch (Exception e) {
-            Console.WriteLine(e);
-        }
-        
-    }
-
     protected override AppOptions CreateAppOptions()
     {
         var appConfigs = AppConfigs.Load();
+
+        // initialize the app flyer
+        if (!string.IsNullOrEmpty(appConfigs.AppsFlyerDevKey))
+            InitAppsFlyer(appConfigs.AppsFlyerDevKey);
 
         // load app settings and resources
         var resources = ConnectAppResources.Resources;
@@ -57,5 +46,21 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
             AdjustForSystemBars = false
         };
+    }
+
+    private void InitAppsFlyer(string appsFlyerDevKey)
+    {
+        try {
+            // Start AppsFlyer if the user's country is China
+            if (!RegionInfo.CurrentRegion.Name.Equals("CN", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            AppsFlyerLib.Instance.Init(appsFlyerDevKey, null, this);
+            AppsFlyerLib.Instance.Start(this);
+
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "AppsFlyer initialization failed.");
+        }
     }
 }

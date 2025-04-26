@@ -1,4 +1,4 @@
-# v6.0.695
+# v6.0.696
 * Fix: Instability of pressing the connect and disconnect buttons
 * Fix: Up speed and down speed show in the wrong place
 * Fix: Android: VpnKey remains connected after disconnect

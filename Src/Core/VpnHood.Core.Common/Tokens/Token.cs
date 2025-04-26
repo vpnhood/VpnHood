@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Common.Tokens.TokenLegacy;
 using VpnHood.Core.Toolkit.Utils;
 
 // ReSharper disable StringLiteralTypo
@@ -69,9 +68,6 @@ public class Token
         var tokenVersion = JsonUtils.Deserialize<TokenVersion>(json);
 
         return tokenVersion.Version switch {
-#pragma warning disable CS0618 // Type or member is obsolete
-            0 or 1 or 2 or 3 => JsonUtils.Deserialize<TokenV3>(json).ToToken(),
-#pragma warning restore CS0618 // Type or member is obsolete
             4 => JsonUtils.Deserialize<Token>(json),
             _ => throw new NotSupportedException($"Token version {tokenVersion.Version} is not supported!")
         };

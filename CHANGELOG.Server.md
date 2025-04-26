@@ -1,4 +1,4 @@
-# v6.0.692
+# v6.0.694
 * Improve: Watching media streaming
 * Improve: Performance and stability
 

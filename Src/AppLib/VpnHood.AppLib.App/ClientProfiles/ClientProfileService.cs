@@ -20,7 +20,6 @@ public class ClientProfileService
     public ClientProfileService(string folderPath)
     {
         _folderPath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
-        ClientProfileServiceLegacy.Migrate(folderPath, ClientProfilesFilePath);
         _clientProfiles = Load().ToList();
     }
 

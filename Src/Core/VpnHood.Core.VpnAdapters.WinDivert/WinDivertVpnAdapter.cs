@@ -27,6 +27,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     private IPAddress[] _dnsServers = [];
     private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>> _lastDnsServersV4 = new(TimeSpan.FromSeconds(30));
     private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>> _lastDnsServersV6 = new(TimeSpan.FromSeconds(30));
+    private readonly bool _excludeLocalNetwork = adapterSettings.ExcludeLocalNetwork;
 
     public const short ProtectedTtl = 111;
     public override bool IsAppFilterSupported => false;
@@ -67,9 +68,12 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         if (_device == null)
             throw new InvalidOperationException("Device is not initialized.");
 
+        var ipRanges = _includeIpNetworks.ToIpRanges();
+        if (_excludeLocalNetwork)
+            ipRanges = ipRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
+        
         // create include and exclude phrases
         var phraseX = "true";
-        var ipRanges = _includeIpNetworks.ToIpRanges();
         if (!ipRanges.IsAll()) {
             var phrases = ipRanges.Select(x => x.FirstIpAddress.Equals(x.LastIpAddress)
                 ? $"{Ip(x)}.DstAddr=={x.FirstIpAddress}"

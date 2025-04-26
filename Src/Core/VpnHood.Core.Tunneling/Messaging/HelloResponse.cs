@@ -22,11 +22,14 @@ public class HelloResponse : SessionResponse
 
     public int? UdpPort { get; set; }
     public string ServerVersion { get; set; } = null!;
-
-    [Obsolete("Use MaxProtocolVersion and MinProtocolVersion")]
+    public int? ProtocolVersion { get; set; }
+    
+    [Obsolete("Use ProtocolVersion")]
     public int ServerProtocolVersion { get; set; }
 
+    [Obsolete("Use ProtocolVersion")]
     public int MaxProtocolVersion { get; set; }
+    [Obsolete("Use ProtocolVersion")]
     public int MinProtocolVersion { get; set; }
     public byte[] ServerSecret { get; set; } = null!;
     public ulong SessionId { get; set; }

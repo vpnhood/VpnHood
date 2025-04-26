@@ -131,7 +131,8 @@ public class SessionManager : IAsyncDisposable, IJob
         return session;
     }
 
-    public async Task<SessionResponseEx> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair)
+    public async Task<SessionResponseEx> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair, 
+        int protocolVersion)
     {
         // validate the token
         VhLogger.Instance.LogDebug("Validating the request by the access server. TokenId: {TokenId}",
@@ -149,7 +150,8 @@ public class SessionManager : IAsyncDisposable, IJob
             PlanId = helloRequest.PlanId,
             AllowRedirect = helloRequest.AllowRedirect,
             IsIpV6Supported = helloRequest.IsIpV6Supported,
-            AccessCode = helloRequest.AccessCode
+            AccessCode = helloRequest.AccessCode,
+            ProtocolVersion = protocolVersion
         }).VhConfigureAwait();
 
         // Access Error should not pass to the client in create session

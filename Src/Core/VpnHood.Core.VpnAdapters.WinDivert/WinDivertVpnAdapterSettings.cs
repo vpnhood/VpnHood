@@ -12,4 +12,5 @@ public class WinDivertVpnAdapterSettings : VpnAdapterSettings
 
     public new int MaxPacketCount => 1;
     public new bool AutoMetric => false;
+    public bool ExcludeLocalNetwork { get; set; } = true;
 }

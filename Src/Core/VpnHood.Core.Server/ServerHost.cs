@@ -31,7 +31,7 @@ public class ServerHost : IAsyncDisposable, IJob
     private readonly List<Task> _tcpListenerTasks = [];
     private bool _disposed;
 
-    public const int MaxProtocolVersion = 6;
+    public const int MaxProtocolVersion = 8;
     public const int MinProtocolVersion = 4;
     public int MinClientProtocolVersion { get; set; } = MinProtocolVersion; // used for tests
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
@@ -297,7 +297,7 @@ public class ServerHost : IAsyncDisposable, IJob
                     };
 
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                case BinaryStreamType.Standard when protocolVersion == 6:
+                case BinaryStreamType.Standard when protocolVersion >= 6:
                     return new TcpClientStream(tcpClient,
                         new BinaryStreamStandard(sslStream, streamId, useBuffer),
                         streamId, ReuseClientStream) {
@@ -540,12 +540,12 @@ public class ServerHost : IAsyncDisposable, IJob
             "Creating a session... TokenId: {TokenId}, ClientId: {ClientId}, ClientVersion: {ClientVersion}, UserAgent: {UserAgent}",
             VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId),
             request.ClientInfo.ClientVersion, request.ClientInfo.UserAgent);
-        var sessionResponseEx = await _sessionManager.CreateSession(request, ipEndPointPair).VhConfigureAwait();
+        var sessionResponseEx = await _sessionManager.CreateSession(request, ipEndPointPair, protocolVersion).VhConfigureAwait();
         var session = _sessionManager.GetSessionById(sessionResponseEx.SessionId) ??
                       throw new InvalidOperationException("Session is lost!");
 
         // check client version; unfortunately it must be after CreateSession to preserve server anonymity
-        if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < MinClientProtocolVersion)
+        if (request.ClientInfo == null || protocolVersion < MinClientProtocolVersion)
             throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint, session,
                 SessionErrorCode.UnsupportedClient, request.RequestId,
                 "This client is outdated and not supported anymore! Please update your app.");
@@ -601,9 +601,10 @@ public class ServerHost : IAsyncDisposable, IJob
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
 #pragma warning disable CS0618 // Type or member is obsolete
             ServerProtocolVersion = protocolVersion,
-#pragma warning restore CS0618 // Type or member is obsolete
-            MaxProtocolVersion = MaxProtocolVersion,
+            MaxProtocolVersion = 7,
             MinProtocolVersion = MinProtocolVersion,
+#pragma warning restore CS0618 // Type or member is obsolete
+            ProtocolVersion = sessionResponseEx.ProtocolVersion,
             SuppressedTo = sessionResponseEx.SuppressedTo,
             MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
             ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,

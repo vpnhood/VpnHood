@@ -17,6 +17,7 @@ public class SessionRequestEx
     public ConnectPlanId PlanId { get; set; }
     public bool AllowRedirect { get; set; } = true;
     public bool? IsIpV6Supported { get; set; }
+    public int? ProtocolVersion { get; set; }
     public string? AccessCode { get; set; }
 
     [JsonConverter(typeof(IPEndPointConverter))]

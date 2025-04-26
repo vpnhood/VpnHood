@@ -40,6 +40,9 @@ public class Session : IAsyncDisposable
     private IPAddress? _clientInternalIpV6;
     private IPAddress? _clientInternalIpV4;
 
+    [Obsolete]
+    private readonly bool _fixClientInternalIp;
+
     private readonly EventReporter _netScanExceptionReporter = new(VhLogger.Instance,
         "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
 
@@ -71,7 +74,7 @@ public class Session : IAsyncDisposable
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
     public VirtualIpBundle VirtualIps { get; }
 
-    internal Session(IAccessManager accessManager, 
+    internal Session(IAccessManager accessManager,
         IVpnAdapter? vpnAdapter,
         INetFilter netFilter,
         ISocketFactory socketFactory,
@@ -85,6 +88,9 @@ public class Session : IAsyncDisposable
         var logScope = new LogScope();
         logScope.Data.Add(sessionTuple);
 
+#pragma warning disable CS0612 // Type or member is obsolete
+        _fixClientInternalIp = sessionResponseEx.ProtocolVersion < 8;
+#pragma warning restore CS0612 // Type or member is obsolete
         _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _proxyManager = new SessionProxyManager(this, socketFactory, vpnAdapter, new ProxyManagerOptions {
@@ -182,6 +188,7 @@ public class Session : IAsyncDisposable
     }
 
     // todo: legacy version. remove in future
+    [Obsolete]
     private IPAddress? GetClientInternalIp(IPVersion ipVersion)
     {
         return ipVersion == IPVersion.IPv4 ? _clientInternalIpV4 : _clientInternalIpV6;
@@ -195,13 +202,17 @@ public class Session : IAsyncDisposable
 
         ipPacket = _netFilter.ProcessReply(ipPacket);
 
-        // fix client internal ip
-        // todo: consider using allocated private ip and prevent recalculate checksum
-        var clientInternalIp = GetClientInternalIp(ipPacket.Version);
-        if (clientInternalIp != null && !ipPacket.DestinationAddress.Equals(clientInternalIp)) {
-            ipPacket.DestinationAddress = clientInternalIp;
-            ipPacket.UpdateIpChecksum();
+#pragma warning disable CS0612 // Type or member is obsolete
+        if (_fixClientInternalIp) {
+            // fix client internal ip
+            // todo: consider using allocated private ip and prevent recalculate checksum
+            var clientInternalIp = GetClientInternalIp(ipPacket.Version);
+            if (clientInternalIp != null && !ipPacket.DestinationAddress.Equals(clientInternalIp)) {
+                ipPacket.DestinationAddress = clientInternalIp;
+                ipPacket.UpdateIpChecksum();
+            }
         }
+#pragma warning restore CS0612 // Type or member is obsolete
 
         Tunnel.SendPacketEnqueue(ipPacket);
     }
@@ -215,20 +226,30 @@ public class Session : IAsyncDisposable
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < e.IpPackets.Count; i++) {
             var ipPacket = e.IpPackets[i];
+            var virtualIp = GetClientVirtualIp(ipPacket.Version);
 
             // todo: legacy save caller internal ip at first call
-            if (ipPacket.Version == IPVersion.IPv4)
-                _clientInternalIpV4 ??= ipPacket.SourceAddress;
-            else if (ipPacket.Version == IPVersion.IPv6)
-                _clientInternalIpV6 ??= ipPacket.SourceAddress;
+#pragma warning disable CS0612 // Type or member is obsolete
+            if (_fixClientInternalIp) {
+                if (ipPacket.Version == IPVersion.IPv4)
+                    _clientInternalIpV4 ??= ipPacket.SourceAddress;
+                else if (ipPacket.Version == IPVersion.IPv6)
+                    _clientInternalIpV6 ??= ipPacket.SourceAddress;
 
-            // update source client virtual ip. will be obsolete in future if client set correct ip
-            var virtualIp = GetClientVirtualIp(ipPacket.Version);
-            if (!virtualIp.Equals(ipPacket.SourceAddress)) {
-                // todo: legacy version. Packet must be dropped if it does not have correct source address
-                // PacketLogger.LogPacket(ipPacket, $"Invalid tunnel packet source ip.");
-                ipPacket.SourceAddress = virtualIp;
-                ipPacket.UpdateIpChecksum();
+                // update source client virtual ip. will be obsolete in future if client set correct ip
+                if (!virtualIp.Equals(ipPacket.SourceAddress)) {
+                    // todo: legacy version. Packet must be dropped if it does not have correct source address
+                    // PacketLogger.LogPacket(ipPacket, $"Invalid tunnel packet source ip.");
+                    ipPacket.SourceAddress = virtualIp;
+                    ipPacket.UpdateIpChecksum();
+                }
+            }
+#pragma warning restore CS0612 // Type or member is obsolete
+
+            // reject if packet source does not match client internal ip
+            if (!ipPacket.SourceAddress.Equals(virtualIp)) {
+                PacketLogger.LogPacket(ipPacket, "Invalid tunnel packet source ip.");
+                continue;
             }
 
             // filter

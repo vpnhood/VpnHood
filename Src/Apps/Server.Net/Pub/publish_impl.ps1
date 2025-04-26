@@ -19,7 +19,8 @@ dotnet publish $projectDir `
     --self-contained `
     --runtime "$runtime" `
     -p:SolutionDir=$solutionDir `
-    -p:Version=$versionParam;
+    -p:Version=$versionParam `
+    -t:Clean;
 
 if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $lastexitcode; }
 

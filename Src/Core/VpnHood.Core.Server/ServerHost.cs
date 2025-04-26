@@ -31,7 +31,7 @@ public class ServerHost : IAsyncDisposable, IJob
     private readonly List<Task> _tcpListenerTasks = [];
     private bool _disposed;
 
-    public const int MaxProtocolVersion = 7;
+    public const int MaxProtocolVersion = 8;
     public const int MinProtocolVersion = 4;
     public int MinClientProtocolVersion { get; set; } = MinProtocolVersion; // used for tests
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));

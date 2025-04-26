@@ -297,7 +297,7 @@ public class ServerHost : IAsyncDisposable, IJob
                     };
 
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                case BinaryStreamType.Standard when protocolVersion == 6:
+                case BinaryStreamType.Standard when protocolVersion >= 6:
                     return new TcpClientStream(tcpClient,
                         new BinaryStreamStandard(sslStream, streamId, useBuffer),
                         streamId, ReuseClientStream) {
@@ -540,7 +540,7 @@ public class ServerHost : IAsyncDisposable, IJob
             "Creating a session... TokenId: {TokenId}, ClientId: {ClientId}, ClientVersion: {ClientVersion}, UserAgent: {UserAgent}",
             VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId),
             request.ClientInfo.ClientVersion, request.ClientInfo.UserAgent);
-        var sessionResponseEx = await _sessionManager.CreateSession(request, ipEndPointPair).VhConfigureAwait();
+        var sessionResponseEx = await _sessionManager.CreateSession(request, ipEndPointPair, protocolVersion).VhConfigureAwait();
         var session = _sessionManager.GetSessionById(sessionResponseEx.SessionId) ??
                       throw new InvalidOperationException("Session is lost!");
 

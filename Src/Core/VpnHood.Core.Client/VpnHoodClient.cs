@@ -325,6 +325,11 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private void Tunnel_PacketReceived(object sender, PacketReceivedEventArgs e)
     {
         _vpnAdapter.SendPackets(e.IpPackets);
+
+        //todo
+        foreach (var eIpPacket in e.IpPackets) {
+            eIpPacket.UpdateAllChecksums();
+        }
     }
 
     // WARNING: Performance Critical!
@@ -602,15 +607,14 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 helloResponse.MaxProtocolVersion = 5;
             }
 
-            if (helloResponse.MinProtocolVersion < MinProtocolVersion)
+            var protocolVersion = helloResponse.ProtocolVersion ?? Math.Min(helloResponse.MaxProtocolVersion, MaxProtocolVersion);
+            if (protocolVersion < MinProtocolVersion)
                 throw new SessionException(SessionErrorCode.UnsupportedServer,
                     "The server is outdated and does not support by your app!");
 
-            if (helloResponse.MaxProtocolVersion > MaxProtocolVersion)
+            if (protocolVersion > MaxProtocolVersion)
                 throw new SessionException(SessionErrorCode.UnsupportedServer,
                     "This app is outdated and does not support by the server!");
-
-            var protocolVersion = helloResponse.ProtocolVersion ?? Math.Min(helloResponse.MaxProtocolVersion, MaxProtocolVersion);
 #pragma warning restore CS0618 // Type or member is obsolete
 
             // initialize the connector

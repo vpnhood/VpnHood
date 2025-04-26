@@ -87,7 +87,7 @@ if ($aab)
 	$module_packageFile = "$moduleDir/$packageFileTitle-android.aab";
 	$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
-	dotnet build $projectFile /t:SignAndroidPackage /verbosity:$msverbosity `
+	dotnet build $projectFile /t:Clean /t:SignAndroidPackage /verbosity:$msverbosity `
 		/p:SolutionDir=$solutionDir `
 		/p:Configuration=Release `
 		/p:ApplicationId=$packageId `

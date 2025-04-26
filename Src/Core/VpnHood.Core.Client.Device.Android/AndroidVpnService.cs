@@ -17,7 +17,7 @@ namespace VpnHood.Core.Client.Device.Droid;
 [Service(
     Permission = Manifest.Permission.BindVpnService,
     Exported = false,
-// #if !DEBUG
+// #if !DEBUG 
     Process = ":vpnhood_process",
 //#endif
     ForegroundServiceType = ForegroundService.TypeSystemExempted)]

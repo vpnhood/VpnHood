@@ -29,7 +29,7 @@ namespace VpnHood.Core.Client;
 
 public class VpnHoodClient : IJob, IAsyncDisposable
 {
-    private const int MaxProtocolVersion = 7;
+    private const int MaxProtocolVersion = 8;
     private const int MinProtocolVersion = 4;
     private bool _disposed;
     private readonly bool _autoDisposeVpnAdapter;
@@ -278,7 +278,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             // report version
             VhLogger.Instance.LogInformation(
                 "ClientVersion: {ClientVersion}, " +
-                "ClientMinProtocolVersion: {ClientMinProtocolVersion}, ClientMinProtocolVersion: {ClientMaxProtocolVersion}, " +
+                "ClientMinProtocolVersion: {ClientMinProtocolVersion}, ClientMaxProtocolVersion: {ClientMaxProtocolVersion}, " +
                 "ClientId: {ClientId}",
                 Version, MinProtocolVersion, MaxProtocolVersion, VhLogger.FormatId(ClientId));
 
@@ -572,7 +572,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             var clientInfo = new ClientInfo {
                 ClientId = ClientId,
                 ClientVersion = Version.ToString(3),
+#pragma warning disable CS0618 // Type or member is obsolete
                 ProtocolVersion = _connectorService.ProtocolVersion,
+#pragma warning restore CS0618 // Type or member is obsolete
                 MinProtocolVersion = MinProtocolVersion,
                 MaxProtocolVersion = MaxProtocolVersion,
                 UserAgent = UserAgent
@@ -599,7 +601,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 helloResponse.MinProtocolVersion = 5;
                 helloResponse.MaxProtocolVersion = 5;
             }
-#pragma warning restore CS0618 // Type or member is obsolete
 
             if (helloResponse.MinProtocolVersion < MinProtocolVersion)
                 throw new SessionException(SessionErrorCode.UnsupportedServer,
@@ -609,9 +610,12 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 throw new SessionException(SessionErrorCode.UnsupportedServer,
                     "This app is outdated and does not support by the server!");
 
+            var protocolVersion = helloResponse.ProtocolVersion ?? Math.Min(helloResponse.MaxProtocolVersion, MaxProtocolVersion);
+#pragma warning restore CS0618 // Type or member is obsolete
+
             // initialize the connector
             _connectorService.Init(
-                Math.Min(helloResponse.MaxProtocolVersion, MaxProtocolVersion),
+                protocolVersion,
                 Debugger.IsAttached ? Timeout.InfiniteTimeSpan : helloResponse.RequestTimeout,
                 helloResponse.ServerSecret,
                 helloResponse.TcpReuseTimeout);
@@ -621,8 +625,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 "Hurray! Client has been connected! " +
                 $"SessionId: {VhLogger.FormatId(helloResponse.SessionId)}, " +
                 $"ServerVersion: {helloResponse.ServerVersion}, " +
-                $"ServerMinProtocolVersion: {helloResponse.MinProtocolVersion}, " +
-                $"ServerMaxProtocolVersion: {helloResponse.MaxProtocolVersion}, " +
+                $"ProtocolVersion: {protocolVersion}, " +
                 $"CurrentProtocolVersion: {_connectorService.ProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(helloResponse.ClientPublicAddress)}, " +
                 $"IsTunProviderSupported: {helloResponse.IsTunProviderSupported}, " +

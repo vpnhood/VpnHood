@@ -65,7 +65,7 @@ public class FileAccessManagerTest : TestBase
         var sessionResponse = await accessManager1.Session_Get(sessionResponseEx1.SessionId,
             sessionRequestEx1.HostEndPoint, sessionRequestEx1.ClientIp);
         Assert.AreEqual(sessionRequestEx1.ExtraData, sessionResponse.ExtraData);
-        Assert.AreEqual(sessionRequestEx1.ClientInfo.ProtocolVersion, sessionResponse.ProtocolVersion);
+        Assert.AreEqual(sessionRequestEx1.ProtocolVersion, sessionResponse.ProtocolVersion);
 
         // ************
         // *** TEST ***: Removing token
@@ -167,10 +167,13 @@ public class FileAccessManagerTest : TestBase
                 ClientId = clientId,
                 UserAgent = "Test",
                 ClientVersion = "1.0.0",
-                ProtocolVersion = 5,
+#pragma warning disable CS0618 // Type or member is obsolete
+                ProtocolVersion = 4,
+#pragma warning restore CS0618 // Type or member is obsolete
                 MinProtocolVersion = 5,
                 MaxProtocolVersion = 6,
             },
+            ProtocolVersion = 5,
             HostEndPoint = token.ServerToken.HostEndPoints!.First(),
             EncryptedClientId = VhUtils.EncryptClientId(clientId, token.Secret),
             ClientIp = null,

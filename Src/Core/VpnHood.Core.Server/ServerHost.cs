@@ -601,7 +601,7 @@ public class ServerHost : IAsyncDisposable, IJob
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
 #pragma warning disable CS0618 // Type or member is obsolete
             ServerProtocolVersion = protocolVersion,
-            MaxProtocolVersion = MaxProtocolVersion,
+            MaxProtocolVersion = 7,
             MinProtocolVersion = MinProtocolVersion,
 #pragma warning restore CS0618 // Type or member is obsolete
             ProtocolVersion = sessionResponseEx.ProtocolVersion,

@@ -1,6 +1,8 @@
 # v6.0.694
 * Improve: Watching media streaming
 * Improve: Performance and stability
+* Fix: Network Isolation
+* Fix: Some Android devices could not open websites after connecting
 
 # v6.0.689
 * Fix: Calculate UDP checksum and DNS response

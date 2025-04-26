@@ -350,8 +350,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         // exclude virtual ip if network isolation is enabled
         if (netFilterOptions.NetworkIsolationValue) {
-            netFilter.BlockedIpRanges = netFilter.BlockedIpRanges.Exclude(virtualIpNetworkV4.ToIpRange());
-            netFilter.BlockedIpRanges = netFilter.BlockedIpRanges.Exclude(virtualIpNetworkV6.ToIpRange());
+            netFilter.BlockedIpRanges = netFilter.BlockedIpRanges
+                .Union(virtualIpNetworkV4.ToIpRange())
+                .Union(virtualIpNetworkV6.ToIpRange());
         }
 
         // exclude listening ip

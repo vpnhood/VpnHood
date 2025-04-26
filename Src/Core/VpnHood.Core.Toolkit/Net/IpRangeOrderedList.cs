@@ -116,6 +116,16 @@ public class IpRangeOrderedList :
         return ipNetworkList.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
     }
 
+    public IpRangeOrderedList Union(IPAddress ipAddress)
+    {
+        return Union(new IpRange(ipAddress));
+    }
+
+    public IpRangeOrderedList Union(IpRange ipRange)
+    {
+        return Union([ipRange]);
+    }
+
     public IpRangeOrderedList Union(IEnumerable<IpRange> ipRanges)
     {
         // ReSharper disable PossibleMultipleEnumeration

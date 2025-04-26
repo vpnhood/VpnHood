@@ -226,6 +226,7 @@ public class Session : IAsyncDisposable
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < e.IpPackets.Count; i++) {
             var ipPacket = e.IpPackets[i];
+            var virtualIp = GetClientVirtualIp(ipPacket.Version);
 
             // todo: legacy save caller internal ip at first call
 #pragma warning disable CS0612 // Type or member is obsolete
@@ -236,7 +237,6 @@ public class Session : IAsyncDisposable
                     _clientInternalIpV6 ??= ipPacket.SourceAddress;
 
                 // update source client virtual ip. will be obsolete in future if client set correct ip
-                var virtualIp = GetClientVirtualIp(ipPacket.Version);
                 if (!virtualIp.Equals(ipPacket.SourceAddress)) {
                     // todo: legacy version. Packet must be dropped if it does not have correct source address
                     // PacketLogger.LogPacket(ipPacket, $"Invalid tunnel packet source ip.");
@@ -245,6 +245,12 @@ public class Session : IAsyncDisposable
                 }
             }
 #pragma warning restore CS0612 // Type or member is obsolete
+
+            // reject if packet source does not match client internal ip
+            if (!ipPacket.SourceAddress.Equals(virtualIp)) {
+                PacketLogger.LogPacket(ipPacket, "Invalid tunnel packet source ip.");
+                continue;
+            }
 
             // filter
             var ipPacket2 = _netFilter.ProcessRequest(ipPacket);

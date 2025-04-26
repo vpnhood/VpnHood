@@ -325,11 +325,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private void Tunnel_PacketReceived(object sender, PacketReceivedEventArgs e)
     {
         _vpnAdapter.SendPackets(e.IpPackets);
-
-        //todo
-        foreach (var eIpPacket in e.IpPackets) {
-            eIpPacket.UpdateAllChecksums();
-        }
     }
 
     // WARNING: Performance Critical!

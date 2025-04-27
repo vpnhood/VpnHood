@@ -28,7 +28,7 @@ public abstract class VpnHoodWpfSpaApp : Application
             VpnHoodWinApp.Init(appOptions.AppId, appOptions.StorageFolderPath);
 
             // check command line
-            VpnHoodWinApp.Instance.PreStart(e.Args);
+            VpnHoodWinApp.Instance.PreStart(appOptions.AppId, e.Args);
 
             // initialize VpnHoodApp
             VpnHoodApp.Init(new WinDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode), appOptions);

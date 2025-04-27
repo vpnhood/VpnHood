@@ -1,3 +1,6 @@
+# Upcoming 
+* Fix: Windows: Add Firewall rules on startup
+
 # v6.0.696
 * Fix: Instability of pressing the connect and disconnect buttons
 * Fix: Up speed and down speed show in the wrong place

@@ -90,7 +90,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         return !_instanceMutex.WaitOne(TimeSpan.FromSeconds(0), false);
     }
 
-    public void PreStart(string[] args)
+    public void PreStart(string appId, string[] args)
     {
         ConnectAfterStart = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
         ShowWindowAfterStart = !ConnectAfterStart &&
@@ -107,10 +107,10 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
 
         // configuring Windows Firewall
         try {
-            OpenLocalFirewall(_storageFolder);
+            OpenLocalFirewall(appId, _storageFolder);
         }
-        catch {
-            /*ignored*/
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not configure Windows Firewall.");
         }
     }
 
@@ -222,65 +222,32 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         }
     }
 
-    private static string FindExePath(string exe)
-    {
-        exe = Environment.ExpandEnvironmentVariables(exe);
-        if (File.Exists(exe))
-            return Path.GetFullPath(exe);
-
-        if (Path.GetDirectoryName(exe) == string.Empty)
-            foreach (var test in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';')) {
-                var path = test.Trim();
-                if (!string.IsNullOrEmpty(path) && File.Exists(path = Path.Combine(path, exe)))
-                    return Path.GetFullPath(path);
-            }
-
-        throw new FileNotFoundException(new FileNotFoundException().Message, exe);
-    }
-
-    private static void OpenLocalFirewall(string appDataPath)
+    private static void OpenLocalFirewall(string appId, string appDataPath)
     {
         var lastFirewallConfig = Path.Combine(appDataPath, "lastFirewallConfig");
-        var lastExeFile = File.Exists(lastFirewallConfig) ? File.ReadAllText(lastFirewallConfig) : null;
-        var curExePath = Process.GetCurrentProcess().MainModule?.FileName;
-        if (string.IsNullOrEmpty(curExePath) || lastExeFile == curExePath)
+        var lastExeMark = File.Exists(lastFirewallConfig) ? File.ReadAllText(lastFirewallConfig) : null;
+        var exePath = Process.GetCurrentProcess().MainModule?.FileName ?? throw new FileNotFoundException("Could not find current module file.");
+        var exeMark = $"{exePath}\r\n{File.GetCreationTimeUtc(exePath)}\r\n{Assembly.GetExecutingAssembly().FullName}";
+        if (lastExeMark == exeMark)
             return;
 
         VhLogger.Instance.LogInformation("Configuring Windows Defender Firewall...");
-        var ruleName = "VpnHood";
+        var ruleName = appId;
 
         //dotnet exe
-        var exePath = FindExePath("dotnet.exe");
-        ProcessStartNoWindow("netsh", $"advfirewall firewall delete rule name=\"{ruleName}\" dir=in").WaitForExit();
-        ProcessStartNoWindow("netsh",
-                $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=any dir=in")
-            .WaitForExit();
-        ProcessStartNoWindow("netsh",
-                $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=any dir=in")
-            .WaitForExit();
+        VhUtils.TryInvoke("Delete old the firewall rules", () =>
+            OsUtils.ExecuteCommand("netsh", $"advfirewall firewall delete rule name=\"{ruleName}\" dir=in"));
 
-        // VpnHood exe
-        exePath = curExePath;
-        if (File.Exists(exePath)) {
-            ProcessStartNoWindow("netsh",
-                    $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=any dir=in")
-                .WaitForExit();
-            ProcessStartNoWindow("netsh",
-                    $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=any dir=in")
-                .WaitForExit();
-        }
+        VhUtils.TryInvoke("Add the TCP firewall rule", () =>
+            OsUtils.ExecuteCommand("netsh",
+                $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=any dir=in"));
+
+        VhUtils.TryInvoke("Add the UDP firewall rule", () =>
+            OsUtils.ExecuteCommand("netsh",
+                $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=any dir=in"));
 
         // save firewall modified
-        File.WriteAllText(lastFirewallConfig, curExePath);
-    }
-
-    private static Process ProcessStartNoWindow(string filename, string argument)
-    {
-        var processStart = new ProcessStartInfo(filename, argument) {
-            CreateNoWindow = true
-        };
-
-        return Process.Start(processStart) ?? throw new Exception($"Could not start process: {filename}");
+        File.WriteAllText(lastFirewallConfig, exeMark);
     }
 
     public void Dispose()

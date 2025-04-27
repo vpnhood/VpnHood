@@ -159,7 +159,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         if (ipV4)
             await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv4 set subinterface \"{AdapterName}\" mtu={mtu}", cancellationToken);
 
-        if (ipV4)
+        if (ipV6)
             await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv6 set subinterface \"{AdapterName}\" mtu={mtu}", cancellationToken);
     }
 

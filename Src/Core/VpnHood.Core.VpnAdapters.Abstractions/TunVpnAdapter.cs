@@ -143,10 +143,10 @@ public abstract class TunVpnAdapter : IVpnAdapter
                     await AddAddress(AdapterIpNetworkV6, cancellationToken).VhConfigureAwait();
                 }
                 catch (Exception ex) {
-                    AdapterIpNetworkV6 = null;
                     VhLogger.Instance.LogError(ex,
                         "Failed to add IPv6 address to TUN adapter. AdapterIpNetworkV6: {AdapterIpNetworkV6}",
                         AdapterIpNetworkV6);
+                    AdapterIpNetworkV6 = null;
                 }
             }
 

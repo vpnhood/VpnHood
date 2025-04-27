@@ -26,7 +26,7 @@ public class CompositeIpLocationProvider(
                 logger.LogError(ex, "Failed to get location. Provider: {Provider}.", provider.GetType().Name);
             }
 
-        throw new KeyNotFoundException("No location provider could resolve the IP address.");
+        throw new Exception("No location provider could resolve the IP address.");
     }
 
     public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)

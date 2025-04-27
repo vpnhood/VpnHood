@@ -21,7 +21,7 @@ public abstract class TunVpnAdapter : IVpnAdapter
     private readonly SemaphoreSlim _sendPacketSemaphore = new(1, 1);
     private readonly bool _autoMetric;
     private static readonly IpNetwork[] WebDeadNetworks = [IpNetwork.Parse("203.0.113.1/24"), IpNetwork.Parse("2001:4860:ffff::1234/48")];
-    
+
     protected bool IsDisposed { get; private set; }
     protected bool UseNat { get; private set; }
     public abstract bool IsAppFilterSupported { get; }
@@ -128,24 +128,34 @@ public abstract class TunVpnAdapter : IVpnAdapter
             VhLogger.Instance.LogInformation("Adding TUN adapter...");
             await AdapterAdd(cancellationToken).VhConfigureAwait();
 
-            // Private IP Networks
-            VhLogger.Instance.LogDebug("Adding private networks...");
-            if (options.VirtualIpNetworkV4 != null) {
-                GatewayIpV4 = BuildGatewayFromFromNetwork(options.VirtualIpNetworkV4);
-                await AddAddress(options.VirtualIpNetworkV4, cancellationToken).VhConfigureAwait();
+            // Set adapter IPv4 address
+            if (AdapterIpNetworkV4 != null) {
+                VhLogger.Instance.LogDebug("Adding IPv4 address to adapter ...");
+                GatewayIpV4 = BuildGatewayFromFromNetwork(AdapterIpNetworkV4);
+                await AddAddress(AdapterIpNetworkV4, cancellationToken).VhConfigureAwait();
             }
 
-            if (options.VirtualIpNetworkV6 != null) {
-                GatewayIpV6 = BuildGatewayFromFromNetwork(options.VirtualIpNetworkV6);
-                await AddAddress(options.VirtualIpNetworkV6, cancellationToken).VhConfigureAwait();
+            // Set adapter IPv6 address
+            if (AdapterIpNetworkV6 != null) {
+                VhLogger.Instance.LogDebug("Adding IPv6 address to adapter ...");
+                try {
+                    GatewayIpV6 = BuildGatewayFromFromNetwork(AdapterIpNetworkV6);
+                    await AddAddress(AdapterIpNetworkV6, cancellationToken).VhConfigureAwait();
+                }
+                catch (Exception ex) {
+                    AdapterIpNetworkV6 = null;
+                    VhLogger.Instance.LogError(ex,
+                        "Failed to add IPv6 address to TUN adapter. AdapterIpNetworkV6: {AdapterIpNetworkV6}",
+                        AdapterIpNetworkV6);
+                }
             }
 
             // set metric
-            VhLogger.Instance.LogDebug("Setting metric...");
             if (options.Metric != null) {
+                VhLogger.Instance.LogDebug("Setting metric...");
                 await SetMetric(options.Metric.Value,
-                    ipV4: options.VirtualIpNetworkV4 != null,
-                    ipV6: options.VirtualIpNetworkV6 != null,
+                    ipV4: AdapterIpNetworkV4 != null,
+                    ipV6: AdapterIpNetworkV6 != null,
                     cancellationToken).VhConfigureAwait();
             }
 
@@ -153,17 +163,17 @@ public abstract class TunVpnAdapter : IVpnAdapter
             if (options.Mtu != null) {
                 VhLogger.Instance.LogDebug("Setting MTU...");
                 await SetMtu(options.Mtu.Value,
-                    ipV4: options.VirtualIpNetworkV4 != null,
-                    ipV6: options.VirtualIpNetworkV6 != null,
+                    ipV4: AdapterIpNetworkV4 != null,
+                    ipV6: AdapterIpNetworkV6 != null,
                     cancellationToken).VhConfigureAwait();
             }
 
             // set DNS servers
             VhLogger.Instance.LogDebug("Setting DNS servers...");
             var dnsServers = options.DnsServers;
-            if (options.VirtualIpNetworkV4 == null)
+            if (AdapterIpNetworkV4 == null)
                 dnsServers = dnsServers.Where(x => !x.IsV4()).ToArray();
-            if (options.VirtualIpNetworkV6 == null)
+            if (AdapterIpNetworkV6 == null)
                 dnsServers = dnsServers.Where(x => !x.IsV6()).ToArray();
             await SetDnsServers(dnsServers, cancellationToken).VhConfigureAwait();
 
@@ -187,11 +197,11 @@ public abstract class TunVpnAdapter : IVpnAdapter
             // add NAT
             if (UseNat) {
                 VhLogger.Instance.LogDebug("Adding NAT...");
-                if (options.VirtualIpNetworkV4 != null && PrimaryAdapterIpV4 != null)
-                    await AddNat(options.VirtualIpNetworkV4, cancellationToken).VhConfigureAwait();
+                if (AdapterIpNetworkV4 != null && PrimaryAdapterIpV4 != null)
+                    await AddNat(AdapterIpNetworkV4, cancellationToken).VhConfigureAwait();
 
-                if (options.VirtualIpNetworkV6 != null && PrimaryAdapterIpV6 != null)
-                    await AddNat(options.VirtualIpNetworkV6, cancellationToken).VhConfigureAwait();
+                if (AdapterIpNetworkV6 != null && PrimaryAdapterIpV6 != null)
+                    await AddNat(AdapterIpNetworkV6, cancellationToken).VhConfigureAwait();
             }
 
             // add app filter

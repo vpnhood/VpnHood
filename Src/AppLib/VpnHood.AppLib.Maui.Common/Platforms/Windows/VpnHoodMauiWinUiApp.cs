@@ -17,19 +17,23 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
     
     protected AppWindow? AppWindow;
     
-    public VpnHoodApp Init(AppOptions options)
+    public VpnHoodApp Init(AppOptions appOptions)
     {
-        var device = new WinDevice(options.StorageFolderPath, options.IsDebugMode);
-        var vpnHoodApp = VpnHoodApp.Init(device, options);
+        // initialize Win App
+        VpnHoodWinApp.Init(appId: appOptions.AppId, storageFolder: appOptions.StorageFolderPath, 
+            args: Environment.GetCommandLineArgs());
 
-        VpnHoodWinApp.Init(vpnHoodApp.Features.AppId, vpnHoodApp.StorageFolderPath);
-        VpnHoodWinApp.Instance.PreStart(Environment.GetCommandLineArgs());
+        // initialize VpnHoodApp
+        var device = new WinDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode);
+        var vpnHoodApp = VpnHoodApp.Init(device, appOptions);
+        vpnHoodApp.ConnectionStateChanged += ConnectionStateChanged;
+
         VpnHoodWinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
         VpnHoodWinApp.Instance.OpenMainWindowInBrowserRequested += OpenMainWindowInBrowserRequested;
         VpnHoodWinApp.Instance.ExitRequested += ExitRequested;
         VpnHoodWinApp.Instance.Start();
-        vpnHoodApp.ConnectionStateChanged += ConnectionStateChanged;
         UpdateIcon();
+
 
         Microsoft.Maui.Handlers.WindowHandler.Mapper.AppendToMapping(nameof(IWindow), (handler, _) =>
         {

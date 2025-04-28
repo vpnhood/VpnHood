@@ -20,15 +20,13 @@ public abstract class VpnHoodWpfSpaApp : Application
     {
         base.OnStartup(e);
         try {
-            // initialize Ain App
+            // initialize Win App
             var appOptions = CreateAppOptions();
             appOptions.DeviceId ??= WindowsIdentity.GetCurrent().User?.Value;
             appOptions.EventWatcherInterval ??= TimeSpan.FromSeconds(1);
 
-            VpnHoodWinApp.Init(appOptions.AppId, appOptions.StorageFolderPath);
-
-            // check command line
-            VpnHoodWinApp.Instance.PreStart(appOptions.AppId, e.Args);
+            // initialize VpnHoodWinApp
+            VpnHoodWinApp.Init(appId: appOptions.AppId, storageFolder: appOptions.StorageFolderPath, args: e.Args);
 
             // initialize VpnHoodApp
             VpnHoodApp.Init(new WinDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode), appOptions);
@@ -37,8 +35,7 @@ public abstract class VpnHoodWpfSpaApp : Application
             ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
             using var spaResource = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
             var localSpaUrl = !string.IsNullOrEmpty(appOptions.LocalSpaHostName)
-                ? VpnHoodWinApp.RegisterLocalDomain(
-                    new IPEndPoint(IPAddress.Parse("127.10.10.10"), SpaDefaultPort ?? 80), appOptions.LocalSpaHostName)
+                ? VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), SpaDefaultPort ?? 80), appOptions.LocalSpaHostName)
                 : null;
 
             VpnHoodAppWebServer.Init(new WebServerOptions {

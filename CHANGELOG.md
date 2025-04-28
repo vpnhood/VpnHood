@@ -1,5 +1,6 @@
 # Upcoming 
 * Fix: Windows: Add Firewall rules on startup
+* Fix: Android: Shows premium servers in the free section
 
 # v6.0.696
 * Fix: Instability of pressing the connect and disconnect buttons

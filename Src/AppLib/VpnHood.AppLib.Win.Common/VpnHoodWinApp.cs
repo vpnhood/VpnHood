@@ -54,9 +54,11 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         _commandListener.CommandReceived += CommandListener_CommandReceived;
     }
 
-    public static VpnHoodWinApp Init(string appId, string storageFolder)
+    public static VpnHoodWinApp Init(string appId, string storageFolder, string[] args)
     {
-        return new VpnHoodWinApp(appId, storageFolder);
+        var ret = new VpnHoodWinApp(appId, storageFolder);
+        ret.PreStart(args);
+        return ret;
     }
 
     public static void SetWindowTitleBarColor(IntPtr hWnd, Color color)
@@ -90,7 +92,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         return !_instanceMutex.WaitOne(TimeSpan.FromSeconds(0), false);
     }
 
-    public void PreStart(string appId, string[] args)
+    private void PreStart(string[] args)
     {
         ConnectAfterStart = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
         ShowWindowAfterStart = !ConnectAfterStart &&
@@ -107,7 +109,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
 
         // configuring Windows Firewall
         try {
-            OpenLocalFirewall(appId, _storageFolder);
+            OpenLocalFirewall(_appId, _storageFolder);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not configure Windows Firewall.");

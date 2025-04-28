@@ -1,4 +1,4 @@
-# v6.0.698
+# v6.0.700
 * Fix: Windows: Add Firewall rules on startup
 * Fix: Android: Shows premium servers in the free section
 

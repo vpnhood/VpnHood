@@ -56,6 +56,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 return;
             
             AppsFlyerLib.Instance.SetDebugLog(AppConfigs.IsDebugMode);
+            AppsFlyerLib.Instance.SetDisableAdvertisingIdentifiers(true);
             AppsFlyerLib.Instance.Init(appsFlyerDevKey, null, this);
             AppsFlyerLib.Instance.Start(this);
 

@@ -358,6 +358,33 @@ public class ClientProfileTest : TestAppBase
     }
 
     [TestMethod]
+    public async Task Calculate_no_free_servers_tags()
+    {
+        await using var app = TestAppHelper.CreateClientApp();
+
+        // test two region in a same country
+        var token = CreateToken();
+
+        var defaultPolicy = new ClientPolicy {
+            ClientCountries = ["*"],
+            FreeLocations = [],
+            Normal = 0,
+            PremiumByPurchase = true,
+            PremiumByRewardedAd = 20,
+            PremiumByTrial = 30,
+            UnblockableOnly = false
+        };
+        token.ServerToken.ServerLocations = ["US/texas [#premium]", "US/california [#tag1 #tag2]", "US/arizona [~#premium]"];
+        token.ClientPolicies = [defaultPolicy];
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+
+        // get all locations
+        var arizona = clientProfile.ToInfo().LocationInfos.First(x => x.ServerLocation == "US/arizona");
+        Assert.IsFalse(arizona.Options.HasFree, "Free location should be overridden by FreeLocations.");
+    }
+
+
+    [TestMethod]
     public async Task Calculate_server_parent_location_tags_auto()
     {
         await using var app = TestAppHelper.CreateClientApp();

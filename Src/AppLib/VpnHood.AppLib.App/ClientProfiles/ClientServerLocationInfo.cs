@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Common.Tokens;
+﻿using System.Diagnostics.CodeAnalysis;
+using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.AppLib.ClientProfiles;
 
@@ -39,7 +40,8 @@ public class ClientServerLocationInfo : ServerLocationInfo
     {
         var tags = Tags ?? [];
         Options = new ServerLocationOptions {
-            HasFree = !tags.Contains(ServerRegisteredTags.Premium) || tags.Contains($"~{ServerRegisteredTags.Premium}"),
+            HasFree = !tags.Contains(ServerRegisteredTags.Premium) || 
+                      tags.Contains($"~{ServerRegisteredTags.Premium}"),
             HasPremium = tags.Contains(ServerRegisteredTags.Premium) ||
                          tags.Contains($"~{ServerRegisteredTags.Premium}"),
             HasUnblockable = tags.Contains(ServerRegisteredTags.Unblockable) ||
@@ -154,6 +156,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
         return tags.Distinct();
     }
 
+    [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
     private static IEnumerable<string> GetItemTags(ServerLocationInfo item, string[]? freeLocations)
     {
         IEnumerable<string> tags = item.Tags ?? [];
@@ -166,8 +169,14 @@ public class ClientServerLocationInfo : ServerLocationInfo
                      freeLocations.Contains("*");
 
         // if the location is not free, add premium tag
-        if (!isFree && !tags.Contains(ServerRegisteredTags.Premium))
-            tags = tags.Append(ServerRegisteredTags.Premium);
+        if (!isFree) {
+            // remove partial premium tag if it exists
+            tags = tags.Where(x => x != $"~{ServerRegisteredTags.Premium}");
+
+            // add premium tag if it does not exist
+            if (!tags.Contains(ServerRegisteredTags.Premium))
+                tags = tags.Append(ServerRegisteredTags.Premium);
+        }
 
         return tags;
     }

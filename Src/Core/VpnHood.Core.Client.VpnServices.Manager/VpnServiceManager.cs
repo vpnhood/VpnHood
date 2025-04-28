@@ -231,6 +231,13 @@ public class VpnServiceManager : IJob, IDisposable
         catch (Exception ex) when (updateConnectionInfoCt.IsCancellationRequested) {
             // it is a dead request from previous session
             VhLogger.Instance.LogWarning(ex, "Previous UpdateConnection Info has been ignored due to the new service.");
+
+        }
+        catch (VpnServiceNotReadyException ex) {
+            if (_connectionInfo.ClientState != ClientState.Disposed) {
+                VhLogger.Instance.LogDebug(ex, "Could not update connection info.");
+                _connectionInfo = SetConnectionInfo(ClientState.Disposed, _connectionInfo.Error?.ToException());
+            }
         }
         catch (VpnServiceUnreachableException ex) {
             // increment the count to stop the service if it is unreachable for too long
@@ -238,7 +245,8 @@ public class VpnServiceManager : IJob, IDisposable
 
             // update connection info and set error
             if (_vpnServiceUnreachableCount == VpnServiceUnreachableThreshold)
-                _connectionInfo = SetConnectionInfo(ClientState.Disposed, ex: new Exception("VpnService has stopped.", ex));
+                _connectionInfo =
+                    SetConnectionInfo(ClientState.Disposed, ex: new Exception("VpnService has stopped.", ex));
 
             // report it first time
             if (_vpnServiceUnreachableCount == 1)
@@ -267,14 +275,11 @@ public class VpnServiceManager : IJob, IDisposable
         // for simplicity, we send one request at a time
         using var scopeLock = await _sendLock.LockAsync(TimeSpan.FromSeconds(5), cancellationToken).VhConfigureAwait();
 
-        if (_connectionInfo == null)
-            throw new InvalidOperationException("VpnService is not active.");
-
         if (_connectionInfo.Error != null)
-            throw new InvalidOperationException("VpnService is not active.");
+            throw new VpnServiceNotReadyException("VpnService is not ready.");
 
         if (_connectionInfo.ApiEndPoint == null)
-            throw new InvalidOperationException("ApiEndPoint is not available.");
+            throw new VpnServiceNotReadyException("ApiEndPoint is not available.");
 
         var ret = await SendRequestCore<T>(_connectionInfo.ApiEndPoint, request, cancellationToken);
 
@@ -412,7 +417,9 @@ public class VpnServiceManager : IJob, IDisposable
 
     public Task Reconfigure(ClientReconfigureParams reconfigureParams, CancellationToken cancellationToken)
     {
-        return SendRequest(new ApiReconfigureRequest { Params = reconfigureParams }, cancellationToken);
+        return IsStarted
+            ? SendRequest(new ApiReconfigureRequest { Params = reconfigureParams }, cancellationToken)
+            : Task.CompletedTask;
     }
 
     public Task SendRewardedAdResult(AdResult adResult, CancellationToken cancellationToken)

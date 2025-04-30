@@ -3,7 +3,7 @@ param(
 	[Parameter(Mandatory=$true)] [String]$packageFileTitle,
 	[Parameter(Mandatory=$true)] [String]$aipFileR,
 	[Parameter(Mandatory=$true)] [String]$distribution,
-	[Parameter(Mandatory=$true)] [String]$repoBaseUrl,
+	[Parameter(Mandatory=$true)] [String]$repoUrl,
 	[Parameter(Mandatory=$true)] [String]$installationPageUrl)
 
 . "$PSScriptRoot/Common.ps1"
@@ -65,8 +65,8 @@ Copy-Item -path "$buildPacakgeFile" -Destination "$moduleDir/" -Force;
 # publish info
 $json = @{
     Version = $versionParam; 
-    UpdateInfoUrl = "$repoBaseUrl/releases/latest/download/$module_infoFileName";
-    PackageUrl = "$repoBaseUrl/releases/download/$versionTag/$module_packageFileName";
+    UpdateInfoUrl = "$repoUrl/releases/latest/download/$module_infoFileName";
+    PackageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
 	InstallationPageUrl = "$installationPageUrl";
 	ReleaseDate = "$releaseDate";
 	DeprecatedVersion = "$deprecatedVersion";
@@ -80,7 +80,7 @@ $str=";aiu;
 [Update]
 Name = $productName $versionParam
 ProductVersion = $versionParam
-URL = $repoBaseUrl/releases/download/$versionTag/$module_packageFileName
+URL = $repoUrl/releases/download/$versionTag/$module_packageFileName
 Size = $((Get-Item $module_packageFile).length)
 SHA256 = $((Get-FileHash $module_packageFile -Algorithm SHA256).Hash)
 MD5 = $((Get-FileHash $module_packageFile -Algorithm MD5).Hash)

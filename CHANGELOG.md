@@ -1,3 +1,6 @@
+# v6.0.702
+* Fix: Update url for VpnHoodConnect app
+
 # v6.0.701
 * Fix: Windows: Add Firewall rules on startup
 * Fix: Android: Shows premium servers in the free section

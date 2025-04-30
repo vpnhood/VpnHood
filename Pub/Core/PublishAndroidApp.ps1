@@ -3,6 +3,7 @@ param(
 	[Parameter(Mandatory=$true)] [String]$packageFileTitle,
 	[Parameter(Mandatory=$true)] [String]$packageId,
 	[Parameter(Mandatory=$true)] [String]$distribution,
+	[Parameter(Mandatory=$true)] [String]$repoUrl,
 	[switch]$apk, [switch]$aab)
 
 . "$PSScriptRoot/Common.ps1"
@@ -63,9 +64,9 @@ if ($apk)
 	# publish info
 	$json = @{
 		Version = $versionParam; 
-		UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_infoFileName";
-		PackageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
-		InstallationPageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
+		UpdateInfoUrl = "$repoUrl/releases/latest/download/$module_infoFileName";
+		PackageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
+		InstallationPageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
 		ReleaseDate = "$releaseDate";
 		DeprecatedVersion = "$deprecatedVersion";
 		NotificationDelay = "03:00:00";

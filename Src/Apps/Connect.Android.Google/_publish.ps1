@@ -3,4 +3,5 @@ $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -P
 	-packageFileTitle "VpnHoodConnect" `
 	-packageId "com.vpnhood.connect.android" `
 	-distribution "google" `
+	-repoUrl "https://github.com/vpnhood/VpnHood.App.Connect" `
 	-aab;

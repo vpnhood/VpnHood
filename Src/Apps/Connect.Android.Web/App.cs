@@ -52,9 +52,12 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         try {
             // Start AppsFlyer if the user's country is China
-            if (useRegionPolicy && RegionInfo.CurrentRegion.Name.Equals("CN", StringComparison.OrdinalIgnoreCase))
+            if (useRegionPolicy && !RegionInfo.CurrentRegion.Name.Equals("CN", StringComparison.OrdinalIgnoreCase)) {
+                VhLogger.Instance.LogInformation("Bypassing AppsFlyer due to regional policy. {DeviceRegion}", RegionInfo.CurrentRegion.Name);
                 return;
-            
+            }
+
+            VhLogger.Instance.LogInformation("Initialize AppsFlyer. DeviceRegion: {DeviceRegion}", RegionInfo.CurrentRegion.Name);
             AppsFlyerLib.Instance.SetDebugLog(AppConfigs.IsDebugMode);
             AppsFlyerLib.Instance.SetDisableAdvertisingIdentifiers(true);
             AppsFlyerLib.Instance.Init(appsFlyerDevKey, null, this);

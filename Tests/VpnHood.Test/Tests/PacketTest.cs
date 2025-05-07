@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
+using PacketDotNet.Utils;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Logging;
@@ -280,5 +281,17 @@ public class PacketTest : TestBase
     [TestMethod]
     public void SimplePacket()
     {
+        var options = Array.Empty<byte>();
+        var payloadData = new byte[20];
+
+        // ICMP echo request
+        var ipPacket = IpPacketFactory.BuildTcp(
+            IPEndPoint.Parse("1.1.1.1:10"), IPEndPoint.Parse("1.1.1.2:20"), 
+            options, payloadData);
+
+
+        var clonePacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.Bytes.ToArray()).Extract<IPPacket>();
+        Console.WriteLine(clonePacket);
+        // clonePacket is completely corrupted
     }
 }

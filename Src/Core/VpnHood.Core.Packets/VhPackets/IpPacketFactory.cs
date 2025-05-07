@@ -31,6 +31,13 @@ public static class IpPacketFactory
         };
     }
 
+    public static VhIpPacket BuildIp(IPAddress sourceAddress, IPAddress destinationAddress,
+        VhIpProtocol protocol, int payloadLength)
+    {
+        return BuildIp(
+            sourceAddress.GetAddressBytes(), destinationAddress.GetAddressBytes(),
+            protocol, payloadLength);
+    }
 
     public static VhIpPacket BuildIp(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
         VhIpProtocol protocol, int payloadLength, MemoryPool<byte>? memoryPool = null)
@@ -50,10 +57,12 @@ public static class IpPacketFactory
 
         sourceAddress.CopyTo(ipPacket.SourceAddressSpan);
         destinationAddress.CopyTo(ipPacket.DestinationAddressSpan);
+        ipPacket.TimeToLive = 64;
         return ipPacket;
     }
 
-    public static VhIpPacket BuildUdp(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint, ReadOnlySpan<byte> payload)
+    public static VhIpPacket BuildUdp(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint, 
+        ReadOnlySpan<byte> payload)
     {
         return BuildUdp(
             sourceEndPoint.Address.GetAddressBytes(), destinationEndPoint.Address.GetAddressBytes(),

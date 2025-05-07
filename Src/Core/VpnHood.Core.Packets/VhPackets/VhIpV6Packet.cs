@@ -33,6 +33,10 @@ public class VhIpV6Packet : VhIpPacket
 
         // set protocol
         Span[6] = (byte)protocol;
+
+        // set payload length
+        var payloadLength = (ushort)(buffer.Length - 40);
+        BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(4, 2), payloadLength);
     }
 
     public VhIpV6Packet(Memory<byte> buffer) : base(buffer)

@@ -11,12 +11,25 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class PacketTest : TestBase
 {
+    private static IPAddress GetRandomIp(VhIpVersion ipVersion)
+    {
+        var random = new Random();
+        var buffer = new byte[ipVersion == VhIpVersion.IPv4 ? 4 : 16];
+        random.NextBytes(buffer);
+        return new IPAddress(buffer);
+    }
+    
+    private static IPEndPoint GetRandomEp(VhIpVersion ipVersion) => 
+        new (GetRandomIp(ipVersion), Random.Shared.Next(0xFFFF));
+
     [TestMethod]
-    public void Udp()
+    [DataRow(VhIpVersion.IPv4)]
+    [DataRow(VhIpVersion.IPv6)]
+    public void Udp(VhIpVersion ipVersion)
     {
         var ipPacket = IpPacketFactory.BuildUdp(
-            sourceEndPoint:  IPEndPoint.Parse("11.12.13.14:50"),
-            destinationEndPoint: IPEndPoint.Parse("21.22.23.24:60"),
+            sourceEndPoint: GetRandomEp(ipVersion),
+            destinationEndPoint: GetRandomEp(ipVersion),
             payload: [0,1,2,3,4,5]);
         var udpPacket = ipPacket.ExtractUdp();
         ipPacket.UpdateAllChecksums();
@@ -29,33 +42,47 @@ public class PacketTest : TestBase
         Assert.AreEqual(udpPacket2.SourcePort, udpPacket.SourcePort);
         Assert.AreEqual(udpPacket2.DestinationPort, udpPacket.DestinationPort);
         Assert.AreEqual(udpPacket2.Checksum, udpPacket.Checksum);
+        CollectionAssert.AreEqual(udpPacket2.Bytes, udpPacket.Buffer.ToArray());
+
+        // Parse
+        ipPacket.Dispose();
+        ipPacket = IpPacketFactory.Parse(packet2.Bytes);
+        udpPacket = ipPacket.ExtractUdp();
+        Assert.AreEqual(udpPacket2.Length, udpPacket.Buffer.Length);
+        Assert.AreEqual(udpPacket2.SourcePort, udpPacket.SourcePort);
+        Assert.AreEqual(udpPacket2.DestinationPort, udpPacket.DestinationPort);
+        Assert.AreEqual(udpPacket2.Checksum, udpPacket.Checksum);
+        CollectionAssert.AreEqual(udpPacket2.Bytes, udpPacket.Buffer.ToArray());
+        ipPacket.Dispose();
     }
 
     [TestMethod]
-    public void IP_Addresses()
+    [DataRow(VhIpVersion.IPv4)]
+    [DataRow(VhIpVersion.IPv6)]
+    public void IP_Addresses(VhIpVersion ipVersion)
     {
-        var sourceAddress = IPAddress.Parse("11.12.13.14");
-        var destinationAddress = IPAddress.Parse("21.22.23.24");
+        var sourceAddress = GetRandomIp(ipVersion);
+        var destinationAddress = GetRandomIp(ipVersion);
 
         // Test ip addresses change by changing VhIpPacket.SourceAddress
-        var ipV4Packet = new VhIpV4Packet(new byte[40], VhIpProtocol.Raw, 0) {
-            SourceAddress = sourceAddress,
-            DestinationAddress = destinationAddress
-        };
+        var ipPacket = IpPacketFactory.BuildIp(
+            sourceAddress, destinationAddress, VhIpProtocol.Raw, 0);
 
-        Assert.AreEqual(sourceAddress, ipV4Packet.SourceAddress);
-        Assert.AreEqual(destinationAddress, ipV4Packet.DestinationAddress);
-        CollectionAssert.AreEqual(sourceAddress.GetAddressBytes(), ipV4Packet.SourceAddressSpan.ToArray());
-        CollectionAssert.AreEqual(destinationAddress.GetAddressBytes(), ipV4Packet.DestinationAddressSpan.ToArray());
+        Assert.AreEqual(sourceAddress, ipPacket.SourceAddress);
+        Assert.AreEqual(destinationAddress, ipPacket.DestinationAddress);
+        CollectionAssert.AreEqual(sourceAddress.GetAddressBytes(), ipPacket.SourceAddressSpan.ToArray());
+        CollectionAssert.AreEqual(destinationAddress.GetAddressBytes(), ipPacket.DestinationAddressSpan.ToArray());
+        ipPacket.Dispose();
 
         // Test ip addresses change by changing VhIpPacket.SourceAddressSpan 
-        ipV4Packet = new VhIpV4Packet(new byte[40], VhIpProtocol.Raw, 0);
-        sourceAddress.GetAddressBytes().CopyTo(ipV4Packet.SourceAddressSpan);
-        destinationAddress.GetAddressBytes().CopyTo(ipV4Packet.DestinationAddressSpan);
-        Assert.AreEqual(sourceAddress, ipV4Packet.SourceAddress);
-        Assert.AreEqual(destinationAddress, ipV4Packet.DestinationAddress);
-        CollectionAssert.AreEqual(sourceAddress.GetAddressBytes(), ipV4Packet.SourceAddressSpan.ToArray());
-        CollectionAssert.AreEqual(destinationAddress.GetAddressBytes(), ipV4Packet.DestinationAddressSpan.ToArray());
+        ipPacket = IpPacketFactory.BuildIp(GetRandomIp(ipVersion), GetRandomIp(ipVersion), VhIpProtocol.Raw, 0);
+        sourceAddress.GetAddressBytes().CopyTo(ipPacket.SourceAddressSpan);
+        destinationAddress.GetAddressBytes().CopyTo(ipPacket.DestinationAddressSpan);
+        Assert.AreEqual(sourceAddress, ipPacket.SourceAddress);
+        Assert.AreEqual(destinationAddress, ipPacket.DestinationAddress);
+        CollectionAssert.AreEqual(sourceAddress.GetAddressBytes(), ipPacket.SourceAddressSpan.ToArray());
+        CollectionAssert.AreEqual(destinationAddress.GetAddressBytes(), ipPacket.DestinationAddressSpan.ToArray());
+        ipPacket.Dispose();
     }
 
     [TestMethod]
@@ -113,9 +140,11 @@ public class PacketTest : TestBase
         ipPacket.Identification = id;
         ipPacket.Dscp = dscp;
         ipPacket.Ecn = ecn;
+        var ipPacketBuffer = ipPacket.Buffer.ToArray();
+        ipPacket.Dispose();
 
         VhLogger.Instance.LogDebug("Assert read from buffer.");
-        ipPacket = new VhIpV4Packet(ipPacket.Buffer.ToArray());
+        ipPacket = new VhIpV4Packet(ipPacketBuffer);
         Assert.AreEqual(VhIpVersion.IPv4, ipPacket.Version);
         Assert.AreEqual(VhIpProtocol.Raw, ipPacket.Protocol);
         Assert.AreEqual(sourceIp, ipPacket.SourceAddress);
@@ -126,6 +155,7 @@ public class PacketTest : TestBase
         Assert.AreEqual(offset, ipPacket.FragmentOffset);
         Assert.AreEqual(id, ipPacket.Identification);
         Assert.AreEqual(0, ipPacket.Payload.Length);
+        ipPacket.Dispose();
     }
 
     [TestMethod]
@@ -168,8 +198,11 @@ public class PacketTest : TestBase
         ipPacket.HopLimit = ttl;
         ipPacket.FlowLabel = flowLabel;
         ipPacket.TrafficClass = trafficClass;
+        var ipPacketBuffer = ipPacket.Buffer.ToArray();
+        ipPacket.Dispose();
+
         VhLogger.Instance.LogDebug("Assert read from buffer.");
-        ipPacket = new VhIpV6Packet(ipPacket.Buffer.ToArray());
+        ipPacket = new VhIpV6Packet(ipPacketBuffer);
         Assert.AreEqual(VhIpVersion.IPv6, ipPacket.Version);
         Assert.AreEqual(nextHeader, ipPacket.Protocol);
         Assert.AreEqual(nextHeader, ipPacket.NextHeader);
@@ -177,6 +210,7 @@ public class PacketTest : TestBase
         Assert.AreEqual(destinationIp, ipPacket.DestinationAddress);
         Assert.AreEqual(ttl, ipPacket.TimeToLive);
         Assert.AreEqual(ttl, ipPacket.HopLimit);
+        ipPacket.Dispose();
     }
 
     [TestMethod]

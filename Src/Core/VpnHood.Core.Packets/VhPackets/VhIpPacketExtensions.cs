@@ -52,40 +52,21 @@ public static class VhIpPacketExtensions
 
     }
 
-
-    public static bool IsChecksumValid(this VhUdpPacket udpPacket, VhIpPacket ipPacket)
+    public static bool IsChecksumValid(this IChecksumPayloadPacket payloadPacket, VhIpPacket ipPacket)
     {
-        return udpPacket
+        return payloadPacket
             .IsChecksumValid(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan);
     }
 
-    public static ushort ComputeChecksum(this VhUdpPacket udpPacket, VhIpPacket ipPacket)
+    public static ushort ComputeChecksum(this IChecksumPayloadPacket payloadPacket, VhIpPacket ipPacket)
     {
-        return udpPacket
+        return payloadPacket
             .ComputeChecksum(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan);
     }
 
-    public static void UpdateChecksum(this VhUdpPacket udpPacket, VhIpPacket ipPacket)
+    public static void UpdateChecksum(this IChecksumPayloadPacket payloadPacket, VhIpPacket ipPacket)
     {
-        udpPacket
-            .UpdateChecksum(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan);
-    }
-
-    public static bool IsChecksumValid(this VhTcpPacket tcpPacket, VhIpPacket ipPacket)
-    {
-        return tcpPacket
-            .IsChecksumValid(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan);
-    }
-
-    public static ushort ComputeChecksum(this VhTcpPacket tcpPacket, VhIpPacket ipPacket)
-    {
-        return tcpPacket
-            .ComputeChecksum(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan);
-    }
-
-    public static void UpdateChecksum(this VhTcpPacket tcpPacket, VhIpPacket ipPacket)
-    {
-        tcpPacket
+        payloadPacket
             .UpdateChecksum(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan);
     }
 

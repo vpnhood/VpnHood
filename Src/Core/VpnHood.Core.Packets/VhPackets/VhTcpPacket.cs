@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Packets.VhPackets;
 
-public class VhTcpPacket
+public class VhTcpPacket : IChecksumPayloadPacket
 {
     private readonly Memory<byte> _buffer;
 

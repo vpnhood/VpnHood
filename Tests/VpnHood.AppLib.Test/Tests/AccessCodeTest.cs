@@ -3,11 +3,13 @@ using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using PacketDotNet.Utils;
+using Swan;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;
@@ -15,41 +17,9 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class AccessCodeTest : TestAppBase
 {
-    public static IPPacket SimpleTcp()
-    {
-        var options = Array.Empty<byte>();
-        var payloadData = new byte[20];
-
-        // ICMP echo request
-        var buffer = new byte[20 + options.Length + payloadData.Length];
-        var tcpPacket = new TcpPacket(new ByteArraySegment(buffer)) {
-            SourcePort = 10,
-            DestinationPort = 20,
-            Options = options,
-            //DataOffset = 5 + options.Length / 4,
-            PayloadData = payloadData
-        };
-        tcpPacket.UpdateCalculatedValues();
-
-        // IP packet
-        var ipPacket = new IPv4Packet(IPAddress.Parse("1.1.1.1"), IPAddress.Parse("1.1.1.2")) {
-            Protocol = ProtocolType.Tcp,
-            PayloadPacket = tcpPacket
-        };
-        ipPacket.UpdateCalculatedValues();
-
-
-        var clonePacket =  Packet.ParsePacket(LinkLayers.Raw, ipPacket.Bytes).Extract<IPPacket>();
-        Console.WriteLine(clonePacket);
-        // clonePacket is completely corrupted
-        return clonePacket;
-    }
-
-    [TestMethod]
+  [TestMethod]
     public async Task AaFoo()
     {
-
-        SimpleTcp();
         await Task.CompletedTask;
     }
 

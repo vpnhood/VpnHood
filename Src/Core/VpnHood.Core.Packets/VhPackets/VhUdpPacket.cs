@@ -2,11 +2,11 @@
 
 namespace VpnHood.Core.Packets.VhPackets;
 
-public class VhUdpPacket
+public class VhUdpPacket : IChecksumPayloadPacket
 {
     private readonly Memory<byte> _buffer;
 
-    public VhUdpPacket(Memory<byte> buffer, bool building)
+    public VhUdpPacket(Memory<byte> buffer, bool building) 
     {
         if (buffer.Length < 8)
             throw new ArgumentException("Buffer too small for UDP header.", nameof(buffer));

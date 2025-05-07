@@ -10,7 +10,7 @@ public static class IpPacketExtensions
     {
         return Packet.ParsePacket(LinkLayers.Raw, ipPacket.Bytes).Extract<IPPacket>();
     }
-    public static IcmpV4Packet ExtractIcmp(this IPPacket ipPacket)
+    public static IcmpV4Packet ExtractIcmpV4(this IPPacket ipPacket)
     {
         return ipPacket.Extract<IcmpV4Packet>() ??
                throw new InvalidDataException($"Invalid IcmpV4 packet. It is: {ipPacket.Protocol}");
@@ -96,7 +96,7 @@ public static class IpPacketExtensions
                 break;
 
             case ProtocolType.Icmp:
-                var icmpPacket = ipPacket.ExtractIcmp();
+                var icmpPacket = ipPacket.ExtractIcmpV4();
                 icmpPacket.UpdateIcmpChecksum();
                 icmpPacket.UpdateCalculatedValues();
                 break;

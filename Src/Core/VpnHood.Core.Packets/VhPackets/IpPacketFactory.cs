@@ -102,6 +102,31 @@ public static class IpPacketFactory
         options.CopyTo(udpPacket.Options.Span);
         return ipPacket;
     }
+    public static VhIpPacket BuildIcmpEchoRequestV4(IPAddress sourceAddress, IPAddress destinationAddress,
+        byte[] payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
+    {
+        return BuildIcmpEchoRequestV4(
+            sourceAddress.GetAddressBytes(), destinationAddress.GetAddressBytes(),
+            payload, identifier, sequenceNumber, calculateChecksum);
+    }
+
+    public static VhIpPacket BuildIcmpEchoRequestV4(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+        byte[] payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
+    {
+        if (sourceAddress.Length != 4 || destinationAddress.Length != 4)
+            throw new ArgumentException("SourceAddress and DestinationAddress must be IPv4 addresses.");
+
+        // ICMP echo request
+        var ipPacket = BuildIp(sourceAddress, destinationAddress, VhIpProtocol.IcmpV4, 8 + payload.Length);
+        var icmp = ipPacket.ExtractIcmpV4();
+        icmp.TypeCode = IcmpV4TypeCode.EchoRequest;
+        icmp.SequenceNumber = sequenceNumber;
+        icmp.Identifier = identifier;
+        if (calculateChecksum)
+            ipPacket.UpdateAllChecksums();
+
+        return ipPacket;
+    }
 
 
 }

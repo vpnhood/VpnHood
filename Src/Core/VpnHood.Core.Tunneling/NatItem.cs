@@ -59,7 +59,7 @@ public class NatItem
     [SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "<Pending>")]
     private static ushort GetIcmpId(IPPacket ipPacket)
     {
-        var icmpPacket = ipPacket.ExtractIcmp();
+        var icmpPacket = ipPacket.ExtractIcmpV4();
         var type = (int)icmpPacket.TypeCode >> 8;
         switch (type) {
             // Identifier

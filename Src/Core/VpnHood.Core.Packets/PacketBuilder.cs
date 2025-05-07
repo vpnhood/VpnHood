@@ -63,7 +63,7 @@ public static class PacketBuilder
     }
 
     public static IPPacket BuildUdpPacket(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
-        byte[] payloadData, bool calculateCheckSum = true)
+        byte[] payloadData, bool calculateChecksum = true)
     {
         // create packet for audience
         var ipPacket = BuildIpPacket(sourceEndPoint.Address, destinationEndPoint.Address);
@@ -72,13 +72,13 @@ public static class PacketBuilder
         };
 
         ipPacket.PayloadPacket = udpPacket;
-        if (calculateCheckSum)
+        if (calculateChecksum)
             ipPacket.UpdateAllChecksums();
         return ipPacket;
     }
 
     public static IPPacket BuildIcmpEchoRequestV4(IPAddress sourceAddress, IPAddress destinationAddress,
-        byte[] payloadData, ushort id = 0, ushort sequence = 0, bool calculateCheckSum = true)
+        byte[] payloadData, ushort id = 0, ushort sequence = 0, bool calculateChecksum = true)
     {
         // ICMP echo request
         var buffer = new byte[8 + payloadData.Length];
@@ -96,7 +96,7 @@ public static class PacketBuilder
         };
 
         // Update checksums
-        if (calculateCheckSum) {
+        if (calculateChecksum) {
             icmpPacket.UpdateIcmpChecksum();
             ipPacket.UpdateIPChecksum();
             ipPacket.UpdateCalculatedValues();

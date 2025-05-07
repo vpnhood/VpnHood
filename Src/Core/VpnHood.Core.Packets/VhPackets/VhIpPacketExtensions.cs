@@ -38,6 +38,24 @@ public static class VhIpPacketExtensions
         return (VhTcpPacket)ipPacket.PayloadPacket;
     }
 
+    public static VhIcmpV4Packet BuildIcmpV4(this VhIpPacket ipPacket)
+    {
+        if (ipPacket.Protocol != VhIpProtocol.IcmpV4)
+            throw new InvalidDataException($"Invalid IcmpV4 packet. It is: {ipPacket.Protocol}");
+
+        ipPacket.PayloadPacket ??= new VhIcmpV4Packet(ipPacket.Payload, true);
+        return (VhIcmpV4Packet)ipPacket.PayloadPacket;
+    }
+
+    public static VhIcmpV4Packet ExtractIcmpV4(this VhIpPacket ipPacket)
+    {
+        if (ipPacket.Protocol != VhIpProtocol.IcmpV4)
+            throw new InvalidDataException($"Invalid IcmpV4 packet. It is: {ipPacket.Protocol}");
+
+        ipPacket.PayloadPacket ??= new VhIcmpV4Packet(ipPacket.Payload, false);
+        return (VhIcmpV4Packet)ipPacket.PayloadPacket;
+    }
+
 
     public static void UpdateAllChecksums(this VhIpPacket ipPacket)
     {
@@ -49,6 +67,9 @@ public static class VhIpPacketExtensions
 
         if (ipPacket.Protocol == VhIpProtocol.Tcp)
             ipPacket.ExtractTcp().UpdateChecksum(ipPacket);
+
+        if (ipPacket.Protocol == VhIpProtocol.IcmpV4)
+            ipPacket.ExtractIcmpV4().UpdateChecksum(ipPacket);
 
     }
 

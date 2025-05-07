@@ -9,7 +9,6 @@ public abstract class VhIpPacket(Memory<byte> buffer) : IDisposable
     protected IPAddress? DestinationAddressField;
     private IPayloadPacket? _payloadPacket;
     public Memory<byte> Buffer => _disposed ? throw new ObjectDisposedException(nameof(VhIpPacket)) : buffer;
-    public ReadOnlyMemory<byte> Bytes => Buffer;
 
     public IPayloadPacket? PayloadPacket {
         get => _payloadPacket;

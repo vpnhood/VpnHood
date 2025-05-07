@@ -29,7 +29,7 @@ public static class PacketLogger
             switch (ipPacket.Protocol) {
                 case ProtocolType.Icmp: {
                         eventId = GeneralEventId.Ping;
-                        var icmpPacket = ipPacket.ExtractIcmp();
+                        var icmpPacket = ipPacket.ExtractIcmpV4();
                         packetPayload = icmpPacket.PayloadData ?? [];
                         break;
                     }

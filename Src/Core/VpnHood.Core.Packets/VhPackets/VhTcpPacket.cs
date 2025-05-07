@@ -5,6 +5,7 @@ namespace VpnHood.Core.Packets.VhPackets;
 public class VhTcpPacket : IChecksumPayloadPacket
 {
     private readonly Memory<byte> _buffer;
+    public Memory<byte> Buffer => _buffer;
 
     public VhTcpPacket(Memory<byte> buffer)
     {
@@ -34,8 +35,7 @@ public class VhTcpPacket : IChecksumPayloadPacket
         _buffer = buffer;
     }
 
-    public Memory<byte> Buffer => _buffer;
-
+    
     public ushort SourcePort {
         get => BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span[..2]);
         set => BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span[..2], value);

@@ -46,7 +46,7 @@ public class PingProxy : ITimeoutItem
             throw new InvalidOperationException(
                 $"Packet is not {ProtocolType.Icmp}! Packet: {PacketLogger.Format(ipPacket)}");
 
-        var icmpPacket = ipPacket.ExtractIcmp();
+        var icmpPacket = ipPacket.ExtractIcmpV4();
         if (icmpPacket.TypeCode != IcmpV4TypeCode.EchoRequest)
             throw new InvalidOperationException(
                 $"The icmp is not {IcmpV4TypeCode.EchoRequest}! Packet: {PacketLogger.Format(ipPacket)}");

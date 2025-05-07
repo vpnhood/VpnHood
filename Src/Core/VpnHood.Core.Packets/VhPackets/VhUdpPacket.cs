@@ -13,6 +13,7 @@ public class VhUdpPacket : IChecksumPayloadPacket
 
         // write udpLength
         if (building) {
+            buffer.Span.Clear();
             BinaryPrimitives.WriteUInt16BigEndian(buffer.Span.Slice(4, 2), (ushort)buffer.Length);
         }
         else {

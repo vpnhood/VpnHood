@@ -32,7 +32,7 @@ public class PingV4ProxyRaw : IDisposable
         if (ipPacket.Protocol != ProtocolType.Icmp)
             throw new InvalidOperationException("Invalid ICMP packet.");
 
-        var icmpV4Packet = ipPacket.ExtractIcmp();
+        var icmpV4Packet = ipPacket.ExtractIcmpV4();
         _socket.SendTo(icmpV4Packet.Bytes, new IPEndPoint(ipPacket.DestinationAddress, 0));
     }
 

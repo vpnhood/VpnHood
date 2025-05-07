@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
-using PacketDotNet.Utils;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Logging;
@@ -22,104 +21,6 @@ public class PacketTest : TestBase
 
     private static IPEndPoint GetRandomEp(VhIpVersion ipVersion) =>
         new(GetRandomIp(ipVersion), Random.Shared.Next(0xFFFF));
-
-    [TestMethod]
-    [DataRow(VhIpVersion.IPv4)]
-    [DataRow(VhIpVersion.IPv6)]
-    public void Udp(VhIpVersion ipVersion)
-    {
-        var ipPacket = IpPacketFactory.BuildUdp(
-            sourceEndPoint: GetRandomEp(ipVersion),
-            destinationEndPoint: GetRandomEp(ipVersion),
-            payload: [0, 1, 2, 3, 4, 5]);
-        var udpPacket = ipPacket.ExtractUdp();
-        ipPacket.UpdateAllChecksums();
-
-        // check with PacketDotNet
-        var packet2 = PacketBuilder.Parse(ipPacket.Buffer.ToArray());
-        packet2.UpdateAllChecksums();
-        var udpPacket2 = packet2.ExtractUdp();
-        Assert.AreEqual(udpPacket2.Length, udpPacket.Buffer.Length);
-        Assert.AreEqual(udpPacket2.SourcePort, udpPacket.SourcePort);
-        Assert.AreEqual(udpPacket2.DestinationPort, udpPacket.DestinationPort);
-        Assert.AreEqual(udpPacket2.Checksum, udpPacket.Checksum);
-        CollectionAssert.AreEqual(udpPacket2.Bytes, udpPacket.Buffer.ToArray());
-
-        // Parse
-        ipPacket.Dispose();
-        ipPacket = IpPacketFactory.Parse(packet2.Bytes);
-        udpPacket = ipPacket.ExtractUdp();
-        Assert.AreEqual(udpPacket2.Length, udpPacket.Buffer.Length);
-        Assert.AreEqual(udpPacket2.SourcePort, udpPacket.SourcePort);
-        Assert.AreEqual(udpPacket2.DestinationPort, udpPacket.DestinationPort);
-        Assert.AreEqual(udpPacket2.Checksum, udpPacket.Checksum);
-        CollectionAssert.AreEqual(udpPacket2.Bytes, udpPacket.Buffer.ToArray());
-        ipPacket.Dispose();
-    }
-
-    [TestMethod]
-    [DataRow(VhIpVersion.IPv4, true)]
-    [DataRow(VhIpVersion.IPv4, false)]
-    [DataRow(VhIpVersion.IPv6, true)]
-    public void Tcp(VhIpVersion ipVersion, bool mode)
-    {
-        var ipPacket = IpPacketFactory.BuildTcp(
-            sourceEndPoint: GetRandomEp(ipVersion),
-            destinationEndPoint: GetRandomEp(ipVersion),
-            [], payload: [0, 1, 2, 3, 4, 5]);
-        var tcpPacket = ipPacket.ExtractTcp();
-        tcpPacket.Acknowledgment = mode;
-        tcpPacket.AcknowledgmentNumber = 0x1234;
-        tcpPacket.SequenceNumber = 0x5678;
-        tcpPacket.Reset = !mode;
-        tcpPacket.Synchronize = mode;
-        tcpPacket.Acknowledgment = !mode;
-        tcpPacket.Push = mode;
-        tcpPacket.WindowSize = 0xBBBB;
-        tcpPacket.UrgentPointer = 0x10;
-        ipPacket.UpdateAllChecksums();
-
-        // check with PacketDotNet
-        var packet2 = PacketBuilder.Parse(ipPacket.Buffer.ToArray());
-        packet2.UpdateAllChecksums();
-        var udpPacket2 = packet2.ExtractTcp();
-        Assert.AreEqual(udpPacket2.SourcePort, tcpPacket.SourcePort);
-        Assert.AreEqual(udpPacket2.DestinationPort, tcpPacket.DestinationPort);
-        Assert.AreEqual(udpPacket2.Checksum, tcpPacket.Checksum);
-        Assert.AreEqual(udpPacket2.Acknowledgment, tcpPacket.Acknowledgment);
-        Assert.AreEqual(udpPacket2.AcknowledgmentNumber, tcpPacket.AcknowledgmentNumber);
-        Assert.AreEqual(udpPacket2.SequenceNumber, tcpPacket.SequenceNumber);
-        Assert.AreEqual(udpPacket2.Reset, tcpPacket.Reset);
-        Assert.AreEqual(udpPacket2.Synchronize, tcpPacket.Synchronize);
-        Assert.AreEqual(udpPacket2.Acknowledgment, tcpPacket.Acknowledgment);
-        Assert.AreEqual(udpPacket2.Push, tcpPacket.Push);
-        Assert.AreEqual(udpPacket2.WindowSize, tcpPacket.WindowSize);
-        Assert.AreEqual(udpPacket2.UrgentPointer, tcpPacket.UrgentPointer);
-        Assert.AreEqual(udpPacket2.DataOffset, (20 + tcpPacket.Options.Length) / 4);
-        Assert.AreEqual(udpPacket2.Options.Length, tcpPacket.Options.Length);
-        CollectionAssert.AreEqual(udpPacket2.Bytes, tcpPacket.Buffer.ToArray());
-
-        // Parse
-        ipPacket.Dispose();
-        ipPacket = IpPacketFactory.Parse(packet2.Bytes);
-        tcpPacket = ipPacket.ExtractTcp();
-        Assert.AreEqual(udpPacket2.SourcePort, tcpPacket.SourcePort);
-        Assert.AreEqual(udpPacket2.DestinationPort, tcpPacket.DestinationPort);
-        Assert.AreEqual(udpPacket2.Checksum, tcpPacket.Checksum);
-        Assert.AreEqual(udpPacket2.Acknowledgment, tcpPacket.Acknowledgment);
-        Assert.AreEqual(udpPacket2.AcknowledgmentNumber, tcpPacket.AcknowledgmentNumber);
-        Assert.AreEqual(udpPacket2.SequenceNumber, tcpPacket.SequenceNumber);
-        Assert.AreEqual(udpPacket2.Reset, tcpPacket.Reset);
-        Assert.AreEqual(udpPacket2.Synchronize, tcpPacket.Synchronize);
-        Assert.AreEqual(udpPacket2.Acknowledgment, tcpPacket.Acknowledgment);
-        Assert.AreEqual(udpPacket2.Push, tcpPacket.Push);
-        Assert.AreEqual(udpPacket2.WindowSize, tcpPacket.WindowSize);
-        Assert.AreEqual(udpPacket2.UrgentPointer, tcpPacket.UrgentPointer);
-        Assert.AreEqual(udpPacket2.DataOffset, (20 + tcpPacket.Options.Length) / 4);
-        Assert.AreEqual(udpPacket2.Options.Length, tcpPacket.Options.Length);
-        CollectionAssert.AreEqual(udpPacket2.Bytes, tcpPacket.Buffer.ToArray());
-        ipPacket.Dispose();
-    }
 
     [TestMethod]
     [DataRow(VhIpVersion.IPv4)]
@@ -163,18 +64,18 @@ public class PacketTest : TestBase
         byte dscp = 0; //
         var ecn = IpEcnField.NonEct;
 
-        var packet = (IPv4Packet)PacketBuilder.BuildIpPacket(sourceIp, destinationIp);
-        packet.Protocol = ProtocolType.Raw;
-        packet.TimeToLive = ttl;
-        packet.Version = IPVersion.IPv4;
-        packet.FragmentFlags = fragmentFlags;
-        packet.FragmentOffset = offset;
-        packet.Id = id;
-        packet.DifferentiatedServices = dscp;
-        packet.UpdateAllChecksums();
+        var ipPacketNet = (IPv4Packet)PacketBuilder.BuildIpPacket(sourceIp, destinationIp);
+        ipPacketNet.Protocol = ProtocolType.Raw;
+        ipPacketNet.TimeToLive = ttl;
+        ipPacketNet.Version = IPVersion.IPv4;
+        ipPacketNet.FragmentFlags = fragmentFlags;
+        ipPacketNet.FragmentOffset = offset;
+        ipPacketNet.Id = id;
+        ipPacketNet.DifferentiatedServices = dscp;
+        ipPacketNet.UpdateAllChecksums();
 
         VhLogger.Instance.LogDebug("Assert read from buffer.");
-        var ipPacket = new VhIpV4Packet(packet.Bytes);
+        var ipPacket = new VhIpV4Packet(ipPacketNet.Bytes);
         Assert.AreEqual(VhIpVersion.IPv4, ipPacket.Version);
         Assert.AreEqual(sourceIp, ipPacket.SourceAddress);
         Assert.AreEqual(destinationIp, ipPacket.DestinationAddress);
@@ -186,6 +87,7 @@ public class PacketTest : TestBase
         Assert.AreEqual(dscp, ipPacket.Dscp);
         Assert.AreEqual(ecn, ipPacket.Ecn);
         Assert.AreEqual(0, ipPacket.Payload.Length);
+        CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
 
         VhLogger.Instance.LogDebug("Assert changes");
         sourceIp = IPAddress.Parse("21.22.23.24");
@@ -220,6 +122,7 @@ public class PacketTest : TestBase
         Assert.AreEqual(offset, ipPacket.FragmentOffset);
         Assert.AreEqual(id, ipPacket.Identification);
         Assert.AreEqual(0, ipPacket.Payload.Length);
+        CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
         ipPacket.Dispose();
     }
 
@@ -232,15 +135,15 @@ public class PacketTest : TestBase
         var flowLabel = 0x12345;
         const VhIpProtocol nextHeader = VhIpProtocol.IPv6NoNextHeader;
         byte trafficClass = 0xFF;
-        var packet = (IPv6Packet)PacketBuilder.BuildIpPacket(sourceIp, destinationIp);
+        var ipPacketNet = (IPv6Packet)PacketBuilder.BuildIpPacket(sourceIp, destinationIp);
 
-        packet.HopLimit = ttl;
-        packet.Version = IPVersion.IPv6;
-        packet.FlowLabel = flowLabel;
-        packet.TrafficClass = trafficClass;
+        ipPacketNet.HopLimit = ttl;
+        ipPacketNet.Version = IPVersion.IPv6;
+        ipPacketNet.FlowLabel = flowLabel;
+        ipPacketNet.TrafficClass = trafficClass;
 
         VhLogger.Instance.LogDebug("Assert read from buffer.");
-        var ipPacket = new VhIpV6Packet(packet.Bytes);
+        var ipPacket = new VhIpV6Packet(ipPacketNet.Bytes);
         Assert.AreEqual(VhIpVersion.IPv6, ipPacket.Version);
         Assert.AreEqual(nextHeader, ipPacket.Protocol);
         Assert.AreEqual(nextHeader, ipPacket.NextHeader);
@@ -250,6 +153,8 @@ public class PacketTest : TestBase
         Assert.AreEqual(ttl, ipPacket.HopLimit);
         Assert.AreEqual(flowLabel, ipPacket.FlowLabel);
         Assert.AreEqual(trafficClass, ipPacket.TrafficClass);
+        CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
+
 
         VhLogger.Instance.LogDebug("Assert changes");
         sourceIp = IPAddress.Parse("2001:db8::3");
@@ -275,6 +180,144 @@ public class PacketTest : TestBase
         Assert.AreEqual(destinationIp, ipPacket.DestinationAddress);
         Assert.AreEqual(ttl, ipPacket.TimeToLive);
         Assert.AreEqual(ttl, ipPacket.HopLimit);
+        CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
+        ipPacket.Dispose();
+    }
+
+    [TestMethod]
+    [DataRow(VhIpVersion.IPv4)]
+    [DataRow(VhIpVersion.IPv6)]
+    public void Udp(VhIpVersion ipVersion)
+    {
+        var ipPacket = IpPacketFactory.BuildUdp(
+            sourceEndPoint: GetRandomEp(ipVersion),
+            destinationEndPoint: GetRandomEp(ipVersion),
+            payload: [0, 1, 2, 3, 4, 5]);
+        var udpPacket = ipPacket.ExtractUdp();
+        ipPacket.UpdateAllChecksums();
+
+        // check with PacketDotNet
+        var ipPacketNet = PacketBuilder.Parse(ipPacket.Buffer.ToArray());
+        ipPacketNet.UpdateAllChecksums();
+        var udpPacketNet = ipPacketNet.ExtractUdp();
+        Assert.AreEqual(udpPacketNet.Length, udpPacket.Buffer.Length);
+        Assert.AreEqual(udpPacketNet.SourcePort, udpPacket.SourcePort);
+        Assert.AreEqual(udpPacketNet.DestinationPort, udpPacket.DestinationPort);
+        Assert.AreEqual(udpPacketNet.Checksum, udpPacket.Checksum);
+        CollectionAssert.AreEqual(udpPacketNet.Bytes, udpPacket.Buffer.ToArray());
+        CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
+
+        // Parse
+        ipPacket.Dispose();
+        ipPacket = IpPacketFactory.Parse(ipPacketNet.Bytes);
+        udpPacket = ipPacket.ExtractUdp();
+        Assert.AreEqual(udpPacketNet.Length, udpPacket.Buffer.Length);
+        Assert.AreEqual(udpPacketNet.SourcePort, udpPacket.SourcePort);
+        Assert.AreEqual(udpPacketNet.DestinationPort, udpPacket.DestinationPort);
+        Assert.AreEqual(udpPacketNet.Checksum, udpPacket.Checksum);
+        CollectionAssert.AreEqual(udpPacketNet.Bytes, udpPacket.Buffer.ToArray());
+        CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
+        ipPacket.Dispose();
+    }
+
+    [TestMethod]
+    [DataRow(VhIpVersion.IPv4, true)]
+    [DataRow(VhIpVersion.IPv4, false)]
+    [DataRow(VhIpVersion.IPv6, true)]
+    public void Tcp(VhIpVersion ipVersion, bool mode)
+    {
+        var ipPacket = IpPacketFactory.BuildTcp(
+            sourceEndPoint: GetRandomEp(ipVersion),
+            destinationEndPoint: GetRandomEp(ipVersion),
+            [], payload: [0, 1, 2, 3, 4, 5]);
+        var tcpPacket = ipPacket.ExtractTcp();
+        tcpPacket.Acknowledgment = mode;
+        tcpPacket.AcknowledgmentNumber = 0x1234;
+        tcpPacket.SequenceNumber = 0x5678;
+        tcpPacket.Reset = !mode;
+        tcpPacket.Synchronize = mode;
+        tcpPacket.Acknowledgment = !mode;
+        tcpPacket.Push = mode;
+        tcpPacket.WindowSize = 0xBBBB;
+        tcpPacket.UrgentPointer = 0x10;
+        ipPacket.UpdateAllChecksums();
+
+        // check with PacketDotNet
+        var ipPacketNet = PacketBuilder.Parse(ipPacket.Buffer.ToArray());
+        ipPacketNet.UpdateAllChecksums();
+        var tcpPacketNet = ipPacketNet.ExtractTcp();
+        Assert.AreEqual(tcpPacketNet.SourcePort, tcpPacket.SourcePort);
+        Assert.AreEqual(tcpPacketNet.DestinationPort, tcpPacket.DestinationPort);
+        Assert.AreEqual(tcpPacketNet.Checksum, tcpPacket.Checksum);
+        Assert.AreEqual(tcpPacketNet.Acknowledgment, tcpPacket.Acknowledgment);
+        Assert.AreEqual(tcpPacketNet.AcknowledgmentNumber, tcpPacket.AcknowledgmentNumber);
+        Assert.AreEqual(tcpPacketNet.SequenceNumber, tcpPacket.SequenceNumber);
+        Assert.AreEqual(tcpPacketNet.Reset, tcpPacket.Reset);
+        Assert.AreEqual(tcpPacketNet.Synchronize, tcpPacket.Synchronize);
+        Assert.AreEqual(tcpPacketNet.Acknowledgment, tcpPacket.Acknowledgment);
+        Assert.AreEqual(tcpPacketNet.Push, tcpPacket.Push);
+        Assert.AreEqual(tcpPacketNet.WindowSize, tcpPacket.WindowSize);
+        Assert.AreEqual(tcpPacketNet.UrgentPointer, tcpPacket.UrgentPointer);
+        Assert.AreEqual(tcpPacketNet.DataOffset, (20 + tcpPacket.Options.Length) / 4);
+        Assert.AreEqual(tcpPacketNet.Options.Length, tcpPacket.Options.Length);
+        CollectionAssert.AreEqual(tcpPacketNet.Bytes, tcpPacket.Buffer.ToArray());
+        CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
+
+        // Parse
+        ipPacket.Dispose();
+        ipPacket = IpPacketFactory.Parse(ipPacketNet.Bytes);
+        tcpPacket = ipPacket.ExtractTcp();
+        Assert.AreEqual(tcpPacketNet.SourcePort, tcpPacket.SourcePort);
+        Assert.AreEqual(tcpPacketNet.DestinationPort, tcpPacket.DestinationPort);
+        Assert.AreEqual(tcpPacketNet.Checksum, tcpPacket.Checksum);
+        Assert.AreEqual(tcpPacketNet.Acknowledgment, tcpPacket.Acknowledgment);
+        Assert.AreEqual(tcpPacketNet.AcknowledgmentNumber, tcpPacket.AcknowledgmentNumber);
+        Assert.AreEqual(tcpPacketNet.SequenceNumber, tcpPacket.SequenceNumber);
+        Assert.AreEqual(tcpPacketNet.Reset, tcpPacket.Reset);
+        Assert.AreEqual(tcpPacketNet.Synchronize, tcpPacket.Synchronize);
+        Assert.AreEqual(tcpPacketNet.Acknowledgment, tcpPacket.Acknowledgment);
+        Assert.AreEqual(tcpPacketNet.Push, tcpPacket.Push);
+        Assert.AreEqual(tcpPacketNet.WindowSize, tcpPacket.WindowSize);
+        Assert.AreEqual(tcpPacketNet.UrgentPointer, tcpPacket.UrgentPointer);
+        Assert.AreEqual(tcpPacketNet.DataOffset, (20 + tcpPacket.Options.Length) / 4);
+        Assert.AreEqual(tcpPacketNet.Options.Length, tcpPacket.Options.Length);
+        CollectionAssert.AreEqual(tcpPacketNet.Bytes, tcpPacket.Buffer.ToArray());
+        CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
+        ipPacket.Dispose();
+    }
+
+    [TestMethod]
+    public void IcmpV4()
+    {
+        var ipPacket = IpPacketFactory.BuildIcmpEchoRequestV4(
+            sourceAddress: GetRandomIp(VhIpVersion.IPv4),
+            destinationAddress: GetRandomIp(VhIpVersion.IPv4),
+            payload: [0, 1, 2, 3, 4, 5]);
+        var icmpPacket = ipPacket.ExtractIcmpV4();
+        icmpPacket.Checksum = 0x1234;
+        ipPacket.UpdateAllChecksums();
+
+        // check with PacketDotNet
+        var ipPacketNet = PacketBuilder.Parse(ipPacket.Buffer.ToArray());
+        ipPacketNet.UpdateAllChecksums();
+        var icmpPacketNet = ipPacketNet.ExtractIcmpV4();
+        Assert.AreEqual((int)icmpPacketNet.TypeCode, (int)icmpPacket.TypeCode);
+        Assert.AreEqual(icmpPacketNet.Id, icmpPacket.Identifier);
+        Assert.AreEqual(icmpPacketNet.Sequence, icmpPacket.SequenceNumber);
+        Assert.AreEqual(icmpPacketNet.Checksum, icmpPacket.Checksum);
+        CollectionAssert.AreEqual(icmpPacketNet.Bytes, icmpPacket.Buffer.ToArray());
+        CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
+
+        // Parse
+        ipPacket.Dispose();
+        ipPacket = IpPacketFactory.Parse(ipPacketNet.Bytes);
+        icmpPacket = ipPacket.ExtractIcmpV4();
+        Assert.AreEqual((int)icmpPacketNet.TypeCode, (int)icmpPacket.TypeCode);
+        Assert.AreEqual(icmpPacketNet.Id, icmpPacket.Identifier);
+        Assert.AreEqual(icmpPacketNet.Sequence, icmpPacket.SequenceNumber);
+        Assert.AreEqual(icmpPacketNet.Checksum, icmpPacket.Checksum);
+        CollectionAssert.AreEqual(icmpPacketNet.Bytes, icmpPacket.Buffer.ToArray());
+        CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
         ipPacket.Dispose();
     }
 
@@ -290,7 +333,7 @@ public class PacketTest : TestBase
             options, payloadData);
 
 
-        var clonePacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.Bytes.ToArray()).Extract<IPPacket>();
+        var clonePacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.Buffer.ToArray()).Extract<IPPacket>();
         Console.WriteLine(clonePacket);
         // clonePacket is completely corrupted
     }

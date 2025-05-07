@@ -1,15 +1,9 @@
-﻿using System.Net;
-using System.Text;
+﻿using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PacketDotNet;
-using PacketDotNet.Utils;
-using Swan;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;
@@ -17,7 +11,7 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class AccessCodeTest : TestAppBase
 {
-  [TestMethod]
+    [TestMethod]
     public async Task AaFoo()
     {
         await Task.CompletedTask;
@@ -85,7 +79,7 @@ public class AccessCodeTest : TestAppBase
     }
 
     [TestMethod]
-    public async Task AccessCode_FailedByCheckSum()
+    public async Task AccessCode_FailedByChecksum()
     {
         using var accessManager = TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);

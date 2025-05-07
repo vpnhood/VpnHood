@@ -77,8 +77,8 @@ public static class PacketUtil
     {
         uint sum = 0;
 
-        sum += SumWords(pseudoHeader);
-        sum += SumWords(data);
+        sum += ComputeSumWords(pseudoHeader);
+        sum += ComputeSumWords(data);
 
         while ((sum >> 16) != 0)
             sum = (sum & 0xFFFF) + (sum >> 16);
@@ -86,7 +86,7 @@ public static class PacketUtil
         return (ushort)~sum;
     }
 
-    private static uint SumWords(ReadOnlySpan<byte> data)
+    public static uint ComputeSumWords(ReadOnlySpan<byte> data)
     {
         uint sum = 0;
         for (var i = 0; i < data.Length; i += 2) {

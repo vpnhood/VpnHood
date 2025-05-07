@@ -3,7 +3,7 @@
 public enum VhIpProtocol : byte
 {
     IPv6HopByHopOptions = 0,
-    Icmp = 1,
+    IcmpV4 = 1,
     Igmp = 2,
     Gpg = 3,
     IPv4 = 4,

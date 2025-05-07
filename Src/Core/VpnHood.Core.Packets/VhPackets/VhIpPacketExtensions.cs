@@ -56,6 +56,23 @@ public static class VhIpPacketExtensions
         return (VhIcmpV4Packet)ipPacket.PayloadPacket;
     }
 
+    public static VhIcmpV6Packet BuildIcmpV6(this VhIpPacket ipPacket)
+    {
+        if (ipPacket.Protocol != VhIpProtocol.IcmpV6)
+            throw new InvalidDataException($"Invalid IcmpV6 packet. It is: {ipPacket.Protocol}");
+
+        ipPacket.PayloadPacket ??= new VhIcmpV6Packet(ipPacket.Payload, true);
+        return (VhIcmpV6Packet)ipPacket.PayloadPacket;
+    }
+
+    public static VhIcmpV6Packet ExtractIcmpV6(this VhIpPacket ipPacket)
+    {
+        if (ipPacket.Protocol != VhIpProtocol.IcmpV6)
+            throw new InvalidDataException($"Invalid IcmpV6 packet. It is: {ipPacket.Protocol}");
+
+        ipPacket.PayloadPacket ??= new VhIcmpV6Packet(ipPacket.Payload, false);
+        return (VhIcmpV6Packet)ipPacket.PayloadPacket;
+    }
 
     public static void UpdateAllChecksums(this VhIpPacket ipPacket)
     {
@@ -70,6 +87,9 @@ public static class VhIpPacketExtensions
 
         if (ipPacket.Protocol == VhIpProtocol.IcmpV4)
             ipPacket.ExtractIcmpV4().UpdateChecksum(ipPacket);
+
+        if (ipPacket.Protocol == VhIpProtocol.IcmpV6)
+            ipPacket.ExtractIcmpV6().UpdateChecksum(ipPacket);
 
     }
 

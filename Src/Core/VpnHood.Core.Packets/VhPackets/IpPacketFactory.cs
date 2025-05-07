@@ -102,6 +102,29 @@ public static class IpPacketFactory
         options.CopyTo(udpPacket.Options.Span);
         return ipPacket;
     }
+
+    public static VhIpPacket BuildIcmpEchoRequest(IPAddress sourceAddress, IPAddress destinationAddress,
+        byte[] payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
+    {
+        return BuildIcmpEchoRequest(
+            sourceAddress.GetAddressBytes(), destinationAddress.GetAddressBytes(),
+            payload, identifier, sequenceNumber, calculateChecksum);
+    }
+
+    public static VhIpPacket BuildIcmpEchoRequest(ReadOnlySpan<byte> sourceAddress,
+        ReadOnlySpan<byte> destinationAddress,
+        byte[] payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
+    {
+        if (sourceAddress.Length != destinationAddress.Length)
+            throw new ArgumentException("SourceAddress and DestinationAddress must have a same ip version.");
+        
+        return sourceAddress.Length switch {
+            4 => BuildIcmpEchoRequestV4(sourceAddress, destinationAddress, payload, identifier, sequenceNumber, calculateChecksum),
+            16 => BuildIcmpEchoRequestV6(sourceAddress, destinationAddress, payload, identifier, sequenceNumber, calculateChecksum),
+            _ => throw new NotSupportedException($"IP version {sourceAddress.Length} not supported.")
+        };
+    }
+
     public static VhIpPacket BuildIcmpEchoRequestV4(IPAddress sourceAddress, IPAddress destinationAddress,
         byte[] payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
@@ -110,7 +133,7 @@ public static class IpPacketFactory
             payload, identifier, sequenceNumber, calculateChecksum);
     }
 
-    public static VhIpPacket BuildIcmpEchoRequestV4(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+   public static VhIpPacket BuildIcmpEchoRequestV4(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
         byte[] payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
         if (sourceAddress.Length != 4 || destinationAddress.Length != 4)
@@ -119,7 +142,8 @@ public static class IpPacketFactory
         // ICMP echo request
         var ipPacket = BuildIp(sourceAddress, destinationAddress, VhIpProtocol.IcmpV4, 8 + payload.Length);
         var icmp = ipPacket.ExtractIcmpV4();
-        icmp.TypeCode = IcmpV4TypeCode.EchoRequest;
+        icmp.Type = IcmpV4Type.EchoRequest;
+        icmp.Code = 0;
         icmp.SequenceNumber = sequenceNumber;
         icmp.Identifier = identifier;
         if (calculateChecksum)
@@ -128,5 +152,30 @@ public static class IpPacketFactory
         return ipPacket;
     }
 
+    public static VhIpPacket BuildIcmpEchoRequestV6(IPAddress sourceAddress, IPAddress destinationAddress,
+        byte[] payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
+    {
+        return BuildIcmpEchoRequestV6(
+            sourceAddress.GetAddressBytes(), destinationAddress.GetAddressBytes(),
+            payload, identifier, sequenceNumber, calculateChecksum);
+    }
 
+    public static VhIpPacket BuildIcmpEchoRequestV6(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+        byte[] payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
+    {
+        if (sourceAddress.Length != 16 || destinationAddress.Length != 16)
+            throw new ArgumentException("SourceAddress and DestinationAddress must be IPv6 addresses.");
+
+        // ICMP echo request
+        var ipPacket = BuildIp(sourceAddress, destinationAddress, VhIpProtocol.IcmpV6, 8 + payload.Length);
+        var icmp = ipPacket.ExtractIcmpV6();
+        icmp.Type = IcmpV6Type.EchoRequest;
+        icmp.Code = 0;
+        icmp.SequenceNumber = sequenceNumber;
+        icmp.Identifier = identifier;
+        if (calculateChecksum)
+            ipPacket.UpdateAllChecksums();
+
+        return ipPacket;
+    }
 }

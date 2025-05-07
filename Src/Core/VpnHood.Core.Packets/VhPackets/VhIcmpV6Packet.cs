@@ -1,19 +1,20 @@
-﻿using System.Buffers.Binary;
+﻿using System;
+using System.Buffers.Binary;
 
 namespace VpnHood.Core.Packets.VhPackets;
 
-public class VhIcmpV4Packet : IChecksumPayloadPacket
+public class VhIcmpV6Packet : IChecksumPayloadPacket
 {
     private readonly Memory<byte> _buffer;
     public Memory<byte> Buffer => _buffer;
 
-    public VhIcmpV4Packet(Memory<byte> buffer, bool building)
+    public VhIcmpV6Packet(Memory<byte> buffer, bool building)
     {
-        if (buffer.Length < 8)
-            throw new ArgumentException("Buffer too small for ICMPv4 header.");
+        if (buffer.Length < 4)
+            throw new ArgumentException("Buffer too small for ICMPv6 header.");
 
         if (buffer.Length > 0xFFFF)
-            throw new ArgumentException("Buffer too large for ICMPv4 header.");
+            throw new ArgumentException("Buffer too large for ICMPv6 packet.");
 
         if (building)
             buffer.Span.Clear();
@@ -21,8 +22,8 @@ public class VhIcmpV4Packet : IChecksumPayloadPacket
         _buffer = buffer;
     }
 
-    public IcmpV4Type Type {
-        get => (IcmpV4Type)_buffer.Span[0];
+    public IcmpV6Type Type {
+        get => (IcmpV6Type)_buffer.Span[0];
         set => _buffer.Span[0] = (byte)value;
     }
 
@@ -34,11 +35,6 @@ public class VhIcmpV4Packet : IChecksumPayloadPacket
     public ushort Checksum {
         get => BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span.Slice(2, 2));
         set => BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span.Slice(2, 2), value);
-    }
-
-    public uint RestOfHeader {
-        get => BinaryPrimitives.ReadUInt32BigEndian(_buffer.Span.Slice(4, 4));
-        set => BinaryPrimitives.WriteUInt32BigEndian(_buffer.Span.Slice(4, 4), value);
     }
 
     public ushort Identifier {
@@ -53,10 +49,10 @@ public class VhIcmpV4Packet : IChecksumPayloadPacket
 
     public Memory<byte> Payload => _buffer[8..];
 
-    public bool IsChecksumValid(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress) => 
+    public bool IsChecksumValid(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress) =>
         ComputeChecksum(sourceAddress, destinationAddress) == Checksum;
 
-    public void UpdateChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress) => 
+    public void UpdateChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress) =>
         Checksum = ComputeChecksum(sourceAddress, destinationAddress);
 
     public ushort ComputeChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress)
@@ -65,16 +61,7 @@ public class VhIcmpV4Packet : IChecksumPayloadPacket
         Checksum = 0;
 
         try {
-            var span = _buffer.Span;
-            span[2] = 0;
-            span[3] = 0;
-
-            var sum = PacketUtil.ComputeSumWords(span);
-
-            while ((sum >> 16) != 0) 
-                sum = (sum & 0xFFFF) + (sum >> 16);
-
-            return (ushort)~sum;
+            return PacketUtil.ComputeChecksum(sourceAddress, destinationAddress, (byte)VhIpProtocol.IcmpV6, _buffer.Span);
         }
         finally {
             Checksum = orgChecksum;

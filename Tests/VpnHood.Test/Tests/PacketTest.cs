@@ -301,7 +301,8 @@ public class PacketTest : TestBase
         var ipPacketNet = PacketBuilder.Parse(ipPacket.Buffer.ToArray());
         ipPacketNet.UpdateAllChecksums();
         var icmpPacketNet = ipPacketNet.ExtractIcmpV4();
-        Assert.AreEqual((int)icmpPacketNet.TypeCode, (int)icmpPacket.TypeCode);
+        Assert.AreEqual((byte)((ushort)icmpPacketNet.TypeCode >> 8), (byte)icmpPacket.Type);
+        Assert.AreEqual((byte)((ushort)icmpPacketNet.TypeCode & 0xFF), icmpPacket.Code);
         Assert.AreEqual(icmpPacketNet.Id, icmpPacket.Identifier);
         Assert.AreEqual(icmpPacketNet.Sequence, icmpPacket.SequenceNumber);
         Assert.AreEqual(icmpPacketNet.Checksum, icmpPacket.Checksum);
@@ -312,7 +313,8 @@ public class PacketTest : TestBase
         ipPacket.Dispose();
         ipPacket = IpPacketFactory.Parse(ipPacketNet.Bytes);
         icmpPacket = ipPacket.ExtractIcmpV4();
-        Assert.AreEqual((int)icmpPacketNet.TypeCode, (int)icmpPacket.TypeCode);
+        Assert.AreEqual((byte)((ushort)icmpPacketNet.TypeCode >> 8), (byte)icmpPacket.Type);
+        Assert.AreEqual((byte)((ushort)icmpPacketNet.TypeCode & 0xFF), (int)icmpPacket.Code);
         Assert.AreEqual(icmpPacketNet.Id, icmpPacket.Identifier);
         Assert.AreEqual(icmpPacketNet.Sequence, icmpPacket.SequenceNumber);
         Assert.AreEqual(icmpPacketNet.Checksum, icmpPacket.Checksum);
@@ -320,6 +322,40 @@ public class PacketTest : TestBase
         CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
         ipPacket.Dispose();
     }
+
+    [TestMethod]
+    public void IcmpV6()
+    {
+        var ipPacket = IpPacketFactory.BuildIcmpEchoRequestV6(
+            sourceAddress: GetRandomIp(VhIpVersion.IPv6),
+            destinationAddress: GetRandomIp(VhIpVersion.IPv6),
+            payload: [0, 1, 2, 3, 4, 5]);
+        var icmpPacket = ipPacket.ExtractIcmpV6();
+        icmpPacket.Checksum = 0x1234;
+        ipPacket.UpdateAllChecksums();
+
+        // check with PacketDotNet
+        var ipPacketNet = PacketBuilder.Parse(ipPacket.Buffer.ToArray());
+        ipPacketNet.UpdateAllChecksums();
+        var icmpPacketNet = ipPacketNet.ExtractIcmpV6();
+        Assert.AreEqual((int)icmpPacketNet.Type, (int)icmpPacket.Type);
+        Assert.AreEqual(icmpPacketNet.Code, icmpPacket.Code);
+        Assert.AreEqual(icmpPacketNet.Checksum, icmpPacket.Checksum);
+        CollectionAssert.AreEqual(icmpPacketNet.Bytes, icmpPacket.Buffer.ToArray());
+        CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
+
+        // Parse
+        ipPacket.Dispose();
+        ipPacket = IpPacketFactory.Parse(ipPacketNet.Bytes);
+        icmpPacket = ipPacket.ExtractIcmpV6();
+        Assert.AreEqual((int)icmpPacketNet.Type, (int)icmpPacket.Type);
+        Assert.AreEqual(icmpPacketNet.Code, icmpPacket.Code);
+        Assert.AreEqual(icmpPacketNet.Checksum, icmpPacket.Checksum);
+        CollectionAssert.AreEqual(icmpPacketNet.Bytes, icmpPacket.Buffer.ToArray());
+        CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
+        ipPacket.Dispose();
+    }
+
 
     [TestMethod]
     public void SimplePacket()

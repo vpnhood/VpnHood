@@ -57,22 +57,23 @@ public class PacketTest : TestBase
     }
 
     [TestMethod]
-    [DataRow(VhIpVersion.IPv4)]
-    [DataRow(VhIpVersion.IPv6)]
-    public void Tcp(VhIpVersion ipVersion)
+    [DataRow(VhIpVersion.IPv4, true)]
+    [DataRow(VhIpVersion.IPv4, false)]
+    [DataRow(VhIpVersion.IPv6, true)]
+    public void Tcp(VhIpVersion ipVersion, bool mode)
     {
         var ipPacket = IpPacketFactory.BuildTcp(
             sourceEndPoint: GetRandomEp(ipVersion),
             destinationEndPoint: GetRandomEp(ipVersion),
             [], payload: [0, 1, 2, 3, 4, 5]);
         var tcpPacket = ipPacket.ExtractTcp();
-        tcpPacket.Acknowledgment = true;
+        tcpPacket.Acknowledgment = mode;
         tcpPacket.AcknowledgmentNumber = 0x1234;
         tcpPacket.SequenceNumber = 0x5678;
-        tcpPacket.Reset = true;
-        tcpPacket.Synchronize = true;
-        tcpPacket.Acknowledgment = false;
-        tcpPacket.Push = true;
+        tcpPacket.Reset = !mode;
+        tcpPacket.Synchronize = mode;
+        tcpPacket.Acknowledgment = !mode;
+        tcpPacket.Push = mode;
         tcpPacket.WindowSize = 0xBBBB;
         tcpPacket.UrgentPointer = 0x10;
         ipPacket.UpdateAllChecksums();

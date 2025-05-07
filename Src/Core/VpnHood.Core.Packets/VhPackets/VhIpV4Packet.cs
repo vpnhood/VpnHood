@@ -1,18 +1,40 @@
-﻿using System.Buffers.Binary;
+﻿using System.Buffers;
+using System.Buffers.Binary;
 
 namespace VpnHood.Core.Packets.VhPackets;
 
 public class VhIpV4Packet : VhIpPacket
 {
-    public VhIpV4Packet(Memory<byte> buffer, VhIpProtocol protocol, int optionsLength) : base(buffer)
+    private readonly IMemoryOwner<byte>? _memoryOwner;
+
+    public VhIpV4Packet(IMemoryOwner<byte> memoryOwner, int packetLength)
+        : this(memoryOwner.Memory[..packetLength])
+    {
+        _memoryOwner = memoryOwner;
+    }
+
+    public VhIpV4Packet(IMemoryOwner<byte> memoryOwner, int packetLength, VhIpProtocol protocol, int optionsLength) 
+        : this(memoryOwner.Memory[..packetLength], protocol, optionsLength)
+    {
+        _memoryOwner = memoryOwner;
+    }
+
+    public VhIpV4Packet(Memory<byte> buffer, VhIpProtocol protocol, int optionsLength) 
+        : base(buffer)
     {
         // validate buffer length
         if (buffer.Length is < 20 or > 0xFFFF)
             throw new ArgumentException("Buffer too small for IP header.", nameof(buffer));
 
+        // clean buffer
+        buffer.Span.Clear();
+
         // validate options length
         if (optionsLength is < 0 or > 40)
             throw new ArgumentOutOfRangeException(nameof(optionsLength), "Options length must be between 0 and 40 bytes.");
+
+        if (optionsLength % 4 !=0)
+            throw new ArgumentOutOfRangeException(nameof(optionsLength), "Options length must be a multiple of 4 bytes.");
 
         // set version
         Version = VhIpVersion.IPv4;
@@ -22,13 +44,15 @@ public class VhIpV4Packet : VhIpPacket
 
         // set header length
         var hl = (20 + optionsLength) / 4;
-        Span[0] = (byte)hl;
+        Span[0] = (byte)((4 << 4) | hl);
 
         // set total length
         BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(2, 2), (ushort)buffer.Length);
     }
 
-    public VhIpV4Packet(Memory<byte> buffer) : base(buffer)
+
+    public VhIpV4Packet(Memory<byte> buffer) 
+        : base(buffer)
     {
         // Check if the buffer is large enough for the IP header
         if (buffer.Length is < 20 or > 0xFFFF)
@@ -57,11 +81,10 @@ public class VhIpV4Packet : VhIpPacket
 
     private Span<byte> Span => Buffer.Span;
     public override Memory<byte> Header => Buffer[..(InternetHeaderLength * 4)];
-    public override VhIpProtocol Protocol {
-        get { return (VhIpProtocol)Span[9]; }
-    }
-
+    public override VhIpProtocol Protocol => (VhIpProtocol)Span[9];
     public int InternetHeaderLength => Span[0] & 0x0F;
+
+
     public byte TypeOfService {
         get => Span[1];
         set => Span[1] = value;
@@ -113,7 +136,11 @@ public class VhIpV4Packet : VhIpPacket
         set => Span[8] = value;
     }
 
-    public ushort HeaderChecksum => BinaryPrimitives.ReadUInt16BigEndian(Span.Slice(10, 2));
+    public ushort HeaderChecksum
+    {
+        get => BinaryPrimitives.ReadUInt16BigEndian(Span.Slice(10, 2));
+        set => BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(10, 2), value);
+    }
 
     public override Span<byte> SourceAddressSpan {
         get => Span.Slice(12, 4);
@@ -130,8 +157,8 @@ public class VhIpV4Packet : VhIpPacket
             DestinationAddressField = null;
         }
     }
-
-    public bool VerifyChecksum()
+    public Memory<byte> Options => Buffer.Slice(20, (InternetHeaderLength * 4) - 20);
+    public bool IsHeaderChecksumValid()
     {
         var originalChecksum = HeaderChecksum;
         Span[10] = 0;
@@ -141,6 +168,14 @@ public class VhIpV4Packet : VhIpPacket
         Span[11] = (byte)(originalChecksum & 0xFF);
         return originalChecksum == calculated;
     }
+
+    public void UpdateHeaderChecksum(VhIpPacket ipPacket)
+    {
+        Span[10] = 0;
+        Span[11] = 0;
+        HeaderChecksum = ComputeChecksum(Span[..Header.Length]);
+    }
+
     private static ushort ComputeChecksum(ReadOnlySpan<byte> data)
     {
         // checksum calculation is done on 16-bit words
@@ -154,5 +189,18 @@ public class VhIpV4Packet : VhIpPacket
             sum = (sum & 0xFFFF) + (sum >> 16);
 
         return (ushort)~sum;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        // I intentionally dispose the memory owner as unmanaged
+        // because the memory owner does have finalizer
+        _memoryOwner?.Dispose();
+        base.Dispose(disposing);
+    }
+
+    ~VhIpV4Packet()
+    {
+        Dispose(false);
     }
 }

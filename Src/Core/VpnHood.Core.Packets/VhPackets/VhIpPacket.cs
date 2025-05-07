@@ -2,17 +2,18 @@
 
 namespace VpnHood.Core.Packets.VhPackets;
 
-public abstract class VhIpPacket(Memory<byte> buffer)
+public abstract class VhIpPacket(Memory<byte> buffer) : IDisposable
 {
+    private bool _disposed;
     protected IPAddress? SourceAddressField;
     protected IPAddress? DestinationAddressField;
     internal object? PayloadPacket { get; set; }
 
-    public Memory<byte> Buffer { get; init; } = buffer;
+    public Memory<byte> Buffer => _disposed ? throw new ObjectDisposedException(nameof(VhIpPacket)) : buffer;
 
     public VhIpVersion Version {
         get { return (VhIpVersion)(Buffer.Span[0] >> 4); }
-        protected set { Buffer.Span[0] = (byte)((byte)value << 4); }
+        protected set => Buffer.Span[0] = (byte)((byte)value << 4 | (Buffer.Span[0] & 0x0F));
     }
 
     public abstract Span<byte> SourceAddressSpan { get; set; }
@@ -45,4 +46,17 @@ public abstract class VhIpPacket(Memory<byte> buffer)
         return $"Packet: Src={SourceAddress}, Dst={DestinationAddress}, Proto={Protocol}, " +
                $"TotalLength:{Buffer.Length}, PayloadLen={Payload.Length}";
     }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        _disposed = true;
+    }
+
+    ~VhIpPacket() => Dispose(false);
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
 }

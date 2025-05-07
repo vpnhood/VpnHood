@@ -12,6 +12,26 @@ namespace VpnHood.Test.Tests;
 public class PacketTest : TestBase
 {
     [TestMethod]
+    public void Udp()
+    {
+        var ipPacket = IpPacketFactory.BuildUdp(
+            sourceEndPoint:  IPEndPoint.Parse("11.12.13.14:50"),
+            destinationEndPoint: IPEndPoint.Parse("21.22.23.24:60"),
+            payload: [0,1,2,3,4,5]);
+        var udpPacket = ipPacket.ExtractUdp();
+        ipPacket.UpdateAllChecksums();
+
+        // check with PacketDotNet
+        var packet2 = PacketBuilder.Parse(ipPacket.Buffer.ToArray());
+        packet2.UpdateAllChecksums();
+        var udpPacket2 = packet2.ExtractUdp();
+        Assert.AreEqual(udpPacket2.Length, udpPacket.Buffer.Length);
+        Assert.AreEqual(udpPacket2.SourcePort, udpPacket.SourcePort);
+        Assert.AreEqual(udpPacket2.DestinationPort, udpPacket.DestinationPort);
+        Assert.AreEqual(udpPacket2.Checksum, udpPacket.Checksum);
+    }
+
+    [TestMethod]
     public void IP_Addresses()
     {
         var sourceAddress = IPAddress.Parse("11.12.13.14");
@@ -62,7 +82,7 @@ public class PacketTest : TestBase
         packet.UpdateAllChecksums();
 
         VhLogger.Instance.LogDebug("Assert read from buffer.");
-        var ipPacket = (VhIpV4Packet)IpPacketFactory.Create(packet.Bytes);
+        var ipPacket = new VhIpV4Packet(packet.Bytes);
         Assert.AreEqual(VhIpVersion.IPv4, ipPacket.Version);
         Assert.AreEqual(sourceIp, ipPacket.SourceAddress);
         Assert.AreEqual(destinationIp, ipPacket.DestinationAddress);
@@ -95,7 +115,7 @@ public class PacketTest : TestBase
         ipPacket.Ecn = ecn;
 
         VhLogger.Instance.LogDebug("Assert read from buffer.");
-        ipPacket = (VhIpV4Packet)IpPacketFactory.Create(ipPacket.Buffer.ToArray());
+        ipPacket = new VhIpV4Packet(ipPacket.Buffer.ToArray());
         Assert.AreEqual(VhIpVersion.IPv4, ipPacket.Version);
         Assert.AreEqual(VhIpProtocol.Raw, ipPacket.Protocol);
         Assert.AreEqual(sourceIp, ipPacket.SourceAddress);
@@ -125,7 +145,7 @@ public class PacketTest : TestBase
         packet.TrafficClass = trafficClass;
 
         VhLogger.Instance.LogDebug("Assert read from buffer.");
-        var ipPacket = (VhIpV6Packet)IpPacketFactory.Create(packet.Bytes);
+        var ipPacket = new VhIpV6Packet(packet.Bytes);
         Assert.AreEqual(VhIpVersion.IPv6, ipPacket.Version);
         Assert.AreEqual(nextHeader, ipPacket.Protocol);
         Assert.AreEqual(nextHeader, ipPacket.NextHeader);
@@ -149,7 +169,7 @@ public class PacketTest : TestBase
         ipPacket.FlowLabel = flowLabel;
         ipPacket.TrafficClass = trafficClass;
         VhLogger.Instance.LogDebug("Assert read from buffer.");
-        ipPacket = (VhIpV6Packet)IpPacketFactory.Create(ipPacket.Buffer.ToArray());
+        ipPacket = new VhIpV6Packet(ipPacket.Buffer.ToArray());
         Assert.AreEqual(VhIpVersion.IPv6, ipPacket.Version);
         Assert.AreEqual(nextHeader, ipPacket.Protocol);
         Assert.AreEqual(nextHeader, ipPacket.NextHeader);
@@ -167,10 +187,10 @@ public class PacketTest : TestBase
             IPEndPoint.Parse("11.12.13.14:90"),
             [1, 2, 3]);
 
-        var ipPacket = IpPacketFactory.Create(a.Bytes);
+        var ipPacket = new VhIpV4Packet(a.Bytes);
         Console.WriteLine(ipPacket);
 
-        var udp = new VhUdpPacket(ipPacket.Payload);
+        var udp = ipPacket.ExtractUdp();
         Console.WriteLine(udp.Checksum);
         var cc = udp.ComputeChecksum(ipPacket);
         Console.WriteLine(cc);

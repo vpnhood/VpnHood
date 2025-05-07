@@ -6,36 +6,35 @@ public class VhUdpPacket
 {
     private readonly Memory<byte> _buffer;
 
-    public VhUdpPacket(Memory<byte> buffer)
+    public VhUdpPacket(Memory<byte> buffer, bool building)
     {
         if (buffer.Length < 8)
             throw new ArgumentException("Buffer too small for UDP header.", nameof(buffer));
 
-        var udpLength = BinaryPrimitives.ReadUInt16BigEndian(buffer.Span.Slice(4, 2));
-        if (udpLength != buffer.Length)
-            throw new ArgumentException("Buffer length does not match UDP length field.");
+        // write udpLength
+        if (building) {
+            BinaryPrimitives.WriteUInt16BigEndian(buffer.Span.Slice(4, 2), (ushort)buffer.Length);
+        }
+        else {
+            var udpLength = BinaryPrimitives.ReadUInt16BigEndian(buffer.Span.Slice(4, 2));
+            if (udpLength != buffer.Length)
+                throw new ArgumentException("Buffer length does not match UDP length field.");
+        }
 
         _buffer = buffer;
     }
 
+    public Memory<byte> Buffer => _buffer;
     public Memory<byte> Payload => _buffer[8..];
 
-    public ushort SourcePort
-    {
+    public ushort SourcePort {
         get => BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span[..2]);
         set => BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span[..2], value);
     }
 
-    public ushort DestinationPort
-    {
+    public ushort DestinationPort {
         get => BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span.Slice(2, 2));
         set => BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span.Slice(2, 2), value);
-    }
-
-    public ushort Length
-    {
-        get => BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span.Slice(4, 2));
-        set => BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span.Slice(4, 2), value);
     }
 
     public ushort Checksum {
@@ -45,20 +44,16 @@ public class VhUdpPacket
 
     public bool IsChecksumValid(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress)
     {
-        return ComputeChecksum(sourceAddress, destinationAddress, false) == Checksum;
+        return ComputeChecksum(sourceAddress, destinationAddress) == Checksum;
+    }
+
+
+    public void UpdateChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress)
+    {
+        Checksum = ComputeChecksum(sourceAddress, destinationAddress);
     }
 
     public ushort ComputeChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress)
-    {
-        return ComputeChecksum(sourceAddress, destinationAddress, false);
-    }
-
-    public ushort UpdateChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress)
-    {
-        return ComputeChecksum(sourceAddress, destinationAddress, true);
-    }
-
-    private ushort ComputeChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress, bool update)
     {
         var orgChecksum = Checksum;
         Checksum = 0;
@@ -67,13 +62,12 @@ public class VhUdpPacket
             return PacketUtil.ComputeChecksum(sourceAddress, destinationAddress, (byte)VhIpProtocol.Udp, _buffer.Span);
         }
         finally {
-            if (!update)
-                Checksum = orgChecksum;
+            Checksum = orgChecksum;
         }
     }
 
     public override string ToString()
     {
-        return $"UDP Packet: SrcPort={SourcePort}, DstPort={DestinationPort}, Len={Length}";
+        return $"UDP Packet: SrcPort={SourcePort}, DstPort={DestinationPort}, PayloadLen={Payload.Length}";
     }
 }

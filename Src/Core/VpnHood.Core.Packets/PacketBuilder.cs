@@ -184,4 +184,9 @@ public static class PacketBuilder
         newIpPacket.UpdateAllChecksums();
         return newIpPacket;
     }
+
+    public static IPPacket Parse(byte[] ipPacketBuffer)
+    {
+        return Packet.ParsePacket(LinkLayers.Raw, ipPacketBuffer).Extract<IPPacket>();
+    }
 }

@@ -74,12 +74,34 @@ public static class IpPacketFactory
     public static VhIpPacket BuildUdp(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
         int sourcePort, int destinationPort, ReadOnlySpan<byte> payload)
     {
-        var ipPacket = BuildIp(sourceAddress, destinationAddress, VhIpProtocol.Udp, payload.Length);
-        var udpPacket = ipPacket.ExtractUdp(true);
+        var ipPacket = BuildIp(sourceAddress, destinationAddress, VhIpProtocol.Udp, 8 + payload.Length);
+        var udpPacket = ipPacket.BuildUdp();
         udpPacket.SourcePort = (ushort)sourcePort;
         udpPacket.DestinationPort = (ushort)destinationPort;
         payload.CopyTo(udpPacket.Payload.Span);
         return ipPacket;
     }
+
+    public static VhIpPacket BuildTcp(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
+        ReadOnlySpan<byte> options, ReadOnlySpan<byte> payload)
+    {
+        return BuildTcp(
+            sourceEndPoint.Address.GetAddressBytes(), destinationEndPoint.Address.GetAddressBytes(),
+            sourceEndPoint.Port, destinationEndPoint.Port,
+            options, payload);
+    }
+
+    public static VhIpPacket BuildTcp(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+        int sourcePort, int destinationPort, ReadOnlySpan<byte> options, ReadOnlySpan<byte> payload)
+    {
+        var ipPacket = BuildIp(sourceAddress, destinationAddress, VhIpProtocol.Tcp, 20 + options.Length + payload.Length);
+        var udpPacket = ipPacket.BuildTcp();
+        udpPacket.SourcePort = (ushort)sourcePort;
+        udpPacket.DestinationPort = (ushort)destinationPort;
+        payload.CopyTo(udpPacket.Payload.Span);
+        options.CopyTo(udpPacket.Options.Span);
+        return ipPacket;
+    }
+
 
 }

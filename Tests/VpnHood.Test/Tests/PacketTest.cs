@@ -18,9 +18,9 @@ public class PacketTest : TestBase
         random.NextBytes(buffer);
         return new IPAddress(buffer);
     }
-    
-    private static IPEndPoint GetRandomEp(VhIpVersion ipVersion) => 
-        new (GetRandomIp(ipVersion), Random.Shared.Next(0xFFFF));
+
+    private static IPEndPoint GetRandomEp(VhIpVersion ipVersion) =>
+        new(GetRandomIp(ipVersion), Random.Shared.Next(0xFFFF));
 
     [TestMethod]
     [DataRow(VhIpVersion.IPv4)]
@@ -30,7 +30,7 @@ public class PacketTest : TestBase
         var ipPacket = IpPacketFactory.BuildUdp(
             sourceEndPoint: GetRandomEp(ipVersion),
             destinationEndPoint: GetRandomEp(ipVersion),
-            payload: [0,1,2,3,4,5]);
+            payload: [0, 1, 2, 3, 4, 5]);
         var udpPacket = ipPacket.ExtractUdp();
         ipPacket.UpdateAllChecksums();
 
@@ -53,6 +53,69 @@ public class PacketTest : TestBase
         Assert.AreEqual(udpPacket2.DestinationPort, udpPacket.DestinationPort);
         Assert.AreEqual(udpPacket2.Checksum, udpPacket.Checksum);
         CollectionAssert.AreEqual(udpPacket2.Bytes, udpPacket.Buffer.ToArray());
+        ipPacket.Dispose();
+    }
+
+    [TestMethod]
+    [DataRow(VhIpVersion.IPv4)]
+    [DataRow(VhIpVersion.IPv6)]
+    public void Tcp(VhIpVersion ipVersion)
+    {
+        var ipPacket = IpPacketFactory.BuildTcp(
+            sourceEndPoint: GetRandomEp(ipVersion),
+            destinationEndPoint: GetRandomEp(ipVersion),
+            [], payload: [0, 1, 2, 3, 4, 5]);
+        var tcpPacket = ipPacket.ExtractTcp();
+        tcpPacket.Acknowledgment = true;
+        tcpPacket.AcknowledgmentNumber = 0x1234;
+        tcpPacket.SequenceNumber = 0x5678;
+        tcpPacket.Reset = true;
+        tcpPacket.Synchronize = true;
+        tcpPacket.Acknowledgment = false;
+        tcpPacket.Push = true;
+        tcpPacket.WindowSize = 0xBBBB;
+        tcpPacket.UrgentPointer = 0x10;
+        ipPacket.UpdateAllChecksums();
+
+        // check with PacketDotNet
+        var packet2 = PacketBuilder.Parse(ipPacket.Buffer.ToArray());
+        packet2.UpdateAllChecksums();
+        var udpPacket2 = packet2.ExtractTcp();
+        Assert.AreEqual(udpPacket2.SourcePort, tcpPacket.SourcePort);
+        Assert.AreEqual(udpPacket2.DestinationPort, tcpPacket.DestinationPort);
+        Assert.AreEqual(udpPacket2.Checksum, tcpPacket.Checksum);
+        Assert.AreEqual(udpPacket2.Acknowledgment, tcpPacket.Acknowledgment);
+        Assert.AreEqual(udpPacket2.AcknowledgmentNumber, tcpPacket.AcknowledgmentNumber);
+        Assert.AreEqual(udpPacket2.SequenceNumber, tcpPacket.SequenceNumber);
+        Assert.AreEqual(udpPacket2.Reset, tcpPacket.Reset);
+        Assert.AreEqual(udpPacket2.Synchronize, tcpPacket.Synchronize);
+        Assert.AreEqual(udpPacket2.Acknowledgment, tcpPacket.Acknowledgment);
+        Assert.AreEqual(udpPacket2.Push, tcpPacket.Push);
+        Assert.AreEqual(udpPacket2.WindowSize, tcpPacket.WindowSize);
+        Assert.AreEqual(udpPacket2.UrgentPointer, tcpPacket.UrgentPointer);
+        Assert.AreEqual(udpPacket2.DataOffset, (20 + tcpPacket.Options.Length) / 4);
+        Assert.AreEqual(udpPacket2.Options.Length, tcpPacket.Options.Length);
+        CollectionAssert.AreEqual(udpPacket2.Bytes, tcpPacket.Buffer.ToArray());
+
+        // Parse
+        ipPacket.Dispose();
+        ipPacket = IpPacketFactory.Parse(packet2.Bytes);
+        tcpPacket = ipPacket.ExtractTcp();
+        Assert.AreEqual(udpPacket2.SourcePort, tcpPacket.SourcePort);
+        Assert.AreEqual(udpPacket2.DestinationPort, tcpPacket.DestinationPort);
+        Assert.AreEqual(udpPacket2.Checksum, tcpPacket.Checksum);
+        Assert.AreEqual(udpPacket2.Acknowledgment, tcpPacket.Acknowledgment);
+        Assert.AreEqual(udpPacket2.AcknowledgmentNumber, tcpPacket.AcknowledgmentNumber);
+        Assert.AreEqual(udpPacket2.SequenceNumber, tcpPacket.SequenceNumber);
+        Assert.AreEqual(udpPacket2.Reset, tcpPacket.Reset);
+        Assert.AreEqual(udpPacket2.Synchronize, tcpPacket.Synchronize);
+        Assert.AreEqual(udpPacket2.Acknowledgment, tcpPacket.Acknowledgment);
+        Assert.AreEqual(udpPacket2.Push, tcpPacket.Push);
+        Assert.AreEqual(udpPacket2.WindowSize, tcpPacket.WindowSize);
+        Assert.AreEqual(udpPacket2.UrgentPointer, tcpPacket.UrgentPointer);
+        Assert.AreEqual(udpPacket2.DataOffset, (20 + tcpPacket.Options.Length) / 4);
+        Assert.AreEqual(udpPacket2.Options.Length, tcpPacket.Options.Length);
+        CollectionAssert.AreEqual(udpPacket2.Bytes, tcpPacket.Buffer.ToArray());
         ipPacket.Dispose();
     }
 
@@ -168,7 +231,7 @@ public class PacketTest : TestBase
         const VhIpProtocol nextHeader = VhIpProtocol.IPv6NoNextHeader;
         byte trafficClass = 0xFF;
         var packet = (IPv6Packet)PacketBuilder.BuildIpPacket(sourceIp, destinationIp);
-        
+
         packet.HopLimit = ttl;
         packet.Version = IPVersion.IPv6;
         packet.FlowLabel = flowLabel;
@@ -216,17 +279,5 @@ public class PacketTest : TestBase
     [TestMethod]
     public void SimplePacket()
     {
-        var a = PacketBuilder.BuildUdpPacket(
-            IPEndPoint.Parse("1.2.3.4:8080"),
-            IPEndPoint.Parse("11.12.13.14:90"),
-            [1, 2, 3]);
-
-        var ipPacket = new VhIpV4Packet(a.Bytes);
-        Console.WriteLine(ipPacket);
-
-        var udp = ipPacket.ExtractUdp();
-        Console.WriteLine(udp.Checksum);
-        var cc = udp.ComputeChecksum(ipPacket);
-        Console.WriteLine(cc);
     }
 }

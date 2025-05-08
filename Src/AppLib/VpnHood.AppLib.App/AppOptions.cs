@@ -20,6 +20,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public bool UseInternalLocationService { get; set; } = true;
     public bool UseExternalLocationService { get; set; } = true;
     public AppResources Resources { get; set; } = new();
+    // ReSharper disable once StringLiteralTypo
     public string? Ga4MeasurementId { get; set; } = "G-4LE99XKZYE";
     public string? UiName { get; set; }
     public bool IsAddAccessKeySupported { get; set; } = true;

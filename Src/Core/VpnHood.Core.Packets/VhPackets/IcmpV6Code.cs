@@ -2,6 +2,8 @@
 
 public enum IcmpV6Code : byte
 {
+    NoCode = 0,
+
     // For Destination Unreachable (Type 1)
     NoRoute = 0,
     AdminProhibited = 1,
@@ -13,6 +15,9 @@ public enum IcmpV6Code : byte
     ErrorInSourceRoutingHeader = 7,
     HeadersTooLong = 8,
     PRouteError = 9,
+
+    // For Type 2: Packet Too Big
+    PacketTooBig = 0,
 
     // For Time Exceeded (Type 3)
     HopLimitExceeded = 0,

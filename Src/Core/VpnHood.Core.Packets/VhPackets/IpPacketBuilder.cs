@@ -1,9 +1,10 @@
 ﻿using System.Buffers;
 using System.Net;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Packets.VhPackets;
 
-public static class IpPacketFactory
+public static class IpPacketBuilder
 {
     public static VhIpPacket Parse(Memory<byte> buffer)
     {
@@ -61,7 +62,7 @@ public static class IpPacketFactory
         return ipPacket;
     }
 
-    public static VhIpPacket BuildUdp(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint, 
+    public static VhIpPacket BuildUdp(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
         ReadOnlySpan<byte> payload)
     {
         return BuildUdp(
@@ -103,6 +104,21 @@ public static class IpPacketFactory
         return ipPacket;
     }
 
+    public static VhIpPacket BuildIcmpV4(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+        ReadOnlySpan<byte> payload)
+    {
+        var ipPacket = BuildIp(sourceAddress, destinationAddress, VhIpProtocol.IcmpV4, 8 + payload.Length);
+        payload.CopyTo(ipPacket.BuildIcmpV4().Payload.Span);
+        return ipPacket;
+    }
+    public static VhIpPacket BuildIcmpV6(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+        ReadOnlySpan<byte> payload)
+    {
+        var ipPacket = BuildIp(sourceAddress, destinationAddress, VhIpProtocol.IcmpV6, 8 + payload.Length);
+        payload.CopyTo(ipPacket.BuildIcmpV6().Payload.Span);
+        return ipPacket;
+    }
+
     public static VhIpPacket BuildIcmpEchoRequest(IPAddress sourceAddress, IPAddress destinationAddress,
         byte[] payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
@@ -117,7 +133,7 @@ public static class IpPacketFactory
     {
         if (sourceAddress.Length != destinationAddress.Length)
             throw new ArgumentException("SourceAddress and DestinationAddress must have a same ip version.");
-        
+
         return sourceAddress.Length switch {
             4 => BuildIcmpEchoRequestV4(sourceAddress, destinationAddress, payload, identifier, sequenceNumber, calculateChecksum),
             16 => BuildIcmpEchoRequestV6(sourceAddress, destinationAddress, payload, identifier, sequenceNumber, calculateChecksum),
@@ -133,14 +149,14 @@ public static class IpPacketFactory
             payload, identifier, sequenceNumber, calculateChecksum);
     }
 
-   public static VhIpPacket BuildIcmpEchoRequestV4(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
-        byte[] payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
+    public static VhIpPacket BuildIcmpEchoRequestV4(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+         byte[] payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
         if (sourceAddress.Length != 4 || destinationAddress.Length != 4)
             throw new ArgumentException("SourceAddress and DestinationAddress must be IPv4 addresses.");
 
         // ICMP echo request
-        var ipPacket = BuildIp(sourceAddress, destinationAddress, VhIpProtocol.IcmpV4, 8 + payload.Length);
+        var ipPacket = BuildIcmpV4(sourceAddress, destinationAddress, payload);
         var icmp = ipPacket.ExtractIcmpV4();
         icmp.Type = IcmpV4Type.EchoRequest;
         icmp.Code = 0;
@@ -167,7 +183,7 @@ public static class IpPacketFactory
             throw new ArgumentException("SourceAddress and DestinationAddress must be IPv6 addresses.");
 
         // ICMP echo request
-        var ipPacket = BuildIp(sourceAddress, destinationAddress, VhIpProtocol.IcmpV6, 8 + payload.Length);
+        var ipPacket = BuildIcmpV6(sourceAddress, destinationAddress, payload);
         var icmp = ipPacket.ExtractIcmpV6();
         icmp.Type = IcmpV6Type.EchoRequest;
         icmp.Code = 0;
@@ -177,5 +193,123 @@ public static class IpPacketFactory
             ipPacket.UpdateAllChecksums();
 
         return ipPacket;
+    }
+
+    public static VhIpPacket BuildTcpResetReply(VhIpPacket ipPacket, bool updateChecksum = false)
+    {
+        if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+        if (ipPacket.Protocol != VhIpProtocol.Tcp)
+            throw new ArgumentException("packet is not TCP!", nameof(ipPacket));
+
+        var tcpPacketOrg = ipPacket.ExtractTcp();
+
+        var resetIpPacket = BuildTcp(
+            ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan,
+            tcpPacketOrg.SourcePort, tcpPacketOrg.SourcePort, [], []);
+
+        var resetTcpPacket = resetIpPacket.ExtractTcp();
+        resetTcpPacket.Reset = true;
+        resetTcpPacket.WindowSize = 0;
+
+        if (tcpPacketOrg is { Synchronize: true, Acknowledgment: false }) {
+            resetTcpPacket.Acknowledgment = true;
+            resetTcpPacket.SequenceNumber = 0;
+            resetTcpPacket.AcknowledgmentNumber = tcpPacketOrg.SequenceNumber + 1;
+        }
+        else {
+            resetTcpPacket.Acknowledgment = false;
+            resetTcpPacket.AcknowledgmentNumber = tcpPacketOrg.AcknowledgmentNumber;
+            resetTcpPacket.SequenceNumber = tcpPacketOrg.AcknowledgmentNumber;
+        }
+
+        if (updateChecksum)
+            resetIpPacket.UpdateAllChecksums();
+
+        return resetIpPacket;
+    }
+
+    public static VhIpPacket BuildDns(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+        int sourcePort, int destinationPort, string host, ushort? queryId = null)
+    {
+        queryId ??= (ushort)new Random().Next(ushort.MaxValue);
+        var query = DnsResolver.BuildDnsQuery(queryId.Value, host);
+        var dnsPacket = BuildUdp(
+            sourceAddress: sourceAddress,
+            destinationAddress: destinationAddress,
+            sourcePort: sourcePort,
+            destinationPort: destinationPort,
+            query);
+
+        return dnsPacket;
+    }
+
+    public static VhIpPacket BuildDns(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
+        string host, ushort? queryId = null)
+    {
+        return BuildDns(
+            sourceAddress: sourceEndPoint.Address.GetAddressBytes(),
+            destinationAddress: destinationEndPoint.Address.GetAddressBytes(),
+            sourcePort: sourceEndPoint.Port,
+            destinationPort: destinationEndPoint.Port,
+            host,
+            queryId);
+    }
+
+    public static VhIpPacket BuildIcmpUnreachableReply(VhIpPacket ipPacket, bool updateChecksum = true)
+    {
+        return ipPacket.Version == VhIpVersion.IPv6
+            ? BuildIcmpV6Error(ipPacket, IcmpV6Type.DestinationUnreachable, IcmpV6Code.AddressUnreachable, 0, updateChecksum)
+            : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.HostUnreachable, updateChecksum);
+    }
+
+    public static VhIpPacket BuildIcmpUnreachablePortReply(VhIpPacket ipPacket, bool updateChecksum = true)
+    {
+        return ipPacket.Version == VhIpVersion.IPv6
+            ? BuildIcmpV6Error(ipPacket, IcmpV6Type.DestinationUnreachable, IcmpV6Code.PortUnreachable, 0, updateChecksum)
+            : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.PortUnreachable, updateChecksum);
+    }
+
+    public static VhIpPacket BuildIcmpPacketTooBigReply(VhIpPacket ipPacket, ushort mtu, bool updateChecksum = true)
+    {
+        return ipPacket.Version == VhIpVersion.IPv6
+            ? BuildIcmpV6Error(ipPacket, IcmpV6Type.PacketTooBig, IcmpV6Code.PacketTooBig, mtu, updateChecksum)
+            : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.FragmentationNeeded);
+    }
+
+    public static VhIpPacket BuildIcmpV4Error(VhIpPacket ipPacket, IcmpV4Type icmpV4Type, IcmpV4Code code, bool updateChecksum = true)
+    {
+        if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+
+        // Copy original IP header (20 bytes) + 8 bytes of payload into ICMP payload
+        var icmpIpPacket = BuildIcmpV4(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan,
+            ipPacket.Buffer.Span[..28]);
+        var icmpPacket = icmpIpPacket.ExtractIcmpV4();
+        icmpPacket.Type = icmpV4Type;
+        icmpPacket.Code = (byte)code;
+
+
+        if (updateChecksum)
+            icmpIpPacket.UpdateAllChecksums();
+
+        return icmpIpPacket;
+    }
+
+    public static VhIpPacket BuildIcmpV6Error(VhIpPacket ipPacket, IcmpV6Type icmpV6Type, IcmpV6Code code, uint messageSpecific,
+        bool updateChecksum = true)
+    {
+        if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+
+        // Copy original IP header (40 bytes) + 8 bytes of payload into ICMP payload
+        var icmpIpPacket = BuildIcmpV6(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan,
+            ipPacket.Buffer.Span[..48]);
+        var icmpPacket = icmpIpPacket.ExtractIcmpV6();
+        icmpPacket.Type = icmpV6Type;
+        icmpPacket.Code = (byte)code;
+        icmpPacket.MessageSpecific = messageSpecific;
+
+        if (updateChecksum)
+            icmpIpPacket.UpdateAllChecksums();
+
+        return icmpIpPacket;
     }
 }

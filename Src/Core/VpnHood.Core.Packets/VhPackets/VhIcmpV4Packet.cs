@@ -9,11 +9,12 @@ public class VhIcmpV4Packet : IChecksumPayloadPacket
 
     public VhIcmpV4Packet(Memory<byte> buffer, bool building)
     {
+        // Base ICMPv4 header requires at least 8 bytes, but Echo messages require 8 bytes minimum
         if (buffer.Length < 8)
             throw new ArgumentException("Buffer too small for ICMPv4 header.");
 
         if (buffer.Length > 0xFFFF)
-            throw new ArgumentException("Buffer too large for ICMPv4 header.");
+            throw new ArgumentException("Buffer too large for ICMPv4 packet.");
 
         if (building)
             buffer.Span.Clear();
@@ -31,32 +32,52 @@ public class VhIcmpV4Packet : IChecksumPayloadPacket
         set => _buffer.Span[1] = value;
     }
 
+    public uint MessageSpecific {
+        get => BinaryPrimitives.ReadUInt32BigEndian(_buffer.Span.Slice(4, 4));
+        set => BinaryPrimitives.WriteUInt32BigEndian(_buffer.Span.Slice(4, 4), value);
+    }
+
     public ushort Checksum {
         get => BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span.Slice(2, 2));
         set => BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span.Slice(2, 2), value);
     }
 
-    public uint RestOfHeader {
-        get => BinaryPrimitives.ReadUInt32BigEndian(_buffer.Span.Slice(4, 4));
-        set => BinaryPrimitives.WriteUInt32BigEndian(_buffer.Span.Slice(4, 4), value);
-    }
-
+    /// <summary>
+    /// Identifier used in Echo Request and Echo Reply messages.
+    /// - Returns 0 if the Type is not EchoRequest or EchoReply.
+    /// - Throws if you attempt to set it on a non-Echo packet.
+    /// </summary>
     public ushort Identifier {
-        get => BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span.Slice(4, 2));
-        set => BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span.Slice(4, 2), value);
+        get => IsEcho ? BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span.Slice(4, 2)) : (ushort)0;
+        set {
+            if (!IsEcho)
+                throw new InvalidOperationException("Identifier is only valid for Echo messages.");
+            BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span.Slice(4, 2), value);
+        }
     }
 
+    /// <summary>
+    /// Sequence number used in Echo Request and Echo Reply messages.
+    /// - Returns 0 if the Type is not EchoRequest or EchoReply.
+    /// - Throws if you attempt to set it on a non-Echo packet.
+    /// </summary>
     public ushort SequenceNumber {
-        get => BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span.Slice(6, 2));
-        set => BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span.Slice(6, 2), value);
+        get => IsEcho ? BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span.Slice(6, 2)) : (ushort)0;
+        set {
+            if (!IsEcho)
+                throw new InvalidOperationException("SequenceNumber is only valid for Echo messages.");
+            BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span.Slice(6, 2), value);
+        }
     }
+
+    public bool IsEcho => Type == IcmpV4Type.EchoRequest || Type == IcmpV4Type.EchoReply;
 
     public Memory<byte> Payload => _buffer[8..];
 
-    public bool IsChecksumValid(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress) => 
+    public bool IsChecksumValid(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress) =>
         ComputeChecksum(sourceAddress, destinationAddress) == Checksum;
 
-    public void UpdateChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress) => 
+    public void UpdateChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress) =>
         Checksum = ComputeChecksum(sourceAddress, destinationAddress);
 
     public ushort ComputeChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress)
@@ -71,7 +92,7 @@ public class VhIcmpV4Packet : IChecksumPayloadPacket
 
             var sum = PacketUtil.ComputeSumWords(span);
 
-            while ((sum >> 16) != 0) 
+            while ((sum >> 16) != 0)
                 sum = (sum & 0xFFFF) + (sum >> 16);
 
             return (ushort)~sum;
@@ -83,7 +104,11 @@ public class VhIcmpV4Packet : IChecksumPayloadPacket
 
     public override string ToString()
     {
-        return $"ICMPv6 Packet: Type={Type}, Code={Code}, Id={Identifier}, Seq={SequenceNumber}, " +
-               $"PayloadLen={Payload.Length}";
+        var str = $"ICMPv4 Packet: Type={Type}, Code={Code}, PayloadLen={Payload.Length}";
+        if (IsEcho)
+            str += $", Id={Identifier}, Seq={SequenceNumber}";
+        else
+            str += $", MsgSpec={MessageSpecific}";
+        return str;
     }
 }

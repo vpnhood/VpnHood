@@ -31,7 +31,7 @@ public class PacketTest : TestBase
         var destinationAddress = GetRandomIp(ipVersion);
 
         // Test ip addresses change by changing VhIpPacket.SourceAddress
-        var ipPacket = IpPacketFactory.BuildIp(
+        var ipPacket = IpPacketBuilder.BuildIp(
             sourceAddress, destinationAddress, VhIpProtocol.Raw, 0);
 
         Assert.AreEqual(sourceAddress, ipPacket.SourceAddress);
@@ -41,7 +41,7 @@ public class PacketTest : TestBase
         ipPacket.Dispose();
 
         // Test ip addresses change by changing VhIpPacket.SourceAddressSpan 
-        ipPacket = IpPacketFactory.BuildIp(GetRandomIp(ipVersion), GetRandomIp(ipVersion), VhIpProtocol.Raw, 0);
+        ipPacket = IpPacketBuilder.BuildIp(GetRandomIp(ipVersion), GetRandomIp(ipVersion), VhIpProtocol.Raw, 0);
         sourceAddress.GetAddressBytes().CopyTo(ipPacket.SourceAddressSpan);
         destinationAddress.GetAddressBytes().CopyTo(ipPacket.DestinationAddressSpan);
         Assert.AreEqual(sourceAddress, ipPacket.SourceAddress);
@@ -189,7 +189,7 @@ public class PacketTest : TestBase
     [DataRow(VhIpVersion.IPv6)]
     public void Udp(VhIpVersion ipVersion)
     {
-        var ipPacket = IpPacketFactory.BuildUdp(
+        var ipPacket = IpPacketBuilder.BuildUdp(
             sourceEndPoint: GetRandomEp(ipVersion),
             destinationEndPoint: GetRandomEp(ipVersion),
             payload: [0, 1, 2, 3, 4, 5]);
@@ -209,7 +209,7 @@ public class PacketTest : TestBase
 
         // Parse
         ipPacket.Dispose();
-        ipPacket = IpPacketFactory.Parse(ipPacketNet.Bytes);
+        ipPacket = IpPacketBuilder.Parse(ipPacketNet.Bytes);
         udpPacket = ipPacket.ExtractUdp();
         Assert.AreEqual(udpPacketNet.Length, udpPacket.Buffer.Length);
         Assert.AreEqual(udpPacketNet.SourcePort, udpPacket.SourcePort);
@@ -226,7 +226,7 @@ public class PacketTest : TestBase
     [DataRow(VhIpVersion.IPv6, true)]
     public void Tcp(VhIpVersion ipVersion, bool mode)
     {
-        var ipPacket = IpPacketFactory.BuildTcp(
+        var ipPacket = IpPacketBuilder.BuildTcp(
             sourceEndPoint: GetRandomEp(ipVersion),
             destinationEndPoint: GetRandomEp(ipVersion),
             [], payload: [0, 1, 2, 3, 4, 5]);
@@ -265,7 +265,7 @@ public class PacketTest : TestBase
 
         // Parse
         ipPacket.Dispose();
-        ipPacket = IpPacketFactory.Parse(ipPacketNet.Bytes);
+        ipPacket = IpPacketBuilder.Parse(ipPacketNet.Bytes);
         tcpPacket = ipPacket.ExtractTcp();
         Assert.AreEqual(tcpPacketNet.SourcePort, tcpPacket.SourcePort);
         Assert.AreEqual(tcpPacketNet.DestinationPort, tcpPacket.DestinationPort);
@@ -289,7 +289,7 @@ public class PacketTest : TestBase
     [TestMethod]
     public void IcmpV4()
     {
-        var ipPacket = IpPacketFactory.BuildIcmpEchoRequestV4(
+        var ipPacket = IpPacketBuilder.BuildIcmpEchoRequestV4(
             sourceAddress: GetRandomIp(VhIpVersion.IPv4),
             destinationAddress: GetRandomIp(VhIpVersion.IPv4),
             payload: [0, 1, 2, 3, 4, 5]);
@@ -311,7 +311,7 @@ public class PacketTest : TestBase
 
         // Parse
         ipPacket.Dispose();
-        ipPacket = IpPacketFactory.Parse(ipPacketNet.Bytes);
+        ipPacket = IpPacketBuilder.Parse(ipPacketNet.Bytes);
         icmpPacket = ipPacket.ExtractIcmpV4();
         Assert.AreEqual((byte)((ushort)icmpPacketNet.TypeCode >> 8), (byte)icmpPacket.Type);
         Assert.AreEqual((byte)((ushort)icmpPacketNet.TypeCode & 0xFF), (int)icmpPacket.Code);
@@ -326,7 +326,7 @@ public class PacketTest : TestBase
     [TestMethod]
     public void IcmpV6()
     {
-        var ipPacket = IpPacketFactory.BuildIcmpEchoRequestV6(
+        var ipPacket = IpPacketBuilder.BuildIcmpEchoRequestV6(
             sourceAddress: GetRandomIp(VhIpVersion.IPv6),
             destinationAddress: GetRandomIp(VhIpVersion.IPv6),
             payload: [0, 1, 2, 3, 4, 5]);
@@ -346,7 +346,7 @@ public class PacketTest : TestBase
 
         // Parse
         ipPacket.Dispose();
-        ipPacket = IpPacketFactory.Parse(ipPacketNet.Bytes);
+        ipPacket = IpPacketBuilder.Parse(ipPacketNet.Bytes);
         icmpPacket = ipPacket.ExtractIcmpV6();
         Assert.AreEqual((int)icmpPacketNet.Type, (int)icmpPacket.Type);
         Assert.AreEqual(icmpPacketNet.Code, icmpPacket.Code);
@@ -364,7 +364,7 @@ public class PacketTest : TestBase
         var payloadData = new byte[20];
 
         // ICMP echo request
-        var ipPacket = IpPacketFactory.BuildTcp(
+        var ipPacket = IpPacketBuilder.BuildTcp(
             IPEndPoint.Parse("1.1.1.1:10"), IPEndPoint.Parse("1.1.1.2:20"), 
             options, payloadData);
 

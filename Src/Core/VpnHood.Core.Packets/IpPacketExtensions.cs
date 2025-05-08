@@ -38,7 +38,7 @@ public static class IpPacketExtensions
     {
         // only UDP and ICMPv6 packets can use multicast
         if (ipPacket.Protocol != ProtocolType.Udp && ipPacket.Protocol != ProtocolType.IcmpV6)
-            return false; 
+            return false;
 
         return
             (ipPacket.Version == IPVersion.IPv4 && IpNetwork.MulticastNetworkV4.Contains(ipPacket.DestinationAddress)) ||
@@ -103,7 +103,12 @@ public static class IpPacketExtensions
 
             case ProtocolType.IcmpV6:
                 var icmpV6Packet = ipPacket.ExtractIcmpV6();
-                icmpV6Packet.UpdateIcmpChecksum();
+                // icmpV6Packet.UpdateIcmpChecksum(); // it has problem
+                icmpV6Packet.Checksum = PacketUtil.ComputeChecksum(
+                    ipPacket.SourceAddress.GetAddressBytes(),
+                    ipPacket.DestinationAddress.GetAddressBytes(),
+                    (byte)ProtocolType.IcmpV6,
+                    icmpV6Packet.Bytes);
                 icmpV6Packet.UpdateCalculatedValues();
                 break;
 

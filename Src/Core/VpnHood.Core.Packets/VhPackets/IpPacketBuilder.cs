@@ -43,16 +43,19 @@ public static class IpPacketBuilder
     public static VhIpPacket BuildIp(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
         VhIpProtocol protocol, int payloadLength, MemoryPool<byte>? memoryPool = null)
     {
+        // validate address length
         if (sourceAddress.Length != destinationAddress.Length)
             throw new ArgumentException("SourceAddress and DestinationAddress must have a same ip version.");
 
+        // validate payload length
         memoryPool ??= MemoryPool<byte>.Shared;
 
+        // create IP packet
         VhIpPacket ipPacket = sourceAddress.Length switch {
-            4 when destinationAddress.Length == 4 =>
-                new VhIpV4Packet(memoryPool.Rent(20 + 8 + payloadLength), 20 + 8 + payloadLength, protocol, 0),
-            16 when destinationAddress.Length == 16 =>
-                new VhIpV6Packet(memoryPool.Rent(40 + 8 + payloadLength), 40 + 8 + payloadLength, protocol),
+            4 =>
+                new VhIpV4Packet(memoryPool.Rent(20 + payloadLength), 20 + payloadLength, protocol, 0),
+            16 =>
+                new VhIpV6Packet(memoryPool.Rent(40 + payloadLength), 40 + payloadLength, protocol),
             _ => throw new NotSupportedException($"IP version {sourceAddress.Length} not supported.")
         };
 
@@ -259,33 +262,39 @@ public static class IpPacketBuilder
     {
         return ipPacket.Version == VhIpVersion.IPv6
             ? BuildIcmpV6Error(ipPacket, IcmpV6Type.DestinationUnreachable, IcmpV6Code.AddressUnreachable, 0, updateChecksum)
-            : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.HostUnreachable, updateChecksum);
+            : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.HostUnreachable, 0, updateChecksum);
     }
 
     public static VhIpPacket BuildIcmpUnreachablePortReply(VhIpPacket ipPacket, bool updateChecksum = true)
     {
         return ipPacket.Version == VhIpVersion.IPv6
             ? BuildIcmpV6Error(ipPacket, IcmpV6Type.DestinationUnreachable, IcmpV6Code.PortUnreachable, 0, updateChecksum)
-            : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.PortUnreachable, updateChecksum);
+            : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.PortUnreachable, 0, updateChecksum);
     }
 
-    public static VhIpPacket BuildIcmpPacketTooBigReply(VhIpPacket ipPacket, ushort mtu, bool updateChecksum = true)
+    public static VhIpPacket BuildIcmpPacketTooBigReply(VhIpPacket ipPacket, int mtu, bool updateChecksum = true)
     {
         return ipPacket.Version == VhIpVersion.IPv6
-            ? BuildIcmpV6Error(ipPacket, IcmpV6Type.PacketTooBig, IcmpV6Code.PacketTooBig, mtu, updateChecksum)
-            : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.FragmentationNeeded);
+            ? BuildIcmpV6Error(ipPacket, IcmpV6Type.PacketTooBig, IcmpV6Code.PacketTooBig,
+                (ushort)mtu, updateChecksum)
+            : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.FragmentationNeeded,
+                (ushort)(mtu & 0xFFFF), updateChecksum);
     }
 
-    public static VhIpPacket BuildIcmpV4Error(VhIpPacket ipPacket, IcmpV4Type icmpV4Type, IcmpV4Code code, bool updateChecksum = true)
+    public static VhIpPacket BuildIcmpV4Error(VhIpPacket ipPacket, IcmpV4Type icmpV4Type, IcmpV4Code code,
+        uint messageSpecific, bool updateChecksum)
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
         // Copy original IP header (20 bytes) + 8 bytes of payload into ICMP payload
-        var icmpIpPacket = BuildIcmpV4(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan,
-            ipPacket.Buffer.Span[..28]);
+        var toCopy = Math.Min(ipPacket.Header.Length + 8, ipPacket.Buffer.Length);
+        var icmpIpPacket = BuildIcmpV4(ipPacket.DestinationAddressSpan, ipPacket.SourceAddressSpan,
+            ipPacket.Buffer.Span[..toCopy]);
+
         var icmpPacket = icmpIpPacket.ExtractIcmpV4();
         icmpPacket.Type = icmpV4Type;
         icmpPacket.Code = (byte)code;
+        icmpPacket.MessageSpecific = messageSpecific;
 
 
         if (updateChecksum)
@@ -300,8 +309,10 @@ public static class IpPacketBuilder
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
         // Copy original IP header (40 bytes) + 8 bytes of payload into ICMP payload
-        var icmpIpPacket = BuildIcmpV6(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan,
-            ipPacket.Buffer.Span[..48]);
+        var toCopy = Math.Min(1280 - 40, ipPacket.Buffer.Length);
+        var icmpIpPacket = BuildIcmpV6(ipPacket.DestinationAddressSpan, ipPacket.SourceAddressSpan,
+            ipPacket.Buffer.Span[..toCopy]);
+
         var icmpPacket = icmpIpPacket.ExtractIcmpV6();
         icmpPacket.Type = icmpV6Type;
         icmpPacket.Code = (byte)code;

@@ -358,6 +358,28 @@ public class PacketTest : TestBase
 
 
     [TestMethod]
+    [DataRow(VhIpVersion.IPv4)]
+    [DataRow(VhIpVersion.IPv6)]
+    public void IcmpPacketTooBig(VhIpVersion ipVersion)
+    {
+        var orgPacket = IpPacketBuilder.BuildUdp(
+            GetRandomEp(ipVersion), GetRandomEp(ipVersion), []);
+
+        var mtu = 0x0102;
+        var ipPacket = IpPacketBuilder.BuildIcmpPacketTooBigReply(orgPacket, mtu, false);
+        var ipPacketNet = PacketBuilder.BuildIcmpPacketTooBigReply(
+            PacketBuilder.Parse(orgPacket.Buffer.ToArray()), mtu, false);
+
+        var b1 = ipPacket.Buffer.ToArray();
+        var b2 = ipPacketNet.Bytes;
+        CollectionAssert.AreEqual(b1, b2);
+
+        ipPacket.UpdateAllChecksums();
+        ipPacketNet.UpdateAllChecksums();
+        CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
+    }
+
+    [TestMethod]
     public void SimplePacket()
     {
         var options = Array.Empty<byte>();
@@ -365,7 +387,7 @@ public class PacketTest : TestBase
 
         // ICMP echo request
         var ipPacket = IpPacketBuilder.BuildTcp(
-            IPEndPoint.Parse("1.1.1.1:10"), IPEndPoint.Parse("1.1.1.2:20"), 
+            IPEndPoint.Parse("1.1.1.1:10"), IPEndPoint.Parse("1.1.1.2:20"),
             options, payloadData);
 
 

@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Buffers.Binary;
+using System.Net;
 using System.Net.Sockets;
 using PacketDotNet;
 using PacketDotNet.Utils;
@@ -105,43 +106,47 @@ public static class PacketBuilder
         return ipPacket;
     }
 
-    public static IPPacket BuildUnreachableReply(IPPacket ipPacket)
+    public static IPPacket BuildUnreachableReply(IPPacket ipPacket, bool calculateChecksum = true)
     {
         return ipPacket.Version == IPVersion.IPv6 
-            ? BuildUnreachableReplyV6(ipPacket, IcmpV6Type.DestinationUnreachable, 0, 0) 
-            : BuildUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachableHost);
+            ? BuildUnreachableReplyV6(ipPacket, IcmpV6Type.DestinationUnreachable, 0, 0, calculateChecksum) 
+            : BuildUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachableHost, 0, calculateChecksum);
     }
 
-    public static IPPacket BuildUnreachablePortReply(IPPacket ipPacket)
+    public static IPPacket BuildUnreachablePortReply(IPPacket ipPacket, bool calculateChecksum = true)
     {
         return ipPacket.Version == IPVersion.IPv6 
-            ? BuildUnreachableReplyV6(ipPacket, IcmpV6Type.DestinationUnreachable, 4, 0) 
-            : BuildUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachablePort);
+            ? BuildUnreachableReplyV6(ipPacket, IcmpV6Type.DestinationUnreachable, 4, 0, calculateChecksum) 
+            : BuildUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachablePort, 0, calculateChecksum);
     }
 
-    public static IPPacket BuildPacketTooBigReply(IPPacket ipPacket, ushort mtu)
+    public static IPPacket BuildIcmpPacketTooBigReply(IPPacket ipPacket, int mtu, bool calculateChecksum = true)
     {
         return ipPacket.Version == IPVersion.IPv6 
-            ? BuildUnreachableReplyV6(ipPacket, IcmpV6Type.PacketTooBig, 0, mtu) 
-            : BuildUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachableFragmentationNeeded);
+            ? BuildUnreachableReplyV6(ipPacket, IcmpV6Type.PacketTooBig, 0, (ushort)mtu, calculateChecksum) 
+            : BuildUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachableFragmentationNeeded, (uint)(mtu & 0xFFFF), calculateChecksum);
     }
 
-    private static IPPacket BuildUnreachableReplyV6(IPPacket ipPacket, IcmpV6Type icmpV6Type, byte code, int reserved)
+    private static IPPacket BuildUnreachableReplyV6(IPPacket ipPacket, IcmpV6Type icmpV6Type, byte code, 
+        uint messageSpecific, bool updateChecksum)
     {
         if (ipPacket is null)
             throw new ArgumentNullException(nameof(ipPacket));
 
-        const int headerSize = 8;
-        var icmpDataLen = Math.Min(ipPacket.TotalLength, 1300);
-        var buffer = new byte[headerSize + icmpDataLen];
-        Array.Copy(BitConverter.GetBytes(reserved), 0, buffer, 4, 4);
-        Array.Copy(ipPacket.Bytes, 0, buffer, headerSize, icmpDataLen);
+        
+        // ICMPv6 header is 8 bytes, but Echo messages require 12 bytes minimum
+        var icmpDataLen = Math.Min(1280 - 40, ipPacket.TotalLength);
+        var buffer = new byte[8 + icmpDataLen];
+
+        // Copy ICMPv6 header messageSpecific as first 4 bytes of the ICMP payload
+        BinaryPrimitives.WriteUInt32BigEndian(buffer.AsSpan(4, 4), messageSpecific);
+        Array.Copy(ipPacket.Bytes, 0, buffer, 8, icmpDataLen);
 
         // PacketDotNet doesn't support IcmpV6Packet properly
-        var icmpPacket = new IcmpV6Packet(new ByteArraySegment(new byte[headerSize])) {
+        var icmpPacket = new IcmpV6Packet(new ByteArraySegment(new byte[4])) {
             Type = icmpV6Type,
             Code = code,
-            PayloadData = buffer[headerSize..]
+            PayloadData = buffer[4..]
         };
 
         var newIpPacket = new IPv6Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress) {
@@ -150,14 +155,17 @@ public static class PacketBuilder
             TimeToLive = 64,
             PayloadLength = (ushort)icmpPacket.TotalPacketLength
         };
-        newIpPacket.UpdateAllChecksums();
+
+        if (updateChecksum)
+            newIpPacket.UpdateAllChecksums();
 
         //var restorePacketV6 = Packet.ParsePacket(LinkLayers.Raw, newIpPacket.Bytes).Extract<IPPacket>();
         //var restoreIcmpV6 = restorePacketV6.Extract<IcmpV6Packet>();
         return newIpPacket;
     }
 
-    private static IPPacket BuildUnreachableReplyV4(IPPacket ipPacket, IcmpV4TypeCode typeCode)
+    private static IPPacket BuildUnreachableReplyV4(IPPacket ipPacket, IcmpV4TypeCode typeCode, uint messageSpecific, 
+        bool updateChecksum)
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
@@ -170,9 +178,11 @@ public static class PacketBuilder
         Array.Copy(ipPacket.Bytes, 0, buffer, headerSize, icmpDataLen);
         var icmpPacket = new IcmpV4Packet(new ByteArraySegment(buffer)) {
             TypeCode = typeCode,
-            Sequence = 0
+            Sequence = 0,
         };
-        icmpPacket.Checksum = (ushort)ChecksumUtils.OnesComplementSum(icmpPacket.Bytes, 0, icmpPacket.Bytes.Length);
+        
+        // Copy message specific to the first 4 bytes of the ICMP payload
+        BinaryPrimitives.WriteUInt32BigEndian(buffer.AsSpan(4, 4), messageSpecific);
 
         var newIpPacket = new IPv4Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress) {
             PayloadPacket = icmpPacket,
@@ -181,7 +191,8 @@ public static class PacketBuilder
             FragmentFlags = 0
         };
 
-        newIpPacket.UpdateAllChecksums();
+        if (updateChecksum)
+            newIpPacket.UpdateAllChecksums();
         return newIpPacket;
     }
 

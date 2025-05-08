@@ -327,7 +327,7 @@ public class Tunnel : IJob, IAsyncDisposable
                     "MTU: {Mtu}, PacketLength: {PacketLength} Packet: {Packet}",
                     mtu, bigPacket.TotalPacketLength, PacketLogger.Format(bigPacket));
 
-                var replyPacket = PacketBuilder.BuildPacketTooBigReply(bigPacket, (ushort)mtu);
+                var replyPacket = PacketBuilder.BuildIcmpPacketTooBigReply(bigPacket, (ushort)mtu);
                 PacketReceived?.Invoke(this, new PacketReceivedEventArgs([replyPacket]));
             }
             catch (Exception ex) {

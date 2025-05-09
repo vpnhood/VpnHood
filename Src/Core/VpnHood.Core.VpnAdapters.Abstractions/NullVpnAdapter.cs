@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Packets;
 
 namespace VpnHood.Core.VpnAdapters.Abstractions;
@@ -36,22 +36,22 @@ public class NullVpnAdapter : IVpnAdapter
     }
 
 
-    public virtual void SendPacket(IPPacket ipPacket)
+    public virtual void SendPacket(IpPacket ipPacket)
     {
         // nothing
     }
 
-    public virtual void SendPackets(IList<IPPacket> ipPackets)
+    public virtual void SendPackets(IList<IpPacket> ipPackets)
     {
         // nothing
     }
 
-    public IPAddress? GetPrimaryAdapterAddress(IPVersion ipVersion)
+    public IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion)
     {
-            return ipVersion == IPVersion.IPv4 ? IPAddress.Loopback : IPAddress.IPv6Loopback;
+            return ipVersion == IpVersion.IPv4 ? IPAddress.Loopback : IPAddress.IPv6Loopback;
     }
 
-    public bool IsIpVersionSupported(IPVersion ipVersion)
+    public bool IsIpVersionSupported(IpVersion ipVersion)
     {
         return true;
     }

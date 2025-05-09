@@ -3,13 +3,14 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Client;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
+using VpnHood.Test.Packets;
 
 namespace VpnHood.Test.Tests;
 
@@ -36,10 +37,10 @@ public class TunnelTest : TestBase
         waitHandle.Reset();
 
         // test packets
-        var packets = new List<IPPacket> {
-            IPPacket.RandomPacket(IPVersion.IPv4),
-            IPPacket.RandomPacket(IPVersion.IPv4),
-            IPPacket.RandomPacket(IPVersion.IPv4)
+        var packets = new List<IpPacket> {
+            PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)),
+            PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)),
+            PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true))
         };
 
         // create keys
@@ -55,7 +56,7 @@ public class TunnelTest : TestBase
             new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
         serverUdpChannel.Start();
 
-        var serverReceivedPackets = Array.Empty<IPPacket>();
+        var serverReceivedPackets = Array.Empty<IpPacket>();
         serverUdpChannel.PacketReceived += delegate(object? sender, PacketReceivedEventArgs e) {
             serverReceivedPackets = e.IpPackets.ToArray();
             _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
@@ -68,7 +69,7 @@ public class TunnelTest : TestBase
             serverEndPoint);
         clientUdpChannel.Start();
 
-        var clientReceivedPackets = Array.Empty<IPPacket>();
+        var clientReceivedPackets = Array.Empty<IpPacket>();
         clientUdpChannel.PacketReceived += delegate(object? _, PacketReceivedEventArgs e) {
             clientReceivedPackets = e.IpPackets.ToArray();
             waitHandle.Set();
@@ -88,10 +89,10 @@ public class TunnelTest : TestBase
         waitHandle.Reset();
 
         // test packets
-        var packets = new List<IPPacket> {
-            IPPacket.RandomPacket(IPVersion.IPv4),
-            IPPacket.RandomPacket(IPVersion.IPv4),
-            IPPacket.RandomPacket(IPVersion.IPv4)
+        var packets = new List<IpPacket> {
+            PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)),
+            PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)),
+            PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true))
         };
 
         // create keys
@@ -106,7 +107,7 @@ public class TunnelTest : TestBase
         using var serverUdpChannelTransmitter =
             new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
 
-        var serverReceivedPackets = Array.Empty<IPPacket>();
+        var serverReceivedPackets = Array.Empty<IpPacket>();
         var serverTunnel = new Tunnel(new TunnelOptions());
         serverTunnel.AddChannel(serverUdpChannel);
         serverTunnel.PacketReceived += delegate(object? sender, PacketReceivedEventArgs e) {
@@ -120,7 +121,7 @@ public class TunnelTest : TestBase
         clientUdpChannel.SetRemote(new ClientUdpChannelTransmitter(clientUdpChannel, clientUdpClient, serverKey),
             serverEndPoint);
 
-        var clientReceivedPackets = Array.Empty<IPPacket>();
+        var clientReceivedPackets = Array.Empty<IpPacket>();
         var clientTunnel = new Tunnel();
         clientTunnel.AddChannel(clientUdpChannel);
         clientTunnel.PacketReceived += delegate(object? _, PacketReceivedEventArgs e) {

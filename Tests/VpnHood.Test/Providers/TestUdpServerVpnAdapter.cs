@@ -1,13 +1,12 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test.Providers;
 
@@ -40,9 +39,9 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyReceiver
         Started = false;
     }
 
-    public void SendPacket(IPPacket ipPacket)
+    public void SendPacket(IpPacket ipPacket)
     {
-        if (ipPacket.Protocol != ProtocolType.Udp) {
+        if (ipPacket.Protocol != IpProtocol.Udp) {
             VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestTunProvider: Not Udp packet.");
             return;
         }
@@ -50,30 +49,30 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyReceiver
         _proxyPool.SendPacket(ipPacket).GetAwaiter().GetResult();
     }
 
-    public void SendPackets(IList<IPPacket> ipPackets)
+    public void SendPackets(IList<IpPacket> ipPackets)
     {
         foreach (var ipPacket in ipPackets) {
             _proxyPool.SendPacket(ipPacket).GetAwaiter().GetResult();
         }
     }
 
-    public IPAddress GetPrimaryAdapterAddress(IPVersion ipVersion)
+    public IPAddress GetPrimaryAdapterAddress(IpVersion ipVersion)
     {
-        return ipVersion == IPVersion.IPv4 ? IPAddress.Loopback : IPAddress.IPv6Loopback;
+        return ipVersion == IpVersion.IPv4 ? IPAddress.Loopback : IPAddress.IPv6Loopback;
     }
 
-    public bool IsIpVersionSupported(IPVersion ipVersion) => true;
+    public bool IsIpVersionSupported(IpVersion ipVersion) => true;
 
-    public void OnPacketReceived(IPPacket ipPacket)
+    public void OnPacketReceived(IpPacket ipPacket)
     {
         PacketReceived?.Invoke(this, new PacketReceivedEventArgs([ipPacket]));
     }
 
-    public void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint)
+    public void OnNewRemoteEndPoint(IpProtocol protocolType, IPEndPoint remoteEndPoint)
     {
     }
 
-    public void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
+    public void OnNewEndPoint(IpProtocol protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
         bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
     {
     }

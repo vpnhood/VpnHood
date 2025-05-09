@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Toolkit.Net;
 
@@ -26,18 +26,18 @@ public class NetFilter : INetFilter
     }
 
     // ReSharper disable once ReturnTypeCanBeNotNullable
-    public virtual IPPacket? ProcessRequest(IPPacket ipPacket)
+    public virtual IpPacket? ProcessRequest(IpPacket ipPacket)
     {
         return IsIpAddressBlocked(ipPacket.DestinationAddress) ? null : ipPacket;
     }
 
     // ReSharper disable once ReturnTypeCanBeNotNullable
-    public virtual IPEndPoint? ProcessRequest(ProtocolType protocol, IPEndPoint requestEndPoint)
+    public virtual IPEndPoint? ProcessRequest(IpProtocol protocol, IPEndPoint requestEndPoint)
     {
         return IsIpAddressBlocked(requestEndPoint.Address) ? null : requestEndPoint;
     }
 
-    public virtual IPPacket ProcessReply(IPPacket ipPacket)
+    public virtual IpPacket ProcessReply(IpPacket ipPacket)
     {
         return ipPacket;
     }

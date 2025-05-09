@@ -1,13 +1,12 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.Utils;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Tunneling;
 
@@ -33,13 +32,13 @@ public abstract class ProxyManager : IPacketProxyReceiver, IAsyncDisposable
         }
     }
 
-    public abstract void OnPacketReceived(IPPacket ipPacket);
+    public abstract void OnPacketReceived(IpPacket ipPacket);
 
-    public virtual void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint)
+    public virtual void OnNewRemoteEndPoint(IpProtocol protocolType, IPEndPoint remoteEndPoint)
     {
     }
 
-    public virtual void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
+    public virtual void OnNewEndPoint(IpProtocol protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
         bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
     {
     }
@@ -60,7 +59,7 @@ public abstract class ProxyManager : IPacketProxyReceiver, IAsyncDisposable
                 sendBufferSize: options.UdpSendBufferSize, receiveBufferSize: options.UdpReceiveBufferSize);
     }
 
-    public async Task SendPackets(IList<IPPacket> ipPackets)
+    public async Task SendPackets(IList<IpPacket> ipPackets)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
@@ -69,7 +68,7 @@ public abstract class ProxyManager : IPacketProxyReceiver, IAsyncDisposable
         }
     }
 
-    public virtual async Task SendPacket(IPPacket ipPacket)
+    public virtual async Task SendPacket(IpPacket ipPacket)
     {
         if (ipPacket is null)
             throw new ArgumentNullException(nameof(ipPacket));
@@ -84,12 +83,12 @@ public abstract class ProxyManager : IPacketProxyReceiver, IAsyncDisposable
 
         try {
             switch (ipPacket.Protocol) {
-                case ProtocolType.Udp:
+                case IpProtocol.Udp:
                     await _udpProxyPool.SendPacket(ipPacket).VhConfigureAwait();
                     break;
 
-                case ProtocolType.Icmp:
-                case ProtocolType.IcmpV6:
+                case IpProtocol.IcmpV4:
+                case IpProtocol.IcmpV6:
                     if (!IsPingSupported)
                         throw new NotSupportedException("Ping is not supported by this proxy.");
 

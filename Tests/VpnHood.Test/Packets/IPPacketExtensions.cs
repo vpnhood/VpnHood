@@ -1,10 +1,13 @@
 ﻿using System.Net;
 using PacketDotNet;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.Core.Packets;
 
-public static class IpPacketExtensions
+namespace VpnHood.Test.Packets;
+
+// ReSharper disable once InconsistentNaming
+public static class IPPacketExtensions
 {
     public static IPPacket Clone(this IPPacket ipPacket)
     {

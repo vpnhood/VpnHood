@@ -5,7 +5,7 @@ using Android.OS;
 using Android.Systems;
 using Java.IO;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -22,6 +22,8 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     private FileOutputStream? _outStream;
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
+    private readonly byte[] _writeBuffer = new byte[0xFFFF];
+    private readonly byte[] _readBuffer = new byte[0xFFFF];
 
     public override bool IsNatSupported => false;
     public override bool IsAppFilterSupported => true;
@@ -214,28 +216,27 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         }
     }
 
-    protected override bool WritePacket(IPPacket ipPacket)
+    protected override bool WritePacket(IpPacket ipPacket)
     {
         if (_outStream == null)
             throw new InvalidOperationException("Adapter is not open.");
 
-        var packetBytes = ipPacket.Bytes;
-        _outStream.Write(packetBytes);
+        ipPacket.Buffer.Span.CopyTo(_writeBuffer);
+        _outStream.Write(_writeBuffer, 0, ipPacket.Buffer.Length);
         return true;
     }
 
-    protected override IPPacket? ReadPacket(int mtu)
+    protected override IpPacket? ReadPacket(int mtu)
     {
         if (_inStream == null)
             throw new InvalidOperationException("Adapter is not open.");
 
-        var buffer = new byte[mtu];
-        var bytesRead = _inStream.Read(buffer);
+        var bytesRead = _inStream.Read(_readBuffer);
         return bytesRead switch {
             // no more packet
             0 => null,
             // Parse the packet and add to the list
-            > 0 => Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>(),
+            > 0 => PacketBuilder.Parse(_readBuffer.AsSpan(0, bytesRead)),
             // error
             < 0 => throw new System.IO.IOException("Could not read from TUN.")
         };

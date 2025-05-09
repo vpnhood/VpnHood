@@ -1,11 +1,10 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -13,7 +12,6 @@ using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Client;
 
@@ -25,7 +23,7 @@ internal class ClientHost(
 {
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly List<IPPacket> _ipPackets = [];
+    private readonly List<IpPacket> _ipPackets = [];
     private TcpListener? _tcpListenerIpV4;
     private TcpListener? _tcpListenerIpV6;
     private IPEndPoint? _localEndpointIpV4;
@@ -47,9 +45,9 @@ internal class ClientHost(
         else
             Interlocked.Decrement(ref _passthruInProcessPacketsCounter);
     }
-    public bool IsOwnPacket(IPPacket ipPacket)
+    public bool IsOwnPacket(IpPacket ipPacket)
     {
-        if (ipPacket.Protocol != ProtocolType.Tcp)
+        if (ipPacket.Protocol != IpProtocol.Tcp)
             return false;
 
         return ipPacket.DestinationAddress.Equals(CatcherAddressIpV4) ||
@@ -107,7 +105,7 @@ internal class ClientHost(
 
     // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
     // Warning: the return array is shared and will be invalid with next call
-    public IList<IPPacket> ProcessOutgoingPacket(IList<IPPacket> ipPackets)
+    public IList<IpPacket> ProcessOutgoingPacket(IList<IpPacket> ipPackets)
     {
         if (_localEndpointIpV4 == null)
             throw new InvalidOperationException(
@@ -119,8 +117,8 @@ internal class ClientHost(
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
             var ipPacket = ipPackets[i];
-            var catcherAddress = ipPacket.Version == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
-            var localEndPoint = ipPacket.Version == IPVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
+            var catcherAddress = ipPacket.Version == IpVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
+            var localEndPoint = ipPacket.Version == IpVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
             TcpPacket? tcpPacket = null;
 
             try {
@@ -170,7 +168,7 @@ internal class ClientHost(
             }
             catch (Exception ex) {
                 if (tcpPacket != null) {
-                    ret.Add(PacketBuilder.BuildTcpResetReply(ipPacket, true));
+                    ret.Add(PacketBuilder.BuildTcpResetReply(ipPacket));
                     PacketLogger.LogPacket(ipPacket,
                         "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.",
                         LogLevel.Debug, ex);
@@ -186,7 +184,7 @@ internal class ClientHost(
         return ret; 
     }
 
-    private SyncCustomData? ProcessOutgoingSyncPacket(IPPacket ipPacket, TcpPacket tcpPacket)
+    private SyncCustomData? ProcessOutgoingSyncPacket(IpPacket ipPacket, TcpPacket tcpPacket)
     {
         var sync = tcpPacket is { Synchronize: true, Acknowledgment: false };
         if (!sync)
@@ -196,7 +194,7 @@ internal class ClientHost(
             IsInIpRange = vpnHoodClient.IsInIpRange(ipPacket.DestinationAddress)
         };
 
-        if (ipPacket.Version == IPVersion.IPv6)
+        if (ipPacket.Version == IpVersion.IPv6)
             ProcessOutgoingSyncIpV6Packet(syncCustomData);
 
         return syncCustomData;
@@ -220,7 +218,7 @@ internal class ClientHost(
         if (orgTcpClient is null) throw new ArgumentNullException(nameof(orgTcpClient));
         ConnectorRequestResult<SessionResponse>? requestResult = null;
         StreamProxyChannel? channel = null;
-        var ipVersion = IPVersion.IPv4;
+        var ipVersion = IpVersion.IPv4;
 
         try {
             // check cancellation
@@ -233,11 +231,11 @@ internal class ClientHost(
             // get original remote from NAT
             var orgRemoteEndPoint = (IPEndPoint)orgTcpClient.Client.RemoteEndPoint;
             ipVersion = orgRemoteEndPoint.AddressFamily == AddressFamily.InterNetwork
-                ? IPVersion.IPv4
-                : IPVersion.IPv6;
+                ? IpVersion.IPv4
+                : IpVersion.IPv6;
 
             var natItem =
-                (NatItemEx?)_nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port) ??
+                (NatItemEx?)_nat.Resolve(ipVersion, IpProtocol.Tcp, (ushort)orgRemoteEndPoint.Port) ??
                 throw new Exception(
                     $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
 
@@ -249,7 +247,7 @@ internal class ClientHost(
             VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel, "New TcpProxy Request.");
 
             // check invalid income
-            var catcherAddress = ipVersion == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
+            var catcherAddress = ipVersion == IpVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
             if (!Equals(orgRemoteEndPoint.Address, catcherAddress))
                 throw new Exception("TcpProxy rejected an outbound connection!");
 
@@ -310,7 +308,7 @@ internal class ClientHost(
         }
         catch (Exception ex) {
             // disable IPv6 if detect the new network does not have IpV6
-            if (ipVersion == IPVersion.IPv6 &&
+            if (ipVersion == IpVersion.IPv6 &&
                 ex is SocketException { SocketErrorCode: SocketError.NetworkUnreachable })
                 vpnHoodClient.IsIpV6SupportedByClient = false;
 

@@ -46,11 +46,6 @@ public class ServerFinder(
             hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6() || x.Address.Equals(IPAddress.IPv6Loopback))
                 .ToArray();
 
-        // for compatibility don't query server for single endpoint
-        // todo: does not need on 535 or upper due to ServerStatusRequest
-        if (hostEndPoints.Count(x => x.Address.IsV4()) == 1)
-            return hostEndPoints.First(x => x.Address.IsV4());
-
         // randomize endpoint 
         VhUtils.Shuffle(hostEndPoints);
 

@@ -2,7 +2,7 @@
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -19,6 +19,8 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     private string? _primaryAdapterName;
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
+    private readonly byte[] _writeBuffer = new byte[0xFFFF];
+    private readonly byte[] _readBuffer = new byte[0xFFFF];
     protected override bool IsSocketProtectedByBind => true;
     public override bool IsNatSupported => true;
     public override bool IsAppFilterSupported => false;
@@ -220,14 +222,15 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         }
     }
 
-    protected override bool WritePacket(IPPacket ipPacket)
+    protected override bool WritePacket(IpPacket ipPacket)
     {
-        var packetBytes = ipPacket.Bytes;
+        var packetBytes = ipPacket.Buffer;
 
         // Write the packet to the TUN device
         var offset = 0;
         while (offset < packetBytes.Length) {
-            var bytesWritten = LinuxAPI.write(_tunAdapterFd, packetBytes, packetBytes.Length - offset);
+            packetBytes.CopyTo(_writeBuffer);
+            var bytesWritten = LinuxAPI.write(_tunAdapterFd, _writeBuffer, packetBytes.Length - offset);
             if (bytesWritten > 0) {
                 offset += bytesWritten; // Advance buffer
                 continue;
@@ -253,13 +256,13 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         return true;
     }
 
-    protected override IPPacket? ReadPacket(int mtu)
+    protected override IpPacket? ReadPacket(int mtu)
     {
-        var buffer = new byte[mtu];
         while (Started) {
-            var bytesRead = LinuxAPI.read(_tunAdapterFd, buffer, buffer.Length);
-            if (bytesRead > 0)
-                return Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>();
+            var bytesRead = LinuxAPI.read(_tunAdapterFd, _readBuffer, _readBuffer.Length);
+            if (bytesRead > 0) {
+                return PacketBuilder.Parse(_readBuffer.AsSpan(0, bytesRead));
+            }
 
             // check for errors
             var errorCode = Marshal.GetLastWin32Error();

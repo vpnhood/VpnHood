@@ -2,12 +2,12 @@
 
 namespace VpnHood.Core.Packets.VhPackets;
 
-public class VhTcpPacket : IChecksumPayloadPacket
+public class TcpPacket : IChecksumPayloadPacket
 {
     private readonly Memory<byte> _buffer;
     public Memory<byte> Buffer => _buffer;
 
-    public VhTcpPacket(Memory<byte> buffer)
+    public TcpPacket(Memory<byte> buffer)
     {
         if (buffer.Length < 20)
             throw new ArgumentException("Buffer too small for TCP header.", nameof(buffer));
@@ -15,7 +15,7 @@ public class VhTcpPacket : IChecksumPayloadPacket
         _buffer = buffer;
     }
 
-    public VhTcpPacket(Memory<byte> buffer, int optionsLength)
+    public TcpPacket(Memory<byte> buffer, int optionsLength)
     {
         if (buffer.Length < 20)
             throw new ArgumentException("Buffer too small for TCP header.", nameof(buffer));
@@ -132,7 +132,7 @@ public class VhTcpPacket : IChecksumPayloadPacket
         Checksum = 0;
 
         try {
-            return PacketUtil.ComputeChecksum(sourceAddress, destinationAddress, (byte)VhIpProtocol.Tcp, _buffer.Span);
+            return PacketUtil.ComputeChecksum(sourceAddress, destinationAddress, (byte)IpProtocol.Tcp, _buffer.Span);
         }
         finally {
             Checksum = orgChecksum;

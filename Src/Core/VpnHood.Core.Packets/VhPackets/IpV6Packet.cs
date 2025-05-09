@@ -3,24 +3,24 @@ using System.Buffers.Binary;
 
 namespace VpnHood.Core.Packets.VhPackets;
 
-public class VhIpV6Packet : VhIpPacket
+public class IpV6Packet : IpPacket
 {
     private bool _disposed;
     private readonly IMemoryOwner<byte>? _memoryOwner;
 
-    public VhIpV6Packet(IMemoryOwner<byte> memoryOwner, int packetLength)
+    public IpV6Packet(IMemoryOwner<byte> memoryOwner, int packetLength)
         : this(memoryOwner.Memory[..packetLength])
     {
         _memoryOwner = memoryOwner;
     }
 
-    public VhIpV6Packet(IMemoryOwner<byte> memoryOwner, int packetLength, VhIpProtocol protocol)
+    public IpV6Packet(IMemoryOwner<byte> memoryOwner, int packetLength, IpProtocol protocol)
         : this(memoryOwner.Memory[..packetLength], protocol)
     {
         _memoryOwner = memoryOwner;
     }
 
-    public VhIpV6Packet(Memory<byte> buffer, VhIpProtocol protocol) : base(buffer)
+    public IpV6Packet(Memory<byte> buffer, IpProtocol protocol) : base(buffer)
     {
         // Check if the buffer is large enough for the IP header
         if (buffer.Length < 40)
@@ -30,7 +30,7 @@ public class VhIpV6Packet : VhIpPacket
         buffer.Span.Clear();
 
         // set version
-        Version = VhIpVersion.IPv6;
+        Version = IpVersion.IPv6;
 
         // set protocol
         Span[6] = (byte)protocol;
@@ -40,7 +40,7 @@ public class VhIpV6Packet : VhIpPacket
         BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(4, 2), payloadLength);
     }
 
-    public VhIpV6Packet(Memory<byte> buffer) : base(buffer)
+    public IpV6Packet(Memory<byte> buffer) : base(buffer)
     {
         // Check if the buffer is large enough for the IP header
         if (buffer.Length < 40)
@@ -58,8 +58,8 @@ public class VhIpV6Packet : VhIpPacket
     }
 
     private Span<byte> Span => Buffer.Span;
-    public override VhIpProtocol Protocol => NextHeader;
-    public VhIpProtocol NextHeader => (VhIpProtocol)Span[6];
+    public override IpProtocol Protocol => NextHeader;
+    public IpProtocol NextHeader => (IpProtocol)Span[6];
     public override Memory<byte> Header => Buffer[..40];
     public override byte TimeToLive {
         get => HopLimit;
@@ -126,7 +126,7 @@ public class VhIpV6Packet : VhIpPacket
         _disposed = true;
     }
 
-    ~VhIpV6Packet()
+    ~IpV6Packet()
     {
         Dispose(false);
     }

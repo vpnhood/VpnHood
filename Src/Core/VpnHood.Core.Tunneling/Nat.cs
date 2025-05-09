@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -8,8 +8,8 @@ namespace VpnHood.Core.Tunneling;
 public class Nat(bool isDestinationSensitive) : IDisposable
 {
     private readonly object _lockObject = new();
-    private readonly Dictionary<(IPVersion, ProtocolType), ushort> _lastNatIds = new();
-    private readonly Dictionary<(IPVersion, ProtocolType, ushort), NatItem> _map = new();
+    private readonly Dictionary<(IpVersion, IpProtocol), ushort> _lastNatIds = new();
+    private readonly Dictionary<(IpVersion, IpProtocol, ushort), NatItem> _map = new();
     private readonly Dictionary<NatItem, NatItem> _mapR = new();
     private bool _disposed;
     private DateTime _lastCleanupTime = FastDateTime.Now;
@@ -26,23 +26,23 @@ public class Nat(bool isDestinationSensitive) : IDisposable
         }
     }
 
-    public int GetItemCount(ProtocolType protocol)
+    public int GetItemCount(IpProtocol protocol)
     {
         lock (_lockObject)
             return _map.Count(x => x.Value.Protocol == protocol);
     }
 
 
-    private NatItem CreateNatItemFromPacket(IPPacket ipPacket)
+    private NatItem CreateNatItemFromPacket(IpPacket ipPacket)
     {
         return isDestinationSensitive ? new NatItemEx(ipPacket) : new NatItem(ipPacket);
     }
 
     private bool IsExpired(NatItem natItem)
     {
-        if (natItem.Protocol == ProtocolType.Tcp)
+        if (natItem.Protocol == IpProtocol.Tcp)
             return FastDateTime.Now - natItem.AccessTime > TcpTimeout;
-        if (natItem.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6)
+        if (natItem.Protocol is IpProtocol.IcmpV4 or IpProtocol.IcmpV6)
             return FastDateTime.Now - natItem.AccessTime > IcmpTimeout;
 
         //treat other as UDP
@@ -76,7 +76,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
         NatItemRemoved?.Invoke(this, new NatEventArgs(natItem2));
     }
 
-    private ushort GetFreeNatId(IPVersion ipVersion, ProtocolType protocol)
+    private ushort GetFreeNatId(IpVersion ipVersion, IpProtocol protocol)
     {
         var key = (ipVersion, protocol);
 
@@ -98,7 +98,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
     }
 
     /// <returns>null if not found</returns>
-    public NatItem? Get(IPPacket ipPacket)
+    public NatItem? Get(IpPacket ipPacket)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(Nat));
 
@@ -112,14 +112,14 @@ public class Nat(bool isDestinationSensitive) : IDisposable
         }
     }
 
-    public NatItem GetOrAdd(IPPacket ipPacket)
+    public NatItem GetOrAdd(IpPacket ipPacket)
     {
         lock (_lockObject) {
             return Get(ipPacket) ?? Add(ipPacket);
         }
     }
 
-    public NatItem Add(IPPacket ipPacket, bool overwrite = false)
+    public NatItem Add(IpPacket ipPacket, bool overwrite = false)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(Nat));
 
@@ -127,7 +127,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
         return Add(ipPacket, natId, overwrite);
     }
 
-    public NatItem Add(IPPacket ipPacket, ushort natId, bool overwrite = false)
+    public NatItem Add(IpPacket ipPacket, ushort natId, bool overwrite = false)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(Nat));
 
@@ -156,7 +156,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
         return natItem;
     }
 
-    public void RemoveOldest(ProtocolType protocol)
+    public void RemoveOldest(IpProtocol protocol)
     {
         lock (_lockObject) {
             var oldest = _map.Values.FirstOrDefault();
@@ -173,7 +173,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
     }
 
     /// <returns>null if not found</returns>
-    public NatItem? Resolve(IPVersion ipVersion, ProtocolType protocol, ushort id)
+    public NatItem? Resolve(IpVersion ipVersion, IpProtocol protocol, ushort id)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(Nat));
 

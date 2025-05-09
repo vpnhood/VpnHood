@@ -1,4 +1,4 @@
-﻿using PacketDotNet;
+﻿using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;
@@ -16,7 +16,7 @@ internal class ClientProxyManager(
     // VpnAdapter can not protect Ping so PingProxy does not work
     protected override bool IsPingSupported => false;
 
-    public override void OnPacketReceived(IPPacket ipPacket)
+    public override void OnPacketReceived(IpPacket ipPacket)
     {
         if (Disposed) return;
         if (VhLogger.IsDiagnoseMode)

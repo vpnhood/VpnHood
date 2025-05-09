@@ -2,8 +2,6 @@
 
 public enum IcmpV6Code : byte
 {
-    NoCode = 0,
-
     // For Destination Unreachable (Type 1)
     NoRoute = 0,
     AdminProhibited = 1,

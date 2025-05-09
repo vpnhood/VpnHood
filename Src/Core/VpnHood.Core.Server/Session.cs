@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Server.Abstractions;
@@ -19,7 +19,6 @@ using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Server;
 
@@ -182,19 +181,19 @@ public class Session : IAsyncDisposable
         }
     }
 
-    private IPAddress GetClientVirtualIp(IPVersion ipVersion)
+    private IPAddress GetClientVirtualIp(IpVersion ipVersion)
     {
-        return ipVersion == IPVersion.IPv4 ? VirtualIps.IpV4 : VirtualIps.IpV6;
+        return ipVersion == IpVersion.IPv4 ? VirtualIps.IpV4 : VirtualIps.IpV6;
     }
 
     // todo: legacy version. remove in future
     [Obsolete]
-    private IPAddress? GetClientInternalIp(IPVersion ipVersion)
+    private IPAddress? GetClientInternalIp(IpVersion ipVersion)
     {
-        return ipVersion == IPVersion.IPv4 ? _clientInternalIpV4 : _clientInternalIpV6;
+        return ipVersion == IpVersion.IPv4 ? _clientInternalIpV4 : _clientInternalIpV6;
     }
 
-    public void Proxy_PacketReceived(IPPacket ipPacket)
+    public void Proxy_PacketReceived(IpPacket ipPacket)
     {
         if (IsDisposed) return;
         PacketLogger.LogPacket(ipPacket, "Delegating a packet to client...");
@@ -208,7 +207,7 @@ public class Session : IAsyncDisposable
             var clientInternalIp = GetClientInternalIp(ipPacket.Version);
             if (clientInternalIp != null && !ipPacket.DestinationAddress.Equals(clientInternalIp)) {
                 ipPacket.DestinationAddress = clientInternalIp;
-                ipPacket.UpdateIpChecksum();
+                ipPacket.UpdateAllChecksums();
             }
         }
 #pragma warning restore CS0612 // Type or member is obsolete
@@ -230,9 +229,9 @@ public class Session : IAsyncDisposable
             // todo: legacy save caller internal ip at first call
 #pragma warning disable CS0612 // Type or member is obsolete
             if (_fixClientInternalIp) {
-                if (ipPacket.Version == IPVersion.IPv4)
+                if (ipPacket.Version == IpVersion.IPv4)
                     _clientInternalIpV4 ??= ipPacket.SourceAddress;
-                else if (ipPacket.Version == IPVersion.IPv6)
+                else if (ipPacket.Version == IpVersion.IPv6)
                     _clientInternalIpV6 ??= ipPacket.SourceAddress;
 
                 // update source client virtual ip. will be obsolete in future if client set correct ip
@@ -240,7 +239,7 @@ public class Session : IAsyncDisposable
                     // todo: legacy version. Packet must be dropped if it does not have correct source address
                     // PacketLogger.LogPacket(ipPacket, $"Invalid tunnel packet source ip.");
                     ipPacket.SourceAddress = virtualIp;
-                    ipPacket.UpdateIpChecksum();
+                    ipPacket.UpdateAllChecksums();
                 }
             }
 #pragma warning restore CS0612 // Type or member is obsolete
@@ -383,7 +382,7 @@ public class Session : IAsyncDisposable
             isRequestedEpException = false;
 
             //tracking
-            LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClientHost.Client.LocalEndPoint,
+            LogTrack(IpProtocol.Tcp.ToString(), (IPEndPoint)tcpClientHost.Client.LocalEndPoint,
                 request.DestinationEndPoint,
                 true, true, null);
 
@@ -421,9 +420,9 @@ public class Session : IAsyncDisposable
     private void VerifyTcpChannelRequest(IClientStream clientStream, StreamProxyChannelRequest request)
     {
         // filter
-        var newEndPoint = _netFilter.ProcessRequest(ProtocolType.Tcp, request.DestinationEndPoint);
+        var newEndPoint = _netFilter.ProcessRequest(IpProtocol.Tcp, request.DestinationEndPoint);
         if (newEndPoint == null) {
-            LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "NetFilter");
+            LogTrack(IpProtocol.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "NetFilter");
             _filterReporter.Raise();
             throw new RequestBlockedException(clientStream.IpEndPointPair.RemoteEndPoint, this, request.RequestId);
         }
@@ -432,18 +431,18 @@ public class Session : IAsyncDisposable
 
         lock (_verifyRequestLock) {
             // NetScan limit
-            VerifyNetScan(ProtocolType.Tcp, request.DestinationEndPoint, request.RequestId);
+            VerifyNetScan(IpProtocol.Tcp, request.DestinationEndPoint, request.RequestId);
 
             // Channel Count limit
             if (TcpChannelCount >= _maxTcpChannelCount) {
-                LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcp");
+                LogTrack(IpProtocol.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcp");
                 _maxTcpChannelExceptionReporter.Raise();
                 throw new MaxTcpChannelException(clientStream.IpEndPointPair.RemoteEndPoint, this, request.RequestId);
             }
 
             // Check tcp wait limit
             if (TcpConnectWaitCount >= _maxTcpConnectWaitCount) {
-                LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcpWait");
+                LogTrack(IpProtocol.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcpWait");
                 _maxTcpConnectWaitExceptionReporter.Raise();
                 throw new MaxTcpConnectWaitException(clientStream.IpEndPointPair.RemoteEndPoint, this,
                     request.RequestId);
@@ -451,7 +450,7 @@ public class Session : IAsyncDisposable
         }
     }
 
-    private void VerifyNetScan(ProtocolType protocol, IPEndPoint remoteEndPoint, string requestId)
+    private void VerifyNetScan(IpProtocol protocol, IPEndPoint remoteEndPoint, string requestId)
     {
         if (NetScanDetector == null || NetScanDetector.Verify(remoteEndPoint)) return;
 
@@ -495,13 +494,13 @@ public class Session : IAsyncDisposable
     {
         protected override bool IsPingSupported => true;
 
-        public override void OnPacketReceived(IPPacket ipPacket)
+        public override void OnPacketReceived(IpPacket ipPacket)
         {
             if (session.IsDisposed) return;
             session.Proxy_PacketReceived(ipPacket);
         }
 
-        public override Task SendPacket(IPPacket ipPacket)
+        public override Task SendPacket(IpPacket ipPacket)
         {
             if (vpnAdapter?.IsIpVersionSupported(ipPacket.Version) == true) {
                 vpnAdapter.SendPacket(ipPacket);
@@ -511,7 +510,7 @@ public class Session : IAsyncDisposable
             return base.SendPacket(ipPacket);
         }
 
-        public override void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint,
+        public override void OnNewEndPoint(IpProtocol protocolType, IPEndPoint localEndPoint,
             IPEndPoint remoteEndPoint,
             bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
         {
@@ -519,7 +518,7 @@ public class Session : IAsyncDisposable
                 isNewRemoteEndPoint, null);
         }
 
-        public override void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint)
+        public override void OnNewRemoteEndPoint(IpProtocol protocolType, IPEndPoint remoteEndPoint)
         {
             session.VerifyNetScan(protocolType, remoteEndPoint, "OnNewRemoteEndPoint");
         }

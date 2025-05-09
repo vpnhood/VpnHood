@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
@@ -67,11 +67,12 @@ public class PingProxyPool : IPacketProxyPool, IJob
         }
     }
 
-    public async Task SendPacket(IPPacket ipPacket)
+    public async Task SendPacket(IpPacket ipPacket)
     {
-        if ((ipPacket.Version != IPVersion.IPv4 ||
-             ipPacket.Extract<IcmpV4Packet>()?.TypeCode != IcmpV4TypeCode.EchoRequest) &&
-            (ipPacket.Version != IPVersion.IPv6 || ipPacket.Extract<IcmpV6Packet>()?.Type != IcmpV6Type.EchoRequest))
+        if (ipPacket.Version == IpVersion.IPv4 && ipPacket.ExtractIcmpV4().Type != IcmpV4Type.EchoRequest)
+            throw new NotSupportedException($"The icmp is not supported. Packet: {PacketLogger.Format(ipPacket)}.");
+
+        if (ipPacket.Version == IpVersion.IPv6 && ipPacket.ExtractIcmpV6().Type != IcmpV6Type.EchoRequest)
             throw new NotSupportedException($"The icmp is not supported. Packet: {PacketLogger.Format(ipPacket)}.");
 
         var destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, 0);
@@ -87,7 +88,7 @@ public class PingProxyPool : IPacketProxyPool, IJob
             _packetProxyReceiver.OnNewRemoteEndPoint(ipPacket.Protocol, destinationEndPoint);
 
         // we know lock doesn't wait for async task, but wait till Send method to set its busy state before goes into its await
-        Task<IPPacket> sendTask;
+        Task<IpPacket> sendTask;
         lock (_pingProxies) {
             var pingProxy = GetFreePingProxy(out isNewLocalEndPoint);
             sendTask = pingProxy.Send(ipPacket);

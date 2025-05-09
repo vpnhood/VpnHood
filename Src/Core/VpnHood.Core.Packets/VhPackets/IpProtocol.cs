@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Core.Packets.VhPackets;
 
-public enum VhIpProtocol : byte
+public enum IpProtocol : byte
 {
     IPv6HopByHopOptions = 0,
     IcmpV4 = 1,

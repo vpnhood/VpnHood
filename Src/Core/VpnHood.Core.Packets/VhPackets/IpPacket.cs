@@ -3,13 +3,14 @@ using System.Text;
 
 namespace VpnHood.Core.Packets.VhPackets;
 
-public abstract class VhIpPacket(Memory<byte> buffer) : IDisposable
+public abstract class IpPacket(Memory<byte> buffer) : IDisposable
 {
     private bool _disposed;
     protected IPAddress? SourceAddressField;
     protected IPAddress? DestinationAddressField;
     private IPayloadPacket? _payloadPacket;
-    public Memory<byte> Buffer => _disposed ? throw new ObjectDisposedException(nameof(VhIpPacket)) : buffer;
+    public Memory<byte> Buffer => _disposed ? throw new ObjectDisposedException(nameof(IpPacket)) : buffer;
+    public int PacketLength => buffer.Length;
 
     public IPayloadPacket? PayloadPacket {
         get => _payloadPacket;
@@ -18,8 +19,8 @@ public abstract class VhIpPacket(Memory<byte> buffer) : IDisposable
             : throw new InvalidOperationException("The PayloadPacket buffer must match the packet buffer.");
     }
 
-    public VhIpVersion Version {
-        get { return (VhIpVersion)(Buffer.Span[0] >> 4); }
+    public IpVersion Version {
+        get { return (IpVersion)(Buffer.Span[0] >> 4); }
         protected set => Buffer.Span[0] = (byte)((byte)value << 4 | (Buffer.Span[0] & 0x0F));
     }
 
@@ -43,7 +44,7 @@ public abstract class VhIpPacket(Memory<byte> buffer) : IDisposable
             DestinationAddressField = value;
         }
     }
-    public abstract VhIpProtocol Protocol { get; }
+    public abstract IpProtocol Protocol { get; }
     public abstract byte TimeToLive { get; set; }
     public abstract Memory<byte> Header { get; }
     public Memory<byte> Payload => Buffer[Header.Length..];
@@ -72,5 +73,5 @@ public abstract class VhIpPacket(Memory<byte> buffer) : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    ~VhIpPacket() => Dispose(false);
+    ~IpPacket() => Dispose(false);
 }

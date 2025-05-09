@@ -4,44 +4,54 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Packets.VhPackets;
 
-public static class VhPacketBuilder
+public static class PacketBuilder
 {
-    public static VhIpPacket Parse(Memory<byte> buffer)
+    public static IpPacket Parse(ReadOnlySpan<byte> buffer, MemoryPool<byte>? memoryPool = null)
+    {
+        // copy buffer to memory pool
+        memoryPool ??= MemoryPool<byte>.Shared;
+        var memoryOwner = memoryPool.Rent(buffer.Length);
+        buffer.CopyTo(memoryOwner.Memory.Span);
+
+        return BuildIp(memoryOwner, buffer.Length);
+    }
+
+    public static IpPacket Attach(Memory<byte> buffer)
     {
         if (buffer.Length < 1)
             throw new ArgumentException("Buffer too small to determine IP version.", nameof(buffer));
 
         var version = buffer.Span[0] >> 4;
         return version switch {
-            4 => new VhIpV4Packet(buffer),
-            6 => new VhIpV6Packet(buffer),
+            4 => new IpV4Packet(buffer),
+            6 => new IpV6Packet(buffer),
             _ => throw new NotSupportedException($"IP version {version} not supported."),
         };
     }
 
-    public static VhIpPacket Parse(IMemoryOwner<byte> memoryOwner, int packetLength)
+    public static IpPacket BuildIp(IMemoryOwner<byte> memoryOwner, int packetLength)
     {
         if (memoryOwner.Memory.Length < 1)
             throw new ArgumentException("Buffer too small to determine IP version.", nameof(memoryOwner));
 
         var version = memoryOwner.Memory.Span[0] >> 4;
         return version switch {
-            4 => new VhIpV4Packet(memoryOwner, packetLength),
-            6 => new VhIpV6Packet(memoryOwner, packetLength),
+            4 => new IpV4Packet(memoryOwner, packetLength),
+            6 => new IpV6Packet(memoryOwner, packetLength),
             _ => throw new NotSupportedException($"IP version {version} not supported."),
         };
     }
 
-    public static VhIpPacket BuildIp(IPAddress sourceAddress, IPAddress destinationAddress,
-        VhIpProtocol protocol, int payloadLength)
+    public static IpPacket BuildIp(IPAddress sourceAddress, IPAddress destinationAddress,
+        IpProtocol protocol, int payloadLength)
     {
         return BuildIp(
             sourceAddress.GetAddressBytes(), destinationAddress.GetAddressBytes(),
             protocol, payloadLength);
     }
 
-    public static VhIpPacket BuildIp(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
-        VhIpProtocol protocol, int payloadLength, MemoryPool<byte>? memoryPool = null)
+    public static IpPacket BuildIp(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+        IpProtocol protocol, int payloadLength, MemoryPool<byte>? memoryPool = null)
     {
         // validate address length
         if (sourceAddress.Length != destinationAddress.Length)
@@ -51,11 +61,9 @@ public static class VhPacketBuilder
         memoryPool ??= MemoryPool<byte>.Shared;
 
         // create IP packet
-        VhIpPacket ipPacket = sourceAddress.Length switch {
-            4 =>
-                new VhIpV4Packet(memoryPool.Rent(20 + payloadLength), 20 + payloadLength, protocol, 0),
-            16 =>
-                new VhIpV6Packet(memoryPool.Rent(40 + payloadLength), 40 + payloadLength, protocol),
+        IpPacket ipPacket = sourceAddress.Length switch {
+            4 => new IpV4Packet(memoryPool.Rent(20 + payloadLength), 20 + payloadLength, protocol, 0),
+            16 => new IpV6Packet(memoryPool.Rent(40 + payloadLength), 40 + payloadLength, protocol),
             _ => throw new NotSupportedException($"IP version {sourceAddress.Length} not supported.")
         };
 
@@ -65,7 +73,7 @@ public static class VhPacketBuilder
         return ipPacket;
     }
 
-    public static VhIpPacket BuildUdp(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
+    public static IpPacket BuildUdp(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
         ReadOnlySpan<byte> payload)
     {
         return BuildUdp(
@@ -74,11 +82,10 @@ public static class VhPacketBuilder
             payload);
     }
 
-
-    public static VhIpPacket BuildUdp(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+    public static IpPacket BuildUdp(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
         int sourcePort, int destinationPort, ReadOnlySpan<byte> payload)
     {
-        var ipPacket = BuildIp(sourceAddress, destinationAddress, VhIpProtocol.Udp, 8 + payload.Length);
+        var ipPacket = BuildIp(sourceAddress, destinationAddress, IpProtocol.Udp, 8 + payload.Length);
         var udpPacket = ipPacket.BuildUdp();
         udpPacket.SourcePort = (ushort)sourcePort;
         udpPacket.DestinationPort = (ushort)destinationPort;
@@ -86,7 +93,7 @@ public static class VhPacketBuilder
         return ipPacket;
     }
 
-    public static VhIpPacket BuildTcp(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
+    public static IpPacket BuildTcp(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
         ReadOnlySpan<byte> options, ReadOnlySpan<byte> payload)
     {
         return BuildTcp(
@@ -95,10 +102,10 @@ public static class VhPacketBuilder
             options, payload);
     }
 
-    public static VhIpPacket BuildTcp(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+    public static IpPacket BuildTcp(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
         int sourcePort, int destinationPort, ReadOnlySpan<byte> options, ReadOnlySpan<byte> payload)
     {
-        var ipPacket = BuildIp(sourceAddress, destinationAddress, VhIpProtocol.Tcp, 20 + options.Length + payload.Length);
+        var ipPacket = BuildIp(sourceAddress, destinationAddress, IpProtocol.Tcp, 20 + options.Length + payload.Length);
         var udpPacket = ipPacket.BuildTcp();
         udpPacket.SourcePort = (ushort)sourcePort;
         udpPacket.DestinationPort = (ushort)destinationPort;
@@ -107,22 +114,22 @@ public static class VhPacketBuilder
         return ipPacket;
     }
 
-    public static VhIpPacket BuildIcmpV4(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+    public static IpPacket BuildIcmpV4(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
         ReadOnlySpan<byte> payload)
     {
-        var ipPacket = BuildIp(sourceAddress, destinationAddress, VhIpProtocol.IcmpV4, 8 + payload.Length);
+        var ipPacket = BuildIp(sourceAddress, destinationAddress, IpProtocol.IcmpV4, 8 + payload.Length);
         payload.CopyTo(ipPacket.BuildIcmpV4().Payload.Span);
         return ipPacket;
     }
-    public static VhIpPacket BuildIcmpV6(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+    public static IpPacket BuildIcmpV6(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
         ReadOnlySpan<byte> payload)
     {
-        var ipPacket = BuildIp(sourceAddress, destinationAddress, VhIpProtocol.IcmpV6, 8 + payload.Length);
+        var ipPacket = BuildIp(sourceAddress, destinationAddress, IpProtocol.IcmpV6, 8 + payload.Length);
         payload.CopyTo(ipPacket.BuildIcmpV6().Payload.Span);
         return ipPacket;
     }
 
-    public static VhIpPacket BuildIcmpEchoRequest(IPAddress sourceAddress, IPAddress destinationAddress,
+    public static IpPacket BuildIcmpEchoRequest(IPAddress sourceAddress, IPAddress destinationAddress,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
         return BuildIcmpEchoRequest(
@@ -130,7 +137,7 @@ public static class VhPacketBuilder
             payload, identifier, sequenceNumber, calculateChecksum);
     }
 
-    public static VhIpPacket BuildIcmpEchoRequest(ReadOnlySpan<byte> sourceAddress,
+    public static IpPacket BuildIcmpEchoRequest(ReadOnlySpan<byte> sourceAddress,
         ReadOnlySpan<byte> destinationAddress,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
@@ -145,7 +152,7 @@ public static class VhPacketBuilder
     }
 
 
-    public static VhIpPacket BuildIcmpV4EchoRequest(IPAddress sourceAddress, IPAddress destinationAddress,
+    public static IpPacket BuildIcmpV4EchoRequest(IPAddress sourceAddress, IPAddress destinationAddress,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
         return BuildIcmpV4EchoRequest(
@@ -153,7 +160,7 @@ public static class VhPacketBuilder
             payload, identifier, sequenceNumber, calculateChecksum);
     }
 
-    public static VhIpPacket BuildIcmpV4EchoRequest(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+    public static IpPacket BuildIcmpV4EchoRequest(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
          ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
         if (sourceAddress.Length != 4 || destinationAddress.Length != 4)
@@ -172,7 +179,7 @@ public static class VhPacketBuilder
         return ipPacket;
     }
 
-    public static VhIpPacket BuildIcmpV6EchoRequest(IPAddress sourceAddress, IPAddress destinationAddress,
+    public static IpPacket BuildIcmpV6EchoRequest(IPAddress sourceAddress, IPAddress destinationAddress,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
         return BuildIcmpV6EchoRequest(
@@ -180,7 +187,7 @@ public static class VhPacketBuilder
             payload, identifier, sequenceNumber, calculateChecksum);
     }
 
-    public static VhIpPacket BuildIcmpV6EchoRequest(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+    public static IpPacket BuildIcmpV6EchoRequest(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
         if (sourceAddress.Length != 16 || destinationAddress.Length != 16)
@@ -199,7 +206,7 @@ public static class VhPacketBuilder
         return ipPacket;
     }
 
-    public static VhIpPacket BuildIcmpEchoReply(IPAddress sourceAddress, IPAddress destinationAddress,
+    public static IpPacket BuildIcmpEchoReply(IPAddress sourceAddress, IPAddress destinationAddress,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
         return BuildIcmpEchoReply(
@@ -207,7 +214,7 @@ public static class VhPacketBuilder
             payload, identifier, sequenceNumber, calculateChecksum);
     }
 
-    public static VhIpPacket BuildIcmpEchoReply(
+    public static IpPacket BuildIcmpEchoReply(
         ReadOnlySpan<byte> sourceAddressSpan, ReadOnlySpan<byte> destinationAddressSpan,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
@@ -221,7 +228,7 @@ public static class VhPacketBuilder
         };
     }
 
-    public static VhIpPacket BuildIcmpV4EchoReply(IPAddress sourceAddress, IPAddress destinationAddress,
+    public static IpPacket BuildIcmpV4EchoReply(IPAddress sourceAddress, IPAddress destinationAddress,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
         return BuildIcmpV4EchoReply(
@@ -229,7 +236,7 @@ public static class VhPacketBuilder
             payload, identifier, sequenceNumber, calculateChecksum);
     }
 
-    public static VhIpPacket BuildIcmpV4EchoReply(
+    public static IpPacket BuildIcmpV4EchoReply(
         ReadOnlySpan<byte> sourceAddressSpan, ReadOnlySpan<byte> destinationAddressSpan,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
@@ -248,7 +255,7 @@ public static class VhPacketBuilder
         return ipPacket;
     }
 
-    public static VhIpPacket BuildIcmpV6EchoReply(IPAddress sourceAddress, IPAddress destinationAddress,
+    public static IpPacket BuildIcmpV6EchoReply(IPAddress sourceAddress, IPAddress destinationAddress,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
         return BuildIcmpV6EchoReply(
@@ -256,7 +263,7 @@ public static class VhPacketBuilder
             payload, identifier: identifier, sequenceNumber: sequenceNumber, calculateChecksum);
     }
 
-    public static VhIpPacket BuildIcmpV6EchoReply(
+    public static IpPacket BuildIcmpV6EchoReply(
         ReadOnlySpan<byte> sourceAddressSpan, ReadOnlySpan<byte> destinationAddressSpan,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
     {
@@ -275,17 +282,17 @@ public static class VhPacketBuilder
         return ipPacket;
     }
 
-    public static VhIpPacket BuildTcpResetReply(VhIpPacket ipPacket, bool updateChecksum = false)
+    public static IpPacket BuildTcpResetReply(IpPacket ipPacket, bool updateChecksum = true)
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-        if (ipPacket.Protocol != VhIpProtocol.Tcp)
+        if (ipPacket.Protocol != IpProtocol.Tcp)
             throw new ArgumentException("packet is not TCP!", nameof(ipPacket));
 
         var tcpPacketOrg = ipPacket.ExtractTcp();
 
         var resetIpPacket = BuildTcp(
-            ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan,
-            tcpPacketOrg.SourcePort, tcpPacketOrg.SourcePort, [], []);
+            ipPacket.DestinationAddressSpan, ipPacket.SourceAddressSpan,
+            tcpPacketOrg.DestinationPort, tcpPacketOrg.SourcePort, null, null);
 
         var resetTcpPacket = resetIpPacket.ExtractTcp();
         resetTcpPacket.Reset = true;
@@ -308,7 +315,7 @@ public static class VhPacketBuilder
         return resetIpPacket;
     }
 
-    public static VhIpPacket BuildDns(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+    public static IpPacket BuildDns(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
         int sourcePort, int destinationPort, string host, ushort? queryId = null)
     {
         queryId ??= (ushort)new Random().Next(ushort.MaxValue);
@@ -323,7 +330,7 @@ public static class VhPacketBuilder
         return dnsPacket;
     }
 
-    public static VhIpPacket BuildDns(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
+    public static IpPacket BuildDns(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
         string host, ushort? queryId = null)
     {
         return BuildDns(
@@ -335,30 +342,30 @@ public static class VhPacketBuilder
             queryId);
     }
 
-    public static VhIpPacket BuildIcmpUnreachableReply(VhIpPacket ipPacket, bool updateChecksum = true)
+    public static IpPacket BuildIcmpUnreachableReply(IpPacket ipPacket, bool updateChecksum = true)
     {
-        return ipPacket.Version == VhIpVersion.IPv6
+        return ipPacket.Version == IpVersion.IPv6
             ? BuildIcmpV6Error(ipPacket, IcmpV6Type.DestinationUnreachable, IcmpV6Code.AddressUnreachable, 0, updateChecksum)
             : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.HostUnreachable, 0, updateChecksum);
     }
 
-    public static VhIpPacket BuildIcmpUnreachablePortReply(VhIpPacket ipPacket, bool updateChecksum = true)
+    public static IpPacket BuildIcmpUnreachablePortReply(IpPacket ipPacket, bool updateChecksum = true)
     {
-        return ipPacket.Version == VhIpVersion.IPv6
+        return ipPacket.Version == IpVersion.IPv6
             ? BuildIcmpV6Error(ipPacket, IcmpV6Type.DestinationUnreachable, IcmpV6Code.PortUnreachable, 0, updateChecksum)
             : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.PortUnreachable, 0, updateChecksum);
     }
 
-    public static VhIpPacket BuildIcmpPacketTooBigReply(VhIpPacket ipPacket, int mtu, bool updateChecksum = true)
+    public static IpPacket BuildIcmpPacketTooBigReply(IpPacket ipPacket, int mtu, bool updateChecksum = true)
     {
-        return ipPacket.Version == VhIpVersion.IPv6
+        return ipPacket.Version == IpVersion.IPv6
             ? BuildIcmpV6Error(ipPacket, IcmpV6Type.PacketTooBig, IcmpV6Code.PacketTooBig,
                 (ushort)mtu, updateChecksum)
             : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.FragmentationNeeded,
                 (ushort)(mtu & 0xFFFF), updateChecksum);
     }
 
-    public static VhIpPacket BuildIcmpV4Error(VhIpPacket ipPacket, IcmpV4Type icmpV4Type, IcmpV4Code code,
+    public static IpPacket BuildIcmpV4Error(IpPacket ipPacket, IcmpV4Type icmpV4Type, IcmpV4Code code,
         uint messageSpecific, bool updateChecksum)
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
@@ -380,7 +387,7 @@ public static class VhPacketBuilder
         return icmpIpPacket;
     }
 
-    public static VhIpPacket BuildIcmpV6Error(VhIpPacket ipPacket, IcmpV6Type icmpV6Type, IcmpV6Code code, uint messageSpecific,
+    public static IpPacket BuildIcmpV6Error(IpPacket ipPacket, IcmpV6Type icmpV6Type, IcmpV6Code code, uint messageSpecific,
         bool updateChecksum = true)
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));

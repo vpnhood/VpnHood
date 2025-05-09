@@ -313,7 +313,7 @@ public class ClientServerTest : TestBase
             stream.ReadByte();
             Assert.Fail("Exception expected!");
         }
-        catch (Exception ex)
+        catch (Exception ex) 
             when (ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionReset }) {
             // OK
         }

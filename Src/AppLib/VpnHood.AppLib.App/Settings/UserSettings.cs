@@ -12,10 +12,7 @@ public class UserSettings
     public Guid? ClientProfileId { get; set; }
     public int MaxDatagramChannelCount { get; set; } = ClientOptions.Default.MaxDatagramChannelCount;
     public bool TunnelClientCountry { get; set; } = true;
-
-    [JsonConverter(typeof(NullToEmptyArrayConverter<string>))] //todo: remove nullable after migration 4.5.533
     public string[] AppFilters { get; set; } = [];
-
     public FilterMode AppFiltersMode { get; set; } = FilterMode.All;
     public bool UseUdpChannel { get; set; } = ClientOptions.Default.UseUdpChannel;
     public bool DropUdp { get; set; } = ClientOptions.Default.DropUdp;

@@ -3,7 +3,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -44,8 +44,8 @@ public abstract class TunVpnAdapter : IVpnAdapter
     protected abstract void AdapterClose();
     protected abstract void WaitForTunWrite();
     protected abstract void WaitForTunRead();
-    protected abstract IPPacket? ReadPacket(int mtu);
-    protected abstract bool WritePacket(IPPacket ipPacket);
+    protected abstract IpPacket? ReadPacket(int mtu);
+    protected abstract bool WritePacket(IpPacket ipPacket);
 
     public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public event EventHandler? Disposed;
@@ -56,7 +56,7 @@ public abstract class TunVpnAdapter : IVpnAdapter
     public IpNetwork? AdapterIpNetworkV6 { get; private set; }
     public IPAddress? GatewayIpV4 { get; private set; }
     public IPAddress? GatewayIpV6 { get; private set; }
-    public bool IsIpVersionSupported(IPVersion ipVersion) => GetPrimaryAdapterAddress(ipVersion) != null;
+    public bool IsIpVersionSupported(IpVersion ipVersion) => GetPrimaryAdapterAddress(ipVersion) != null;
     public bool Started { get; private set; }
 
     private readonly object _stopLock = new();
@@ -78,28 +78,28 @@ public abstract class TunVpnAdapter : IVpnAdapter
         PrimaryAdapterIpV6 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
     }
 
-    public IPAddress? GetPrimaryAdapterAddress(IPVersion ipVersion)
+    public IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion)
     {
-        return ipVersion == IPVersion.IPv4 ? PrimaryAdapterIpV4 : PrimaryAdapterIpV6;
+        return ipVersion == IpVersion.IPv4 ? PrimaryAdapterIpV4 : PrimaryAdapterIpV6;
     }
 
     public IPAddress? GetPrimaryAdapterAddress(AddressFamily addressFamily)
     {
         return addressFamily switch {
-            AddressFamily.InterNetwork => GetPrimaryAdapterAddress(IPVersion.IPv4),
-            AddressFamily.InterNetworkV6 => GetPrimaryAdapterAddress(IPVersion.IPv6),
+            AddressFamily.InterNetwork => GetPrimaryAdapterAddress(IpVersion.IPv4),
+            AddressFamily.InterNetworkV6 => GetPrimaryAdapterAddress(IpVersion.IPv6),
             _ => throw new NotSupportedException("Address family is not supported.")
         };
     }
 
-    public IPAddress? GetGatewayIp(IPVersion ipVersion)
+    public IPAddress? GetGatewayIp(IpVersion ipVersion)
     {
-        return ipVersion == IPVersion.IPv4 ? GatewayIpV4 : GatewayIpV6;
+        return ipVersion == IpVersion.IPv4 ? GatewayIpV4 : GatewayIpV6;
     }
 
-    public IpNetwork? GetIpNetwork(IPVersion ipVersion)
+    public IpNetwork? GetIpNetwork(IpVersion ipVersion)
     {
-        return ipVersion == IPVersion.IPv4 ? AdapterIpNetworkV4 : AdapterIpNetworkV6;
+        return ipVersion == IpVersion.IPv4 ? AdapterIpNetworkV4 : AdapterIpNetworkV6;
     }
 
     public async Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
@@ -366,13 +366,16 @@ public abstract class TunVpnAdapter : IVpnAdapter
             : IPAddressUtil.Increment(ipNetwork.FirstIpAddress);
     }
 
-    public void SendPacket(IPPacket ipPacket)
+    private readonly object _sendLock = new();
+    public void SendPacket(IpPacket ipPacket)
     {
         if (!Started)
             throw new InvalidOperationException("TUN adapter is not started.");
 
         try {
-            SendPacketInternal(ipPacket);
+            lock (_sendLock) 
+                SendPacketInternal(ipPacket);
+
             _autoRestartCount = 0;
         }
         catch (Exception ex) {
@@ -383,7 +386,7 @@ public abstract class TunVpnAdapter : IVpnAdapter
         }
     }
 
-    private void SendPacketInternal(IPPacket ipPacket)
+    private void SendPacketInternal(IpPacket ipPacket)
     {
         // try to send the packet with exponential backoff
         var sent = false;
@@ -410,13 +413,13 @@ public abstract class TunVpnAdapter : IVpnAdapter
             VhLogger.Instance.LogWarning("Failed to send packet via WinTun adapter.");
     }
 
-    public void SendPackets(IList<IPPacket> packets)
+    public void SendPackets(IList<IpPacket> packets)
     {
         foreach (var packet in packets)
             SendPacket(packet);
     }
 
-    public Task SendPacketAsync(IPPacket ipPacket)
+    public Task SendPacketAsync(IpPacket ipPacket)
     {
         return _sendPacketSemaphore.WaitAsync().ContinueWith(_ => {
             try {
@@ -428,7 +431,7 @@ public abstract class TunVpnAdapter : IVpnAdapter
         });
     }
 
-    public Task SendPacketsAsync(IList<IPPacket> ipPackets)
+    public Task SendPacketsAsync(IList<IpPacket> ipPackets)
     {
         return _sendPacketSemaphore.WaitAsync().ContinueWith(_ => {
             try {
@@ -442,7 +445,7 @@ public abstract class TunVpnAdapter : IVpnAdapter
 
     protected virtual void StartReadingPackets()
     {
-        var packetList = new List<IPPacket>(_adapterSettings.MaxPacketCount);
+        var packetList = new List<IpPacket>(_adapterSettings.MaxPacketCount);
 
         // Read packets from TUN adapter
         while (Started) {
@@ -500,7 +503,7 @@ public abstract class TunVpnAdapter : IVpnAdapter
         AdapterOpen(CancellationToken.None);
     }
 
-    protected void InvokeReadPackets(IList<IPPacket> packetList)
+    protected void InvokeReadPackets(IList<IpPacket> packetList)
     {
         try {
             if (packetList.Count > 0) {

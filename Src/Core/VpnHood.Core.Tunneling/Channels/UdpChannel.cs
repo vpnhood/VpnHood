@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
@@ -18,7 +18,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
     private readonly BufferCryptor _sessionCryptorWriter = new(sessionKey);
     private readonly BufferCryptor _sessionCryptorReader = new(sessionKey);
     private PacketReceivedEventArgs? _packetReceivedEventArgs;
-    private readonly IPPacket[] _sendingPackets = [null!];
+    private readonly IpPacket[] _sendingPackets = [null!];
     private readonly long _cryptorPosBase = isServer ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
     private bool _disposed;
 
@@ -43,7 +43,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
     }
 
     // it is not thread safe
-    public Task SendPacketAsync(IPPacket packet)
+    public Task SendPacketAsync(IpPacket packet)
     {
         _sendingPackets[0] = packet;
         return SendPacketAsync(_sendingPackets);
@@ -73,7 +73,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
         LastActivityTime = FastDateTime.Now;
     }
 
-    public async Task SendPacketAsync(IList<IPPacket> ipPackets)
+    public async Task SendPacketAsync(IList<IpPacket> ipPackets)
     {
         if (_disposed)
             throw new ObjectDisposedException(VhLogger.FormatType(this));
@@ -88,7 +88,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < ipPackets.Count; i++) {
                 var ipPacket = ipPackets[i];
-                var packetBytes = ipPacket.Bytes;
+                var packetBytes = ipPacket.Buffer;
 
                 // flush buffer if this packet does not fit
                 if (bufferIndex > UdpChannelTransmitter.HeaderLength && bufferIndex + packetBytes.Length > _buffer.Length) {
@@ -105,7 +105,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
                 }
 
                 // add packet to buffer
-                Buffer.BlockCopy(packetBytes, 0, _buffer, bufferIndex, packetBytes.Length);
+                packetBytes.Span.CopyTo(_buffer.AsSpan(bufferIndex));
                 bufferIndex += packetBytes.Length;
             }
 
@@ -140,7 +140,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
 
             while (bufferIndex < buffer.Length) {
                 var ipPacket = PacketUtil.ReadNextPacket(buffer, ref bufferIndex);
-                Traffic.Received += ipPacket.TotalLength;
+                Traffic.Received += ipPacket.PacketLength;
                 _packetReceivedEventArgs.IpPackets.Add(ipPacket);
             }
 

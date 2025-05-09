@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using System.Net.Sockets;
 using VpnHood.Core.Packets;
 
@@ -16,8 +16,8 @@ public interface IVpnAdapter : IDisposable
     bool ProtectSocket(Socket socket, IPAddress ipAddress);
     Task Start(VpnAdapterOptions options, CancellationToken cancellationToken);
     void Stop();
-    void SendPacket(IPPacket ipPacket);
-    void SendPackets(IList<IPPacket> ipPackets);
-    IPAddress? GetPrimaryAdapterAddress(IPVersion ipVersion);
-    bool IsIpVersionSupported(IPVersion ipVersion);
+    void SendPacket(IpPacket ipPacket);
+    void SendPackets(IList<IpPacket> ipPackets);
+    IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion);
+    bool IsIpVersionSupported(IpVersion ipVersion);
 }

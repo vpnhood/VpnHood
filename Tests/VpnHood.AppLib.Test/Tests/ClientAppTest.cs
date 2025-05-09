@@ -173,7 +173,7 @@ public class ClientAppTest : TestAppBase
     [TestMethod]
     public async Task IpFilters()
     {
-        var testPing = false; //todo (not supported yet)
+        var testPing = false; //Ping can not be split
         var device = TestHelper.CreateDevice();
 
         // Create Server

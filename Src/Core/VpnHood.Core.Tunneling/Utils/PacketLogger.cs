@@ -1,15 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
-using PacketDotNet;
-using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Logging;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 // ReSharper disable UnusedMember.Global
 namespace VpnHood.Core.Tunneling.Utils;
 
 public static class PacketLogger
 {
-    public static void LogPackets(IList<IPPacket> ipPackets, string operation)
+    public static void LogPackets(IList<IpPacket> ipPackets, string operation)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
@@ -18,40 +16,40 @@ public static class PacketLogger
         }
     }
 
-    public static void LogPacket(IPPacket ipPacket, string message, LogLevel logLevel = LogLevel.Trace,
+    public static void LogPacket(IpPacket ipPacket, string message, LogLevel logLevel = LogLevel.Trace,
         Exception? exception = null)
     {
         try {
             if (!VhLogger.IsDiagnoseMode) return;
             var eventId = GeneralEventId.Packet;
-            var packetPayload = Array.Empty<byte>();
+            var packetPayload = new Memory<byte>();
 
             switch (ipPacket.Protocol) {
-                case ProtocolType.Icmp: {
+                case IpProtocol.IcmpV4: {
                         eventId = GeneralEventId.Ping;
                         var icmpPacket = ipPacket.ExtractIcmpV4();
-                        packetPayload = icmpPacket.PayloadData ?? [];
+                        packetPayload = icmpPacket.Payload;
                         break;
                     }
 
-                case ProtocolType.IcmpV6: {
+                case IpProtocol.IcmpV6: {
                         eventId = GeneralEventId.Ping;
                         var icmpPacket = ipPacket.ExtractIcmpV6();
-                        packetPayload = icmpPacket.PayloadData ?? [];
+                        packetPayload = icmpPacket.Payload;
                         break;
                     }
 
-                case ProtocolType.Udp: {
+                case IpProtocol.Udp: {
                         eventId = GeneralEventId.Udp;
                         var udpPacket = ipPacket.ExtractUdp();
-                        packetPayload = udpPacket.PayloadData ?? [];
+                        packetPayload = udpPacket.Payload;
                         break;
                     }
 
-                case ProtocolType.Tcp: {
+                case IpProtocol.Tcp: {
                         eventId = GeneralEventId.Tcp;
                         var tcpPacket = ipPacket.ExtractTcp();
-                        packetPayload = tcpPacket.PayloadData ?? [];
+                        packetPayload = tcpPacket.Payload;
                         break;
                     }
             }
@@ -59,7 +57,7 @@ public static class PacketLogger
             VhLogger.Instance.Log(logLevel, eventId, exception,
                 message + " Packet: {Packet}, PayloadLength: {PayloadLength}, Payload: {Payload}",
                 Format(ipPacket), packetPayload.Length,
-                BitConverter.ToString(packetPayload, 0, Math.Min(10, packetPayload.Length)));
+                BitConverter.ToString(packetPayload.ToArray(), 0, Math.Min(10, packetPayload.Length)));
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.Packet,
@@ -67,8 +65,8 @@ public static class PacketLogger
                 Format(ipPacket), message, exception);
         }
     }
-    public static string Format(IPPacket ipPacket)
+    public static string Format(IpPacket ipPacket)
     {
-        return VhLogger.FormatIpPacket(ipPacket.ToString()!);
+        return VhLogger.FormatIpPacket(ipPacket.ToString());
     }
 }

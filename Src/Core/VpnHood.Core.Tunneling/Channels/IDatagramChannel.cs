@@ -1,4 +1,4 @@
-﻿using PacketDotNet;
+﻿using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Packets;
 
 namespace VpnHood.Core.Tunneling.Channels;
@@ -9,8 +9,8 @@ public interface IDatagramChannel : IChannel
     bool IsStream { get; }
 
     // it is not thread-safe
-    Task SendPacketAsync(IList<IPPacket> packets);
+    Task SendPacketAsync(IList<IpPacket> packets);
 
     // it is not thread-safe
-    Task SendPacketAsync(IPPacket packet);
+    Task SendPacketAsync(IpPacket packet);
 }

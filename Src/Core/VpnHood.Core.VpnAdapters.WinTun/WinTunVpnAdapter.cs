@@ -1,10 +1,11 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.IO.Compression;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -21,6 +22,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     private IntPtr _tunAdapter;
     private IntPtr _tunSession;
     private IntPtr _readEvent;
+    private readonly byte[] _writeBuffer = new byte[0xFFFF];
+    private readonly byte[] _readBuffer = new byte[0xFFFF];
 
     public const int MinRingCapacity = 0x20000; // 128kiB
     public const int MaxRingCapacity = 0x4000000; // 64MiB
@@ -244,7 +247,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     }
 
 
-    protected override IPPacket? ReadPacket(int mtu)
+    protected override IpPacket? ReadPacket(int mtu)
     {
         const int maxErrorCount = 10;
         var errorCount = 0;
@@ -254,10 +257,10 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
             if (tunReceivePacket != IntPtr.Zero) {
                 try {
                     // read the packet
-                    var buffer = new byte[size];
-                    Marshal.Copy(tunReceivePacket, buffer, 0, size);
-                    var packet = Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>();
-                    if (packet.SourceAddress.Equals(PrimaryAdapterIpV4) || packet.SourceAddress.Equals(PrimaryAdapterIpV6))
+                    Marshal.Copy(tunReceivePacket, _readBuffer, 0, size);
+                    var packet = PacketBuilder.Parse(_readBuffer.AsSpan(0, size));
+                    if (packet.SourceAddressSpan.SequenceEqual(PrimaryAdapterIpV4.GetAddressBytes()) || 
+                        packet.SourceAddress.Equals(PrimaryAdapterIpV6))
                         continue; // skip the packet
                     return packet;
                 }
@@ -295,9 +298,9 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         Thread.Sleep(1);
     }
 
-    protected override bool WritePacket(IPPacket ipPacket)
+    protected override bool WritePacket(IpPacket ipPacket)
     {
-        var packetBytes = ipPacket.Bytes;
+        var packetBytes = ipPacket.Buffer;
 
         // Allocate memory for the packet inside WinTun ring buffer
         var packetMemory = WinTunApi.WintunAllocateSendPacket(_tunSession, packetBytes.Length); // thread-safe
@@ -306,7 +309,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
 
         // Copy the raw packet data into WinTun memory
-        Marshal.Copy(packetBytes, 0, packetMemory, packetBytes.Length);
+        ipPacket.Buffer.Span.CopyTo(_writeBuffer);
+        Marshal.Copy(_writeBuffer, 0, packetMemory, packetBytes.Length);
 
         // Send the packet through WinTun
         WinTunApi.WintunSendPacket(_tunSession, packetMemory); // thread-safe

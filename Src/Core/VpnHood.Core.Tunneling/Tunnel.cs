@@ -1,6 +1,6 @@
 ﻿using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Jobs;
@@ -25,7 +25,7 @@ public class Tunnel : IJob, IAsyncDisposable
     private readonly Traffic _trafficUsage = new();
     private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
     private readonly TimeSpan _speedTestThreshold = TimeSpan.FromSeconds(2);
-    private readonly Channel<IPPacket> _sendChannel;
+    private readonly Channel<IpPacket> _sendChannel;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
     public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
@@ -40,7 +40,7 @@ public class Tunnel : IJob, IAsyncDisposable
         options ??= new TunnelOptions();
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _speedMonitorTimer = new Timer(_ => UpdateSpeed(), null, TimeSpan.Zero, _speedTestThreshold);
-        _sendChannel = Channel.CreateBounded<IPPacket>(new BoundedChannelOptions(options.MaxQueueLength) {
+        _sendChannel = Channel.CreateBounded<IpPacket>(new BoundedChannelOptions(options.MaxQueueLength) {
             SingleReader = true,
             SingleWriter = false,
             FullMode = BoundedChannelFullMode.DropWrite
@@ -240,7 +240,7 @@ public class Tunnel : IJob, IAsyncDisposable
 
     private async Task SendEnqueuedPacketTask(int maxQueueLength)
     {
-        var ipPackets = new List<IPPacket>(maxQueueLength);
+        var ipPackets = new List<IpPacket>(maxQueueLength);
         while (!_disposed) {
             // wait for new packets
             await _sendChannel.Reader.WaitToReadAsync(_cancellationTokenSource.Token);
@@ -257,13 +257,13 @@ public class Tunnel : IJob, IAsyncDisposable
 
 
     // Usually server use this method to send packets to the client
-    public void SendPacketEnqueue(IPPacket ipPacket)
+    public void SendPacketEnqueue(IpPacket ipPacket)
     {
         _sendChannel.Writer.TryWrite(ipPacket);
     }
 
     // it is not thread-safe
-    public async Task SendPacketsAsync(IList<IPPacket> ipPackets)
+    public async Task SendPacketsAsync(IList<IpPacket> ipPackets)
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(Tunnel));
@@ -303,7 +303,7 @@ public class Tunnel : IJob, IAsyncDisposable
         }
     }
 
-    private void CheckMtu(IList<IPPacket> ipPackets)
+    private void CheckMtu(IList<IpPacket> ipPackets)
     {
         // use RemoteMtu if the channel is streamed
         var mtu = IsUdpMode ? Mtu : RemoteMtu;
@@ -311,21 +311,21 @@ public class Tunnel : IJob, IAsyncDisposable
         // check is there any packet larger than MTU
         var found = false;
         for (var i = 0; i < ipPackets.Count && !found; i++)
-            found = ipPackets[i].TotalPacketLength > mtu;
+            found = ipPackets[i].PacketLength > mtu;
 
         // no need to check if there is no large packet
         if (!found)
             return;
 
         // remove large packets and send PacketTooBig replies
-        var bigPackets = ipPackets.Where(x => x.TotalPacketLength > mtu).ToArray();
+        var bigPackets = ipPackets.Where(x => x.PacketLength > mtu).ToArray();
         foreach (var bigPacket in bigPackets) {
             try {
                 ipPackets.Remove(bigPacket);
                 VhLogger.Instance.LogWarning(
                     "Packet dropped! Packet is too big. " +
                     "MTU: {Mtu}, PacketLength: {PacketLength} Packet: {Packet}",
-                    mtu, bigPacket.TotalPacketLength, PacketLogger.Format(bigPacket));
+                    mtu, bigPacket.PacketLength, PacketLogger.Format(bigPacket));
 
                 var replyPacket = PacketBuilder.BuildIcmpPacketTooBigReply(bigPacket, (ushort)mtu);
                 PacketReceived?.Invoke(this, new PacketReceivedEventArgs([replyPacket]));
@@ -337,7 +337,7 @@ public class Tunnel : IJob, IAsyncDisposable
         }
     }
 
-    private IDatagramChannel? FindChannelForPackets(IList<IPPacket> ipPackets)
+    private IDatagramChannel? FindChannelForPackets(IList<IpPacket> ipPackets)
     {
         IDatagramChannel? channel = null;
 
@@ -352,7 +352,7 @@ public class Tunnel : IJob, IAsyncDisposable
         return channel;
     }
 
-    private IDatagramChannel FindChannelForPacket(IPPacket ipPacket)
+    private IDatagramChannel FindChannelForPacket(IpPacket ipPacket)
     {
         // remove channel if it is not connected
         var channel = FindChannelForPacketInternal(ipPacket);
@@ -364,7 +364,7 @@ public class Tunnel : IJob, IAsyncDisposable
         return channel;
     }
 
-    private IDatagramChannel FindChannelForPacketInternal(IPPacket ipPacket)
+    private IDatagramChannel FindChannelForPacketInternal(IpPacket ipPacket)
     {
         // send packets directly if there is only one channel
         lock (_datagramChannels) {
@@ -374,10 +374,10 @@ public class Tunnel : IJob, IAsyncDisposable
                 1 => _datagramChannels[0],
                 _ => ipPacket.Protocol switch {
                     // select channel by tcp source port
-                    ProtocolType.Tcp => _datagramChannels[ipPacket.ExtractTcp().SourcePort % channelCount],
+                    IpProtocol.Tcp => _datagramChannels[ipPacket.ExtractTcp().SourcePort % channelCount],
 
                     // select channel by udp source port
-                    ProtocolType.Udp => _datagramChannels[ipPacket.ExtractUdp().SourcePort % _datagramChannels.Count],
+                    IpProtocol.Udp => _datagramChannels[ipPacket.ExtractUdp().SourcePort % _datagramChannels.Count],
 
                     // select the first channel for other protocols
                     _ => _datagramChannels[0]

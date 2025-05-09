@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Server;
 
@@ -9,10 +9,10 @@ namespace VpnHood.Test.Providers;
 
 public class TestNetFilter : NetFilter
 {
-    private ConcurrentDictionary<Tuple<ProtocolType, IPEndPoint>, IPEndPoint> NetMap { get; } = new();
-    private ConcurrentDictionary<Tuple<ProtocolType, IPEndPoint>, IPEndPoint> NetMapR { get; } = new();
+    private ConcurrentDictionary<Tuple<IpProtocol, IPEndPoint>, IPEndPoint> NetMap { get; } = new();
+    private ConcurrentDictionary<Tuple<IpProtocol, IPEndPoint>, IPEndPoint> NetMapR { get; } = new();
 
-    public void Init(Tuple<ProtocolType, IPEndPoint, IPEndPoint>[] items)
+    public void Init(Tuple<IpProtocol, IPEndPoint, IPEndPoint>[] items)
     {
         NetMap.Clear();
         NetMapR.Clear();
@@ -23,7 +23,7 @@ public class TestNetFilter : NetFilter
         }
     }
 
-    public override IPEndPoint? ProcessRequest(ProtocolType protocol, IPEndPoint requestEndPoint)
+    public override IPEndPoint? ProcessRequest(IpProtocol protocol, IPEndPoint requestEndPoint)
     {
         var ipEndPoint = base.ProcessRequest(protocol, requestEndPoint);
         if (ipEndPoint == null)
@@ -32,14 +32,14 @@ public class TestNetFilter : NetFilter
         return NetMap.GetValueOrDefault(Tuple.Create(protocol, requestEndPoint), requestEndPoint);
     }
 
-    public override IPPacket? ProcessRequest(IPPacket ipPacket)
+    public override IpPacket? ProcessRequest(IpPacket ipPacket)
     {
         var result = base.ProcessRequest(ipPacket);
         if (result == null) return null;
         ipPacket = result;
 
         switch (ipPacket.Protocol) {
-            case ProtocolType.Udp: {
+            case IpProtocol.Udp: {
                 var udpPacket = ipPacket.ExtractUdp();
                 var newEndPoint = ProcessRequest(ipPacket.Protocol,
                     new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort));
@@ -49,7 +49,7 @@ public class TestNetFilter : NetFilter
                 ipPacket.UpdateAllChecksums();
                 return ipPacket;
             }
-            case ProtocolType.Tcp: {
+            case IpProtocol.Tcp: {
                 var tcpPacket = ipPacket.ExtractTcp();
                 var newEndPoint = ProcessRequest(ipPacket.Protocol,
                     new IPEndPoint(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
@@ -59,7 +59,7 @@ public class TestNetFilter : NetFilter
                 ipPacket.UpdateAllChecksums();
                 return ipPacket;
             }
-            case ProtocolType.Icmp or ProtocolType.IcmpV6: {
+            case IpProtocol.IcmpV4 or IpProtocol.IcmpV6: {
                 var newEndPoint = ProcessRequest(ipPacket.Protocol, new IPEndPoint(ipPacket.DestinationAddress, 0));
                 if (newEndPoint == null) return null;
                 ipPacket.DestinationAddress = newEndPoint.Address;
@@ -71,10 +71,10 @@ public class TestNetFilter : NetFilter
         }
     }
 
-    public override IPPacket ProcessReply(IPPacket ipPacket)
+    public override IpPacket ProcessReply(IpPacket ipPacket)
     {
         switch (ipPacket.Protocol) {
-            case ProtocolType.Udp: {
+            case IpProtocol.Udp: {
                 var udpPacket = ipPacket.ExtractUdp();
                 if (NetMapR.TryGetValue(
                         Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort)),
@@ -87,7 +87,7 @@ public class TestNetFilter : NetFilter
                 break;
             }
 
-            case ProtocolType.Tcp: {
+            case IpProtocol.Tcp: {
                 var tcpPacket = ipPacket.ExtractTcp();
                 if (NetMapR.TryGetValue(
                         Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, tcpPacket.SourcePort)),
@@ -100,7 +100,7 @@ public class TestNetFilter : NetFilter
                 break;
             }
 
-            case ProtocolType.Icmp or ProtocolType.IcmpV6:
+            case IpProtocol.IcmpV4 or IpProtocol.IcmpV6:
                 if (NetMapR.TryGetValue(
                         Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, 0)),
                         out var icmpEndPoint)) {

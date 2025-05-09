@@ -1,14 +1,12 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using PacketDotNet;
-using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Sockets;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Tunneling;
 
@@ -56,12 +54,12 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
         JobRunner.Default.Add(this);
     }
 
-    public Task SendPacket(IPPacket ipPacket)
+    public Task SendPacket(IpPacket ipPacket)
     {
         // send packet via proxy
         var udpPacket = ipPacket.ExtractUdp();
-        bool? noFragment = ipPacket.Protocol == ProtocolType.IPv6 && ipPacket is IPv4Packet ipV4Packet
-            ? (ipV4Packet.FragmentFlags & 0x2) != 0
+        bool? noFragment = ipPacket.Protocol == IpProtocol.IPv4 && ipPacket is IpV4Packet ipV4Packet
+            ? ipV4Packet.DontFragment
             : null;
 
         var sourceEndPoint = new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort);
@@ -79,7 +77,7 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
                 return new TimeoutItem<bool>(true);
             });
             if (isNewRemoteEndPoint)
-                _packetProxyReceiver.OnNewRemoteEndPoint(ProtocolType.Udp, destinationEndPoint);
+                _packetProxyReceiver.OnNewRemoteEndPoint(IpProtocol.Udp, destinationEndPoint);
 
             // Find or create a worker that does not use the RemoteEndPoint
             lock (_udpProxies) {
@@ -108,13 +106,13 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
 
         // Raise new endpoint
         if (isNewLocalEndPoint || isNewRemoteEndPoint)
-            _packetProxyReceiver.OnNewEndPoint(ProtocolType.Udp,
+            _packetProxyReceiver.OnNewEndPoint(IpProtocol.Udp,
                 localEndPoint: udpProxy.LocalEndPoint,
                 remoteEndPoint: destinationEndPoint,
                 isNewLocalEndPoint: isNewLocalEndPoint,
                 isNewRemoteEndPoint: isNewRemoteEndPoint);
 
-        var dgram = udpPacket.PayloadData ?? [];
+        var dgram = udpPacket.Payload.ToArray(); //todo: use Memory later
         return udpProxy.SendPacket(destinationEndPoint, dgram, noFragment);
     }
 

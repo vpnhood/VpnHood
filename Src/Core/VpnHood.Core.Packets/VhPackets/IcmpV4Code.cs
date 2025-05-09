@@ -2,6 +2,8 @@
 
 public enum IcmpV4Code : byte
 {
+    EchoReply = 0,
+
     // Type 3 - Destination Unreachable
     NetUnreachable = 0,
     HostUnreachable = 1,

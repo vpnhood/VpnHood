@@ -3,24 +3,24 @@ using System.Buffers.Binary;
 
 namespace VpnHood.Core.Packets.VhPackets;
 
-public class VhIpV4Packet : VhIpPacket
+public class IpV4Packet : IpPacket
 {
     private bool _disposed;
     private readonly IMemoryOwner<byte>? _memoryOwner;
 
-    public VhIpV4Packet(IMemoryOwner<byte> memoryOwner, int packetLength)
+    public IpV4Packet(IMemoryOwner<byte> memoryOwner, int packetLength)
         : this(memoryOwner.Memory[..packetLength])
     {
         _memoryOwner = memoryOwner;
     }
 
-    public VhIpV4Packet(IMemoryOwner<byte> memoryOwner, int packetLength, VhIpProtocol protocol, int optionsLength) 
+    public IpV4Packet(IMemoryOwner<byte> memoryOwner, int packetLength, IpProtocol protocol, int optionsLength) 
         : this(memoryOwner.Memory[..packetLength], protocol, optionsLength)
     {
         _memoryOwner = memoryOwner;
     }
 
-    public VhIpV4Packet(Memory<byte> buffer, VhIpProtocol protocol, int optionsLength) 
+    public IpV4Packet(Memory<byte> buffer, IpProtocol protocol, int optionsLength) 
         : base(buffer)
     {
         // validate buffer length
@@ -38,7 +38,7 @@ public class VhIpV4Packet : VhIpPacket
             throw new ArgumentOutOfRangeException(nameof(optionsLength), "Options length must be a multiple of 4 bytes.");
 
         // set version
-        Version = VhIpVersion.IPv4;
+        Version = IpVersion.IPv4;
 
         // set protocol
         Span[9] = (byte)protocol;
@@ -52,7 +52,7 @@ public class VhIpV4Packet : VhIpPacket
     }
 
 
-    public VhIpV4Packet(Memory<byte> buffer) 
+    public IpV4Packet(Memory<byte> buffer) 
         : base(buffer)
     {
         // Check if the buffer is large enough for the IP header
@@ -82,7 +82,7 @@ public class VhIpV4Packet : VhIpPacket
 
     private Span<byte> Span => Buffer.Span;
     public override Memory<byte> Header => Buffer[..(InternetHeaderLength * 4)];
-    public override VhIpProtocol Protocol => (VhIpProtocol)Span[9];
+    public override IpProtocol Protocol => (IpProtocol)Span[9];
     public int InternetHeaderLength => Span[0] & 0x0F;
 
 
@@ -170,7 +170,7 @@ public class VhIpV4Packet : VhIpPacket
         return originalChecksum == calculated;
     }
 
-    public void UpdateHeaderChecksum(VhIpPacket ipPacket)
+    public void UpdateHeaderChecksum(IpPacket ipPacket)
     {
         Span[10] = 0;
         Span[11] = 0;
@@ -204,5 +204,5 @@ public class VhIpV4Packet : VhIpPacket
         _disposed = true;
     }
 
-    ~VhIpV4Packet() => Dispose(false);
+    ~IpV4Packet() => Dispose(false);
 }

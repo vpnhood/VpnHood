@@ -2,7 +2,7 @@
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Logging;
@@ -92,12 +92,10 @@ internal class UdpProxyEx : ITimeoutItem
             }
 
             // create packet for audience
-            var ipPacket = PacketBuilder.BuildIpPacket(udpResult.RemoteEndPoint.Address, sourceEndPoint.Value.Address);
-            var udpPacket = new UdpPacket((ushort)udpResult.RemoteEndPoint.Port, (ushort)sourceEndPoint.Value.Port) {
-                PayloadData = udpResult.Buffer
-            };
+            var ipPacket = PacketBuilder.BuildUdp(
+                udpResult.RemoteEndPoint.Address.GetAddressBytes(), sourceEndPoint.Value.Address.GetAddressBytes(),
+                udpResult.RemoteEndPoint.Port, sourceEndPoint.Value.Port, udpResult.Buffer);
 
-            ipPacket.PayloadPacket = udpPacket;
             ipPacket.UpdateAllChecksums();
 
             // send packet to audience

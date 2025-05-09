@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Jobs;
@@ -18,7 +18,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private bool _isCloseSent;
     private bool _isCloseReceived;
-    private readonly IPPacket[] _sendingPackets = [null!];
+    private readonly IpPacket[] _sendingPackets = [null!];
 
     public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public JobSection JobSection { get; } = new();
@@ -72,20 +72,20 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     }
 
     // This is not thread-safe
-    public Task SendPacketAsync(IPPacket packet)
+    public Task SendPacketAsync(IpPacket packet)
     {
         _sendingPackets[0] = packet;
         return SendPacketInternalAsync(_sendingPackets);
     }
 
     // This is not thread-safe
-    public Task SendPacketAsync(IList<IPPacket> ipPackets)
+    public Task SendPacketAsync(IList<IpPacket> ipPackets)
     {
         return SendPacketInternalAsync(ipPackets);
     }
 
     // This is not thread-safe
-    private async Task SendPacketInternalAsync(IList<IPPacket> ipPackets)
+    private async Task SendPacketInternalAsync(IList<IpPacket> ipPackets)
     {
         if (_disposed) throw new ObjectDisposedException(VhLogger.FormatType(this));
         var cancellationToken = _cancellationTokenSource.Token;
@@ -102,7 +102,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
             var ipPacket = ipPackets[i];
-            var packetBytes = ipPacket.Bytes;
+            var packetBytes = ipPacket.Buffer;
 
             // flush buffer if this packet does not fit
             if (bufferIndex > 0 && bufferIndex + packetBytes.Length > buffer.Length) {
@@ -118,7 +118,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                 Traffic.Sent += packetBytes.Length;
             }
             else {
-                Buffer.BlockCopy(packetBytes, 0, buffer, bufferIndex, packetBytes.Length);
+                packetBytes.Span.CopyTo(buffer.AsSpan(bufferIndex));
                 bufferIndex += packetBytes.Length;
             }
         }
@@ -144,7 +144,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                 break;
 
             LastActivityTime = FastDateTime.Now;
-            Traffic.Received += ipPackets.Sum(x => x.TotalLength);
+            Traffic.Received += ipPackets.Sum(x => x.PacketLength);
 
             // check datagram message
             ProcessMessage(ipPackets);
@@ -164,10 +164,10 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
     }
 
-    private void ProcessMessage(IList<IPPacket> ipPackets)
+    private void ProcessMessage(IList<IpPacket> ipPackets)
     {
         // check datagram message
-        List<IPPacket>? processedPackets = null;
+        List<IpPacket>? processedPackets = null;
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
             var ipPacket = ipPackets[i];
@@ -184,7 +184,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
             }
     }
 
-    private bool ProcessMessage(IPPacket ipPacket)
+    private bool ProcessMessage(IpPacket ipPacket)
     {
         if (!DatagramMessageHandler.IsDatagramMessage(ipPacket))
             return false;

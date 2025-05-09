@@ -2,12 +2,12 @@
 
 namespace VpnHood.Core.Packets.VhPackets;
 
-public class VhIcmpV4Packet : IChecksumPayloadPacket
+public class IcmpV4Packet : IChecksumPayloadPacket
 {
     private readonly Memory<byte> _buffer;
     public Memory<byte> Buffer => _buffer;
 
-    public VhIcmpV4Packet(Memory<byte> buffer, bool building)
+    public IcmpV4Packet(Memory<byte> buffer, bool building)
     {
         // Base ICMPv4 header requires at least 8 bytes, but Echo messages require 8 bytes minimum
         if (buffer.Length < 8)

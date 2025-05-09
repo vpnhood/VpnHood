@@ -33,14 +33,13 @@
 			<PackagePath></PackagePath>
 		</None>
 	</ItemGroup>
-	
-			<ItemGroup>
-		<PackageReference Include="PacketDotNet" Version="1.4.7" />
-		<PackageReference Include="System.Text.Json" Version="9.0.4" />
-	</ItemGroup>	
 
 	<ItemGroup>
-	  <ProjectReference Include="..\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
+		<PackageReference Include="System.Text.Json" Version="9.0.4" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
 	</ItemGroup>
 
 </Project>

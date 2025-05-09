@@ -2,12 +2,12 @@
 
 namespace VpnHood.Core.Packets.VhPackets;
 
-public class VhIcmpV6Packet : IChecksumPayloadPacket
+public class IcmpV6Packet : IChecksumPayloadPacket
 {
     private readonly Memory<byte> _buffer;
     public Memory<byte> Buffer => _buffer;
 
-    public VhIcmpV6Packet(Memory<byte> buffer, bool building)
+    public IcmpV6Packet(Memory<byte> buffer, bool building)
     {
         // Base ICMPv6 header requires at least 8 bytes, but Echo messages require 12 bytes minimum
         if (buffer.Length < 8)
@@ -86,7 +86,7 @@ public class VhIcmpV6Packet : IChecksumPayloadPacket
         Checksum = 0;
 
         try {
-            return PacketUtil.ComputeChecksum(sourceAddress, destinationAddress, (byte)VhIpProtocol.IcmpV6, _buffer.Span);
+            return PacketUtil.ComputeChecksum(sourceAddress, destinationAddress, (byte)IpProtocol.IcmpV6, _buffer.Span);
         }
         finally {
             Checksum = orgChecksum;

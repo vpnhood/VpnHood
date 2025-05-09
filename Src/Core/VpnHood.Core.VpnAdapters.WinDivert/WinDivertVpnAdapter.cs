@@ -3,15 +3,13 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets.VhPackets;
 using SharpPcap;
 using SharpPcap.WinDivert;
-using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.VpnAdapters.WinDivert;
 
@@ -20,7 +18,6 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 {
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr LoadLibrary(string lpFileName);
-
     private WinDivertDevice? _device;
     private WinDivertHeader? _lastCaptureHeader;
     private readonly List<IpNetwork> _includeIpNetworks = [];
@@ -153,7 +150,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return Task.CompletedTask;
     }
 
-    protected override IPPacket? ReadPacket(int mtu)
+    protected override IpPacket? ReadPacket(int mtu)
     {
         if (_device == null)
             throw new InvalidOperationException("Device is not initialized.");
@@ -164,8 +161,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
         _lastCaptureHeader = (WinDivertHeader)packetCapture.Header;
         var rawPacket = packetCapture.GetPacket();
-        var packet = Packet.ParsePacket(rawPacket.LinkLayerType, rawPacket.Data);
-        var ipPacket = packet.Extract<IPPacket>();
+        var ipPacket = PacketBuilder.Attach(rawPacket.Data);
 
         ProcessReadPacket(ipPacket);
         return ipPacket;
@@ -187,7 +183,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return true;
     }
 
-    protected virtual void ProcessReadPacket(IPPacket ipPacket)
+    protected virtual void ProcessReadPacket(IpPacket ipPacket)
     {
         // simulate adapter network
         SimulateAdapterNetwork(ipPacket, true);
@@ -197,7 +193,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     }
 
 
-    protected override bool WritePacket(IPPacket ipPacket)
+    protected override bool WritePacket(IpPacket ipPacket)
     {
 #if DEBUG
         if (GetIpNetwork(ipPacket.Version)?.Contains(ipPacket.DestinationAddress) is null or false)
@@ -215,7 +211,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return true;
     }
 
-    protected void WritePacketToAdapter(IPPacket ipPacket, bool outbound)
+    protected void WritePacketToAdapter(IpPacket ipPacket, bool outbound)
     {
         if (_lastCaptureHeader == null)
             throw new InvalidOperationException("Could not send any data without receiving a packet.");
@@ -225,7 +221,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
         // send by a device
         _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
-        _device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
+        _device.SendPacket(ipPacket.Buffer.Span, _lastCaptureHeader);
     }
 
     protected override void WaitForTunRead()
@@ -238,13 +234,13 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         // It is blocking, we don't need to block here
     }
 
-    private void SimulateAdapterNetwork(IPPacket ipPacket, bool read)
+    private void SimulateAdapterNetwork(IpPacket ipPacket, bool read)
     {
         if (read) {
             var adapterIp = GetIpNetwork(ipPacket.Version)?.Prefix;
             if (adapterIp == null) {
                 VhLogger.Instance.LogDebug("The arrival packet is not supported : {Packet}",
-                    VhLogger.FormatIpPacket(ipPacket.ToString()!));
+                    VhLogger.FormatIpPacket(ipPacket.ToString()));
                 return;
             }
 
@@ -258,16 +254,16 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
             ipPacket.DestinationAddress = primaryAdapterIp;
         }
 
-        ipPacket.UpdateIpChecksum();
+        ipPacket.UpdateAllChecksums();
     }
 
-    private void SimulateDnsServers(IPPacket ipPacket, bool read)
+    private void SimulateDnsServers(IpPacket ipPacket, bool read)
     {
-        if (ipPacket.Protocol != ProtocolType.Udp || _dnsServers.Length == 0)
+        if (ipPacket.Protocol != IpProtocol.Udp || _dnsServers.Length == 0)
             return;
 
         var udpPacket = ipPacket.ExtractUdp();
-        var lastDnsServers = ipPacket.Version == IPVersion.IPv4 ? _lastDnsServersV4 : _lastDnsServersV6;
+        var lastDnsServers = ipPacket.Version == IpVersion.IPv4 ? _lastDnsServersV4 : _lastDnsServersV6;
 
         if (read) {
             // check if the packet is a dns query

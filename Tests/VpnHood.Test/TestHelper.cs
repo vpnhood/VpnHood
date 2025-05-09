@@ -8,6 +8,7 @@ using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
@@ -23,7 +24,6 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test;
 
@@ -52,20 +52,20 @@ public class TestHelper : IDisposable
         WebServer = TestWebServer.Create();
         NetFilter = new TestNetFilter();
         NetFilter.Init([
-            Tuple.Create(ProtocolType.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
-            Tuple.Create(ProtocolType.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
-            Tuple.Create(ProtocolType.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
-            Tuple.Create(ProtocolType.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
-            Tuple.Create(ProtocolType.Tcp, TestConstants.TcpRefusedEndPoint, WebServer.HttpsV4RefusedEndPoint1),
-            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
-            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
-            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
-            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
-            Tuple.Create(ProtocolType.Icmp, new IPEndPoint(TestConstants.PingV4Address1, 0),
+            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
+            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
+            Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
+            Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
+            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpRefusedEndPoint, WebServer.HttpsV4RefusedEndPoint1),
+            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
+            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
+            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
+            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
+            Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address1, 0),
                 IPEndPoint.Parse("127.0.0.1:0")),
-            Tuple.Create(ProtocolType.Icmp, new IPEndPoint(TestConstants.PingV4Address2, 0),
+            Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address2, 0),
                 IPEndPoint.Parse("127.0.0.2:0")),
-            Tuple.Create(ProtocolType.IcmpV6, new IPEndPoint(TestConstants.PingV6Address1, 0),
+            Tuple.Create(IpProtocol.IcmpV6, new IPEndPoint(TestConstants.PingV6Address1, 0),
                 IPEndPoint.Parse("[::1]:0"))
         ]);
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
@@ -109,7 +109,7 @@ public class TestHelper : IDisposable
 
         // fix TLS host; it may map by NetFilter.ProcessRequest
         if (IPEndPoint.TryParse(requestMessage.RequestUri!.Authority, out var ipEndPoint))
-            requestMessage.Headers.Host = NetFilter.ProcessRequest(ProtocolType.Tcp, ipEndPoint)!.Address.ToString();
+            requestMessage.Headers.Host = NetFilter.ProcessRequest(IpProtocol.Tcp, ipEndPoint)!.Address.ToString();
 
         var response = await httpClient.SendAsync(requestMessage, cancellationTokenSource.Token);
         var res = await response.Content.ReadAsStringAsync(cancellationTokenSource.Token);

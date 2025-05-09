@@ -33,7 +33,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     public const int MaxProtocolVersion = 8;
     public const int MinProtocolVersion = 4;
-    public int MinClientProtocolVersion { get; set; } = 7; 
+    public int MinClientProtocolVersion { get; set; } = 8; 
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
     public bool IsIpV6Supported { get; set; }
     public IpRange[]? NetFilterVpnAdapterIncludeIpRanges { get; set; }

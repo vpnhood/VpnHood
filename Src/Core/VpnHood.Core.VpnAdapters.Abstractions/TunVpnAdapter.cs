@@ -56,6 +56,7 @@ public abstract class TunVpnAdapter : IVpnAdapter
     public IpNetwork? AdapterIpNetworkV6 { get; private set; }
     public IPAddress? GatewayIpV4 { get; private set; }
     public IPAddress? GatewayIpV6 { get; private set; }
+    public bool IsIpVersionSupported(IPVersion ipVersion) => GetPrimaryAdapterAddress(ipVersion) != null;
     public bool Started { get; private set; }
 
     private readonly object _stopLock = new();
@@ -77,16 +78,16 @@ public abstract class TunVpnAdapter : IVpnAdapter
         PrimaryAdapterIpV6 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
     }
 
-    public IPAddress? GetPrimaryAdapterIp(IPVersion ipVersion)
+    public IPAddress? GetPrimaryAdapterAddress(IPVersion ipVersion)
     {
         return ipVersion == IPVersion.IPv4 ? PrimaryAdapterIpV4 : PrimaryAdapterIpV6;
     }
 
-    public IPAddress? GetPrimaryAdapterIp(AddressFamily addressFamily)
+    public IPAddress? GetPrimaryAdapterAddress(AddressFamily addressFamily)
     {
         return addressFamily switch {
-            AddressFamily.InterNetwork => GetPrimaryAdapterIp(IPVersion.IPv4),
-            AddressFamily.InterNetworkV6 => GetPrimaryAdapterIp(IPVersion.IPv6),
+            AddressFamily.InterNetwork => GetPrimaryAdapterAddress(IPVersion.IPv4),
+            AddressFamily.InterNetworkV6 => GetPrimaryAdapterAddress(IPVersion.IPv6),
             _ => throw new NotSupportedException("Address family is not supported.")
         };
     }
@@ -304,7 +305,7 @@ public abstract class TunVpnAdapter : IVpnAdapter
             throw new InvalidOperationException("Could not protect an already bound socket.");
 
         // get the primary adapter IP
-        var primaryAdapterIp = GetPrimaryAdapterIp(socket.AddressFamily);
+        var primaryAdapterIp = GetPrimaryAdapterAddress(socket.AddressFamily);
         if (primaryAdapterIp == null) {
             BindToAny(socket);
             return false;
@@ -321,7 +322,7 @@ public abstract class TunVpnAdapter : IVpnAdapter
             throw new InvalidOperationException("Could not protect an already bound socket.");
 
         // get the primary adapter IP
-        var primaryAdapterIp = GetPrimaryAdapterIp(socket.AddressFamily);
+        var primaryAdapterIp = GetPrimaryAdapterAddress(socket.AddressFamily);
         if (primaryAdapterIp == null) {
             BindToAny(socket);
             return false;
@@ -345,7 +346,8 @@ public abstract class TunVpnAdapter : IVpnAdapter
         var remoteEndPoint = new IPEndPoint(ipAddress, 53);
 
         try {
-            using var udpClient = new UdpClient();
+            // IPv6 needs the addressFamily to be set
+            using var udpClient = new UdpClient(addressFamily);
             udpClient.Connect(remoteEndPoint);
             return (udpClient.Client.LocalEndPoint as IPEndPoint)?.Address;
         }

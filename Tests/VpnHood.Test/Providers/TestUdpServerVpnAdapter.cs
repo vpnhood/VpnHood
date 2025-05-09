@@ -57,6 +57,13 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyReceiver
         }
     }
 
+    public IPAddress GetPrimaryAdapterAddress(IPVersion ipVersion)
+    {
+        return ipVersion == IPVersion.IPv4 ? IPAddress.Loopback : IPAddress.IPv6Loopback;
+    }
+
+    public bool IsIpVersionSupported(IPVersion ipVersion) => true;
+
     public void OnPacketReceived(IPPacket ipPacket)
     {
         PacketReceived?.Invoke(this, new PacketReceivedEventArgs([ipPacket]));

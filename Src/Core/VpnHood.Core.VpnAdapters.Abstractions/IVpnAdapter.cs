@@ -18,4 +18,6 @@ public interface IVpnAdapter : IDisposable
     void Stop();
     void SendPacket(IPPacket ipPacket);
     void SendPackets(IList<IPPacket> ipPackets);
+    IPAddress? GetPrimaryAdapterAddress(IPVersion ipVersion);
+    bool IsIpVersionSupported(IPVersion ipVersion);
 }

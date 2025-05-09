@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text;
 
 namespace VpnHood.Core.Packets.VhPackets;
 
@@ -49,8 +50,14 @@ public abstract class VhIpPacket(Memory<byte> buffer) : IDisposable
 
     public override string ToString()
     {
-        return $"Packet: Src={SourceAddress}, Dst={DestinationAddress}, Proto={Protocol}, " +
-               $"TotalLength:{Buffer.Length}, PayloadLen={Payload.Length}";
+        var builder = new StringBuilder();
+        builder.Append($"Packet: Src={SourceAddress}, Dst={DestinationAddress}, Proto={Protocol}, ");
+        builder.Append($"TotalLength:{Buffer.Length}, PayloadLen={Payload.Length}");
+
+        if (PayloadPacket != null)
+            builder.Append($", PayloadPacket: {PayloadPacket.GetType().Name}, {PayloadPacket}");
+
+        return builder.ToString();
     }
 
     protected virtual void Dispose(bool disposing)

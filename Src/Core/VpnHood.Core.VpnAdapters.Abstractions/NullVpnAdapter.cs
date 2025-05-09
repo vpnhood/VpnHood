@@ -46,6 +46,16 @@ public class NullVpnAdapter : IVpnAdapter
         // nothing
     }
 
+    public IPAddress? GetPrimaryAdapterAddress(IPVersion ipVersion)
+    {
+            return ipVersion == IPVersion.IPv4 ? IPAddress.Loopback : IPAddress.IPv6Loopback;
+    }
+
+    public bool IsIpVersionSupported(IPVersion ipVersion)
+    {
+        return true;
+    }
+
     private bool _disposed;
     public void Dispose()
     {

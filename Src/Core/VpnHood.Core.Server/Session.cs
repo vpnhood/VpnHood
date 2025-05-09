@@ -122,7 +122,7 @@ public class Session : IAsyncDisposable
         SessionKey = sessionResponseEx.SessionKey ?? throw new InvalidOperationException(
             $"{nameof(sessionResponseEx)} does not have {nameof(sessionResponseEx.SessionKey)}!");
         Tunnel = new Tunnel(new TunnelOptions { MaxDatagramChannelCount = options.MaxDatagramChannelCountValue });
-        Tunnel.PacketReceived += Tunnel_OnPacketReceived;
+        Tunnel.PacketReceived += Tunnel_PacketReceived;
 
         // ReSharper disable once MergeIntoPattern
         if (options.NetScanLimit != null && options.NetScanTimeout != null)
@@ -194,11 +194,10 @@ public class Session : IAsyncDisposable
         return ipVersion == IPVersion.IPv4 ? _clientInternalIpV4 : _clientInternalIpV6;
     }
 
-    public void Proxy_OnPacketReceived(IPPacket ipPacket)
+    public void Proxy_PacketReceived(IPPacket ipPacket)
     {
         if (IsDisposed) return;
-        if (VhLogger.IsDiagnoseMode)
-            PacketLogger.LogPacket(ipPacket, "Delegating a packet to client.");
+        PacketLogger.LogPacket(ipPacket, "Delegating a packet to client...");
 
         ipPacket = _netFilter.ProcessReply(ipPacket);
 
@@ -217,7 +216,7 @@ public class Session : IAsyncDisposable
         Tunnel.SendPacketEnqueue(ipPacket);
     }
 
-    private void Tunnel_OnPacketReceived(object sender, PacketReceivedEventArgs e)
+    private void Tunnel_PacketReceived(object sender, PacketReceivedEventArgs e)
     {
         if (IsDisposed)
             return;
@@ -469,7 +468,7 @@ public class Session : IAsyncDisposable
         if (IsDisposed) return;
         DisposedTime = DateTime.UtcNow;
 
-        Tunnel.PacketReceived -= Tunnel_OnPacketReceived;
+        Tunnel.PacketReceived -= Tunnel_PacketReceived;
         await Task.WhenAll(Tunnel.DisposeAsync().AsTask(), _proxyManager.DisposeAsync().AsTask());
         _netScanExceptionReporter.Dispose();
         _maxTcpChannelExceptionReporter.Dispose();
@@ -499,12 +498,12 @@ public class Session : IAsyncDisposable
         public override void OnPacketReceived(IPPacket ipPacket)
         {
             if (session.IsDisposed) return;
-            session.Proxy_OnPacketReceived(ipPacket);
+            session.Proxy_PacketReceived(ipPacket);
         }
 
         public override Task SendPacket(IPPacket ipPacket)
         {
-            if (vpnAdapter != null) {
+            if (vpnAdapter?.IsIpVersionSupported(ipPacket.Version) == true) {
                 vpnAdapter.SendPacket(ipPacket);
                 return Task.CompletedTask;
             }

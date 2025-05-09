@@ -13,9 +13,6 @@ public class VhIcmpV6Packet : IChecksumPayloadPacket
         if (buffer.Length < 8)
             throw new ArgumentException("Buffer too small for ICMPv6 header.");
 
-        if (buffer.Length < 12 && (buffer.Span[0] == (byte)IcmpV6Type.EchoRequest || buffer.Span[0] == (byte)IcmpV6Type.EchoReply))
-            throw new ArgumentException("Buffer too small for ICMPv6 Echo message (requires at least 12 bytes).");
-
         if (buffer.Length > 0xFFFF)
             throw new ArgumentException("Buffer too large for ICMPv6 packet.");
 
@@ -51,11 +48,11 @@ public class VhIcmpV6Packet : IChecksumPayloadPacket
     /// - Throws if you attempt to set it on a non-Echo packet.
     /// </summary>
     public ushort Identifier {
-        get => IsEcho ? BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span.Slice(8, 2)) : (ushort)0;
+        get => IsEcho ? BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span.Slice(4, 2)) : (ushort)0;
         set {
             if (!IsEcho)
                 throw new InvalidOperationException("Identifier is only valid for Echo messages.");
-            BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span.Slice(8, 2), value);
+            BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span.Slice(4, 2), value);
         }
     }
 
@@ -65,15 +62,15 @@ public class VhIcmpV6Packet : IChecksumPayloadPacket
     /// - Throws if you attempt to set it on a non-Echo packet.
     /// </summary>
     public ushort SequenceNumber {
-        get => IsEcho ? BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span.Slice(10, 2)) : (ushort)0;
+        get => IsEcho ? BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span.Slice(6, 2)) : (ushort)0;
         set {
             if (!IsEcho)
                 throw new InvalidOperationException("SequenceNumber is only valid for Echo messages.");
-            BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span.Slice(10, 2), value);
+            BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span.Slice(6, 2), value);
         }
     }
 
-    public bool IsEcho => Type == IcmpV6Type.EchoRequest || Type == IcmpV6Type.EchoReply;
+    public bool IsEcho => Type is IcmpV6Type.EchoRequest or IcmpV6Type.EchoReply;
 
     public Memory<byte> Payload => _buffer[8..];
 

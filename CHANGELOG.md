@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: IPv6 ping
+
 # v6.0.702
 * Fix: Update url for VpnHoodConnect app
 

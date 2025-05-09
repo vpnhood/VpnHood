@@ -251,7 +251,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
             ipPacket.SourceAddress = adapterIp;
         }
         else {
-            var primaryAdapterIp = GetPrimaryAdapterIp(ipPacket.Version);
+            var primaryAdapterIp = GetPrimaryAdapterAddress(ipPacket.Version);
             if (primaryAdapterIp == null)
                 throw new InvalidOperationException("Could not send packet to inbound. there is no internal IP.");
 

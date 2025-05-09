@@ -1,10 +1,12 @@
-﻿using System.Net.NetworkInformation;
+﻿using System.Buffers.Binary;
+using System.Net.NetworkInformation;
 using PacketDotNet;
-using PacketDotNet.Utils;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
+using IcmpV6Type = PacketDotNet.IcmpV6Type;
 
 namespace VpnHood.Core.Tunneling;
 
@@ -81,30 +83,22 @@ public class PingProxy : ITimeoutItem
             throw new InvalidOperationException(
                 $"The icmp is not {IcmpV6Type.EchoRequest}! Packet: {PacketLogger.Format(ipPacket)}");
 
+        PacketLogger.LogPacket(ipPacket, "Delegating a ping to host...");
         var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, true);
         var pingData = icmpPacket.Bytes[8..];
         var pingReply = await _ping
             .SendPingAsync(ipPacket.DestinationAddress, (int)IcmpTimeout.TotalMilliseconds, pingData, pingOptions)
             .VhConfigureAwait();
 
-        // set ip addresses
-        ipPacket.DestinationAddress = ipPacket.SourceAddress;
-        ipPacket.SourceAddress = pingReply.Address;
+        // todo: change it by VhIpPacket
+        var identifier = BinaryPrimitives.ReadUInt16BigEndian(icmpPacket.Bytes.AsSpan().Slice(4, 2));
+        var sequenceNumber = BinaryPrimitives.ReadUInt16BigEndian(icmpPacket.Bytes.AsSpan().Slice(6, 2));
+        using var replyPacket = VhPacketBuilder.BuildIcmpV6EchoReply(
+            sourceAddress: ipPacket.DestinationAddress, destinationAddress: ipPacket.SourceAddress,
+            payload: pingReply.Buffer, identifier: identifier, sequenceNumber: sequenceNumber);
 
-        // IcmpV6 packet generation is not fully implemented by packetNet
-        // So create all packet in buffer
-        icmpPacket.Type = IcmpV6Type.EchoReply;
-        icmpPacket.Code = 0;
-        var buffer = new byte[pingReply.Buffer.Length + 8];
-        Array.Copy(icmpPacket.Bytes, 0, buffer, 0, 8);
-        Array.Copy(pingReply.Buffer, 0, buffer, 8, pingReply.Buffer.Length);
-        icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer), ipPacket);
-
-        // PacketDotNet: 1.4.7
-        // NOTE: this will not work and cause bad checksum. We need to call ipPacket.Extract 
-        // Also add ipPacket to IcmpV6Packet constructor instead setting ParentPacket or PayloadPacket
-        // icmpPacket.UpdateIcmpChecksum(); 
-        icmpPacket.UpdateCalculatedValues();
+        ipPacket = PacketBuilder.Parse(replyPacket.Buffer.ToArray()).Extract<IPv6Packet>();
+        PacketLogger.LogPacket(ipPacket, "Delegating a ping to client...");
         return ipPacket;
     }
 

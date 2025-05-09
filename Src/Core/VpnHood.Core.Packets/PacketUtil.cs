@@ -76,15 +76,22 @@ public static class PacketUtil
     public static ushort ComputeChecksum(ReadOnlySpan<byte> pseudoHeader, ReadOnlySpan<byte> data)
     {
         uint sum = 0;
-
         sum += ComputeSumWords(pseudoHeader);
         sum += ComputeSumWords(data);
 
+        // Fold into 16 bits until it fits
         while ((sum >> 16) != 0)
             sum = (sum & 0xFFFF) + (sum >> 16);
 
-        return (ushort)~sum;
+
+        // Invert and fix 0
+        var checksum = (ushort)(~sum & 0xFFFF);
+        if (checksum == 0)
+            checksum = 0xFFFF;
+
+        return checksum;
     }
+
 
     public static uint ComputeSumWords(ReadOnlySpan<byte> data)
     {
@@ -95,5 +102,4 @@ public static class PacketUtil
         }
         return sum;
     }
-
 }

@@ -104,6 +104,7 @@ public static class IpPacketExtensions
             case ProtocolType.IcmpV6:
                 var icmpV6Packet = ipPacket.ExtractIcmpV6();
                 // icmpV6Packet.UpdateIcmpChecksum(); // it has problem
+                icmpV6Packet.Checksum = 0;
                 icmpV6Packet.Checksum = PacketUtil.ComputeChecksum(
                     ipPacket.SourceAddress.GetAddressBytes(),
                     ipPacket.DestinationAddress.GetAddressBytes(),

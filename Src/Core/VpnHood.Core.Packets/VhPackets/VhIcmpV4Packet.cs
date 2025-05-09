@@ -70,7 +70,7 @@ public class VhIcmpV4Packet : IChecksumPayloadPacket
         }
     }
 
-    public bool IsEcho => Type == IcmpV4Type.EchoRequest || Type == IcmpV4Type.EchoReply;
+    public bool IsEcho => Type is IcmpV4Type.EchoRequest or IcmpV4Type.EchoReply;
 
     public Memory<byte> Payload => _buffer[8..];
 

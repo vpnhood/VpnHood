@@ -500,7 +500,7 @@ public class SessionManager : IAsyncDisposable, IJob
                 return;
             }
 
-            session.Proxy_OnPacketReceived(ipPacket);
+            session.Proxy_PacketReceived(ipPacket);
         }
     }
 

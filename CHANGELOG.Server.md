@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: IPv6
+
 # v6.0.696
 * Improve: Watching media streaming
 * Improve: Performance and stability

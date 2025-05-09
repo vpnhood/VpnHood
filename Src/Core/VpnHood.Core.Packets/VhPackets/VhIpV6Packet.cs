@@ -5,6 +5,7 @@ namespace VpnHood.Core.Packets.VhPackets;
 
 public class VhIpV6Packet : VhIpPacket
 {
+    private bool _disposed;
     private readonly IMemoryOwner<byte>? _memoryOwner;
 
     public VhIpV6Packet(IMemoryOwner<byte> memoryOwner, int packetLength)
@@ -116,9 +117,13 @@ public class VhIpV6Packet : VhIpPacket
 
     protected override void Dispose(bool disposing)
     {
+        if (_disposed)
+            return;
+
         // I intentionally dispose the memory owner as unmanaged
         _memoryOwner?.Dispose();
         base.Dispose(disposing);
+        _disposed = true;
     }
 
     ~VhIpV6Packet()

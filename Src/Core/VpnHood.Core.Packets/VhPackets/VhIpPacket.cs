@@ -65,11 +65,12 @@ public abstract class VhIpPacket(Memory<byte> buffer) : IDisposable
         _disposed = true;
     }
 
-    ~VhIpPacket() => Dispose(false);
+
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
+    ~VhIpPacket() => Dispose(false);
 }

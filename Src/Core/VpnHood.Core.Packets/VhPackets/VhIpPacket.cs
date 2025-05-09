@@ -10,6 +10,14 @@ public abstract class VhIpPacket(Memory<byte> buffer) : IDisposable
     protected IPAddress? DestinationAddressField;
     private IPayloadPacket? _payloadPacket;
     public Memory<byte> Buffer => _disposed ? throw new ObjectDisposedException(nameof(VhIpPacket)) : buffer;
+    public ReadOnlyMemory<byte> Bytes => Buffer;
+
+    public IPayloadPacket? PayloadPacket {
+        get => _payloadPacket;
+        set => _payloadPacket = value == null || value.Buffer.Equals(Payload)
+            ? value
+            : throw new InvalidOperationException("The PayloadPacket buffer must match the packet buffer.");
+    }
 
     public IPayloadPacket? PayloadPacket {
         get => _payloadPacket;

@@ -1,5 +1,4 @@
-﻿using System.Threading.Channels;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
@@ -12,11 +11,9 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
-public class Tunnel : IJob, IAsyncDisposable
+public class Tunnel : IPacketSender, IJob, IAsyncDisposable
 {
     private readonly object _channelListLock = new();
-    private readonly SemaphoreSlim _packetSentEvent = new(0);
-    private readonly SemaphoreSlim _packetSenderSemaphore = new(0);
     private readonly HashSet<StreamProxyChannel> _streamProxyChannels = [];
     private readonly List<IDatagramChannel> _datagramChannels = [];
     private readonly Timer _speedMonitorTimer;
@@ -25,7 +22,7 @@ public class Tunnel : IJob, IAsyncDisposable
     private readonly Traffic _trafficUsage = new();
     private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
     private readonly TimeSpan _speedTestThreshold = TimeSpan.FromSeconds(2);
-    private readonly Channel<IpPacket> _sendChannel;
+    private readonly PacketSenderChannel _senderChannel;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
     public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
@@ -40,12 +37,7 @@ public class Tunnel : IJob, IAsyncDisposable
         options ??= new TunnelOptions();
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _speedMonitorTimer = new Timer(_ => UpdateSpeed(), null, TimeSpan.Zero, _speedTestThreshold);
-        _sendChannel = Channel.CreateBounded<IpPacket>(new BoundedChannelOptions(options.MaxQueueLength) {
-            SingleReader = true,
-            SingleWriter = false,
-            FullMode = BoundedChannelFullMode.DropWrite
-        });
-        _ = SendEnqueuedPacketTask(options.MaxQueueLength);
+        _senderChannel = new PacketSenderChannel(this, options.MaxQueueLength);
         JobRunner.Default.Add(this);
     }
 
@@ -238,28 +230,10 @@ public class Tunnel : IJob, IAsyncDisposable
         }
     }
 
-    private async Task SendEnqueuedPacketTask(int maxQueueLength)
-    {
-        var ipPackets = new List<IpPacket>(maxQueueLength);
-        while (!_disposed) {
-            // wait for new packets
-            await _sendChannel.Reader.WaitToReadAsync(_cancellationTokenSource.Token);
-
-            // dequeue all packets
-            while (_sendChannel.Reader.TryRead(out var ipPacket))
-                ipPackets.Add(ipPacket);
-
-            // send packets
-            await SendPacketsAsync(ipPackets);
-            ipPackets.Clear();
-        }
-    }
-
-
     // Usually server use this method to send packets to the client
-    public void SendPacketEnqueue(IpPacket ipPacket)
+    public bool SendPacketEnqueue(IpPacket ipPacket)
     {
-        _sendChannel.Writer.TryWrite(ipPacket);
+        return _senderChannel.SendPacketEnqueue(ipPacket);
     }
 
     // it is not thread-safe
@@ -419,13 +393,10 @@ public class Tunnel : IJob, IAsyncDisposable
         }
 
         // Stop speed monitor
+        await _senderChannel.DisposeAsync().VhConfigureAwait();
         await _speedMonitorTimer.DisposeAsync().VhConfigureAwait();
         Speed.Sent = 0;
         Speed.Received = 0;
-
-        // release worker threads (make sure to release all semaphores)
-        _packetSenderSemaphore.Release(MaxDatagramChannelCount * 10);
-        _packetSentEvent.Release();
 
         // dispose all channels
         await Task.WhenAll(disposeTasks).VhConfigureAwait();

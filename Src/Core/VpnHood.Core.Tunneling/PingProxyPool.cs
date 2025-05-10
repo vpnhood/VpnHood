@@ -91,7 +91,7 @@ public class PingProxyPool : IPacketProxyPool, IJob
         Task<IpPacket> sendTask;
         lock (_pingProxies) {
             var pingProxy = GetFreePingProxy(out isNewLocalEndPoint);
-            sendTask = pingProxy.Send(ipPacket);
+            sendTask = pingProxy.SendAsync(ipPacket);
         }
 
         // raise new endpoint event

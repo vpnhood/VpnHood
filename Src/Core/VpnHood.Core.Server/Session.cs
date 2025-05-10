@@ -247,6 +247,7 @@ public class Session : IAsyncDisposable
             // reject if packet source does not match client internal ip
             if (!ipPacket.SourceAddress.Equals(virtualIp)) {
                 PacketLogger.LogPacket(ipPacket, "Invalid tunnel packet source ip.");
+                ipPacket.Dispose();
                 continue;
             }
 
@@ -256,6 +257,7 @@ public class Session : IAsyncDisposable
                 var ipeEndPointPair = ipPacket.GetEndPoints();
                 LogTrack(ipPacket.Protocol.ToString(), null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
                 _filterReporter.Raise();
+                ipPacket.Dispose();
                 continue;
             }
 
@@ -500,14 +502,17 @@ public class Session : IAsyncDisposable
             session.Proxy_PacketReceived(ipPacket);
         }
 
-        public override Task SendPacket(IpPacket ipPacket)
+        public override async Task SendPacket(IpPacket ipPacket)
         {
-            if (vpnAdapter?.IsIpVersionSupported(ipPacket.Version) == true) {
-                vpnAdapter.SendPacket(ipPacket);
-                return Task.CompletedTask;
+            try {
+                if (vpnAdapter?.IsIpVersionSupported(ipPacket.Version) == true)
+                    vpnAdapter.SendPacket(ipPacket);
+                else 
+                    await base.SendPacket(ipPacket);
             }
-
-            return base.SendPacket(ipPacket);
+            finally {
+                ipPacket.Dispose();
+            }
         }
 
         public override void OnNewEndPoint(IpProtocol protocolType, IPEndPoint localEndPoint,

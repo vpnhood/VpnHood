@@ -1,5 +1,4 @@
-﻿using System.Buffers.Binary;
-using System.Net.NetworkInformation;
+﻿using System.Net.NetworkInformation;
 using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Utils;
@@ -18,7 +17,9 @@ public class PingProxy : ITimeoutItem
     public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
     public bool Disposed { get; private set; }
 
-    public async Task<IpPacket> Send(IpPacket ipPacket)
+    
+
+    public async Task<IpPacket> SendAsync(IpPacket ipPacket)
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 

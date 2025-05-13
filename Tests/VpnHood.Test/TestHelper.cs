@@ -142,12 +142,12 @@ public class TestHelper : IDisposable
     {
         timeout ??= TestConstants.DefaultTimeout;
 
-        if (udpEndPoint.AddressFamily == AddressFamily.InterNetwork) {
+        if (udpEndPoint.IsV4()) {
             using var udpClientIpV4 = new UdpClient(AddressFamily.InterNetwork);
             await Test_Udp(udpClientIpV4, udpEndPoint, timeout.Value);
         }
 
-        else if (udpEndPoint.AddressFamily == AddressFamily.InterNetworkV6) {
+        else if (udpEndPoint.IsV6()) {
             using var udpClientIpV6 = new UdpClient(AddressFamily.InterNetworkV6);
             await Test_Udp(udpClientIpV6, udpEndPoint, timeout.Value);
         }

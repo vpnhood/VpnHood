@@ -17,44 +17,45 @@ public static class PacketLogger
     }
 
     public static void LogPacket(IpPacket ipPacket, string message, LogLevel logLevel = LogLevel.Trace,
-        Exception? exception = null)
+        Exception? exception = null, EventId? eventId = null)
     {
         try {
             if (!VhLogger.IsDiagnoseMode) return;
-            var eventId = GeneralEventId.Packet;
+            var packetEventId = GeneralEventId.Packet;
             var packetPayload = new Memory<byte>();
 
             switch (ipPacket.Protocol) {
                 case IpProtocol.IcmpV4: {
-                        eventId = GeneralEventId.Ping;
+                        packetEventId = GeneralEventId.Ping;
                         var icmpPacket = ipPacket.ExtractIcmpV4();
                         packetPayload = icmpPacket.Payload;
                         break;
                     }
 
                 case IpProtocol.IcmpV6: {
-                        eventId = GeneralEventId.Ping;
+                        packetEventId = GeneralEventId.Ping;
                         var icmpPacket = ipPacket.ExtractIcmpV6();
                         packetPayload = icmpPacket.Payload;
                         break;
                     }
 
                 case IpProtocol.Udp: {
-                        eventId = GeneralEventId.Udp;
+                        packetEventId = GeneralEventId.Udp;
                         var udpPacket = ipPacket.ExtractUdp();
                         packetPayload = udpPacket.Payload;
                         break;
                     }
 
                 case IpProtocol.Tcp: {
-                        eventId = GeneralEventId.Tcp;
+                        packetEventId = GeneralEventId.Tcp;
                         var tcpPacket = ipPacket.ExtractTcp();
                         packetPayload = tcpPacket.Payload;
                         break;
                     }
             }
 
-            VhLogger.Instance.Log(logLevel, eventId, exception,
+            // Log the packet
+            VhLogger.Instance.Log(logLevel, eventId ?? packetEventId, exception,
                 message + " Packet: {Packet}, PayloadLength: {PayloadLength}, Payload: {Payload}",
                 Format(ipPacket), packetPayload.Length,
                 BitConverter.ToString(packetPayload.ToArray(), 0, Math.Min(10, packetPayload.Length)));

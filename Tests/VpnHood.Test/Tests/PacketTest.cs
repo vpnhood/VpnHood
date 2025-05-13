@@ -42,8 +42,8 @@ public class PacketTest : TestBase
 
         // Test ip addresses change by changing VhIpPacket.SourceAddressSpan 
         ipPacket = PacketBuilder.BuildIp(GetRandomIp(ipVersion), GetRandomIp(ipVersion), IpProtocol.Raw, 0);
-        sourceAddress.GetAddressBytes().CopyTo(ipPacket.SourceAddressSpan);
-        destinationAddress.GetAddressBytes().CopyTo(ipPacket.DestinationAddressSpan);
+        ipPacket.SourceAddressSpan = sourceAddress.GetAddressBytes().AsSpan();
+        ipPacket.DestinationAddressSpan = destinationAddress.GetAddressBytes().AsSpan();
         Assert.AreEqual(sourceAddress, ipPacket.SourceAddress);
         Assert.AreEqual(destinationAddress, ipPacket.DestinationAddress);
         CollectionAssert.AreEqual(sourceAddress.GetAddressBytes(), ipPacket.SourceAddressSpan.ToArray());

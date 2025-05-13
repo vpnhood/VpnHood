@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Toolkit.Collections;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Server;
 
@@ -10,14 +11,14 @@ public class NetScanDetector(int itemLimit, TimeSpan itemTimeout)
 
     private static IPAddress GetNetworkIpAddress(IPEndPoint ipEndPoint)
     {
-        var bytes = ipEndPoint.Address.GetAddressBytes();
-        bytes[3] = 0;
+        var bytes = ipEndPoint.Address.GetAddressBytesFast(stackalloc byte[16]);
+        bytes[3] = 0; // ipV4 only
         return new IPAddress(bytes);
     }
 
     public bool Verify(IPEndPoint ipEndPoint)
     {
-        if (ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6)
+        if (ipEndPoint.IsV6())
             return true;
 
         var item = _networkIpAddresses.GetOrAdd(GetNetworkIpAddress(ipEndPoint),

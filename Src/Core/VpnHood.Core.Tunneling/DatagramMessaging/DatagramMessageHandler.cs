@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using VpnHood.Core.Packets.VhPackets;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.DatagramMessaging;
@@ -27,7 +28,7 @@ public static class DatagramMessageHandler
     public static bool IsDatagramMessage(IpPacket ipPacket)
     {
         return ipPacket.Protocol == IpProtocol.Udp &&
-               ipPacket.DestinationAddressSpan.SequenceEqual(IPAddress.None.GetAddressBytes());
+               IPAddress.None.SpanEquals(ipPacket.DestinationAddressSpan);
     }
 
     public static DatagramBaseMessage ReadMessage(IpPacket ipPacket)

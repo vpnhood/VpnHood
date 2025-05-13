@@ -10,7 +10,7 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Test.Providers;
 
-public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyReceiver
+public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyCallbacks
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
@@ -19,7 +19,11 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyReceiver
 
     public TestUdpServerVpnAdapter()
     {
-        _proxyPool = new UdpProxyPool(this, new SocketFactory(), udpTimeout: null, maxClientCount: null);
+        _proxyPool = new UdpProxyPool(new UdpProxyPoolOptions {
+            SocketFactory = new SocketFactory(),
+            PacketProxyCallbacks = this
+        });
+        _proxyPool.PacketReceived += Proxy_PacketReceived;
     }
 
     public event EventHandler? Disposed;
@@ -46,13 +50,14 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyReceiver
             return;
         }
 
-        _proxyPool.SendPacket(ipPacket).GetAwaiter().GetResult();
+        ipPacket = ipPacket.Clone(); // caller will dispose the packet
+        _proxyPool.SendPacketQueued(ipPacket);
     }
 
     public void SendPackets(IList<IpPacket> ipPackets)
     {
         foreach (var ipPacket in ipPackets) {
-            _proxyPool.SendPacket(ipPacket).GetAwaiter().GetResult();
+            SendPacket(ipPacket);
         }
     }
 
@@ -63,16 +68,16 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyReceiver
 
     public bool IsIpVersionSupported(IpVersion ipVersion) => true;
 
-    public void OnPacketReceived(IpPacket ipPacket)
+    private void Proxy_PacketReceived(object? sender, PacketReceivedEventArgs e)
     {
-        PacketReceived?.Invoke(this, new PacketReceivedEventArgs([ipPacket]));
+        PacketReceived?.Invoke(this, e);
     }
 
-    public void OnNewRemoteEndPoint(IpProtocol protocolType, IPEndPoint remoteEndPoint)
+    public void OnConnectionRequested(IpProtocol protocolType, IPEndPoint remoteEndPoint)
     {
     }
 
-    public void OnNewEndPoint(IpProtocol protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
+    public void OnConnectionEstablished(IpProtocol protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
         bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
     {
     }

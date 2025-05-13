@@ -41,12 +41,14 @@ public class IpRangeOrderedList :
 
     public void Serialize(Stream stream)
     {
+        Span<byte> firstIpBuffer = stackalloc byte[16];
+        Span<byte> lastIpBuffer = stackalloc byte[16];
         // serialize to binary
         using var writer = new BinaryWriter(stream);
         writer.Write(_orderedList.Count);
         foreach (var range in _orderedList) {
-            var firstIpBytes = range.FirstIpAddress.GetAddressBytes();
-            var lastIpBytes = range.LastIpAddress.GetAddressBytes();
+            var firstIpBytes = range.FirstIpAddress.GetAddressBytesFast(firstIpBuffer);
+            var lastIpBytes = range.LastIpAddress.GetAddressBytesFast(lastIpBuffer);
 
             writer.Write((byte)firstIpBytes.Length);
             writer.Write(firstIpBytes);

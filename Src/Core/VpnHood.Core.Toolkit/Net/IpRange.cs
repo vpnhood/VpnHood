@@ -40,8 +40,8 @@ public class IpRange
     public IPAddress FirstIpAddress { get; }
     public IPAddress LastIpAddress { get; }
 
-    public BigInteger Total => new BigInteger(LastIpAddress.GetAddressBytes(), true, true) -
-        new BigInteger(FirstIpAddress.GetAddressBytes(), true, true) + 1;
+    public BigInteger Total => new BigInteger(LastIpAddress.GetAddressBytesFast(stackalloc byte[16]), true, true) -
+        new BigInteger(FirstIpAddress.GetAddressBytesFast(stackalloc byte[16]), true, true) + 1;
 
     public IEnumerable<IpNetwork> ToIpNetworks() => IpNetwork.FromRange(FirstIpAddress, LastIpAddress);
 

@@ -1,45 +1,24 @@
 ﻿using System.Net.NetworkInformation;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.VhPackets;
-using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
-
 namespace VpnHood.Core.Tunneling;
 
-public class PingProxy : ITimeoutItem
+public class PingProxy() : PacketProxy(1)
 {
     private readonly Ping _ping = new();
-    private readonly SemaphoreSlim _finishSemaphore = new(1, 1);
-
-    public DateTime LastUsedTime { get; set; } = DateTime.MinValue;
-    public bool IsBusy { get; private set; }
     public void Cancel() => _ping.SendAsyncCancel();
-    public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
-    public bool Disposed { get; private set; }
+    public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(5);
 
-    
-
-    public async Task<IpPacket> SendAsync(IpPacket ipPacket)
+    protected override Task SendPacketAsync(IpPacket ipPacket)
     {
-        if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-
-        try {
-            // Ping does not support concurrent call
-            await _finishSemaphore.WaitAsync().VhConfigureAwait();
-            IsBusy = true;
-
-            LastUsedTime = FastDateTime.Now;
-            return ipPacket.Version == IpVersion.IPv4
-                ? await SendIpV4((IpV4Packet)ipPacket).VhConfigureAwait()
-                : await SendIpV6((IpV6Packet)ipPacket).VhConfigureAwait();
-        }
-        finally {
-            IsBusy = false;
-            _finishSemaphore.Release();
-        }
+        return ipPacket.Version == IpVersion.IPv4
+            ? SendIpV4((IpV4Packet)ipPacket)
+            : SendIpV6((IpV6Packet)ipPacket);
     }
 
-    private async Task<IpPacket> SendIpV4(IpV4Packet ipPacket)
+    private async Task SendIpV4(IpV4Packet ipPacket)
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
         if (ipPacket.Protocol != IpProtocol.IcmpV4)
@@ -57,22 +36,19 @@ public class PingProxy : ITimeoutItem
             icmpPacket.Payload.ToArray(), pingOptions).VhConfigureAwait();
 
         if (pingReply.Status != IPStatus.Success)
-            throw new Exception($"Ping Reply has been failed! Status: {pingReply.Status}");
+            throw new Exception($"Ping Reply has been failed! Status: {pingReply.Status}. Packet: {PacketLogger.Format(ipPacket)}");
 
         var replyPacket = PacketBuilder.BuildIcmpV4EchoReply(
             sourceAddress: ipPacket.DestinationAddress, destinationAddress: ipPacket.SourceAddress,
-            payload: pingReply.Buffer, identifier: icmpPacket.Identifier, sequenceNumber: icmpPacket.SequenceNumber);
+            payload: pingReply.Buffer, identifier: icmpPacket.Identifier, sequenceNumber: icmpPacket.SequenceNumber,
+            updateChecksum: false);
 
-        return replyPacket;
+        replyPacket.UpdateAllChecksums();
+        OnPacketReceived(replyPacket);
     }
 
-    private async Task<IpPacket> SendIpV6(IpV6Packet ipPacket)
+    private async Task SendIpV6(IpV6Packet ipPacket)
     {
-        if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-        if (ipPacket.Protocol != IpProtocol.IcmpV6)
-            throw new InvalidOperationException(
-                $"Packet is not {IpProtocol.IcmpV6}! Packet: {PacketLogger.Format(ipPacket)}");
-
         var icmpPacket = ipPacket.ExtractIcmpV6();
         if (icmpPacket.Type != IcmpV6Type.EchoRequest)
             throw new InvalidOperationException(
@@ -83,20 +59,28 @@ public class PingProxy : ITimeoutItem
             icmpPacket.Payload.ToArray(), pingOptions).VhConfigureAwait();
 
         if (pingReply.Status != IPStatus.Success)
-            throw new Exception($"Ping Reply has been failed! Status: {pingReply.Status}");
+            throw new Exception($"Ping Reply has been failed. Status: {pingReply.Status}. Packet: {PacketLogger.Format(ipPacket)}");
 
         var replyPacket = PacketBuilder.BuildIcmpV6EchoReply(
             sourceAddress: ipPacket.DestinationAddress, destinationAddress: ipPacket.SourceAddress,
-            payload: pingReply.Buffer, identifier: icmpPacket.Identifier, sequenceNumber: icmpPacket.SequenceNumber);
+            payload: pingReply.Buffer, identifier: icmpPacket.Identifier, sequenceNumber: icmpPacket.SequenceNumber,
+            updateChecksum: false);
 
-        return replyPacket;
+        replyPacket.UpdateAllChecksums();
+        OnPacketReceived(replyPacket);
     }
 
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        if (!Disposed) return;
-        Disposed = true;
+        if (Disposed) 
+            return;
 
-        _ping.Dispose();
+        if (disposing) {
+            // Dispose managed resources
+            _ping.Dispose();
+        }
+
+        // Dispose unmanaged resources
+        base.Dispose(disposing);
     }
 }

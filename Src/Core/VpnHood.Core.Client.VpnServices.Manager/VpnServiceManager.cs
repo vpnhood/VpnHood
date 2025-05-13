@@ -124,6 +124,8 @@ public class VpnServiceManager : IJob, IDisposable
             await WaitForVpnService(cancellationToken).VhConfigureAwait();
         }
         catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not start VpnService.");
+
             // It looks like the service is not running, set the state to disposed if it is still in initializing state
             var connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
             if (connectionInfo?.ClientState == ClientState.Initializing)
@@ -185,7 +187,7 @@ public class VpnServiceManager : IJob, IDisposable
 
             await Task.Delay(_connectionInfoTimeSpan, cancellationToken);
         }
-
+            
         VhLogger.Instance.LogDebug("The VpnService has established a connection.");
     }
 

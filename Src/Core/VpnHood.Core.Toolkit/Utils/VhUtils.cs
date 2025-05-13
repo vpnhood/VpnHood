@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Toolkit.Utils;
 
@@ -244,14 +245,14 @@ public static class VhUtils
 
     public static string RedactIpAddress(IPAddress ipAddress)
     {
-        var addressBytes = ipAddress.GetAddressBytes();
+        var addressBytes = ipAddress.GetAddressBytesFast(stackalloc byte[16]);
 
-        if (ipAddress.AddressFamily == AddressFamily.InterNetwork &&
+        if (ipAddress.IsV4() &&
             !ipAddress.Equals(IPAddress.Any) &&
             !ipAddress.Equals(IPAddress.Loopback))
             return $"{addressBytes[0]}.*.*.{addressBytes[3]}";
 
-        if (ipAddress.AddressFamily == AddressFamily.InterNetworkV6 &&
+        if (ipAddress.IsV6() &&
             !ipAddress.Equals(IPAddress.IPv6Any) &&
             !ipAddress.Equals(IPAddress.IPv6Loopback))
             return $"{addressBytes[0]:x2}{addressBytes[1]:x2}:***:{addressBytes[14]:x2}{addressBytes[15]:x2}";

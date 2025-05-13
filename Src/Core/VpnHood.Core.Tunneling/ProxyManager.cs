@@ -1,6 +1,6 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Net;
+﻿using System.Net;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -10,20 +10,18 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
-public abstract class ProxyManager : IPacketProxyReceiver, IAsyncDisposable
+public class ProxyManager : IAsyncDisposable
 {
     private readonly IPAddress[] _blockList = [
         IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play) SSDP (Simple Service Discovery Protocol)
     ];
     private readonly HashSet<IChannel> _channels = [];
-    private readonly IPacketProxyPool _pingProxyPool;
+    private readonly IPacketProxyPool? _pingProxyPool;
     private readonly IPacketProxyPool _udpProxyPool;
-    protected bool Disposed { get; private set; }
+    private bool _disposed;
 
-
-    [SuppressMessage("ReSharper", "UnusedMember.Global")]
-    public int PingClientCount => _pingProxyPool.ClientCount;
-
+    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
+    public int PingClientCount => _pingProxyPool?.ClientCount ?? 0;
     public int UdpClientCount => _udpProxyPool.ClientCount;
 
     public int TcpConnectionCount {
@@ -32,50 +30,60 @@ public abstract class ProxyManager : IPacketProxyReceiver, IAsyncDisposable
         }
     }
 
-    public abstract void OnPacketReceived(IpPacket ipPacket);
-
-    public virtual void OnNewRemoteEndPoint(IpProtocol protocolType, IPEndPoint remoteEndPoint)
+    public ProxyManager(ISocketFactory socketFactory, ProxyManagerOptions options)
     {
-    }
+        var udpProxyPoolOptions = new UdpProxyPoolOptions {
+            PacketProxyCallbacks = options.PacketProxyCallbacks,
+            SocketFactory =  socketFactory, 
+            UdpTimeout = options.UdpTimeout, 
+            MaxClientCount = options.MaxUdpClientCount,
+            LogScope = options.LogScope,
+            PacketQueueCapacity = options.PacketQueueCapacity, 
+            SendBufferSize = options.UdpSendBufferSize, 
+            ReceiveBufferSize = options.UdpReceiveBufferSize,
+        };
 
-    public virtual void OnNewEndPoint(IpProtocol protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
-        bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
-    {
-    }
-
-    protected abstract bool IsPingSupported { get; }
-
-    protected ProxyManager(ISocketFactory socketFactory, ProxyManagerOptions options)
-    {
-        _pingProxyPool = new PingProxyPool(this, options.IcmpTimeout, options.MaxIcmpClientCount,
-            logScope: options.LogScope);
-
+        // create UDP proxy pool
         _udpProxyPool = options.UseUdpProxy2
-            ? new UdpProxyPoolEx(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount,
-                logScope: options.LogScope,
-                sendBufferSize: options.UdpSendBufferSize, receiveBufferSize: options.UdpReceiveBufferSize)
-            : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount,
-                logScope: options.LogScope,
-                sendBufferSize: options.UdpSendBufferSize, receiveBufferSize: options.UdpReceiveBufferSize);
+            ? new UdpProxyPoolEx(udpProxyPoolOptions)
+            : new UdpProxyPool(udpProxyPoolOptions);
+        _udpProxyPool.PacketReceived += Proxy_PacketReceived;
+
+        // create Ping proxy pools
+        if (options.IsPingSupported) {
+            _pingProxyPool = new PingProxyPool(options.PacketProxyCallbacks, 
+                icmpTimeout:options.IcmpTimeout,
+                maxClientCount:options.MaxIcmpClientCount,
+                logScope: options.LogScope);
+            _pingProxyPool.PacketReceived += Proxy_PacketReceived;
+        }
     }
 
-    public async Task SendPackets(IList<IpPacket> ipPackets)
+    private void Proxy_PacketReceived(object sender, PacketReceivedEventArgs e)
+    {
+        PacketReceived?.Invoke(this, e);
+    }
+
+    public void SendPacketsQueued(IList<IpPacket> ipPackets)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
             var ipPacket = ipPackets[i];
-            await SendPacket(ipPacket).VhConfigureAwait();
+            SendPacketQueued(ipPacket);
         }
     }
 
-    public virtual async Task SendPacket(IpPacket ipPacket)
+    public void SendPacketQueued(IpPacket ipPacket)
     {
         if (ipPacket is null)
             throw new ArgumentNullException(nameof(ipPacket));
 
         // drop blocked packets
-        if (_blockList.Any(x => x.Equals(ipPacket.DestinationAddress)))
+        if (_blockList.Any(x => x.Equals(ipPacket.DestinationAddress))) {
+            PacketLogger.LogPacket(ipPacket, $"Blocked a packet. Dst: {ipPacket.DestinationAddress}", 
+                logLevel: LogLevel.Debug, eventId: GeneralEventId.NetFilter);
             return;
+        }
 
         // send packet via proxy
         if (VhLogger.IsDiagnoseMode)
@@ -84,15 +92,15 @@ public abstract class ProxyManager : IPacketProxyReceiver, IAsyncDisposable
         try {
             switch (ipPacket.Protocol) {
                 case IpProtocol.Udp:
-                    await _udpProxyPool.SendPacket(ipPacket).VhConfigureAwait();
+                    _udpProxyPool.SendPacketQueued(ipPacket);
                     break;
 
                 case IpProtocol.IcmpV4:
                 case IpProtocol.IcmpV6:
-                    if (!IsPingSupported)
+                    if (_pingProxyPool == null)
                         throw new NotSupportedException("Ping is not supported by this proxy.");
 
-                    await _pingProxyPool.SendPacket(ipPacket).VhConfigureAwait();
+                    _pingProxyPool.SendPacketQueued(ipPacket);
                     break;
 
                 default:
@@ -108,7 +116,7 @@ public abstract class ProxyManager : IPacketProxyReceiver, IAsyncDisposable
 
     public void AddChannel(IChannel channel)
     {
-        if (Disposed) throw new ObjectDisposedException(nameof(ProxyManager));
+        if (_disposed) throw new ObjectDisposedException(nameof(ProxyManager));
 
         lock (_channels)
             _channels.Add(channel);
@@ -117,17 +125,25 @@ public abstract class ProxyManager : IPacketProxyReceiver, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        if (Disposed) return;
-        Disposed = true;
+        if (_disposed) return;
+        PacketReceived = null;
 
+        // dispose udp proxy pool
+        _udpProxyPool.PacketReceived -= Proxy_PacketReceived;
         _udpProxyPool.Dispose();
-        _pingProxyPool.Dispose();
+
+        // dispose ping proxy pool
+        if (_pingProxyPool != null) {
+            _pingProxyPool.PacketReceived -= Proxy_PacketReceived;
+            _pingProxyPool.Dispose();
+        }
 
         // dispose channels
-        var disposeTasks = new List<Task>();
+        Task[] disposeTasks;
         lock (_channels)
-            disposeTasks.AddRange(_channels.Select(channel => channel.DisposeAsync(false).AsTask()));
+            disposeTasks = _channels.Select(channel => channel.DisposeAsync(false).AsTask()).ToArray();
 
         await Task.WhenAll(disposeTasks).VhConfigureAwait();
+        _disposed = true;
     }
 }

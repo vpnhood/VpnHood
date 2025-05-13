@@ -26,7 +26,8 @@ public class Session : IAsyncDisposable
 {
     private readonly INetFilter _netFilter;
     private readonly IAccessManager _accessManager;
-    private readonly SessionProxyManager _proxyManager;
+    private readonly IVpnAdapter? _vpnAdapter;
+    private readonly ProxyManager _proxyManager;
     private readonly ISocketFactory _socketFactory;
     private readonly object _verifyRequestLock = new();
     private readonly int _maxTcpConnectWaitCount;
@@ -91,8 +92,9 @@ public class Session : IAsyncDisposable
         _fixClientInternalIp = sessionResponseEx.ProtocolVersion < 8;
 #pragma warning restore CS0612 // Type or member is obsolete
         _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
+        _vpnAdapter = vpnAdapter;
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
-        _proxyManager = new SessionProxyManager(this, socketFactory, vpnAdapter, new ProxyManagerOptions {
+        _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions {
             UdpTimeout = options.UdpTimeoutValue,
             IcmpTimeout = options.IcmpTimeoutValue,
             MaxUdpClientCount = options.MaxUdpClientCountValue,
@@ -100,8 +102,11 @@ public class Session : IAsyncDisposable
             UdpReceiveBufferSize = options.UdpProxyReceiveBufferSize,
             UdpSendBufferSize = options.UdpProxySendBufferSize,
             UseUdpProxy2 = options.UseUdpProxy2Value,
-            LogScope = logScope
+            LogScope = logScope,
+            IsPingSupported = true,
+            PacketProxyCallbacks = new PacketProxyCallbacks(this)
         });
+        _proxyManager.PacketReceived += Proxy_PacketsReceived;
         _trackingOptions = trackingOptions;
         _maxTcpConnectWaitCount = options.MaxTcpConnectWaitCountValue;
         _maxTcpChannelCount = options.MaxTcpChannelCountValue;
@@ -193,7 +198,21 @@ public class Session : IAsyncDisposable
         return ipVersion == IpVersion.IPv4 ? _clientInternalIpV4 : _clientInternalIpV6;
     }
 
-    public void Proxy_PacketReceived(IpPacket ipPacket)
+    private void Proxy_PacketsReceived(object sender, PacketReceivedEventArgs eventArgs)
+    {
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var index = 0; index < eventArgs.IpPackets.Count; index++) {
+            var packet = eventArgs.IpPackets[index];
+            Proxy_PacketReceived(packet);
+        }
+    }
+
+    public void Adapter_PacketReceived(IpPacket ipPacket)
+    {
+        Proxy_PacketReceived(ipPacket);
+    }
+
+    private void Proxy_PacketReceived(IpPacket ipPacket)
     {
         if (IsDisposed) return;
         PacketLogger.LogPacket(ipPacket, "Delegating a packet to client...");
@@ -212,56 +231,73 @@ public class Session : IAsyncDisposable
         }
 #pragma warning restore CS0612 // Type or member is obsolete
 
+        // PacketEnqueue will dispose packets
         Tunnel.SendPacketEnqueue(ipPacket);
     }
 
+    private readonly List<IpPacket> _adapterPackets = [];
+    private readonly object _packetReceivedLock = new();
     private void Tunnel_PacketReceived(object sender, PacketReceivedEventArgs e)
     {
         if (IsDisposed)
             return;
 
-        // filter requests
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < e.IpPackets.Count; i++) {
-            var ipPacket = e.IpPackets[i];
-            var virtualIp = GetClientVirtualIp(ipPacket.Version);
+        lock (_packetReceivedLock) {
+            // this is the shared resource
+            _adapterPackets.Clear();
 
-            // todo: legacy save caller internal ip at first call
+            // filter requests
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < e.IpPackets.Count; i++) {
+                var ipPacket = e.IpPackets[i];
+                var virtualIp = GetClientVirtualIp(ipPacket.Version);
+
+                // todo: legacy save caller internal ip at first call
 #pragma warning disable CS0612 // Type or member is obsolete
-            if (_fixClientInternalIp) {
-                if (ipPacket.Version == IpVersion.IPv4)
-                    _clientInternalIpV4 ??= ipPacket.SourceAddress;
-                else if (ipPacket.Version == IpVersion.IPv6)
-                    _clientInternalIpV6 ??= ipPacket.SourceAddress;
+                if (_fixClientInternalIp) {
+                    if (ipPacket.Version == IpVersion.IPv4)
+                        _clientInternalIpV4 ??= ipPacket.SourceAddress;
+                    else if (ipPacket.Version == IpVersion.IPv6)
+                        _clientInternalIpV6 ??= ipPacket.SourceAddress;
 
-                // update source client virtual ip. will be obsolete in future if client set correct ip
-                if (!virtualIp.Equals(ipPacket.SourceAddress)) {
-                    // todo: legacy version. Packet must be dropped if it does not have correct source address
-                    // PacketLogger.LogPacket(ipPacket, $"Invalid tunnel packet source ip.");
-                    ipPacket.SourceAddress = virtualIp;
-                    ipPacket.UpdateAllChecksums();
+                    // update source client virtual ip. will be obsolete in future if client set correct ip
+                    if (!virtualIp.Equals(ipPacket.SourceAddress)) {
+                        // todo: legacy version. Packet must be dropped if it does not have correct source address
+                        // PacketLogger.LogPacket(ipPacket, $"Invalid tunnel packet source ip.");
+                        ipPacket.SourceAddress = virtualIp;
+                        ipPacket.UpdateAllChecksums();
+                    }
                 }
-            }
 #pragma warning restore CS0612 // Type or member is obsolete
 
-            // reject if packet source does not match client internal ip
-            if (!ipPacket.SourceAddress.Equals(virtualIp)) {
-                PacketLogger.LogPacket(ipPacket, "Invalid tunnel packet source ip.");
-                ipPacket.Dispose();
-                continue;
+                // reject if packet source does not match client internal ip
+                if (!ipPacket.SourceAddress.Equals(virtualIp)) {
+                    PacketLogger.LogPacket(ipPacket, "Invalid tunnel packet source ip.");
+                    ipPacket.Dispose();
+                    continue;
+                }
+
+                // filter
+                var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
+                if (ipPacket2 == null) {
+                    var ipeEndPointPair = ipPacket.GetEndPoints();
+                    LogTrack(ipPacket.Protocol.ToString(), null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
+                    _filterReporter.Raise();
+                    ipPacket.Dispose();
+                    continue;
+                }
+
+                // send using tunnel or proxy
+                if (_vpnAdapter?.IsIpVersionSupported(ipPacket2.Version) == true)
+                    _adapterPackets.Add(ipPacket2);
+                else
+                    _proxyManager.SendPacketQueued(ipPacket2);
+
             }
 
-            // filter
-            var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
-            if (ipPacket2 == null) {
-                var ipeEndPointPair = ipPacket.GetEndPoints();
-                LogTrack(ipPacket.Protocol.ToString(), null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
-                _filterReporter.Raise();
-                ipPacket.Dispose();
-                continue;
-            }
-
-            _ = _proxyManager.SendPacket(ipPacket2);
+            // send using tunnel or proxy
+            _vpnAdapter?.SendPackets(_adapterPackets);
+            _adapterPackets.DisposeAllPackets();
         }
     }
 
@@ -469,6 +505,7 @@ public class Session : IAsyncDisposable
         if (IsDisposed) return;
         DisposedTime = DateTime.UtcNow;
 
+        _proxyManager.PacketReceived -= Proxy_PacketsReceived;
         Tunnel.PacketReceived -= Tunnel_PacketReceived;
         await Task.WhenAll(Tunnel.DisposeAsync().AsTask(), _proxyManager.DisposeAsync().AsTask());
         _netScanExceptionReporter.Dispose();
@@ -487,45 +524,19 @@ public class Session : IAsyncDisposable
             SessionResponseEx.ErrorMessage ?? "None");
     }
 
-    private class SessionProxyManager(
-        Session session,
-        ISocketFactory socketFactory,
-        IVpnAdapter? vpnAdapter,
-        ProxyManagerOptions options)
-        : ProxyManager(socketFactory, options)
+    private class PacketProxyCallbacks(Session session) : IPacketProxyCallbacks
     {
-        protected override bool IsPingSupported => true;
-
-        public override void OnPacketReceived(IpPacket ipPacket)
+        public void OnConnectionRequested(IpProtocol protocolType, IPEndPoint remoteEndPoint)
         {
-            if (session.IsDisposed) return;
-            session.Proxy_PacketReceived(ipPacket);
+            session.VerifyNetScan(protocolType, remoteEndPoint, "OnNewRemoteEndPoint");
         }
 
-        public override async Task SendPacket(IpPacket ipPacket)
-        {
-            try {
-                if (vpnAdapter?.IsIpVersionSupported(ipPacket.Version) == true)
-                    vpnAdapter.SendPacket(ipPacket);
-                else 
-                    await base.SendPacket(ipPacket);
-            }
-            finally {
-                ipPacket.Dispose();
-            }
-        }
-
-        public override void OnNewEndPoint(IpProtocol protocolType, IPEndPoint localEndPoint,
+        public void OnConnectionEstablished(IpProtocol protocolType, IPEndPoint localEndPoint,
             IPEndPoint remoteEndPoint,
             bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
         {
             session.LogTrack(protocolType.ToString(), localEndPoint, remoteEndPoint, isNewLocalEndPoint,
                 isNewRemoteEndPoint, null);
-        }
-
-        public override void OnNewRemoteEndPoint(IpProtocol protocolType, IPEndPoint remoteEndPoint)
-        {
-            session.VerifyNetScan(protocolType, remoteEndPoint, "OnNewRemoteEndPoint");
         }
     }
 }

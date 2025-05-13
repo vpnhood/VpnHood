@@ -1,5 +1,7 @@
 ﻿using System.Buffers;
 using System.Net;
+using System.Net.Sockets;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Packets.VhPackets;
@@ -43,11 +45,26 @@ public static class PacketBuilder
     }
 
     public static IpPacket BuildIp(IPAddress sourceAddress, IPAddress destinationAddress,
-        IpProtocol protocol, int payloadLength)
+        IpProtocol protocol, int payloadLength, MemoryPool<byte>? memoryPool = null)
     {
-        return BuildIp(
-            sourceAddress.GetAddressBytes(), destinationAddress.GetAddressBytes(),
-            protocol, payloadLength);
+        // validate address length
+        if (sourceAddress.AddressFamily != destinationAddress.AddressFamily)
+            throw new ArgumentException("SourceAddress and DestinationAddress must have a same ip version.");
+
+        // validate payload length
+        memoryPool ??= MemoryPool<byte>.Shared;
+
+        // create IP packet
+        IpPacket ipPacket = sourceAddress.AddressFamily switch {
+            AddressFamily.InterNetwork => new IpV4Packet(memoryPool.Rent(20 + payloadLength), 20 + payloadLength, protocol, 0),
+            AddressFamily.InterNetworkV6 => new IpV6Packet(memoryPool.Rent(40 + payloadLength), 40 + payloadLength, protocol),
+            _ => throw new NotSupportedException($"{sourceAddress.AddressFamily} not supported.")
+        };
+
+        ipPacket.SourceAddress = sourceAddress;
+        ipPacket.DestinationAddress = destinationAddress;
+        ipPacket.TimeToLive = 64;
+        return ipPacket;
     }
 
     public static IpPacket BuildIp(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
@@ -67,22 +84,21 @@ public static class PacketBuilder
             _ => throw new NotSupportedException($"IP version {sourceAddress.Length} not supported.")
         };
 
-        sourceAddress.CopyTo(ipPacket.SourceAddressSpan);
-        destinationAddress.CopyTo(ipPacket.DestinationAddressSpan);
+        ipPacket.SourceAddressSpan = sourceAddress;
+        ipPacket.DestinationAddressSpan = destinationAddress;
         ipPacket.TimeToLive = 64;
         return ipPacket;
     }
-
     public static IpPacket BuildUdp(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
         ReadOnlySpan<byte> payload)
     {
         return BuildUdp(
-            sourceEndPoint.Address.GetAddressBytes(), destinationEndPoint.Address.GetAddressBytes(),
+            sourceEndPoint.Address, destinationEndPoint.Address,
             sourceEndPoint.Port, destinationEndPoint.Port,
             payload);
     }
 
-    public static IpPacket BuildUdp(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+    public static IpPacket BuildUdp(IPAddress sourceAddress, IPAddress destinationAddress,
         int sourcePort, int destinationPort, ReadOnlySpan<byte> payload)
     {
         var ipPacket = BuildIp(sourceAddress, destinationAddress, IpProtocol.Udp, 8 + payload.Length);
@@ -97,12 +113,12 @@ public static class PacketBuilder
         ReadOnlySpan<byte> options, ReadOnlySpan<byte> payload)
     {
         return BuildTcp(
-            sourceEndPoint.Address.GetAddressBytes(), destinationEndPoint.Address.GetAddressBytes(),
+            sourceEndPoint.Address, destinationEndPoint.Address,
             sourceEndPoint.Port, destinationEndPoint.Port,
             options, payload);
     }
 
-    public static IpPacket BuildTcp(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+    public static IpPacket BuildTcp(IPAddress sourceAddress, IPAddress destinationAddress,
         int sourcePort, int destinationPort, ReadOnlySpan<byte> options, ReadOnlySpan<byte> payload)
     {
         var ipPacket = BuildIp(sourceAddress, destinationAddress, IpProtocol.Tcp, 20 + options.Length + payload.Length);
@@ -114,14 +130,14 @@ public static class PacketBuilder
         return ipPacket;
     }
 
-    public static IpPacket BuildIcmpV4(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+    public static IpPacket BuildIcmpV4(IPAddress sourceAddress, IPAddress destinationAddress,
         ReadOnlySpan<byte> payload)
     {
         var ipPacket = BuildIp(sourceAddress, destinationAddress, IpProtocol.IcmpV4, 8 + payload.Length);
         payload.CopyTo(ipPacket.BuildIcmpV4().Payload.Span);
         return ipPacket;
     }
-    public static IpPacket BuildIcmpV6(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+    public static IpPacket BuildIcmpV6(IPAddress sourceAddress, IPAddress destinationAddress,
         ReadOnlySpan<byte> payload)
     {
         var ipPacket = BuildIp(sourceAddress, destinationAddress, IpProtocol.IcmpV6, 8 + payload.Length);
@@ -129,41 +145,25 @@ public static class PacketBuilder
         return ipPacket;
     }
 
+
     public static IpPacket BuildIcmpEchoRequest(IPAddress sourceAddress, IPAddress destinationAddress,
-        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
+        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool updateChecksum = true)
     {
-        return BuildIcmpEchoRequest(
-            sourceAddress.GetAddressBytes(), destinationAddress.GetAddressBytes(),
-            payload, identifier, sequenceNumber, calculateChecksum);
-    }
+        if (sourceAddress.AddressFamily != destinationAddress.AddressFamily)
+            throw new ArgumentException("SourceAddress and DestinationAddress must have a same address family.");
 
-    public static IpPacket BuildIcmpEchoRequest(ReadOnlySpan<byte> sourceAddress,
-        ReadOnlySpan<byte> destinationAddress,
-        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
-    {
-        if (sourceAddress.Length != destinationAddress.Length)
-            throw new ArgumentException("SourceAddress and DestinationAddress must have a same ip version.");
-
-        return sourceAddress.Length switch {
-            4 => BuildIcmpV4EchoRequest(sourceAddress, destinationAddress, payload, identifier, sequenceNumber, calculateChecksum),
-            16 => BuildIcmpV6EchoRequest(sourceAddress, destinationAddress, payload, identifier, sequenceNumber, calculateChecksum),
-            _ => throw new NotSupportedException($"IP version {sourceAddress.Length} not supported.")
+        return sourceAddress.AddressFamily switch {
+            AddressFamily.InterNetwork => BuildIcmpV4EchoRequest(sourceAddress, destinationAddress, payload, identifier, sequenceNumber, updateChecksum),
+            AddressFamily.InterNetworkV6 => BuildIcmpV6EchoRequest(sourceAddress, destinationAddress, payload, identifier, sequenceNumber, updateChecksum),
+            _ => throw new NotSupportedException($"{sourceAddress.AddressFamily} not supported.")
         };
     }
-
+    
 
     public static IpPacket BuildIcmpV4EchoRequest(IPAddress sourceAddress, IPAddress destinationAddress,
-        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
+         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool updateChecksum = true)
     {
-        return BuildIcmpV4EchoRequest(
-            sourceAddress.GetAddressBytes(), destinationAddress.GetAddressBytes(),
-            payload, identifier, sequenceNumber, calculateChecksum);
-    }
-
-    public static IpPacket BuildIcmpV4EchoRequest(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
-         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
-    {
-        if (sourceAddress.Length != 4 || destinationAddress.Length != 4)
+        if (!sourceAddress.IsV4() || !destinationAddress.IsV4())
             throw new ArgumentException("SourceAddress and DestinationAddress must be IPv4 addresses.");
 
         // ICMP echo request
@@ -173,24 +173,16 @@ public static class PacketBuilder
         icmp.Code = 0;
         icmp.SequenceNumber = sequenceNumber;
         icmp.Identifier = identifier;
-        if (calculateChecksum)
+        if (updateChecksum)
             ipPacket.UpdateAllChecksums();
 
         return ipPacket;
     }
 
     public static IpPacket BuildIcmpV6EchoRequest(IPAddress sourceAddress, IPAddress destinationAddress,
-        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
+        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool updateChecksum = true)
     {
-        return BuildIcmpV6EchoRequest(
-            sourceAddress.GetAddressBytes(), destinationAddress.GetAddressBytes(),
-            payload, identifier, sequenceNumber, calculateChecksum);
-    }
-
-    public static IpPacket BuildIcmpV6EchoRequest(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
-        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
-    {
-        if (sourceAddress.Length != 16 || destinationAddress.Length != 16)
+        if (!sourceAddress.IsV6() || !destinationAddress.IsV6())
             throw new ArgumentException("SourceAddress and DestinationAddress must be IPv6 addresses.");
 
         // ICMP echo request
@@ -200,83 +192,59 @@ public static class PacketBuilder
         icmp.Code = 0;
         icmp.SequenceNumber = sequenceNumber;
         icmp.Identifier = identifier;
-        if (calculateChecksum)
+        if (updateChecksum)
             ipPacket.UpdateAllChecksums();
 
         return ipPacket;
     }
 
-    public static IpPacket BuildIcmpEchoReply(IPAddress sourceAddress, IPAddress destinationAddress,
-        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
-    {
-        return BuildIcmpEchoReply(
-            sourceAddress.GetAddressBytes(), destinationAddress.GetAddressBytes(),
-            payload, identifier, sequenceNumber, calculateChecksum);
-    }
-
     public static IpPacket BuildIcmpEchoReply(
-        ReadOnlySpan<byte> sourceAddressSpan, ReadOnlySpan<byte> destinationAddressSpan,
-        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
+        IPAddress sourceAddress, IPAddress destinationAddress,
+        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool updateChecksum = true)
     {
-        if (sourceAddressSpan.Length != destinationAddressSpan.Length)
+        if (sourceAddress.AddressFamily != destinationAddress.AddressFamily)
             throw new ArgumentException("SourceAddress and DestinationAddress must have a same ip version.");
 
-        return sourceAddressSpan.Length switch {
-            4 => BuildIcmpV4EchoReply(sourceAddressSpan, destinationAddressSpan, payload, identifier, sequenceNumber, calculateChecksum),
-            16 => BuildIcmpV6EchoReply(sourceAddressSpan, destinationAddressSpan, payload, identifier, sequenceNumber, calculateChecksum),
-            _ => throw new NotSupportedException($"IP version {sourceAddressSpan.Length} not supported.")
+        return sourceAddress.AddressFamily switch {
+            AddressFamily.InterNetwork => BuildIcmpV4EchoReply(sourceAddress, destinationAddress, payload, identifier, sequenceNumber, updateChecksum),
+            AddressFamily.InterNetworkV6 => BuildIcmpV6EchoReply(sourceAddress, destinationAddress, payload, identifier, sequenceNumber, updateChecksum),
+            _ => throw new NotSupportedException($"{sourceAddress.AddressFamily} not supported.")
         };
     }
 
-    public static IpPacket BuildIcmpV4EchoReply(IPAddress sourceAddress, IPAddress destinationAddress,
-        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
-    {
-        return BuildIcmpV4EchoReply(
-            sourceAddress.GetAddressBytes(), destinationAddress.GetAddressBytes(),
-            payload, identifier, sequenceNumber, calculateChecksum);
-    }
-
     public static IpPacket BuildIcmpV4EchoReply(
-        ReadOnlySpan<byte> sourceAddressSpan, ReadOnlySpan<byte> destinationAddressSpan,
-        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
+        IPAddress sourceAddress, IPAddress destinationAddress,
+        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool updateChecksum = true)
     {
-        if (sourceAddressSpan.Length != 4 || destinationAddressSpan.Length != 4)
+        if (!sourceAddress.IsV4() || !destinationAddress.IsV4())
             throw new ArgumentException("SourceAddress and DestinationAddress must be IPv4 addresses.");
 
-        var ipPacket = BuildIcmpV4(sourceAddressSpan, destinationAddressSpan, payload);
+        var ipPacket = BuildIcmpV4(sourceAddress, destinationAddress, payload);
         var icmp = ipPacket.ExtractIcmpV4();
         icmp.Type = IcmpV4Type.EchoReply;
         icmp.Code = 0;
         icmp.SequenceNumber = sequenceNumber;
         icmp.Identifier = identifier;
-        if (calculateChecksum)
+        if (updateChecksum)
             ipPacket.UpdateAllChecksums();
 
         return ipPacket;
     }
 
-    public static IpPacket BuildIcmpV6EchoReply(IPAddress sourceAddress, IPAddress destinationAddress,
-        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
-    {
-        return BuildIcmpV6EchoReply(
-            sourceAddress.GetAddressBytes(), destinationAddress.GetAddressBytes(),
-            payload, identifier: identifier, sequenceNumber: sequenceNumber, calculateChecksum);
-    }
-
     public static IpPacket BuildIcmpV6EchoReply(
-        ReadOnlySpan<byte> sourceAddressSpan, ReadOnlySpan<byte> destinationAddressSpan,
-        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool calculateChecksum = true)
+        IPAddress sourceAddress, IPAddress destinationAddress,
+        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool updateChecksum = true)
     {
-        if (sourceAddressSpan.Length != 16 || destinationAddressSpan.Length != 16)
+        if (!sourceAddress.IsV6() || !destinationAddress.IsV6())
             throw new ArgumentException("SourceAddress and DestinationAddress must be IPv6 addresses.");
 
-        var ipPacket = BuildIcmpV6(sourceAddressSpan, destinationAddressSpan, payload);
+        var ipPacket = BuildIcmpV6(sourceAddress, destinationAddress, payload);
         var icmp = ipPacket.ExtractIcmpV6();
         icmp.Type = IcmpV6Type.EchoReply;
         icmp.Code = 0;
         icmp.SequenceNumber = sequenceNumber;
         icmp.Identifier = identifier;
-        if (calculateChecksum)
+        if (updateChecksum)
             ipPacket.UpdateAllChecksums();
 
         return ipPacket;
@@ -291,7 +259,7 @@ public static class PacketBuilder
         var tcpPacketOrg = ipPacket.ExtractTcp();
 
         var resetIpPacket = BuildTcp(
-            ipPacket.DestinationAddressSpan, ipPacket.SourceAddressSpan,
+            ipPacket.DestinationAddress, ipPacket.SourceAddress,
             tcpPacketOrg.DestinationPort, tcpPacketOrg.SourcePort, null, null);
 
         var resetTcpPacket = resetIpPacket.ExtractTcp();
@@ -315,7 +283,7 @@ public static class PacketBuilder
         return resetIpPacket;
     }
 
-    public static IpPacket BuildDns(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
+    public static IpPacket BuildDns(IPAddress sourceAddress, IPAddress destinationAddress,
         int sourcePort, int destinationPort, string host, ushort? queryId = null)
     {
         queryId ??= (ushort)new Random().Next(ushort.MaxValue);
@@ -334,8 +302,8 @@ public static class PacketBuilder
         string host, ushort? queryId = null)
     {
         return BuildDns(
-            sourceAddress: sourceEndPoint.Address.GetAddressBytes(),
-            destinationAddress: destinationEndPoint.Address.GetAddressBytes(),
+            sourceAddress: sourceEndPoint.Address,
+            destinationAddress: destinationEndPoint.Address,
             sourcePort: sourceEndPoint.Port,
             destinationPort: destinationEndPoint.Port,
             host,
@@ -372,7 +340,7 @@ public static class PacketBuilder
 
         // Copy original IP header (20 bytes) + 8 bytes of payload into ICMP payload
         var toCopy = Math.Min(ipPacket.Header.Length + 8, ipPacket.Buffer.Length);
-        var icmpIpPacket = BuildIcmpV4(ipPacket.DestinationAddressSpan, ipPacket.SourceAddressSpan,
+        var icmpIpPacket = BuildIcmpV4(ipPacket.DestinationAddress, ipPacket.SourceAddress,
             ipPacket.Buffer.Span[..toCopy]);
 
         var icmpPacket = icmpIpPacket.ExtractIcmpV4();
@@ -394,7 +362,7 @@ public static class PacketBuilder
 
         // Copy original IP header (40 bytes) + 8 bytes of payload into ICMP payload
         var toCopy = Math.Min(1280 - 40, ipPacket.Buffer.Length);
-        var icmpIpPacket = BuildIcmpV6(ipPacket.DestinationAddressSpan, ipPacket.SourceAddressSpan,
+        var icmpIpPacket = BuildIcmpV6(ipPacket.DestinationAddress, ipPacket.SourceAddress,
             ipPacket.Buffer.Span[..toCopy]);
 
         var icmpPacket = icmpIpPacket.ExtractIcmpV6();

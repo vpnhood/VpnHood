@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -23,7 +24,6 @@ internal class ClientHost(
 {
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly List<IpPacket> _ipPackets = [];
     private TcpListener? _tcpListenerIpV4;
     private TcpListener? _tcpListenerIpV6;
     private IPEndPoint? _localEndpointIpV4;
@@ -32,11 +32,13 @@ internal class ClientHost(
     private readonly ClientHostStat _stat = new();
     private int _passthruInProcessPacketsCounter;
     private readonly Nat _nat = new(true);
+    private readonly PacketReceivedEventArgs _packetReceivedEventArgs = new(new List<IpPacket>());
 
     public IPAddress CatcherAddressIpV4 { get; } = catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 { get; } = catcherAddressIpV6;
     public bool IsPassthruInProcessPacketsEnabled => _passthruInProcessPacketsCounter > 0;
     public IClientHostStat Stat => _stat;
+    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
 
     public void EnablePassthruInProcessPackets(bool value)
     {
@@ -104,15 +106,14 @@ internal class ClientHost(
     }
 
     // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
-    // Warning: the return array is shared and will be invalid with next call
-    public IList<IpPacket> ProcessOutgoingPacket(IList<IpPacket> ipPackets)
+    public void ProcessOutgoingPacket(IList<IpPacket> ipPackets)
     {
         if (_localEndpointIpV4 == null)
             throw new InvalidOperationException(
                 $"{nameof(_localEndpointIpV4)} has not been initialized! Did you call {nameof(Start)}!");
 
-        _ipPackets.Clear(); // prevent reallocation in this intensive method
-        var ret = _ipPackets;
+        _packetReceivedEventArgs.IpPackets.Clear(); // prevent reallocation in this intensive method
+        var resultPackets = _packetReceivedEventArgs.IpPackets;
 
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
@@ -164,11 +165,11 @@ internal class ClientHost(
                 }
 
                 ipPacket.UpdateAllChecksums();
-                ret.Add(ipPacket);
+                resultPackets.Add(ipPacket);
             }
             catch (Exception ex) {
                 if (tcpPacket != null) {
-                    ret.Add(PacketBuilder.BuildTcpResetReply(ipPacket));
+                    resultPackets.Add(PacketBuilder.BuildTcpResetReply(ipPacket));
                     PacketLogger.LogPacket(ipPacket,
                         "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.",
                         LogLevel.Debug, ex);
@@ -181,7 +182,7 @@ internal class ClientHost(
         }
 
         //it is a shared buffer; to ToArray is necessary
-        return ret; 
+        PacketReceived?.Invoke(this, _packetReceivedEventArgs);
     }
 
     private SyncCustomData? ProcessOutgoingSyncPacket(IpPacket ipPacket, TcpPacket tcpPacket)
@@ -325,12 +326,16 @@ internal class ClientHost(
 
     public ValueTask DisposeAsync()
     {
-        if (_disposed) return default;
-        _disposed = true;
+        if (_disposed) 
+            return default;
+        
         _cancellationTokenSource.Cancel();
         _tcpListenerIpV4?.Stop();
         _tcpListenerIpV6?.Stop();
         _nat.Dispose();
+        PacketReceived = null;
+        
+        _disposed = true;
         return default;
     }
 
@@ -344,5 +349,5 @@ internal class ClientHost(
     {
         public required bool IsInIpRange { get; init; }
     }
-   
+
 }

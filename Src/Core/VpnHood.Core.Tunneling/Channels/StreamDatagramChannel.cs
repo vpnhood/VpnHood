@@ -181,6 +181,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         if (processedPackets != null)
             foreach (var processedPacket in processedPackets) {
                 ipPackets.Remove(processedPacket);
+                processedPacket.Dispose();
             }
     }
 
@@ -212,7 +213,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
             _cancellationTokenSource.CancelAfter(TunnelDefaults.TcpGracefulTimeout);
 
             // send close message to peer
-            var ipPacket = DatagramMessageHandler.CreateMessage(new CloseDatagramMessage());
+            using var ipPacket = DatagramMessageHandler.CreateMessage(new CloseDatagramMessage());
             VhLogger.Instance.LogDebug(GeneralEventId.DatagramChannel,
                 "StreamDatagramChannel sending the close message to the remote. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);

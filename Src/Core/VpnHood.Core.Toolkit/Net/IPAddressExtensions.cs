@@ -35,4 +35,19 @@ public static class IPAddressExtensions
     {
         return addressFamily == AddressFamily.InterNetworkV6;
     }
+
+    public static bool SpanEquals(this IPAddress ipAddress, ReadOnlySpan<byte> ipAddressSpan)
+    {
+        return ipAddress
+            .GetAddressBytesFast(stackalloc byte[16])
+            .SequenceEqual(ipAddressSpan);
+    }
+
+    public static Span<byte> GetAddressBytesFast(this IPAddress ipAddress, Span<byte> buffer)
+    {
+        if (!ipAddress.TryWriteBytes(buffer, out var bytesWritten))
+            throw new ArgumentException($"buffer is not big enough to hold the IP address. BufferLength: {buffer.Length}, IPAddress: {ipAddress}.");
+
+        return buffer[..bytesWritten];
+    }
 }

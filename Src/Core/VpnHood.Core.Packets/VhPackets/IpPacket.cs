@@ -24,13 +24,32 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
         protected set => Buffer.Span[0] = (byte)((byte)value << 4 | (Buffer.Span[0] & 0x0F));
     }
 
-    public abstract Span<byte> SourceAddressSpan { get; set; }
-    public abstract Span<byte> DestinationAddressSpan { get; set; }
+    protected abstract Span<byte> SourceAddressBuffer { get; set; }
+    protected abstract Span<byte> DestinationAddressBuffer { get; set; }
+
+
+    public ReadOnlySpan<byte> SourceAddressSpan {
+        get => SourceAddressBuffer;
+        set {
+            if (!value.TryCopyTo(SourceAddressBuffer))
+                throw new ArgumentException("Invalid IP address format.");
+            SourceAddressBuffer = null;
+        }
+    }
+
+    public ReadOnlySpan<byte> DestinationAddressSpan {
+        get => DestinationAddressBuffer;
+        set {
+            if (!value.TryCopyTo(DestinationAddressBuffer))
+                throw new ArgumentException("Invalid IP address format.");
+            DestinationAddressBuffer = null;
+        }
+    }
 
     public IPAddress SourceAddress {
         get => SourceAddressField ??= new IPAddress(SourceAddressSpan);
         set {
-            if (!value.TryWriteBytes(SourceAddressSpan, out var written) || written != SourceAddressSpan.Length)
+            if (!value.TryWriteBytes(SourceAddressBuffer, out var written) || written != SourceAddressSpan.Length)
                 throw new ArgumentException("Invalid IP address format.");
             SourceAddressField = value;
         }
@@ -39,7 +58,7 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     public IPAddress DestinationAddress {
         get => DestinationAddressField ??= new IPAddress(DestinationAddressSpan);
         set {
-            if (!value.TryWriteBytes(DestinationAddressSpan, out var written) || written != DestinationAddressSpan.Length)
+            if (!value.TryWriteBytes(DestinationAddressBuffer, out var written) || written != DestinationAddressSpan.Length)
                 throw new ArgumentException("Invalid IP address format.");
             DestinationAddressField = value;
         }

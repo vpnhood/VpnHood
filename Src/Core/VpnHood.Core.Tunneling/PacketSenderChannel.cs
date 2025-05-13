@@ -10,15 +10,17 @@ public class PacketSenderChannel : IAsyncDisposable
 {
     private bool _disposed;
     private readonly Channel<IpPacket> _sendChannel;
-    private readonly IPacketSender _packetSender;
-    private readonly int _maxQueueLength;
+    private readonly PacketsHandlerAsync _sendPacketsHandlerAsync;
+    private readonly int _queueCapacity;
     private readonly Task _sendingTask;
+    public int QueueLength => _sendChannel.Reader.Count;
+    public delegate Task PacketsHandlerAsync(IList<IpPacket> ipPackets);
 
-    public PacketSenderChannel(IPacketSender packetSender, int maxQueueLength)
+    public PacketSenderChannel(PacketsHandlerAsync sendPacketsHandlerAsync, int queueCapacity)
     {
-        _packetSender = packetSender;
-        _maxQueueLength = maxQueueLength;
-        _sendChannel = Channel.CreateBounded<IpPacket>(new BoundedChannelOptions(maxQueueLength) {
+        _sendPacketsHandlerAsync = sendPacketsHandlerAsync;
+        _queueCapacity = queueCapacity;
+        _sendChannel = Channel.CreateBounded<IpPacket>(new BoundedChannelOptions(queueCapacity) {
             SingleReader = true,
             SingleWriter = false,
             FullMode = BoundedChannelFullMode.DropWrite
@@ -29,7 +31,7 @@ public class PacketSenderChannel : IAsyncDisposable
 
     private async Task StartSendingPacketsAsync()
     {
-        var ipPackets = new List<IpPacket>(_maxQueueLength);
+        var ipPackets = new List<IpPacket>(_queueCapacity);
         while (await _sendChannel.Reader.WaitToReadAsync()) {
             
             // dequeue all packets
@@ -38,7 +40,7 @@ public class PacketSenderChannel : IAsyncDisposable
 
             // send packets
             try {
-                await _packetSender.SendPacketsAsync(ipPackets);
+                await _sendPacketsHandlerAsync(ipPackets);
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Error in sending packets via channel.");
@@ -46,9 +48,7 @@ public class PacketSenderChannel : IAsyncDisposable
 
             // All packets belong to queue worker, so we can dispose them
             // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < ipPackets.Count; i++)
-                ipPackets[i].Dispose();
-
+            ipPackets.DisposeAllPackets();
             ipPackets.Clear();
         }
     }
@@ -68,7 +68,7 @@ public class PacketSenderChannel : IAsyncDisposable
         if (_disposed) 
             return;
 
-        _sendChannel.Writer.Complete();
+        _sendChannel.Writer.TryComplete();
         await _sendingTask;
 
         _disposed = true;

@@ -2,38 +2,39 @@
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.VhPackets;
-using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
-internal class UdpProxy : ITimeoutItem
+internal class UdpProxy : PacketProxy
 {
-    private readonly IPacketReceiver _packetReceiver;
     private readonly UdpClient _udpClient;
-    private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
-
-    public DateTime LastUsedTime { get; set; }
-    public IPEndPoint SourceEndPoint { get; }
-    public bool Disposed { get; private set; }
+    private readonly IPEndPoint? _sourceEndPoint;
     public IPEndPoint LocalEndPoint { get; }
-
-    public UdpProxy(IPacketReceiver packetReceiver, UdpClient udpClient, IPEndPoint sourceEndPoint)
+    public AddressFamily AddressFamily { get; }
+    
+    public UdpProxy(UdpClient udpClient, IPEndPoint? sourceEndPoint, int queueCapacity)
+        : base(queueCapacity)
     {
-        _packetReceiver = packetReceiver;
         _udpClient = udpClient;
-        SourceEndPoint = sourceEndPoint;
+        _sourceEndPoint = sourceEndPoint;
         LastUsedTime = FastDateTime.Now;
         LocalEndPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
+        AddressFamily = LocalEndPoint.AddressFamily;
 
         // prevent raise exception when there is no listener
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             udpClient.Client.IOControl(-1744830452, [0], [0]);
 
-        _ = Listen();
+        _ = StartReceivingAsync();
+    }
+
+    protected virtual IPEndPoint? GetSourceEndPoint(IPEndPoint remoteEndPoint)
+    {
+        return _sourceEndPoint;
     }
 
     private bool IsInvalidState(Exception ex)
@@ -42,58 +43,75 @@ internal class UdpProxy : ITimeoutItem
             or SocketException { SocketErrorCode: SocketError.InvalidArgument };
     }
 
-    public async Task SendPacket(IPEndPoint ipEndPoint, byte[] datagram, bool? noFragment)
+    private readonly byte[] _payloadBuffer = new byte[1500]; //todo: Use SendAsync(Memory<>) later
+    private IPEndPoint? _destinationEndPoint; 
+    protected override async Task SendPacketAsync(IpPacket ipPacket)
     {
-        LastUsedTime = FastDateTime.Now;
-
         try {
-            await _sendSemaphore.WaitAsync().VhConfigureAwait();
-
-            if (VhLogger.IsDiagnoseMode)
-                VhLogger.Instance.LogTrace(GeneralEventId.Udp,
-                    "Sending all udp bytes to host. Requested: DataLength: {DataLength}, Source: {Source}, Destination: {Destination}",
-                    datagram.Length, VhLogger.Format(LocalEndPoint), VhLogger.Format(ipEndPoint));
-
             // IpV4 fragmentation
-            if (noFragment != null && ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
-                _udpClient.DontFragment =
-                    noFragment.Value; // Never call this for IPv6, it will throw exception for any value
+            if (ipPacket.Protocol == IpProtocol.IPv4 && ipPacket is IpV4Packet ipV4Packet && AddressFamily.IsV4()) 
+                _udpClient.DontFragment = ipV4Packet.DontFragment; // Never call this for IPv6, it will throw exception for any value
 
-            var sentBytes = await _udpClient.SendAsync(datagram, datagram.Length, ipEndPoint).VhConfigureAwait();
-            if (sentBytes != datagram.Length)
-                VhLogger.Instance.LogWarning(
-                    $"Couldn't send all udp bytes. Requested: {datagram.Length}, Sent: {sentBytes}");
+            var udpPacket = ipPacket.ExtractUdp();
+
+            // check if the destination endpoint is changed. Prevent reallocating the buffer
+            if (_destinationEndPoint == null || !_destinationEndPoint.Address.Equals(ipPacket.DestinationAddress) || _destinationEndPoint.Port != udpPacket.DestinationPort)
+                _destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
+
+            // check if the payload is too large for the buffer
+            if (udpPacket.Payload.Length > _payloadBuffer.Length)
+                throw new InvalidOperationException("UDP payload too large for buffer.");
+            udpPacket.Payload.CopyTo(_payloadBuffer);
+
+            // send packet to destination
+            var sentBytes = await _udpClient.SendAsync(_payloadBuffer, udpPacket.Payload.Length, _destinationEndPoint)
+                .VhConfigureAwait();
+            
+            if (sentBytes != udpPacket.Payload.Length)
+                throw new Exception(
+                    $"Couldn't send all udp bytes. Requested: {udpPacket.Payload.Length}, Sent: {sentBytes}");
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(GeneralEventId.Udp,
-                "Couldn't send a udp packet. RemoteEp: {RemoteEp}, Exception: {Message}",
-                VhLogger.Format(ipEndPoint), ex.Message);
-
             if (IsInvalidState(ex))
                 Dispose();
         }
-        finally {
-            _sendSemaphore.Release();
+    }
+
+    public async Task StartReceivingAsync()
+    {
+        try {
+            while (!Disposed) {
+                var udpResult = await _udpClient.ReceiveAsync().VhConfigureAwait();
+                LastUsedTime = FastDateTime.Now;
+
+                // find the audience (sourceEndPoint)
+                var sourceEndPoint = GetSourceEndPoint(udpResult.RemoteEndPoint);
+                if (sourceEndPoint == null) {
+                    VhLogger.Instance.LogInformation(GeneralEventId.Udp, "Could not find result UDP in the NAT!");
+                    return;
+                }
+
+                var ipPacket = PacketBuilder.BuildUdp(udpResult.RemoteEndPoint, sourceEndPoint, udpResult.Buffer);
+                ipPacket.UpdateAllChecksums();
+                OnPacketReceived(ipPacket);
+            }
+        }
+        catch (Exception ex) {
+            if (!IsInvalidState(ex))
+                VhLogger.Instance.LogError(ex, "Unexpected error in UDP receive loop.");
+            Dispose();
         }
     }
 
-    public async Task Listen()
+    protected override void Dispose(bool disposing)
     {
-        while (!Disposed) {
-            var udpResult = await _udpClient.ReceiveAsync().VhConfigureAwait();
-            LastUsedTime = FastDateTime.Now;
+        if (Disposed)
+            return;
 
-            // create packet for audience
-            var ipPacket = PacketBuilder.BuildUdp(udpResult.RemoteEndPoint, SourceEndPoint, udpResult.Buffer);
-
-            // send packet to audience
-            _packetReceiver.OnPacketReceived(ipPacket);
+        if (disposing) {
+            _udpClient.Dispose();
         }
-    }
 
-    public void Dispose()
-    {
-        Disposed = true;
-        _udpClient.Dispose();
+        base.Dispose(disposing);
     }
 }

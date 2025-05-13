@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Jobs;
@@ -8,25 +9,21 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
+
 public class PingProxyPool : IPacketProxyPool, IJob
 {
-    private readonly IPacketProxyReceiver _packetProxyReceiver;
+    private readonly IPacketProxyCallbacks? _packetProxyCallbacks;
     private readonly List<PingProxy> _pingProxies = [];
     private readonly EventReporter _maxWorkerEventReporter;
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly TimeSpan _workerTimeout = TimeSpan.FromMinutes(5);
     private readonly int _workerMaxCount;
-
-    public int ClientCount {
-        get {
-            lock (_pingProxies) return _pingProxies.Count;
-        }
-    }
-
+    
+    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public int RemoteEndPointCount => _remoteEndPoints.Count;
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
 
-    public PingProxyPool(IPacketProxyReceiver packetProxyReceiver, TimeSpan? icmpTimeout,
+    public PingProxyPool(IPacketProxyCallbacks? packetProxyCallbacks, TimeSpan? icmpTimeout,
         int? maxClientCount, LogScope? logScope = null)
     {
         icmpTimeout ??= TimeSpan.FromSeconds(120);
@@ -35,12 +32,19 @@ public class PingProxyPool : IPacketProxyPool, IJob
         _workerMaxCount = maxClientCount > 0
             ? maxClientCount.Value
             : throw new ArgumentException($"{nameof(maxClientCount)} must be greater than 0", nameof(maxClientCount));
-        _packetProxyReceiver = packetProxyReceiver;
+        _packetProxyCallbacks = packetProxyCallbacks;
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(icmpTimeout);
         _maxWorkerEventReporter = new EventReporter(VhLogger.Instance,
             "Session has reached to the maximum ping workers.", logScope: logScope);
 
         JobRunner.Default.Add(this);
+    }
+
+    public int ClientCount {
+        get {
+            lock (_pingProxies)
+                return _pingProxies.Count;
+        }
     }
 
     private PingProxy GetFreePingProxy(out bool isNew)
@@ -54,6 +58,7 @@ public class PingProxyPool : IPacketProxyPool, IJob
 
             if (_pingProxies.Count < _workerMaxCount) {
                 pingProxy = new PingProxy();
+                pingProxy.PacketReceived += PingProxy_PacketReceived;
                 _pingProxies.Add(pingProxy);
                 isNew = true;
                 return pingProxy;
@@ -67,7 +72,12 @@ public class PingProxyPool : IPacketProxyPool, IJob
         }
     }
 
-    public async Task SendPacket(IpPacket ipPacket)
+    private void PingProxy_PacketReceived(object sender, PacketReceivedEventArgs e)
+    {
+        PacketReceived?.Invoke(this, e);
+    }
+
+    public void SendPacketQueued(IpPacket ipPacket)
     {
         if (ipPacket.Version == IpVersion.IPv4 && ipPacket.ExtractIcmpV4().Type != IcmpV4Type.EchoRequest)
             throw new NotSupportedException($"The icmp is not supported. Packet: {PacketLogger.Format(ipPacket)}.");
@@ -76,7 +86,6 @@ public class PingProxyPool : IPacketProxyPool, IJob
             throw new NotSupportedException($"The icmp is not supported. Packet: {PacketLogger.Format(ipPacket)}.");
 
         var destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, 0);
-        bool isNewLocalEndPoint;
         var isNewRemoteEndPoint = false;
 
         // add the endpoint
@@ -85,23 +94,17 @@ public class PingProxyPool : IPacketProxyPool, IJob
             return new TimeoutItem<bool>(true);
         });
         if (isNewRemoteEndPoint)
-            _packetProxyReceiver.OnNewRemoteEndPoint(ipPacket.Protocol, destinationEndPoint);
+            _packetProxyCallbacks?.OnConnectionRequested(ipPacket.Protocol, destinationEndPoint);
 
-        // we know lock doesn't wait for async task, but wait till Send method to set its busy state before goes into its await
-        Task<IpPacket> sendTask;
-        lock (_pingProxies) {
-            var pingProxy = GetFreePingProxy(out isNewLocalEndPoint);
-            sendTask = pingProxy.SendAsync(ipPacket);
-        }
+        // send to a ping proxy
+        var pingProxy = GetFreePingProxy(out var isNewLocalEndPoint);
+        pingProxy.SendPacketQueued(ipPacket);
 
         // raise new endpoint event
         if (isNewLocalEndPoint || isNewRemoteEndPoint)
-            _packetProxyReceiver.OnNewEndPoint(ipPacket.Protocol,
+            _packetProxyCallbacks?.OnConnectionEstablished(ipPacket.Protocol,
                 new IPEndPoint(ipPacket.SourceAddress, 0), new IPEndPoint(ipPacket.DestinationAddress, 0),
                 isNewLocalEndPoint, isNewRemoteEndPoint);
-
-        var result = await sendTask.VhConfigureAwait();
-        _packetProxyReceiver.OnPacketReceived(result);
     }
 
     public Task RunJob()
@@ -114,8 +117,14 @@ public class PingProxyPool : IPacketProxyPool, IJob
 
     public void Dispose()
     {
-        lock (_pingProxies)
-            _pingProxies.ForEach(x => x.Dispose());
+        lock (_pingProxies) {
+            foreach (var proxy in _pingProxies) {
+                proxy.PacketReceived -= PingProxy_PacketReceived;
+                proxy.Dispose();
+            }
+        }
+
         _maxWorkerEventReporter.Dispose();
+        PacketReceived = null;
     }
 }

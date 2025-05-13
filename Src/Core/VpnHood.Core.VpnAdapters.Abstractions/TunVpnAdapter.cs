@@ -522,6 +522,9 @@ public abstract class TunVpnAdapter : IVpnAdapter
 
     protected virtual void Dispose(bool disposing)
     {
+        if (IsDisposed) 
+            return;
+
         // release managed resources when disposing
         if (disposing) {
             IsDisposed = true;
@@ -529,14 +532,15 @@ public abstract class TunVpnAdapter : IVpnAdapter
 
             // notify the subscribers that the adapter is disposed
             Disposed?.Invoke(this, EventArgs.Empty);
+            PacketReceived = null;
             NetworkChange.NetworkAddressChanged -= NetworkChange_NetworkAddressChanged;
         }
+
+        IsDisposed = true;
     }
 
     public void Dispose()
     {
-        if (IsDisposed) return;
-        IsDisposed = true;
         Dispose(true);
         GC.SuppressFinalize(this);
     }

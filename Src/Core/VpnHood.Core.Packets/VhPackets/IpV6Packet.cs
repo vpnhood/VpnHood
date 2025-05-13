@@ -71,7 +71,7 @@ public class IpV6Packet : IpPacket
         set => Span[7] = value;
     }
     
-    public override Span<byte> SourceAddressSpan {
+    protected override Span<byte> SourceAddressBuffer {
         get => Span.Slice(8, 16);
         set {
             value.CopyTo(Span.Slice(8, 16));
@@ -79,7 +79,7 @@ public class IpV6Packet : IpPacket
         }
     }
 
-    public override Span<byte> DestinationAddressSpan {
+    protected override Span<byte> DestinationAddressBuffer {
         get => Span.Slice(24, 16);
         set {
             value.CopyTo(Span.Slice(24, 16));

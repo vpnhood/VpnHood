@@ -7,7 +7,7 @@ using VpnHood.Core.Toolkit.Net;
 namespace VpnHood.Test.Packets;
 
 // ReSharper disable once InconsistentNaming
-public static class IPPacketExtensions
+public static class NetPacketExtensions
 {
     public static IPPacket Clone(this IPPacket ipPacket)
     {
@@ -109,8 +109,8 @@ public static class IPPacketExtensions
                 // icmpV6Packet.UpdateIcmpChecksum(); // it has problem
                 icmpV6Packet.Checksum = 0;
                 icmpV6Packet.Checksum = PacketUtil.ComputeChecksum(
-                    ipPacket.SourceAddress.GetAddressBytes(),
-                    ipPacket.DestinationAddress.GetAddressBytes(),
+                    ipPacket.SourceAddress.GetAddressBytesFast(stackalloc byte[16]),
+                    ipPacket.DestinationAddress.GetAddressBytesFast(stackalloc byte[16]),
                     (byte)ProtocolType.IcmpV6,
                     icmpV6Packet.Bytes);
                 icmpV6Packet.UpdateCalculatedValues();

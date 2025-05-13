@@ -232,7 +232,6 @@ public class VpnServiceHost : IAsyncDisposable
         // let dispose in the background
         _ = Client?.DisposeAsync();
     }
-
     
     public async ValueTask DisposeAsync()
     {

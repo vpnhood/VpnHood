@@ -257,7 +257,7 @@ public class ClientProfileService
                 cts.Token.ThrowIfCancellationRequested();
                 var newServerToken = ServerToken.Decrypt(token.ServerToken.Secret, encryptedServerToken);
 
-                // return older only if token body is same and created time is newer
+                // return if the token is not new
                 if (!token.ServerToken.IsTokenUpdated(newServerToken)) {
                     VhLogger.Instance.LogInformation("The remote ServerToken is not new and has not been updated.");
                     return false;

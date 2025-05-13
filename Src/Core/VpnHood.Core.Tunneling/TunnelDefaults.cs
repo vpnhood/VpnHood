@@ -13,7 +13,11 @@ public static class TunnelDefaults
     public const int StreamProxyBufferSize = 0x1000 * 2;
     public const int ClientUdpReceiveBufferSize = 1024 * 1024 * 1; // 1MB
     public const int ClientUdpSendBufferSize = 1024 * 1024 * 1; // 1MB
+    public const int ProxyPacketQueueCapacity = 200;
+    public const int TunnelPacketQueueCapacity = 200;
+    public const int MaxUdpClientCount = 500;
 
+    public static TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(2);
     public static TimeSpan TcpCheckInterval { get; set; } = TimeSpan.FromMinutes(15);
     public static TimeSpan TcpGracefulTimeout { get; set; } = TimeSpan.FromSeconds(15);
     public static TimeSpan ClientRequestTimeoutDelta { get; set; } = TimeSpan.FromSeconds(10);

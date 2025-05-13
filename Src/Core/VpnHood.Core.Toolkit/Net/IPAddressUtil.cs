@@ -235,32 +235,24 @@ public static class IPAddressUtil
         if (ipAddress2.IsIPv4MappedToIPv6) ipAddress2 = ipAddress2.MapToIPv4();
 
         // compare
-        if (ipAddress1.AddressFamily == AddressFamily.InterNetwork &&
-            ipAddress2.AddressFamily == AddressFamily.InterNetworkV6)
+        if (ipAddress1.IsV4() && ipAddress2.IsV6())
             return -1;
 
-        if (ipAddress1.AddressFamily == AddressFamily.InterNetworkV6 &&
-            ipAddress2.AddressFamily == AddressFamily.InterNetwork)
+        if (ipAddress1.IsV6() && ipAddress2.IsV4())
             return +1;
 
-        var bytes1 = ipAddress1.GetAddressBytes();
-        var bytes2 = ipAddress2.GetAddressBytes();
-
-        for (var i = 0; i < bytes1.Length; i++) {
-            if (bytes1[i] < bytes2[i]) return -1;
-            if (bytes1[i] > bytes2[i]) return +1;
-        }
-
-        return 0;
+        var span1 = ipAddress1.GetAddressBytesFast(stackalloc byte[16]);
+        var span2 = ipAddress2.GetAddressBytesFast(stackalloc byte[16]);
+        return span1.SequenceCompareTo(span2);
     }
 
     public static long ToLong(IPAddress ipAddress)
     {
-        if (ipAddress.AddressFamily != AddressFamily.InterNetwork)
+        if (!ipAddress.IsV4())
             throw new InvalidOperationException(
                 $"Only {AddressFamily.InterNetwork} family can be converted into long!");
 
-        var bytes = ipAddress.GetAddressBytes();
+        var bytes = ipAddress.GetAddressBytesFast(stackalloc byte[16]);
         return ((long)bytes[0] << 24) | ((long)bytes[1] << 16) | ((long)bytes[2] << 8) | bytes[3];
     }
 
@@ -271,16 +263,16 @@ public static class IPAddressUtil
 
     public static BigInteger ToBigInteger(IPAddress value)
     {
-        return new BigInteger(value.GetAddressBytes(), true, true);
+        return new BigInteger(value.GetAddressBytesFast(stackalloc byte[16]), true, true);
     }
 
     public static IPAddress FromBigInteger(BigInteger value, AddressFamily addressFamily)
     {
         Verify(addressFamily);
 
-        var bytes = new byte[addressFamily == AddressFamily.InterNetworkV6 ? 16 : 4];
+        Span<byte> bytes = stackalloc byte[addressFamily == AddressFamily.InterNetworkV6 ? 16 : 4];
         value.TryWriteBytes(bytes, out _, true);
-        Array.Reverse(bytes);
+        bytes.Reverse();
         return new IPAddress(bytes);
     }
 
@@ -288,7 +280,7 @@ public static class IPAddressUtil
     {
         Verify(ipAddress);
 
-        var bytes = ipAddress.GetAddressBytes();
+        var bytes = ipAddress.GetAddressBytesFast(stackalloc byte[16]);
 
         for (var k = bytes.Length - 1; k >= 0; k--) {
             if (bytes[k] == byte.MaxValue) {
@@ -309,7 +301,7 @@ public static class IPAddressUtil
     {
         Verify(ipAddress);
 
-        var bytes = ipAddress.GetAddressBytes();
+        var bytes = ipAddress.GetAddressBytesFast(stackalloc byte[16]);
 
         for (var k = bytes.Length - 1; k >= 0; k--) {
             if (bytes[k] == byte.MinValue) {
@@ -354,12 +346,12 @@ public static class IPAddressUtil
     public static IPAddress Anonymize(IPAddress ipAddress)
     {
         if (ipAddress.AddressFamily == AddressFamily.InterNetwork) {
-            var bytes = ipAddress.GetAddressBytes();
+            var bytes = ipAddress.GetAddressBytesFast(stackalloc byte[16]);
             bytes[^1] = 0;
             return new IPAddress(bytes);
         }
         else {
-            var bytes = ipAddress.GetAddressBytes();
+            var bytes = ipAddress.GetAddressBytesFast(stackalloc byte[16]);
             for (var i = 6; i < bytes.Length; i++)
                 bytes[i] = 0;
             return new IPAddress(bytes);

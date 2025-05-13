@@ -11,7 +11,7 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
-public class Tunnel : IPacketSender, IJob, IAsyncDisposable
+public class Tunnel : IJob, IAsyncDisposable
 {
     private readonly object _channelListLock = new();
     private readonly HashSet<StreamProxyChannel> _streamProxyChannels = [];
@@ -37,7 +37,7 @@ public class Tunnel : IPacketSender, IJob, IAsyncDisposable
         options ??= new TunnelOptions();
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _speedMonitorTimer = new Timer(_ => UpdateSpeed(), null, TimeSpan.Zero, _speedTestThreshold);
-        _senderChannel = new PacketSenderChannel(this, options.MaxQueueLength);
+        _senderChannel = new PacketSenderChannel(SendPacketsAsync, options.MaxQueueLength);
         JobRunner.Default.Add(this);
     }
 

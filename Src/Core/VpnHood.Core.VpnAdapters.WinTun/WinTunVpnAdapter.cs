@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.IO.Compression;
 using System.Net;
 using System.Runtime.InteropServices;
@@ -259,8 +258,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
                     // read the packet
                     Marshal.Copy(tunReceivePacket, _readBuffer, 0, size);
                     var packet = PacketBuilder.Parse(_readBuffer.AsSpan(0, size));
-                    if (packet.SourceAddressSpan.SequenceEqual(PrimaryAdapterIpV4.GetAddressBytes()) || 
-                        packet.SourceAddress.Equals(PrimaryAdapterIpV6))
+                    if (PrimaryAdapterIpV4?.SpanEquals(packet.SourceAddressSpan)== true ||
+                        PrimaryAdapterIpV6?.SpanEquals(packet.SourceAddressSpan) == true)
                         continue; // skip the packet
                     return packet;
                 }

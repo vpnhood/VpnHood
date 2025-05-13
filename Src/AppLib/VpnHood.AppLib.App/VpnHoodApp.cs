@@ -644,7 +644,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IncludeLocalNetwork = UserSettings.IncludeLocalNetwork && Features.IsLocalNetworkSupported,
             IncludeIpRanges = (await GetIncludeIpRanges(cancellationToken)).ToArray(),
             VpnAdapterIncludeIpRanges = vpnAdapterIpRanges.ToArray(),
-            MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount, 
+            MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
             ServerQueryTimeout = _serverQueryTimeout,
             UseNullCapture = HasDebugCommand(DebugCommands.NullCapture),
@@ -731,6 +731,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 allowUpdateToken &&
                 !VhUtils.IsNullOrEmpty(token.ServerToken.Urls) &&
                 await ClientProfileService.UpdateServerTokenByUrls(token, cancellationToken).VhConfigureAwait()) {
+                // reconnect using the new token
+                VhLogger.Instance.LogInformation("Reconnecting using the new token..");
                 token = ClientProfileService.GetToken(token.TokenId);
                 await ConnectInternal(token,
                         serverLocation: serverLocation,

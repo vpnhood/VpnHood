@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Exceptions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.IpLocations.Providers;
@@ -116,7 +117,7 @@ public class ClientAppTest : TestAppBase
     }
 
     [TestMethod]
-    public async Task State_Error_InConnecting()
+    public async Task State_Error_Unreachable_Server()
     {
         // create server
         await using var server = await TestHelper.CreateServer();
@@ -126,7 +127,7 @@ public class ClientAppTest : TestAppBase
         // create app
         await using var app = TestAppHelper.CreateClientApp();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await Assert.ThrowsExceptionAsync<TimeoutException>(() => app.Connect(clientProfile.ClientProfileId));
+        await Assert.ThrowsExceptionAsync<UnreachableServerException>(() => app.Connect(clientProfile.ClientProfileId));
 
         await app.WaitForState(AppConnectionState.None);
         Assert.IsTrue(app.State.LogExists);

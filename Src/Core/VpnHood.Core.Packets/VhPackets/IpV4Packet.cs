@@ -143,7 +143,7 @@ public class IpV4Packet : IpPacket
         set => BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(10, 2), value);
     }
 
-    public override Span<byte> SourceAddressSpan {
+    protected override Span<byte> SourceAddressBuffer {
         get => Span.Slice(12, 4);
         set {
             value.CopyTo(Span.Slice(12, 4));
@@ -151,7 +151,7 @@ public class IpV4Packet : IpPacket
         }
     }
 
-    public override Span<byte> DestinationAddressSpan {
+    protected override Span<byte> DestinationAddressBuffer {
         get => Span.Slice(16, 4);
         set {
             value.CopyTo(Span.Slice(16, 4));

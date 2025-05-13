@@ -39,11 +39,11 @@ public static class ClientExceptionConverter
         if (apiError.Is<NoStableVpnException>())
             exception = new NoStableVpnException();
 
-        if (apiError.Is<UnreachableServer>())
-            exception = new UnreachableServer(apiError.Message);
+        if (apiError.Is<UnreachableServerException>())
+            exception = new UnreachableServerException(apiError.Message);
 
-        if (apiError.Is<UnreachableServerLocation>())
-            exception = new UnreachableServerLocation(apiError.Message);
+        if (apiError.Is<UnreachableServerExceptionLocation>())
+            exception = new UnreachableServerExceptionLocation(apiError.Message);
 
         if (exception != null)
             apiError.ExportData(exception.Data);

@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Jobs;
@@ -12,51 +13,45 @@ namespace VpnHood.Core.Tunneling;
 
 public class UdpProxyPool : IPacketProxyPool, IJob
 {
-    private readonly IPacketProxyReceiver _packetProxyReceiver;
+    private readonly IPacketProxyCallbacks? _packetProxyCallbacks;
     private readonly ISocketFactory _socketFactory;
     private readonly int? _sendBufferSize;
     private readonly int? _receiveBufferSize;
+    private readonly int _packetQueueCapacity;
     private readonly TimeoutDictionary<IPEndPoint, UdpProxy> _udpProxies;
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly EventReporter _maxWorkerEventReporter;
     private readonly int _maxClientCount;
     private bool _disposed;
 
+    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public int RemoteEndPointCount => _remoteEndPoints.Count;
     public int ClientCount => _udpProxies.Count;
     public JobSection JobSection { get; } = new();
 
-    public UdpProxyPool(IPacketProxyReceiver packetProxyReceiver, ISocketFactory socketFactory,
-        TimeSpan? udpTimeout, int? maxClientCount, LogScope? logScope = null,
-        int? sendBufferSize = null, int? receiveBufferSize = null)
+    public UdpProxyPool(UdpProxyPoolOptions options)
     {
-        udpTimeout ??= TimeSpan.FromSeconds(120);
-        maxClientCount ??= int.MaxValue;
+        var udpTimeout = options.UdpTimeout ?? TunnelDefaults.UdpTimeout;
 
-        _packetProxyReceiver = packetProxyReceiver;
-        _socketFactory = socketFactory;
-        _sendBufferSize = sendBufferSize;
-        _receiveBufferSize = receiveBufferSize;
-        _maxClientCount = maxClientCount > 0
-            ? maxClientCount.Value
-            : throw new ArgumentException($"{nameof(maxClientCount)} must be greater than 0", nameof(maxClientCount));
-        _udpProxies = new TimeoutDictionary<IPEndPoint, UdpProxy>(udpTimeout);
+        _packetProxyCallbacks = options.PacketProxyCallbacks;
+        _socketFactory = options.SocketFactory;
+        _packetQueueCapacity = options.PacketQueueCapacity ?? TunnelDefaults.ProxyPacketQueueCapacity;
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(udpTimeout);
+        _maxClientCount = options.MaxClientCount ?? TunnelDefaults.MaxUdpClientCount;
+        _sendBufferSize = options.SendBufferSize;
+        _receiveBufferSize = options.ReceiveBufferSize;
         _maxWorkerEventReporter = new EventReporter(VhLogger.Instance,
-            "Session has reached to Maximum local UDP ports.", GeneralEventId.NetProtect, logScope: logScope);
+            "Session has reached to Maximum local UDP ports.", GeneralEventId.NetProtect, logScope: options.LogScope);
 
-        JobSection.Interval = udpTimeout.Value;
+        _udpProxies = new TimeoutDictionary<IPEndPoint, UdpProxy>(udpTimeout);
+        JobSection.Interval = udpTimeout;
         JobRunner.Default.Add(this);
     }
 
-    public Task SendPacket(IpPacket ipPacket)
+    public void SendPacketQueued(IpPacket ipPacket)
     {
         // send packet via proxy
         var udpPacket = ipPacket.ExtractUdp();
-        bool? noFragment = ipPacket.Protocol == IpProtocol.IPv6 && ipPacket is IpV4Packet ipV4Packet
-            ? ipV4Packet.DontFragment
-            : null;
-
         var sourceEndPoint = new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort);
         var destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
         var addressFamily = ipPacket.SourceAddress.AddressFamily;
@@ -69,7 +64,7 @@ public class UdpProxyPool : IPacketProxyPool, IJob
             return new TimeoutItem<bool>(true);
         });
         if (isNewRemoteEndPoint)
-            _packetProxyReceiver.OnNewRemoteEndPoint(IpProtocol.Udp, destinationEndPoint);
+            _packetProxyCallbacks?.OnConnectionRequested(IpProtocol.Udp, destinationEndPoint);
 
         // find the proxy for the sourceEndPoint
         var udpProxy = _udpProxies.GetOrAdd(sourceEndPoint, key => {
@@ -80,19 +75,25 @@ public class UdpProxyPool : IPacketProxyPool, IJob
             }
 
             isNewLocalEndPoint = true;
-            return new UdpProxy(_packetProxyReceiver, CreateUdpClient(addressFamily), key);
+            var ret = new UdpProxy(CreateUdpClient(addressFamily), key, _packetQueueCapacity);
+            ret.PacketReceived += UdpProxy_OnPacketReceived;
+            return ret;
         });
 
         // Raise new endpoint
         if (isNewLocalEndPoint || isNewRemoteEndPoint)
-            _packetProxyReceiver.OnNewEndPoint(IpProtocol.Udp, 
-                localEndPoint: udpProxy.LocalEndPoint, 
+            _packetProxyCallbacks?.OnConnectionEstablished(IpProtocol.Udp,
+                localEndPoint: udpProxy.LocalEndPoint,
                 remoteEndPoint: destinationEndPoint,
                 isNewLocalEndPoint: isNewLocalEndPoint,
                 isNewRemoteEndPoint: isNewRemoteEndPoint);
 
-        var dgram = udpPacket.Payload.ToArray(); // todo: use memory in new .net
-        return udpProxy.SendPacket(destinationEndPoint, dgram, noFragment);
+        udpProxy.SendPacketQueued(ipPacket);
+    }
+
+    private void UdpProxy_OnPacketReceived(object sender, PacketReceivedEventArgs e)
+    {
+        PacketReceived?.Invoke(this, e);
     }
 
     private UdpClient CreateUdpClient(AddressFamily addressFamily)
@@ -114,9 +115,10 @@ public class UdpProxyPool : IPacketProxyPool, IJob
     {
         if (_disposed)
             return;
-        _disposed = true;
 
+        PacketReceived = null;
         _remoteEndPoints.Dispose();
         _maxWorkerEventReporter.Dispose();
+        _disposed = true;
     }
 }

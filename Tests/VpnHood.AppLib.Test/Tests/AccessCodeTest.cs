@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;

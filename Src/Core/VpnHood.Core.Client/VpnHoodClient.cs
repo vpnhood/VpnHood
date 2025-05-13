@@ -180,7 +180,11 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         DomainFilterService = new DomainFilterService(options.DomainFilter, forceLogSni: options.ForceLogSni);
 
         // Tunnel
-        Tunnel = new Tunnel();
+        Tunnel = new Tunnel(new TunnelOptions {
+            AutoDisposeSentPackets = true,
+            PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
+            MaxDatagramChannelCount = TunnelDefaults.MaxDatagramChannelCount
+        });
         Tunnel.PacketReceived += Tunnel_PacketReceived;
 
         // create proxy host

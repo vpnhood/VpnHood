@@ -32,13 +32,12 @@ public class Tunnel : IJob, IAsyncDisposable
     public int Mtu { get; set; } = TunnelDefaults.Mtu;
     public int RemoteMtu { get; set; } = TunnelDefaults.MtuRemote;
 
-    public Tunnel(TunnelOptions? options = null, bool autoDisposeSentPackets = false)
+    public Tunnel(TunnelOptions options)
     {
-        options ??= new TunnelOptions();
-        _autoDisposeSentPackets = autoDisposeSentPackets;
+        _autoDisposeSentPackets = options.AutoDisposeSentPackets;
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _speedMonitorTimer = new Timer(_ => UpdateSpeed(), null, TimeSpan.Zero, _speedTestThreshold);
-        _senderChannel = new PacketSenderChannel(SendPacketsAsync, options.MaxQueueLength, autoDisposeSentPackets);
+        _senderChannel = new PacketSenderChannel(SendPacketsAsync, options.PacketQueueCapacity, options.AutoDisposeSentPackets);
         JobRunner.Default.Add(this);
     }
 

@@ -43,6 +43,8 @@ public class SessionOptions
     [JsonIgnore] public TimeSpan UdpTimeoutValue => UdpTimeout ?? TimeSpan.FromMinutes(1);
     [JsonIgnore] public int UdpSendBufferSizeValue => UdpSendBufferSize ?? 1024 * 1024 * 4;
     [JsonIgnore] public int UdpReceiveBufferSizeValue => UdpReceiveBufferSize ?? 1024 * 1024 * 4;
+    [JsonIgnore] public int? UdpProxySendBufferSizeValue => UdpProxySendBufferSize ?? null;
+    [JsonIgnore] public int? UdpProxyReceiveBufferSizeValue => UdpProxyReceiveBufferSize ?? null;
     [JsonIgnore] public TimeSpan TcpTimeoutValue => TcpTimeout ?? TimeSpan.FromMinutes(15);
     [JsonIgnore] public TimeSpan IcmpTimeoutValue => IcmpTimeout ?? TimeSpan.FromSeconds(30);
     [JsonIgnore] public TimeSpan SyncIntervalValue => SyncInterval ?? TimeSpan.FromMinutes(20);
@@ -97,8 +99,8 @@ public class SessionOptions
         TcpBufferSize = TcpBufferSize; //no default
         TcpKernelSendBufferSize = TcpKernelSendBufferSize; //no default
         TcpKernelReceiveBufferSize = TcpKernelReceiveBufferSize; //no default
-        UdpProxySendBufferSize = UdpProxySendBufferSize; //no default
-        UdpProxyReceiveBufferSize = UdpProxyReceiveBufferSize; //no default
+        UdpProxySendBufferSize = UdpProxySendBufferSizeValue; //no default
+        UdpProxyReceiveBufferSize = UdpProxyReceiveBufferSizeValue; //no default
         UdpSendBufferSize = UdpSendBufferSizeValue;
         UdpReceiveBufferSize = UdpReceiveBufferSizeValue;
         TcpConnectTimeout = TcpConnectTimeoutValue;

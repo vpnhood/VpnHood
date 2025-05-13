@@ -43,7 +43,7 @@ public class TcpDatagramChannelTest : TestBase
             new TcpClientStream(serverTcpClient, serverTcpClient.GetStream(), Guid.NewGuid() + ":server");
         await using var serverChannel = new StreamDatagramChannel(serverStream, Guid.NewGuid().ToString());
 
-        var serverTunnel = new Tunnel(new TunnelOptions());
+        var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         serverTunnel.AddChannel(serverChannel);
         IpPacket? lastServerReceivedPacket = null;
         serverTunnel.PacketReceived += (_, args) => { lastServerReceivedPacket = args.IpPackets.Last(); };
@@ -53,7 +53,7 @@ public class TcpDatagramChannelTest : TestBase
             new TcpClientStream(tcpClient, tcpClient.GetStream(), Guid.NewGuid() + ":client");
         await using var clientChannel =
             new StreamDatagramChannel(clientStream, Guid.NewGuid().ToString(), TimeSpan.FromMilliseconds(1000));
-        await using var clientTunnel = new Tunnel(new TunnelOptions());
+        await using var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         clientTunnel.AddChannel(clientChannel);
 
         // -------

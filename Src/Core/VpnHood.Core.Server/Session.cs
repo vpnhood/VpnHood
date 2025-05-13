@@ -98,7 +98,7 @@ public class Session : IAsyncDisposable
             IcmpTimeout = options.IcmpTimeoutValue,
             MaxUdpClientCount = options.MaxUdpClientCountValue,
             MaxPingClientCount = options.MaxIcmpClientCountValue,
-            UdpReceiveBufferSize = options.UdpProxyReceiveBufferSize,
+            UdpReceiveBufferSize = options.UdpProxyReceiveBufferSize ?? TunnelDefaults.ClientUdpReceiveBufferSize,
             UdpSendBufferSize = options.UdpProxySendBufferSize,
             LogScope = logScope,
             IsPingSupported = true,
@@ -126,7 +126,11 @@ public class Session : IAsyncDisposable
         SessionId = sessionResponseEx.SessionId;
         SessionKey = sessionResponseEx.SessionKey ?? throw new InvalidOperationException(
             $"{nameof(sessionResponseEx)} does not have {nameof(sessionResponseEx.SessionKey)}!");
-        Tunnel = new Tunnel(new TunnelOptions { MaxDatagramChannelCount = options.MaxDatagramChannelCountValue });
+        Tunnel = new Tunnel(new TunnelOptions {
+            MaxDatagramChannelCount = options.MaxDatagramChannelCountValue,
+            PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
+            AutoDisposeSentPackets = true
+        });
         Tunnel.PacketReceived += Tunnel_PacketReceived;
 
         // ReSharper disable once MergeIntoPattern

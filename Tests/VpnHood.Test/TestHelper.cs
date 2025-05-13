@@ -414,6 +414,17 @@ public class TestHelper : IDisposable
         return proxyPool;
     }
 
+    public TunnelOptions CreateTunnelOptions()
+    {
+        var tunnelOptions = new TunnelOptions {
+            AutoDisposeSentPackets = true,
+            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
+            MaxDatagramChannelCount = TunnelDefaults.MaxDatagramChannelCount
+        };
+        return tunnelOptions;
+    }
+
+
 
     public ClientOptions CreateClientOptions(Token token, bool useUdpChannel = false, string? clientId = null)
     {

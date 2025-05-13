@@ -18,6 +18,8 @@ public static class TunnelDefaults
     public const int MaxUdpClientCount = 500;
     public const int MaxPingClientCount = 10;
 
+    public static int? ServerUdpReceiveBufferSize { get; set; } = null; // system default
+    public static int? ServerUdpSendBufferSize { get; set; } = null; // system default
     public static TimeSpan PingTimeout { get; set; } = TimeSpan.FromSeconds(5);
     public static TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(2);
     public static TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromMinutes(1); // it is for worker timeout

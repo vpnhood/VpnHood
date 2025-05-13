@@ -5,7 +5,7 @@ using System.Text;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Common.IpLocations.Providers;
+namespace VpnHood.Core.Common.IpLocations.Providers.Offlines;
 
 public class LocalIpLocationProvider : IIpLocationProvider
 {

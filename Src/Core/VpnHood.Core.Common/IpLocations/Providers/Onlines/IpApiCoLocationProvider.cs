@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 using VpnHood.Core.Toolkit.Converters;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Common.IpLocations.Providers;
+namespace VpnHood.Core.Common.IpLocations.Providers.Onlines;
 
 public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : IIpLocationProvider
 {

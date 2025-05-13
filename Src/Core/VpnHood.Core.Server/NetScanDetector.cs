@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Net.Sockets;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Net;
 

@@ -29,12 +29,13 @@ using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Common.IpLocations;
-using VpnHood.Core.Common.IpLocations.Providers;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Common.IpLocations.Providers.Offlines;
+using VpnHood.Core.Common.IpLocations.Providers.Onlines;
 
 namespace VpnHood.AppLib;
 

@@ -11,7 +11,7 @@ using VpnHood.AppLib.Exceptions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.IpLocations.Providers;
+using VpnHood.Core.Common.IpLocations.Providers.Offlines;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;

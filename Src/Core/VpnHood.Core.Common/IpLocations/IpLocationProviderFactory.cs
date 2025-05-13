@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Common.IpLocations.Providers;
+﻿using VpnHood.Core.Common.IpLocations.Providers.Onlines;
 
 namespace VpnHood.Core.Common.IpLocations;
 

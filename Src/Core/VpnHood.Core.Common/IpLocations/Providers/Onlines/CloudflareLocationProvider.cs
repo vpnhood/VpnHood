@@ -2,7 +2,7 @@
 using System.Net;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Common.IpLocations.Providers;
+namespace VpnHood.Core.Common.IpLocations.Providers.Onlines;
 
 public class CloudflareLocationProvider(HttpClient httpClient, string userAgent) : IIpLocationProvider
 {

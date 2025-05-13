@@ -3,12 +3,12 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Common.IpLocations.Providers;
+namespace VpnHood.Core.Common.IpLocations.Providers.Offlines;
 
 public class LocalIpRangeLocationProvider(
     Func<ZipArchive> zipArchiveFactory,

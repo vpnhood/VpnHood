@@ -1,5 +1,4 @@
-﻿using VpnHood.Core.Packets.VhPackets;
-using VpnHood.Core.Packets;
+﻿using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling;

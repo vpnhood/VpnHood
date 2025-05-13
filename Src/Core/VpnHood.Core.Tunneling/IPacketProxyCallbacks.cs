@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using VpnHood.Core.Packets.VhPackets;
+using VpnHood.Core.Packets;
 
 namespace VpnHood.Core.Tunneling;
 

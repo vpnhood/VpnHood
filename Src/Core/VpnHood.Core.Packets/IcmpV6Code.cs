@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Packets.VhPackets;
+﻿namespace VpnHood.Core.Packets;
 
 public enum IcmpV6Code : byte
 {

@@ -3,13 +3,13 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Packets.VhPackets;
 using SharpPcap;
 using SharpPcap.WinDivert;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Core.Packets;
 
 namespace VpnHood.Core.VpnAdapters.WinDivert;
 

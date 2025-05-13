@@ -1,6 +1,4 @@
-﻿using VpnHood.Core.Packets.VhPackets;
-
-namespace VpnHood.Core.Packets;
+﻿namespace VpnHood.Core.Packets;
 
 public sealed class PacketReceivedEventArgs(IList<IpPacket> ipPackets) : EventArgs
 {

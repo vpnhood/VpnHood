@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Core.Packets.VhPackets;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Tunneling;
 
 namespace VpnHood.Test.Tests;

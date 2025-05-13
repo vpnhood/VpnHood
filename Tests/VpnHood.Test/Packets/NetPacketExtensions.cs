@@ -2,6 +2,10 @@
 using PacketDotNet;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Net;
+using IcmpV4Packet = PacketDotNet.IcmpV4Packet;
+using IcmpV6Packet = PacketDotNet.IcmpV6Packet;
+using TcpPacket = PacketDotNet.TcpPacket;
+using UdpPacket = PacketDotNet.UdpPacket;
 
 
 namespace VpnHood.Test.Packets;

@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Text;
 
-namespace VpnHood.Core.Packets.VhPackets;
+namespace VpnHood.Core.Packets;
 
 public abstract class IpPacket(Memory<byte> buffer) : IDisposable
 {
@@ -21,7 +21,7 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
 
     public IpVersion Version {
         get { return (IpVersion)(Buffer.Span[0] >> 4); }
-        protected set => Buffer.Span[0] = (byte)((byte)value << 4 | (Buffer.Span[0] & 0x0F));
+        protected set => Buffer.Span[0] = (byte)((byte)value << 4 | Buffer.Span[0] & 0x0F);
     }
 
     protected abstract Span<byte> SourceAddressBuffer { get; set; }

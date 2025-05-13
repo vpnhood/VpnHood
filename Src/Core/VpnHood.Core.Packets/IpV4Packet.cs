@@ -1,7 +1,7 @@
 ﻿using System.Buffers;
 using System.Buffers.Binary;
 
-namespace VpnHood.Core.Packets.VhPackets;
+namespace VpnHood.Core.Packets;
 
 public class IpV4Packet : IpPacket
 {
@@ -45,7 +45,7 @@ public class IpV4Packet : IpPacket
 
         // set header length
         var hl = (20 + optionsLength) / 4;
-        Span[0] = (byte)((4 << 4) | hl);
+        Span[0] = (byte)(4 << 4 | hl);
 
         // set total length
         BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(2, 2), (ushort)buffer.Length);
@@ -124,12 +124,12 @@ public class IpV4Packet : IpPacket
     // ReSharper disable once IdentifierTypo
     public byte Dscp {
         get => (byte)((Span[1] & 0xFC) >> 2);
-        set => Span[1] = (byte)((Span[1] & 0x03) | ((value & 0x3F) << 2));
+        set => Span[1] = (byte)(Span[1] & 0x03 | (value & 0x3F) << 2);
     }
 
     public IpEcnField Ecn {
         get => (IpEcnField)(Span[1] & 0x03);
-        set => Span[1] = (byte)((Span[1] & 0xFC) | ((byte)value & 0x03));
+        set => Span[1] = (byte)(Span[1] & 0xFC | (byte)value & 0x03);
     }
 
     public override byte TimeToLive {
@@ -158,7 +158,7 @@ public class IpV4Packet : IpPacket
             DestinationAddressField = null;
         }
     }
-    public Memory<byte> Options => Buffer.Slice(20, (InternetHeaderLength * 4) - 20);
+    public Memory<byte> Options => Buffer.Slice(20, InternetHeaderLength * 4 - 20);
     public bool IsHeaderChecksumValid()
     {
         var originalChecksum = HeaderChecksum;

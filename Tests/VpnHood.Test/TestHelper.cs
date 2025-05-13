@@ -8,7 +8,7 @@ using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Packets.VhPackets;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;

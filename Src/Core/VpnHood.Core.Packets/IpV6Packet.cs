@@ -1,7 +1,7 @@
 ﻿using System.Buffers;
 using System.Buffers.Binary;
 
-namespace VpnHood.Core.Packets.VhPackets;
+namespace VpnHood.Core.Packets;
 
 public class IpV6Packet : IpPacket
 {
@@ -90,15 +90,15 @@ public class IpV6Packet : IpPacket
     public int FlowLabel {
         get {
             // Extract 20-bit Flow Label: lower 4 bits of Span[1], all Span[2] and Span[3]
-            return ((Span[1] & 0x0F) << 16) | (Span[2] << 8) | Span[3];
+            return (Span[1] & 0x0F) << 16 | Span[2] << 8 | Span[3];
         }
         set {
             if (value is < 0 or > 0xFFFFF)
                 throw new ArgumentOutOfRangeException(nameof(value), "Flow Label must be a 20-bit unsigned value (0 to 1048575).");
 
             // Write back 20-bit Flow Label
-            Span[1] = (byte)((Span[1] & 0xF0) | ((value >> 16) & 0x0F));
-            Span[2] = (byte)((value >> 8) & 0xFF);
+            Span[1] = (byte)(Span[1] & 0xF0 | value >> 16 & 0x0F);
+            Span[2] = (byte)(value >> 8 & 0xFF);
             Span[3] = (byte)(value & 0xFF);
         }
     }
@@ -106,12 +106,12 @@ public class IpV6Packet : IpPacket
     public byte TrafficClass {
         get {
             // TrafficClass = low 4 bits of Span[0] and high 4 bits of Span[1]
-            return (byte)(((Span[0] & 0x0F) << 4) | (Span[1] >> 4));
+            return (byte)((Span[0] & 0x0F) << 4 | Span[1] >> 4);
         }
         set {
             // value is 8 bits: upper 4 bits go to lower nibble of Span[0], lower 4 bits go to upper nibble of Span[1]
-            Span[0] = (byte)((Span[0] & 0xF0) | (value >> 4));     // Preserve version (upper 4 bits)
-            Span[1] = (byte)((Span[1] & 0x0F) | (value << 4));     // Preserve FlowLabel high bits
+            Span[0] = (byte)(Span[0] & 0xF0 | value >> 4);     // Preserve version (upper 4 bits)
+            Span[1] = (byte)(Span[1] & 0x0F | value << 4);     // Preserve FlowLabel high bits
         }
     }
 

@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.Core.Packets.VhPackets;
+namespace VpnHood.Core.Packets;
 
 public static class IpPacketExtensions
 {
@@ -89,21 +89,21 @@ public static class IpPacketExtensions
             return false;
 
         return
-            (ipPacket.Version == IpVersion.IPv4 && IpNetwork.MulticastNetworkV4.Contains(ipPacket.DestinationAddress)) ||
-            (ipPacket.Version == IpVersion.IPv6 && IpNetwork.MulticastNetworkV6.Contains(ipPacket.DestinationAddress));
+            ipPacket.Version == IpVersion.IPv4 && IpNetwork.MulticastNetworkV4.Contains(ipPacket.DestinationAddress) ||
+            ipPacket.Version == IpVersion.IPv6 && IpNetwork.MulticastNetworkV6.Contains(ipPacket.DestinationAddress);
 
     }
     public static IPEndPointPair GetEndPoints(this IpPacket ipPacket)
     {
         if (ipPacket.Protocol == IpProtocol.Tcp) {
-            var tcpPacket = ExtractTcp(ipPacket);
+            var tcpPacket = ipPacket.ExtractTcp();
             return new IPEndPointPair(
                 new IPEndPoint(ipPacket.SourceAddress, tcpPacket.SourcePort),
                 new IPEndPoint(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
         }
 
         if (ipPacket.Protocol == IpProtocol.Udp) {
-            var udpPacket = ExtractUdp(ipPacket);
+            var udpPacket = ipPacket.ExtractUdp();
             return new IPEndPointPair(
                 new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort),
                 new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort));

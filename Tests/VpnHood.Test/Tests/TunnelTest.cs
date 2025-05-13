@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Client;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Utils;

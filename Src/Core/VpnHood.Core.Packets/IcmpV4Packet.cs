@@ -1,6 +1,6 @@
 ﻿using System.Buffers.Binary;
 
-namespace VpnHood.Core.Packets.VhPackets;
+namespace VpnHood.Core.Packets;
 
 public class IcmpV4Packet : IChecksumPayloadPacket
 {
@@ -92,7 +92,7 @@ public class IcmpV4Packet : IChecksumPayloadPacket
 
             var sum = PacketUtil.ComputeSumWords(span);
 
-            while ((sum >> 16) != 0)
+            while (sum >> 16 != 0)
                 sum = (sum & 0xFFFF) + (sum >> 16);
 
             return (ushort)~sum;

@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Packets;
 
 namespace VpnHood.Core.VpnAdapters.Abstractions;

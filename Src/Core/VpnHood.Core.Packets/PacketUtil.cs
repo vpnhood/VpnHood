@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using VpnHood.Core.Packets.VhPackets;
 
 // ReSharper disable UnusedMember.Global
 namespace VpnHood.Core.Packets;

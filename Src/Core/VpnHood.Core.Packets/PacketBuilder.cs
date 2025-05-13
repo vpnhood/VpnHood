@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Packets.VhPackets;
+namespace VpnHood.Core.Packets;
 
 public static class PacketBuilder
 {

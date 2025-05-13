@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Jobs;

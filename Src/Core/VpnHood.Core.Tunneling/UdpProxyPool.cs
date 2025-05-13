@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;

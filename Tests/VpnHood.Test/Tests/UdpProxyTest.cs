@@ -4,8 +4,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Tunneling;
-using VpnHood.Test.Providers;
-
 
 namespace VpnHood.Test.Tests;
 
@@ -46,15 +44,12 @@ public class UdpProxyTest : TestBase
         }
     }
 
-
+    
     [TestMethod]
     public async Task Multiple_EndPoint()
     {
         var myPacketProxyCallbacks = new MyPacketProxyCallbacks();
-        var proxyPool = new UdpProxyPool(new UdpProxyPoolOptions {
-            PacketProxyCallbacks = myPacketProxyCallbacks,
-            SocketFactory = new TestSocketFactory(),
-        });
+        var proxyPool = new UdpProxyPool(TestHelper.CreateUdpProxyPoolOptions(myPacketProxyCallbacks));
         proxyPool.PacketReceived += myPacketProxyCallbacks.PacketReceived;
 
         // Test
@@ -93,10 +88,10 @@ public class UdpProxyTest : TestBase
 
 
         // Test timeout
-        proxyPool = new UdpProxyPool(new UdpProxyPoolOptions {
-            PacketProxyCallbacks = myPacketProxyCallbacks,
-            SocketFactory = new TestSocketFactory(),
-            UdpTimeout = TimeSpan.FromSeconds(1)});
+        var proxyPoolOptions = TestHelper.CreateUdpProxyPoolOptions(myPacketProxyCallbacks);
+        proxyPoolOptions.UdpTimeout = TimeSpan.FromSeconds(1);
+        proxyPool = new UdpProxyPool(proxyPoolOptions);
+
         proxyPool.PacketReceived += myPacketProxyCallbacks.PacketReceived;
         udpEndPoint = TestHelper.WebServer.UdpV4EndPoints[0];
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint,
@@ -116,10 +111,8 @@ public class UdpProxyTest : TestBase
     public async Task Multiple_EndPointEx()
     {
         var myPacketProxyCallbacks = new MyPacketProxyCallbacks();
-        var proxyPool = new UdpProxyPoolEx(new UdpProxyPoolOptions {
-            PacketProxyCallbacks = myPacketProxyCallbacks,
-            SocketFactory = new TestSocketFactory(),
-        });
+        var proxyPoolOptions = TestHelper.CreateUdpProxyPoolOptions(myPacketProxyCallbacks);
+        var proxyPool = new UdpProxyPoolEx(proxyPoolOptions);
         proxyPool.PacketReceived += myPacketProxyCallbacks.PacketReceived;
         var udpEndPoint = TestHelper.WebServer.UdpV4EndPoints[0];
         var ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint,
@@ -164,11 +157,9 @@ public class UdpProxyTest : TestBase
         // -------------
         // Test: timeout
         // -------------
-        proxyPool = new UdpProxyPoolEx(new UdpProxyPoolOptions {
-            PacketProxyCallbacks = myPacketProxyCallbacks,
-            SocketFactory = new TestSocketFactory(),
-            UdpTimeout = TimeSpan.FromSeconds(1)
-        });
+        proxyPoolOptions = TestHelper.CreateUdpProxyPoolOptions(myPacketProxyCallbacks);
+        proxyPoolOptions.UdpTimeout = TimeSpan.FromSeconds(1);
+        proxyPool = new UdpProxyPoolEx(proxyPoolOptions);
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint, Guid.NewGuid().ToByteArray());
         proxyPool.PacketReceived += myPacketProxyCallbacks.PacketReceived;
         proxyPool.SendPacketQueued(ipPacket);

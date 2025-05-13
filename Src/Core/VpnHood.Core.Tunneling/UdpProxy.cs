@@ -16,8 +16,8 @@ internal class UdpProxy : PacketProxy
     public IPEndPoint LocalEndPoint { get; }
     public AddressFamily AddressFamily { get; }
     
-    public UdpProxy(UdpClient udpClient, IPEndPoint? sourceEndPoint, int queueCapacity)
-        : base(queueCapacity)
+    public UdpProxy(UdpClient udpClient, IPEndPoint? sourceEndPoint, int queueCapacity, bool autoDisposeSentPackets)
+        : base(queueCapacity, autoDisposeSentPackets)
     {
         _udpClient = udpClient;
         _sourceEndPoint = sourceEndPoint;
@@ -74,6 +74,7 @@ internal class UdpProxy : PacketProxy
         catch (Exception ex) {
             if (IsInvalidState(ex))
                 Dispose();
+            throw;
         }
     }
 

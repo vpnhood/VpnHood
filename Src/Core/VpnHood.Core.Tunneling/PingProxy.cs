@@ -1,15 +1,14 @@
 ﻿using System.Net.NetworkInformation;
-using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
 namespace VpnHood.Core.Tunneling;
 
-public class PingProxy() : PacketProxy(1)
+public class PingProxy(bool autoDisposeSentPackets) : PacketProxy(1, autoDisposeSentPackets)
 {
     private readonly Ping _ping = new();
     public void Cancel() => _ping.SendAsyncCancel();
-    public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(5);
+    public TimeSpan PingTimeout { get; set; } = TunnelDefaults.PingTimeout;
 
     protected override Task SendPacketAsync(IpPacket ipPacket)
     {
@@ -32,7 +31,7 @@ public class PingProxy() : PacketProxy(1)
 
         var noFragment = (ipPacket.FragmentFlags & 0x2) != 0;
         var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, noFragment);
-        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)IcmpTimeout.TotalMilliseconds,
+        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)PingTimeout.TotalMilliseconds,
             icmpPacket.Payload.ToArray(), pingOptions).VhConfigureAwait();
 
         if (pingReply.Status != IPStatus.Success)
@@ -55,7 +54,7 @@ public class PingProxy() : PacketProxy(1)
                 $"The icmp is not {IcmpV6Type.EchoRequest}! Packet: {PacketLogger.Format(ipPacket)}");
 
         var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, true);
-        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)IcmpTimeout.TotalMilliseconds,
+        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)PingTimeout.TotalMilliseconds,
             icmpPacket.Payload.ToArray(), pingOptions).VhConfigureAwait();
 
         if (pingReply.Status != IPStatus.Success)

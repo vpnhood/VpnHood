@@ -21,7 +21,14 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyCallbacks
     {
         _proxyPool = new UdpProxyPool(new UdpProxyPoolOptions {
             SocketFactory = new SocketFactory(),
-            PacketProxyCallbacks = this
+            PacketProxyCallbacks = this,
+            UdpTimeout = TunnelDefaults.UdpTimeout,
+            MaxClientCount = TunnelDefaults.MaxUdpClientCount,
+            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
+            SendBufferSize = null,
+            ReceiveBufferSize = null,
+            AutoDisposeSentPackets = true,
+            LogScope = null
         });
         _proxyPool.PacketReceived += Proxy_PacketReceived;
     }

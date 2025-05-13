@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Provides tunnelling classes and protocols shared between VpnHood.Core.Client and VpnHood.Core.Server</Description>
+		<Description>A very fast and memory-efficient internet packet parser that supports IPv4, IPv6, ICMPv4, ICMPv6, TCP, and UDP.</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
 	</PropertyGroup>
 

@@ -6,7 +6,7 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
-public abstract class PacketProxy : ITimeoutItem
+public abstract class PacketProxy : IPacketSenderQueued, ITimeoutItem
 {
     private bool _isSending;
     private readonly IpPacket[] _singlePacketList = new IpPacket[1];
@@ -14,15 +14,20 @@ public abstract class PacketProxy : ITimeoutItem
     private readonly PacketSenderChannel _senderChannel;
     protected abstract Task SendPacketAsync(IpPacket ipPacket);
     public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
+    public DateTime LastUsedTime { get; set; } = DateTime.MinValue;
+    public bool IsBusy => _isSending || _senderChannel.QueueLength > 0;
+    public bool Disposed { get; private set; }
 
-    protected PacketProxy(int queueCapacity)
+
+    protected PacketProxy(int queueCapacity, bool autoDisposeSentPackets)
     {
-        _senderChannel = new PacketSenderChannel(SendPacketInternalAsync, queueCapacity);
+        _senderChannel = new PacketSenderChannel(SendPacketInternalAsync, queueCapacity, autoDisposeSentPackets);
     }
 
-    public bool SendPacketQueued(IpPacket ipPacket)
+    public void SendPacketQueued(IpPacket ipPacket)
     {
-        return _senderChannel.SendPacketEnqueue(ipPacket);
+        PacketLogger.LogPacket(ipPacket, $"Delegating packet to host via {GetType().Name}.");
+        _senderChannel.SendPacketQueued(ipPacket);
     }
 
     private async Task SendPacketInternalAsync(IList<IpPacket> ipPackets)
@@ -59,21 +64,16 @@ public abstract class PacketProxy : ITimeoutItem
     {
         LastUsedTime = FastDateTime.Now;
         // it is not thread safe and caller should be careful
-        _packetReceivedEventArgs.IpPackets = ipPackets; 
+        _packetReceivedEventArgs.IpPackets = ipPackets;
         try {
             PacketLogger.LogPackets(ipPackets, "Received packets via PacketProxy.");
             PacketReceived?.Invoke(this, _packetReceivedEventArgs);
         }
         catch (Exception ex) {
-            PacketLogger.LogPacket(ipPackets[0], 
+            PacketLogger.LogPacket(ipPackets[0],
                 "Error while invoking the received packets event in PacketProxy.", exception: ex);
         }
     }
-
-
-    public DateTime LastUsedTime { get; set; } = DateTime.MinValue;
-    public bool IsBusy => _isSending || _senderChannel.QueueLength > 0;
-    public bool Disposed { get; private set; }
 
     public void Dispose()
     {
@@ -87,7 +87,7 @@ public abstract class PacketProxy : ITimeoutItem
 
         // Dispose managed resources
         if (disposing) {
-            VhUtils.TryInvoke("Dispose Sender Channel", () => 
+            VhUtils.TryInvoke("Dispose Sender Channel", () =>
                 _senderChannel.DisposeAsync().AsTask().Wait());
 
             PacketReceived = null;

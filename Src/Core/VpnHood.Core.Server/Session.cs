@@ -98,13 +98,15 @@ public class Session : IAsyncDisposable
             UdpTimeout = options.UdpTimeoutValue,
             IcmpTimeout = options.IcmpTimeoutValue,
             MaxUdpClientCount = options.MaxUdpClientCountValue,
-            MaxIcmpClientCount = options.MaxIcmpClientCountValue,
+            MaxPingClientCount = options.MaxIcmpClientCountValue,
             UdpReceiveBufferSize = options.UdpProxyReceiveBufferSize,
             UdpSendBufferSize = options.UdpProxySendBufferSize,
-            UseUdpProxy2 = options.UseUdpProxy2Value,
             LogScope = logScope,
             IsPingSupported = true,
-            PacketProxyCallbacks = new PacketProxyCallbacks(this)
+            PacketProxyCallbacks = new PacketProxyCallbacks(this),
+            AutoDisposeSentPackets = true,
+            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
+            UseUdpProxy2 = options.UseUdpProxy2Value
         });
         _proxyManager.PacketReceived += Proxy_PacketsReceived;
         _trackingOptions = trackingOptions;
@@ -232,7 +234,7 @@ public class Session : IAsyncDisposable
 #pragma warning restore CS0612 // Type or member is obsolete
 
         // PacketEnqueue will dispose packets
-        Tunnel.SendPacketEnqueue(ipPacket);
+        Tunnel.SendPacketQueued(ipPacket);
     }
 
     private readonly List<IpPacket> _adapterPackets = [];

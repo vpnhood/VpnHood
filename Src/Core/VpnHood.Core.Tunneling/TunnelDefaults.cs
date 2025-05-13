@@ -16,8 +16,11 @@ public static class TunnelDefaults
     public const int ProxyPacketQueueCapacity = 200;
     public const int TunnelPacketQueueCapacity = 200;
     public const int MaxUdpClientCount = 500;
+    public const int MaxPingClientCount = 10;
 
+    public static TimeSpan PingTimeout { get; set; } = TimeSpan.FromSeconds(5);
     public static TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(2);
+    public static TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromMinutes(1); // it is for worker timeout
     public static TimeSpan TcpCheckInterval { get; set; } = TimeSpan.FromMinutes(15);
     public static TimeSpan TcpGracefulTimeout { get; set; } = TimeSpan.FromSeconds(15);
     public static TimeSpan ClientRequestTimeoutDelta { get; set; } = TimeSpan.FromSeconds(10);

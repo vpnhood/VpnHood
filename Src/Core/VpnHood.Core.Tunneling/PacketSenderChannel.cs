@@ -12,14 +12,17 @@ public class PacketSenderChannel : IAsyncDisposable
     private readonly Channel<IpPacket> _sendChannel;
     private readonly PacketsHandlerAsync _sendPacketsHandlerAsync;
     private readonly int _queueCapacity;
+    private readonly bool _autoDisposeSentPackets;
     private readonly Task _sendingTask;
     public int QueueLength => _sendChannel.Reader.Count;
     public delegate Task PacketsHandlerAsync(IList<IpPacket> ipPackets);
 
-    public PacketSenderChannel(PacketsHandlerAsync sendPacketsHandlerAsync, int queueCapacity)
+    public PacketSenderChannel(PacketsHandlerAsync sendPacketsHandlerAsync, int queueCapacity,
+        bool autoDisposeSentPackets)
     {
         _sendPacketsHandlerAsync = sendPacketsHandlerAsync;
         _queueCapacity = queueCapacity;
+        _autoDisposeSentPackets = autoDisposeSentPackets;
         _sendChannel = Channel.CreateBounded<IpPacket>(new BoundedChannelOptions(queueCapacity) {
             SingleReader = true,
             SingleWriter = false,
@@ -33,7 +36,8 @@ public class PacketSenderChannel : IAsyncDisposable
     {
         var ipPackets = new List<IpPacket>(_queueCapacity);
         while (await _sendChannel.Reader.WaitToReadAsync()) {
-            
+            ipPackets.Clear();
+
             // dequeue all packets
             while (_sendChannel.Reader.TryRead(out var ipPacket) && ipPackets.Count < ipPackets.Capacity)
                 ipPackets.Add(ipPacket);
@@ -45,27 +49,32 @@ public class PacketSenderChannel : IAsyncDisposable
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Error in sending packets via channel.");
             }
+            finally {
+                if (_autoDisposeSentPackets)
+                    ipPackets.DisposeAllPackets();
+            }
+        }
 
-            // All packets belong to queue worker, so we can dispose them
-            // ReSharper disable once ForCanBeConvertedToForeach
-            ipPackets.DisposeAllPackets();
-            ipPackets.Clear();
+        // dispose remaining packets
+        if (_autoDisposeSentPackets) {
+            while (_sendChannel.Reader.TryRead(out var ipPacket))
+                ipPacket.Dispose();
         }
     }
 
-    public bool SendPacketEnqueue(IpPacket ipPacket)
+    public void SendPacketQueued(IpPacket ipPacket)
     {
         var result = _sendChannel.Writer.TryWrite(ipPacket);
         if (!result) {
             PacketLogger.LogPacket(ipPacket, "Dropping packet. Send queue full.", logLevel: LogLevel.Debug);
-            ipPacket.Dispose(); // Only dispose if enqueue failed
+            if (_autoDisposeSentPackets)
+                ipPacket.Dispose();
         }
-        return result;
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_disposed) 
+        if (_disposed)
             return;
 
         _sendChannel.Writer.TryComplete();

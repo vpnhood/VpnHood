@@ -127,8 +127,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _vpnAdapter = vpnAdapter;
         _autoDisposeVpnAdapter = options.AutoDisposeVpnAdapter;
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
-        _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions{IsPingSupported = false});
-        _proxyManager.PacketReceived += Proxy_PacketReceived;
         Tracker = tracker;
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
@@ -144,6 +142,22 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
             tracker: options.AllowEndPointTracker ? tracker : null);
+        _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions {
+            IsPingSupported = false,
+            PacketProxyCallbacks = null,
+            UdpTimeout = TunnelDefaults.UdpTimeout,
+            MaxUdpClientCount = TunnelDefaults.MaxUdpClientCount,
+            MaxPingClientCount = TunnelDefaults.MaxPingClientCount,
+            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
+            IcmpTimeout = TunnelDefaults.IcmpTimeout,
+            UdpReceiveBufferSize = TunnelDefaults.ClientUdpReceiveBufferSize,
+            UdpSendBufferSize = TunnelDefaults.ClientUdpSendBufferSize,
+            LogScope = null,
+            UseUdpProxy2 = true,
+            AutoDisposeSentPackets = true,
+        });
+        _proxyManager.PacketReceived += Proxy_PacketReceived;
+
 
         SessionName = options.SessionName;
         AllowTcpReuse = options.AllowTcpReuse;

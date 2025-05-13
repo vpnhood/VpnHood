@@ -13,6 +13,7 @@ namespace VpnHood.Core.Tunneling;
 
 public class Tunnel : IJob, IAsyncDisposable
 {
+    private readonly bool _autoDisposeSentPackets;
     private readonly object _channelListLock = new();
     private readonly HashSet<StreamProxyChannel> _streamProxyChannels = [];
     private readonly List<IDatagramChannel> _datagramChannels = [];
@@ -32,12 +33,13 @@ public class Tunnel : IJob, IAsyncDisposable
     public int Mtu { get; set; } = TunnelDefaults.Mtu;
     public int RemoteMtu { get; set; } = TunnelDefaults.MtuRemote;
 
-    public Tunnel(TunnelOptions? options = null)
+    public Tunnel(TunnelOptions? options = null, bool autoDisposeSentPackets = false)
     {
         options ??= new TunnelOptions();
+        _autoDisposeSentPackets = autoDisposeSentPackets;
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _speedMonitorTimer = new Timer(_ => UpdateSpeed(), null, TimeSpan.Zero, _speedTestThreshold);
-        _senderChannel = new PacketSenderChannel(SendPacketsAsync, options.MaxQueueLength);
+        _senderChannel = new PacketSenderChannel(SendPacketsAsync, options.MaxQueueLength, autoDisposeSentPackets);
         JobRunner.Default.Add(this);
     }
 
@@ -230,10 +232,35 @@ public class Tunnel : IJob, IAsyncDisposable
         }
     }
 
-    // Usually server use this method to send packets to the client
-    public bool SendPacketEnqueue(IpPacket ipPacket)
+    public void SendPacketsQueued(IList<IpPacket> ipPackets)
     {
-        return _senderChannel.SendPacketEnqueue(ipPacket);
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < ipPackets.Count; i++) {
+            SendPacketQueued(ipPackets[i]);
+        }
+    }
+
+    public void SendPacketQueued(IpPacket ipPacket)
+    {
+        try {
+            // send packet via proxy
+            PacketLogger.LogPacket(ipPacket, $"Delegating packet to host via {GetType().Name}.");
+            SendPacketQueuedInternal(ipPacket);
+        }
+        catch (Exception ex) {
+            // Log the error
+            PacketLogger.LogPacket(ipPacket, $"Error while sending packet via {GetType().Name}.", exception: ex);
+
+            // Dispose the packet if needed
+            if (_autoDisposeSentPackets)
+                ipPacket.Dispose();
+        }
+    }
+
+    // Usually server use this method to send packets to the client
+    private void SendPacketQueuedInternal(IpPacket ipPacket)
+    {
+        _senderChannel.SendPacketQueued(ipPacket);
     }
 
     // it is not thread-safe

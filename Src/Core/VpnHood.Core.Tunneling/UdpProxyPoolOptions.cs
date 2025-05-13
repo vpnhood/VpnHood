@@ -5,12 +5,13 @@ namespace VpnHood.Core.Tunneling;
 
 public class UdpProxyPoolOptions
 {
-    public required ISocketFactory SocketFactory { get; init; }
-    public IPacketProxyCallbacks? PacketProxyCallbacks { get; set; }
-    public TimeSpan? UdpTimeout { get; init; } = TunnelDefaults.UdpTimeout;
-    public int? MaxClientCount { get; init; } = TunnelDefaults.MaxUdpClientCount;
-    public int? PacketQueueCapacity { get; init; } = TunnelDefaults.ProxyPacketQueueCapacity;
-    public LogScope? LogScope { get; init; }
-    public int? SendBufferSize { get; init; }
-    public int? ReceiveBufferSize { get; init; }
+    public required ISocketFactory SocketFactory { get; set; }
+    public required IPacketProxyCallbacks? PacketProxyCallbacks { get; set; }
+    public required TimeSpan UdpTimeout { get; set; } 
+    public required int MaxClientCount { get; set; } 
+    public required int PacketQueueCapacity { get; set; }
+    public required int? SendBufferSize { get; set; }
+    public required int? ReceiveBufferSize { get; set; }
+    public required bool AutoDisposeSentPackets { get; set; }
+    public required LogScope? LogScope { get; set; }
 }

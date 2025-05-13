@@ -9,33 +9,29 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
-
 public class PingProxyPool : IPacketProxyPool, IJob
 {
+    private bool _disposed;
+    private readonly bool _autoDisposeSentPackets;
     private readonly IPacketProxyCallbacks? _packetProxyCallbacks;
     private readonly List<PingProxy> _pingProxies = [];
     private readonly EventReporter _maxWorkerEventReporter;
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly TimeSpan _workerTimeout = TimeSpan.FromMinutes(5);
-    private readonly int _workerMaxCount;
-    
+    private readonly int _maxClientCount;
+
     public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public int RemoteEndPointCount => _remoteEndPoints.Count;
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
 
-    public PingProxyPool(IPacketProxyCallbacks? packetProxyCallbacks, TimeSpan? icmpTimeout,
-        int? maxClientCount, LogScope? logScope = null)
+    public PingProxyPool(PingProxyPoolOptions options)
     {
-        icmpTimeout ??= TimeSpan.FromSeconds(120);
-        maxClientCount ??= int.MaxValue;
-
-        _workerMaxCount = maxClientCount > 0
-            ? maxClientCount.Value
-            : throw new ArgumentException($"{nameof(maxClientCount)} must be greater than 0", nameof(maxClientCount));
-        _packetProxyCallbacks = packetProxyCallbacks;
-        _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(icmpTimeout);
+        _autoDisposeSentPackets = options.AutoDisposeSentPackets;
+        _maxClientCount = options.MaxClientCount;
+        _packetProxyCallbacks = options.PacketProxyCallbacks;
+        _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(options.IcmpTimeout);
         _maxWorkerEventReporter = new EventReporter(VhLogger.Instance,
-            "Session has reached to the maximum ping workers.", logScope: logScope);
+            "Session has reached to the maximum ping workers.", logScope: options.LogScope);
 
         JobRunner.Default.Add(this);
     }
@@ -56,8 +52,8 @@ public class PingProxyPool : IPacketProxyPool, IJob
             if (pingProxy != null)
                 return pingProxy;
 
-            if (_pingProxies.Count < _workerMaxCount) {
-                pingProxy = new PingProxy();
+            if (_pingProxies.Count < _maxClientCount) {
+                pingProxy = new PingProxy(_autoDisposeSentPackets);
                 pingProxy.PacketReceived += PingProxy_PacketReceived;
                 _pingProxies.Add(pingProxy);
                 isNew = true;
@@ -78,6 +74,23 @@ public class PingProxyPool : IPacketProxyPool, IJob
     }
 
     public void SendPacketQueued(IpPacket ipPacket)
+    {
+        try {
+            // send packet via proxy
+            PacketLogger.LogPacket(ipPacket, $"Delegating packet to host via {GetType().Name}.");
+            SendPacketQueuedInternal(ipPacket);
+        }
+        catch (Exception ex) {
+            // Log the error
+            PacketLogger.LogPacket(ipPacket, $"Error while sending packet via {GetType().Name}.", exception: ex);
+
+            // Dispose the packet if needed
+            if (_autoDisposeSentPackets)
+                ipPacket.Dispose();
+        }
+    }
+
+    public void SendPacketQueuedInternal(IpPacket ipPacket)
     {
         if (ipPacket.Version == IpVersion.IPv4 && ipPacket.ExtractIcmpV4().Type != IcmpV4Type.EchoRequest)
             throw new NotSupportedException($"The icmp is not supported. Packet: {PacketLogger.Format(ipPacket)}.");
@@ -105,6 +118,7 @@ public class PingProxyPool : IPacketProxyPool, IJob
             _packetProxyCallbacks?.OnConnectionEstablished(ipPacket.Protocol,
                 new IPEndPoint(ipPacket.SourceAddress, 0), new IPEndPoint(ipPacket.DestinationAddress, 0),
                 isNewLocalEndPoint, isNewRemoteEndPoint);
+
     }
 
     public Task RunJob()
@@ -117,6 +131,9 @@ public class PingProxyPool : IPacketProxyPool, IJob
 
     public void Dispose()
     {
+        if (_disposed)
+            return;
+
         lock (_pingProxies) {
             foreach (var proxy in _pingProxies) {
                 proxy.PacketReceived -= PingProxy_PacketReceived;
@@ -126,5 +143,8 @@ public class PingProxyPool : IPacketProxyPool, IJob
 
         _maxWorkerEventReporter.Dispose();
         PacketReceived = null;
+        JobRunner.Default.Remove(this);
+
+        _disposed = true;
     }
 }

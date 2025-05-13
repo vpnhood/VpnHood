@@ -4,15 +4,16 @@ namespace VpnHood.Core.Tunneling;
 
 public class ProxyManagerOptions
 {
-    public TimeSpan? UdpTimeout { get; init; }
-    public TimeSpan? IcmpTimeout { get; init; }
-    public int? MaxUdpClientCount { get; init; }
-    public int? MaxIcmpClientCount { get; init; }
-    public int? PacketQueueCapacity { get; init; }
-    public bool UseUdpProxy2 { get; init; }
-    public int? UdpSendBufferSize { get; init; }
-    public int? UdpReceiveBufferSize { get; init; }
-    public LogScope? LogScope { get; init; }
-    public bool IsPingSupported { get; init; }
-    public IPacketProxyCallbacks? PacketProxyCallbacks { get; init; }
+    public required TimeSpan UdpTimeout { get; init; }
+    public required TimeSpan IcmpTimeout { get; init; }
+    public required int MaxUdpClientCount { get; init; }
+    public required int MaxPingClientCount { get; init; }
+    public required int PacketQueueCapacity { get; init; }
+    public required bool UseUdpProxy2 { get; init; }
+    public required int? UdpSendBufferSize { get; init; }
+    public required int? UdpReceiveBufferSize { get; init; }
+    public required bool IsPingSupported { get; init; }
+    public required IPacketProxyCallbacks? PacketProxyCallbacks { get; init; }
+    public required bool AutoDisposeSentPackets { get; init; }
+    public required LogScope? LogScope { get; init; }
 }

@@ -397,6 +397,22 @@ public class TestHelper : IDisposable
         return new TestDevice(this, _ => new NullVpnAdapter());
     }
 
+    public UdpProxyPoolOptions CreateUdpProxyPoolOptions(IPacketProxyCallbacks callbacks)
+    {
+        var proxyPool = new UdpProxyPoolOptions {
+            PacketProxyCallbacks = callbacks,
+            SocketFactory = new TestSocketFactory(),
+            AutoDisposeSentPackets = true,
+            UdpTimeout = TunnelDefaults.UdpTimeout,
+            MaxClientCount = 10,
+            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
+            SendBufferSize = TunnelDefaults.ClientUdpSendBufferSize,
+            ReceiveBufferSize = TunnelDefaults.ClientUdpReceiveBufferSize,
+            LogScope = null
+        };
+
+        return proxyPool;
+    }
 
 
     public ClientOptions CreateClientOptions(Token token, bool useUdpChannel = false, string? clientId = null)

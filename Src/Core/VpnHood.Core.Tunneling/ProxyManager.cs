@@ -1,8 +1,6 @@
 ﻿using System.Net;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.VhPackets;
-using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Sockets;
@@ -10,7 +8,7 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
-public class ProxyManager : IAsyncDisposable
+public class ProxyManager : IPacketSenderQueued, IAsyncDisposable
 {
     private readonly IPAddress[] _blockList = [
         IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play) SSDP (Simple Service Discovery Protocol)
@@ -18,6 +16,7 @@ public class ProxyManager : IAsyncDisposable
     private readonly HashSet<IChannel> _channels = [];
     private readonly IPacketProxyPool? _pingProxyPool;
     private readonly IPacketProxyPool _udpProxyPool;
+    private readonly bool _autoDisposeSentPackets;
     private bool _disposed;
 
     public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
@@ -32,15 +31,18 @@ public class ProxyManager : IAsyncDisposable
 
     public ProxyManager(ISocketFactory socketFactory, ProxyManagerOptions options)
     {
+        _autoDisposeSentPackets = options.AutoDisposeSentPackets;
+
         var udpProxyPoolOptions = new UdpProxyPoolOptions {
             PacketProxyCallbacks = options.PacketProxyCallbacks,
-            SocketFactory =  socketFactory, 
-            UdpTimeout = options.UdpTimeout, 
+            SocketFactory = socketFactory,
+            UdpTimeout = options.UdpTimeout  ,
             MaxClientCount = options.MaxUdpClientCount,
             LogScope = options.LogScope,
-            PacketQueueCapacity = options.PacketQueueCapacity, 
-            SendBufferSize = options.UdpSendBufferSize, 
+            PacketQueueCapacity = options.PacketQueueCapacity,
+            SendBufferSize = options.UdpSendBufferSize,
             ReceiveBufferSize = options.UdpReceiveBufferSize,
+            AutoDisposeSentPackets = options.AutoDisposeSentPackets
         };
 
         // create UDP proxy pool
@@ -51,10 +53,13 @@ public class ProxyManager : IAsyncDisposable
 
         // create Ping proxy pools
         if (options.IsPingSupported) {
-            _pingProxyPool = new PingProxyPool(options.PacketProxyCallbacks, 
-                icmpTimeout:options.IcmpTimeout,
-                maxClientCount:options.MaxIcmpClientCount,
-                logScope: options.LogScope);
+            _pingProxyPool = new PingProxyPool(new PingProxyPoolOptions {
+                PacketProxyCallbacks = options.PacketProxyCallbacks,
+                IcmpTimeout = options.IcmpTimeout,
+                MaxClientCount = options.MaxPingClientCount,
+                AutoDisposeSentPackets = options.AutoDisposeSentPackets,
+                LogScope = options.LogScope
+            });
             _pingProxyPool.PacketReceived += Proxy_PacketReceived;
         }
     }
@@ -64,54 +69,45 @@ public class ProxyManager : IAsyncDisposable
         PacketReceived?.Invoke(this, e);
     }
 
-    public void SendPacketsQueued(IList<IpPacket> ipPackets)
+    public void SendPacketQueued(IpPacket ipPacket)
     {
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++) {
-            var ipPacket = ipPackets[i];
-            SendPacketQueued(ipPacket);
+        try {
+            // send packet via proxy
+            PacketLogger.LogPacket(ipPacket, $"Delegating packet to host via {GetType().Name}.");
+            SendPacketQueuedInternal(ipPacket);
+        }
+        catch (Exception ex) {
+            // Log the error
+            PacketLogger.LogPacket(ipPacket, $"Error while sending packet via {GetType().Name}.", exception: ex);
+
+            // Dispose the packet if needed
+            if (_autoDisposeSentPackets)
+                ipPacket.Dispose();
         }
     }
 
-    public void SendPacketQueued(IpPacket ipPacket)
+    private void SendPacketQueuedInternal(IpPacket ipPacket)
     {
-        if (ipPacket is null)
-            throw new ArgumentNullException(nameof(ipPacket));
-
         // drop blocked packets
-        if (_blockList.Any(x => x.Equals(ipPacket.DestinationAddress))) {
-            PacketLogger.LogPacket(ipPacket, $"Blocked a packet. Dst: {ipPacket.DestinationAddress}", 
-                logLevel: LogLevel.Debug, eventId: GeneralEventId.NetFilter);
-            return;
+        if (_blockList.Any(x => x.Equals(ipPacket.DestinationAddress)))
+            throw new Exception("The packet is blocked.");
+
+        switch (ipPacket.Protocol) {
+            case IpProtocol.Udp:
+                _udpProxyPool.SendPacketQueued(ipPacket);
+                break;
+
+            case IpProtocol.IcmpV4:
+            case IpProtocol.IcmpV6:
+                if (_pingProxyPool == null)
+                    throw new NotSupportedException("Ping is not supported by this proxy.");
+                _pingProxyPool.SendPacketQueued(ipPacket);
+                break;
+
+            default:
+                throw new Exception($"{ipPacket.Protocol} packet should not be sent through this channel.");
         }
 
-        // send packet via proxy
-        if (VhLogger.IsDiagnoseMode)
-            PacketLogger.LogPacket(ipPacket, "Delegating packet to host via proxy.");
-
-        try {
-            switch (ipPacket.Protocol) {
-                case IpProtocol.Udp:
-                    _udpProxyPool.SendPacketQueued(ipPacket);
-                    break;
-
-                case IpProtocol.IcmpV4:
-                case IpProtocol.IcmpV6:
-                    if (_pingProxyPool == null)
-                        throw new NotSupportedException("Ping is not supported by this proxy.");
-
-                    _pingProxyPool.SendPacketQueued(ipPacket);
-                    break;
-
-                default:
-                    throw new Exception($"{ipPacket.Protocol} packet should not be sent through this channel.");
-            }
-        }
-        catch (Exception ex) when (ex is ISelfLog) {
-        }
-        catch (Exception ex) {
-            PacketLogger.LogPacket(ipPacket, "Error in delegating packet via proxy.", LogLevel.Error, ex);
-        }
     }
 
     public void AddChannel(IChannel channel)

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets.VhPackets;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Tunneling.Exceptions;
 
 // ReSharper disable UnusedMember.Global
 namespace VpnHood.Core.Tunneling.Utils;
@@ -53,6 +54,10 @@ public static class PacketLogger
                         break;
                     }
             }
+
+            // set network filter event id if the exception is NetFilterException
+            if (exception is NetFilterException)
+                eventId = GeneralEventId.NetFilter;
 
             // Log the packet
             VhLogger.Instance.Log(logLevel, eventId ?? packetEventId, exception,

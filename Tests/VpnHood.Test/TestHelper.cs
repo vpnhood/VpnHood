@@ -19,6 +19,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Test.AccessManagers;
@@ -159,10 +160,12 @@ public class TestHelper : IDisposable
 
         var buffer = new byte[1024];
         new Random().NextBytes(buffer);
+
         var sentBytes = await udpClient.SendAsync(buffer, udpEndPoint, new CancellationTokenSource(timeout.Value).Token);
         Assert.AreEqual(buffer.Length, sentBytes);
 
-        var res = await udpClient.ReceiveAsync(new CancellationTokenSource(timeout.Value).Token);
+        using var cts = new CancellationTokenSource(timeout.Value);
+        var res = await udpClient.ReceiveAsync(cts.Token);
         CollectionAssert.AreEquivalent(buffer, res.Buffer);
     }
 
@@ -402,7 +405,7 @@ public class TestHelper : IDisposable
         var proxyPool = new UdpProxyPoolOptions {
             PacketProxyCallbacks = callbacks,
             SocketFactory = new TestSocketFactory(),
-            AutoDisposeSentPackets = true,
+            AutoDisposePackets = false,
             UdpTimeout = TunnelDefaults.UdpTimeout,
             MaxClientCount = 10,
             PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
@@ -417,7 +420,7 @@ public class TestHelper : IDisposable
     public TunnelOptions CreateTunnelOptions()
     {
         var tunnelOptions = new TunnelOptions {
-            AutoDisposeSentPackets = true,
+            AutoDisposePackets = true,
             PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
             MaxDatagramChannelCount = TunnelDefaults.MaxDatagramChannelCount
         };

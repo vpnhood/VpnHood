@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using VpnHood.Core.Packets;
 
-namespace VpnHood.Core.Tunneling;
+namespace VpnHood.Core.Tunneling.Proxies;
 
 public interface IPacketProxyCallbacks
 {

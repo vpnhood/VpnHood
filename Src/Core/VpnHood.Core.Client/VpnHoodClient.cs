@@ -12,6 +12,7 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Transports;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -20,7 +21,9 @@ using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client;
@@ -153,7 +156,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             UdpSendBufferSize = TunnelDefaults.ClientUdpSendBufferSize,
             LogScope = null,
             UseUdpProxy2 = true,
-            AutoDisposeSentPackets = true,
+            AutoDisposePackets = true,
         });
         _proxyManager.PacketReceived += Proxy_PacketReceived;
 
@@ -181,7 +184,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         // Tunnel
         Tunnel = new Tunnel(new TunnelOptions {
-            AutoDisposeSentPackets = true,
+            AutoDisposePackets = true,
             PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
             MaxDatagramChannelCount = TunnelDefaults.MaxDatagramChannelCount
         });
@@ -343,21 +346,18 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private void ClientHost_PacketReceived(object sender, PacketReceivedEventArgs e)
     {
         _vpnAdapter.SendPackets(e.IpPackets);
-        e.IpPackets.DisposeAllPackets();
     }
 
     // WARNING: Performance Critical!
     private void Proxy_PacketReceived(object sender, PacketReceivedEventArgs e)
     {
         _vpnAdapter.SendPackets(e.IpPackets);
-        e.IpPackets.DisposeAllPackets();
     }
 
     // WARNING: Performance Critical!
     private void Tunnel_PacketReceived(object sender, PacketReceivedEventArgs e)
     {
         _vpnAdapter.SendPackets(e.IpPackets);
-        e.IpPackets.DisposeAllPackets();
     }
 
     // WARNING: Performance Critical!
@@ -442,22 +442,26 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     _ = ManageDatagramChannels(_cancellationTokenSource.Token);
 
                 if (tunnelPackets.Count > 0) {
-                    Tunnel.SendPacketsAsync(tunnelPackets).GetAwaiter().GetResult();
-                    tunnelPackets.DisposeAllPackets();
+                    foreach (var tunnelPacket in tunnelPackets) {
+                        Tunnel.SendPacketQueued(tunnelPacket);
+                    }
                 }
 
                 if (proxyPackets.Count > 0) {
-                    _proxyManager.SendPacketsQueued(proxyPackets);
+                    foreach (var proxyPacket in proxyPackets)
+                        _proxyManager.SendPacketQueued(proxyPacket);
                     // dispose packets by queue
                 }
 
                 if (tcpHostPackets.Count > 0) {
                     _clientHost.ProcessOutgoingPacket(tcpHostPackets);
-                    tcpHostPackets.DisposeAllPackets();
                 }
 
                 // dispose all drop packets
-                droppedPackets.DisposeAllPackets();
+                if (droppedPackets.Count > 0) {
+                    foreach (var droppedPacket in droppedPackets)
+                        PacketLogger.LogPacket(droppedPacket, "Packet has been dropped.");
+                }
             }
 
             // set state outside the lock as it may raise an event
@@ -1041,7 +1045,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         VhLogger.Instance.LogDebug("Disposing ProxyManager...");
         _proxyManager.PacketReceived -= Proxy_PacketReceived;
-        await _proxyManager.DisposeAsync().VhConfigureAwait();
+        _proxyManager.Dispose();
 
         // don't wait for this. It is just for server clean up we should not wait the user for it
         // Sending Bye

@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Transports;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
@@ -15,6 +16,7 @@ using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
@@ -103,7 +105,7 @@ public class Session : IAsyncDisposable
             LogScope = logScope,
             IsPingSupported = true,
             PacketProxyCallbacks = new PacketProxyCallbacks(this),
-            AutoDisposeSentPackets = true,
+            AutoDisposePackets = true,
             PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
             UseUdpProxy2 = options.UseUdpProxy2Value
         });
@@ -129,7 +131,7 @@ public class Session : IAsyncDisposable
         Tunnel = new Tunnel(new TunnelOptions {
             MaxDatagramChannelCount = options.MaxDatagramChannelCountValue,
             PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
-            AutoDisposeSentPackets = true
+            AutoDisposePackets = true
         });
         Tunnel.PacketReceived += Tunnel_PacketReceived;
 
@@ -196,7 +198,6 @@ public class Session : IAsyncDisposable
         return ipVersion == IpVersion.IPv4 ? VirtualIps.IpV4 : VirtualIps.IpV6;
     }
 
-    // todo: legacy version. remove in future
     [Obsolete]
     private IPAddress? GetClientInternalIp(IpVersion ipVersion)
     {
@@ -267,8 +268,7 @@ public class Session : IAsyncDisposable
 
                     // update source client virtual ip. will be obsolete in future if client set correct ip
                     if (!virtualIp.Equals(ipPacket.SourceAddress)) {
-                        // todo: legacy version. Packet must be dropped if it does not have correct source address
-                        // PacketLogger.LogPacket(ipPacket, $"Invalid tunnel packet source ip.");
+                        PacketLogger.LogPacket(ipPacket, "Invalid tunnel packet source ip.");
                         ipPacket.SourceAddress = virtualIp;
                         ipPacket.UpdateAllChecksums();
                     }
@@ -302,7 +302,6 @@ public class Session : IAsyncDisposable
 
             // send using tunnel or proxy
             _vpnAdapter?.SendPackets(_adapterPackets);
-            _adapterPackets.DisposeAllPackets();
         }
     }
 
@@ -511,8 +510,9 @@ public class Session : IAsyncDisposable
         DisposedTime = DateTime.UtcNow;
 
         _proxyManager.PacketReceived -= Proxy_PacketsReceived;
+        _proxyManager.Dispose();
         Tunnel.PacketReceived -= Tunnel_PacketReceived;
-        await Task.WhenAll(Tunnel.DisposeAsync().AsTask(), _proxyManager.DisposeAsync().AsTask());
+        await Tunnel.DisposeAsync();
         _netScanExceptionReporter.Dispose();
         _maxTcpChannelExceptionReporter.Dispose();
         _maxTcpConnectWaitExceptionReporter.Dispose();

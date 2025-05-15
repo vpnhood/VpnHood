@@ -1,23 +1,32 @@
 ﻿using System.Net.NetworkInformation;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Transports;
+using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
-namespace VpnHood.Core.Tunneling;
+namespace VpnHood.Core.Tunneling.Proxies;
 
-public class PingProxy(bool autoDisposeSentPackets) : PacketProxy(1, autoDisposeSentPackets)
+public class PingProxy(bool autoDisposePackets) 
+    : PacketChannelSingle(new PacketChannelOptions {
+                AutoDisposeFailedPackets = autoDisposePackets,
+                AutoDisposeSentPackets = autoDisposePackets,
+                Blocking = false, 
+                QueueCapacity = 1})
+    , ITimeoutItem
 {
     private readonly Ping _ping = new();
     public void Cancel() => _ping.SendAsyncCancel();
     public TimeSpan PingTimeout { get; set; } = TunnelDefaults.PingTimeout;
+    public DateTime LastUsedTime { get; set; }
 
-    protected override Task SendPacketAsync(IpPacket ipPacket)
+    protected override ValueTask SendPacketAsync(IpPacket ipPacket)
     {
         return ipPacket.Version == IpVersion.IPv4
             ? SendIpV4((IpV4Packet)ipPacket)
             : SendIpV6((IpV6Packet)ipPacket);
     }
 
-    private async Task SendIpV4(IpV4Packet ipPacket)
+    private async ValueTask SendIpV4(IpV4Packet ipPacket)
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
         if (ipPacket.Protocol != IpProtocol.IcmpV4)
@@ -46,7 +55,7 @@ public class PingProxy(bool autoDisposeSentPackets) : PacketProxy(1, autoDispose
         OnPacketReceived(replyPacket);
     }
 
-    private async Task SendIpV6(IpV6Packet ipPacket)
+    private async ValueTask SendIpV6(IpV6Packet ipPacket)
     {
         var icmpPacket = ipPacket.ExtractIcmpV6();
         if (icmpPacket.Type != IcmpV6Type.EchoRequest)
@@ -71,15 +80,10 @@ public class PingProxy(bool autoDisposeSentPackets) : PacketProxy(1, autoDispose
 
     protected override void Dispose(bool disposing)
     {
-        if (Disposed) 
-            return;
-
-        if (disposing) {
-            // Dispose managed resources
+        if (disposing)             // Dispose managed resources
             _ping.Dispose();
-        }
 
-        // Dispose unmanaged resources
         base.Dispose(disposing);
     }
+
 }

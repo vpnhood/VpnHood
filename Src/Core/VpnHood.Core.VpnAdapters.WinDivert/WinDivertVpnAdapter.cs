@@ -68,7 +68,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         var ipRanges = _includeIpNetworks.ToIpRanges();
         if (_excludeLocalNetwork)
             ipRanges = ipRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
-        
+
         // create include and exclude phrases
         var phraseX = "true";
         if (!ipRanges.IsAll()) {
@@ -197,7 +197,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     {
 #if DEBUG
         if (GetIpNetwork(ipPacket.Version)?.Contains(ipPacket.DestinationAddress) is null or false)
-            throw new NotSupportedException("This adapter can send packets outside of its network.");
+            throw new NotSupportedException("This adapter can not send packets outside of its network.");
 #endif
 
         // simulate adapter network

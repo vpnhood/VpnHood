@@ -1,7 +1,7 @@
 ﻿using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling.Sockets;
 
-namespace VpnHood.Core.Tunneling;
+namespace VpnHood.Core.Tunneling.Proxies;
 
 public class UdpProxyPoolOptions
 {
@@ -12,6 +12,6 @@ public class UdpProxyPoolOptions
     public required int PacketQueueCapacity { get; set; }
     public required int? SendBufferSize { get; set; }
     public required int? ReceiveBufferSize { get; set; }
-    public required bool AutoDisposeSentPackets { get; set; }
+    public required bool AutoDisposePackets { get; set; }
     public required LogScope? LogScope { get; set; }
 }

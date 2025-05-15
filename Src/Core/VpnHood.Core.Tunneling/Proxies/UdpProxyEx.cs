@@ -1,10 +1,10 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Toolkit.Collections;
-namespace VpnHood.Core.Tunneling;
+namespace VpnHood.Core.Tunneling.Proxies;
 
-internal class UdpProxyEx(UdpClient udpClient, TimeSpan udpTimeout, int queueCapacity, bool autoDisposeSentPackets)
-    : UdpProxy(udpClient, sourceEndPoint: null, queueCapacity, autoDisposeSentPackets)
+internal class UdpProxyEx(UdpClient udpClient, TimeSpan udpTimeout, int queueCapacity, bool autoDisposePackets)
+    : UdpProxy(udpClient, sourceEndPoint: null, queueCapacity, autoDisposePackets)
 {
     public TimeoutDictionary<IPEndPoint, TimeoutItem<IPEndPoint>> DestinationEndPointMap { get; } = new(udpTimeout);
 

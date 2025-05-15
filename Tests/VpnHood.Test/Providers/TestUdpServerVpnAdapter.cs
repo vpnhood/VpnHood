@@ -2,8 +2,10 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Transports;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
@@ -26,7 +28,7 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyCallbacks
             PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
             SendBufferSize = null,
             ReceiveBufferSize = null,
-            AutoDisposeSentPackets = true,
+            AutoDisposePackets = true,
             LogScope = null
         });
         _proxyPool.PacketReceived += Proxy_PacketReceived;

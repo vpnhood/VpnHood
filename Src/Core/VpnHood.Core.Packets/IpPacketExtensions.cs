@@ -150,11 +150,4 @@ public static class IpPacketExtensions
         payloadPacket
             .UpdateChecksum(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan);
     }
-
-    public static void DisposeAllPackets(this IList<IpPacket> ipPackets)
-    {
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++)
-            ipPackets[i].Dispose();
-    }
 }

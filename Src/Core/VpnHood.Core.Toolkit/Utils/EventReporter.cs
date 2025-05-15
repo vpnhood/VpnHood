@@ -26,7 +26,6 @@ public class EventReporter : IDisposable, IJob
         _eventId = eventId;
         LogScope = logScope ?? new LogScope();
 
-
         JobRunner.Default.Add(this);
     }
 
@@ -80,9 +79,12 @@ public class EventReporter : IDisposable, IJob
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (_disposed) 
+            return;
 
         ReportInternal();
+        JobRunner.Default.Remove(this);
+
+        _disposed = true;
     }
 }

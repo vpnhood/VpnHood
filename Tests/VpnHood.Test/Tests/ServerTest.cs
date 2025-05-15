@@ -60,7 +60,7 @@ public class ServerTest : TestBase
     {
         // Create Server
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
-        serverOptions.SessionOptions.SyncCacheSize = 10000000;
+        serverOptions.SessionOptions.SyncCacheSize = 10;
         serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
         serverOptions.UpdateStatusInterval = TimeSpan.FromMilliseconds(200);
         var accessManager = TestHelper.CreateAccessManager(serverOptions);
@@ -270,7 +270,7 @@ public class ServerTest : TestBase
     {
         // create server
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
-        serverOptions.SessionOptions.SyncCacheSize = 1000000;
+        serverOptions.SessionOptions.SyncCacheSize = 10;
         serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
         using var accessManager = TestHelper.CreateAccessManager(serverOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
@@ -278,14 +278,15 @@ public class ServerTest : TestBase
         // create client
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
-
+        
+        Log("Clearing all sessions...");
         accessManager.SessionService.Sessions.Clear();
 
+        Log("Waiting for the client disposal...");
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {
-            await TestHelper.Test_Https(throwError: false, timeout: 1000);
+            await TestHelper.Test_Https(throwError: false, timeout: 100);
             return client.State;
         });
-        Assert.AreEqual(ClientState.Disposed, client.State);
         Assert.AreEqual(SessionErrorCode.AccessError, client.GetLastSessionErrorCode());
     }
 

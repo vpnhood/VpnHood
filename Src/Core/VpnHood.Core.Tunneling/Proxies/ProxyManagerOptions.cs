@@ -1,6 +1,6 @@
 ﻿using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.Core.Tunneling;
+namespace VpnHood.Core.Tunneling.Proxies;
 
 public class ProxyManagerOptions
 {
@@ -14,6 +14,6 @@ public class ProxyManagerOptions
     public required int? UdpReceiveBufferSize { get; init; }
     public required bool IsPingSupported { get; init; }
     public required IPacketProxyCallbacks? PacketProxyCallbacks { get; init; }
-    public required bool AutoDisposeSentPackets { get; init; }
+    public required bool AutoDisposePackets { get; init; }
     public required LogScope? LogScope { get; init; }
 }

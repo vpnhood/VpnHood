@@ -3,21 +3,29 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Transports;
+using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Tunneling;
+namespace VpnHood.Core.Tunneling.Proxies;
 
-internal class UdpProxy : PacketProxy
+internal class UdpProxy : PacketChannelSingle, ITimeoutItem
 {
     private readonly UdpClient _udpClient;
     private readonly IPEndPoint? _sourceEndPoint;
     public IPEndPoint LocalEndPoint { get; }
     public AddressFamily AddressFamily { get; }
-    
-    public UdpProxy(UdpClient udpClient, IPEndPoint? sourceEndPoint, int queueCapacity, bool autoDisposeSentPackets)
-        : base(queueCapacity, autoDisposeSentPackets)
+    public DateTime LastUsedTime { get; set; } //todo
+
+    public UdpProxy(UdpClient udpClient, IPEndPoint? sourceEndPoint, int queueCapacity, bool autoDisposePackets)
+        : base(new PacketChannelOptions {
+            AutoDisposeFailedPackets = autoDisposePackets,
+            AutoDisposeSentPackets = autoDisposePackets,
+            Blocking = false,
+            QueueCapacity = queueCapacity,
+        })
     {
         _udpClient = udpClient;
         _sourceEndPoint = sourceEndPoint;
@@ -40,16 +48,19 @@ internal class UdpProxy : PacketProxy
     private bool IsInvalidState(Exception ex)
     {
         return Disposed || ex is ObjectDisposedException
-            or SocketException { SocketErrorCode: SocketError.InvalidArgument };
+            or SocketException { SocketErrorCode: SocketError.InvalidArgument }
+            or SocketException { SocketErrorCode: SocketError.ConnectionAborted }
+            or SocketException { SocketErrorCode: SocketError.OperationAborted };
+        ;
     }
 
     private readonly byte[] _payloadBuffer = new byte[1500]; //todo: Use SendAsync(Memory<>) later
-    private IPEndPoint? _destinationEndPoint; 
-    protected override async Task SendPacketAsync(IpPacket ipPacket)
+    private IPEndPoint? _destinationEndPoint;
+    protected override async ValueTask SendPacketAsync(IpPacket ipPacket)
     {
         try {
             // IpV4 fragmentation
-            if (ipPacket.Protocol == IpProtocol.IPv4 && ipPacket is IpV4Packet ipV4Packet && AddressFamily.IsV4()) 
+            if (ipPacket.Protocol == IpProtocol.IPv4 && ipPacket is IpV4Packet ipV4Packet && AddressFamily.IsV4())
                 _udpClient.DontFragment = ipV4Packet.DontFragment; // Never call this for IPv6, it will throw exception for any value
 
             var udpPacket = ipPacket.ExtractUdp();
@@ -66,7 +77,7 @@ internal class UdpProxy : PacketProxy
             // send packet to destination
             var sentBytes = await _udpClient.SendAsync(_payloadBuffer, udpPacket.Payload.Length, _destinationEndPoint)
                 .VhConfigureAwait();
-            
+
             if (sentBytes != udpPacket.Payload.Length)
                 throw new Exception(
                     $"Couldn't send all udp bytes. Requested: {udpPacket.Payload.Length}, Sent: {sentBytes}");
@@ -74,6 +85,7 @@ internal class UdpProxy : PacketProxy
         catch (Exception ex) {
             if (IsInvalidState(ex))
                 Dispose();
+
             throw;
         }
     }
@@ -83,12 +95,11 @@ internal class UdpProxy : PacketProxy
         try {
             while (!Disposed) {
                 var udpResult = await _udpClient.ReceiveAsync().VhConfigureAwait();
-                LastUsedTime = FastDateTime.Now;
 
                 // find the audience (sourceEndPoint)
                 var sourceEndPoint = GetSourceEndPoint(udpResult.RemoteEndPoint);
                 if (sourceEndPoint == null) {
-                    VhLogger.Instance.LogInformation(GeneralEventId.Udp, "Could not find result UDP in the NAT!");
+                    VhLogger.Instance.LogInformation(GeneralEventId.Udp, "Could not find UDP source address.");
                     return;
                 }
 
@@ -100,19 +111,16 @@ internal class UdpProxy : PacketProxy
         catch (Exception ex) {
             if (!IsInvalidState(ex))
                 VhLogger.Instance.LogError(ex, "Unexpected error in UDP receive loop.");
+            
             Dispose();
         }
     }
 
     protected override void Dispose(bool disposing)
     {
-        if (Disposed)
-            return;
-
-        if (disposing) {
-            _udpClient.Dispose();
-        }
+        if (disposing) _udpClient.Dispose();
 
         base.Dispose(disposing);
     }
+
 }

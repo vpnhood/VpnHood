@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Transports;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
@@ -372,7 +373,7 @@ public abstract class TunVpnAdapter : IVpnAdapter
             throw new InvalidOperationException("TUN adapter is not started.");
 
         try {
-            lock (_sendLock) 
+            lock (_sendLock)
                 SendPacketInternal(ipPacket);
 
             _autoRestartCount = 0;
@@ -521,7 +522,7 @@ public abstract class TunVpnAdapter : IVpnAdapter
 
     protected virtual void Dispose(bool disposing)
     {
-        if (IsDisposed) 
+        if (IsDisposed)
             return;
 
         // release managed resources when disposing

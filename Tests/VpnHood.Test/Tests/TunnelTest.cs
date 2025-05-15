@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Client;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Transports;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
@@ -88,7 +89,7 @@ public class TunnelTest : TestBase
         waitHandle.Reset();
 
         // test packets
-        var packets = new List<IpPacket> {
+        var ipPackets = new List<IpPacket> {
             PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)),
             PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)),
             PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true))
@@ -106,11 +107,11 @@ public class TunnelTest : TestBase
         using var serverUdpChannelTransmitter =
             new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
 
-        var serverReceivedPackets = Array.Empty<IpPacket>();
+        var serverReceivedPackets = new List<IpPacket>();
         var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         serverTunnel.AddChannel(serverUdpChannel);
         serverTunnel.PacketReceived += delegate(object? sender, PacketReceivedEventArgs e) {
-            serverReceivedPackets = e.IpPackets.ToArray();
+            serverReceivedPackets.AddRange(e.IpPackets);
             _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
         };
 
@@ -120,18 +121,20 @@ public class TunnelTest : TestBase
         clientUdpChannel.SetRemote(new ClientUdpChannelTransmitter(clientUdpChannel, clientUdpClient, serverKey),
             serverEndPoint);
 
-        var clientReceivedPackets = Array.Empty<IpPacket>();
+        var clientReceivedPackets = new List<IpPacket>();
         var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         clientTunnel.AddChannel(clientUdpChannel);
         clientTunnel.PacketReceived += delegate(object? _, PacketReceivedEventArgs e) {
-            clientReceivedPackets = e.IpPackets.ToArray();
+            clientReceivedPackets.AddRange(e.IpPackets);
             waitHandle.Set();
         };
 
         // send packet to server through tunnel
-        await clientTunnel.SendPacketsAsync(packets.ToArray());
-        await VhTestUtil.AssertEqualsWait(packets.Count, () => serverReceivedPackets.Length);
-        await VhTestUtil.AssertEqualsWait(packets.Count, () => clientReceivedPackets.Length);
+        foreach (var ipPacket in ipPackets)
+            clientTunnel.SendPacketQueued(ipPacket);
+
+        await VhTestUtil.AssertEqualsWait(ipPackets.Count, () => serverReceivedPackets.Count);
+        await VhTestUtil.AssertEqualsWait(ipPackets.Count, () => clientReceivedPackets.Count);
     }
 
     private static async Task SimpleLoopback(TcpListener tcpListener, CancellationToken cancellationToken)

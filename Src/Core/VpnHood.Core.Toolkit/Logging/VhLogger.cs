@@ -113,6 +113,8 @@ public static class VhLogger
 
         ipPacketText = RedactIpAddress(ipPacketText, "SourceAddress");
         ipPacketText = RedactIpAddress(ipPacketText, "DestinationAddress");
+        ipPacketText = RedactIpAddress(ipPacketText, "Src");
+        ipPacketText = RedactIpAddress(ipPacketText, "Dst");
         return ipPacketText;
     }
 

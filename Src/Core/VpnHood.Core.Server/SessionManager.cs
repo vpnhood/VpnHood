@@ -5,7 +5,7 @@ using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Trackers;
-using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Transports;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
@@ -28,11 +28,11 @@ public class SessionManager : IAsyncDisposable, IJob
     private readonly IAccessManager _accessManager;
     private readonly ISocketFactory _socketFactory;
     private readonly IVpnAdapter? _vpnAdapter;
-    private byte[] _serverSecret;
     private readonly TimeSpan _deadSessionTimeout;
     private readonly JobSection _heartbeatSection;
     private readonly SessionLocalService _sessionLocalService;
     private readonly VirtualIpManager _virtualIpManager;
+    private byte[] _serverSecret;
 
     public string ApiKey { get; private set; }
     public INetFilter NetFilter { get; }
@@ -517,6 +517,9 @@ public class SessionManager : IAsyncDisposable, IJob
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
         _disposed = true;
+        
+        // dispose the job
+        JobRunner.Default.Remove(this);
 
         // sync sessions
         try {

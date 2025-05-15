@@ -1,4 +1,7 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Tunneling;
 
 namespace VpnHood.Test;
 
@@ -16,6 +19,11 @@ public abstract class TestBase
     public void TestCleanup()
     {
         TestHelper.Dispose();
+    }
+
+    protected void Log(string message)
+    {
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, message);
     }
 
     protected virtual TestHelper CreateTestHelper() => new();

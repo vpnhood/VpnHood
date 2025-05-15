@@ -1,13 +1,12 @@
 ﻿using System.Net;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Packets.Transports;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Sockets;
-using VpnHood.Core.Tunneling.Utils;
 
-namespace VpnHood.Core.Tunneling;
+namespace VpnHood.Core.Tunneling.Proxies;
 
-public class ProxyManager : IPacketSenderQueued, IAsyncDisposable
+public class ProxyManager : PacketChannelPipe
 {
     private readonly IPAddress[] _blockList = [
         IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play) SSDP (Simple Service Discovery Protocol)
@@ -15,10 +14,7 @@ public class ProxyManager : IPacketSenderQueued, IAsyncDisposable
     private readonly HashSet<IChannel> _channels = [];
     private readonly IPacketProxyPool? _pingProxyPool;
     private readonly IPacketProxyPool _udpProxyPool;
-    private readonly bool _autoDisposeSentPackets;
-    private bool _disposed;
 
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public int PingClientCount => _pingProxyPool?.ClientCount ?? 0;
     public int UdpClientCount => _udpProxyPool.ClientCount;
 
@@ -29,19 +25,18 @@ public class ProxyManager : IPacketSenderQueued, IAsyncDisposable
     }
 
     public ProxyManager(ISocketFactory socketFactory, ProxyManagerOptions options)
+        : base(options.AutoDisposePackets)
     {
-        _autoDisposeSentPackets = options.AutoDisposeSentPackets;
-
         var udpProxyPoolOptions = new UdpProxyPoolOptions {
             PacketProxyCallbacks = options.PacketProxyCallbacks,
             SocketFactory = socketFactory,
-            UdpTimeout = options.UdpTimeout  ,
+            UdpTimeout = options.UdpTimeout,
             MaxClientCount = options.MaxUdpClientCount,
             LogScope = options.LogScope,
             PacketQueueCapacity = options.PacketQueueCapacity,
             SendBufferSize = options.UdpSendBufferSize,
             ReceiveBufferSize = options.UdpReceiveBufferSize,
-            AutoDisposeSentPackets = options.AutoDisposeSentPackets
+            AutoDisposePackets = options.AutoDisposePackets
         };
 
         // create UDP proxy pool
@@ -56,7 +51,7 @@ public class ProxyManager : IPacketSenderQueued, IAsyncDisposable
                 PacketProxyCallbacks = options.PacketProxyCallbacks,
                 IcmpTimeout = options.IcmpTimeout,
                 MaxClientCount = options.MaxPingClientCount,
-                AutoDisposeSentPackets = options.AutoDisposeSentPackets,
+                AutoDisposePackets = options.AutoDisposePackets,
                 LogScope = options.LogScope
             });
             _pingProxyPool.PacketReceived += Proxy_PacketReceived;
@@ -65,31 +60,18 @@ public class ProxyManager : IPacketSenderQueued, IAsyncDisposable
 
     private void Proxy_PacketReceived(object sender, PacketReceivedEventArgs e)
     {
-        PacketReceived?.Invoke(this, e);
+        OnPacketReceived(e);
     }
 
-    public void SendPacketQueued(IpPacket ipPacket)
+    protected override void SendPacket(IpPacket ipPacket)
     {
-        try {
-            // send packet via proxy
-            PacketLogger.LogPacket(ipPacket, $"Delegating packet to host via {GetType().Name}.");
-            SendPacketQueuedInternal(ipPacket);
+        // Drop blocked packets
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < _blockList.Length; i++) {
+            var ipAddress = _blockList[i];
+            if (ipAddress.Equals(ipPacket.DestinationAddress))
+                throw new Exception("The packet is blocked.");
         }
-        catch (Exception ex) {
-            // Log the error
-            PacketLogger.LogPacket(ipPacket, $"Error while sending packet via {GetType().Name}.", exception: ex);
-
-            // Dispose the packet if needed
-            if (_autoDisposeSentPackets)
-                ipPacket.Dispose();
-        }
-    }
-
-    private void SendPacketQueuedInternal(IpPacket ipPacket)
-    {
-        // drop blocked packets
-        if (_blockList.Any(x => x.Equals(ipPacket.DestinationAddress)))
-            throw new Exception("The packet is blocked.");
 
         switch (ipPacket.Protocol) {
             case IpProtocol.Udp:
@@ -106,39 +88,35 @@ public class ProxyManager : IPacketSenderQueued, IAsyncDisposable
             default:
                 throw new Exception($"{ipPacket.Protocol} packet should not be sent through this channel.");
         }
-
     }
 
     public void AddChannel(IChannel channel)
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(ProxyManager));
+        if (Disposed)
+            throw new ObjectDisposedException(nameof(ProxyManager));
 
         lock (_channels)
             _channels.Add(channel);
         channel.Start();
     }
 
-    public async ValueTask DisposeAsync()
+    protected override void Dispose(bool disposing)
     {
-        if (_disposed) return;
-        PacketReceived = null;
+        if (disposing) {
+            // dispose udp proxy pool
+            _udpProxyPool.PacketReceived -= Proxy_PacketReceived;
+            _udpProxyPool.Dispose();
 
-        // dispose udp proxy pool
-        _udpProxyPool.PacketReceived -= Proxy_PacketReceived;
-        _udpProxyPool.Dispose();
+            // dispose ping proxy pool
+            if (_pingProxyPool != null) {
+                _pingProxyPool.PacketReceived -= Proxy_PacketReceived;
+                _pingProxyPool.Dispose();
+            }
 
-        // dispose ping proxy pool
-        if (_pingProxyPool != null) {
-            _pingProxyPool.PacketReceived -= Proxy_PacketReceived;
-            _pingProxyPool.Dispose();
+            // dispose channels
+            lock (_channels)
+                foreach (var channel in _channels)
+                    channel.DisposeAsync(false);
         }
-
-        // dispose channels
-        Task[] disposeTasks;
-        lock (_channels)
-            disposeTasks = _channels.Select(channel => channel.DisposeAsync(false).AsTask()).ToArray();
-
-        await Task.WhenAll(disposeTasks).VhConfigureAwait();
-        _disposed = true;
     }
 }

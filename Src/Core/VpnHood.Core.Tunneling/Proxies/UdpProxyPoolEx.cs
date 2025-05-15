@@ -2,20 +2,18 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Transports;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Sockets;
-using VpnHood.Core.Tunneling.Utils;
 
-namespace VpnHood.Core.Tunneling;
+namespace VpnHood.Core.Tunneling.Proxies;
 
-public class UdpProxyPoolEx : IPacketProxyPool, IJob
+public class UdpProxyPoolEx : PacketChannelPipe, IPacketProxyPool, IJob
 {
-    private bool _disposed;
-    private readonly bool _autoDisposeSentPackets;
     private readonly IPacketProxyCallbacks? _packetProxyCallbacks;
     private readonly ISocketFactory _socketFactory;
     private readonly int? _sendBufferSize;
@@ -27,8 +25,8 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
     private readonly TimeSpan _udpTimeout;
     private readonly int _maxClientCount;
     private readonly int _packetQueueCapacity;
-    
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
+    private readonly bool _autoDisposeSentPackets;
+
     public int RemoteEndPointCount => _remoteEndPoints.Count;
 
     public int ClientCount {
@@ -40,8 +38,9 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
     public JobSection JobSection { get; } = new();
 
     public UdpProxyPoolEx(UdpProxyPoolOptions options)
+        : base(options.AutoDisposePackets)
     {
-        _autoDisposeSentPackets = options.AutoDisposeSentPackets;
+        _autoDisposeSentPackets = options.AutoDisposePackets;
         _packetProxyCallbacks = options.PacketProxyCallbacks;
         _socketFactory = options.SocketFactory;
         _packetQueueCapacity = options.PacketQueueCapacity;
@@ -59,24 +58,7 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
         JobRunner.Default.Add(this);
     }
 
-    public void SendPacketQueued(IpPacket ipPacket)
-    {
-        try {
-            // send packet via proxy
-            PacketLogger.LogPacket(ipPacket, $"Delegating packet to host via {GetType().Name}.");
-            SendPacketQueuedInternal(ipPacket);
-        }
-        catch (Exception ex) {
-            // Log the error
-            PacketLogger.LogPacket(ipPacket, $"Error while sending packet via {GetType().Name}.", exception: ex);
-
-            // Dispose the packet if needed
-            if (_autoDisposeSentPackets)
-                ipPacket.Dispose();
-        }
-    }
-
-    private void SendPacketQueuedInternal(IpPacket ipPacket)
+    protected override void SendPacket(IpPacket ipPacket)
     {
         // send packet via proxy
         var udpPacket = ipPacket.ExtractUdp();
@@ -146,7 +128,7 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
     }
     private void UdpProxy_OnPacketReceived(object sender, PacketReceivedEventArgs e)
     {
-        PacketReceived?.Invoke(this, e);
+        OnPacketReceived(e);
     }
 
     private UdpClient CreateUdpClient(AddressFamily addressFamily)
@@ -166,20 +148,19 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
         return Task.CompletedTask;
     }
 
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        if (_disposed)
-            return;
+        if (disposing) {
+            // Dispose managed resources
+            lock (_udpProxies)
+                _udpProxies.ForEach(udpWorker => udpWorker.Dispose());
 
-        lock (_udpProxies)
-            _udpProxies.ForEach(udpWorker => udpWorker.Dispose());
+            _connectionMap.Dispose();
+            _remoteEndPoints.Dispose();
+            _maxWorkerEventReporter.Dispose();
+            JobRunner.Default.Remove(this);
+        }
 
-        _connectionMap.Dispose();
-        _remoteEndPoints.Dispose();
-        _maxWorkerEventReporter.Dispose();
-        PacketReceived = null;
-        JobRunner.Default.Remove(this);
-
-        _disposed = true;
+        base.Dispose(disposing);
     }
 }

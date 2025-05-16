@@ -9,7 +9,7 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
-public class PingProxyPool : PacketChannelPipe, IPacketProxyPool, IJob
+public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
 {
     private readonly bool _autoDisposeSentPackets;
     private readonly IPacketProxyCallbacks? _packetProxyCallbacks;

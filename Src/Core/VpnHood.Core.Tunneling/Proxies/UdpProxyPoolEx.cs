@@ -12,7 +12,7 @@ using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
-public class UdpProxyPoolEx : PacketChannelPipe, IPacketProxyPool, IJob
+public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool, IJob
 {
     private readonly IPacketProxyCallbacks? _packetProxyCallbacks;
     private readonly ISocketFactory _socketFactory;

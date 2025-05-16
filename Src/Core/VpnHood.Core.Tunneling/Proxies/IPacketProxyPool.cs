@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
-public interface IPacketProxyPool : IPacketChannel
+public interface IPacketProxyPool : IPacketTransport
 {
     public int ClientCount { get; }
     public int RemoteEndPointCount { get; }

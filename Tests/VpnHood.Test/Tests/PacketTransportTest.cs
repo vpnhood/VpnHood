@@ -9,7 +9,7 @@ using VpnHood.Test.Packets;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class PacketChannelTest : TestBase
+public class PacketTransportTest : TestBase
 {
     private static IPAddress GetRandomIp(IpVersion ipVersion)
     {

@@ -11,7 +11,7 @@ using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
-public class UdpProxyPool : PacketChannelPipe, IPacketProxyPool, IJob
+public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
 {
     private readonly bool _autoDisposeSentPackets;
     private readonly IPacketProxyCallbacks? _packetProxyCallbacks;

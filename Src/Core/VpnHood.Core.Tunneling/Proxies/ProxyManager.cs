@@ -6,7 +6,7 @@ using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
-public class ProxyManager : PacketChannelPipe
+public class ProxyManager : PassthroughPacketTransport
 {
     private readonly IPAddress[] _blockList = [
         IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play) SSDP (Simple Service Discovery Protocol)

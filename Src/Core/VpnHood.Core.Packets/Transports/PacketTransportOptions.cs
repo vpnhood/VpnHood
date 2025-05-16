@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Core.Packets.Transports;
 
-public class PacketSenderOptions
+public class PacketTransportOptions
 {
     public int QueueCapacity { get; set; } = 255;
     public required bool AutoDisposeSentPackets { get; init; }

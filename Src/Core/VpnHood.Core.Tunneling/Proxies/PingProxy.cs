@@ -7,7 +7,7 @@ using VpnHood.Core.Tunneling.Utils;
 namespace VpnHood.Core.Tunneling.Proxies;
 
 public class PingProxy(bool autoDisposePackets) 
-    : PacketChannelSingle(new PacketChannelOptions {
+    : SinglePacketTransport(new PacketTransportOptions {
                 AutoDisposeFailedPackets = autoDisposePackets,
                 AutoDisposeSentPackets = autoDisposePackets,
                 Blocking = false, 

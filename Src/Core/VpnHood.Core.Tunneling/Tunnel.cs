@@ -11,7 +11,7 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
-public class Tunnel : PacketChannelPipe, IJob
+public class Tunnel : PassthroughPacketTransport, IJob
 {
     private readonly object _channelListLock = new();
     private readonly HashSet<StreamProxyChannel> _streamProxyChannels = [];
@@ -231,7 +231,7 @@ public class Tunnel : PacketChannelPipe, IJob
 
         // flush all packets to the same channel
         var channel = FindChannelForPacket(ipPacket);
-        channel.SendPacketAsync(ipPacket).Wait(); //todo: channel must use PacketChannel
+        channel.SendPacketAsync(ipPacket).Wait(); //todo: channel must use PacketTransport
     }
 
     private void VerifyMtu(IpPacket ipPacket)

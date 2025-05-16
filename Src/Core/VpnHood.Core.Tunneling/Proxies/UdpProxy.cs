@@ -11,7 +11,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
-internal class UdpProxy : PacketChannelSingle, ITimeoutItem
+internal class UdpProxy : SinglePacketTransport, ITimeoutItem
 {
     private readonly UdpClient _udpClient;
     private readonly IPEndPoint? _sourceEndPoint;
@@ -20,7 +20,7 @@ internal class UdpProxy : PacketChannelSingle, ITimeoutItem
     public DateTime LastUsedTime { get; set; } //todo
 
     public UdpProxy(UdpClient udpClient, IPEndPoint? sourceEndPoint, int queueCapacity, bool autoDisposePackets)
-        : base(new PacketChannelOptions {
+        : base(new PacketTransportOptions {
             AutoDisposeFailedPackets = autoDisposePackets,
             AutoDisposeSentPackets = autoDisposePackets,
             Blocking = false,

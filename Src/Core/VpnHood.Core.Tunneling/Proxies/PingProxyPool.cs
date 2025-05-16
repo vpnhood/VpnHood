@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Transports;
+using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
@@ -114,10 +114,10 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
-            lock (_pingProxies)                 foreach (var proxy in _pingProxies) {
-                    proxy.PacketReceived -= PingProxy_PacketReceived;
-                    proxy.Dispose();
-                }
+            lock (_pingProxies) foreach (var proxy in _pingProxies) {
+                proxy.PacketReceived -= PingProxy_PacketReceived;
+                proxy.Dispose();
+            }
 
             _maxWorkerEventReporter.Dispose();
             JobRunner.Default.Remove(this);

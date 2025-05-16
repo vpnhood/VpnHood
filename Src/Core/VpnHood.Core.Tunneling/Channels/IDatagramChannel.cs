@@ -1,5 +1,5 @@
 ﻿using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Transports;
+using VpnHood.Core.PacketTransports;
 
 namespace VpnHood.Core.Tunneling.Channels;
 

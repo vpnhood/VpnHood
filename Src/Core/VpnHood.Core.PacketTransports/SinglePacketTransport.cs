@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Core.Packets.Transports;
+﻿using VpnHood.Core.Packets;
+
+namespace VpnHood.Core.PacketTransports;
 
 public abstract class SinglePacketTransport(PacketTransportOptions options)
     : PacketTransportBase(options, singleMode: false, passthrough: true)

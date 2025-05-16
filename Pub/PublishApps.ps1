@@ -29,6 +29,7 @@ Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 if ($nugets) {
 	& "$solutionDir/Src/Core/VpnHood.Core.Toolkit/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Packets/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.PacketTransports/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.Abstractions/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.AndroidTun/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.WinTun/_publish.ps1";

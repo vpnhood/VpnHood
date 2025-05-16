@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Core.Packets.Transports;
+﻿using VpnHood.Core.Packets;
+
+namespace VpnHood.Core.PacketTransports;
 
 public interface IPacketTransport : IDisposable
 {

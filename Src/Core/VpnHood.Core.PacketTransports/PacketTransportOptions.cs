@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Packets.Transports;
+﻿namespace VpnHood.Core.PacketTransports;
 
 public class PacketTransportOptions
 {

@@ -1,7 +1,6 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Abstraction for VPN Adapter</Description>
+		<Description>Abstract base class for transporting and forwarding IP packets.</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
 	</PropertyGroup>
 
@@ -34,8 +33,13 @@
 			<PackagePath></PackagePath>
 		</None>
 	</ItemGroup>
+
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Core.PacketTransports\VpnHood.Core.PacketTransports.csproj" />
+		<PackageReference Include="System.Threading.Channels" Version="9.0.4" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Core.Packets\VpnHood.Core.Packets.csproj" />
 	</ItemGroup>
 
 </Project>

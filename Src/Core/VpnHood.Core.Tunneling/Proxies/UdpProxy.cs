@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Transports;
+using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -51,7 +51,6 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
             or SocketException { SocketErrorCode: SocketError.InvalidArgument }
             or SocketException { SocketErrorCode: SocketError.ConnectionAborted }
             or SocketException { SocketErrorCode: SocketError.OperationAborted };
-        ;
     }
 
     private readonly byte[] _payloadBuffer = new byte[1500]; //todo: Use SendAsync(Memory<>) later

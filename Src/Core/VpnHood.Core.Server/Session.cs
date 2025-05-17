@@ -3,7 +3,6 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
-using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
@@ -15,6 +14,7 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.ClientStreams;
+using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Sockets;
@@ -204,16 +204,12 @@ public class Session : IAsyncDisposable
         return ipVersion == IpVersion.IPv4 ? _clientInternalIpV4 : _clientInternalIpV6;
     }
 
-    private void Proxy_PacketsReceived(object sender, PacketReceivedEventArgs eventArgs)
+    private void Proxy_PacketsReceived(object sender, IpPacket ipPacket)
     {
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var index = 0; index < eventArgs.IpPackets.Count; index++) {
-            var packet = eventArgs.IpPackets[index];
-            Proxy_PacketReceived(packet);
-        }
+        Proxy_PacketReceived(ipPacket);
     }
 
-    public void Adapter_PacketReceived(IpPacket ipPacket)
+    public void Adapter_PacketReceived(object sender, IpPacket ipPacket)
     {
         Proxy_PacketReceived(ipPacket);
     }
@@ -241,71 +237,54 @@ public class Session : IAsyncDisposable
         Tunnel.SendPacketQueued(ipPacket);
     }
 
-    private readonly List<IpPacket> _adapterPackets = [];
-    private readonly object _packetReceivedLock = new();
-    private void Tunnel_PacketReceived(object sender, PacketReceivedEventArgs e)
+    private void Tunnel_PacketReceived(object sender, IpPacket ipPacket)
     {
         if (IsDisposed)
             return;
 
-        lock (_packetReceivedLock) {
-            // this is the shared resource
-            _adapterPackets.Clear();
+        // filter requests
+        // ReSharper disable once ForCanBeConvertedToForeach
+        var virtualIp = GetClientVirtualIp(ipPacket.Version);
 
-            // filter requests
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < e.IpPackets.Count; i++) {
-                var ipPacket = e.IpPackets[i];
-                var virtualIp = GetClientVirtualIp(ipPacket.Version);
-
-                // todo: legacy save caller internal ip at first call
+        // todo: legacy save caller internal ip at first call
 #pragma warning disable CS0612 // Type or member is obsolete
-                if (_fixClientInternalIp) {
-                    if (ipPacket.Version == IpVersion.IPv4)
-                        _clientInternalIpV4 ??= ipPacket.SourceAddress;
-                    else if (ipPacket.Version == IpVersion.IPv6)
-                        _clientInternalIpV6 ??= ipPacket.SourceAddress;
+        if (_fixClientInternalIp) {
+            if (ipPacket.Version == IpVersion.IPv4)
+                _clientInternalIpV4 ??= ipPacket.SourceAddress;
+            else if (ipPacket.Version == IpVersion.IPv6)
+                _clientInternalIpV6 ??= ipPacket.SourceAddress;
 
-                    // update source client virtual ip. will be obsolete in future if client set correct ip
-                    if (!virtualIp.Equals(ipPacket.SourceAddress)) {
-                        PacketLogger.LogPacket(ipPacket, "Invalid tunnel packet source ip.");
-                        ipPacket.SourceAddress = virtualIp;
-                        ipPacket.UpdateAllChecksums();
-                    }
-                }
-#pragma warning restore CS0612 // Type or member is obsolete
-
-                // reject if packet source does not match client internal ip
-                if (!ipPacket.SourceAddress.Equals(virtualIp)) {
-                    PacketLogger.LogPacket(ipPacket, "Invalid tunnel packet source ip.");
-                    ipPacket.Dispose();
-                    continue;
-                }
-
-                // filter
-                var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
-                if (ipPacket2 == null) {
-                    var ipeEndPointPair = ipPacket.GetEndPoints();
-                    LogTrack(ipPacket.Protocol.ToString(), null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
-                    _filterReporter.Raise();
-                    ipPacket.Dispose();
-                    continue;
-                }
-
-                // send using tunnel or proxy
-                if (_vpnAdapter?.IsIpVersionSupported(ipPacket2.Version) == true)
-                    _adapterPackets.Add(ipPacket2);
-                else
-                    _proxyManager.SendPacketQueued(ipPacket2);
-
-            }
-
-            // send using tunnel or proxy
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < _adapterPackets.Count; i++) {
-                _vpnAdapter?.SendPacketQueued(_adapterPackets[i]);
+            // update source client virtual ip. will be obsolete in future if client set correct ip
+            if (!virtualIp.Equals(ipPacket.SourceAddress)) {
+                PacketLogger.LogPacket(ipPacket, "Invalid tunnel packet source ip.");
+                ipPacket.SourceAddress = virtualIp;
+                ipPacket.UpdateAllChecksums();
             }
         }
+#pragma warning restore CS0612 // Type or member is obsolete
+
+        // reject if packet source does not match client internal ip
+        if (!ipPacket.SourceAddress.Equals(virtualIp)) {
+            var ipeEndPointPair = ipPacket.GetEndPoints();
+            LogTrack(ipPacket.Protocol.ToString(), null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
+            _filterReporter.Raise();
+            throw new NetFilterException("Invalid tunnel packet source ip.");
+        }
+
+        // filter
+        var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
+        if (ipPacket2 == null) {
+            var ipeEndPointPair = ipPacket.GetEndPoints();
+            LogTrack(ipPacket.Protocol.ToString(), null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
+            _filterReporter.Raise();
+            throw new NetFilterException("Packet discarded due to the NetFilter's policies.");
+        }
+
+        // send using tunnel or proxy
+        if (_vpnAdapter?.IsIpVersionSupported(ipPacket2.Version) == true)
+            _vpnAdapter.SendPacketQueued(ipPacket2);
+        else
+            _proxyManager.SendPacketQueued(ipPacket2);
     }
 
     public void LogTrack(string protocol, IPEndPoint? localEndPoint, IPEndPoint? destinationEndPoint,

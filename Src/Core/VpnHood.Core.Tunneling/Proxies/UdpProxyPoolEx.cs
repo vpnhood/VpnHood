@@ -126,9 +126,9 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool, IJob
 
         udpProxy.SendPacketQueued(ipPacket);
     }
-    private void UdpProxy_OnPacketReceived(object sender, PacketReceivedEventArgs e)
+    private void UdpProxy_OnPacketReceived(object sender, IpPacket ipPacket)
     {
-        OnPacketReceived(e);
+        OnPacketReceived(ipPacket);
     }
 
     private UdpClient CreateUdpClient(AddressFamily addressFamily)

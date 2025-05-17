@@ -38,6 +38,9 @@ public static class IPAddressExtensions
 
     public static bool SpanEquals(this IPAddress ipAddress, ReadOnlySpan<byte> ipAddressSpan)
     {
+        if (ipAddress.IsV4() && ipAddressSpan.Length != 4) return false;
+        if (ipAddress.IsV6() && ipAddressSpan.Length != 16) return false;
+
         return ipAddress
             .GetAddressBytesFast(stackalloc byte[16])
             .SequenceEqual(ipAddressSpan);

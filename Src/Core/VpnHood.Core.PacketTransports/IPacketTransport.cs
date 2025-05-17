@@ -4,7 +4,7 @@ namespace VpnHood.Core.PacketTransports;
 
 public interface IPacketTransport : IDisposable
 {
-    event EventHandler<PacketReceivedEventArgs>? PacketReceived;
+    event EventHandler<IpPacket>? PacketReceived;
     bool IsSending { get; }
     DateTime LastSentTime { get; }
     DateTime LastReceivedTime { get; }

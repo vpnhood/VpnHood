@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using VpnHood.Core.Packets;
 using VpnHood.Core.PacketTransports;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Sockets;
 
@@ -58,9 +59,9 @@ public class ProxyManager : PassthroughPacketTransport
         }
     }
 
-    private void Proxy_PacketReceived(object sender, PacketReceivedEventArgs e)
+    private void Proxy_PacketReceived(object sender, IpPacket ipPacket)
     {
-        OnPacketReceived(e);
+        OnPacketReceived(ipPacket);
     }
 
     protected override void SendPacket(IpPacket ipPacket)
@@ -69,7 +70,7 @@ public class ProxyManager : PassthroughPacketTransport
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < _blockList.Length; i++) {
             var ipAddress = _blockList[i];
-            if (ipAddress.Equals(ipPacket.DestinationAddress))
+            if (ipAddress.SpanEquals(ipPacket.DestinationAddressSpan))
                 throw new Exception("The packet is blocked.");
         }
 

@@ -7,7 +7,6 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.DatagramMessaging;
-using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
@@ -193,34 +192,18 @@ public class Tunnel : PassthroughPacketTransport, IJob
         channel.DisposeAsync();
     }
 
-    private void Channel_OnPacketReceived(object sender, PacketReceivedEventArgs e)
+    private void Channel_OnPacketReceived(object sender, IpPacket ipPacket)
     {
         if (_disposed)
             return;
 
-        if (VhLogger.IsDiagnoseMode)
-            PacketLogger.LogPackets(e.IpPackets, $"Packets received from a channel. ChannelId: {(sender as IChannel)?.ChannelId}");
-
         // check datagram message
-        // performance critical; don't create another array by linq
-        // performance critical; don't use Linq to check the message
-        // ReSharper disable once LoopCanBeConvertedToQuery
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < e.IpPackets.Count; i++) {
-            if (DatagramMessageHandler.IsDatagramMessage(e.IpPackets[i])) {
-                e = new PacketReceivedEventArgs(
-                    e.IpPackets.Where(x => !DatagramMessageHandler.IsDatagramMessage(x)).ToArray());
-                break;
-            }
+        if (DatagramMessageHandler.IsDatagramMessage(ipPacket)) {
+            ipPacket.Dispose();
+            return;
         }
 
-        try {
-            OnPacketReceived(e);
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex,
-                "Packets dropped! Error in processing channel received packets.");
-        }
+        OnPacketReceived(ipPacket);
     }
 
     // it is not thread-safe

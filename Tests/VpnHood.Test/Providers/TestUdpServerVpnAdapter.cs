@@ -80,9 +80,9 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
 
     public bool IsIpVersionSupported(IpVersion ipVersion) => true;
 
-    private void Proxy_PacketReceived(object? sender, PacketReceivedEventArgs e)
+    private void Proxy_PacketReceived(object? sender, IpPacket ipPacket)
     {
-        OnPacketReceived(e);
+        OnPacketReceived(ipPacket);
     }
 
     public void OnConnectionRequested(IpProtocol protocolType, IPEndPoint remoteEndPoint)

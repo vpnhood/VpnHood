@@ -5,7 +5,6 @@ using System.Net.Sockets;
 using System.Text;
 using VpnHood.Core.Client;
 using VpnHood.Core.Packets;
-using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
@@ -46,7 +45,7 @@ public class TunnelTest : TestBase
 
         // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint 
+        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint
                              ?? throw new Exception("Server connection is not established");
         var serverUdpChannel = new UdpChannel(1, sessionKey, true, 4, autoDisposePackets: true);
         using var serverUdpChannelTransmitter =
@@ -54,11 +53,9 @@ public class TunnelTest : TestBase
         serverUdpChannel.Start();
 
         var serverReceivedPackets = new List<IpPacket>();
-        serverUdpChannel.PacketReceived += delegate (object? _, PacketReceivedEventArgs e) {
-            serverReceivedPackets.AddRange(e.IpPackets);
-            foreach (var packet in e.IpPackets) {
-                serverUdpChannel.SendPacketQueued(packet);
-            }
+        serverUdpChannel.PacketReceived += delegate (object? _, IpPacket ipPacket) {
+            serverReceivedPackets.Add(ipPacket);
+            serverUdpChannel.SendPacketQueued(ipPacket.Clone());
         };
 
         // Create client
@@ -69,14 +66,13 @@ public class TunnelTest : TestBase
         clientUdpChannel.Start();
 
         var clientReceivedPackets = new List<IpPacket>();
-        clientUdpChannel.PacketReceived += delegate (object? _, PacketReceivedEventArgs e) {
-            clientReceivedPackets.AddRange(e.IpPackets);
+        clientUdpChannel.PacketReceived += delegate (object? _, IpPacket ipPacket) {
+            clientReceivedPackets.Add(ipPacket);
         };
 
         // send packet to server through channel
-        foreach (var ipPacket in packets) {
-            clientUdpChannel.SendPacketQueued(ipPacket);
-        }
+        foreach (var ipPacket in packets)
+            clientUdpChannel.SendPacketQueued(ipPacket.Clone());
 
         await VhTestUtil.AssertEqualsWait(packets.Count, () => serverReceivedPackets.Count);
         await VhTestUtil.AssertEqualsWait(packets.Count, () => clientReceivedPackets.Count);
@@ -110,11 +106,9 @@ public class TunnelTest : TestBase
         var serverReceivedPackets = new List<IpPacket>();
         var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         serverTunnel.AddChannel(serverUdpChannel);
-        serverTunnel.PacketReceived += delegate (object? _, PacketReceivedEventArgs e) {
-            serverReceivedPackets.AddRange(e.IpPackets);
-            foreach (var packet in e.IpPackets) {
-                serverUdpChannel.SendPacketQueued(packet);
-            }
+        serverTunnel.PacketReceived += delegate (object? _, IpPacket ipPacket) {
+            serverReceivedPackets.Add(ipPacket);
+            serverUdpChannel.SendPacketQueued(ipPacket.Clone());
         };
 
         // Create client
@@ -126,8 +120,8 @@ public class TunnelTest : TestBase
         var clientReceivedPackets = new List<IpPacket>();
         var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         clientTunnel.AddChannel(clientUdpChannel);
-        clientTunnel.PacketReceived += delegate (object? _, PacketReceivedEventArgs e) {
-            clientReceivedPackets.AddRange(e.IpPackets);
+        clientTunnel.PacketReceived += delegate (object? _, IpPacket ipPacket) {
+            clientReceivedPackets.Add(ipPacket);
             waitHandle.Set();
         };
 

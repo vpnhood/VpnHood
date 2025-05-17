@@ -478,8 +478,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             Stop();
 
             // notify the subscribers that the adapter is disposed
-            Disposed?.Invoke(this, EventArgs.Empty);
             NetworkChange.NetworkAddressChanged -= NetworkChange_NetworkAddressChanged;
+            Disposed?.Invoke(this, EventArgs.Empty);
+            Disposed = null;
         }
     }
 }

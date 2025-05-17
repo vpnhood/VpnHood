@@ -68,9 +68,9 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
         }
     }
 
-    private void PingProxy_PacketReceived(object sender, PacketReceivedEventArgs e)
+    private void PingProxy_PacketReceived(object sender, IpPacket ipPacket)
     {
-        OnPacketReceived(e.IpPackets[0]);
+        OnPacketReceived(ipPacket);
     }
 
     protected override void SendPacket(IpPacket ipPacket)

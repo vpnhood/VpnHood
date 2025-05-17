@@ -2,7 +2,6 @@
 using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Packets;
-using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Proxies;
 
@@ -15,10 +14,9 @@ public class UdpProxyTest : TestBase
     {
         private IpPacket? LastReceivedPacket { get; set; }
 
-        public void PacketReceived(object? sender, PacketReceivedEventArgs e)
-        {
-            foreach (var ipPacket in e.IpPackets)
-                LastReceivedPacket = ipPacket;
+        public void PacketReceived(object? sender, IpPacket ipPacket)
+        { 
+            LastReceivedPacket = ipPacket;
         }
 
         public Task WaitForUdpPacket(IpPacket ipPacket, TimeSpan? timeout = null)

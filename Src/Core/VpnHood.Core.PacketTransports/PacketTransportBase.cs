@@ -6,7 +6,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.PacketTransports;
 
-public abstract class PacketTransportBase :  IPacketTransport
+public abstract class PacketTransportBase : IPacketTransport
 {
     private readonly Channel<IpPacket> _sendChannel;
     private readonly int _queueCapacity;
@@ -18,8 +18,7 @@ public abstract class PacketTransportBase :  IPacketTransport
     protected bool IsDisposed { get; private set; }
     public DateTime LastReceivedTime { get; protected set; }
     public DateTime LastActivityTime => LastReceivedTime > LastSentTime ? LastReceivedTime : FastDateTime.Now;
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
-    private readonly PacketReceivedEventArgs _packetReceivedEventArgs = new(new IpPacket[1]);
+    public event EventHandler<IpPacket>? PacketReceived;
 
     protected abstract ValueTask SendPacketsAsync(IList<IpPacket> ipPackets);
     public int QueueLength => _sendChannel.Reader.Count;
@@ -44,25 +43,13 @@ public abstract class PacketTransportBase :  IPacketTransport
 
         _ = StartSendingPacketsAsync();
     }
-    
-    protected void OnPacketReceived(PacketReceivedEventArgs arg)
-    {
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < arg.IpPackets.Count; i++) {
-            var ipPacket = arg.IpPackets[i];
-            OnPacketReceived(ipPacket);
-        }
-    }
 
     protected void OnPacketReceived(IpPacket ipPacket)
     {
         try {
-            lock (_packetReceivedEventArgs) { //todo: remove by packet
-                LastReceivedTime = FastDateTime.Now;
-                _packetReceivedEventArgs.IpPackets[0] = ipPacket;
-                LogPacket(ipPacket, $"{VhLogger.FormatType(this)}: Received a packet.");
-                PacketReceived?.Invoke(this, _packetReceivedEventArgs);
-            }
+            LastReceivedTime = FastDateTime.Now;
+            LogPacket(ipPacket, $"{VhLogger.FormatType(this)}: Received a packet.");
+            PacketReceived?.Invoke(this, ipPacket);
         }
         catch (Exception ex) {
             LogPacket(ipPacket, $"{VhLogger.FormatType(this)}: Error while invoking the received packets.", exception: ex);
@@ -138,7 +125,7 @@ public abstract class PacketTransportBase :  IPacketTransport
             if (!task.IsCompleted)
                 await task;
         }
-        
+
         // dispose remaining packets
         if (_autoDisposePackets)
             while (_sendChannel.Reader.TryRead(out var ipPacket))
@@ -176,7 +163,7 @@ public abstract class PacketTransportBase :  IPacketTransport
             if (_autoDisposePackets)
                 for (var i = 0; i < ipPackets.Count; i++)
                     ipPackets[i].Dispose();
-            
+
             return false;
         }
         finally {

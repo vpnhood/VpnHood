@@ -150,4 +150,25 @@ public static class IpPacketExtensions
         payloadPacket
             .UpdateChecksum(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan);
     }
+
+    public static bool IsV4(this IpPacket ipPacket)
+    {
+        return ipPacket.Version == IpVersion.IPv4;
+    }
+
+    public static bool IsV6(this IpPacket ipPacket)
+    {
+        return ipPacket.Version == IpVersion.IPv6;
+    }
+
+    public static bool IsIcmpEcho(this IpPacket ipPacket)
+    {
+        return ipPacket switch {
+            // IPv4
+            { Version: IpVersion.IPv4, Protocol: IpProtocol.IcmpV4 } => ipPacket.ExtractIcmpV4().IsEcho,
+            // IPv6
+            { Version: IpVersion.IPv6, Protocol: IpProtocol.IcmpV6 } => ipPacket.ExtractIcmpV6().IsEcho,
+            _ => false
+        };
+    }
 }

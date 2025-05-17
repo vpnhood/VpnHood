@@ -5,12 +5,13 @@ using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
-using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.ClientStreams;
+using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
 
@@ -32,13 +33,12 @@ internal class ClientHost(
     private readonly ClientHostStat _stat = new();
     private int _passthruInProcessPacketsCounter;
     private readonly Nat _nat = new(true);
-    private readonly PacketReceivedEventArgs _packetReceivedEventArgs = new(new List<IpPacket>());
 
     public IPAddress CatcherAddressIpV4 { get; } = catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 { get; } = catcherAddressIpV6;
     public bool IsPassthruInProcessPacketsEnabled => _passthruInProcessPacketsCounter > 0;
     public IClientHostStat Stat => _stat;
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
+    public event EventHandler<IpPacket>? PacketReceived;
 
     public void EnablePassthruInProcessPackets(bool value)
     {
@@ -47,13 +47,14 @@ internal class ClientHost(
         else
             Interlocked.Decrement(ref _passthruInProcessPacketsCounter);
     }
+
     public bool IsOwnPacket(IpPacket ipPacket)
     {
         if (ipPacket.Protocol != IpProtocol.Tcp)
             return false;
 
-        return ipPacket.DestinationAddress.Equals(CatcherAddressIpV4) ||
-               ipPacket.DestinationAddress.Equals(CatcherAddressIpV6);
+        return CatcherAddressIpV4.SpanEquals(ipPacket.DestinationAddressSpan) ||
+               CatcherAddressIpV6.SpanEquals(ipPacket.DestinationAddressSpan);
     }
 
     public void Start()
@@ -106,83 +107,69 @@ internal class ClientHost(
     }
 
     // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
-    public void ProcessOutgoingPacket(IList<IpPacket> ipPackets)
+    public void ProcessOutgoingPacket(IpPacket ipPacket)
     {
+        PacketLogger.LogPacket(ipPacket, "Processing a ClientHost packet...");
+
+        // check packet type
         if (_localEndpointIpV4 == null)
             throw new InvalidOperationException(
                 $"{nameof(_localEndpointIpV4)} has not been initialized! Did you call {nameof(Start)}!");
 
-        _packetReceivedEventArgs.IpPackets.Clear(); // prevent reallocation in this intensive method
-        var resultPackets = _packetReceivedEventArgs.IpPackets;
+        var catcherAddress = ipPacket.Version == IpVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
+        var localEndPoint = ipPacket.Version == IpVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
+        TcpPacket? tcpPacket = null;
 
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++) {
-            var ipPacket = ipPackets[i];
-            var catcherAddress = ipPacket.Version == IpVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
-            var localEndPoint = ipPacket.Version == IpVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
-            TcpPacket? tcpPacket = null;
+        try {
+            tcpPacket = ipPacket.ExtractTcp();
 
-            try {
-                tcpPacket = ipPacket.ExtractTcp();
+            // check local endpoint
+            if (localEndPoint == null)
+                throw new Exception("There is no localEndPoint registered for this packet.");
 
-                // check local endpoint
-                if (localEndPoint == null)
-                    throw new Exception("There is no localEndPoint registered for this packet.");
+            // ignore new packets 
+            if (_disposed)
+                throw new ObjectDisposedException(GetType().Name);
 
-                // ignore new packets 
-                if (_disposed)
-                    throw new ObjectDisposedException(GetType().Name);
+            // redirect to inbound
+            if (catcherAddress.SpanEquals(ipPacket.DestinationAddressSpan)) {
+                var natItem = (NatItemEx?)_nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
+                              ?? throw new Exception("Could not find incoming tcp destination in NAT.");
 
-                // redirect to inbound
-                if (Equals(ipPacket.DestinationAddress, catcherAddress)) {
-                    var natItem = (NatItemEx?)_nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
-                                  ?? throw new Exception("Could not find incoming tcp destination in NAT.");
-
-                    ipPacket.SourceAddress = natItem.DestinationAddress;
-                    ipPacket.DestinationAddress = natItem.SourceAddress;
-                    tcpPacket.SourcePort = natItem.DestinationPort;
-                    tcpPacket.DestinationPort = natItem.SourcePort;
-                }
-
-                // Redirect outbound to the local address
-                else {
-                    var syncCustomData = ProcessOutgoingSyncPacket(ipPacket, tcpPacket);
-
-                    // add to nat if it is sync packet
-                    var natItem = syncCustomData != null
-                        ? _nat.Add(ipPacket, true)
-                        : _nat.Get(ipPacket) ??
-                          throw new Exception("Could not find outgoing tcp destination in NAT.");
-
-                    // set customData
-                    if (syncCustomData != null)
-                        natItem.CustomData = syncCustomData;
-
-                    tcpPacket.SourcePort = natItem.NatId; // 1
-                    ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
-                    ipPacket.SourceAddress = catcherAddress; //3
-                    tcpPacket.DestinationPort = (ushort)localEndPoint.Port; //4
-                }
-
-                ipPacket.UpdateAllChecksums();
-                resultPackets.Add(ipPacket);
+                ipPacket.SourceAddress = natItem.DestinationAddress;
+                ipPacket.DestinationAddress = natItem.SourceAddress;
+                tcpPacket.SourcePort = natItem.DestinationPort;
+                tcpPacket.DestinationPort = natItem.SourcePort;
             }
-            catch (Exception ex) {
-                if (tcpPacket != null) {
-                    resultPackets.Add(PacketBuilder.BuildTcpResetReply(ipPacket));
-                    PacketLogger.LogPacket(ipPacket,
-                        "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.",
-                        LogLevel.Debug, ex);
-                }
-                else {
-                    PacketLogger.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet.",
-                        LogLevel.Error, ex);
-                }
+
+            // Redirect outbound to the local address
+            else {
+                var syncCustomData = ProcessOutgoingSyncPacket(ipPacket, tcpPacket);
+
+                // add to nat if it is sync packet
+                var natItem = syncCustomData != null
+                    ? _nat.Add(ipPacket, true)
+                    : _nat.Get(ipPacket) ??
+                      throw new Exception("Could not find outgoing tcp destination in NAT.");
+
+                // set customData
+                if (syncCustomData != null)
+                    natItem.CustomData = syncCustomData;
+
+                tcpPacket.SourcePort = natItem.NatId; // 1
+                ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
+                ipPacket.SourceAddress = catcherAddress; //3
+                tcpPacket.DestinationPort = (ushort)localEndPoint.Port; //4
             }
+
+            ipPacket.UpdateAllChecksums();
+            PacketReceived?.Invoke(this, ipPacket);
         }
-
-        //it is a shared buffer; to ToArray is necessary
-        PacketReceived?.Invoke(this, _packetReceivedEventArgs);
+        catch (Exception ex) when (tcpPacket != null) {
+            var resultPacket = PacketBuilder.BuildTcpResetReply(ipPacket);
+            PacketReceived?.Invoke(this, resultPacket);
+            throw new DropPacketException("Dropping packet and sending TCP rest.", ex);
+        }
     }
 
     private SyncCustomData? ProcessOutgoingSyncPacket(IpPacket ipPacket, TcpPacket tcpPacket)
@@ -326,15 +313,15 @@ internal class ClientHost(
 
     public ValueTask DisposeAsync()
     {
-        if (_disposed) 
+        if (_disposed)
             return default;
-        
+
         _cancellationTokenSource.Cancel();
         _tcpListenerIpV4?.Stop();
         _tcpListenerIpV6?.Stop();
         _nat.Dispose();
         PacketReceived = null;
-        
+
         _disposed = true;
         return default;
     }

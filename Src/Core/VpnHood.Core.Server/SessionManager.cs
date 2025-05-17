@@ -5,7 +5,7 @@ using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Trackers;
-using VpnHood.Core.PacketTransports;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
@@ -131,7 +131,7 @@ public class SessionManager : IAsyncDisposable, IJob
         return session;
     }
 
-    public async Task<SessionResponseEx> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair, 
+    public async Task<SessionResponseEx> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair,
         int protocolVersion)
     {
         // validate the token
@@ -487,21 +487,14 @@ public class SessionManager : IAsyncDisposable, IJob
         _sessionLocalService.Remove(session.SessionId);
     }
 
-    private void VpnAdapter_PacketReceived(object sender, PacketReceivedEventArgs e)
+    private void VpnAdapter_PacketReceived(object sender, IpPacket ipPacket)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < e.IpPackets.Count; i++) {
-            var ipPacket = e.IpPackets[i];
-            var session = GetSessionByVirtualIp(ipPacket.DestinationAddress);
-            if (session == null) {
-                // log dropped packet
-                if (VhLogger.IsDiagnoseMode)
-                    PacketLogger.LogPacket(ipPacket, "Could not find session for packet destination.");
-                return;
-            }
+        var session = GetSessionByVirtualIp(ipPacket.DestinationAddress);
+        if (session == null)
+            throw new Exception("SessionManager could not find the session for the packet.");
 
-            session.Adapter_PacketReceived(ipPacket);
-        }
+        session.Adapter_PacketReceived(this, ipPacket);
     }
 
     public Session? GetSessionByVirtualIp(IPAddress virtualIpAddress)
@@ -517,7 +510,7 @@ public class SessionManager : IAsyncDisposable, IJob
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
         _disposed = true;
-        
+
         // dispose the job
         JobRunner.Default.Remove(this);
 

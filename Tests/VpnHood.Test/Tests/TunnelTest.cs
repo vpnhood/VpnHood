@@ -3,11 +3,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client;
 using VpnHood.Core.Packets;
 using VpnHood.Core.PacketTransports;
-using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
@@ -24,10 +22,10 @@ public class TunnelTest : TestBase
         : UdpChannelTransmitter(udpClient, serverKey)
     {
         protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint, long channelCryptorPosition,
-            byte[] buffer, int bufferIndex)
+            Span<byte> buffer)
         {
             udpChannel.SetRemote(this, remoteEndPoint);
-            udpChannel.OnReceiveData(channelCryptorPosition, buffer, bufferIndex);
+            udpChannel.OnReceiveData(buffer, channelCryptorPosition);
         }
     }
 
@@ -35,12 +33,6 @@ public class TunnelTest : TestBase
     [TestMethod]
     public async Task UdpChannel_Direct()
     {
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(LogLevel.Trace);//todo
-
-        //todo remove wait handle
-        var waitHandle = new EventWaitHandle(true, EventResetMode.AutoReset);
-        waitHandle.Reset();
-
         // test packets
         var packets = new List<IpPacket> {
             PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)),
@@ -79,7 +71,6 @@ public class TunnelTest : TestBase
         var clientReceivedPackets = new List<IpPacket>();
         clientUdpChannel.PacketReceived += delegate (object? _, PacketReceivedEventArgs e) {
             clientReceivedPackets.AddRange(e.IpPackets);
-            waitHandle.Set();
         };
 
         // send packet to server through channel

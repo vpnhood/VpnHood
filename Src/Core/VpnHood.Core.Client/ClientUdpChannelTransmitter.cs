@@ -7,9 +7,9 @@ namespace VpnHood.Core.Client;
 public class ClientUdpChannelTransmitter(UdpChannel udpChannel, UdpClient udpClient, byte[] serverKey)
     : UdpChannelTransmitter(udpClient, serverKey)
 {
-    protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint, long channelCryptorPosition,
-        byte[] buffer, int bufferIndex)
+    protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint, 
+        long channelCryptorPosition, Span<byte> buffer)
     {
-        udpChannel.OnReceiveData(channelCryptorPosition, buffer, bufferIndex);
+        udpChannel.OnReceiveData(buffer, channelCryptorPosition);
     }
 }

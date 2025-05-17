@@ -17,7 +17,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
     }), IPacketChannel
 {
     private IPEndPoint? _lastRemoteEp;
-    private readonly byte[] _buffer = new byte[TunnelDefaults.Mtu + UdpChannelTransmitter.HeaderLength];
+    private readonly Memory<byte> _buffer = new byte[TunnelDefaults.Mtu + UdpChannelTransmitter.HeaderLength];
     private UdpChannelTransmitter? _udpChannelTransmitter;
     private readonly BufferCryptor _sessionCryptorWriter = new(sessionKey);
     private readonly BufferCryptor _sessionCryptorReader = new(sessionKey);
@@ -41,7 +41,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
         Connected = true;
     }
 
-    public async Task SendBuffer(byte[] buffer, int bufferLength)
+    public async Task SendBuffer(Memory<byte> buffer)
     {
         if (_lastRemoteEp == null)
             throw new InvalidOperationException("RemoveEndPoint has not been initialized yet in UdpChannel.");
@@ -51,14 +51,12 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
 
         // encrypt packets
         var sessionCryptoPosition = _cryptorPosBase + Traffic.Sent;
-        _sessionCryptorWriter.Cipher(buffer,
-            UdpChannelTransmitter.HeaderLength,
-            bufferLength - UdpChannelTransmitter.HeaderLength,
+        _sessionCryptorWriter.Cipher(buffer.Span[UdpChannelTransmitter.HeaderLength..],
             sessionCryptoPosition);
 
         // send buffer
         var ret = await _udpChannelTransmitter
-            .SendAsync(_lastRemoteEp, sessionId, sessionCryptoPosition, buffer, bufferLength, protocolVersion)
+            .SendAsync(_lastRemoteEp, sessionId, sessionCryptoPosition, buffer, protocolVersion)
             .VhConfigureAwait();
 
         Traffic.Sent += ret;
@@ -83,7 +81,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
 
                 // flush buffer if this packet does not fit
                 if (bufferIndex > UdpChannelTransmitter.HeaderLength && bufferIndex + packetBytes.Length > _buffer.Length) {
-                    await SendBuffer(_buffer, bufferIndex).VhConfigureAwait();
+                    await SendBuffer(_buffer[..bufferIndex]).VhConfigureAwait();
                     bufferIndex = UdpChannelTransmitter.HeaderLength;
                 }
 
@@ -96,13 +94,13 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
                 }
 
                 // add packet to buffer
-                packetBytes.Span.CopyTo(_buffer.AsSpan(bufferIndex));
+                packetBytes.Span.CopyTo(_buffer.Span[bufferIndex..]);
                 bufferIndex += packetBytes.Length;
             }
 
             // send remaining buffer
             if (bufferIndex > UdpChannelTransmitter.HeaderLength) {
-                await SendBuffer(_buffer, bufferIndex).VhConfigureAwait();
+                await SendBuffer(_buffer[..bufferIndex]).VhConfigureAwait();
             }
         }
         catch (Exception ex) {
@@ -120,13 +118,14 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
         _lastRemoteEp = remoteEndPoint;
     }
 
-    public void OnReceiveData(long cryptorPosition, byte[] buffer, int bufferIndex)
+    public void OnReceiveData(Span<byte> buffer, long cryptorPosition)
     {
-        _sessionCryptorReader.Cipher(buffer, bufferIndex, buffer.Length - bufferIndex, cryptorPosition);
+        _sessionCryptorReader.Cipher(buffer, cryptorPosition);
 
         // read all packets
+        var bufferIndex = 0;
         while (bufferIndex < buffer.Length) {
-            var ipPacket = PacketUtil.ReadNextPacket(buffer.AsSpan(bufferIndex));
+            var ipPacket = PacketUtil.ReadNextPacket(buffer[bufferIndex..]);
             bufferIndex += ipPacket.PacketLength;
             Traffic.Received += ipPacket.PacketLength;
             OnPacketReceived(ipPacket);

@@ -9,6 +9,7 @@ public static class TunnelDefaults
     public const int MtuOverhead = 70;
     public const int Mtu = 1500 - MtuOverhead;
     public const int MtuRemote = 1500;
+    public const int MaxPacketSize = 1500;
     public const string HttpPassCheck = "VpnHoodPassCheck";
     public const int StreamProxyBufferSize = 0x1000 * 2; // 8KB
     public const int ClientUdpReceiveBufferSize = 1024 * 1024 * 1; // 1MB

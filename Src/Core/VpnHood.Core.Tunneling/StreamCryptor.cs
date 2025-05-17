@@ -51,22 +51,22 @@ public class StreamCryptor : AsyncStreamDecorator
     }
 
 
-    public void Decrypt(byte[] buffer, int offset, int count)
+    public void Decrypt(Span<byte> buffer)
     {
-        var cipherCount = Math.Min(count, _maxCipherCount - _readCount);
+        var cipherCount = (int)Math.Min(buffer.Length, _maxCipherCount - _readCount);
         if (cipherCount > 0) {
             lock (_bufferCryptor)
-                _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _readCount);
-            _readCount += count;
+                _bufferCryptor.Cipher(buffer[..cipherCount], _readCount);
+            _readCount += buffer.Length;
         }
     }
 
     public void Encrypt(byte[] buffer, int offset, int count)
     {
-        var cipherCount = Math.Min(count, _maxCipherCount - _writeCount);
+        var cipherCount = (int)Math.Min(count, _maxCipherCount - _writeCount);
         if (cipherCount > 0) {
             lock (_bufferCryptor)
-                _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _writeCount);
+                _bufferCryptor.Cipher(buffer[..cipherCount], _writeCount);
             _writeCount += cipherCount;
         }
     }
@@ -80,7 +80,7 @@ public class StreamCryptor : AsyncStreamDecorator
 
 
         var readCount = await _stream.ReadAsync(buffer, offset, count, cancellationToken).VhConfigureAwait();
-        Decrypt(buffer, offset, readCount);
+        Decrypt(buffer2.Span[..readCount]);
         return readCount;
     }
 

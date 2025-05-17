@@ -3,11 +3,11 @@
 public class TimeoutItem : ITimeoutItem
 {
     public DateTime LastUsedTime { get; set; }
-    public bool Disposed { get; private set; }
+    public bool IsDisposed { get; private set; }
 
     protected virtual void Dispose(bool disposing)
     {
-        Disposed = true;
+        IsDisposed = true;
     }
 
     public void Dispose()

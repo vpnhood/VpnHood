@@ -34,9 +34,6 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
-        if (adapterSettings.MaxPacketCount != 1)
-            throw new InvalidOperationException("WinDivert adapter supports only 1 packet at a time.");
-
         // initialize devices
         _device = new WinDivertDevice { Flags = 0 };
 
@@ -329,5 +326,10 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         // The adapter is an unmanaged resource; it must be closed if it is open
         if (_device != null)
             AdapterRemove();
+    }
+
+    ~WinDivertVpnAdapter()
+    {
+        Dispose(false);
     }
 }

@@ -258,7 +258,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
     protected override IpPacket? ReadPacket(int mtu)
     {
-        while (Started) {
+        while (IsStarted) {
             var bytesRead = LinuxAPI.read(_tunAdapterFd, _readBuffer, _readBuffer.Length);
             if (bytesRead > 0) {
                 return PacketBuilder.Parse(_readBuffer.AsSpan(0, bytesRead));
@@ -326,11 +326,16 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
     protected override void Dispose(bool disposing)
     {
-        base.Dispose(disposing);
-
         // The adapter is an unmanaged resource; it must be closed if it is open
         if (_tunAdapterFd != 0) {
             AdapterRemove();
         }
+
+        base.Dispose(disposing);
+    }
+
+    ~LinuxTunVpnAdapter()
+    {
+        Dispose(false);
     }
 }

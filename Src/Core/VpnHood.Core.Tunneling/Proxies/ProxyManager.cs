@@ -92,7 +92,7 @@ public class ProxyManager : PassthroughPacketTransport
 
     public void AddChannel(IChannel channel)
     {
-        if (Disposed)
+        if (IsDisposed)
             throw new ObjectDisposedException(nameof(ProxyManager));
 
         lock (_channels)

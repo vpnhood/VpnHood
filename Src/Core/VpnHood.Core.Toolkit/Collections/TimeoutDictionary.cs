@@ -100,7 +100,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
 
     private bool IsExpired(ITimeoutItem item)
     {
-        return item.Disposed || (Timeout != null && FastDateTime.Now - item.LastUsedTime > Timeout);
+        return item.IsDisposed || (Timeout != null && FastDateTime.Now - item.LastUsedTime > Timeout);
     }
 
     private void AutoCleanupInternal()

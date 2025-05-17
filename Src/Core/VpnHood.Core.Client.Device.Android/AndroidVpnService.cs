@@ -62,9 +62,12 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     {
         return new AndroidVpnAdapter(this, new AndroidVpnAdapterSettings {
             AdapterName = adapterSettings.AdapterName, 
-            MaxPacketCount = adapterSettings.MaxPacketCount,
+            Blocking = adapterSettings.Blocking,
+            AutoDisposePackets = adapterSettings.AutoDisposePackets,
             MaxAutoRestartCount = adapterSettings.MaxAutoRestartCount,
-            MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay
+            MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
+            QueueCapacity = adapterSettings.QueueCapacity,
+            AutoMetric = adapterSettings.AutoMetric
         });
     }
 

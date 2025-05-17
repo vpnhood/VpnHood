@@ -34,14 +34,21 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
         IVpnAdapter vpnAdapter = debugData1?.Contains("/wintun", StringComparison.OrdinalIgnoreCase) is true
             ? new WinTunVpnAdapter(new WinVpnAdapterSettings {
                 AdapterName = adapterSettings.AdapterName,
-                MaxPacketCount = adapterSettings.MaxPacketCount,
                 MaxAutoRestartCount = adapterSettings.MaxAutoRestartCount,
-                MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay
+                MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
+                Blocking = adapterSettings.Blocking,
+                AutoDisposePackets = adapterSettings.AutoDisposePackets,
+                AutoMetric = adapterSettings.AutoMetric,
+                QueueCapacity = adapterSettings.QueueCapacity
             })
             : new WinDivertVpnAdapter(new WinDivertVpnAdapterSettings {
                 AdapterName = adapterSettings.AdapterName,
                 MaxAutoRestartCount = adapterSettings.MaxAutoRestartCount,
-                MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay
+                MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
+                Blocking = adapterSettings.Blocking,
+                AutoDisposePackets = adapterSettings.AutoDisposePackets,
+                QueueCapacity = adapterSettings.QueueCapacity,
+                ExcludeLocalNetwork = true
             });
 
         return vpnAdapter;

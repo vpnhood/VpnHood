@@ -5,24 +5,27 @@ using VpnHood.Core.PacketTransports;
 
 namespace VpnHood.Core.VpnAdapters.Abstractions;
 
-public class NullVpnAdapter : IVpnAdapter
+public class NullVpnAdapter(bool autoDisposePackets, bool blocking) :
+    PacketTransport(new PacketTransportOptions {
+        Blocking = blocking,
+        AutoDisposePackets = autoDisposePackets
+    }),
+    IVpnAdapter
 {
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public event EventHandler? Disposed;
-    public virtual bool Started { get; set; }
+    public virtual bool IsStarted { get; set; }
     public virtual bool IsNatSupported { get; set; } = true;
     public virtual bool CanProtectSocket { get; set; } = true;
 
     public virtual Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
-        Started = true;
-        _ = PacketReceived; //prevent not used warning
+        IsStarted = true;
         return Task.CompletedTask;
     }
 
     public virtual void Stop()
     {
-        Started = false;    
+        IsStarted = false;
     }
 
     public virtual bool ProtectSocket(Socket socket)
@@ -35,20 +38,15 @@ public class NullVpnAdapter : IVpnAdapter
         return true;
     }
 
-
-    public virtual void SendPacket(IpPacket ipPacket)
+    protected override ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
     {
-        // nothing
-    }
-
-    public virtual void SendPackets(IList<IpPacket> ipPackets)
-    {
-        // nothing
+        // Just discard the packets
+        return default;
     }
 
     public IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion)
     {
-            return ipVersion == IpVersion.IPv4 ? IPAddress.Loopback : IPAddress.IPv6Loopback;
+        return ipVersion == IpVersion.IPv4 ? IPAddress.Loopback : IPAddress.IPv6Loopback;
     }
 
     public bool IsIpVersionSupported(IpVersion ipVersion)
@@ -56,13 +54,13 @@ public class NullVpnAdapter : IVpnAdapter
         return true;
     }
 
-    private bool _disposed;
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (disposing) {
+            Stop();
+            Disposed?.Invoke(this, EventArgs.Empty);
+        }
 
-        Stop();
-        Disposed?.Invoke(this, EventArgs.Empty);
+        base.Dispose(disposing);
     }
 }

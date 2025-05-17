@@ -271,7 +271,11 @@ public class ServerApp : IDisposable
     {
         try {
             var vpnAdapter = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-                ? new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings { AdapterName = "VpnHoodServer" })
+                ? new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {
+                    AdapterName = "VpnHoodServer", 
+                    Blocking = false, 
+                    AutoDisposePackets = true
+                })
                 : null;
 
             // start the adapter

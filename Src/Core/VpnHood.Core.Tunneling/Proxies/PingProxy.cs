@@ -8,8 +8,7 @@ namespace VpnHood.Core.Tunneling.Proxies;
 
 public class PingProxy(bool autoDisposePackets) 
     : SinglePacketTransport(new PacketTransportOptions {
-                AutoDisposeFailedPackets = autoDisposePackets,
-                AutoDisposeSentPackets = autoDisposePackets,
+                AutoDisposePackets = autoDisposePackets,
                 Blocking = false, 
                 QueueCapacity = 1})
     , ITimeoutItem

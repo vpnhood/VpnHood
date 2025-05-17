@@ -41,7 +41,8 @@ public class TcpDatagramChannelTest : TestBase
         var serverTcpClient = await listenerTask;
         await using var serverStream =
             new TcpClientStream(serverTcpClient, serverTcpClient.GetStream(), Guid.NewGuid() + ":server");
-        await using var serverChannel = new StreamDatagramChannel(serverStream, Guid.NewGuid().ToString());
+        await using var serverChannel = new StreamPacketChannel(serverStream, Guid.NewGuid().ToString(), 
+            autoDisposePackets: true);
 
         var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         serverTunnel.AddChannel(serverChannel);
@@ -52,7 +53,9 @@ public class TcpDatagramChannelTest : TestBase
         await using var clientStream =
             new TcpClientStream(tcpClient, tcpClient.GetStream(), Guid.NewGuid() + ":client");
         await using var clientChannel =
-            new StreamDatagramChannel(clientStream, Guid.NewGuid().ToString(), TimeSpan.FromMilliseconds(1000));
+            new StreamPacketChannel(clientStream, Guid.NewGuid().ToString(), 
+                autoDisposePackets: true, lifespan: TimeSpan.FromMilliseconds(1000));
+
         await using var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         clientTunnel.AddChannel(clientChannel);
 

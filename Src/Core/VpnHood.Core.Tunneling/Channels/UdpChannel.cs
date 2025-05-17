@@ -9,25 +9,25 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int protocolVersion)
-    : IDatagramChannel
+public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int protocolVersion,
+    bool autoDisposePackets)
+    : PacketTransport(new PacketTransportOptions {
+        AutoDisposePackets = autoDisposePackets,
+        Blocking = false,
+    }), IPacketChannel
 {
     private IPEndPoint? _lastRemoteEp;
     private readonly byte[] _buffer = new byte[TunnelDefaults.Mtu + UdpChannelTransmitter.HeaderLength];
     private UdpChannelTransmitter? _udpChannelTransmitter;
     private readonly BufferCryptor _sessionCryptorWriter = new(sessionKey);
     private readonly BufferCryptor _sessionCryptorReader = new(sessionKey);
-    private PacketReceivedEventArgs? _packetReceivedEventArgs;
-    private readonly IpPacket[] _sendingPackets = [null!];
     private readonly long _cryptorPosBase = isServer ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
     private bool _disposed;
 
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public string ChannelId { get; } = Guid.NewGuid().ToString();
     public bool IsStream => false;
     public bool IsClosePending => false;
     public bool Connected { get; private set; }
-    public DateTime LastActivityTime { get; private set; }
     public Traffic Traffic { get; } = new();
 
     public void Start()
@@ -39,14 +39,6 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
             throw new InvalidOperationException("The udpChannel is already started.");
 
         Connected = true;
-        LastActivityTime = FastDateTime.Now;
-    }
-
-    // it is not thread safe
-    public Task SendPacketAsync(IpPacket packet)
-    {
-        _sendingPackets[0] = packet;
-        return SendPacketAsync(_sendingPackets);
     }
 
     public async Task SendBuffer(byte[] buffer, int bufferLength)
@@ -61,7 +53,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
         var sessionCryptoPosition = _cryptorPosBase + Traffic.Sent;
         _sessionCryptorWriter.Cipher(buffer,
             UdpChannelTransmitter.HeaderLength,
-            bufferLength - UdpChannelTransmitter.HeaderLength, 
+            bufferLength - UdpChannelTransmitter.HeaderLength,
             sessionCryptoPosition);
 
         // send buffer
@@ -70,10 +62,9 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
             .VhConfigureAwait();
 
         Traffic.Sent += ret;
-        LastActivityTime = FastDateTime.Now;
     }
 
-    public async Task SendPacketAsync(IList<IpPacket> ipPackets)
+    protected override async ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
     {
         if (_disposed)
             throw new ObjectDisposedException(VhLogger.FormatType(this));
@@ -134,21 +125,11 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
         _sessionCryptorReader.Cipher(buffer, bufferIndex, buffer.Length - bufferIndex, cryptorPosition);
 
         // read all packets
-        try {
-            _packetReceivedEventArgs ??= new PacketReceivedEventArgs([]);
-            _packetReceivedEventArgs.IpPackets.Clear();
-
-            while (bufferIndex < buffer.Length) {
-                var ipPacket = PacketUtil.ReadNextPacket(buffer, ref bufferIndex);
-                Traffic.Received += ipPacket.PacketLength;
-                _packetReceivedEventArgs.IpPackets.Add(ipPacket);
-            }
-
-            PacketReceived?.Invoke(this, _packetReceivedEventArgs);
-            LastActivityTime = FastDateTime.Now;
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogWarning(GeneralEventId.Udp, ex, "Error in processing packets.");
+        while (bufferIndex < buffer.Length) {
+            var ipPacket = PacketUtil.ReadNextPacket(buffer.AsSpan(bufferIndex));
+            bufferIndex += ipPacket.PacketLength;
+            Traffic.Received += ipPacket.PacketLength;
+            OnPacketReceived(ipPacket);
         }
     }
 

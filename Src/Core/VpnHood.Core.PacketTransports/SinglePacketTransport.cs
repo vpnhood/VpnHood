@@ -3,7 +3,7 @@
 namespace VpnHood.Core.PacketTransports;
 
 public abstract class SinglePacketTransport(PacketTransportOptions options)
-    : PacketTransportBase(options, singleMode: false, passthrough: true)
+    : PacketTransportBase(options, singleMode: true, passthrough: true)
 {
     protected sealed override ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
     {

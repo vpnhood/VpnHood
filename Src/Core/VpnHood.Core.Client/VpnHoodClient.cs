@@ -581,7 +581,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
 
         var udpClient = SocketFactory.CreateUdpClient(HostTcpEndPoint.AddressFamily);
-        var udpChannel = new UdpChannel(SessionId, _sessionKey, false, ConnectorService.ProtocolVersion);
+        var udpChannel = new UdpChannel(SessionId, _sessionKey, false, ConnectorService.ProtocolVersion, autoDisposePackets:true);
         try {
             var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, ServerSecret);
             udpChannelTransmitter.Configure(sendBufferSize: _udpSendBufferSize, receiveBufferSize: _udpReceiveBufferSize);
@@ -867,7 +867,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         };
 
         var requestResult = await SendRequest<SessionResponse>(request, cancellationToken).VhConfigureAwait();
-        StreamDatagramChannel? channel = null;
+        StreamPacketChannel? channel = null;
         try {
             // find timespan
             var lifespan = !VhUtils.IsInfinite(_maxTcpDatagramLifespan)
@@ -876,7 +876,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 : Timeout.InfiniteTimeSpan;
 
             // add the new channel
-            channel = new StreamDatagramChannel(requestResult.ClientStream, request.RequestId, lifespan);
+            channel = new StreamPacketChannel(requestResult.ClientStream, request.RequestId, 
+                autoDisposePackets: true, lifespan: lifespan);
             Tunnel.AddChannel(channel);
         }
         catch {

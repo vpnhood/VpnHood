@@ -71,9 +71,14 @@ public class StreamCryptor : AsyncStreamDecorator
         }
     }
 
-    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count,
-        CancellationToken cancellationToken)
+    //todo: convert to Memory
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer2, CancellationToken cancellationToken = default)
     {
+        var buffer = buffer2.ToArray();
+        var offset = 0;
+        var count = buffer.Length;
+
+
         var readCount = await _stream.ReadAsync(buffer, offset, count, cancellationToken).VhConfigureAwait();
         Decrypt(buffer, offset, readCount);
         return readCount;

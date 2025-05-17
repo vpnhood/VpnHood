@@ -5,38 +5,37 @@ namespace VpnHood.Core.Packets;
 
 public static class PacketUtil
 {
-    public static ushort ReadPacketLength(ReadOnlySpan<byte> buffer, int bufferIndex)
+    public static ushort ReadPacketLength(ReadOnlySpan<byte> buffer)
     {
-        var version = buffer[bufferIndex] >> 4;
+        var version = buffer[0] >> 4;
 
         // v4
         if (version == 4)
         {
-            var packetLength = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer.Slice(bufferIndex + 2, 2)));
+            var packetLength = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer.Slice(2, 2)));
             if (packetLength < 20)
-                throw new Exception($"A packet with invalid length has been received! Length: {packetLength}");
+                throw new Exception($"An IPv4 packet with invalid length has been received! Length: {packetLength}");
             return packetLength;
         }
 
         // v6
         if (version == 6)
         {
-            var payload = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer.Slice(bufferIndex + 4, 2)));
-            return (ushort)(40 + payload); //header + payload
+            var payloadLength = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer.Slice(4, 2)));
+            return (ushort)(40 + payloadLength); //header + payload
         }
 
         // unknown
         throw new Exception("Unknown packet version!");
     }
 
-    public static IpPacket ReadNextPacket(ReadOnlySpan<byte> buffer, ref int bufferIndex)
+    public static IpPacket ReadNextPacket(ReadOnlySpan<byte> buffer)
     {
-
-        var packetLength = ReadPacketLength(buffer, bufferIndex);
-        var packet = PacketBuilder.Parse(buffer[bufferIndex..(bufferIndex + packetLength)]);
-        bufferIndex += packetLength;
+        var packetLength = ReadPacketLength(buffer);
+        var packet = PacketBuilder.Parse(buffer[..packetLength]);
         return packet;
     }
+
 
     public static ushort ComputeChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress, 
         byte protocol, ReadOnlySpan<byte> data)

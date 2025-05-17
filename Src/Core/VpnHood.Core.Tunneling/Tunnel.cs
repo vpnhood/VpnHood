@@ -15,7 +15,7 @@ public class Tunnel : PassthroughPacketTransport, IJob
 {
     private readonly object _channelListLock = new();
     private readonly HashSet<StreamProxyChannel> _streamProxyChannels = [];
-    private readonly List<IDatagramChannel> _datagramChannels = [];
+    private readonly List<IPacketChannel> _datagramChannels = [];
     private readonly Timer _speedMonitorTimer;
     private int _maxDatagramChannelCount;
     private Traffic _lastTraffic = new();
@@ -106,13 +106,13 @@ public class Tunnel : PassthroughPacketTransport, IJob
     private bool IsChannelExists(IChannel channel)
     {
         lock (_channelListLock) {
-            return channel is IDatagramChannel
+            return channel is IPacketChannel
                 ? _datagramChannels.Contains(channel)
                 : _streamProxyChannels.Contains(channel);
         }
     }
 
-    public void AddChannel(IDatagramChannel datagramChannel)
+    public void AddChannel(IPacketChannel datagramChannel)
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(Tunnel));
@@ -170,7 +170,7 @@ public class Tunnel : PassthroughPacketTransport, IJob
             return; // channel already removed or does not exist
 
         lock (_channelListLock) {
-            if (channel is IDatagramChannel datagramChannel) {
+            if (channel is IPacketChannel datagramChannel) {
                 _datagramChannels.Remove(datagramChannel);
                 VhLogger.Instance.LogDebug(GeneralEventId.DatagramChannel,
                     "A DatagramChannel has been removed. Channel: {Channel}, ChannelId: {ChannelId}, " +
@@ -231,7 +231,7 @@ public class Tunnel : PassthroughPacketTransport, IJob
 
         // flush all packets to the same channel
         var channel = FindChannelForPacket(ipPacket);
-        channel.SendPacketAsync(ipPacket).Wait(); //todo: channel must use PacketTransport
+        channel.SendPacketQueued(ipPacket);
     }
 
     private void VerifyMtu(IpPacket ipPacket)
@@ -247,7 +247,7 @@ public class Tunnel : PassthroughPacketTransport, IJob
             $"The packet is larger than MTU. PacketLength: {ipPacket.PacketLength}, MTU: {mtu}.");
     }
 
-    private IDatagramChannel FindChannelForPacket(IpPacket ipPacket)
+    private IPacketChannel FindChannelForPacket(IpPacket ipPacket)
     {
         // remove channel if it is not connected
         var channel = FindChannelForPacketInternal(ipPacket);
@@ -259,7 +259,7 @@ public class Tunnel : PassthroughPacketTransport, IJob
         return channel;
     }
 
-    private IDatagramChannel FindChannelForPacketInternal(IpPacket ipPacket)
+    private IPacketChannel FindChannelForPacketInternal(IpPacket ipPacket)
     {
         // send packets directly if there is only one channel
         lock (_datagramChannels) {

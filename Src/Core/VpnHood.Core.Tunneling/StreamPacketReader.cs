@@ -3,82 +3,31 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
-public class StreamPacketReader(Stream stream) : IAsyncDisposable
+public class StreamPacketReader(Stream stream, int bufferSize)
 {
-    private readonly List<IpPacket> _ipPackets = [];
-    private readonly ReadCacheStream _stream = new(stream, true, 15000); // max batch
+    private readonly ReadCacheStream _stream = new(stream, true, bufferSize);
     private readonly Memory<byte> _packetBuffer = new byte[2000];
-    private int _packetBufferCount;
-
 
     /// <returns>null if read nothing</returns>
-    public async Task<IList<IpPacket>?> ReadAsync(CancellationToken cancellationToken)
+    public async Task<IpPacket?> ReadAsync(CancellationToken cancellationToken)
     {
-        _ipPackets.Clear();
 
-        while (true) {
-            // read packet header
-            const int minPacketSize = 20;
-            if (_packetBufferCount < minPacketSize) {
-                var toRead = minPacketSize - _packetBufferCount;
-                var read = await _stream.ReadAsync(_packetBuffer.Slice(_packetBufferCount, toRead), cancellationToken)
-                    .VhConfigureAwait();
-                _packetBufferCount += read;
+        // read minimum packet header
+        const int minPacketSize = 20; // works for ipv4 and ipv6
+        await _stream.ReadExactAsync(_packetBuffer[..minPacketSize], cancellationToken);
 
-                // is eof?
-                if (read == 0 && _packetBufferCount == 0)
-                    return null;
+        // read packet length
+        var packetLength = PacketUtil.ReadPacketLength(_packetBuffer.Span);
 
-                // is unexpected eof?
-                if (read == 0)
-                    throw new Exception("Stream has been unexpectedly closed before reading the rest of packet.");
+        // check packet length
+        if (packetLength > _packetBuffer.Length) 
+            throw new Exception($"Stream has been closed due an oversize packet. PacketLength: {packetLength}");
 
-                // is uncompleted header?
-                if (toRead != read)
-                    break;
+        // read the rest of the packet
+        await _stream.ReadExactAsync(_packetBuffer[minPacketSize..packetLength], cancellationToken);
 
-                // is just header?
-                if (!_stream.DataAvailableInCache)
-                    break;
-            }
-
-            // find packet length
-            var packetLength = PacketUtil.ReadPacketLength(_packetBuffer.Span, 0);
-            if (_packetBufferCount < packetLength) {
-                //not sure if we get any packet more than 1600
-                if (packetLength > _packetBuffer.Length) 
-                    throw new Exception($"Stream has been closed due an oversize packet. PacketLength: {packetLength}");
-
-                var toRead = packetLength - _packetBufferCount;
-                var read = await _stream.ReadAsync(_packetBuffer.Slice(_packetBufferCount, toRead), cancellationToken)
-                    .VhConfigureAwait();
-
-                _packetBufferCount += read;
-                if (read == 0)
-                    throw new Exception("Stream has been unexpectedly closed before reading the rest of packet.");
-
-                // is packet read?
-                if (toRead != read)
-                    break;
-            }
-
-            // WARNING: we shouldn't use shared memory for packet
-            var packetBuffer = _packetBuffer.Span[..packetLength];
-            var ipPacket = PacketBuilder.Parse(packetBuffer);
-
-            _ipPackets.Add(ipPacket);
-            _packetBufferCount = 0;
-
-            // Don't try to read more packet if there is no data in cache
-            if (!_stream.DataAvailableInCache)
-                break;
-        }
-
-        return _ipPackets;
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        return _stream.DisposeAsync();
+        // build the packet
+        var ipPacket = PacketBuilder.Parse(_packetBuffer.Span[..packetLength]);
+        return ipPacket;
     }
 }

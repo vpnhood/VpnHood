@@ -21,7 +21,7 @@ public class HttpStream : ChunkStream
     private readonly string? _host;
     private readonly CancellationTokenSource _readCts = new();
     private readonly CancellationTokenSource _writeCts = new();
-    private Task<int> _readTask = Task.FromResult(0);
+    private ValueTask<int> _readTask;
     private Task _writeTask = Task.CompletedTask;
     private bool _isConnectionClosed;
 
@@ -59,18 +59,18 @@ public class HttpStream : ChunkStream
             "\r\n";
     }
 
-    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
 
         // Create CancellationToken
         using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_readCts.Token, cancellationToken);
-        _readTask = ReadInternalAsync(buffer, offset, count, tokenSource.Token);
+        _readTask = ReadInternalAsync(buffer, tokenSource.Token);
         return await _readTask.VhConfigureAwait(); // await needed to dispose tokenSource
     }
 
-    private async Task<int> ReadInternalAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    private async ValueTask<int> ReadInternalAsync(Memory<byte> buffer, CancellationToken cancellationToken)
     {
         try {
             // ignore header
@@ -99,10 +99,10 @@ public class HttpStream : ChunkStream
             if (_isFinished)
                 return 0;
 
-            var bytesToRead = Math.Min(_remainingChunkBytes, count);
-            var bytesRead = await SourceStream.ReadAsync(buffer, offset, bytesToRead, cancellationToken)
+            var bytesToRead = Math.Min(_remainingChunkBytes, buffer.Length);
+            var bytesRead = await SourceStream.ReadAsync(buffer[..bytesToRead], cancellationToken)
                 .VhConfigureAwait();
-            if (bytesRead == 0 && count != 0) // count zero is used for checking the connection
+            if (bytesRead == 0 && buffer.Length != 0) // count zero is used for checking the connection
                 throw new Exception("HttpStream has been closed unexpectedly.");
 
             _remainingChunkBytes -= bytesRead;
@@ -292,8 +292,8 @@ public class HttpStream : ChunkStream
                     "Attempt to dispose a HttpStream before finishing the current chunk.");
 
             if (!_isFinished) {
-                var buffer = new byte[10];
-                var read = await ReadInternalAsync(buffer, 0, buffer.Length, cancellationToken).VhConfigureAwait();
+                Memory<byte> buffer = new byte[10];
+                var read = await ReadInternalAsync(buffer, cancellationToken).VhConfigureAwait();
                 if (read != 0)
                     throw new InvalidDataException("HttpStream read unexpected data on end.");
             }

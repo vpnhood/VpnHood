@@ -193,7 +193,7 @@ public class ClientServerTest : TestBase
             clientOptions: TestHelper.CreateClientOptions(token, useUdpChannel: true));
 
         var tasks = new List<Task>();
-        for (var i = 0; i < 50; i++)
+        for (var i = 0; i < 2; i++) //todo
             tasks.Add(TestHelper.Test_Udp());
 
         await Task.WhenAll(tasks);

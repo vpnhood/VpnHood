@@ -4,8 +4,7 @@ namespace VpnHood.Core.PacketTransports;
 
 public abstract class PassthroughPacketTransport(bool autoDisposePackets)
     : PacketTransportBase(new PacketTransportOptions {
-        AutoDisposeFailedPackets = autoDisposePackets,
-        AutoDisposeSentPackets = false, // always false for passthrough to let next chain handle it
+        AutoDisposePackets = autoDisposePackets,
         Blocking = false
     }, passthrough: true, singleMode: true)
 {

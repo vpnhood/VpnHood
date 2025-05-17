@@ -20,7 +20,7 @@ public class ProxyManager : PassthroughPacketTransport
 
     public int TcpConnectionCount {
         get {
-            lock (_channels) return _channels.Count(x => x is not IDatagramChannel);
+            lock (_channels) return _channels.Count(x => x is not IPacketChannel);
         }
     }
 

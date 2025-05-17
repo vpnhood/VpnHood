@@ -10,8 +10,7 @@ public abstract class PacketTransportBase :  IPacketTransport
 {
     private readonly Channel<IpPacket> _sendChannel;
     private readonly int _queueCapacity;
-    private readonly bool _autoDisposeSentPackets;
-    private readonly bool _autoDisposeFailedPackets;
+    private readonly bool _autoDisposePackets;
     private readonly bool _blocking;
     private readonly bool _singleMode;
     private readonly bool _passthrough;
@@ -29,9 +28,11 @@ public abstract class PacketTransportBase :  IPacketTransport
 
     protected PacketTransportBase(PacketTransportOptions options, bool singleMode, bool passthrough)
     {
+        if (passthrough && !singleMode)
+            throw new ArgumentException("Passthrough mode should be used with single mode only.", nameof(passthrough));
+
         _queueCapacity = options.QueueCapacity;
-        _autoDisposeSentPackets = options.AutoDisposeSentPackets;
-        _autoDisposeFailedPackets = options.AutoDisposeFailedPackets;
+        _autoDisposePackets = options.AutoDisposePackets;
         _blocking = options.Blocking;
         _singleMode = singleMode;
         _passthrough = passthrough;
@@ -65,6 +66,8 @@ public abstract class PacketTransportBase :  IPacketTransport
         }
         catch (Exception ex) {
             LogPacket(ipPacket, $"{VhLogger.FormatType(this)}: Error while invoking the received packets.", exception: ex);
+            if (_autoDisposePackets)
+                ipPacket.Dispose();
         }
     }
 
@@ -97,7 +100,7 @@ public abstract class PacketTransportBase :  IPacketTransport
 
         // dispose the packet
         LogPacket(ipPacket, $"{VhLogger.FormatType(this)}: Dropping a packet. Send queue is full.", LogLevel.Debug);
-        if (_autoDisposeFailedPackets)
+        if (_autoDisposePackets)
             ipPacket.Dispose();
 
         return false;
@@ -111,7 +114,7 @@ public abstract class PacketTransportBase :  IPacketTransport
         }
         catch (Exception ex) {
             LogPacket(ipPacket, "Dropping packet. Could not write the packet to queue.", exception: ex);
-            if (_autoDisposeFailedPackets)
+            if (_autoDisposePackets)
                 ipPacket.Dispose();
 
             return false;
@@ -137,7 +140,7 @@ public abstract class PacketTransportBase :  IPacketTransport
         }
         
         // dispose remaining packets
-        if (_autoDisposeFailedPackets)
+        if (_autoDisposePackets)
             while (_sendChannel.Reader.TryRead(out var ipPacket))
                 ipPacket.Dispose();
     }
@@ -154,7 +157,8 @@ public abstract class PacketTransportBase :  IPacketTransport
                 await task;
 
             // ReSharper disable once ForCanBeConvertedToForeach
-            if (_autoDisposeSentPackets)
+            // passthrough mode does not dispose packets
+            if (_autoDisposePackets && !_passthrough)
                 for (var i = 0; i < ipPackets.Count; i++)
                     ipPackets[i].Dispose();
 
@@ -169,7 +173,7 @@ public abstract class PacketTransportBase :  IPacketTransport
                     $"{VhLogger.FormatType(this)}: Error in sending some packets via channel.");
 
             // ReSharper disable once ForCanBeConvertedToForeach
-            if (_autoDisposeFailedPackets)
+            if (_autoDisposePackets)
                 for (var i = 0; i < ipPackets.Count; i++)
                     ipPackets[i].Dispose();
             

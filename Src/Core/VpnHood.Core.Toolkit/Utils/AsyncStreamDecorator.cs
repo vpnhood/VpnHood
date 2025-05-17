@@ -3,7 +3,7 @@
 public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
     where T : Stream
 {
-    protected T SourceStream = sourceStream;
+    protected readonly T SourceStream = sourceStream;
 
     public override bool CanRead => SourceStream.CanRead;
     public override bool CanSeek => SourceStream.CanSeek;
@@ -39,9 +39,14 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
         return SourceStream.FlushAsync(cancellationToken);
     }
 
-    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public sealed override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        return SourceStream.ReadAsync(buffer, offset, count, cancellationToken);
+        return await ReadAsync(buffer.AsMemory(offset, count), cancellationToken);
+    }
+
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        return SourceStream.ReadAsync(buffer, cancellationToken);
     }
 
     public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -54,14 +59,20 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
         return base.CopyToAsync(destination, bufferSize, cancellationToken);
     }
 
-    public sealed override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
-    {
-        return base.ReadAsync(buffer, cancellationToken);
-    }
-
     public override ValueTask DisposeAsync()
     {
         return leaveOpen ? default : SourceStream.DisposeAsync();
+    }
+
+    protected sealed override void Dispose(bool disposing)
+    {
+        if (disposing && !leaveOpen)
+            SourceStream.Dispose();
+    }
+    public sealed override void Close()
+    {
+        if (!leaveOpen)
+            SourceStream.Close();
     }
 
     // Sealed
@@ -84,16 +95,6 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
     public sealed override int ReadByte()
     {
         throw new NotSupportedException("Use ReadAsync.");
-    }
-
-    public sealed override void Close()
-    {
-        throw new NotSupportedException("Use DisposeAsync.");
-    }
-
-    protected sealed override void Dispose(bool disposing)
-    {
-        throw new NotSupportedException("Use DisposeAsync.");
     }
 
     public sealed override void WriteByte(byte value)

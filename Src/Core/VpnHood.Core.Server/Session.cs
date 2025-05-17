@@ -183,7 +183,7 @@ public class Session : IAsyncDisposable
                 return;
 
             // add new channel
-            var udpChannel = new UdpChannel(SessionId, SessionKey, true, ProtocolVersion);
+            var udpChannel = new UdpChannel(SessionId, SessionKey, true, ProtocolVersion, autoDisposePackets: true);
             try {
                 Tunnel.AddChannel(udpChannel);
             }
@@ -359,7 +359,7 @@ public class Session : IAsyncDisposable
         VhLogger.Instance.LogDebug(GeneralEventId.DatagramChannel,
             "Creating a TcpDatagramChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
-        var channel = new StreamDatagramChannel(clientStream, request.RequestId);
+        var channel = new StreamPacketChannel(clientStream, request.RequestId, autoDisposePackets: true);
         try {
             Tunnel.AddChannel(channel);
         }

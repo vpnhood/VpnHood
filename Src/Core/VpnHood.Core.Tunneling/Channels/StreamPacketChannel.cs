@@ -10,36 +10,33 @@ using VpnHood.Core.Tunneling.DatagramMessaging;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class StreamDatagramChannel : IDatagramChannel, IJob
+public class StreamPacketChannel : PacketTransport, IPacketChannel, IJob
 {
-    private readonly byte[] _buffer = new byte[0xFFFF * 4];
+    private readonly Memory<byte> _buffer = new byte[0xFFFF * 4];
     private readonly IClientStream _clientStream;
     private readonly DateTime _lifeTime = DateTime.MaxValue;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private bool _isCloseSent;
     private bool _isCloseReceived;
-    private readonly IpPacket[] _sendingPackets = [null!];
 
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     public JobSection JobSection { get; } = new();
     public string ChannelId { get; }
     public bool Connected { get; private set; }
     public Traffic Traffic { get; } = new();
-    public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
 
     public bool IsStream => true;
 
-    public StreamDatagramChannel(IClientStream clientStream, string channelId)
-        : this(clientStream, channelId, Timeout.InfiniteTimeSpan)
+    public StreamPacketChannel(IClientStream clientStream, string channelId, 
+        bool autoDisposePackets = false, TimeSpan? lifespan = null)
+        : base(new PacketTransportOptions {
+                AutoDisposePackets = autoDisposePackets,
+                Blocking = false})
     {
-    }
-
-    public StreamDatagramChannel(IClientStream clientStream, string channelId, TimeSpan lifespan)
-    {
+        lifespan ??= Timeout.InfiniteTimeSpan;
         ChannelId = channelId;
         _clientStream = clientStream ?? throw new ArgumentNullException(nameof(clientStream));
-        if (!VhUtils.IsInfinite(lifespan)) {
-            _lifeTime = FastDateTime.Now + lifespan;
+        if (!VhUtils.IsInfinite(lifespan.Value)) {
+            _lifeTime = FastDateTime.Now + lifespan.Value;
             JobRunner.Default.Add(this);
         }
     }
@@ -52,10 +49,10 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     public async Task StartInternal()
     {
         if (_disposed)
-            throw new ObjectDisposedException("StreamDatagramChannel");
+            throw new ObjectDisposedException("StreamPacketChannel");
 
         if (Connected)
-            throw new Exception("StreamDatagramChannel has been already started.");
+            throw new Exception("StreamPacketChannel has been already started.");
 
         Connected = true;
         try {
@@ -63,7 +60,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
             await SendClose().VhConfigureAwait();
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex, "StreamDatagramChannel has been stopped unexpectedly.");
+            VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex, "StreamPacketChannel has been stopped unexpectedly.");
         }
         finally {
             Connected = false;
@@ -71,21 +68,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         }
     }
 
-    // This is not thread-safe
-    public Task SendPacketAsync(IpPacket packet)
-    {
-        _sendingPackets[0] = packet;
-        return SendPacketInternalAsync(_sendingPackets);
-    }
-
-    // This is not thread-safe
-    public Task SendPacketAsync(IList<IpPacket> ipPackets)
-    {
-        return SendPacketInternalAsync(ipPackets);
-    }
-
-    // This is not thread-safe
-    private async Task SendPacketInternalAsync(IList<IpPacket> ipPackets)
+    protected override async ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
     {
         if (_disposed) throw new ObjectDisposedException(VhLogger.FormatType(this));
         var cancellationToken = _cancellationTokenSource.Token;
@@ -106,7 +89,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
             // flush buffer if this packet does not fit
             if (bufferIndex > 0 && bufferIndex + packetBytes.Length > buffer.Length) {
-                await _clientStream.Stream.WriteAsync(buffer, 0, bufferIndex, cancellationToken).VhConfigureAwait();
+                await _clientStream.Stream.WriteAsync(buffer[..bufferIndex], cancellationToken).VhConfigureAwait();
                 Traffic.Sent += bufferIndex;
                 bufferIndex = 0;
             }
@@ -118,71 +101,36 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                 Traffic.Sent += packetBytes.Length;
             }
             else {
-                packetBytes.Span.CopyTo(buffer.AsSpan(bufferIndex));
+                packetBytes.CopyTo(buffer[bufferIndex..]);
                 bufferIndex += packetBytes.Length;
             }
         }
 
         // send remaining buffer
         if (bufferIndex > 0) {
-            await _clientStream.Stream.WriteAsync(buffer, 0, bufferIndex, cancellationToken).VhConfigureAwait();
+            await _clientStream.Stream.WriteAsync(buffer[..bufferIndex], cancellationToken).VhConfigureAwait();
             Traffic.Sent += bufferIndex;
         }
-
-        LastActivityTime = FastDateTime.Now;
     }
 
     private async Task ReadTask(CancellationToken cancellationToken)
     {
-        var stream = _clientStream.Stream;
-        var eventArgs = new PacketReceivedEventArgs([]);
-
-        await using var streamPacketReader = new StreamPacketReader(stream);
+        var streamPacketReader = new StreamPacketReader(_clientStream.Stream, TunnelDefaults.StreamPacketReaderBufferSize);
         while (!cancellationToken.IsCancellationRequested && !_isCloseReceived && !_disposed) {
-            var ipPackets = await streamPacketReader.ReadAsync(cancellationToken).VhConfigureAwait();
-            if (ipPackets == null)
+            var ipPacket = await streamPacketReader.ReadAsync(cancellationToken).VhConfigureAwait();
+            if (ipPacket == null)
                 break;
 
-            LastActivityTime = FastDateTime.Now;
-            Traffic.Received += ipPackets.Sum(x => x.PacketLength);
+            Traffic.Received += ipPacket.PacketLength;
 
             // check datagram message
-            ProcessMessage(ipPackets);
-
-            // fire new packets
-            if (ipPackets.Count > 0) {
-                try {
-                    eventArgs.IpPackets = ipPackets;
-                    PacketReceived?.Invoke(this, eventArgs);
-                }
-                catch (Exception ex) {
-                    VhLogger.Instance.LogError(GeneralEventId.Packet, ex,
-                        "Could not process the read packets. PacketCount: {PacketCount}", ipPackets.Count);
-                }
-            }
-        }
-
-    }
-
-    private void ProcessMessage(IList<IpPacket> ipPackets)
-    {
-        // check datagram message
-        List<IpPacket>? processedPackets = null;
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++) {
-            var ipPacket = ipPackets[i];
             if (ProcessMessage(ipPacket)) {
-                processedPackets ??= [];
-                processedPackets.Add(ipPacket);
+                ipPacket.Dispose();
+                continue;
             }
-        }
 
-        // remove all processed packets
-        if (processedPackets != null)
-            foreach (var processedPacket in processedPackets) {
-                ipPackets.Remove(processedPacket);
-                processedPacket.Dispose();
-            }
+            OnPacketReceived(ipPacket);
+        }
     }
 
     private bool ProcessMessage(IpPacket ipPacket)
@@ -218,7 +166,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                 "StreamDatagramChannel sending the close message to the remote. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);
 
-            await SendPacketAsync(ipPacket);
+            await SendPacketsAsync([ipPacket]);
         }
         catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.DatagramChannel, ex,
@@ -243,6 +191,16 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         return Task.CompletedTask;
     }
 
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) {
+            //_clientStream.Dispose(); //todo: do later
+        }
+
+        base.Dispose(disposing);
+    }
+
+    //todo remove
     public ValueTask DisposeAsync()
     {
         return DisposeAsync(true);

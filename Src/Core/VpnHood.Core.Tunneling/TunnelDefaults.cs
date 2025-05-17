@@ -10,13 +10,14 @@ public static class TunnelDefaults
     public const int Mtu = 1500 - MtuOverhead;
     public const int MtuRemote = 1500;
     public const string HttpPassCheck = "VpnHoodPassCheck";
-    public const int StreamProxyBufferSize = 0x1000 * 2;
+    public const int StreamProxyBufferSize = 0x1000 * 2; // 8KB
     public const int ClientUdpReceiveBufferSize = 1024 * 1024 * 1; // 1MB
     public const int ClientUdpSendBufferSize = 1024 * 1024 * 1; // 1MB
     public const int ProxyPacketQueueCapacity = 200;
     public const int TunnelPacketQueueCapacity = 200;
     public const int MaxUdpClientCount = 500;
     public const int MaxPingClientCount = 10;
+    public const int StreamPacketReaderBufferSize = 1500 * 50; // 50KB about 50 packets
 
     public static int? ServerUdpReceiveBufferSize { get; set; } = null; // system default
     public static int? ServerUdpSendBufferSize { get; set; } = null; // system default

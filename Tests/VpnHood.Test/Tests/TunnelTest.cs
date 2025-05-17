@@ -1,11 +1,13 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client;
 using VpnHood.Core.Packets;
 using VpnHood.Core.PacketTransports;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
@@ -31,9 +33,12 @@ public class TunnelTest : TestBase
 
 
     [TestMethod]
-    public void UdpChannel_Direct()
+    public async Task UdpChannel_Direct()
     {
-        EventWaitHandle waitHandle = new(true, EventResetMode.AutoReset);
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(LogLevel.Trace);//todo
+
+        //todo remove wait handle
+        var waitHandle = new EventWaitHandle(true, EventResetMode.AutoReset);
         waitHandle.Reset();
 
         // test packets
@@ -49,37 +54,41 @@ public class TunnelTest : TestBase
 
         // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint
+        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint 
                              ?? throw new Exception("Server connection is not established");
-        var serverUdpChannel = new UdpChannel(1, sessionKey, true, 4);
+        var serverUdpChannel = new UdpChannel(1, sessionKey, true, 4, autoDisposePackets: true);
         using var serverUdpChannelTransmitter =
             new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
         serverUdpChannel.Start();
 
-        var serverReceivedPackets = Array.Empty<IpPacket>();
-        serverUdpChannel.PacketReceived += delegate(object? sender, PacketReceivedEventArgs e) {
-            serverReceivedPackets = e.IpPackets.ToArray();
-            _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
+        var serverReceivedPackets = new List<IpPacket>();
+        serverUdpChannel.PacketReceived += delegate (object? _, PacketReceivedEventArgs e) {
+            serverReceivedPackets.AddRange(e.IpPackets);
+            foreach (var packet in e.IpPackets) {
+                serverUdpChannel.SendPacketQueued(packet);
+            }
         };
 
         // Create client
         var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var clientUdpChannel = new UdpChannel(1, sessionKey, false, 4);
+        var clientUdpChannel = new UdpChannel(1, sessionKey, false, 4, autoDisposePackets: true);
         clientUdpChannel.SetRemote(new ClientUdpChannelTransmitter(clientUdpChannel, clientUdpClient, serverKey),
             serverEndPoint);
         clientUdpChannel.Start();
 
-        var clientReceivedPackets = Array.Empty<IpPacket>();
-        clientUdpChannel.PacketReceived += delegate(object? _, PacketReceivedEventArgs e) {
-            clientReceivedPackets = e.IpPackets.ToArray();
+        var clientReceivedPackets = new List<IpPacket>();
+        clientUdpChannel.PacketReceived += delegate (object? _, PacketReceivedEventArgs e) {
+            clientReceivedPackets.AddRange(e.IpPackets);
             waitHandle.Set();
         };
 
         // send packet to server through channel
-        _ = clientUdpChannel.SendPacketAsync(packets.ToArray());
-        waitHandle.WaitOne(5000);
-        Assert.AreEqual(packets.Count, serverReceivedPackets.Length);
-        Assert.AreEqual(packets.Count, clientReceivedPackets.Length);
+        foreach (var ipPacket in packets) {
+            clientUdpChannel.SendPacketQueued(ipPacket);
+        }
+
+        await VhTestUtil.AssertEqualsWait(packets.Count, () => serverReceivedPackets.Count);
+        await VhTestUtil.AssertEqualsWait(packets.Count, () => clientReceivedPackets.Count);
     }
 
     [TestMethod]
@@ -103,28 +112,30 @@ public class TunnelTest : TestBase
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
         var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint
                              ?? throw new Exception("Server connection is not established");
-        var serverUdpChannel = new UdpChannel(1, sessionKey, true, 4);
+        var serverUdpChannel = new UdpChannel(1, sessionKey, true, 4, autoDisposePackets: true);
         using var serverUdpChannelTransmitter =
             new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
 
         var serverReceivedPackets = new List<IpPacket>();
         var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         serverTunnel.AddChannel(serverUdpChannel);
-        serverTunnel.PacketReceived += delegate(object? sender, PacketReceivedEventArgs e) {
+        serverTunnel.PacketReceived += delegate (object? _, PacketReceivedEventArgs e) {
             serverReceivedPackets.AddRange(e.IpPackets);
-            _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
+            foreach (var packet in e.IpPackets) {
+                serverUdpChannel.SendPacketQueued(packet);
+            }
         };
 
         // Create client
         var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var clientUdpChannel = new UdpChannel(1, sessionKey, false, 4);
+        var clientUdpChannel = new UdpChannel(1, sessionKey, false, 4, autoDisposePackets: true);
         clientUdpChannel.SetRemote(new ClientUdpChannelTransmitter(clientUdpChannel, clientUdpClient, serverKey),
             serverEndPoint);
 
         var clientReceivedPackets = new List<IpPacket>();
         var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         clientTunnel.AddChannel(clientUdpChannel);
-        clientTunnel.PacketReceived += delegate(object? _, PacketReceivedEventArgs e) {
+        clientTunnel.PacketReceived += delegate (object? _, PacketReceivedEventArgs e) {
             clientReceivedPackets.AddRange(e.IpPackets);
             waitHandle.Set();
         };

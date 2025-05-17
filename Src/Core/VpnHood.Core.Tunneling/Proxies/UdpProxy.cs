@@ -21,8 +21,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
 
     public UdpProxy(UdpClient udpClient, IPEndPoint? sourceEndPoint, int queueCapacity, bool autoDisposePackets)
         : base(new PacketTransportOptions {
-            AutoDisposeFailedPackets = autoDisposePackets,
-            AutoDisposeSentPackets = autoDisposePackets,
+            AutoDisposePackets = autoDisposePackets,
             Blocking = false,
             QueueCapacity = queueCapacity,
         })

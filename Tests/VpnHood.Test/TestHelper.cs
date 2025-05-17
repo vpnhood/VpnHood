@@ -135,7 +135,7 @@ public class TestHelper : IDisposable
 
     public Task Test_Udp(int? timeout = null)
     {
-        timeout ??= TestConstants.DefaultTimeout;
+        timeout ??= TestConstants.DefaultUdpTimeout;
         return Test_Udp(TestConstants.UdpV4EndPoint1, timeout.Value);
     }
 

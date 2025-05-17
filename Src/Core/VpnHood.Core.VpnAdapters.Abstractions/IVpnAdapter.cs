@@ -5,19 +5,16 @@ using VpnHood.Core.PacketTransports;
 
 namespace VpnHood.Core.VpnAdapters.Abstractions;
 
-public interface IVpnAdapter : IDisposable
+public interface IVpnAdapter : IPacketTransport
 {
-    event EventHandler<PacketReceivedEventArgs> PacketReceived;
     event EventHandler? Disposed;
-    bool Started { get; }
+    bool IsStarted { get; }
     bool IsNatSupported { get; }
     bool CanProtectSocket { get; }
     bool ProtectSocket(Socket socket);
     bool ProtectSocket(Socket socket, IPAddress ipAddress);
     Task Start(VpnAdapterOptions options, CancellationToken cancellationToken);
     void Stop();
-    void SendPacket(IpPacket ipPacket);
-    void SendPackets(IList<IpPacket> ipPackets);
     IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion);
     bool IsIpVersionSupported(IpVersion ipVersion);
 }

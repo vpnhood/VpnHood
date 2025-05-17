@@ -279,7 +279,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 throw new Exception("Connection is already in progress.");
 
             // Preparing device;
-            if (_vpnAdapter.Started) //make sure it is not a shared packet capture
+            if (_vpnAdapter.IsStarted) //make sure it is not a shared packet capture
                 throw new InvalidOperationException("VpnAdapter should not be started before connect.");
 
             // Connecting. Must before IsIpv6Supported
@@ -345,19 +345,23 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     // WARNING: Performance Critical!
     private void ClientHost_PacketReceived(object sender, PacketReceivedEventArgs e)
     {
-        _vpnAdapter.SendPackets(e.IpPackets);
+        Tunnel_PacketReceived(sender, e);
     }
 
     // WARNING: Performance Critical!
     private void Proxy_PacketReceived(object sender, PacketReceivedEventArgs e)
     {
-        _vpnAdapter.SendPackets(e.IpPackets);
+        Tunnel_PacketReceived(sender, e);
     }
 
     // WARNING: Performance Critical!
     private void Tunnel_PacketReceived(object sender, PacketReceivedEventArgs e)
     {
-        _vpnAdapter.SendPackets(e.IpPackets);
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < e.IpPackets.Count; i++) {
+            var ipPacket = e.IpPackets[i];
+            _vpnAdapter.SendPacketQueued(ipPacket);
+        }
     }
 
     // WARNING: Performance Critical!

@@ -15,6 +15,7 @@ public abstract class PacketTransportBase :  IPacketTransport
     private readonly bool _singleMode;
     private readonly bool _passthrough;
     private bool _isSending;
+    protected bool IsDisposed { get; private set; }
     public DateTime LastReceivedTime { get; protected set; }
     public DateTime LastActivityTime => LastReceivedTime > LastSentTime ? LastReceivedTime : FastDateTime.Now;
     public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
@@ -24,7 +25,6 @@ public abstract class PacketTransportBase :  IPacketTransport
     public int QueueLength => _sendChannel.Reader.Count;
     public bool IsSending => _isSending || QueueLength > 0;
     public DateTime LastSentTime { get; protected set; } = FastDateTime.Now;
-    public bool Disposed { get; private set; }
 
     protected PacketTransportBase(PacketTransportOptions options, bool singleMode, bool passthrough)
     {
@@ -124,7 +124,7 @@ public abstract class PacketTransportBase :  IPacketTransport
     private async Task StartSendingPacketsAsync()
     {
         var ipPackets = new List<IpPacket>(_singleMode ? 1 : _queueCapacity);
-        while (await _sendChannel.Reader.WaitToReadAsync() && !Disposed) {
+        while (await _sendChannel.Reader.WaitToReadAsync() && !IsDisposed) {
             ipPackets.Clear();
             _isSending = true;
             LastSentTime = FastDateTime.Now;
@@ -200,8 +200,8 @@ public abstract class PacketTransportBase :  IPacketTransport
 
     protected virtual void Dispose(bool disposing)
     {
-        if (Disposed) return;
-        Disposed = true;
+        if (IsDisposed) return;
+        IsDisposed = true;
 
         // Dispose managed resources
         if (disposing) {

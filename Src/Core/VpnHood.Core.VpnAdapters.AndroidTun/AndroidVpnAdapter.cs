@@ -250,4 +250,9 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         if (_parcelFileDescriptor != null)
             AdapterRemove();
     }
+
+    ~AndroidVpnAdapter()
+    {
+        Dispose(false);
+    }
 }

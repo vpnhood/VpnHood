@@ -301,7 +301,10 @@ public class Session : IAsyncDisposable
             }
 
             // send using tunnel or proxy
-            _vpnAdapter?.SendPackets(_adapterPackets);
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < _adapterPackets.Count; i++) {
+                _vpnAdapter?.SendPacketQueued(_adapterPackets[i]);
+            }
         }
     }
 

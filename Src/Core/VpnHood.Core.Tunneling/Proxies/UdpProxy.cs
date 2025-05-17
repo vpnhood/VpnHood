@@ -17,7 +17,8 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
     private readonly IPEndPoint? _sourceEndPoint;
     public IPEndPoint LocalEndPoint { get; }
     public AddressFamily AddressFamily { get; }
-    public DateTime LastUsedTime { get; set; } //todo
+    public DateTime LastUsedTime { get; set; }
+    public new bool IsDisposed => base.IsDisposed;
 
     public UdpProxy(UdpClient udpClient, IPEndPoint? sourceEndPoint, int queueCapacity, bool autoDisposePackets)
         : base(new PacketTransportOptions {
@@ -46,7 +47,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
 
     private bool IsInvalidState(Exception ex)
     {
-        return Disposed || ex is ObjectDisposedException
+        return IsDisposed || ex is ObjectDisposedException
             or SocketException { SocketErrorCode: SocketError.InvalidArgument }
             or SocketException { SocketErrorCode: SocketError.ConnectionAborted }
             or SocketException { SocketErrorCode: SocketError.OperationAborted };
@@ -91,7 +92,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
     public async Task StartReceivingAsync()
     {
         try {
-            while (!Disposed) {
+            while (!IsDisposed) {
                 var udpResult = await _udpClient.ReceiveAsync().VhConfigureAwait();
 
                 // find the audience (sourceEndPoint)

@@ -250,7 +250,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     {
         const int maxErrorCount = 10;
         var errorCount = 0;
-        while (Started) {
+        while (IsStarted) {
             var tunReceivePacket = WinTunApi.WintunReceivePacket(_tunSession, out var size);
             var lastError = (WintunReceivePacketError)Marshal.GetLastWin32Error();
             if (tunReceivePacket != IntPtr.Zero) {
@@ -348,6 +348,11 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         // The adapter is an unmanaged resource; it must be closed if it is open
         if (_tunAdapter != IntPtr.Zero)
             AdapterRemove();
+    }
+
+    ~WinTunVpnAdapter()
+    {
+        Dispose(false);
     }
 
 }

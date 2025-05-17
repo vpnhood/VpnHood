@@ -2,4 +2,4 @@
 
 namespace VpnHood.Test.Device;
 
-public class TestNullVpnAdapter : NullVpnAdapter;
+public class TestNullVpnAdapter() : NullVpnAdapter(autoDisposePackets: true, blocking: false);

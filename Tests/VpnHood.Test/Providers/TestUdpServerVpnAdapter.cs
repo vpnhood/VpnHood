@@ -11,14 +11,17 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Test.Providers;
 
-public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyCallbacks
+public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProxyCallbacks
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     private readonly UdpProxyPool _proxyPool;
     public IPAddress? VirtualIp { get; set; }
 
     public TestUdpServerVpnAdapter()
+        : base(new PacketTransportOptions {
+            Blocking = false,
+            AutoDisposePackets = true
+        })
     {
         _proxyPool = new UdpProxyPool(new UdpProxyPoolOptions {
             SocketFactory = new SocketFactory(),
@@ -35,20 +38,28 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyCallbacks
     }
 
     public event EventHandler? Disposed;
-    public bool Started { get; private set; }
+    public bool IsStarted { get; private set; }
     public bool IsNatSupported => true;
     public bool CanProtectSocket => false;
     public bool ProtectSocket(Socket socket) => false;
     public bool ProtectSocket(Socket socket, IPAddress ipAddress) => false;
     public Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
-        Started = true;
+        IsStarted = true;
         return Task.CompletedTask;
     }
 
     public void Stop()
     {
-        Started = false;
+        IsStarted = false;
+    }
+
+    protected override ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
+    {
+        foreach (var ipPacket in ipPackets)
+            SendPacket(ipPacket);
+
+        return default;
     }
 
     public void SendPacket(IpPacket ipPacket)
@@ -62,13 +73,6 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyCallbacks
         _proxyPool.SendPacketQueued(ipPacket);
     }
 
-    public void SendPackets(IList<IpPacket> ipPackets)
-    {
-        foreach (var ipPacket in ipPackets) {
-            SendPacket(ipPacket);
-        }
-    }
-
     public IPAddress GetPrimaryAdapterAddress(IpVersion ipVersion)
     {
         return ipVersion == IpVersion.IPv4 ? IPAddress.Loopback : IPAddress.IPv6Loopback;
@@ -78,7 +82,7 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyCallbacks
 
     private void Proxy_PacketReceived(object? sender, PacketReceivedEventArgs e)
     {
-        PacketReceived?.Invoke(this, e);
+        OnPacketReceived(e);
     }
 
     public void OnConnectionRequested(IpProtocol protocolType, IPEndPoint remoteEndPoint)
@@ -90,10 +94,13 @@ public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyCallbacks
     {
     }
 
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        _cancellationTokenSource.Dispose();
-        _proxyPool.Dispose();
-        Disposed?.Invoke(this, EventArgs.Empty);
+        if (disposing) {
+            _cancellationTokenSource.Dispose();
+            _proxyPool.Dispose();
+            Disposed?.Invoke(this, EventArgs.Empty);
+        }
+        base.Dispose(disposing);
     }
 }

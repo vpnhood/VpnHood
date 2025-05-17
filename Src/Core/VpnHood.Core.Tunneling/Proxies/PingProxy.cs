@@ -17,6 +17,7 @@ public class PingProxy(bool autoDisposePackets)
     public void Cancel() => _ping.SendAsyncCancel();
     public TimeSpan PingTimeout { get; set; } = TunnelDefaults.PingTimeout;
     public DateTime LastUsedTime { get; set; }
+    public new bool IsDisposed => base.IsDisposed;
 
     protected override ValueTask SendPacketAsync(IpPacket ipPacket)
     {

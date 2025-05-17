@@ -397,7 +397,7 @@ public class TestHelper : IDisposable
 
     public TestDevice CreateNullDevice(ITracker? tracker = null)
     {
-        return new TestDevice(this, _ => new NullVpnAdapter());
+        return new TestDevice(this, _ => new TestNullVpnAdapter());
     }
 
     public UdpProxyPoolOptions CreateUdpProxyPoolOptions(IPacketProxyCallbacks callbacks)

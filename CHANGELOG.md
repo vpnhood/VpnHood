@@ -1,4 +1,4 @@
-# Upcoming
+# v6.2.704
 * Fix: IPv6 ping
 * Improve: Performance and stability
 

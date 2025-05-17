@@ -1,55 +1,103 @@
 ﻿using System.Net;
-using System.Net.Sockets;
 using VpnHood.Core.Packets;
-using VpnHood.Core.PacketTransports;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.VpnAdapters.Abstractions;
 
 public class NullVpnAdapter(bool autoDisposePackets, bool blocking) :
-    PacketTransport(new PacketTransportOptions {
+    TunVpnAdapter(new VpnAdapterSettings {
+        AdapterName = "NullAdapter",
         Blocking = blocking,
         AutoDisposePackets = autoDisposePackets
-    }),
-    IVpnAdapter
+    })
 {
-    public event EventHandler? Disposed;
-    public virtual bool IsStarted { get; set; }
-    public virtual bool IsNatSupported { get; set; } = true;
-    public virtual bool CanProtectSocket { get; set; } = true;
-
-    public virtual Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
+    public override bool IsAppFilterSupported => true;
+    public override bool IsNatSupported => true;
+    protected override bool IsSocketProtectedByBind  =>false;
+    protected override string AppPackageId => "VpnHood.NullAdapter";
+    protected override Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
-        IsStarted = true;
         return Task.CompletedTask;
     }
 
-    public virtual void Stop()
+    protected override Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
-        IsStarted = false;
+        return Task.CompletedTask;
     }
 
-    public virtual bool ProtectSocket(Socket socket)
+    protected override Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
     {
-        return true;
+        return Task.CompletedTask;
     }
 
-    public virtual bool ProtectSocket(Socket socket, IPAddress ipAddress)
+    protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        return true;
+        return Task.CompletedTask;
     }
 
-    protected override ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
+    protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        // Just discard the packets
-        return default;
+        return Task.CompletedTask;
     }
 
-    public IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion)
+    protected override Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        return ipVersion == IpVersion.IPv4 ? IPAddress.Loopback : IPAddress.IPv6Loopback;
+        return Task.CompletedTask;
     }
 
-    public bool IsIpVersionSupported(IpVersion ipVersion)
+    protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override Task AdapterAdd(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override void AdapterRemove()
+    {
+    }
+
+    protected override Task AdapterOpen(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override void AdapterClose()
+    {
+    }
+
+    protected override void WaitForTunWrite()
+    {
+    }
+
+    private ManualResetEventSlim? _readBlockEvent = new(false);
+
+    protected override void WaitForTunRead()
+    {
+        // wait for dispose or unblock
+        // NullVpnAdapter never returns any packets, so we need to wait for unblock
+        _readBlockEvent?.Wait();
+        _readBlockEvent?.Dispose();
+    }
+
+    protected override IpPacket? ReadPacket(int mtu)
+    {
+        return null;
+    }
+
+    protected override bool WritePacket(IpPacket ipPacket)
     {
         return true;
     }
@@ -57,10 +105,9 @@ public class NullVpnAdapter(bool autoDisposePackets, bool blocking) :
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
-            Stop();
-            Disposed?.Invoke(this, EventArgs.Empty);
+            _readBlockEvent?.Set();
+            _readBlockEvent = null;
         }
-
         base.Dispose(disposing);
     }
 }

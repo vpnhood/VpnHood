@@ -168,7 +168,7 @@ internal class ClientHost(
         catch (Exception ex) when (tcpPacket != null) {
             var resultPacket = PacketBuilder.BuildTcpResetReply(ipPacket);
             PacketReceived?.Invoke(this, resultPacket);
-            throw new DropPacketException("Dropping packet and sending TCP rest.", ex);
+            throw new PacketDropException("Dropping packet and sending TCP rest.", ex);
         }
     }
 

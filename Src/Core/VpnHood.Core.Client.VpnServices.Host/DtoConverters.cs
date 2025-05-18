@@ -34,6 +34,7 @@ internal static class DtoConverters
             SessionExpirationTime = sessionStatus.SessionExpirationTime,
             SessionMaxTraffic = sessionStatus.SessionMaxTraffic,
             SessionTraffic = sessionStatus.SessionTraffic,
+            SessionSplitTraffic = sessionStatus.SessionSplitTraffic,
             TotalTraffic = sessionStatus.TotalTraffic,
             Speed = sessionStatus.Speed,
             TcpPassthruCount = sessionStatus.TcpPassthruCount,

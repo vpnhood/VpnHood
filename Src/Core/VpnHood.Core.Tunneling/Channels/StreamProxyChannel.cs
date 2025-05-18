@@ -19,7 +19,7 @@ public class StreamProxyChannel : IChannel, IJob
     private const int BufferSizeMin = 2048;
     public JobSection JobSection { get; } = new(TunnelDefaults.TcpCheckInterval);
     public bool Connected { get; private set; }
-    public Traffic Traffic { get; } = new();
+    public Traffic Traffic { get; private set; }
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public string ChannelId { get; }
 
@@ -161,9 +161,9 @@ public class StreamProxyChannel : IChannel, IJob
 
             // calculate transferred bytes
             if (isSendingToTunnel)
-                Traffic.Sent += bytesRead;
+                Traffic += new Traffic(bytesRead, 0);
             else
-                Traffic.Received += bytesRead;
+                Traffic += new Traffic(0, bytesRead);
 
             // set LastActivityTime as some data delegated
             LastActivityTime = FastDateTime.Now;

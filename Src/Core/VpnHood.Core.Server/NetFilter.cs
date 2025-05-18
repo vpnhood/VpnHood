@@ -9,6 +9,8 @@ public class NetFilter : INetFilter
 {
     private readonly IpRangeOrderedList _loopbackIpRange = IpNetwork.LoopbackNetworks.ToIpRanges();
     private IpRangeOrderedList _blockedIpRanges = new([]);
+    public bool BlockMulticast { get; set; } = true;
+    public bool BlockLoopback { get; set; } = true;
 
     public NetFilter()
     {
@@ -22,6 +24,12 @@ public class NetFilter : INetFilter
 
     private bool IsIpAddressBlocked(IPAddress ipAddress)
     {
+        if (BlockMulticast && ipAddress.IsMulticast())
+            return true;
+
+        if (BlockLoopback && ipAddress.IsLoopback())
+            return true;
+
         return BlockedIpRanges.IsInRange(ipAddress);
     }
 

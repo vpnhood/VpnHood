@@ -25,6 +25,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>> _lastDnsServersV4 = new(TimeSpan.FromSeconds(30));
     private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>> _lastDnsServersV6 = new(TimeSpan.FromSeconds(30));
     private readonly bool _excludeLocalNetwork = adapterSettings.ExcludeLocalNetwork;
+    private readonly bool _simulateDns = adapterSettings.SimulateDns;
 
     public const short ProtectedTtl = 111;
     public override bool IsAppFilterSupported => false;
@@ -74,12 +75,16 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
                 : $"({Ip(x)}.DstAddr>={x.FirstIpAddress} and {Ip(x)}.DstAddr<={x.LastIpAddress})");
             var phrase = string.Join(" or ", phrases);
             phraseX += $" and ({phrase})";
+            phraseX = $"({phraseX})";
         }
+
+        // simulate dns servers
+        var dnsPhrase = _simulateDns ? "(udp.DstPort==53)" : "false";
 
         // add outbound; filter loopback
         var filter = $"(ip.TTL!={ProtectedTtl} or ipv6.HopLimit!={ProtectedTtl}) and " +
                      $"outbound and !loopback and " +
-                     $"(udp.DstPort==53 or ({phraseX}))";
+                     $"({dnsPhrase} or {phraseX})";
 
         filter = filter.Replace("ipv6.DstAddr>=::", "ipv6"); // WinDivert bug
         try {
@@ -256,6 +261,9 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     private void SimulateDnsServers(IpPacket ipPacket, bool read)
     {
+        if (!_simulateDns)
+            return;
+
         if (ipPacket.Protocol != IpProtocol.Udp || _dnsServers.Length == 0)
             return;
 

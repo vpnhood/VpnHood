@@ -9,6 +9,7 @@ public interface ISessionStatus
     ClientConnectorStat ConnectorStat { get; }
     Traffic Speed { get; }
     Traffic SessionTraffic { get; }
+    Traffic SessionSplitTraffic { get; }
     Traffic CycleTraffic { get; }
     Traffic TotalTraffic { get; }
     int TcpTunnelledCount { get; }

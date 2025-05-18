@@ -83,7 +83,7 @@ public class TestHelper : IDisposable
     private static Task<PingReply> SendPing(Ping? ping = null, IPAddress? ipAddress = null,
         int? timeout = null)
     {
-        timeout ??= TestConstants.DefaultTimeout;
+        timeout ??= TestConstants.DefaultPingTimeout;
 
         using var pingT = new Ping();
         ping ??= pingT;
@@ -104,7 +104,7 @@ public class TestHelper : IDisposable
 
     private async Task<bool> SendHttpGet(HttpClient httpClient, Uri uri, int? timeout)
     {
-        timeout ??= TestConstants.DefaultTimeout;
+        timeout ??= TestConstants.DefaultHttpTimeout;
         var cancellationTokenSource = new CancellationTokenSource(timeout.Value);
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
 
@@ -135,28 +135,25 @@ public class TestHelper : IDisposable
 
     public Task Test_Udp(int? timeout = null)
     {
-        timeout ??= TestConstants.DefaultUdpTimeout;
-        return Test_Udp(TestConstants.UdpV4EndPoint1, timeout.Value);
+        return Test_Udp(TestConstants.UdpV4EndPoint1, timeout);
     }
 
     public async Task Test_Udp(IPEndPoint udpEndPoint, int? timeout = null)
     {
-        timeout ??= TestConstants.DefaultTimeout;
-
         if (udpEndPoint.IsV4()) {
             using var udpClientIpV4 = new UdpClient(AddressFamily.InterNetwork);
-            await Test_Udp(udpClientIpV4, udpEndPoint, timeout.Value);
+            await Test_Udp(udpClientIpV4, udpEndPoint, timeout);
         }
 
         else if (udpEndPoint.IsV6()) {
             using var udpClientIpV6 = new UdpClient(AddressFamily.InterNetworkV6);
-            await Test_Udp(udpClientIpV6, udpEndPoint, timeout.Value);
+            await Test_Udp(udpClientIpV6, udpEndPoint, timeout);
         }
     }
 
     public async Task Test_Udp(UdpClient udpClient, IPEndPoint udpEndPoint, int? timeout = null)
     {
-        timeout ??= TestConstants.DefaultTimeout;
+        timeout ??= TestConstants.DefaultUdpTimeout;
 
         var buffer = new byte[1024];
         new Random().NextBytes(buffer);
@@ -168,6 +165,14 @@ public class TestHelper : IDisposable
         var res = await udpClient.ReceiveAsync(cts.Token);
         CollectionAssert.AreEquivalent(buffer, res.Buffer);
     }
+
+    public async Task Test_UdpByDNS(IPEndPoint udpEndPoint, int? timeout = null)
+    {
+        timeout ??= TestConstants.DefaultUdpTimeout;
+        var result = await DnsResolver.GetHostEntry("www.google.com", udpEndPoint, timeout.Value, CancellationToken.None);
+        Assert.IsTrue(result.AddressList.Length > 0);
+    }
+
 
     public async Task<bool> Test_Https(Uri? uri = null,
         int? timeout = null, bool throwError = true)

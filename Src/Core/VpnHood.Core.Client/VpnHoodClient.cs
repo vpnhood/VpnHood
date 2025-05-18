@@ -234,22 +234,21 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         string channelId, byte[] initBuffer, CancellationToken cancellationToken)
     {
         // set timeout
-        using var cancellationTokenSource = new CancellationTokenSource(ConnectorService.RequestTimeout);
-        using var linkedCancellationTokenSource =
-            CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
-        cancellationToken = linkedCancellationTokenSource.Token;
+        using var cts = new CancellationTokenSource(ConnectorService.RequestTimeout);
+        using var linkedCts =
+            CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
 
         // connect to host
         var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint);
         await VhUtils.RunTask(tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port),
-            cancellationToken: cancellationToken).VhConfigureAwait();
+            cancellationToken: linkedCts.Token).VhConfigureAwait();
 
         // create and add the channel
         var bypassChannel = new StreamProxyChannel(channelId, orgTcpClientStream,
             new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"));
 
         // flush initBuffer
-        await tcpClient.GetStream().WriteAsync(initBuffer, cancellationToken);
+        await tcpClient.GetStream().WriteAsync(initBuffer, linkedCts.Token);
 
         try {
             _proxyManager.AddChannel(bypassChannel);
@@ -269,7 +268,6 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         try {
             // merge cancellation tokens
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
-            cancellationToken = linkedCts.Token;
 
             // create connection log scope
             using var scope = VhLogger.Instance.BeginScope("Client");
@@ -285,6 +283,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             // report config
             IsIpV6SupportedByClient = await IPAddressUtil.IsIpv6Supported();
+            _proxyManager.IsIpV6Supported = IsIpV6SupportedByClient;
             _serverFinder.IncludeIpV6 = IsIpV6SupportedByClient;
             ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             VhLogger.Instance.LogInformation(
@@ -303,8 +302,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
 
             // Establish first connection and create a session
-            var hostEndPoint = await _serverFinder.FindReachableServerAsync(cancellationToken).VhConfigureAwait();
-            await ConnectInternal(hostEndPoint, true, cancellationToken).VhConfigureAwait();
+            var hostEndPoint = await _serverFinder.FindReachableServerAsync(linkedCts.Token).VhConfigureAwait();
+            await ConnectInternal(hostEndPoint, true, linkedCts.Token).VhConfigureAwait();
 
             // Create Tcp Proxy Host
             _clientHost.Start();
@@ -368,7 +367,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         // stop traffic if the client is paused and unpause after AutoPauseTimeout
         if (_autoWaitTime != null) {
             if (FastDateTime.Now - _autoWaitTime.Value < AutoWaitTimeout)
-                throw new DropPacketException("Connection is paused. The packet has been dropped.");
+                throw new PacketDropException("Connection is paused. The packet has been dropped.");
 
             // resume connection if the client is paused and AutoWaitTimeout is not set
             _autoWaitTime = null;
@@ -380,7 +379,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             _ = ManageDatagramChannels(_cancellationTokenSource.Token);
 
         if (ipPacket.IsMulticast())
-            throw new DropPacketException("Multicast packet has been dropped.");
+            throw new PacketDropException("Multicast packet has been dropped.");
 
         // TcpHost has to manage its own packets
         if (_clientHost.IsOwnPacket(ipPacket)) {
@@ -400,16 +399,13 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         // use local proxy if the packet is not in the range and not ICMP.
         // ICMP is not supported by the local proxy for split tunnel
         if (!IsInIpRange(ipPacket.DestinationAddress) && !ipPacket.IsIcmpEcho()) {
-            if (!IsIpV6SupportedByClient)
-                throw new DropPacketException("IPv6 packet has been dropped because client does not support IPv6.");
-
             _proxyManager.SendPacketQueued(ipPacket);
             return;
         }
 
         // Drop IPv6 if not support
         if (ipPacket.IsV6() && !IsIpV6SupportedByServer)
-            throw new DropPacketException("IPv6 packet has been dropped because server does not support IPv6.");
+            throw new PacketDropException("IPv6 packet has been dropped because server does not support IPv6.");
 
         // ICMP packet must go through tunnel because PingProxy does not support protect socket
         if (ipPacket.IsIcmpEcho()) {
@@ -426,7 +422,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
 
         // Drop packet
-        throw new DropPacketException("Packet has been dropped because no one handle it.");
+        throw new PacketDropException("Packet has been dropped because no one handle it.");
     }
 
     private bool ShouldTunnelUdpPacket(UdpPacket udpPacket)
@@ -895,9 +891,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
     public async Task UpdateSessionStatus(CancellationToken cancellationToken = default)
     {
-        using var linkedCancellationTokenSource =
+        using var linkedCts =
             CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
-        cancellationToken = linkedCancellationTokenSource.Token;
 
         // don't use SendRequest because it can be disposed
         await using var requestResult = await SendRequest<SessionResponse>(
@@ -906,7 +901,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                     SessionId = SessionId,
                     SessionKey = SessionKey
                 },
-                cancellationToken)
+                linkedCts.Token)
             .VhConfigureAwait();
     }
 
@@ -1017,6 +1012,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         public ClientConnectorStat ConnectorStat => client.ConnectorService.Stat;
         public Traffic Speed => client.Tunnel.Speed;
         public Traffic SessionTraffic => client.Tunnel.Traffic;
+        public Traffic SessionSplitTraffic => client._proxyManager.Traffic;
         public Traffic CycleTraffic => _cycleTraffic + client.Tunnel.Traffic;
         public Traffic TotalTraffic => _totalTraffic + client.Tunnel.Traffic;
         public int TcpTunnelledCount => client._clientHost.Stat.TcpTunnelledCount;

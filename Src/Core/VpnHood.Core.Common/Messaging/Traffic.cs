@@ -2,18 +2,10 @@
 
 namespace VpnHood.Core.Common.Messaging;
 
-public class Traffic : IEquatable<Traffic>, ICloneable
+public readonly struct Traffic : IEquatable<Traffic>
 {
-    public long SentTraffic {
-        set => Sent = value;
-    }
-
-    public long ReceivedTraffic {
-        set => Received = value;
-    }
-
-    public long Sent { get; set; }
-    public long Received { get; set; }
+    public long Sent { get; init; }
+    public long Received { get; init; }
 
     [JsonIgnore] public long Total => Sent + Received;
 
@@ -25,12 +17,6 @@ public class Traffic : IEquatable<Traffic>, ICloneable
     {
         Sent = sent;
         Received = received;
-    }
-
-    public void Add(Traffic traffic)
-    {
-        Sent += traffic.Sent;
-        Received += traffic.Received;
     }
 
     public static Traffic operator +(Traffic traffic1, Traffic traffic2)
@@ -49,46 +35,34 @@ public class Traffic : IEquatable<Traffic>, ICloneable
         };
     }
 
-    public bool Equals(Traffic? other)
-    {
-        if (other == null) return false;
-        return Sent == other.Sent && Received == other.Received;
-    }
-
     public override bool Equals(object? obj)
     {
-        return Equals(obj as Traffic);
+        return obj is Traffic other && Equals(other);
     }
 
     public override int GetHashCode()
     {
-        // ReSharper disable NonReadonlyMemberInGetHashCode
         return HashCode.Combine(Sent, Received);
-        // ReSharper restore NonReadonlyMemberInGetHashCode
     }
 
-    public Traffic Clone()
-    {
-        return new Traffic {
-            Sent = Sent,
-            Received = Received
-        };
-    }
 
-    object ICloneable.Clone()
+    public static bool operator ==(Traffic traffic1, Traffic traffic2)
     {
-        return Clone();
-    }
-
-    public static bool operator ==(Traffic? traffic1, Traffic? traffic2)
-    {
-        if (ReferenceEquals(traffic1, traffic2)) return true;
-        if (traffic1 is null || traffic2 is null) return false;
         return traffic1.Equals(traffic2);
     }
 
     public static bool operator !=(Traffic traffic1, Traffic traffic2)
     {
-        return !(traffic1 == traffic2);
+        return !traffic1.Equals(traffic2);
+    }
+
+    public bool Equals(Traffic other)
+    {
+        return Sent == other.Sent && Received == other.Received;
+    }
+
+    public override string ToString()
+    {
+        return $"Sent: {Sent}, Received: {Received}";
     }
 }

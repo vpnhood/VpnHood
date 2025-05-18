@@ -40,6 +40,7 @@ public static class AppDtoConverterExtensions
             ConnectorStat = sessionStatus.ConnectorStat.ToAppDto(),
             Speed = sessionStatus.Speed,
             SessionTraffic = sessionStatus.SessionTraffic,
+            SessionSplitTraffic = sessionStatus.SessionSplitTraffic,
             CycleTraffic = sessionStatus.CycleTraffic,
             TotalTraffic = sessionStatus.TotalTraffic,
             TcpTunnelledCount = sessionStatus.TcpTunnelledCount,

@@ -56,7 +56,7 @@ public class Session : IAsyncDisposable
     private readonly EventReporter _filterReporter =
         new(VhLogger.Instance, "Some requests has been blocked.", GeneralEventId.NetProtect);
 
-    private readonly Traffic _prevTraffic = new();
+    private Traffic _prevTraffic = new();
     private int _tcpConnectWaitCount;
 
     public Tunnel Tunnel { get; }
@@ -142,24 +142,21 @@ public class Session : IAsyncDisposable
 
     public Traffic Traffic {
         get {
-            lock (_prevTraffic) {
-                // Intentionally Reversed: sending to tunnel means receiving form client,
-                // Intentionally Reversed: receiving from tunnel means sending for client
-                return new Traffic {
-                    Sent = Tunnel.Traffic.Received - _prevTraffic.Sent,
-                    Received = Tunnel.Traffic.Sent - _prevTraffic.Received
-                };
-            }
+            // Intentionally Reversed: sending to tunnel means receiving form client,
+            // Intentionally Reversed: receiving from tunnel means sending for client
+            var traffic = Tunnel.Traffic - _prevTraffic;
+            return new Traffic {
+                Sent = traffic.Received,
+                Received = traffic.Sent
+            };
         }
     }
 
     public Traffic ResetTraffic()
     {
-        lock (_prevTraffic) {
-            var traffic = Traffic;
-            _prevTraffic.Add(traffic);
-            return traffic;
-        }
+        var traffic = Traffic;
+        _prevTraffic = Tunnel.Traffic;
+        return traffic;
     }
 
     public void SetSyncRequired() => IsSyncRequired = true;

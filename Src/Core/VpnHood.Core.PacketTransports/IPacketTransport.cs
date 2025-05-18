@@ -6,8 +6,7 @@ public interface IPacketTransport : IDisposable
 {
     event EventHandler<IpPacket>? PacketReceived;
     bool IsSending { get; }
-    DateTime LastSentTime { get; }
-    DateTime LastReceivedTime { get; }
     bool SendPacketQueued(IpPacket ipPacket);
     ValueTask SendPacketQueuedAsync(IpPacket ipPacket);
+    public ReadOnlyPacketTransportStat PacketStat { get; }
 }

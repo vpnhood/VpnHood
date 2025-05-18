@@ -36,6 +36,32 @@ public static class IPAddressExtensions
         return addressFamily == AddressFamily.InterNetworkV6;
     }
 
+    public static bool IsMulticast(this IPAddress ipAddress)
+    {
+        return
+            (ipAddress.IsV4() && IpNetwork.MulticastNetworkV4.Contains(ipAddress)) ||
+            (ipAddress.IsV6() && ipAddress.IsIPv6Multicast);
+    }
+
+    public static bool IsLoopback(this IPAddress ipAddress)
+    {
+        // IPv4 loopback address is 127.x.x.x
+        if (ipAddress.IsV4()) {
+            Span<byte> buffer = stackalloc byte[4];
+            return
+                ipAddress.TryWriteBytes(buffer, out _) &&
+                buffer[0] == 127;
+        }
+
+        // IPv6 loopback address is ::1
+        if (ipAddress.IsV6()) {
+            return ipAddress.Equals(IPAddress.IPv6Loopback);
+        }
+
+        return false;
+    }
+
+
     public static bool SpanEquals(this IPAddress ipAddress, ReadOnlySpan<byte> ipAddressSpan)
     {
         if (ipAddress.IsV4() && ipAddressSpan.Length != 4) return false;

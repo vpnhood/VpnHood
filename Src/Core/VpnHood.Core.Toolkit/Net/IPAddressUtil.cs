@@ -71,10 +71,19 @@ public static class IPAddressUtil
     public static async Task<bool> IsIpv6Supported()
     {
         try {
+            // filter IPv6 addresses
+            var dnsServersV6 = ReliableDnsServers
+                .Where(x => x.IsV6())
+                .ToArray();
+
+            // check with binding to the address family
+            // this will throw exception if IPv6 is not supported
+            using var udpClient = new UdpClient(AddressFamily.InterNetworkV6);
+            udpClient.Connect(dnsServersV6.First(), 53);
+
             // it may throw error if IPv6 is not supported before creating task
             var ping = new Ping();
-            var pingTasks = ReliableDnsServers
-                .Where(x => x.IsV6())
+            var pingTasks = dnsServersV6
                 .Select(x => ping.SendPingAsync(x));
 
             foreach (var pingTask in pingTasks) {

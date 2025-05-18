@@ -1,29 +1,42 @@
-﻿using System.Net;
+﻿using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.PacketTransports;
-using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Tunneling.Channels;
+using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
 public class ProxyManager : PassthroughPacketTransport
 {
-    private readonly IPAddress[] _blockList = [
-        IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play) SSDP (Simple Service Discovery Protocol)
-    ];
-    private readonly HashSet<IChannel> _channels = [];
+    private readonly List<StreamProxyChannel> _streamProxyChannels = [];
     private readonly IPacketProxyPool? _pingProxyPool;
     private readonly IPacketProxyPool _udpProxyPool;
 
+    public bool IsIpV6Supported { get; set; } = true;
     public int PingClientCount => _pingProxyPool?.ClientCount ?? 0;
     public int UdpClientCount => _udpProxyPool.ClientCount;
-
     public int TcpConnectionCount {
         get {
-            lock (_channels) return _channels.Count(x => x is not IPacketChannel);
+            lock (_streamProxyChannels)
+                return _streamProxyChannels.Count;
         }
     }
+
+    public Traffic Traffic {
+        get {
+            lock (_streamProxyChannels) {
+                var traffic = new Traffic(PacketStat.SentBytes, PacketStat.ReceivedBytes);
+                // ReSharper disable once ForCanBeConvertedToForeach
+                // ReSharper disable once LoopCanBeConvertedToQuery
+                for (var i = 0; i < _streamProxyChannels.Count; i++) 
+                    traffic += _streamProxyChannels[i].Traffic;
+
+                return traffic;
+            }
+        }
+    }
+
 
     public ProxyManager(ISocketFactory socketFactory, ProxyManagerOptions options)
         : base(options.AutoDisposePackets)
@@ -66,13 +79,8 @@ public class ProxyManager : PassthroughPacketTransport
 
     protected override void SendPacket(IpPacket ipPacket)
     {
-        // Drop blocked packets
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < _blockList.Length; i++) {
-            var ipAddress = _blockList[i];
-            if (ipAddress.SpanEquals(ipPacket.DestinationAddressSpan))
-                throw new Exception("The packet is blocked.");
-        }
+        if (ipPacket.IsV6() && !IsIpV6Supported)
+            throw new PacketDropException("IPv6 is not supported.");
 
         switch (ipPacket.Protocol) {
             case IpProtocol.Udp:
@@ -91,13 +99,13 @@ public class ProxyManager : PassthroughPacketTransport
         }
     }
 
-    public void AddChannel(IChannel channel)
+    public void AddChannel(StreamProxyChannel channel)
     {
         if (IsDisposed)
             throw new ObjectDisposedException(nameof(ProxyManager));
 
-        lock (_channels)
-            _channels.Add(channel);
+        lock (_streamProxyChannels)
+            _streamProxyChannels.Add(channel);
         channel.Start();
     }
 
@@ -115,9 +123,9 @@ public class ProxyManager : PassthroughPacketTransport
             }
 
             // dispose channels
-            lock (_channels)
-                foreach (var channel in _channels)
-                    channel.DisposeAsync(false);
+            lock (_streamProxyChannels)
+                foreach (var channel in _streamProxyChannels)
+                    _ = channel.DisposeAsync(false);
         }
     }
 }

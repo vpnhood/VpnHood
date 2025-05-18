@@ -22,7 +22,8 @@ public class StreamPacketChannel : PacketTransport, IPacketChannel, IJob
     public JobSection JobSection { get; } = new();
     public string ChannelId { get; }
     public bool Connected { get; private set; }
-    public Traffic Traffic { get; } = new();
+    public DateTime LastActivityTime => PacketStat.LastActivityTime;
+    public Traffic Traffic => new(PacketStat.SentBytes, PacketStat.ReceivedBytes);
 
     public bool IsStream => true;
 
@@ -90,7 +91,6 @@ public class StreamPacketChannel : PacketTransport, IPacketChannel, IJob
             // flush buffer if this packet does not fit
             if (bufferIndex > 0 && bufferIndex + packetBytes.Length > buffer.Length) {
                 await _clientStream.Stream.WriteAsync(buffer[..bufferIndex], cancellationToken).VhConfigureAwait();
-                Traffic.Sent += bufferIndex;
                 bufferIndex = 0;
             }
 
@@ -98,7 +98,6 @@ public class StreamPacketChannel : PacketTransport, IPacketChannel, IJob
             if (packetBytes.Length > buffer.Length) {
                 // send packet
                 await _clientStream.Stream.WriteAsync(packetBytes, cancellationToken).VhConfigureAwait();
-                Traffic.Sent += packetBytes.Length;
             }
             else {
                 packetBytes.CopyTo(buffer[bufferIndex..]);
@@ -109,7 +108,6 @@ public class StreamPacketChannel : PacketTransport, IPacketChannel, IJob
         // send remaining buffer
         if (bufferIndex > 0) {
             await _clientStream.Stream.WriteAsync(buffer[..bufferIndex], cancellationToken).VhConfigureAwait();
-            Traffic.Sent += bufferIndex;
         }
     }
 
@@ -120,8 +118,6 @@ public class StreamPacketChannel : PacketTransport, IPacketChannel, IJob
             var ipPacket = await streamPacketReader.ReadAsync(cancellationToken).VhConfigureAwait();
             if (ipPacket == null)
                 break;
-
-            Traffic.Received += ipPacket.PacketLength;
 
             // check datagram message
             if (ProcessMessage(ipPacket)) {

@@ -62,7 +62,7 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
 
             _maxWorkerEventReporter.Raise();
 
-            pingProxy = _pingProxies.OrderBy(x => x.LastActivityTime).First();
+            pingProxy = _pingProxies.OrderBy(x => x.PacketStat.LastActivityTime).First();
             pingProxy.Cancel();
             return pingProxy;
         }

@@ -14,16 +14,15 @@ public abstract class PacketTransportBase : IPacketTransport
     private readonly bool _blocking;
     private readonly bool _singleMode;
     private readonly bool _passthrough;
+    private readonly PacketTransportStat _stat = new();
     private bool _isSending;
     protected bool IsDisposed { get; private set; }
-    public DateTime LastReceivedTime { get; protected set; }
-    public DateTime LastActivityTime => LastReceivedTime > LastSentTime ? LastReceivedTime : FastDateTime.Now;
-    public event EventHandler<IpPacket>? PacketReceived;
-
     protected abstract ValueTask SendPacketsAsync(IList<IpPacket> ipPackets);
+
+    public event EventHandler<IpPacket>? PacketReceived;
+    public ReadOnlyPacketTransportStat PacketStat { get; }
     public int QueueLength => _sendChannel.Reader.Count;
     public bool IsSending => _isSending || QueueLength > 0;
-    public DateTime LastSentTime { get; protected set; } = FastDateTime.Now;
 
     protected PacketTransportBase(PacketTransportOptions options, bool singleMode, bool passthrough)
     {
@@ -41,13 +40,16 @@ public abstract class PacketTransportBase : IPacketTransport
             FullMode = options.Blocking ? BoundedChannelFullMode.Wait : BoundedChannelFullMode.DropWrite
         });
 
+        PacketStat = new ReadOnlyPacketTransportStat(_stat);
         _ = StartSendingPacketsAsync();
     }
 
     protected void OnPacketReceived(IpPacket ipPacket)
     {
         try {
-            LastReceivedTime = FastDateTime.Now;
+            _stat.LastReceivedTime = FastDateTime.Now;
+            _stat.ReceivedBytes += ipPacket.PacketLength;
+            _stat.ReceivedPackets++;
             LogPacket(ipPacket, $"{VhLogger.FormatType(this)}: Received a packet.");
             PacketReceived?.Invoke(this, ipPacket);
         }
@@ -64,6 +66,7 @@ public abstract class PacketTransportBase : IPacketTransport
     }
 
     private readonly IpPacket[] _singlePacketBuffer = new IpPacket[1];
+
     public bool SendPacketQueued(IpPacket ipPacket)
     {
         LogPacket(ipPacket, $"{VhLogger.FormatType(this)}: Sending a packet to queue.");
@@ -113,8 +116,6 @@ public abstract class PacketTransportBase : IPacketTransport
         var ipPackets = new List<IpPacket>(_singleMode ? 1 : _queueCapacity);
         while (await _sendChannel.Reader.WaitToReadAsync() && !IsDisposed) {
             ipPackets.Clear();
-            _isSending = true;
-            LastSentTime = FastDateTime.Now;
 
             // dequeue all packets
             while (ipPackets.Count < ipPackets.Capacity && _sendChannel.Reader.TryRead(out var ipPacket))
@@ -137,7 +138,7 @@ public abstract class PacketTransportBase : IPacketTransport
         // send packets
         try {
             _isSending = true;
-            LastSentTime = FastDateTime.Now;
+            _stat.LastSentTime = FastDateTime.Now;
 
             var task = SendPacketsAsync(ipPackets);
             if (!task.IsCompleted)
@@ -145,9 +146,12 @@ public abstract class PacketTransportBase : IPacketTransport
 
             // ReSharper disable once ForCanBeConvertedToForeach
             // passthrough mode does not dispose packets
-            if (_autoDisposePackets && !_passthrough)
-                for (var i = 0; i < ipPackets.Count; i++)
+            for (var i = 0; i < ipPackets.Count; i++) {
+                _stat.SentBytes += ipPackets[i].PacketLength;
+                _stat.SentPackets++;
+                if (_autoDisposePackets && !_passthrough)
                     ipPackets[i].Dispose();
+            }
 
             return true;
         }
@@ -160,9 +164,11 @@ public abstract class PacketTransportBase : IPacketTransport
                     $"{VhLogger.FormatType(this)}: Error in sending some packets via channel.");
 
             // ReSharper disable once ForCanBeConvertedToForeach
-            if (_autoDisposePackets)
-                for (var i = 0; i < ipPackets.Count; i++)
+            for (var i = 0; i < ipPackets.Count; i++) {
+                _stat.DroppedPackets++;
+                if (_autoDisposePackets)
                     ipPackets[i].Dispose();
+            }
 
             return false;
         }

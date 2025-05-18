@@ -106,7 +106,7 @@ public class ClientServerTest : TestBase
         clientOptions.DropUdp = true;
         clientOptions.MaxDatagramChannelCount = 6;
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions);
-        await Assert.ThrowsAsync<OperationCanceledException>(()=>TestHelper.Test_Udp(3000), "UDP must be failed.");
+        await Assert.ThrowsAsync<OperationCanceledException>(() => TestHelper.Test_Udp(3000), "UDP must be failed.");
     }
 
 
@@ -199,7 +199,7 @@ public class ClientServerTest : TestBase
         await Task.WhenAll(tasks);
     }
 
-   
+
 
     [TestMethod]
     public async Task UdpChannel_custom_udp_port()
@@ -246,26 +246,16 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(
             vpnAdapter: TestHelper.CreateTestVpnAdapter(), clientOptions: clientOptions);
 
+        // success
         await TestHelper.Test_Https();
 
+        // stop server
         await server.DisposeAsync();
-        try {
-            await TestHelper.Test_Https(timeout: 3000);
-        }
-        catch {
-            /* ignored */
-        }
 
-        Thread.Sleep(1000);
-        try {
-            await TestHelper.Test_Https(timeout: 3000);
-        }
-        catch {
-            /* ignored */
-        }
+        // failed
+        await Assert.ThrowsAsync<Exception>(() => TestHelper.Test_Https());
 
         await client.WaitForState(ClientState.Disposed);
-        await client.DisposeAsync();
     }
 
     [TestMethod]
@@ -313,7 +303,7 @@ public class ClientServerTest : TestBase
             stream.ReadByte();
             Assert.Fail("Exception expected!");
         }
-        catch (Exception ex) 
+        catch (Exception ex)
             when (ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionReset }) {
             // OK
         }
@@ -594,7 +584,7 @@ public class ClientServerTest : TestBase
     public async Task ServerVpnAdapter_by_udp()
     {
         using var vpnAdapter = new TestUdpServerVpnAdapter();
-        
+
         // check will server use the adapter 
         var adapterUsed = false;
         vpnAdapter.PacketReceived += (_, _) => {

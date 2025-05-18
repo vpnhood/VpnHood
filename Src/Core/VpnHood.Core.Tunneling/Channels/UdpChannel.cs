@@ -28,7 +28,8 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
     public bool IsStream => false;
     public bool IsClosePending => false;
     public bool Connected { get; private set; }
-    public Traffic Traffic { get; } = new();
+    public DateTime LastActivityTime => PacketStat.LastActivityTime;
+    public Traffic Traffic => new (PacketStat.SentBytes, PacketStat.ReceivedBytes);
 
     public void Start()
     {
@@ -50,16 +51,14 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
             throw new InvalidOperationException("UdpChannelTransmitter has not been initialized yet in UdpChannel.");
 
         // encrypt packets
-        var sessionCryptoPosition = _cryptorPosBase + Traffic.Sent;
+        var sessionCryptoPosition = _cryptorPosBase + PacketStat.SentBytes;
         _sessionCryptorWriter.Cipher(buffer.Span[UdpChannelTransmitter.HeaderLength..],
             sessionCryptoPosition);
 
         // send buffer
-        var ret = await _udpChannelTransmitter
+        await _udpChannelTransmitter
             .SendAsync(_lastRemoteEp, sessionId, sessionCryptoPosition, buffer, protocolVersion)
             .VhConfigureAwait();
-
-        Traffic.Sent += ret;
     }
 
     protected override async ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
@@ -127,7 +126,6 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
         while (bufferIndex < buffer.Length) {
             var ipPacket = PacketUtil.ReadNextPacket(buffer[bufferIndex..]);
             bufferIndex += ipPacket.PacketLength;
-            Traffic.Received += ipPacket.PacketLength;
             OnPacketReceived(ipPacket);
         }
     }

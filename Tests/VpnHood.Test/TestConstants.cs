@@ -6,8 +6,9 @@ namespace VpnHood.Test;
 
 public class TestConstants
 {
-    public static int DefaultTimeout => Debugger.IsAttached ? 3_000_000 : 30_000;
-    public static int DefaultUdpTimeout => Debugger.IsAttached ? 3_000_000 : 2000;
+    public static int DefaultHttpTimeout => Debugger.IsAttached ? 3_000_000 : 1000;
+    public static int DefaultUdpTimeout => DefaultHttpTimeout;
+    public static int DefaultPingTimeout => DefaultUdpTimeout;
 
     public static Uri HttpsUri1 => new($"https://{HttpsEndPoint1}/file1");
     public static Uri HttpsUri2 => new($"https://{HttpsEndPoint2}/file2");

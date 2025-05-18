@@ -263,7 +263,7 @@ public class Session : IAsyncDisposable
         // reject if packet source does not match client internal ip
         if (!ipPacket.SourceAddress.Equals(virtualIp)) {
             var ipeEndPointPair = ipPacket.GetEndPoints();
-            LogTrack(ipPacket.Protocol.ToString(), null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
+            LogTrack(ipPacket.Protocol, null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
             _filterReporter.Raise();
             throw new NetFilterException("Invalid tunnel packet source ip.");
         }
@@ -272,7 +272,7 @@ public class Session : IAsyncDisposable
         var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
         if (ipPacket2 == null) {
             var ipeEndPointPair = ipPacket.GetEndPoints();
-            LogTrack(ipPacket.Protocol.ToString(), null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
+            LogTrack(ipPacket.Protocol, null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
             _filterReporter.Raise();
             throw new NetFilterException("Packet discarded due to the NetFilter's policies.");
         }
@@ -284,7 +284,7 @@ public class Session : IAsyncDisposable
             _proxyManager.SendPacketQueued(ipPacket2);
     }
 
-    public void LogTrack(string protocol, IPEndPoint? localEndPoint, IPEndPoint? destinationEndPoint,
+    public void LogTrack(IpProtocol protocol, IPEndPoint? localEndPoint, IPEndPoint? destinationEndPoint,
         bool isNewLocal, bool isNewRemote, string? failReason)
     {
         if (!_trackingOptions.IsEnabled)
@@ -294,9 +294,9 @@ public class Session : IAsyncDisposable
             failReason == null)
             return;
 
-        if (!_trackingOptions.TrackTcpValue && protocol.Equals("tcp", StringComparison.OrdinalIgnoreCase) ||
-            !_trackingOptions.TrackUdpValue && protocol.Equals("udp", StringComparison.OrdinalIgnoreCase) ||
-            !_trackingOptions.TrackUdpValue && protocol.Equals("icmp", StringComparison.OrdinalIgnoreCase))
+        if (!_trackingOptions.TrackTcpValue && protocol is IpProtocol.Tcp ||
+            !_trackingOptions.TrackUdpValue && protocol is IpProtocol.Udp ||
+            !_trackingOptions.TrackUdpValue && protocol is IpProtocol.IcmpV4 or IpProtocol.IcmpV6)
             return;
 
         var mode = (isNewLocal ? "L" : "") + (isNewRemote ? "R" : "");
@@ -403,7 +403,7 @@ public class Session : IAsyncDisposable
             isRequestedEpException = false;
 
             //tracking
-            LogTrack(IpProtocol.Tcp.ToString(), (IPEndPoint)tcpClientHost.Client.LocalEndPoint,
+            LogTrack(IpProtocol.Tcp, (IPEndPoint)tcpClientHost.Client.LocalEndPoint,
                 request.DestinationEndPoint,
                 true, true, null);
 
@@ -443,7 +443,7 @@ public class Session : IAsyncDisposable
         // filter
         var newEndPoint = _netFilter.ProcessRequest(IpProtocol.Tcp, request.DestinationEndPoint);
         if (newEndPoint == null) {
-            LogTrack(IpProtocol.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "NetFilter");
+            LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint, false, true, "NetFilter");
             _filterReporter.Raise();
             throw new RequestBlockedException(clientStream.IpEndPointPair.RemoteEndPoint, this, request.RequestId);
         }
@@ -456,14 +456,14 @@ public class Session : IAsyncDisposable
 
             // Channel Count limit
             if (TcpChannelCount >= _maxTcpChannelCount) {
-                LogTrack(IpProtocol.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcp");
+                LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint, false, true, "MaxTcp");
                 _maxTcpChannelExceptionReporter.Raise();
                 throw new MaxTcpChannelException(clientStream.IpEndPointPair.RemoteEndPoint, this, request.RequestId);
             }
 
             // Check tcp wait limit
             if (TcpConnectWaitCount >= _maxTcpConnectWaitCount) {
-                LogTrack(IpProtocol.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcpWait");
+                LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint, false, true, "MaxTcpWait");
                 _maxTcpConnectWaitExceptionReporter.Raise();
                 throw new MaxTcpConnectWaitException(clientStream.IpEndPointPair.RemoteEndPoint, this,
                     request.RequestId);
@@ -475,7 +475,7 @@ public class Session : IAsyncDisposable
     {
         if (NetScanDetector == null || NetScanDetector.Verify(remoteEndPoint)) return;
 
-        LogTrack(protocol.ToString(), null, remoteEndPoint, false, true, "NetScan");
+        LogTrack(protocol, null, remoteEndPoint, false, true, "NetScan");
         _netScanExceptionReporter.Raise();
         throw new NetScanException(remoteEndPoint, this, requestId);
     }
@@ -519,7 +519,7 @@ public class Session : IAsyncDisposable
             IPEndPoint remoteEndPoint,
             bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
         {
-            session.LogTrack(protocolType.ToString(), localEndPoint, remoteEndPoint, isNewLocalEndPoint,
+            session.LogTrack(protocolType, localEndPoint, remoteEndPoint, isNewLocalEndPoint,
                 isNewRemoteEndPoint, null);
         }
     }

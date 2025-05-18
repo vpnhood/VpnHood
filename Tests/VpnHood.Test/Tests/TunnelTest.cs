@@ -196,7 +196,7 @@ public class TunnelTest : TestBase
         ChunkStream binaryStream = new BinaryStreamStandard(stream, Guid.NewGuid().ToString(), true);
         await binaryStream.WriteAsync(BitConverter.GetBytes(chunks.Sum(x => x.Length)), cts.Token);
         foreach (var chunk in chunks)
-            await binaryStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray(), cts.Token);
+            await binaryStream.WriteAsync(Encoding.UTF8.GetBytes(chunk), cts.Token);
         Assert.AreEqual(chunks.Count + 1, binaryStream.WroteChunkCount);
 
         // read first stream
@@ -206,9 +206,9 @@ public class TunnelTest : TestBase
 
         // write second stream
         binaryStream = await binaryStream.CreateReuse();
-        await binaryStream.WriteAsync(BitConverter.GetBytes(chunks.Sum(x => x.Length)).ToArray(), cts.Token);
+        await binaryStream.WriteAsync(BitConverter.GetBytes(chunks.Sum(x => x.Length)), cts.Token);
         foreach (var chunk in chunks)
-            await binaryStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray(), cts.Token);
+            await binaryStream.WriteAsync(Encoding.UTF8.GetBytes(chunk), cts.Token);
         Assert.AreEqual(chunks.Count + 1, binaryStream.WroteChunkCount);
 
         // read second stream

@@ -206,7 +206,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             ServerUtil.ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
             var allServerIps = serverInfo.PublicIpAddresses
                 .Concat(serverInfo.PrivateIpAddresses)
-                .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
+                .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? []);
 
             ConfigNetFilter(SessionManager.NetFilter, ServerHost, serverConfig.NetFilterOptions,
                 privateAddresses: allServerIps,

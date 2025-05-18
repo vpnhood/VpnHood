@@ -508,7 +508,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // create cancellationToken after disconnecting previous connection
             using var linkedCts =
                 CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectTimeoutCts.Token);
-            cancellationToken = linkedCts.Token;
 
             // reset connection state
             _appPersistState.LastClearedError = null; // it is a new connection
@@ -548,12 +547,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
             if (connectOptions.Diagnose) // log country name
                 VhLogger.Instance.LogInformation("CountryCode: {CountryCode}",
-                    VhUtils.TryGetCountryName(await GetCurrentCountryAsync(cancellationToken).VhConfigureAwait()));
+                    VhUtils.TryGetCountryName(await GetCurrentCountryAsync(linkedCts.Token).VhConfigureAwait()));
 
 
             // request features for the first time
             VhLogger.Instance.LogDebug("Requesting Features ...");
-            await RequestFeatures(cancellationToken).VhConfigureAwait();
+            await RequestFeatures(linkedCts.Token).VhConfigureAwait();
 
             // connect
             VhLogger.Instance.LogInformation("Client is Connecting ...");
@@ -563,7 +562,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     planId: connectOptions.PlanId,
                     accessCode: clientProfile.AccessCode,
                     allowUpdateToken: true,
-                    cancellationToken: cancellationToken)
+                    cancellationToken: linkedCts.Token)
                 .VhConfigureAwait();
         }
         catch (Exception ex) {

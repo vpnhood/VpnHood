@@ -60,8 +60,7 @@ public static class AppDtoConverterExtensions
         apiError = (ApiError)apiError.Clone();
 
         // remove sensitive info like access key 
-        if (apiError.Data.ContainsKey(nameof(SessionResponse)))
-            apiError.Data.Remove(nameof(SessionResponse));
+        apiError.Data.Remove(nameof(SessionResponse));
 
         return apiError;
     }

@@ -31,7 +31,7 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
         if (accessTokenData == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
         var hostName = token.ServerToken.HostName +
                        (token.ServerToken.IsValidHostName ? "" : " (Fake)");
-        var endPoints = token.ServerToken.HostEndPoints?.Select(x => x.ToString()) ?? Array.Empty<string>();
+        var endPoints = token.ServerToken.HostEndPoints?.Select(x => x.ToString()) ?? [];
 
         Console.WriteLine();
         Console.WriteLine("--- Access Usage ---");

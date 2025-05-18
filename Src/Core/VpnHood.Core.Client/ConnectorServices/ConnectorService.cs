@@ -29,16 +29,14 @@ internal class ConnectorService(
             (RequestCode)request.RequestCode, request.RequestId);
 
         // set request timeout
-        using var cancellationTokenSource = new CancellationTokenSource(RequestTimeout);
-        using var linkedCancellationTokenSource =
-            CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
-        cancellationToken = linkedCancellationTokenSource.Token;
+        using var localTimeoutCts = new CancellationTokenSource(RequestTimeout);
+        using var localCts = CancellationTokenSource.CreateLinkedTokenSource(localTimeoutCts.Token, cancellationToken);
 
         await using var mem = new MemoryStream();
         mem.WriteByte(1);
         mem.WriteByte(request.RequestCode);
-        await StreamUtils.WriteObjectAsync(mem, request, cancellationToken).VhConfigureAwait();
-        var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, cancellationToken).VhConfigureAwait();
+        await StreamUtils.WriteObjectAsync(mem, request, localCts.Token).VhConfigureAwait();
+        var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, localCts.Token).VhConfigureAwait();
 
         // log the response
         VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.", ret.Response.ErrorCode);

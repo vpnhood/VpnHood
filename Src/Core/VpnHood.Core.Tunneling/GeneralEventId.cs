@@ -15,7 +15,7 @@ public static class GeneralEventId
     public static EventId Udp = new((int)EventCode.Udp, nameof(Udp));
     public static EventId Packet = new((int)EventCode.Packet, nameof(Packet));
     public static EventId StreamProxyChannel = new((int)EventCode.StreamChannel, nameof(StreamProxyChannel));
-    public static EventId DatagramChannel = new((int)EventCode.DatagramChannel, EventCode.DatagramChannel.ToString());
+    public static EventId DatagramChannel = new((int)EventCode.DatagramChannel, nameof(EventCode.DatagramChannel));
     public static EventId Request = new((int)EventCode.Request, nameof(Request));
     public static EventId TcpLife = new((int)EventCode.TcpLife, nameof(TcpLife));
     public static EventId Test = new((int)EventCode.Test, nameof(Test));

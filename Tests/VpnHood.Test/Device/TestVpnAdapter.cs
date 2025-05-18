@@ -1,5 +1,4 @@
-﻿using VpnHood.Core.Packets;
-using VpnHood.Core.VpnAdapters.WinDivert;
+﻿using VpnHood.Core.VpnAdapters.WinDivert;
 
 namespace VpnHood.Test.Device;
 

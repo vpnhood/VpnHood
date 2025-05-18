@@ -329,21 +329,19 @@ public class ServerHost : IAsyncDisposable, IJob
     {
         // add timeout to cancellationToken
         using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
-        using var cancellationTokenSource =
-            CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
-        cancellationToken = cancellationTokenSource.Token;
+        using var localCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
 
         IClientStream? clientStream = null;
         try {
             // establish SSL
-            var sslStream = await AuthenticateAsServerAsync(tcpClient.GetStream(), cancellationToken)
+            var sslStream = await AuthenticateAsServerAsync(tcpClient.GetStream(), localCts.Token)
                 .VhConfigureAwait();
 
             // create client stream
-            clientStream = await CreateClientStream(tcpClient, sslStream, cancellationToken).VhConfigureAwait();
+            clientStream = await CreateClientStream(tcpClient, sslStream, localCts.Token).VhConfigureAwait();
             lock (_clientStreams) _clientStreams.Add(clientStream);
 
-            await ProcessClientStream(clientStream, cancellationToken).VhConfigureAwait();
+            await ProcessClientStream(clientStream, localCts.Token).VhConfigureAwait();
         }
         catch (TlsAuthenticateException ex) when (ex.InnerException is OperationCanceledException) {
             VhLogger.Instance.LogInformation(GeneralEventId.Tls, "Client TLS authentication has been canceled.");

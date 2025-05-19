@@ -12,7 +12,7 @@
 
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
 		<PublishTrimmed>True</PublishTrimmed>
-		<RunAOTCompilation>True</RunAOTCompilation>
+		<RunAOTCompilation>False</RunAOTCompilation>
 		<RuntimeIdentifiers>android-arm64;android-x64;android-arm</RuntimeIdentifiers>
 	</PropertyGroup>
 
@@ -42,7 +42,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.683" />
+	  <PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.685" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -56,7 +56,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.683" />
+	  <PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.685" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -69,8 +69,8 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
-		<PackageReference Include="AppsFlyerXamarinBindingAndroid" Version="6.15.0" />
-		<PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.0.21.2" />
+		<PackageReference Include="AppsFlyerXamarinBindingAndroid" Version="6.17.0" />
+		<PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.0.21.3" />
 	</ItemGroup>
 
 </Project>

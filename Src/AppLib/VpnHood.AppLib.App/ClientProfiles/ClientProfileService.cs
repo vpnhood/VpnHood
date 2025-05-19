@@ -132,8 +132,15 @@ public class ClientProfileService
 
     private ClientProfile ImportAccessKey(string accessKey, bool isForAccount)
     {
-        var token = Token.FromAccessKey(accessKey);
-        return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false, isForAccount: isForAccount);
+        try {
+            var token = Token.FromAccessKey(accessKey);
+            return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false, isForAccount: isForAccount);
+
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not import access key.");
+            throw;
+        }
     }
 
     private readonly object _importLock = new();

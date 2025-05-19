@@ -35,7 +35,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="System.Threading.Channels" Version="9.0.4" />
+		<PackageReference Include="System.Threading.Channels" Version="9.0.5" />
 	</ItemGroup>
 
 	<ItemGroup>

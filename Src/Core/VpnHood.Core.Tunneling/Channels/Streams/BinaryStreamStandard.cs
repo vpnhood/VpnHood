@@ -91,8 +91,9 @@ public class BinaryStreamStandard : ChunkStream
     private async Task<int> ReadChunkHeaderAsync(CancellationToken cancellationToken)
     {
         // read chunk header by cryptor
-        if (!await StreamUtils.ReadExactAsync(SourceStream, _readChunkHeaderBuffer, 0, _readChunkHeaderBuffer.Length,
-                cancellationToken).VhConfigureAwait()) {
+        if (!await StreamUtils.ReadExactAsync(SourceStream, _readChunkHeaderBuffer, 0, _readChunkHeaderBuffer.Length, cancellationToken)
+                .VhConfigureAwait()) {
+
             if (!_finished && ReadChunkCount > 0)
                 VhLogger.Instance.LogWarning(GeneralEventId.TcpLife, "BinaryStream has been closed unexpectedly.");
             _isConnectionClosed = true;

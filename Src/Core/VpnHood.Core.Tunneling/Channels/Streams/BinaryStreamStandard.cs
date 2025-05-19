@@ -1,11 +1,13 @@
-﻿using System.Net.Sockets;
+﻿using System.Buffers;
 using Microsoft.Extensions.Logging;
+using System.Buffers.Binary;
+using System.Net.Sockets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels.Streams;
 
-public class BinaryStreamStandard : ChunkStream
+public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
 {
     private const int ChunkHeaderLength = 4;
     private int _remainingChunkBytes;
@@ -14,12 +16,11 @@ public class BinaryStreamStandard : ChunkStream
     private readonly CancellationTokenSource _readCts = new();
     private readonly CancellationTokenSource _writeCts = new();
     private ValueTask<int> _readTask;
-    private Task _writeTask = Task.CompletedTask;
+    private ValueTask _writeTask;
     private bool _isConnectionClosed;
     private readonly byte[] _readChunkHeaderBuffer = new byte[ChunkHeaderLength];
-    private byte[] _writeBuffer = [];
 
-    public override int PreserveWriteBufferLength => ChunkHeaderLength;
+    public int PreserveWriteBufferLength => ChunkHeaderLength;
 
     public BinaryStreamStandard(Stream sourceStream, string streamId, bool useBuffer)
         : base(
@@ -105,22 +106,17 @@ public class BinaryStreamStandard : ChunkStream
         return chunkSize;
     }
 
-    public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        if (_disposed)
-            throw new ObjectDisposedException(GetType().Name);
-
-        if (_finished)
-            throw new SocketException((int)SocketError.ConnectionAborted);
-
-        // Create CancellationToken
+        if (_disposed) throw new ObjectDisposedException(GetType().Name);
+        if (_finished) throw new SocketException((int)SocketError.ConnectionAborted);
         using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_writeCts.Token, cancellationToken);
 
         // should not write a zero chunk if caller data is zero
         try {
-            _writeTask = count == 0
-                ? SourceStream.WriteAsync(buffer, offset, count, tokenSource.Token)
-                : WriteInternalAsync(buffer, offset, count, tokenSource.Token);
+            _writeTask = buffer.Length == 0
+                ? SourceStream.WriteAsync(buffer, tokenSource.Token)
+                : WriteInternalAsync(buffer, tokenSource.Token);
 
             await _writeTask.VhConfigureAwait();
         }
@@ -130,30 +126,56 @@ public class BinaryStreamStandard : ChunkStream
         }
     }
 
-    private async Task WriteInternalAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public async ValueTask WritePreservedAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        if (_disposed) throw new ObjectDisposedException(GetType().Name);
+        if (_finished) throw new SocketException((int)SocketError.ConnectionAborted);
+        using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_writeCts.Token, cancellationToken);
+
+        // should not write a zero chunk if caller data is zero
+        try {
+            _writeTask = buffer.Length == PreserveWriteBufferLength
+                ? SourceStream.WriteAsync(buffer, tokenSource.Token)
+                : WriteInternalPreserverAsync(buffer, tokenSource.Token);
+
+            await _writeTask.VhConfigureAwait();
+        }
+        catch (Exception ex) {
+            CloseByError(ex);
+            throw;
+        }
+    }
+
+    private async ValueTask WriteInternalPreserverAsync(Memory<byte> buffer, CancellationToken cancellationToken)
     {
         try {
-            if (PreserveWriteBuffer) {
-                // create the chunk header
-                BitConverter.GetBytes(count).CopyTo(buffer, offset - ChunkHeaderLength);
-                await SourceStream
-                    .WriteAsync(buffer, offset - ChunkHeaderLength, ChunkHeaderLength + count, cancellationToken)
-                    .VhConfigureAwait();
-            }
-            else {
-                var size = ChunkHeaderLength + count;
-                if (size > _writeBuffer.Length)
-                    Array.Resize(ref _writeBuffer, size);
+            // create the chunk header
+            BinaryPrimitives.WriteInt32LittleEndian(buffer.Span, buffer.Length - PreserveWriteBufferLength);
+            await SourceStream.WriteAsync(buffer, cancellationToken).VhConfigureAwait();
+            await SourceStream.FlushAsync(cancellationToken).VhConfigureAwait();
+            WroteChunkCount++;
+        }
+        catch (Exception ex) {
+            CloseByError(ex);
+            throw;
+        }
+    }
 
-                // create the chunk header
-                BitConverter.GetBytes(count).CopyTo(_writeBuffer, 0);
+    private async ValueTask WriteInternalAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
+    {
+        try {
+            var bufferLength = ChunkHeaderLength + buffer.Length;
+            using var memoryOwner = MemoryPool<byte>.Shared.Rent(bufferLength);
+            var fullBuffer = memoryOwner.Memory[..bufferLength];
 
-                // prepend the buffer to chunk
-                Buffer.BlockCopy(buffer, offset, _writeBuffer, ChunkHeaderLength, count);
+            // create the chunk header
+            BinaryPrimitives.WriteInt32LittleEndian(fullBuffer.Span, buffer.Length);
 
-                // Copy write buffer to output
-                await SourceStream.WriteAsync(_writeBuffer, 0, size, cancellationToken).VhConfigureAwait();
-            }
+            // prepend the buffer to chunk
+            buffer.CopyTo(fullBuffer[ChunkHeaderLength..]);
+
+            // Copy write buffer to output
+            await SourceStream.WriteAsync(fullBuffer, cancellationToken).VhConfigureAwait();
 
             // make sure chunk is sent
             await SourceStream.FlushAsync(cancellationToken).VhConfigureAwait();
@@ -215,11 +237,7 @@ public class BinaryStreamStandard : ChunkStream
 
         // finish writing current BinaryStream gracefully
         try {
-            if (PreserveWriteBuffer)
-                await WriteInternalAsync(new byte[ChunkHeaderLength], ChunkHeaderLength, 0, cancellationToken)
-                    .VhConfigureAwait();
-            else
-                await WriteInternalAsync([], 0, 0, cancellationToken).VhConfigureAwait();
+            await WriteInternalAsync(ReadOnlyMemory<byte>.Empty, cancellationToken).VhConfigureAwait();
         }
         catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.TcpLife, ex,

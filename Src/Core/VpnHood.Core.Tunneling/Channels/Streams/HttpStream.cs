@@ -22,7 +22,7 @@ public class HttpStream : ChunkStream
     private readonly CancellationTokenSource _readCts = new();
     private readonly CancellationTokenSource _writeCts = new();
     private ValueTask<int> _readTask;
-    private Task _writeTask = Task.CompletedTask;
+    private ValueTask _writeTask;
     private bool _isConnectionClosed;
 
     private bool IsServer => _host == null;
@@ -159,7 +159,7 @@ public class HttpStream : ChunkStream
         return chunkSize;
     }
 
-    public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
@@ -172,9 +172,9 @@ public class HttpStream : ChunkStream
 
         // should not write a zero chunk if caller data is zero
         try {
-            _writeTask = count == 0
-                ? SourceStream.WriteAsync(buffer, offset, count, tokenSource.Token)
-                : WriteInternalAsync(buffer, offset, count, tokenSource.Token);
+            _writeTask = buffer.Length == 0
+                ? SourceStream.WriteAsync(buffer, tokenSource.Token)
+                : WriteInternalAsync(buffer, tokenSource.Token);
 
             await _writeTask.VhConfigureAwait();
         }
@@ -185,7 +185,7 @@ public class HttpStream : ChunkStream
     }
 
 
-    private async Task WriteInternalAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    private async ValueTask WriteInternalAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
     {
         try {
             // write header for first time
@@ -196,11 +196,11 @@ public class HttpStream : ChunkStream
             }
 
             // Write the chunk header
-            var headerBytes = Encoding.ASCII.GetBytes(count.ToString("X") + "\r\n");
+            var headerBytes = Encoding.ASCII.GetBytes(buffer.Length.ToString("X") + "\r\n");
             await SourceStream.WriteAsync(headerBytes, cancellationToken).VhConfigureAwait();
 
             // Write the chunk data
-            await SourceStream.WriteAsync(buffer, offset, count, cancellationToken).VhConfigureAwait();
+            await SourceStream.WriteAsync(buffer, cancellationToken).VhConfigureAwait();
 
             // Write the chunk footer
             await SourceStream.WriteAsync(_newLineBytes, cancellationToken).VhConfigureAwait();
@@ -267,7 +267,7 @@ public class HttpStream : ChunkStream
 
         // finish writing current HttpStream gracefully
         try {
-            await WriteInternalAsync([], 0, 0, cancellationToken).VhConfigureAwait();
+            await WriteInternalAsync(Memory<byte>.Empty,  cancellationToken).VhConfigureAwait();
         }
         catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.TcpLife, ex,

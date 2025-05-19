@@ -10,8 +10,6 @@ public abstract class ChunkStream : AsyncStreamDecorator
     public int ReadChunkCount { get; protected set; }
     public int WroteChunkCount { get; protected set; }
     public string StreamId { get; internal set; }
-    public bool PreserveWriteBuffer { get; set; }
-    public virtual int PreserveWriteBufferLength => 0;
 
     protected ChunkStream(Stream sourceStream, string streamId)
         : base(sourceStream, true)

@@ -19,10 +19,10 @@ public class AsyncStreamTracker(Stream sourceStream, bool leaveOpen)
         return base.ReadAsync(buffer, cancellationToken);
     }
 
-    public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (VhLogger.IsDiagnoseMode)
-            VhLogger.Instance.LogTrace(LogPrefix + "writing count. " + count);
-        return base.WriteAsync(buffer, offset, count, cancellationToken);
+            VhLogger.Instance.LogTrace(LogPrefix + "writing count. " + buffer.Length);
+        return base.WriteAsync(buffer, cancellationToken);
     }
 }

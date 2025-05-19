@@ -39,9 +39,9 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
         return SourceStream.FlushAsync(cancellationToken);
     }
 
-    public sealed override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public sealed override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        return await ReadAsync(buffer.AsMemory(offset, count), cancellationToken);
+        return ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
     }
 
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
@@ -49,9 +49,14 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
         return SourceStream.ReadAsync(buffer, cancellationToken);
     }
 
-    public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public sealed override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        return SourceStream.WriteAsync(buffer, offset, count, cancellationToken);
+        return WriteAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+    }
+
+    public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        return SourceStream.WriteAsync(buffer, cancellationToken);
     }
 
     public sealed override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
@@ -84,12 +89,6 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
     public sealed override int ReadTimeout {
         get => SourceStream.ReadTimeout;
         set => SourceStream.ReadTimeout = value;
-    }
-
-    public sealed override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer,
-        CancellationToken cancellationToken = default)
-    {
-        return base.WriteAsync(buffer, cancellationToken);
     }
 
     public sealed override int ReadByte()

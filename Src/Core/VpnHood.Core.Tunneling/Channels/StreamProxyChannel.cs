@@ -136,19 +136,16 @@ public class StreamProxyChannel : IChannel, IJob
                 nameof(bufferSize));
 
         // use PreserveWriteBuffer if possible
-        var preserveCount = 0;
-        if (destination is ChunkStream chunkStream) {
-            chunkStream.PreserveWriteBuffer = true;
-            preserveCount = chunkStream.PreserveWriteBufferLength;
-        }
+        var destinationPreserved = destination as IPreservedChunkStream;
+        var preserveCount = destinationPreserved?.PreserveWriteBufferLength ?? 0;
 
         // <<----------------- the MOST memory consuming in the APP! >> ----------------------
-        var readBuffer = new byte[bufferSize + preserveCount];
+        Memory<byte> readBuffer = new byte[bufferSize];
         while (!sourceCancellationToken.IsCancellationRequested &&
                !destinationCancellationToken.IsCancellationRequested) {
             // read from source
             var bytesRead = await source
-                .ReadAsync(readBuffer, preserveCount, readBuffer.Length - preserveCount, sourceCancellationToken)
+                .ReadAsync(readBuffer[preserveCount..], sourceCancellationToken)
                 .VhConfigureAwait();
 
             // check end of the stream
@@ -156,8 +153,12 @@ public class StreamProxyChannel : IChannel, IJob
                 break;
 
             // write to destination
-            await destination.WriteAsync(readBuffer, preserveCount, bytesRead, destinationCancellationToken)
-                .VhConfigureAwait();
+            if (destinationPreserved != null)
+                await destinationPreserved.WritePreservedAsync(readBuffer[..(preserveCount + bytesRead)], 
+                        cancellationToken: destinationCancellationToken).VhConfigureAwait();
+            else
+                await destination.WriteAsync(readBuffer[preserveCount..bytesRead], 
+                        destinationCancellationToken).VhConfigureAwait();
 
             // calculate transferred bytes
             if (isSendingToTunnel)

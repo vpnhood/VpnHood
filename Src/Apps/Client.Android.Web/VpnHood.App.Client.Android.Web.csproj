@@ -10,6 +10,11 @@
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<!--todo-->
+		<TrimmerRootDescriptor Include="XMLFile1.xml" />
+	</ItemGroup>
+
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
 		<PublishTrimmed>True</PublishTrimmed>
 		<RunAOTCompilation>True</RunAOTCompilation>

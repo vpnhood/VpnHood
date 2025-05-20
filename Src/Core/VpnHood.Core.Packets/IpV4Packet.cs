@@ -8,19 +8,19 @@ public class IpV4Packet : IpPacket
     private bool _disposed;
     private readonly IMemoryOwner<byte>? _memoryOwner;
 
-    public IpV4Packet(IMemoryOwner<byte> memoryOwner, int packetLength)
-        : this(memoryOwner.Memory[..packetLength])
+    public IpV4Packet(IMemoryOwner<byte> memoryOwner)
+        : this(memoryOwner.Memory)
     {
         _memoryOwner = memoryOwner;
     }
 
-    public IpV4Packet(IMemoryOwner<byte> memoryOwner, int packetLength, IpProtocol protocol, int optionsLength) 
+    public IpV4Packet(IMemoryOwner<byte> memoryOwner, int packetLength, IpProtocol protocol, int optionsLength)
         : this(memoryOwner.Memory[..packetLength], protocol, optionsLength)
     {
         _memoryOwner = memoryOwner;
     }
 
-    public IpV4Packet(Memory<byte> buffer, IpProtocol protocol, int optionsLength) 
+    public IpV4Packet(Memory<byte> buffer, IpProtocol protocol, int optionsLength)
         : base(buffer)
     {
         // validate buffer length
@@ -34,7 +34,7 @@ public class IpV4Packet : IpPacket
         if (optionsLength is < 0 or > 40)
             throw new ArgumentOutOfRangeException(nameof(optionsLength), "Options length must be between 0 and 40 bytes.");
 
-        if (optionsLength % 4 !=0)
+        if (optionsLength % 4 != 0)
             throw new ArgumentOutOfRangeException(nameof(optionsLength), "Options length must be a multiple of 4 bytes.");
 
         // set version
@@ -51,18 +51,22 @@ public class IpV4Packet : IpPacket
         BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(2, 2), (ushort)buffer.Length);
     }
 
-
-    public IpV4Packet(Memory<byte> buffer) 
-        : base(buffer)
+    private static Memory<byte> AdjustBuffer(Memory<byte> buffer)
     {
-        // Check if the buffer is large enough for the IP header
-        if (buffer.Length is < 20 or > 0xFFFF)
-            throw new ArgumentException("Buffer too small for IP header.", nameof(buffer));
+        var packetLength = GetPacketLength(buffer.Span);
+        if (packetLength < 20)
+            throw new ArgumentException("Invalid IPv4 packet length.", nameof(buffer));
 
-        // Check if the version is 6
-        var version = buffer.Span[0] >> 4;
-        if (version != 4)
-            throw new ArgumentException("Invalid IP version. Expected IPv6.");
+        if (packetLength > buffer.Length)
+            throw new ArgumentException("Buffer too small for IPv4 packet.", nameof(buffer));
+
+        return buffer[..packetLength];
+    }
+
+    public IpV4Packet(Memory<byte> buffer)
+        : base(AdjustBuffer(buffer))
+    {
+        buffer = Buffer;
 
         // Check if the header length is valid
         var ihl = Span[0] & 0x0F;
@@ -137,8 +141,7 @@ public class IpV4Packet : IpPacket
         set => Span[8] = value;
     }
 
-    public ushort HeaderChecksum
-    {
+    public ushort HeaderChecksum {
         get => BinaryPrimitives.ReadUInt16BigEndian(Span.Slice(10, 2));
         set => BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(10, 2), value);
     }
@@ -176,11 +179,23 @@ public class IpV4Packet : IpPacket
         Span[11] = 0;
         HeaderChecksum = PacketUtil.OnesComplementSum(Span[..Header.Length]);
     }
+
+    public static int GetPacketLength(ReadOnlySpan<byte> buffer)
+    {
+        if (GetPacketVersion(buffer) != IpVersion.IPv4)
+            throw new ArgumentException("Buffer is not an IPv4 packet.", nameof(buffer));
+
+        if (buffer.Length < 4)
+            throw new ArgumentException("IPv4 header requires at least 4 bytes to determine packet length.", nameof(buffer));
+
+        return (ushort)(buffer[2] << 8 | buffer[3]);
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (_disposed)
             return;
-        
+
         // I intentionally dispose the memory owner as unmanaged
         // because the memory owner does have finalizer
         _memoryOwner?.Dispose();

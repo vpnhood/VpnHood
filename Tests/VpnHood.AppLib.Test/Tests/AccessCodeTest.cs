@@ -17,36 +17,6 @@ using TcpPacket = PacketDotNet.TcpPacket;
 
 namespace VpnHood.AppLib.Test.Tests;
 
-public abstract class A(Memory<byte> a) : IDisposable
-{
-    public Memory<byte> Prop1 { get; set; } = a;
-
-    private bool _disposed;
-    protected IPAddress? SourceAddressField;
-    protected IPAddress? DestinationAddressField;
-    private IPayloadPacket? _payloadPacket;
-    protected virtual void Dispose(bool disposing)
-    {
-        //_disposed = true;
-    }
-
-
-    public void Dispose()
-    {
-        Dispose(true);
-        //GC.SuppressFinalize(this);
-    }
-
-    ~A() => Dispose(false);
-}
-
-public class B : A
-{
-    public B(Memory<byte> a) : base(a)
-    {
-    }
-}
-
 [TestClass]
 public class AccessCodeTest : TestAppBase
 {
@@ -100,9 +70,9 @@ public class AccessCodeTest : TestAppBase
         }
         Console.WriteLine($"Elapsed: {sw.ElapsedMilliseconds}ms");
 
-        var ipPacketVh = PacketBuilder.Parse(buffer) as IpV4Packet;
+        var ipPacketVh = (IpV4Packet)PacketBuilder.Parse(buffer);
         ipPacketVh.UpdateAllChecksums();
-        var ipPacketNet = NetPacketBuilder.Parse(buffer) as IPv4Packet;
+        var ipPacketNet = (IPv4Packet)NetPacketBuilder.Parse(buffer);
         ipPacketNet.UpdateAllChecksums();
 
         Console.WriteLine($"IpNet: {ipPacketNet.Checksum}, IpVh: {ipPacketVh.HeaderChecksum}");

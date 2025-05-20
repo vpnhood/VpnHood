@@ -20,6 +20,12 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
             : throw new InvalidOperationException("The PayloadPacket buffer must match the packet buffer.");
     }
 
+    public static IpVersion GetPacketVersion(ReadOnlySpan<byte> buffer)
+    {
+        // throw error if packet version is not 4 or 6
+        return (IpVersion)(buffer[0] >> 4);
+    }
+
     public IpVersion Version {
         get { return (IpVersion)(Buffer.Span[0] >> 4); }
         protected set => Buffer.Span[0] = (byte)((byte)value << 4 | Buffer.Span[0] & 0x0F);

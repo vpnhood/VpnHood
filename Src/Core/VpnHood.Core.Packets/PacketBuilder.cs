@@ -10,36 +10,35 @@ public static class PacketBuilder
 {
     public static IpPacket Parse(ReadOnlySpan<byte> buffer, MemoryPool<byte>? memoryPool = null)
     {
+        // adjust buffer length by parsing the packet length
+        var packetLength = PacketUtil.ReadPacketLength(buffer);
+        buffer = buffer[..packetLength]; 
+
         // copy buffer to memory pool
         memoryPool ??= MemoryPool<byte>.Shared;
         var memoryOwner = memoryPool.Rent(buffer.Length);
         buffer.CopyTo(memoryOwner.Memory.Span);
 
-        return BuildIp(memoryOwner, buffer.Length);
+        return Attach(memoryOwner);
     }
 
     public static IpPacket Attach(Memory<byte> buffer)
     {
-        if (buffer.Length < 1)
-            throw new ArgumentException("Buffer too small to determine IP version.", nameof(buffer));
-
-        var version = buffer.Span[0] >> 4;
+        // find packet length by reading the first byte
+        var version = IpPacket.GetPacketVersion(buffer.Span);
         return version switch {
-            4 => new IpV4Packet(buffer),
-            6 => new IpV6Packet(buffer),
+            IpVersion.IPv4 => new IpV4Packet(buffer),
+            IpVersion.IPv6 => new IpV6Packet(buffer),
             _ => throw new NotSupportedException($"IP version {version} not supported."),
         };
     }
 
-    public static IpPacket BuildIp(IMemoryOwner<byte> memoryOwner, int packetLength)
+    public static IpPacket Attach(IMemoryOwner<byte> memoryOwner)
     {
-        if (memoryOwner.Memory.Length < 1)
-            throw new ArgumentException("Buffer too small to determine IP version.", nameof(memoryOwner));
-
-        var version = memoryOwner.Memory.Span[0] >> 4;
+        var version = IpPacket.GetPacketVersion(memoryOwner.Memory.Span);
         return version switch {
-            4 => new IpV4Packet(memoryOwner, packetLength),
-            6 => new IpV6Packet(memoryOwner, packetLength),
+            IpVersion.IPv4 => new IpV4Packet(memoryOwner),
+            IpVersion.IPv6 => new IpV6Packet(memoryOwner),
             _ => throw new NotSupportedException($"IP version {version} not supported."),
         };
     }

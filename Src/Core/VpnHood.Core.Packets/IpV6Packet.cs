@@ -8,8 +8,8 @@ public class IpV6Packet : IpPacket
     private bool _disposed;
     private readonly IMemoryOwner<byte>? _memoryOwner;
 
-    public IpV6Packet(IMemoryOwner<byte> memoryOwner, int packetLength)
-        : this(memoryOwner.Memory[..packetLength])
+    public IpV6Packet(IMemoryOwner<byte> memoryOwner)
+        : this(memoryOwner.Memory)
     {
         _memoryOwner = memoryOwner;
     }
@@ -40,16 +40,21 @@ public class IpV6Packet : IpPacket
         BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(4, 2), payloadLength);
     }
 
-    public IpV6Packet(Memory<byte> buffer) : base(buffer)
+    private static Memory<byte> AdjustBuffer(Memory<byte> buffer)
     {
-        // Check if the buffer is large enough for the IP header
-        if (buffer.Length < 40)
-            throw new ArgumentException("Buffer too small for IPv6 header.");
+        var packetLength = GetPacketLength(buffer.Span);
+        if (packetLength < 40)
+            throw new ArgumentException("Invalid IPv6 packet length.", nameof(buffer));
 
-        // Check if the version is 6
-        var version = buffer.Span[0] >> 4;
-        if (version != 6)
-            throw new ArgumentException("Invalid IP version. Expected IPv6.");
+        if (packetLength > buffer.Length)
+            throw new ArgumentException("Buffer too small for IPv6 packet.", nameof(buffer));
+        return buffer[..packetLength];
+    }
+
+    public IpV6Packet(Memory<byte> buffer)
+        : base(AdjustBuffer(buffer))
+    {
+        buffer = Buffer;
 
         // Check if the payment length is valid
         var payloadLength = BinaryPrimitives.ReadUInt16BigEndian(buffer.Span.Slice(4, 2));
@@ -70,7 +75,7 @@ public class IpV6Packet : IpPacket
         get => Span[7];
         set => Span[7] = value;
     }
-    
+
     protected override Span<byte> SourceAddressBuffer {
         get => Span.Slice(8, 16);
         set {
@@ -113,6 +118,18 @@ public class IpV6Packet : IpPacket
             Span[0] = (byte)(Span[0] & 0xF0 | value >> 4);     // Preserve version (upper 4 bits)
             Span[1] = (byte)(Span[1] & 0x0F | value << 4);     // Preserve FlowLabel high bits
         }
+    }
+
+    public static int GetPacketLength(ReadOnlySpan<byte> buffer)
+    {
+        if (GetPacketVersion(buffer) != IpVersion.IPv6)
+            throw new ArgumentException("Buffer is not an IPv6 packet.", nameof(buffer));
+
+        if (buffer.Length < 6)
+            throw new ArgumentException("IPv6 header requires at least 6 bytes to determine packet length.", nameof(buffer));
+
+        var payloadLength = (ushort)(buffer[4] << 8 | buffer[5]);
+        return 40 + payloadLength;
     }
 
     protected override void Dispose(bool disposing)

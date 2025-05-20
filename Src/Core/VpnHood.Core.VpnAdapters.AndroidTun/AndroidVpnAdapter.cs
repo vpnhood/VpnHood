@@ -1,10 +1,11 @@
-﻿using System.Net;
-using System.Runtime.InteropServices;
-using Android.Net;
+﻿using Android.Net;
 using Android.OS;
 using Android.Systems;
 using Java.IO;
 using Microsoft.Extensions.Logging;
+using System.Buffers;
+using System.Net;
+using System.Runtime.InteropServices;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
@@ -23,7 +24,6 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
-    private readonly byte[] _readBuffer = new byte[0xFFFF];
 
     public override bool IsNatSupported => false;
     public override bool IsAppFilterSupported => true;
@@ -231,15 +231,35 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         if (_inStream == null)
             throw new InvalidOperationException("Adapter is not open.");
 
-        var bytesRead = _inStream.Read(_readBuffer);
-        return bytesRead switch {
-            // no more packet
-            0 => null,
-            // Parse the packet and add to the list
-            > 0 => PacketBuilder.Parse(_readBuffer.AsSpan(0, bytesRead)),
-            // error
-            < 0 => throw new System.IO.IOException("Could not read from TUN.")
-        };
+        // Allocate a memory block for the packet
+        var memoryOwner = MemoryPool<byte>.Shared.Rent(mtu);
+
+        try {
+            // Get the underlying array from the memory owner
+            if (!MemoryMarshal.TryGetArray<byte>(memoryOwner.Memory, out var segment))
+                throw new InvalidOperationException("Could not get array from memory owner.");
+
+            // Read the packet from the input stream into the array
+            var bytesRead = _inStream.Read(segment.Array);
+
+            // Check the number of bytes read
+            switch (bytesRead) {
+                // no more packet
+                case 0:
+                    memoryOwner.Dispose();
+                    return null;
+                // Parse the packet and add to the list
+                case > 0:
+                    return PacketBuilder.Attach(memoryOwner);
+                // error
+                case < 0:
+                    throw new System.IO.IOException("Could not read from TUN.");
+            }
+        }
+        catch {
+            memoryOwner.Dispose();
+            throw;
+        }
     }
 
     protected override void Dispose(bool disposing)

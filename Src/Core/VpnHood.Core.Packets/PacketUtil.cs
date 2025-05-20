@@ -1,32 +1,17 @@
-﻿using System.Net;
-
-// ReSharper disable UnusedMember.Global
+﻿// ReSharper disable UnusedMember.Global
 namespace VpnHood.Core.Packets;
 
 public static class PacketUtil
 {
-    public static ushort ReadPacketLength(ReadOnlySpan<byte> buffer)
+    public static int ReadPacketLength(ReadOnlySpan<byte> buffer)
     {
-        var version = buffer[0] >> 4;
-
-        // v4
-        if (version == 4)
-        {
-            var packetLength = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer.Slice(2, 2)));
-            if (packetLength < 20)
-                throw new Exception($"An IPv4 packet with invalid length has been received! Length: {packetLength}");
-            return packetLength;
-        }
-
-        // v6
-        if (version == 6)
-        {
-            var payloadLength = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer.Slice(4, 2)));
-            return (ushort)(40 + payloadLength); //header + payload
-        }
-
-        // unknown
-        throw new Exception("Unknown packet version!");
+        var ipVersion = IpPacket.GetPacketVersion(buffer);
+        return ipVersion switch {
+            // v4
+            IpVersion.IPv4 => IpV4Packet.GetPacketLength(buffer),
+            IpVersion.IPv6 => IpV6Packet.GetPacketLength(buffer),
+            _ => throw new Exception("Unknown packet version.")
+        };
     }
 
     public static IpPacket ReadNextPacket(ReadOnlySpan<byte> buffer)

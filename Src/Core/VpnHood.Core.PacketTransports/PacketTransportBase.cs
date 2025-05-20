@@ -60,9 +60,17 @@ public abstract class PacketTransportBase : IPacketTransport
         }
     }
 
+    private async ValueTask SendPacketQueuedPassthroughAsync(IpPacket ipPacket)
+    {
+        _singlePacketBuffer[0] = ipPacket;
+        await SendPacketsInternalAsync(_singlePacketBuffer);
+    }
+
     public ValueTask SendPacketQueuedAsync(IpPacket ipPacket)
     {
-        return _sendChannel.Writer.WriteAsync(ipPacket);
+        return _passthrough ? 
+            SendPacketQueuedPassthroughAsync(ipPacket) : 
+            _sendChannel.Writer.WriteAsync(ipPacket);
     }
 
     private readonly IpPacket[] _singlePacketBuffer = new IpPacket[1];
@@ -99,7 +107,6 @@ public abstract class PacketTransportBase : IPacketTransport
     private bool SendPacketQueuedBlocking(IpPacket ipPacket)
     {
         try {
-            //todo: use mutex
             _sendChannel.Writer.WriteAsync(ipPacket).AsTask().Wait();
             return true;
         }

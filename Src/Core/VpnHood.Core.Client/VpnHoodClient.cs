@@ -390,7 +390,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         // tcp already check for InInRange and IpV6 and Proxy
         if (ipPacket.Protocol == IpProtocol.Tcp) {
             if (_isTunProviderSupported && UseTcpOverTun && IsInIpRange(ipPacket.DestinationAddress))
-                Tunnel.SendPacketQueued(ipPacket);
+                Tunnel.SendPacketQueuedAsync(ipPacket).VhBlock();
             else
                 _clientHost.ProcessOutgoingPacket(ipPacket);
             return;
@@ -410,14 +410,14 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         // ICMP packet must go through tunnel because PingProxy does not support protect socket
         if (ipPacket.IsIcmpEcho()) {
             // ICMP can not be proxied so we don't need to check InRange
-            Tunnel.SendPacketQueued(ipPacket);
+            Tunnel.SendPacketQueuedAsync(ipPacket).VhBlock();
             return;
         }
 
         // Udp
         if (ipPacket.Protocol == IpProtocol.Udp &&
             ShouldTunnelUdpPacket(ipPacket.ExtractUdp())) {
-            Tunnel.SendPacketQueued(ipPacket);
+            Tunnel.SendPacketQueuedAsync(ipPacket).VhBlock();
             return;
         }
 

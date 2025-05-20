@@ -152,6 +152,12 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return Task.CompletedTask;
     }
 
+    protected override bool ReadPacket(byte[] buffer)
+    {
+        throw new InvalidOperationException(
+            "ReadPacket with buffer should not be called when ReadPacket has the override.");
+    }
+
     protected override IpPacket? ReadPacket(int mtu)
     {
         if (_device == null)
@@ -329,11 +335,12 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     protected override void Dispose(bool disposing)
     {
-        base.Dispose(disposing);
-
         // The adapter is an unmanaged resource; it must be closed if it is open
         if (_device != null)
             AdapterRemove();
+
+        base.Dispose(disposing);
+
     }
 
     ~WinDivertVpnAdapter()

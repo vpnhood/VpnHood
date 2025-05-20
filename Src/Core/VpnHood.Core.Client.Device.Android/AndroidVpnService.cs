@@ -64,7 +64,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
             AdapterName = adapterSettings.AdapterName, 
             Blocking = adapterSettings.Blocking,
             AutoDisposePackets = adapterSettings.AutoDisposePackets,
-            MaxAutoRestartCount = adapterSettings.MaxAutoRestartCount,
+            AutoRestart = adapterSettings.AutoRestart,
             MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
             QueueCapacity = adapterSettings.QueueCapacity,
             AutoMetric = adapterSettings.AutoMetric

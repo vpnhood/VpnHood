@@ -226,7 +226,6 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     {
         var packetBytes = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var bufferLength);
 
-
         // Write the packet to the TUN device
         var offset = 0;
         while (offset < bufferLength) {
@@ -257,33 +256,21 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         return true;
     }
 
-    protected override IpPacket? ReadPacket(int mtu)
+    protected override bool ReadPacket(byte[] buffer)
     {
-        while (IsStarted) {
-            var bytesRead = LinuxAPI.read(_tunAdapterFd, _readBuffer, _readBuffer.Length);
-            if (bytesRead > 0) {
-                return PacketBuilder.Parse(_readBuffer.AsSpan(0, bytesRead));
-            }
+        var bytesRead = LinuxAPI.read(_tunAdapterFd, buffer, buffer.Length);
+        if (bytesRead > 0)
+            return true;
 
-            // check for errors
-            var errorCode = Marshal.GetLastWin32Error();
-            switch (errorCode) {
-                // No data available, wait
-                case OsConstants.Eagain:
-                    return null;
-
-                // Interrupted, retry
-                case OsConstants.Eintr: {
-                        VhLogger.Instance.LogTrace("Read from TUN was interrupted. Retrying...");
-                        continue;
-                    }
-
-                default:
-                    throw new PInvokeException("Could not read from TUN.", errorCode);
-            }
-        }
-
-        return null;
+        // check for errors
+        var errorCode = Marshal.GetLastWin32Error();
+        return errorCode switch {
+            // No data available, wait
+            OsConstants.Eagain => false,
+            // Interrupted, retry
+            OsConstants.Eintr => throw new IOException("Read from TUN was interrupted. Retrying..."),
+            _ => throw new PInvokeException("Could not read from TUN.", errorCode)
+        };
     }
 
     private static int OpenTunAdapter(string adapterName, bool blockingMode)

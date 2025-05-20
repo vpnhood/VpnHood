@@ -92,9 +92,9 @@ public class NullVpnAdapter(bool autoDisposePackets, bool blocking) :
         _readBlockEvent?.Dispose();
     }
 
-    protected override IpPacket? ReadPacket(int mtu)
+    protected override bool ReadPacket(byte[] buffer)
     {
-        return null;
+        return false; // there is no packet
     }
 
     protected override bool WritePacket(IpPacket ipPacket)

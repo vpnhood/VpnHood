@@ -34,7 +34,7 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
         IVpnAdapter vpnAdapter = debugData1?.Contains("/wintun", StringComparison.OrdinalIgnoreCase) is true
             ? new WinTunVpnAdapter(new WinVpnAdapterSettings {
                 AdapterName = adapterSettings.AdapterName,
-                MaxAutoRestartCount = adapterSettings.MaxAutoRestartCount,
+                AutoRestart = adapterSettings.AutoRestart,
                 MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
                 Blocking = adapterSettings.Blocking,
                 AutoDisposePackets = adapterSettings.AutoDisposePackets,
@@ -43,7 +43,7 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
             })
             : new WinDivertVpnAdapter(new WinDivertVpnAdapterSettings {
                 AdapterName = adapterSettings.AdapterName,
-                MaxAutoRestartCount = adapterSettings.MaxAutoRestartCount,
+                AutoRestart = adapterSettings.AutoRestart,
                 MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
                 Blocking = adapterSettings.Blocking,
                 AutoDisposePackets = adapterSettings.AutoDisposePackets,

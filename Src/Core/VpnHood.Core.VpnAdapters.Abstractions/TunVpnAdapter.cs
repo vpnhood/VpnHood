@@ -1,8 +1,9 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Logging;
+using System.Buffers;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Logging;
@@ -14,11 +15,14 @@ namespace VpnHood.Core.VpnAdapters.Abstractions;
 public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 {
     private readonly int _maxPacketSendDelayMs;
+    private const int MaxIoErrorCount = 10;
+    private readonly bool _autoRestart;
     private int _mtu = 0xFFFF;
-    private readonly int _maxAutoRestartCount;
-    private int _autoRestartCount;
+    private int _ioErrorCount;
     private readonly bool _autoMetric;
     private static readonly IpNetwork[] WebDeadNetworks = [IpNetwork.Parse("203.0.113.1/24"), IpNetwork.Parse("2001:4860:ffff::1234/48")];
+    private readonly object _stopLock = new();
+    private bool _isRestarting;
 
     protected bool UseNat { get; private set; }
     public abstract bool IsAppFilterSupported { get; }
@@ -41,7 +45,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     protected abstract void AdapterClose();
     protected abstract void WaitForTunWrite();
     protected abstract void WaitForTunRead();
-    protected abstract IpPacket? ReadPacket(int mtu);
+    /// <summary>
+    /// Return false if there is no packet
+    /// </summary>
+    /// <returns></returns>
+    protected abstract bool ReadPacket(byte[] buffer);
     protected abstract bool WritePacket(IpPacket ipPacket);
 
     public event EventHandler? Disposed;
@@ -55,13 +63,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     public bool IsIpVersionSupported(IpVersion ipVersion) => GetPrimaryAdapterAddress(ipVersion) != null;
     public bool IsStarted { get; private set; }
 
-    private readonly object _stopLock = new();
-
     protected TunVpnAdapter(VpnAdapterSettings adapterSettings)
         : base(adapterSettings)
     {
         _maxPacketSendDelayMs = (int)adapterSettings.MaxPacketSendDelay.TotalMilliseconds;
-        _maxAutoRestartCount = adapterSettings.MaxAutoRestartCount;
+        _autoRestart = adapterSettings.AutoRestart;
         _autoMetric = adapterSettings.AutoMetric;
         AdapterName = adapterSettings.AdapterName;
         NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
@@ -377,12 +383,21 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
         try {
             SendPacketInternal(ipPacket);
-            _autoRestartCount = 0;
+            _ioErrorCount = 0;
         }
-        catch (Exception) {
-            if (_autoRestartCount < _maxAutoRestartCount)
-                RestartAdapter();
+        catch (Exception) when (!_isRestarting) {
+            _ioErrorCount++;
+            if (_ioErrorCount < MaxIoErrorCount || _isRestarting)
+                throw;
 
+            // restart if the maximum I/O error count is exceeded
+            if (_autoRestart) {
+                _ = RestartAdapter();
+                throw;
+            }
+
+            // stop the adapter if not restarting
+            Stop();
             throw;
         }
     }
@@ -419,35 +434,38 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         // Read packets from TUN adapter
         while (IsStarted) {
             try {
-                // read packet from the adapter until the list is full
-                while (IsStarted) {
-                    var packet = ReadPacket(_mtu);
-                    if (packet == null)
-                        break;
+                // read next packet
+                var packet = ReadPacket(_mtu);
 
-                    // no error so reset the auto restart count
-                    _autoRestartCount = 0;
+                // reset error counters if not exception
+                _ioErrorCount = 0;
 
-                    // process the packet
-                    OnPacketReceived(packet);
+                // no packet available, wait before retrying
+                if (packet == null) {
+                    WaitForTunRead();
+                    continue;
                 }
 
-                // break if the adapter is stopped or disposed
-                if (!IsStarted)
-                    break;
-
-                // Wait for the next packet
-                WaitForTunRead();
+                // process the packet
+                OnPacketReceived(packet);
             }
             catch (Exception) when (!IsStarted || IsDisposed) {
                 break; // normal stop
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Error in reading packets from TUN adapter.");
-                if (_autoRestartCount >= _maxAutoRestartCount)
-                    break;
+                _ioErrorCount++;
+                if (_ioErrorCount < MaxIoErrorCount || _isRestarting)
+                    continue;
 
-                RestartAdapter();
+                // restart if the maximum I/O error count is exceeded
+                if (_autoRestart) {
+                    _ = RestartAdapter();
+                    continue;
+                }
+
+                // stop the adapter if not restarting
+                break;
             }
         }
 
@@ -456,9 +474,37 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         Stop();
     }
 
-    private void RestartAdapter()
+    protected virtual IpPacket? ReadPacket(int mtu)
     {
-        VhLogger.Instance.LogWarning("Restarting the adapter. RestartCount: {RestartCount}", _autoRestartCount + 1);
+        // Allocate a memory block for the packet
+        var memoryOwner = MemoryPool<byte>.Shared.Rent(mtu);
+
+        // Get the underlying array from the memory owner
+        if (!MemoryMarshal.TryGetArray<byte>(memoryOwner.Memory, out var segment))
+            throw new InvalidOperationException("Could not get array from memory owner.");
+
+        try {
+            if (segment.Array == null)
+                throw new InvalidOperationException("Memory owner's segment returned a null array.");
+
+            // read packet
+            var success = ReadPacket(segment.Array);
+            if (success)
+                return PacketBuilder.Attach(memoryOwner);
+
+            // no more packet
+            memoryOwner.Dispose();
+            return null;
+        }
+        catch {
+            memoryOwner.Dispose();
+            throw;
+        }
+    }
+
+    private async Task RestartAdapter()
+    {
+        VhLogger.Instance.LogWarning("Restarting the adapter.");
 
         if (IsDisposed)
             throw new ObjectDisposedException(GetType().Name);
@@ -466,9 +512,18 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         if (!IsStarted)
             throw new InvalidOperationException("Cannot restart the adapter when it is stopped.");
 
-        _autoRestartCount++;
-        AdapterClose();
-        AdapterOpen(CancellationToken.None);
+        _isRestarting = false;
+        try {
+            AdapterClose();
+            await AdapterOpen(CancellationToken.None);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Failed to restart the adapter.");
+            throw;
+        }
+        finally {
+            _isRestarting = false;
+        }
     }
 
     protected override void Dispose(bool disposing)

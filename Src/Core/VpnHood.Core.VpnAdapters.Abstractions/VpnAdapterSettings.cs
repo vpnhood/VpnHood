@@ -6,7 +6,7 @@ public class VpnAdapterSettings : PacketTransportOptions
 {
     public required string AdapterName { get; init; }
     public TimeSpan MaxPacketSendDelay { get; init; } = TimeSpan.FromMilliseconds(500);
-    public int MaxAutoRestartCount { get; init; }
+    public bool AutoRestart { get; init; }
     
     /// <summary>
     /// Automatically adjusts route metrics by splitting routes when all routes are included.

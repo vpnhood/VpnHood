@@ -3,7 +3,6 @@ using Android.OS;
 using Android.Systems;
 using Java.IO;
 using Microsoft.Extensions.Logging;
-using System.Buffers;
 using System.Net;
 using System.Runtime.InteropServices;
 using VpnHood.Core.Packets;
@@ -226,40 +225,20 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         return true;
     }
 
-    protected override IpPacket? ReadPacket(int mtu)
+    protected override bool ReadPacket(byte[] buffer)
     {
         if (_inStream == null)
             throw new InvalidOperationException("Adapter is not open.");
 
-        // Allocate a memory block for the packet
-        var memoryOwner = MemoryPool<byte>.Shared.Rent(mtu);
+        // Read the packet from the input stream into the array
+        var bytesRead = _inStream.Read(buffer);
 
-        try {
-            // Get the underlying array from the memory owner
-            if (!MemoryMarshal.TryGetArray<byte>(memoryOwner.Memory, out var segment))
-                throw new InvalidOperationException("Could not get array from memory owner.");
-
-            // Read the packet from the input stream into the array
-            var bytesRead = _inStream.Read(segment.Array);
-
-            // Check the number of bytes read
-            switch (bytesRead) {
-                // no more packet
-                case 0:
-                    memoryOwner.Dispose();
-                    return null;
-                // Parse the packet and add to the list
-                case > 0:
-                    return PacketBuilder.Attach(memoryOwner);
-                // error
-                case < 0:
-                    throw new System.IO.IOException("Could not read from TUN.");
-            }
-        }
-        catch {
-            memoryOwner.Dispose();
-            throw;
-        }
+        // Check the number of bytes read
+        return bytesRead switch {
+            0 => false, // no more packet
+            > 0 => true, // Successfully read a packet
+            < 0 => throw new System.IO.IOException("Could not read from TUN.")  // error
+        };
     }
 
     protected override void Dispose(bool disposing)

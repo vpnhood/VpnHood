@@ -1,4 +1,4 @@
 ﻿namespace VpnHood.Core.PacketTransports;
 
-public abstract class PacketTransport(PacketTransportOptions options) : 
+public abstract class Packet(PacketTransportOptions options) : 
     PacketTransportBase(options, false, false);

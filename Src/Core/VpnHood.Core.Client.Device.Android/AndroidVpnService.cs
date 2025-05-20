@@ -18,7 +18,7 @@ namespace VpnHood.Core.Client.Device.Droid;
     Permission = Manifest.Permission.BindVpnService,
     Exported = false,
 // #if !DEBUG 
-    Process = ":vpnhood_process",
+    //Process = ":vpnhood_process",
 //#endif
     ForegroundServiceType = ForegroundService.TypeSystemExempted)]
 [IntentFilter(["android.net.VpnService"])]

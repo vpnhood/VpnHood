@@ -11,7 +11,7 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Test.Providers;
 
-public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProxyCallbacks
+public class TestUdpServerVpnAdapter : Packet, IVpnAdapter, IPacketProxyCallbacks
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly UdpProxyPool _proxyPool;

@@ -1,0 +1,9 @@
+﻿<linker>
+	<assembly fullname="System.Net.Primitives">
+		<type fullname="System.Net.IPEndPoint" preserve="all" />
+	</assembly>
+	<assembly fullname="Your.Assembly.Name">
+		<type fullname="YourNamespace.IPEndPointConverter" preserve="all" />
+		<type fullname="YourNamespace.IPEndPointArrayConverter" preserve="all" />
+	</assembly>
+</linker>

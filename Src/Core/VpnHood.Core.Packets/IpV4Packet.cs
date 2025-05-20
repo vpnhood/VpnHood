@@ -164,7 +164,7 @@ public class IpV4Packet : IpPacket
         var originalChecksum = HeaderChecksum;
         Span[10] = 0;
         Span[11] = 0;
-        var calculated = ComputeChecksum(Span[..Header.Length]);
+        var calculated = PacketUtil.OnesComplementSum(Span[..Header.Length]);
         Span[10] = (byte)(originalChecksum >> 8);
         Span[11] = (byte)(originalChecksum & 0xFF);
         return originalChecksum == calculated;
@@ -174,24 +174,8 @@ public class IpV4Packet : IpPacket
     {
         Span[10] = 0;
         Span[11] = 0;
-        HeaderChecksum = ComputeChecksum(Span[..Header.Length]);
+        HeaderChecksum = PacketUtil.OnesComplementSum(Span[..Header.Length]);
     }
-
-    private static ushort ComputeChecksum(ReadOnlySpan<byte> data)
-    {
-        // checksum calculation is done on 16-bit words
-        uint sum = 0;
-        for (var i = 0; i < data.Length; i += 2) {
-            var word = (ushort)((data[i] << 8) + (i + 1 < data.Length ? data[i + 1] : 0));
-            sum += word;
-        }
-
-        while (sum >> 16 != 0)
-            sum = (sum & 0xFFFF) + (sum >> 16);
-
-        return (ushort)~sum;
-    }
-
     protected override void Dispose(bool disposing)
     {
         if (_disposed)

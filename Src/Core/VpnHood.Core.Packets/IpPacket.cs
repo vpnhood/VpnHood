@@ -10,6 +10,7 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     protected IPAddress? DestinationAddressField;
     private IPayloadPacket? _payloadPacket;
     public Memory<byte> Buffer => _disposed ? throw new ObjectDisposedException(nameof(IpPacket)) : buffer;
+
     public int PacketLength => buffer.Length;
 
     public IPayloadPacket? PayloadPacket {

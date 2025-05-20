@@ -11,7 +11,7 @@ namespace VpnHood.Core.Tunneling.Channels;
 
 public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int protocolVersion,
     bool autoDisposePackets)
-    : PacketTransport(new PacketTransportOptions {
+    : Packet(new PacketTransportOptions {
         AutoDisposePackets = autoDisposePackets,
         Blocking = false,
     }), IPacketChannel

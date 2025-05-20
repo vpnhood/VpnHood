@@ -221,8 +221,8 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         if (_outStream == null)
             throw new InvalidOperationException("Adapter is not open.");
 
-        ipPacket.Buffer.Span.CopyTo(_writeBuffer);
-        _outStream.Write(_writeBuffer, 0, ipPacket.Buffer.Length);
+        var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
+        _outStream.Write(buffer, offset, length);
         return true;
     }
 

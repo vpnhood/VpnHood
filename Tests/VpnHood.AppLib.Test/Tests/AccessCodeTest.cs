@@ -1,9 +1,14 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.Buffers;
+using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;
@@ -14,6 +19,16 @@ public class AccessCodeTest : TestAppBase
     [TestMethod]
     public async Task AaFoo()
     {
+        var packet = PacketBuilder.BuildTcp(IPEndPoint.Parse("10.11.12.13:53"), IPEndPoint.Parse("10.11.12.13:52"),
+            null, new byte[1400]);
+
+
+        if (MemoryMarshal.TryGetArray<byte>(packet.Buffer, out var segment)) {
+            var buffer = segment.Array!;
+            int offset = segment.Offset;
+            int length = segment.Count;
+        }
+
         await Task.CompletedTask;
     }
 

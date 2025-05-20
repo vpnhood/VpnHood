@@ -10,7 +10,7 @@ using VpnHood.Core.Tunneling.DatagramMessaging;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class StreamPacketChannel : PacketTransport, IPacketChannel, IJob
+public class StreamPacketChannel : Packet, IPacketChannel, IJob
 {
     private readonly Memory<byte> _buffer = new byte[0xFFFF * 4];
     private readonly IClientStream _clientStream;

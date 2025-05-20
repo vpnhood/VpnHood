@@ -89,6 +89,7 @@ public static class PacketBuilder
         ipPacket.TimeToLive = 64;
         return ipPacket;
     }
+
     public static IpPacket BuildUdp(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
         ReadOnlySpan<byte> payload)
     {

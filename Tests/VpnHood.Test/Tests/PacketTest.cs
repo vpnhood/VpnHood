@@ -9,7 +9,7 @@ using VpnHood.Test.Packets;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class PacketTransportTest : TestBase
+public class PacketTest : TestBase
 {
     private static IPAddress GetRandomIp(IpVersion ipVersion)
     {
@@ -88,6 +88,8 @@ public class PacketTransportTest : TestBase
         Assert.AreEqual(ecn, ipPacket.Ecn);
         Assert.AreEqual(0, ipPacket.Payload.Length);
         CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
+        ipPacket.UpdateAllChecksums();
+        Assert.AreEqual(ipPacketNet.Checksum, ipPacket.HeaderChecksum);
 
         VhLogger.Instance.LogDebug("Assert changes");
         sourceIp = IPAddress.Parse("21.22.23.24");
@@ -198,8 +200,10 @@ public class PacketTransportTest : TestBase
 
         // check with PacketDotNet
         var ipPacketNet = NetPacketBuilder.Parse(ipPacket.Buffer.ToArray());
-        ipPacketNet.UpdateAllChecksums();
         var udpPacketNet = ipPacketNet.ExtractUdp();
+        Assert.AreEqual(udpPacketNet.Checksum, udpPacket.Checksum);
+
+        ipPacketNet.UpdateAllChecksums();
         Assert.AreEqual(udpPacketNet.Length, udpPacket.Buffer.Length);
         Assert.AreEqual(udpPacketNet.SourcePort, udpPacket.SourcePort);
         Assert.AreEqual(udpPacketNet.DestinationPort, udpPacket.DestinationPort);
@@ -244,8 +248,10 @@ public class PacketTransportTest : TestBase
 
         // check with PacketDotNet
         var ipPacketNet = NetPacketBuilder.Parse(ipPacket.Buffer.ToArray());
-        ipPacketNet.UpdateAllChecksums();
         var tcpPacketNet = ipPacketNet.ExtractTcp();
+        Assert.AreEqual(tcpPacketNet.Checksum, tcpPacket.Checksum);
+
+        ipPacketNet.UpdateAllChecksums();
         Assert.AreEqual(tcpPacketNet.SourcePort, tcpPacket.SourcePort);
         Assert.AreEqual(tcpPacketNet.DestinationPort, tcpPacket.DestinationPort);
         Assert.AreEqual(tcpPacketNet.Checksum, tcpPacket.Checksum);
@@ -299,8 +305,10 @@ public class PacketTransportTest : TestBase
 
         // check with PacketDotNet
         var ipPacketNet = NetPacketBuilder.Parse(ipPacket.Buffer.ToArray());
-        ipPacketNet.UpdateAllChecksums();
         var icmpPacketNet = ipPacketNet.ExtractIcmpV4();
+        Assert.AreEqual(icmpPacketNet.Checksum, icmpPacket.Checksum);
+
+        ipPacketNet.UpdateAllChecksums();
         Assert.AreEqual((byte)((ushort)icmpPacketNet.TypeCode >> 8), (byte)icmpPacket.Type);
         Assert.AreEqual((byte)((ushort)icmpPacketNet.TypeCode & 0xFF), icmpPacket.Code);
         Assert.AreEqual(icmpPacketNet.Id, icmpPacket.Identifier);
@@ -337,8 +345,10 @@ public class PacketTransportTest : TestBase
 
         // check with PacketDotNet
         var ipPacketNet = NetPacketBuilder.Parse(ipPacket.Buffer.ToArray());
-        ipPacketNet.UpdateAllChecksums();
         var icmpPacketNet = ipPacketNet.ExtractIcmpV6();
+        Assert.AreEqual(icmpPacketNet.Checksum, icmpPacket.Checksum);
+
+        ipPacketNet.UpdateAllChecksums();
         Assert.AreEqual((int)icmpPacketNet.Type, (int)icmpPacket.Type);
         Assert.AreEqual(icmpPacketNet.Code, icmpPacket.Code);
         Assert.AreEqual(icmpPacketNet.Checksum, icmpPacket.Checksum);

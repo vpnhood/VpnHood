@@ -1,4 +1,6 @@
 ﻿using System.Net;
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Packets;
@@ -89,6 +91,7 @@ public static class IpPacketExtensions
                ipPacket.DestinationAddress.IsMulticast();
 
     }
+
     public static IPEndPointPair GetEndPoints(this IpPacket ipPacket)
     {
         if (ipPacket.Protocol == IpProtocol.Tcp) {
@@ -166,5 +169,20 @@ public static class IpPacketExtensions
             { Version: IpVersion.IPv6, Protocol: IpProtocol.IcmpV6 } => ipPacket.ExtractIcmpV6().IsEcho,
             _ => false
         };
+    }
+
+    public static byte[] GetUnderlyingBufferUnsafe(this IpPacket ipPacket, 
+        byte[] backupBuffer, out int offset, out int length)
+    {
+        if (MemoryMarshal.TryGetArray<byte>(ipPacket.Buffer, out var segment)) {
+            offset = segment.Offset;
+            length = segment.Count;
+            return segment.Array!;
+        }
+
+        ipPacket.Buffer.CopyTo(backupBuffer);
+        offset = segment.Offset;
+        length = segment.Count;
+        return backupBuffer;
     }
 }

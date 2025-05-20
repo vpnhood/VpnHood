@@ -99,7 +99,8 @@ public abstract class PacketTransportBase : IPacketTransport
     private bool SendPacketQueuedBlocking(IpPacket ipPacket)
     {
         try {
-            _sendChannel.Writer.WriteAsync(ipPacket).GetAwaiter().GetResult();
+            //todo: use mutex
+            _sendChannel.Writer.WriteAsync(ipPacket).AsTask().Wait();
             return true;
         }
         catch (Exception ex) {

@@ -171,7 +171,19 @@ public static class IpPacketExtensions
         };
     }
 
-    public static byte[] GetUnderlyingBufferUnsafe(this IpPacket ipPacket, 
+    public static byte[] GetUnderlyingBufferUnsafe(this IpPacket ipPacket, byte[] backupBuffer, out int length)
+    {
+        if (MemoryMarshal.TryGetArray<byte>(ipPacket.Buffer, out var segment) && segment.Offset == 0) {
+            length = segment.Count;
+            return segment.Array!;
+        }
+
+        ipPacket.Buffer.CopyTo(backupBuffer);
+        length = ipPacket.Buffer.Length;
+        return backupBuffer;
+    }
+
+    public static byte[] GetUnderlyingBufferUnsafe(this IpPacket ipPacket,
         byte[] backupBuffer, out int offset, out int length)
     {
         if (MemoryMarshal.TryGetArray<byte>(ipPacket.Buffer, out var segment)) {
@@ -181,8 +193,8 @@ public static class IpPacketExtensions
         }
 
         ipPacket.Buffer.CopyTo(backupBuffer);
-        offset = segment.Offset;
-        length = segment.Count;
+        offset = 0;
+        length = ipPacket.Buffer.Length;
         return backupBuffer;
     }
 }

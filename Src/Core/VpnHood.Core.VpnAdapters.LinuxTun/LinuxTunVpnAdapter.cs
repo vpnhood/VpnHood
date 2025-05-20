@@ -224,15 +224,16 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
     protected override bool WritePacket(IpPacket ipPacket)
     {
-        var packetBytes = ipPacket.Buffer;
+        var packetBytes = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var bufferLength);
+
 
         // Write the packet to the TUN device
         var offset = 0;
-        while (offset < packetBytes.Length) {
-            packetBytes.CopyTo(_writeBuffer);
-            var bytesWritten = LinuxAPI.write(_tunAdapterFd, _writeBuffer, packetBytes.Length - offset);
+        while (offset < bufferLength) {
+            var bytesWritten = LinuxAPI.write(_tunAdapterFd, packetBytes, bufferLength - offset);
             if (bytesWritten > 0) {
-                offset += bytesWritten; // Advance buffer
+                offset += bytesWritten; // Advance offset
+                packetBytes = packetBytes[bytesWritten..]; // Advance buffer (rare case)
                 continue;
             }
 

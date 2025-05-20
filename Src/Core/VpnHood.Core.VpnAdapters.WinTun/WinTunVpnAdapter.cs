@@ -308,8 +308,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
 
         // Copy the raw packet data into WinTun memory
-        ipPacket.Buffer.Span.CopyTo(_writeBuffer);
-        Marshal.Copy(_writeBuffer, 0, packetMemory, packetBytes.Length);
+        var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
+        Marshal.Copy(buffer, offset, packetMemory, length);
 
         // Send the packet through WinTun
         WinTunApi.WintunSendPacket(_tunSession, packetMemory); // thread-safe

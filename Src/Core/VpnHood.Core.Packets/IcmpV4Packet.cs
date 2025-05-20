@@ -90,12 +90,7 @@ public class IcmpV4Packet : IChecksumPayloadPacket
             span[2] = 0;
             span[3] = 0;
 
-            var sum = ChecksumUtils.ComputeSumWords(span);
-
-            while (sum >> 16 != 0)
-                sum = (sum & 0xFFFF) + (sum >> 16);
-
-            return (ushort)~sum;
+            return ChecksumUtils.OnesComplementSum(span);
         }
         finally {
             Checksum = orgChecksum;

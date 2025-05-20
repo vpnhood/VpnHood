@@ -26,7 +26,7 @@ public static class ChecksumUtils
         return checksum;
     }
 
-    public static uint ComputeSumWords(ReadOnlySpan<byte> data)
+    private static uint ComputeSumWords(ReadOnlySpan<byte> data)
     {
         uint sum = 0;
         for (var i = 0; i < data.Length; i += 2) {

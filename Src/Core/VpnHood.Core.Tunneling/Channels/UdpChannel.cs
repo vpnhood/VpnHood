@@ -9,20 +9,22 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int protocolVersion,
-    bool autoDisposePackets)
+public class UdpChannel(UdpChannelOptions options)
     : PacketTransport(new PacketTransportOptions {
-        AutoDisposePackets = autoDisposePackets,
-        Blocking = false,
+        AutoDisposePackets = options.AutoDisposePackets,
+        Blocking = options.Blocking,
     }), IPacketChannel
 {
     private IPEndPoint? _lastRemoteEp;
     private readonly Memory<byte> _buffer = new byte[TunnelDefaults.Mtu + UdpChannelTransmitter.HeaderLength];
     private UdpChannelTransmitter? _udpChannelTransmitter;
-    private readonly BufferCryptor _sessionCryptorWriter = new(sessionKey);
-    private readonly BufferCryptor _sessionCryptorReader = new(sessionKey);
-    private readonly long _cryptorPosBase = isServer ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
+    private readonly BufferCryptor _sessionCryptorWriter = new(options.SessionKey);
+    private readonly BufferCryptor _sessionCryptorReader = new(options.SessionKey);
+    private readonly long _cryptorPosBase = options.LeaveTransmitterOpen ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
     private bool _disposed;
+    private readonly ulong _sessionId = options.SessionId;
+    private readonly int _protocolVersion = options.ProtocolVersion;
+    private readonly bool _leaveTransmitterOpen = options.LeaveTransmitterOpen;
 
     public string ChannelId { get; } = Guid.NewGuid().ToString();
     public bool IsStream => false;
@@ -57,7 +59,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
 
         // send buffer
         await _udpChannelTransmitter
-            .SendAsync(_lastRemoteEp, sessionId, sessionCryptoPosition, buffer, protocolVersion)
+            .SendAsync(_lastRemoteEp, _sessionId, sessionCryptoPosition, buffer, _protocolVersion)
             .VhConfigureAwait();
     }
 
@@ -148,7 +150,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
         if (_disposed) return default;
         _disposed = true;
         Connected = false;
-        if (!isServer)
+        if (!_leaveTransmitterOpen)
             _udpChannelTransmitter?.Dispose();
 
         return default;

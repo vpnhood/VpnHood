@@ -432,7 +432,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     protected virtual void StartReadingPackets()
     {
         // Read packets from TUN adapter
-        while (IsStarted) {
+        while (IsStarted && !IsDisposed) {
             try {
                 // read next packet
                 var packet = ReadPacket(_mtu);

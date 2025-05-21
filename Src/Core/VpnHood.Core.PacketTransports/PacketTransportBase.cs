@@ -107,7 +107,7 @@ public abstract class PacketTransportBase : IPacketTransport
     private bool SendPacketQueuedBlocking(IpPacket ipPacket)
     {
         try {
-            _sendChannel.Writer.WriteAsync(ipPacket).AsTask().Wait();
+            _sendChannel.Writer.WriteAsync(ipPacket).VhBlock();
             return true;
         }
         catch (Exception ex) {
@@ -202,12 +202,12 @@ public abstract class PacketTransportBase : IPacketTransport
     protected virtual void Dispose(bool disposing)
     {
         if (IsDisposed) return;
-        IsDisposed = true;
 
         // Dispose managed resources
         if (disposing) {
             PacketReceived = null;
         }
 
+        IsDisposed = true;
     }
 }

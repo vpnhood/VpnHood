@@ -5,7 +5,7 @@ namespace VpnHood.Test.Device;
 public class TestVpnAdapter(TestVpnAdapterOptions vpnAdapterOptions)
     : WinDivertVpnAdapter(new WinDivertVpnAdapterSettings {
         AdapterName = "VpnHoodTestAdapter",
-        Blocking = true, // lets simulate client
+        Blocking = false,
         AutoDisposePackets = true,
         SimulateDns = vpnAdapterOptions.SimulateDns
     })

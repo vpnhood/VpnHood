@@ -47,7 +47,17 @@ public class TunnelTest : TestBase
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
         var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint
                              ?? throw new Exception("Server connection is not established");
-        var serverUdpChannel = new UdpChannel(1, sessionKey, true, 4, autoDisposePackets: true);
+
+        var serverUdpChannel = new UdpChannel(
+            new UdpChannelOptions {
+                SessionId = 1,
+                SessionKey = sessionKey,
+                AutoDisposePackets = true,
+                Blocking = false,
+                ProtocolVersion = 4,
+                LeaveTransmitterOpen = true
+            });
+
         using var serverUdpChannelTransmitter =
             new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
         serverUdpChannel.Start();
@@ -60,7 +70,15 @@ public class TunnelTest : TestBase
 
         // Create client
         var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var clientUdpChannel = new UdpChannel(1, sessionKey, false, 4, autoDisposePackets: true);
+        var clientUdpChannel = new UdpChannel(new UdpChannelOptions {
+            SessionId = 1,
+            SessionKey = sessionKey,
+            AutoDisposePackets = true,
+            Blocking = false,
+            ProtocolVersion = 4,
+            LeaveTransmitterOpen = false
+        });
+
         clientUdpChannel.SetRemote(new ClientUdpChannelTransmitter(clientUdpChannel, clientUdpClient, serverKey),
             serverEndPoint);
         clientUdpChannel.Start();
@@ -99,7 +117,16 @@ public class TunnelTest : TestBase
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
         var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint
                              ?? throw new Exception("Server connection is not established");
-        var serverUdpChannel = new UdpChannel(1, sessionKey, true, 4, autoDisposePackets: true);
+        var serverUdpChannel = new UdpChannel(
+            new UdpChannelOptions {
+                SessionId = 1,
+                SessionKey = sessionKey,
+                AutoDisposePackets = true,
+                Blocking = false,
+                ProtocolVersion = 4,
+                LeaveTransmitterOpen = true
+            });
+
         using var serverUdpChannelTransmitter =
             new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
 
@@ -113,7 +140,16 @@ public class TunnelTest : TestBase
 
         // Create client
         var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var clientUdpChannel = new UdpChannel(1, sessionKey, false, 4, autoDisposePackets: true);
+        var clientUdpChannel = new UdpChannel(
+            new UdpChannelOptions {
+                SessionId = 1,
+                SessionKey = sessionKey,
+                AutoDisposePackets = true,
+                Blocking = false,
+                ProtocolVersion = 4,
+                LeaveTransmitterOpen = false
+            });
+
         clientUdpChannel.SetRemote(new ClientUdpChannelTransmitter(clientUdpChannel, clientUdpClient, serverKey),
             serverEndPoint);
 

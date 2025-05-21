@@ -333,16 +333,6 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         LoadLibrary(Path.Combine(destinationFolder, "WinDivert.dll"));
     }
 
-    protected override void Dispose(bool disposing)
-    {
-        // The adapter is an unmanaged resource; it must be closed if it is open
-        if (_device != null)
-            AdapterRemove();
-
-        base.Dispose(disposing);
-
-    }
-
     ~WinDivertVpnAdapter()
     {
         Dispose(false);

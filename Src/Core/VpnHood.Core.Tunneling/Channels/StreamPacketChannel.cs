@@ -27,17 +27,17 @@ public class StreamPacketChannel : PacketTransport, IPacketChannel, IJob
 
     public bool IsStream => true;
 
-    public StreamPacketChannel(IClientStream clientStream, string channelId, 
-        bool autoDisposePackets = false, TimeSpan? lifespan = null)
+    public StreamPacketChannel(StreamPacketChannelOptions options)
         : base(new PacketTransportOptions {
-                AutoDisposePackets = autoDisposePackets,
-                Blocking = false})
+            AutoDisposePackets = options.AutoDisposePackets,
+            Blocking = options.Blocking
+        })
     {
-        lifespan ??= Timeout.InfiniteTimeSpan;
-        ChannelId = channelId;
-        _clientStream = clientStream ?? throw new ArgumentNullException(nameof(clientStream));
-        if (!VhUtils.IsInfinite(lifespan.Value)) {
-            _lifeTime = FastDateTime.Now + lifespan.Value;
+        var lifespan = options.Lifespan ?? Timeout.InfiniteTimeSpan;
+        ChannelId = options.ChannelId;
+        _clientStream = options.ClientStream;
+        if (!VhUtils.IsInfinite(lifespan)) {
+            _lifeTime = FastDateTime.Now + lifespan;
             JobRunner.Default.Add(this);
         }
     }
@@ -88,21 +88,21 @@ public class StreamPacketChannel : PacketTransport, IPacketChannel, IJob
             var ipPacket = ipPackets[i];
             var packetBytes = ipPacket.Buffer;
 
-            // flush buffer if this packet does not fit
+            // flush current buffer if this packet does not fit
             if (bufferIndex > 0 && bufferIndex + packetBytes.Length > buffer.Length) {
                 await _clientStream.Stream.WriteAsync(buffer[..bufferIndex], cancellationToken).VhConfigureAwait();
                 bufferIndex = 0;
             }
 
-            // Write the packet directly if it does fit in the buffer
-            if (packetBytes.Length > buffer.Length) {
+            // Write the packet directly if it does not fit in the buffer or there is only one packet
+            if (packetBytes.Length > buffer.Length || ipPackets.Count == 1) {
                 // send packet
                 await _clientStream.Stream.WriteAsync(packetBytes, cancellationToken).VhConfigureAwait();
+                continue;
             }
-            else {
-                packetBytes.CopyTo(buffer[bufferIndex..]);
-                bufferIndex += packetBytes.Length;
-            }
+
+            packetBytes.Span.CopyTo(buffer.Span[bufferIndex..]);
+            bufferIndex += packetBytes.Length;
         }
 
         // send remaining buffer

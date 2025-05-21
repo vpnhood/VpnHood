@@ -135,7 +135,7 @@ public abstract class UdpChannelTransmitter : IDisposable
                 bufferIndex += 8;
 
                 OnReceiveData(sessionId, udpResult.RemoteEndPoint, channelCryptorPosition, 
-                    udpResult.Buffer.AsSpan(bufferIndex));
+                    udpResult.Buffer.AsMemory(bufferIndex));
             }
             catch (Exception ex) {
                 // finish if disposed
@@ -161,7 +161,7 @@ public abstract class UdpChannelTransmitter : IDisposable
     }
 
     protected abstract void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint, 
-        long channelCryptorPosition, Span<byte> buffer);
+        long channelCryptorPosition, Memory<byte> buffer);
 
     private bool IsInvalidState(Exception ex)
     {

@@ -119,14 +119,21 @@ public class UdpChannel(UdpChannelOptions options)
         _lastRemoteEp = remoteEndPoint;
     }
 
-    public void OnReceiveData(Span<byte> buffer, long cryptorPosition)
+    private static IpPacket ReadNextPacketKeepMemory(Memory<byte> buffer)
     {
-        _sessionCryptorReader.Cipher(buffer, cryptorPosition);
+        var packetLength = PacketUtil.ReadPacketLength(buffer.Span);
+        var packet = PacketBuilder.Attach(buffer[..packetLength]);
+        return packet;
+    }
+
+    public void OnReceiveData(Memory<byte> buffer, long cryptorPosition)
+    {
+        _sessionCryptorReader.Cipher(buffer.Span, cryptorPosition);
 
         // read all packets
         var bufferIndex = 0;
         while (bufferIndex < buffer.Length) {
-            var ipPacket = PacketUtil.ReadNextPacket(buffer[bufferIndex..]);
+            var ipPacket = ReadNextPacketKeepMemory(buffer[bufferIndex..]);
             bufferIndex += ipPacket.PacketLength;
             OnPacketReceived(ipPacket);
         }

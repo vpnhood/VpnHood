@@ -21,7 +21,7 @@ public class TunnelTest : TestBase
         : UdpChannelTransmitter(udpClient, serverKey)
     {
         protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint, long channelCryptorPosition,
-            Span<byte> buffer)
+            Memory<byte> buffer)
         {
             udpChannel.SetRemote(this, remoteEndPoint);
             udpChannel.OnReceiveData(buffer, channelCryptorPosition);

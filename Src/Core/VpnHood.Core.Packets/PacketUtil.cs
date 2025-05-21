@@ -14,14 +14,6 @@ public static class PacketUtil
         };
     }
 
-    public static IpPacket ReadNextPacket(ReadOnlySpan<byte> buffer)
-    {
-        var packetLength = ReadPacketLength(buffer);
-        var packet = PacketBuilder.Parse(buffer[..packetLength]);
-        return packet;
-    }
-
-
     public static ushort ComputeChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress, 
         byte protocol, ReadOnlySpan<byte> data)
     {

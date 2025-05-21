@@ -16,7 +16,6 @@ public class LogService(string logFilePath) : IDisposable
         Stop();
 
         VhLogger.IsAnonymousMode = options.LogAnonymous is null or true;
-        VhLogger.IsDiagnoseMode = options.LogEventNames.Contains("*");
         VhLogger.Instance = _logger = CreateLogger(options);
         LogEvents = options.LogEventNames;
         if (options.LogLevel == LogLevel.Trace) {

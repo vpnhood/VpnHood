@@ -152,7 +152,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
             }
         }
 
-        VhLogger.Instance.LogDebug(GeneralEventId.Nat, $"New NAT record. {natItem}");
+        VhLogger.Instance.LogTrace(GeneralEventId.Nat, "New NAT record. NatItem: {NatItem}", natItem);
         return natItem;
     }
 

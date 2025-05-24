@@ -18,4 +18,16 @@ public class ServerUdpChannelTransmitter(UdpClient udpClient, SessionManager ses
         session.UdpChannel?.SetRemote(this, remoteEndPoint);
         session.UdpChannel?.OnReceiveData(buffer, channelCryptorPosition);
     }
+
+    public static ServerUdpChannelTransmitter Create(IPEndPoint ipEndPoint, SessionManager sessionManager)
+    {
+        var udpClient = new UdpClient(ipEndPoint);
+        try {
+            return new ServerUdpChannelTransmitter(udpClient, sessionManager);
+        }
+        catch {
+            udpClient.Dispose();
+            throw;
+        }
+    }
 }

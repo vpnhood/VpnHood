@@ -85,7 +85,7 @@ public class ClientAdService(VpnHoodClient client)
     public async Task SendRewardedAdResult(string adData, CancellationToken cancellationToken)
     {
         // request reward from server
-        await using var requestResult = await client.SendRequest<SessionResponse>(
+        using var requestResult = await client.SendRequest<SessionResponse>(
                 new RewardedAdRequest {
                     RequestId = Guid.NewGuid() + ":client",
                     SessionId = client.SessionId,

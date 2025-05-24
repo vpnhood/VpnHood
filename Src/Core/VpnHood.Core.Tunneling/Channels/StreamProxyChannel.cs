@@ -11,9 +11,9 @@ namespace VpnHood.Core.Tunneling.Channels;
 public class StreamProxyChannel : IChannel, IJob
 {
     private readonly int _orgStreamBufferSize;
-    private readonly IClientStream _hostTcpClientStream;
+    private readonly IClientStream _hostClientStream;
     private readonly int _tunnelStreamBufferSize;
-    private readonly IClientStream _tunnelTcpClientStream;
+    private readonly IClientStream _tunnelClientStream;
     private const int BufferSizeDefault = TunnelDefaults.StreamProxyBufferSize;
     private const int BufferSizeMax = 0x14000;
     private const int BufferSizeMin = 2048;
@@ -26,8 +26,8 @@ public class StreamProxyChannel : IChannel, IJob
     public StreamProxyChannel(string channelId, IClientStream orgClientStream, IClientStream tunnelClientStream,
         int? orgStreamBufferSize = BufferSizeDefault, int? tunnelStreamBufferSize = BufferSizeDefault)
     {
-        _hostTcpClientStream = orgClientStream ?? throw new ArgumentNullException(nameof(orgClientStream));
-        _tunnelTcpClientStream = tunnelClientStream ?? throw new ArgumentNullException(nameof(tunnelClientStream));
+        _hostClientStream = orgClientStream ?? throw new ArgumentNullException(nameof(orgClientStream));
+        _tunnelClientStream = tunnelClientStream ?? throw new ArgumentNullException(nameof(tunnelClientStream));
 
         // validate buffer sizes
         if (orgStreamBufferSize is 0 or null) orgStreamBufferSize = BufferSizeDefault;
@@ -65,11 +65,11 @@ public class StreamProxyChannel : IChannel, IJob
             // let pass CancellationToken for the host only to save the tunnel for reuse
 
             var tunnelCopyTask = CopyToAsync(
-                _tunnelTcpClientStream.Stream, _hostTcpClientStream.Stream, false, _tunnelStreamBufferSize,
+                _tunnelClientStream.Stream, _hostClientStream.Stream, false, _tunnelStreamBufferSize,
                 CancellationToken.None, CancellationToken.None); // tunnel => host
 
             var hostCopyTask = CopyToAsync(
-                _hostTcpClientStream.Stream, _tunnelTcpClientStream.Stream, true, _orgStreamBufferSize,
+                _hostClientStream.Stream, _tunnelClientStream.Stream, true, _orgStreamBufferSize,
                 CancellationToken.None, CancellationToken.None); // host => tunnel
 
             await Task.WhenAny(tunnelCopyTask, hostCopyTask).VhConfigureAwait();
@@ -92,7 +92,7 @@ public class StreamProxyChannel : IChannel, IJob
     private void CheckClientIsAlive()
     {
         // check tcp states
-        if (_hostTcpClientStream.CheckIsAlive() && _tunnelTcpClientStream.CheckIsAlive())
+        if (_hostClientStream.Connected && _tunnelClientStream.Connected)
             return;
 
         VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel,
@@ -186,9 +186,8 @@ public class StreamProxyChannel : IChannel, IJob
         _disposed = true;
 
         Connected = false;
-        await Task.WhenAll(
-                _hostTcpClientStream.DisposeAsync(graceful).AsTask(),
-                _tunnelTcpClientStream.DisposeAsync(graceful).AsTask())
-            .VhConfigureAwait();
+        _hostClientStream.Dispose();
+        Console.WriteLine($"zzz2: {_tunnelClientStream.ClientStreamId}"); //todo
+        _tunnelClientStream.Dispose();
     }
 }

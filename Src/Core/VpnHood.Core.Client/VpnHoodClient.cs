@@ -580,7 +580,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 IsIpV6Supported = IsIpV6SupportedByClient
             };
 
-            await using var requestResult =
+            using var requestResult =
                 await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();
             var helloResponse = requestResult.Response;
 
@@ -776,7 +776,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             }
 
             // init new connector
-            _ = _connectorService?.DisposeAsync();
+            _connectorService?.Dispose();
             var redirectedEndPoint = await _serverFinder.FindBestRedirectedServerAsync(ex.RedirectHostEndPoints.ToArray(), cancellationToken);
             await ConnectInternal(redirectedEndPoint, false, cancellationToken).VhConfigureAwait();
         }
@@ -830,7 +830,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
         catch {
             if (channel != null) await channel.DisposeAsync().VhConfigureAwait();
-            await requestResult.DisposeAsync().VhConfigureAwait();
+            requestResult.Dispose();
             throw;
         }
     }
@@ -849,7 +849,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             // client is disposed meanwhile
             if (_disposed) {
-                await requestResult.DisposeAsync();
+                requestResult.Dispose();
                 throw new ObjectDisposedException(VhLogger.FormatType(this));
             }
 
@@ -909,7 +909,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
 
         // don't use SendRequest because it can be disposed
-        await using var requestResult = await SendRequest<SessionResponse>(
+        using var requestResult = await SendRequest<SessionResponse>(
                 new SessionStatusRequest {
                     RequestId = Guid.NewGuid() + ":client",
                     SessionId = SessionId,
@@ -922,7 +922,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private async Task SendByeRequest(CancellationToken cancellationToken)
     {
         // don't use SendRequest because it can be disposed
-        await using var requestResult = await ConnectorService.SendRequest<SessionResponse>(
+        using var requestResult = await ConnectorService.SendRequest<SessionResponse>(
                 new ByeRequest {
                     RequestId = Guid.NewGuid() + ":client",
                     SessionId = SessionId,
@@ -1010,7 +1010,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         // dispose ConnectorService
         VhLogger.Instance.LogDebug("Disposing ConnectorService...");
-        await ConnectorService.DisposeAsync().VhConfigureAwait();
+        ConnectorService.Dispose();
 
         VhLogger.Instance.LogInformation("Bye Bye!");
         State = ClientState.Disposed; //everything is clean

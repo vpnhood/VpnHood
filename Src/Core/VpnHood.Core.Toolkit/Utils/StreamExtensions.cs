@@ -1,4 +1,7 @@
-﻿namespace VpnHood.Core.Toolkit.Utils;
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.Core.Toolkit.Logging;
+
+namespace VpnHood.Core.Toolkit.Utils;
 
 public static class StreamExtensions
 {
@@ -17,6 +20,18 @@ public static class StreamExtensions
                 throw new EndOfStreamException($"Unable to read the required {buffer.Length} bytes from the stream.");
 
             totalBytesRead += bytesRead;
+        }
+    }
+
+    public static async ValueTask SafeDisposeAsync(this Stream stream)
+    {
+        try {
+            await stream.DisposeAsync();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogDebug(ex, "Failed to dispose stream asynchronously. Falling back to synchronous dispose.");
+            // ReSharper disable once MethodHasAsyncOverload
+            stream.Dispose();
         }
     }
 

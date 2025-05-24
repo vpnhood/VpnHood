@@ -213,7 +213,7 @@ public class StreamPacketChannel : PacketTransport, IPacketChannel, IJob
         if (graceful)
             await SendClose().VhConfigureAwait(); // this won't throw any error
 
-        await _clientStream.DisposeAsync(graceful).VhConfigureAwait();
+        _clientStream.Dispose();
         _disposed = true;
     }
 }

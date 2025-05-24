@@ -136,11 +136,14 @@ public static class VhUtils
             timeout = Timeout.InfiniteTimeSpan;
 
         var timeoutTask = Task.Delay(timeout, cancellationToken);
-        await Task.WhenAny(task, timeoutTask).VhConfigureAwait();
+        var completedTask = await Task.WhenAny(task, timeoutTask).VhConfigureAwait();
 
-        cancellationToken.ThrowIfCancellationRequested();
-        if (timeoutTask.IsCompleted)
-            throw new TimeoutException();
+        // Still check if it was actually a timeout
+        if (completedTask == timeoutTask) {
+            if (timeoutTask.IsCompletedSuccessfully)
+                throw new TimeoutException();
+            cancellationToken.ThrowIfCancellationRequested(); // clearer path for cancellation
+        }
 
         await task.VhConfigureAwait();
     }
@@ -428,7 +431,7 @@ public static class VhUtils
         }
     }
 
-    public static async Task TryInvokeAsync(string actionName, Func<Task> task)
+    public static async Task TryInvokeAsync(string? actionName, Func<Task> task)
     {
         try {
             await task().VhConfigureAwait();
@@ -438,7 +441,7 @@ public static class VhUtils
         }
     }
 
-    public static async Task<T?> TryInvokeAsync<T>(string actionName, Func<Task<T>> task, T? defaultValue = default)
+    public static async Task<T?> TryInvokeAsync<T>(string? actionName, Func<Task<T>> task, T? defaultValue = default)
     {
         try {
             return await task().VhConfigureAwait();
@@ -449,7 +452,7 @@ public static class VhUtils
         }
     }
 
-    public static void TryInvoke(string actionName, Action action)
+    public static void TryInvoke(string? actionName, Action action)
     {
         try {
             action.Invoke();
@@ -459,7 +462,7 @@ public static class VhUtils
         }
     }
 
-    public static T? TryInvoke<T>(string actionName, Func<T> func, T? defaultValue = default)
+    public static T? TryInvoke<T>(string? actionName, Func<T> func, T? defaultValue = default)
     {
         try {
             return func();
@@ -470,9 +473,9 @@ public static class VhUtils
         }
     }
 
-    private static void LogInvokeError(Exception ex, string actionDesc)
+    private static void LogInvokeError(Exception ex, string? actionName)
     {
-        if (!string.IsNullOrEmpty(actionDesc))
-            VhLogger.Instance.LogDebug(ex, "Could not invoke {ActionDesc}", actionDesc);
+        if (!string.IsNullOrEmpty(actionName))
+            VhLogger.Instance.LogDebug(ex, "Could not invoke {ActionDesc}", actionName);
     }
 }

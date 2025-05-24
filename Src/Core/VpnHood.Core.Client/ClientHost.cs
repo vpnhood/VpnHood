@@ -67,8 +67,7 @@ internal class ClientHost(
         _tcpListenerIpV4 = new TcpListener(IPAddress.Any, 0);
         _tcpListenerIpV4.Start();
         _localEndpointIpV4 = (IPEndPoint)_tcpListenerIpV4.LocalEndpoint; //it is slow; make sure to cache it
-        VhLogger.Instance.LogInformation(
-            $"{VhLogger.FormatType(this)} is listening on {VhLogger.Format(_localEndpointIpV4)}");
+        VhLogger.Instance.LogInformation("ClientHost is listening. EndPoint: {EndPoint}", VhLogger.Format(_localEndpointIpV4));
         _ = AcceptTcpClientLoop(_tcpListenerIpV4);
 
         // IpV6
@@ -76,13 +75,12 @@ internal class ClientHost(
             _tcpListenerIpV6 = new TcpListener(IPAddress.IPv6Any, 0);
             _tcpListenerIpV6.Start();
             _localEndpointIpV6 = (IPEndPoint)_tcpListenerIpV6.LocalEndpoint; //it is slow; make sure to cache it
-            VhLogger.Instance.LogInformation(
-                $"{VhLogger.FormatType(this)} is listening on {VhLogger.Format(_localEndpointIpV6)}");
+            VhLogger.Instance.LogInformation("ClientHost is listening. EndPoint: {EndPoint}", VhLogger.Format(_localEndpointIpV6));
             _ = AcceptTcpClientLoop(_tcpListenerIpV6);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex,
-                $"Could not create listener on {VhLogger.Format(new IPEndPoint(IPAddress.IPv6Any, 0))}!");
+                "Could not create a listener. EndPoint: {EndPoint}", VhLogger.Format(new IPEndPoint(IPAddress.IPv6Any, 0)));
         }
     }
 
@@ -301,7 +299,7 @@ internal class ClientHost(
                 vpnHoodClient.IsIpV6SupportedByClient = false;
 
             if (channel != null) await channel.DisposeAsync().VhConfigureAwait();
-            if (requestResult != null) await requestResult.DisposeAsync().VhConfigureAwait();
+            requestResult?.Dispose();
             orgTcpClient.Dispose();
             VhLogger.LogError(GeneralEventId.StreamProxyChannel, ex, "");
         }

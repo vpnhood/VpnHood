@@ -11,10 +11,7 @@ using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Test.Packets;
-using TcpPacket = PacketDotNet.TcpPacket;
 
 namespace VpnHood.AppLib.Test.Tests;
 

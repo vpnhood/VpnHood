@@ -4,6 +4,7 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
     where T : Stream
 {
     protected readonly T SourceStream = sourceStream;
+    private bool _disposed;
 
     public override bool CanRead => SourceStream.CanRead;
     public override bool CanSeek => SourceStream.CanSeek;
@@ -64,22 +65,36 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
         return base.CopyToAsync(destination, bufferSize, cancellationToken);
     }
 
-    public override ValueTask DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
-        return leaveOpen ? default : SourceStream.DisposeAsync();
+        if (!leaveOpen)
+            await SourceStream.DisposeAsync();
+        
+        await base.DisposeAsync();
+
+        // the base class does not call Dispose(bool) so we need to do it manually
+        Dispose(true);
     }
 
-    protected sealed override void Dispose(bool disposing)
+    protected override void Dispose(bool disposing)
     {
-        if (disposing && !leaveOpen)
-            SourceStream.Dispose();
+        if (_disposed)
+            return;
+
+        if (disposing) {
+            if (!leaveOpen)
+                SourceStream.Dispose();
+        }
+
+        _disposed = true;
     }
+
     public sealed override void Close()
     {
         if (!leaveOpen)
             SourceStream.Close();
     }
-
+    
     // Sealed
     public sealed override int WriteTimeout {
         get => SourceStream.WriteTimeout;

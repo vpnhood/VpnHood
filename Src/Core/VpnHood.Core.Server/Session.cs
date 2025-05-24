@@ -337,7 +337,7 @@ public class Session : IAsyncDisposable
         CancellationToken cancellationToken)
     {
         // send OK reply
-        await clientStream.WriteResponse(SessionResponseEx, cancellationToken).VhConfigureAwait();
+        await clientStream.WriteResponseAsync(SessionResponseEx, cancellationToken).VhConfigureAwait();
 
         // Disable UdpChannel
         UseUdpChannel = false;
@@ -375,7 +375,7 @@ public class Session : IAsyncDisposable
     public async Task ProcessSessionStatusRequest(SessionStatusRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
-        await clientStream.WriteFinalResponse(SessionResponseEx, cancellationToken).VhConfigureAwait();
+        await clientStream.DisposeAsync(SessionResponseEx, cancellationToken).VhConfigureAwait();
     }
 
     public async Task ProcessRewardedAdRequest(RewardedAdRequest request, IClientStream clientStream,
@@ -383,7 +383,7 @@ public class Session : IAsyncDisposable
     {
         SessionResponseEx = await _accessManager
             .Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData).VhConfigureAwait();
-        await clientStream.WriteFinalResponse(SessionResponseEx, cancellationToken).VhConfigureAwait();
+        await clientStream.DisposeAsync(SessionResponseEx, cancellationToken).VhConfigureAwait();
     }
 
     public async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IClientStream clientStream,
@@ -418,19 +418,19 @@ public class Session : IAsyncDisposable
             isRequestedEpException = false;
 
             //tracking
-            LogTrack(IpProtocol.Tcp, (IPEndPoint)tcpClientHost.Client.LocalEndPoint,
-                request.DestinationEndPoint,
-                true, true, null);
+            LogTrack(IpProtocol.Tcp, 
+                localEndPoint: (IPEndPoint)tcpClientHost.Client.LocalEndPoint,
+                destinationEndPoint: request.DestinationEndPoint, 
+                isNewLocal: true, isNewRemote: true, failReason: null);
 
             // send response
-            await clientStream.WriteResponse(SessionResponseEx, cancellationToken).VhConfigureAwait();
+            await clientStream.WriteResponseAsync(SessionResponseEx, cancellationToken).VhConfigureAwait();
 
             // add the connection
             VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
                 "Adding a StreamProxyChannel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
-            tcpClientStreamHost =
-                new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
+            tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
             streamProxyChannel = new StreamProxyChannel(request.RequestId, tcpClientStreamHost, clientStream,
                 _tcpBufferSize, _tcpBufferSize);
 
@@ -438,7 +438,7 @@ public class Session : IAsyncDisposable
         }
         catch (Exception ex) {
             tcpClientHost?.Dispose();
-            if (tcpClientStreamHost != null) await tcpClientStreamHost.DisposeAsync().VhConfigureAwait();
+            tcpClientStreamHost?.Dispose();
             if (streamProxyChannel != null) await streamProxyChannel.DisposeAsync().VhConfigureAwait();
 
             if (isRequestedEpException)

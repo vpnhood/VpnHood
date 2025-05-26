@@ -7,7 +7,6 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-//todo: rename to UdpChannel
 public class UdpChannel(UdpChannelOptions options) : PacketChannel(options)
 {
     private IPEndPoint? _lastRemoteEp;

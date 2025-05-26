@@ -28,7 +28,7 @@ public class ClientTunnelTest : TestBase
         await AssertTunnel(clientServerDom);
 
         // switch to tcp
-        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Switch to DatagramChannel.");
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Switch to PacketChannel.");
         clientServerDom.Client.UseUdpChannel = false;
         await AssertTunnel(clientServerDom);
         await VhTestUtil.AssertEqualsWait(false, () => clientServerDom.Client.GetSessionStatus().IsUdpMode);

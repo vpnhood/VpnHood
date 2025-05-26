@@ -23,7 +23,7 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Server;
 
-public class Session : IAsyncDisposable
+public class Session : IDisposable
 {
     private readonly INetFilter _netFilter;
     private readonly IAccessManager _accessManager;
@@ -70,7 +70,7 @@ public class Session : IAsyncDisposable
     public SessionExtraData ExtraData { get; }
     public int ProtocolVersion { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
-    public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (Tunnel.IsUdpMode ? 0 : Tunnel.DatagramChannelCount);
+    public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (Tunnel.IsUdpMode ? 0 : Tunnel.PacketChannelCount);
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
     public VirtualIpBundle VirtualIps { get; }
@@ -129,7 +129,7 @@ public class Session : IAsyncDisposable
         SessionKey = sessionResponseEx.SessionKey ?? throw new InvalidOperationException(
             $"{nameof(sessionResponseEx)} does not have {nameof(sessionResponseEx.SessionKey)}!");
         Tunnel = new Tunnel(new TunnelOptions {
-            MaxDatagramChannelCount = options.MaxDatagramChannelCountValue,
+            MaxPacketChannelCount = options.MaxPacketChannelCountValue,
             PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
             AutoDisposePackets = true
         });
@@ -186,14 +186,16 @@ public class Session : IAsyncDisposable
                 SessionKey = SessionKey,
                 LeaveTransmitterOpen = true,
                 AutoDisposePackets = true,
-                ProtocolVersion = ProtocolVersion
+                ProtocolVersion = ProtocolVersion,
+                Lifespan = null,
+                ChannelId = Guid.NewGuid().ToString()
             });
             
             try {
                 Tunnel.AddChannel(udpChannel);
             }
             catch {
-                udpChannel.DisposeAsync();
+                udpChannel.Dispose();
             }
         }
     }
@@ -333,7 +335,7 @@ public class Session : IAsyncDisposable
             localPortStr, destinationIpStr, destinationPortStr, failReason);
     }
 
-    public async Task ProcessTcpDatagramChannelRequest(TcpDatagramChannelRequest request, IClientStream clientStream,
+    public async Task ProcessTcpPacketChannelRequest(TcpPacketChannelRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
         // send OK reply
@@ -344,7 +346,7 @@ public class Session : IAsyncDisposable
 
         // add channel
         VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
-            "Creating a TcpDatagramChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
+            "Creating a TcpPacketChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
         var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
             Blocking = false,
@@ -358,7 +360,7 @@ public class Session : IAsyncDisposable
             Tunnel.AddChannel(channel);
         }
         catch {
-            await channel.DisposeAsync().VhConfigureAwait();
+            channel.Dispose();
             throw;
         }
     }
@@ -398,7 +400,7 @@ public class Session : IAsyncDisposable
         try {
             // connect to requested site
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
-                $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
+                "Connecting to the requested endpoint. RequestedEP: {Format}", VhLogger.Format(request.DestinationEndPoint));
 
             // Apply limitation
             VerifyTcpChannelRequest(clientStream, request);
@@ -495,18 +497,15 @@ public class Session : IAsyncDisposable
         throw new NetScanException(remoteEndPoint, this, requestId);
     }
 
-    private readonly AsyncLock _disposeLock = new();
-
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (IsDisposed) return;
         DisposedTime = DateTime.UtcNow;
 
         _proxyManager.PacketReceived -= Proxy_PacketsReceived;
         _proxyManager.Dispose();
         Tunnel.PacketReceived -= Tunnel_PacketReceived;
-        await Tunnel.DisposeAsync();
+        Tunnel.Dispose();
         _netScanExceptionReporter.Dispose();
         _maxTcpChannelExceptionReporter.Dispose();
         _maxTcpConnectWaitExceptionReporter.Dispose();

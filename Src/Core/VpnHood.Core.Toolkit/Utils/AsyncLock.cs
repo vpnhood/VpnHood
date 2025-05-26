@@ -40,6 +40,8 @@ public sealed class AsyncLock
         }
     }
 
+    public bool IsLocked => _semaphoreSlimEx.CurrentCount == 0;
+
     public async Task<ILockAsyncResult> LockAsync(CancellationToken cancellationToken = default)
     {
         await _semaphoreSlimEx.WaitAsync(cancellationToken).VhConfigureAwait();

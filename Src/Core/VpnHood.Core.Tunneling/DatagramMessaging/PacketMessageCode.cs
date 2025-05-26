@@ -2,5 +2,5 @@
 
 public enum PacketMessageCode : byte
 {
-    CloseDatagramChannel
+    ClosePacketChannel
 }

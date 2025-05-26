@@ -298,7 +298,7 @@ internal class ClientHost(
                 ex is SocketException { SocketErrorCode: SocketError.NetworkUnreachable })
                 vpnHoodClient.IsIpV6SupportedByClient = false;
 
-            if (channel != null) await channel.DisposeAsync().VhConfigureAwait();
+            channel?.Dispose();
             requestResult?.Dispose();
             orgTcpClient.Dispose();
             VhLogger.LogError(GeneralEventId.ProxyChannel, ex, "");

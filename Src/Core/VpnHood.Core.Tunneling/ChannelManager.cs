@@ -17,7 +17,6 @@ internal class ChannelManager : IDisposable, IJob
     private Traffic _trafficUsage = new();
     private readonly EventHandler<IpPacket> _channelPacketReceived;
     private bool _disposed;
-    IReadOnlyList<IPacketChannel> aa => _packetChannels.AsReadOnly();
 
     public JobSection JobSection { get; } = new();
 
@@ -270,5 +269,11 @@ internal class ChannelManager : IDisposable, IJob
 
             return _packetChannels[channelIndex];
         }
+    }
+
+    public void RemoveAllPacketChannels()
+    {
+        foreach (var channel in _packetChannels.ToArray())
+            RemoveChannel(channel);
     }
 }

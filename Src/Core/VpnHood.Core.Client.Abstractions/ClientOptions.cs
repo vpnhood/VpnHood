@@ -40,7 +40,7 @@ public class ClientOptions
     public TimeSpan AutoWaitTimeout { get; set; } = TimeSpan.FromSeconds(30); // auto resume after pause
     public bool UseUdpChannel { get; set; }
     public bool IncludeLocalNetwork { get; set; }
-    public int MaxDatagramChannelCount { get; set; } = 4;
+    public int MaxPacketChannelCount { get; set; } = 4;
     public string UserAgent { get; set; } = Environment.OSVersion.ToString();
     public TimeSpan MinTcpDatagramTimespan { get; set; } = TimeSpan.FromMinutes(5);
     public TimeSpan MaxTcpDatagramTimespan { get; set; } = TimeSpan.FromMinutes(10);

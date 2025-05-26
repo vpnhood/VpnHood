@@ -11,7 +11,7 @@ using VpnHood.Core.Tunneling.DatagramMessaging;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class TcpDatagramChannelTest : TestBase
+public class TcpPacketChannelTest : TestBase
 {
     [TestMethod]
     public void DatagramMessages()
@@ -75,7 +75,7 @@ public class TcpDatagramChannelTest : TestBase
         clientTunnel.SendPacketQueued(testPacket.Clone());
         await VhTestUtil.AssertEqualsWait(true, () => 
             lastServerReceivedPacket!=null && testPacket.Buffer.Span.SequenceEqual(lastServerReceivedPacket.Buffer.Span) );
-        await VhTestUtil.AssertEqualsWait(0, () => clientTunnel.DatagramChannelCount);
-        await VhTestUtil.AssertEqualsWait(0, () => serverTunnel.DatagramChannelCount);
+        await VhTestUtil.AssertEqualsWait(0, () => clientTunnel.PacketChannelCount);
+        await VhTestUtil.AssertEqualsWait(0, () => serverTunnel.PacketChannelCount);
     }
 }

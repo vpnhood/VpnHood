@@ -104,28 +104,28 @@ public class ClientServerTest : TestBase
 
         var clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.DropUdp = true;
-        clientOptions.MaxDatagramChannelCount = 6;
+        clientOptions.MaxPacketChannelCount = 6;
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions);
         await Assert.ThrowsAsync<OperationCanceledException>(() => TestHelper.Test_Udp(3000), "UDP must be failed.");
     }
 
 
     [TestMethod]
-    public async Task MaxDatagramChannels()
+    public async Task MaxPacketChannels()
     {
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        fileAccessManagerOptions.SessionOptions.MaxDatagramChannelCount = 3;
+        fileAccessManagerOptions.SessionOptions.MaxPacketChannelCount = 3;
 
         // Create Server
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
         var token = TestHelper.CreateAccessToken(server);
 
         // --------
-        // Check: Client MaxDatagramChannelCount larger than server
+        // Check: Client MaxPacketChannelCount larger than server
         // --------
         var clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.UseUdpChannel = false;
-        clientOptions.MaxDatagramChannelCount = 6;
+        clientOptions.MaxPacketChannelCount = 6;
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: TestHelper.CreateTestVpnAdapter());
 
@@ -136,15 +136,15 @@ public class ClientServerTest : TestBase
         }
 
         Thread.Sleep(100);
-        Assert.AreEqual(3, client.GetSessionStatus().DatagramChannelCount);
+        Assert.AreEqual(3, client.GetSessionStatus().PacketChannelCount);
         await client.DisposeAsync();
 
         // --------
-        // Check: Client MaxDatagramChannelCount smaller than server
+        // Check: Client MaxPacketChannelCount smaller than server
         // --------
         clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.UseUdpChannel = false;
-        clientOptions.MaxDatagramChannelCount = 1;
+        clientOptions.MaxPacketChannelCount = 1;
         await using var client2 = await TestHelper.CreateClient(clientOptions: clientOptions);
 
         // let channel be removed gradually
@@ -154,12 +154,12 @@ public class ClientServerTest : TestBase
         }
 
         Thread.Sleep(200);
-        Assert.AreEqual(1, client2.GetSessionStatus().DatagramChannelCount);
+        Assert.AreEqual(1, client2.GetSessionStatus().PacketChannelCount);
         await client.DisposeAsync();
     }
 
     [TestMethod]
-    public async Task DatagramChannel_Stream()
+    public async Task PacketChannel_Stream()
     {
         // Create Server
         await using var server = await TestHelper.CreateServer();
@@ -167,7 +167,7 @@ public class ClientServerTest : TestBase
 
         // Create Client
         var clientOptions = TestHelper.CreateClientOptions(token);
-        clientOptions.MaxDatagramChannelCount = 4;
+        clientOptions.MaxPacketChannelCount = 4;
         await using var client = await TestHelper.CreateClient(
             vpnAdapter: TestHelper.CreateTestVpnAdapter(), clientOptions: clientOptions);
 
@@ -179,7 +179,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
-    public async Task DatagramChannel_Udp()
+    public async Task PacketChannel_Udp()
     {
         VhLogger.IsDiagnoseMode = true;
 

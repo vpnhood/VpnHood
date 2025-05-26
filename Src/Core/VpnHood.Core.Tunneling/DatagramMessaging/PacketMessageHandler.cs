@@ -11,7 +11,7 @@ public static class PacketMessageHandler
 
     private static PacketMessageCode GetMessageCode(IPacketMessage request)
     {
-        if (request is ClosePacketMessage) return PacketMessageCode.CloseDatagramChannel;
+        if (request is ClosePacketMessage) return PacketMessageCode.ClosePacketChannel;
         throw new ArgumentException("Could not detect version code for this datagram message.");
     }
 
@@ -55,7 +55,7 @@ public static class PacketMessageHandler
         // check message code
         var messageCode = (PacketMessageCode)buffer[1];
         return messageCode switch {
-            PacketMessageCode.CloseDatagramChannel => StreamUtils.ReadObject<ClosePacketMessage>(stream),
+            PacketMessageCode.ClosePacketChannel => StreamUtils.ReadObject<ClosePacketMessage>(stream),
             _ => throw new NotSupportedException($"Unknown Datagram Message messageCode. MessageCode: {messageCode}")
         };
     }

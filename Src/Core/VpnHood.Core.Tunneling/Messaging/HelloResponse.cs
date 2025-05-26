@@ -35,7 +35,7 @@ public class HelloResponse : SessionResponse
     public ulong SessionId { get; set; }
     public byte[] SessionKey { get; set; } = [];
     public SessionSuppressType SuppressedTo { get; set; }
-    public int MaxDatagramChannelCount { get; set; }
+    public int MaxPacketChannelCount { get; set; }
     public bool IsIpV6Supported { get; set; }
     public bool IsReviewRequested { get; set; }
     public IpRange[]? IncludeIpRanges { get; set; }

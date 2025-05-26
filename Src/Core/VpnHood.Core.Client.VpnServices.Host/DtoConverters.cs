@@ -29,7 +29,7 @@ internal static class DtoConverters
             ActiveClientCount = sessionStatus.ActiveClientCount,
             CanExtendByRewardedAd = sessionStatus.CanExtendByRewardedAd,
             CycleTraffic = sessionStatus.CycleTraffic,
-            DatagramChannelCount = sessionStatus.DatagramChannelCount,
+            PacketChannelCount = sessionStatus.PacketChannelCount,
             IsUdpMode = sessionStatus.IsUdpMode,
             SessionExpirationTime = sessionStatus.SessionExpirationTime,
             SessionMaxTraffic = sessionStatus.SessionMaxTraffic,

@@ -448,7 +448,7 @@ $
 * Update: Improve stability when using no UDP mode
 
 ### Server
-* Feature: Improve stability by adding lifetime to TcpDatagramChannel
+* Feature: Improve stability by adding lifetime to TcpPacketChannel
 * Fix: IpV6 detection
 
 # v2.6.342
@@ -657,7 +657,7 @@ $
 
 ### Server
 * Update: Move Sessions options to AccessManager via ServerConfig
-* Fix: Catch a lost packet when removing TcpDatagramChannel
+* Fix: Catch a lost packet when removing TcpPacketChannel
 
 # v2.3.290
 ### Client
@@ -951,7 +951,7 @@ $
 * Change: Always Open the main window at start if App is already running
 
 ### Developer
-* Change: Update TcpDatagramHeader from binary to TcpDatagramChannelRequest json
+* Change: Update TcpDatagramHeader from binary to TcpPacketChannelRequest json
 * Change: Move IDevice and IVpnAdapter to VpnHood.Core.Client.Device module
 * Developer: Add Simple Sample for Windows Client usage
 * Developer: Fix PublishApps.ps1 scripts to create publish folder when it does not exist

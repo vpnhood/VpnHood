@@ -132,7 +132,7 @@ public class ServerTest : TestBase
         serverConfig.SessionOptions.UdpTimeout = TimeSpan.FromSeconds(2071);
         serverConfig.SessionOptions.IcmpTimeout = TimeSpan.FromSeconds(2072);
         serverConfig.SessionOptions.Timeout = TimeSpan.FromSeconds(2073);
-        serverConfig.SessionOptions.MaxDatagramChannelCount = 2074;
+        serverConfig.SessionOptions.MaxPacketChannelCount = 2074;
         serverConfig.SessionOptions.SyncCacheSize = 2075;
         serverConfig.SessionOptions.TcpBufferSize = 2076;
         serverConfig.SessionOptions.UdpProxyReceiveBufferSize = 4001;
@@ -161,7 +161,7 @@ public class ServerTest : TestBase
         Assert.AreEqual(serverConfig.SessionOptions.IcmpTimeout, server.SessionManager.SessionOptions.IcmpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.UdpTimeout, server.SessionManager.SessionOptions.UdpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.Timeout, server.SessionManager.SessionOptions.Timeout);
-        Assert.AreEqual(serverConfig.SessionOptions.MaxDatagramChannelCount, server.SessionManager.SessionOptions.MaxDatagramChannelCount);
+        Assert.AreEqual(serverConfig.SessionOptions.MaxPacketChannelCount, server.SessionManager.SessionOptions.MaxPacketChannelCount);
         Assert.AreEqual(serverConfig.SessionOptions.SyncCacheSize, server.SessionManager.SessionOptions.SyncCacheSize);
         Assert.AreEqual(serverConfig.SessionOptions.TcpBufferSize, server.SessionManager.SessionOptions.TcpBufferSize);
         Assert.AreEqual(serverConfig.SessionOptions.UdpProxySendBufferSize, server.SessionManager.SessionOptions.UdpProxySendBufferSize);
@@ -320,7 +320,7 @@ public class ServerTest : TestBase
             },
             SessionOptions = new SessionOptions {
                 IcmpTimeout = TimeSpan.FromMinutes(50),
-                MaxDatagramChannelCount = 13,
+                MaxPacketChannelCount = 13,
                 MaxTcpChannelCount = 14,
                 MaxTcpConnectWaitCount = 16,
                 MaxUdpClientCount = 17,

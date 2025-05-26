@@ -471,8 +471,8 @@ public class ServerHost : IAsyncDisposable, IJob
                 await ProcessSessionStatus(clientStream, cancellationToken).VhConfigureAwait();
                 break;
 
-            case RequestCode.TcpDatagramChannel:
-                await ProcessTcpDatagramChannel(clientStream, cancellationToken).VhConfigureAwait();
+            case RequestCode.TcpPacketChannel:
+                await ProcessTcpPacketChannel(clientStream, cancellationToken).VhConfigureAwait();
                 break;
 
             case RequestCode.ProxyChannel:
@@ -599,7 +599,7 @@ public class ServerHost : IAsyncDisposable, IJob
 #pragma warning restore CS0618 // Type or member is obsolete
             ProtocolVersion = sessionResponseEx.ProtocolVersion,
             SuppressedTo = sessionResponseEx.SuppressedTo,
-            MaxDatagramChannelCount = session.Tunnel.MaxPacketChannelCount,
+            MaxPacketChannelCount = session.Tunnel.MaxPacketChannelCount,
             ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,
             IncludeIpRanges = NetFilterIncludeIpRanges,
             VpnAdapterIncludeIpRanges = NetFilterVpnAdapterIncludeIpRanges,
@@ -687,15 +687,15 @@ public class ServerHost : IAsyncDisposable, IJob
         await session.ProcessUdpPacketRequest(request, clientStream, cancellationToken).VhConfigureAwait();
     }
 
-    private async Task ProcessTcpDatagramChannel(IClientStream clientStream, CancellationToken cancellationToken)
+    private async Task ProcessTcpPacketChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Reading the TcpDatagramChannelRequest...");
-        var request = await ReadRequest<TcpDatagramChannelRequest>(clientStream, cancellationToken).VhConfigureAwait();
+        VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Reading the TcpPacketChannelRequest...");
+        var request = await ReadRequest<TcpPacketChannelRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         // finding session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
-        await session.ProcessTcpDatagramChannelRequest(request, clientStream, cancellationToken).VhConfigureAwait();
+        await session.ProcessTcpPacketChannelRequest(request, clientStream, cancellationToken).VhConfigureAwait();
     }
 
     private async Task ProcessStreamProxyChannel(IClientStream clientStream, CancellationToken cancellationToken)

@@ -8,7 +8,7 @@ public class UserSettings
     public bool IsLicenseAccepted { get; set; }
     public string? CultureCode { get; set; }
     public Guid? ClientProfileId { get; set; }
-    public int MaxDatagramChannelCount { get; set; } = ClientOptions.Default.MaxDatagramChannelCount;
+    public int MaxPacketChannelCount { get; set; } = ClientOptions.Default.MaxPacketChannelCount;
     public bool TunnelClientCountry { get; set; } = true;
     public string[] AppFilters { get; set; } = [];
     public FilterMode AppFiltersMode { get; set; } = FilterMode.All;

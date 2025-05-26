@@ -36,10 +36,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly ProxyManager _proxyManager;
     private readonly Dictionary<IPAddress, bool> _includeIps = new();
-    private readonly int _maxDatagramChannelCount;
+    private readonly int _maxPacketChannelCount;
     private readonly IVpnAdapter _vpnAdapter;
     private readonly ClientHost _clientHost;
-    private readonly SemaphoreSlim _datagramChannelsSemaphore = new(1, 1);
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private readonly bool _allowAnonymousTracker;
@@ -66,6 +65,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     private IPAddress[] _dnsServers;
     private readonly int _udpSendBufferSize;
     private readonly int _udpReceiveBufferSize;
+    private readonly AsyncLock _packetChannelLock = new();
 
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
     internal Tunnel Tunnel { get; }
@@ -126,7 +126,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _maxTcpDatagramLifespan = options.MaxTcpDatagramTimespan;
         _vpnAdapter = vpnAdapter;
         _autoDisposeVpnAdapter = options.AutoDisposeVpnAdapter;
-        _maxDatagramChannelCount = options.MaxDatagramChannelCount;
+        _maxPacketChannelCount = options.MaxPacketChannelCount;
         Tracker = tracker;
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
@@ -184,7 +184,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         Tunnel = new Tunnel(new TunnelOptions {
             AutoDisposePackets = true,
             PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
-            MaxDatagramChannelCount = TunnelDefaults.MaxDatagramChannelCount
+            MaxPacketChannelCount = TunnelDefaults.MaxPacketChannelCount
         });
         Tunnel.PacketReceived += Tunnel_PacketReceived;
 
@@ -226,7 +226,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         set {
             if (_useUdpChannel == value) return;
             _useUdpChannel = value;
-            _ = ManageDatagramChannels(_cancellationTokenSource.Token);
+            Tunnel.MaxPacketChannelCount = value ? 1 : _maxPacketChannelCount;
+            Tunnel.RemoveAllPacketChannels();
+            Task.Run(() => ManagePacketChannels(_cancellationTokenSource.Token));
         }
     }
 
@@ -244,17 +246,17 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             cancellationToken: linkedCts.Token).VhConfigureAwait();
 
         // create and add the channel
-        var bypassChannel = new ProxyChannel(channelId, orgTcpClientStream,
+        var channel = new ProxyChannel(channelId, orgTcpClientStream,
             new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"));
 
         // flush initBuffer
         await tcpClient.GetStream().WriteAsync(initBuffer, linkedCts.Token);
 
         try {
-            _proxyManager.AddChannel(bypassChannel);
+            _proxyManager.AddChannel(channel);
         }
         catch {
-            await bypassChannel.DisposeAsync().VhConfigureAwait();
+            channel.Dispose();
             throw;
         }
     }
@@ -375,9 +377,10 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
 
         // Manage datagram channels if needed
-        if (ShouldManageDatagramChannels)
-            _ = ManageDatagramChannels(_cancellationTokenSource.Token);
+        if (ShouldManagePacketChannels && !_packetChannelLock.IsLocked)
+            _ = ManagePacketChannels(_cancellationTokenSource.Token);
 
+        // Multicast packets are not supported
         if (ipPacket.IsMulticast())
             throw new PacketDropException("Multicast packet has been dropped.");
 
@@ -465,46 +468,39 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         return isInRange;
     }
 
-    private bool ShouldManageDatagramChannels {
-        get {
-            if (_disposed) return false;
-            if (_datagramChannelsSemaphore.CurrentCount == 0) return false;
-            if (UseUdpChannel != Tunnel.IsUdpMode) return true;
-            return !UseUdpChannel && Tunnel.DatagramChannelCount < Tunnel.MaxPacketChannelCount;
-        }
-    }
+    private bool ShouldManagePacketChannels =>
+        Tunnel.PacketChannelCount < Tunnel.MaxPacketChannelCount;
 
     internal void EnablePassthruInProcessPackets(bool value)
     {
         _clientHost.EnablePassthruInProcessPackets(value);
     }
 
-    private async ValueTask ManageDatagramChannels(CancellationToken cancellationToken)
+    private async ValueTask ManagePacketChannels(CancellationToken cancellationToken)
     {
-        // ShouldManageDatagramChannels checks the semaphore count so it must be called before WaitAsync
-        if (!ShouldManageDatagramChannels)
-            return;
-
-        if (!await _datagramChannelsSemaphore.WaitAsync(0, cancellationToken).VhConfigureAwait())
+        // if the lock is not acquired, it means that another thread is already managing packet channels
+        using var lockResult = await _packetChannelLock.LockAsync(TimeSpan.Zero, cancellationToken);
+        if (!lockResult.Succeeded)
             return;
 
         try {
-            // make sure only one UdpChannel exists for DatagramChannels if UseUdpChannel is on
+            // check is adding channels allowed
+            if (!ShouldManagePacketChannels)
+                return;
+
+            // make sure only one UdpChannel exists for PacketChannels if UseUdpChannel is on
             if (UseUdpChannel)
-                await AddUdpChannel().VhConfigureAwait();
+                AddUdpChannel();
             else
-                await AddTcpDatagramChannel(cancellationToken).VhConfigureAwait();
+                await AddTcpPacketChannel(cancellationToken).VhConfigureAwait();
         }
         catch (Exception ex) {
-            if (_disposed) return;
-            VhLogger.LogError(GeneralEventId.PacketChannel, ex, "Could not Manage DatagramChannels.");
-        }
-        finally {
-            _datagramChannelsSemaphore.Release();
+            if (!_disposed)
+                VhLogger.LogError(GeneralEventId.PacketChannel, ex, "Could not Manage PacketChannels.");
         }
     }
 
-    private async Task AddUdpChannel()
+    private void AddUdpChannel()
     {
         if (HostTcpEndPoint == null) throw new InvalidOperationException($"{nameof(HostTcpEndPoint)} is not initialized!");
         if (VhUtils.IsNullOrEmpty(ServerSecret)) throw new Exception("ServerSecret has not been set.");
@@ -522,7 +518,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 LeaveTransmitterOpen = false,
                 ProtocolVersion = ConnectorService.ProtocolVersion,
                 AutoDisposePackets = true,
-                Blocking = true
+                Blocking = true,
+                ChannelId = Guid.NewGuid().ToString(),
+                Lifespan = null,
             });
 
         try {
@@ -533,7 +531,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
         catch {
             udpClient.Dispose();
-            await udpChannel.DisposeAsync().VhConfigureAwait();
+            udpChannel.Dispose();
             UseUdpChannel = false;
             throw;
         }
@@ -737,14 +735,13 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             // Preparing tunnel
             VhLogger.Instance.LogInformation("Configuring Datagram Channels...");
             Tunnel.Mtu = Math.Min(TunnelDefaults.Mtu, helloResponse.Mtu - TunnelDefaults.MtuOverhead);
-            Tunnel.RemoteMtu = helloResponse.Mtu;
-            Tunnel.MaxPacketChannelCount = helloResponse.MaxDatagramChannelCount != 0
+            Tunnel.MaxPacketChannelCount = helloResponse.MaxPacketChannelCount != 0
                 ? Tunnel.MaxPacketChannelCount =
-                    Math.Min(_maxDatagramChannelCount, helloResponse.MaxDatagramChannelCount)
-                : _maxDatagramChannelCount;
+                    Math.Min(_maxPacketChannelCount, helloResponse.MaxPacketChannelCount)
+                : _maxPacketChannelCount;
 
             // manage datagram channels
-            await ManageDatagramChannels(cancellationToken).VhConfigureAwait();
+            await ManagePacketChannels(cancellationToken).VhConfigureAwait();
 
             // prepare packet capture
             // Set a default to capture & drop the packets if the server does not provide a network
@@ -800,10 +797,10 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         return adResult;
     }
 
-    private async Task AddTcpDatagramChannel(CancellationToken cancellationToken)
+    private async Task AddTcpPacketChannel(CancellationToken cancellationToken)
     {
         // Create and send the Request Message
-        var request = new TcpDatagramChannelRequest {
+        var request = new TcpPacketChannelRequest {
             RequestId = Guid.NewGuid() + ":client",
             SessionId = SessionId,
             SessionKey = SessionKey
@@ -813,10 +810,14 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         StreamPacketChannel? channel = null;
         try {
             // find timespan
-            var lifespan = !VhUtils.IsInfinite(_maxTcpDatagramLifespan)
-                ? TimeSpan.FromSeconds(new Random().Next((int)_minTcpDatagramLifespan.TotalSeconds,
-                    (int)_maxTcpDatagramLifespan.TotalSeconds))
-                : Timeout.InfiniteTimeSpan;
+            var lifespan = VhUtils.IsInfinite(_maxTcpDatagramLifespan)
+                ? (TimeSpan?)null
+                : TimeSpan.FromSeconds(new Random().Next((int)_minTcpDatagramLifespan.TotalSeconds,
+                    (int)_maxTcpDatagramLifespan.TotalSeconds));
+
+            // PacketChannel should not be reused, otherwise its timespan will be meaningless
+            if (lifespan != null)
+                requestResult.ClientStream.PreventReuse();
 
             // add the new channel
             channel = new StreamPacketChannel(new StreamPacketChannelOptions {
@@ -829,7 +830,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             Tunnel.AddChannel(channel);
         }
         catch {
-            if (channel != null) await channel.DisposeAsync().VhConfigureAwait();
+            channel?.Dispose();
             requestResult.Dispose();
             throw;
         }
@@ -989,7 +990,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         // Tunnel
         VhLogger.Instance.LogDebug("Disposing Tunnel...");
         Tunnel.PacketReceived -= Tunnel_PacketReceived;
-        await Tunnel.DisposeAsync().VhConfigureAwait();
+        Tunnel.Dispose();
 
         VhLogger.Instance.LogDebug("Disposing ProxyManager...");
         _proxyManager.PacketReceived -= Proxy_PacketReceived;
@@ -1031,8 +1032,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         public Traffic TotalTraffic => _totalTraffic + client.Tunnel.Traffic;
         public int TcpTunnelledCount => client._clientHost.Stat.TcpTunnelledCount;
         public int TcpPassthruCount => client._clientHost.Stat.TcpPassthruCount;
-        public int DatagramChannelCount => client.Tunnel.DatagramChannelCount;
-        public bool IsUdpMode => client.Tunnel.IsUdpMode;
+        public int PacketChannelCount => client.Tunnel.PacketChannelCount;
+        public bool IsUdpMode => client.UseUdpChannel;
         public bool CanExtendByRewardedAd => client.CanExtendByRewardedAd(_accessUsage);
         public long SessionMaxTraffic => _accessUsage.MaxTraffic;
         public DateTime? SessionExpirationTime => _accessUsage.ExpirationTime;

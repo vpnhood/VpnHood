@@ -5,7 +5,7 @@ namespace VpnHood.Core.Tunneling;
 
 public static class TunnelDefaults
 {
-    public const int MaxDatagramChannelCount = 8;
+    public const int MaxPacketChannelCount = 8;
     public const int MtuOverhead = 70;
     public const int Mtu = 1500 - MtuOverhead;
     public const int MtuRemote = 1500;

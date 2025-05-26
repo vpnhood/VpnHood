@@ -17,8 +17,19 @@ public class Tunnel : PassthroughPacketTransport
     private readonly object _speedLock = new();
 
     public void AddChannel(IChannel channel) => _channelManager.AddChannel(channel);
+    public DateTime LastActivityTime { get; private set; }
     public Traffic Traffic => _channelManager.Traffic;
+    public int PacketChannelCount => _channelManager.PacketChannelCount;
+    public int StreamProxyChannelCount => _channelManager.ProxyChannelCount;
+    public void RemoveAllPacketChannels() => _channelManager.RemoveAllPacketChannels();
 
+    public int MaxPacketChannelCount {
+        get => _channelManager.MaxPacketChannelCount;
+        set => _channelManager.MaxPacketChannelCount = value;
+    }
+
+    public int Mtu { get; set; }
+    
     public Traffic Speed {
         get {
             lock (_speedLock) return _speed;
@@ -28,24 +39,12 @@ public class Tunnel : PassthroughPacketTransport
         }
     }
 
-    public int Mtu { get; set; } = TunnelDefaults.Mtu;
-    public int RemoteMtu { get; set; } = TunnelDefaults.MtuRemote;
-
     public Tunnel(TunnelOptions options)
         : base(options.AutoDisposePackets)
     {
-        _channelManager = new ChannelManager(options.MaxDatagramChannelCount, Channel_OnPacketReceived);
+        _channelManager = new ChannelManager(options.MaxPacketChannelCount, Channel_OnPacketReceived);
         _speedMonitorTimer = new Timer(_ => UpdateSpeed(), null, TimeSpan.Zero, _speedTestThreshold);
     }
-
-    //public bool IsUdpMode => UdpChannel != null;
-
-    //public UdpChannel? UdpChannel {
-    //    get {
-    //        lock (_channelListLock)
-    //            return (UdpChannel?)_packetChannels.FirstOrDefault(x => x is UdpChannel);
-    //    }
-    //}
 
     private void UpdateSpeed()
     {
@@ -64,11 +63,13 @@ public class Tunnel : PassthroughPacketTransport
             _lastSpeedUpdateTime = FastDateTime.Now;
 
             // update traffic usage & last traffic if changed
-            _lastTraffic = traffic;
+            if (_lastTraffic != traffic) {
+                LastActivityTime = FastDateTime.Now;
+                _lastTraffic = traffic;
+            }
         }
     }
-
-
+    
     private void Channel_OnPacketReceived(object sender, IpPacket ipPacket)
     {
         OnPacketReceived(ipPacket);
@@ -77,27 +78,26 @@ public class Tunnel : PassthroughPacketTransport
     // it is not thread-safe
     protected override void SendPacket(IpPacket ipPacket)
     {
+        // flush all packets to the same channel
+        var channel = FindChannelForPacket(ipPacket);
+
         // check is there any packet larger than MTU
         VerifyMtu(ipPacket);
 
-        // flush all packets to the same channel
-        var channel = FindChannelForPacket(ipPacket);
-        if (channel is IPacketChannel)
-
+        // send packet
         channel.SendPacketQueued(ipPacket);
     }
 
     private void VerifyMtu(IpPacket ipPacket)
     {
         // use RemoteMtu if the channel is streamed
-        var mtu = IsUdpMode ? Mtu : RemoteMtu;
-        if (ipPacket.PacketLength <= mtu)
+        if (ipPacket.PacketLength <= Mtu)
             return;
 
-        var replyPacket = PacketBuilder.BuildIcmpPacketTooBigReply(ipPacket, (ushort)mtu);
+        var replyPacket = PacketBuilder.BuildIcmpPacketTooBigReply(ipPacket, (ushort)Mtu);
         OnPacketReceived(replyPacket);
         throw new Exception(
-            $"The packet is larger than MTU. PacketLength: {ipPacket.PacketLength}, MTU: {mtu}.");
+            $"The packet is larger than MTU. PacketLength: {ipPacket.PacketLength}, MTU: {Mtu}.");
     }
 
     private IPacketChannel FindChannelForPacket(IpPacket ipPacket)
@@ -117,7 +117,7 @@ public class Tunnel : PassthroughPacketTransport
         // find channel by protocol
         var channelCount = _channelManager.PacketChannelCount;
         var channelIndex = channelCount switch {
-            0 => throw new Exception("There is no DatagramChannel to send packets."),
+            0 => throw new Exception("There is no PacketChannel to send packets."),
             1 => 0,
             _ => ipPacket.Protocol switch {
                 // select channel by tcp source port

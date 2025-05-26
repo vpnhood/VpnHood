@@ -21,7 +21,7 @@ public class SessionOptions
     public TimeSpan? SyncInterval { get; set; }
 
     public long? SyncCacheSize { get; set; }
-    public int? MaxDatagramChannelCount { get; set; }
+    public int? MaxPacketChannelCount { get; set; }
     public int? MaxUdpClientCount { get; set; }
     public int? MaxIcmpClientCount { get; set; }
     public int? TcpBufferSize { get; set; }
@@ -49,7 +49,7 @@ public class SessionOptions
     [JsonIgnore] public TimeSpan IcmpTimeoutValue => IcmpTimeout ?? TimeSpan.FromSeconds(30);
     [JsonIgnore] public TimeSpan SyncIntervalValue => SyncInterval ?? TimeSpan.FromMinutes(20);
     [JsonIgnore] public long SyncCacheSizeValue => SyncCacheSize ?? 100 * 1000000; // 100 MB
-    [JsonIgnore] public int MaxDatagramChannelCountValue => MaxDatagramChannelCount ?? 8;
+    [JsonIgnore] public int MaxPacketChannelCountValue => MaxPacketChannelCount ?? 8;
     [JsonIgnore] public int MaxUdpClientCountValue => MaxUdpClientCount ?? 500;
     [JsonIgnore] public int MaxIcmpClientCountValue => MaxIcmpClientCount ?? 20;
     [JsonIgnore] public TimeSpan TcpConnectTimeoutValue => TcpConnectTimeout ?? TimeSpan.FromSeconds(30);
@@ -66,7 +66,7 @@ public class SessionOptions
         if (obj.IcmpTimeout != null) IcmpTimeout = obj.IcmpTimeout;
         if (obj.SyncInterval != null) SyncInterval = obj.SyncInterval;
         if (obj.SyncCacheSize != null) SyncCacheSize = obj.SyncCacheSize;
-        if (obj.MaxDatagramChannelCount != null) MaxDatagramChannelCount = obj.MaxDatagramChannelCount;
+        if (obj.MaxPacketChannelCount != null) MaxPacketChannelCount = obj.MaxPacketChannelCount;
         if (obj.MaxUdpClientCount != null) MaxUdpClientCount = obj.MaxUdpClientCount;
         if (obj.MaxIcmpClientCount != null) MaxIcmpClientCount = obj.MaxIcmpClientCount;
         if (obj.TcpBufferSize != null) TcpBufferSize = obj.TcpBufferSize;
@@ -93,7 +93,7 @@ public class SessionOptions
         IcmpTimeout = IcmpTimeoutValue;
         SyncInterval = SyncIntervalValue;
         SyncCacheSize = SyncCacheSizeValue;
-        MaxDatagramChannelCount = MaxDatagramChannelCountValue;
+        MaxPacketChannelCount = MaxPacketChannelCountValue;
         MaxUdpClientCount = MaxUdpClientCountValue;
         MaxIcmpClientCount = MaxIcmpClientCountValue;
         TcpBufferSize = TcpBufferSize; //no default

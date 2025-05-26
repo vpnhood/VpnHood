@@ -427,7 +427,7 @@ public class TestHelper : IDisposable
         var tunnelOptions = new TunnelOptions {
             AutoDisposePackets = true,
             PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
-            MaxDatagramChannelCount = TunnelDefaults.MaxDatagramChannelCount
+            MaxPacketChannelCount = TunnelDefaults.MaxPacketChannelCount
         };
         return tunnelOptions;
     }
@@ -442,7 +442,7 @@ public class TestHelper : IDisposable
             ClientId = clientId ?? Guid.NewGuid().ToString(),
             AllowAnonymousTracker = true,
             AllowEndPointTracker = true,
-            MaxDatagramChannelCount = 1,
+            MaxPacketChannelCount = 1,
             UseUdpChannel = useUdpChannel,
             VpnAdapterIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToArray(),
             IncludeLocalNetwork = true,

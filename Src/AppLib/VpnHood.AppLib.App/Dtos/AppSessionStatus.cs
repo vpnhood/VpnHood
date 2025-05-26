@@ -12,7 +12,7 @@ public class AppSessionStatus
     public required Traffic TotalTraffic { get; init; }
     public required int TcpTunnelledCount { get; init; }
     public required int TcpPassthruCount { get; init; }
-    public required int DatagramChannelCount { get; init; }
+    public required int PacketChannelCount { get; init; }
     public required bool IsUdpMode { get; init; }
     public required bool IsWaitingForAd { get; init; }
     public required bool CanExtendByRewardedAd { get; init; }

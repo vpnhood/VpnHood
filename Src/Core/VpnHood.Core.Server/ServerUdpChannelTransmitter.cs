@@ -8,15 +8,14 @@ public class ServerUdpChannelTransmitter(UdpClient udpClient, SessionManager ses
     : UdpChannelTransmitter(udpClient, sessionManager.ServerSecret)
 {
     protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint,
-        long channelCryptorPosition, Memory<byte> buffer)
+        Memory<byte> buffer,
+        long channelCryptorPosition)
     {
         var session = sessionManager.GetSessionById(sessionId) 
                       ?? throw new Exception($"Session does not found. SessionId: {sessionId}");
 
         //make sure UDP channel is added
-        session.UseUdpChannel = true;
-        session.UdpChannel?.SetRemote(this, remoteEndPoint);
-        session.UdpChannel?.OnDataReceived(buffer, channelCryptorPosition);
+        session.OnUdpTransmitterReceivedData(this, remoteEndPoint, channelCryptorPosition, buffer);
     }
 
     public static ServerUdpChannelTransmitter Create(IPEndPoint ipEndPoint, SessionManager sessionManager)

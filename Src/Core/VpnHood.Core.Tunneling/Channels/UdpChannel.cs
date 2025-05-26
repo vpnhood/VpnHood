@@ -9,15 +9,15 @@ namespace VpnHood.Core.Tunneling.Channels;
 
 public class UdpChannel(UdpChannelOptions options) : PacketChannel(options)
 {
-    private IPEndPoint? _lastRemoteEp;
     private readonly Memory<byte> _buffer = new byte[TunnelDefaults.Mtu + UdpChannelTransmitter.HeaderLength];
-    private UdpChannelTransmitter? _udpChannelTransmitter;
+    private readonly UdpChannelTransmitter _udpChannelTransmitter = options.UdpChannelTransmitter;
     private readonly BufferCryptor _sessionCryptorWriter = new(options.SessionKey);
     private readonly BufferCryptor _sessionCryptorReader = new(options.SessionKey);
     private readonly long _cryptorPosBase = options.LeaveTransmitterOpen ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
     private readonly ulong _sessionId = options.SessionId;
     private readonly int _protocolVersion = options.ProtocolVersion;
     private readonly bool _leaveTransmitterOpen = options.LeaveTransmitterOpen;
+    public IPEndPoint RemoteEndPoint { get; set; } = options.RemoteEndPoint;
 
     protected override Task StartReadTask()
     {
@@ -27,7 +27,7 @@ public class UdpChannel(UdpChannelOptions options) : PacketChannel(options)
 
     public async Task SendBuffer(Memory<byte> buffer)
     {
-        if (_lastRemoteEp == null)
+        if (RemoteEndPoint == null)
             throw new InvalidOperationException("RemoveEndPoint has not been initialized yet in UdpChannel.");
 
         if (_udpChannelTransmitter == null)
@@ -40,7 +40,7 @@ public class UdpChannel(UdpChannelOptions options) : PacketChannel(options)
 
         // send buffer
         await _udpChannelTransmitter
-            .SendAsync(_lastRemoteEp, _sessionId, sessionCryptoPosition, buffer, _protocolVersion)
+            .SendAsync(RemoteEndPoint, _sessionId, sessionCryptoPosition, buffer, _protocolVersion)
             .VhConfigureAwait();
     }
 
@@ -108,12 +108,6 @@ public class UdpChannel(UdpChannelOptions options) : PacketChannel(options)
         };
     }
 
-    public void SetRemote(UdpChannelTransmitter udpChannelTransmitter, IPEndPoint remoteEndPoint)
-    {
-        _udpChannelTransmitter = udpChannelTransmitter;
-        _lastRemoteEp = remoteEndPoint;
-    }
-
     private static IpPacket ReadNextPacketKeepMemory(Memory<byte> buffer)
     {
         var packetLength = PacketUtil.ReadPacketLength(buffer.Span);
@@ -139,7 +133,7 @@ public class UdpChannel(UdpChannelOptions options) : PacketChannel(options)
     {
         if (disposing) {
             if (!_leaveTransmitterOpen)
-                _udpChannelTransmitter?.Dispose();
+                _udpChannelTransmitter.Dispose();
         }
 
         base.Dispose(disposing);

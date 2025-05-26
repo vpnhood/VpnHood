@@ -4,8 +4,7 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
     where T : Stream
 {
     protected readonly T SourceStream = sourceStream;
-    private bool _disposed;
-
+    protected bool IsDisposed { get; private set; }
     public override bool CanRead => SourceStream.CanRead;
     public override bool CanSeek => SourceStream.CanSeek;
     public override bool CanWrite => SourceStream.CanWrite;
@@ -78,7 +77,7 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
 
     protected override void Dispose(bool disposing)
     {
-        if (_disposed)
+        if (IsDisposed)
             return;
 
         if (disposing) {
@@ -86,7 +85,7 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
                 SourceStream.Dispose();
         }
 
-        _disposed = true;
+        IsDisposed = true;
     }
 
     public sealed override void Close()

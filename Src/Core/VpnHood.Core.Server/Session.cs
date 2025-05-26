@@ -1,6 +1,6 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Server.Abstractions;
@@ -40,6 +40,7 @@ public class Session : IDisposable
     private readonly TrackingOptions _trackingOptions;
     private IPAddress? _clientInternalIpV6;
     private IPAddress? _clientInternalIpV4;
+    private UdpChannel? _udpChannel;
 
     [Obsolete]
     private readonly bool _fixClientInternalIp;
@@ -63,14 +64,13 @@ public class Session : IDisposable
     public ulong SessionId { get; }
     public byte[] SessionKey { get; }
     public SessionResponse SessionResponseEx { get; internal set; }
-    public UdpChannel? UdpChannel => Tunnel.UdpChannel;
     public bool IsDisposed => DisposedTime != null;
     public DateTime? DisposedTime { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
     public SessionExtraData ExtraData { get; }
     public int ProtocolVersion { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
-    public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (Tunnel.IsUdpMode ? 0 : Tunnel.PacketChannelCount);
+    public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (_udpChannel != null ? 0 : Tunnel.PacketChannelCount);
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
     public VirtualIpBundle VirtualIps { get; }
@@ -169,18 +169,30 @@ public class Session : IDisposable
         return oldValue;
     }
 
-    public bool UseUdpChannel {
-        get => Tunnel.IsUdpMode;
-        set {
-            if (value == UseUdpChannel)
+    public void OnUdpTransmitterReceivedData(UdpChannelTransmitter transmitter, IPEndPoint remoteEndPoint,
+        long cryptorPosition, Memory<byte> buffer)
+    {
+        // create and add udp channel if not exists
+        if (_udpChannel is not { State: PacketChannelState.Connected }) {
+            _udpChannel = TryPrepareUdpChannel(transmitter, remoteEndPoint);
+            if (_udpChannel == null)
                 return;
+        }
 
-            // the udp channel will remove by add stream channel request
-            if (!value)
-                return;
+        // set remote end point and notify channel about data received
+        _udpChannel.RemoteEndPoint = remoteEndPoint;
+        _udpChannel.OnDataReceived(buffer, cryptorPosition);
+    }
 
+    private UdpChannel? TryPrepareUdpChannel(UdpChannelTransmitter transmitter, IPEndPoint remoteEndPoint)
+    {
+        // add the new udp channel
+        UdpChannel? udpChannel = null;
+        try {
             // add new channel
-            var udpChannel = new UdpChannel(new UdpChannelOptions {
+            udpChannel = new UdpChannel(new UdpChannelOptions {
+                UdpChannelTransmitter = transmitter,
+                RemoteEndPoint = remoteEndPoint,
                 Blocking = false,
                 SessionId = SessionId,
                 SessionKey = SessionKey,
@@ -190,13 +202,18 @@ public class Session : IDisposable
                 Lifespan = null,
                 ChannelId = Guid.NewGuid().ToString()
             });
-            
-            try {
-                Tunnel.AddChannel(udpChannel);
-            }
-            catch {
-                udpChannel.Dispose();
-            }
+
+            // remove old channels
+            Tunnel.RemoveAllPacketChannels();
+            Tunnel.AddChannel(udpChannel);
+            return udpChannel;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(GeneralEventId.PacketChannel, ex,
+                "Failed to create UdpChannel for session {SessionId}", SessionId);
+
+            udpChannel?.Dispose();
+            return null;
         }
     }
 
@@ -342,8 +359,11 @@ public class Session : IDisposable
         await clientStream.WriteResponseAsync(SessionResponseEx, cancellationToken).VhConfigureAwait();
 
         // Disable UdpChannel
-        UseUdpChannel = false;
-
+        if (_udpChannel != null) {
+            Tunnel.RemoveAllPacketChannels();
+            _udpChannel = null;
+        }
+       
         // add channel
         VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
             "Creating a TcpPacketChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
@@ -355,7 +375,7 @@ public class Session : IDisposable
             ChannelId = request.RequestId,
             Lifespan = null
         });
-        
+
         try {
             Tunnel.AddChannel(channel);
         }
@@ -368,9 +388,6 @@ public class Session : IDisposable
     public Task ProcessUdpPacketRequest(UdpPacketRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
-        //var udpClient = new UdpClient();
-        //udpClient.SendAsync();
-        //request.PacketBuffers.
         throw new NotImplementedException();
     }
 
@@ -420,9 +437,9 @@ public class Session : IDisposable
             isRequestedEpException = false;
 
             //tracking
-            LogTrack(IpProtocol.Tcp, 
+            LogTrack(IpProtocol.Tcp,
                 localEndPoint: (IPEndPoint)tcpClientHost.Client.LocalEndPoint,
-                destinationEndPoint: request.DestinationEndPoint, 
+                destinationEndPoint: request.DestinationEndPoint,
                 isNewLocal: true, isNewRemote: true, failReason: null);
 
             // send response

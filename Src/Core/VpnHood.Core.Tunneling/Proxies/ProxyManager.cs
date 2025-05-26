@@ -125,7 +125,7 @@ public class ProxyManager : PassthroughPacketTransport
             // dispose channels
             lock (_streamProxyChannels)
                 foreach (var channel in _streamProxyChannels)
-                    _ = channel.DisposeAsync(false);
+                    channel.Dispose();
         }
     }
 }

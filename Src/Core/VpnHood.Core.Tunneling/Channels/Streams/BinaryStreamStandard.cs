@@ -37,6 +37,9 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer,
         CancellationToken cancellationToken = default)
     {
+        if (IsDisposed)
+            throw new ObjectDisposedException(nameof(BinaryStreamStandard));
+
         try {
             // support zero length buffer. It should just call the base stream write
             _readTask = buffer.Length == 0
@@ -89,6 +92,9 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer,
         CancellationToken cancellationToken = default)
     {
+        if (IsDisposed)
+            throw new ObjectDisposedException(nameof(BinaryStreamStandard));
+
         try {
             // support zero length buffer. It should just call the base stream write
             _writeTask = buffer.Length == 0
@@ -106,6 +112,9 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
 
     public async ValueTask WritePreservedAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
+        if (IsDisposed)
+            throw new ObjectDisposedException(nameof(BinaryStreamStandard));
+
         try {
             // should not write a zero chunk if caller data is zero
             _writeTask = buffer.Length == PreserveWriteBufferLength

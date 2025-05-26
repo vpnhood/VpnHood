@@ -134,8 +134,8 @@ public abstract class UdpChannelTransmitter : IDisposable
                 var channelCryptorPosition = BitConverter.ToInt64(buffer, bufferIndex);
                 bufferIndex += 8;
 
-                OnReceiveData(sessionId, udpResult.RemoteEndPoint, channelCryptorPosition, 
-                    udpResult.Buffer.AsMemory(bufferIndex));
+                OnReceiveData(sessionId, udpResult.RemoteEndPoint, 
+                    udpResult.Buffer.AsMemory(bufferIndex), channelCryptorPosition);
             }
             catch (Exception ex) {
                 // finish if disposed
@@ -160,8 +160,9 @@ public abstract class UdpChannelTransmitter : IDisposable
         Dispose();
     }
 
-    protected abstract void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint, 
-        long channelCryptorPosition, Memory<byte> buffer);
+    protected abstract void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint,
+        Memory<byte> buffer,
+        long channelCryptorPosition);
 
     private bool IsInvalidState(Exception ex)
     {

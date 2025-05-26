@@ -40,7 +40,7 @@ public class TcpPacketChannelTest : TestBase
         // create server channel
         var serverTcpClient = await listenerTask;
         using var serverStream = new TcpClientStream(serverTcpClient, serverTcpClient.GetStream(), Guid.NewGuid() + ":server");
-        await using var serverChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
+        using var serverChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
             ClientStream = serverStream,
             Blocking = false,
             AutoDisposePackets = true,
@@ -48,7 +48,7 @@ public class TcpPacketChannelTest : TestBase
             ChannelId = Guid.NewGuid().ToString(),
         });
   
-        await using var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
+        using var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         serverTunnel.AddChannel(serverChannel);
         IpPacket? lastServerReceivedPacket = null;
         serverTunnel.PacketReceived += (_, ipPacket) => {
@@ -57,7 +57,7 @@ public class TcpPacketChannelTest : TestBase
 
         // create client channel
         using var clientStream = new TcpClientStream(tcpClient, tcpClient.GetStream(), Guid.NewGuid() + ":client");
-        await using var clientChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
+        using var clientChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
             ClientStream = clientStream,
             AutoDisposePackets = true,
             Lifespan = TimeSpan.FromMilliseconds(1000),
@@ -65,7 +65,7 @@ public class TcpPacketChannelTest : TestBase
             ChannelId = Guid.NewGuid().ToString(),
         });
 
-        await using var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
+        using var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         clientTunnel.AddChannel(clientChannel);
 
         // -------

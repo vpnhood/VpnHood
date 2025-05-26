@@ -23,8 +23,9 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Server;
 
-public class SessionManager : IAsyncDisposable, IJob
+public class SessionManager : IAsyncDisposable, IDisposable, IJob
 {
+    private bool _disposed;
     private readonly IAccessManager _accessManager;
     private readonly ISocketFactory _socketFactory;
     private readonly IVpnAdapter? _vpnAdapter;
@@ -84,7 +85,7 @@ public class SessionManager : IAsyncDisposable, IJob
         JobRunner.Default.Add(this);
     }
 
-    private async Task<Session> CreateSessionInternal(
+    private Session CreateSessionInternal(
         SessionResponseEx sessionResponseEx,
         IPEndPointPair ipEndPointPair,
         string requestId,
@@ -99,7 +100,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
         session.SessionResponseEx.ErrorMessage = "Could not add session to collection.";
         session.SessionResponseEx.ErrorCode = SessionErrorCode.SessionError;
-        await session.DisposeAsync().VhConfigureAwait();
+        session.Dispose();
         throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponseEx, requestId);
     }
 
@@ -163,9 +164,8 @@ public class SessionManager : IAsyncDisposable, IJob
             throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponseEx, helloRequest);
 
         // create the session and add it to list
-        var session = await CreateSessionInternal(sessionResponseEx, ipEndPointPair,
-                helloRequest.RequestId, isRecovery: false)
-            .VhConfigureAwait();
+        var session = CreateSessionInternal(sessionResponseEx, ipEndPointPair,
+            helloRequest.RequestId, isRecovery: false);
 
         // Anonymous Report to GA
         _ = GaTrackNewSession(helloRequest.ClientInfo);
@@ -205,7 +205,7 @@ public class SessionManager : IAsyncDisposable, IJob
             try {
                 var session = BuildSessionFromResponseEx(responseEx, true);
                 if (!Sessions.TryAdd(session.SessionId, session)) {
-                    await session.DisposeAsync().VhConfigureAwait();
+                    session.Dispose();
                     throw new Exception("Could not add session to collection.");
                 }
             }
@@ -254,7 +254,7 @@ public class SessionManager : IAsyncDisposable, IJob
                 throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponse, sessionRequest);
 
             // create the session
-            session = await CreateSessionInternal(sessionResponse, ipEndPointPair, "recovery", isRecovery: true).VhConfigureAwait();
+            session = CreateSessionInternal(sessionResponse, ipEndPointPair, "recovery", isRecovery: true);
             VhLogger.Instance.LogInformation(GeneralEventId.Session,
                 "Session has been recovered. SessionId: {SessionId}",
                 VhLogger.FormatSessionId(sessionRequest.SessionId));
@@ -334,7 +334,7 @@ public class SessionManager : IAsyncDisposable, IJob
             session.SessionResponseEx = new SessionResponse {
                 ErrorCode = SessionErrorCode.AccessExpired
             };
-            _ = session.DisposeAsync();
+            session.Dispose();
         }
     }
 
@@ -369,7 +369,7 @@ public class SessionManager : IAsyncDisposable, IJob
                 x.Value.SessionResponseEx.ErrorCode != SessionErrorCode.Ok);
 
         foreach (var failedSession in failedSessions) {
-            _ = failedSession.Value.DisposeAsync().VhConfigureAwait();
+            failedSession.Value.Dispose();
         }
     }
 
@@ -392,7 +392,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
     public void RemoveSession(Session session)
     {
-        _ = session.DisposeAsync();
+        session.Dispose();
         Sessions.TryRemove(session.SessionId, out _);
         _sessionLocalService.Update(session); // let update the last state
         _virtualIpManager.Release(session.VirtualIps);
@@ -502,28 +502,34 @@ public class SessionManager : IAsyncDisposable, IJob
         return _virtualIpManager.FindSession(virtualIpAddress);
     }
 
-    private bool _disposed;
-    private readonly AsyncLock _disposeLock = new();
 
     public async ValueTask DisposeAsync()
     {
-        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
-        _disposed = true;
-
-        // dispose the job
-        JobRunner.Default.Remove(this);
 
         // sync sessions
         try {
-            await Sync(force: true);
+            await Sync(force: true).VhConfigureAwait();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not sync sessions in disposing.");
             // Dispose should not throw any error
         }
 
+        Dispose();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        // dispose the job
+        JobRunner.Default.Remove(this);
+
         // dispose all sessions
-        await Task.WhenAll(Sessions.Values.Select(x => x.DisposeAsync().AsTask())).VhConfigureAwait();
+        VhLogger.Instance.LogDebug("Disposing all sessions...");
+        foreach (var session in Sessions.Values)
+            session.Dispose();
     }
 }

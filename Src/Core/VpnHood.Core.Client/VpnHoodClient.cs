@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
@@ -510,28 +511,32 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             throw new Exception("Server does not serve any UDP endpoint.");
         }
 
-        var udpClient = SocketFactory.CreateUdpClient(HostTcpEndPoint.AddressFamily);
-        var udpChannel = new UdpChannel(
-            new UdpChannelOptions {
-                SessionKey = _sessionKey,
-                SessionId = SessionId,
-                LeaveTransmitterOpen = false,
-                ProtocolVersion = ConnectorService.ProtocolVersion,
-                AutoDisposePackets = true,
-                Blocking = true,
-                ChannelId = Guid.NewGuid().ToString(),
-                Lifespan = null,
-            });
-
+        UdpChannel? udpChannel = null;
+        UdpClient? udpClient = null;
+        UdpChannelTransmitter? transmitter = null;
         try {
-            var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, ServerSecret);
+            udpClient = SocketFactory.CreateUdpClient(HostTcpEndPoint.AddressFamily);
+            var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpClient, ServerSecret);
             udpChannelTransmitter.Configure(sendBufferSize: _udpSendBufferSize, receiveBufferSize: _udpReceiveBufferSize);
-            udpChannel.SetRemote(udpChannelTransmitter, HostUdpEndPoint);
+            udpChannel = new UdpChannel(
+                new UdpChannelOptions {
+                    UdpChannelTransmitter = udpChannelTransmitter,
+                    RemoteEndPoint = HostUdpEndPoint,
+                    SessionKey = _sessionKey,
+                    SessionId = SessionId,
+                    LeaveTransmitterOpen = false,
+                    ProtocolVersion = ConnectorService.ProtocolVersion,
+                    AutoDisposePackets = true,
+                    Blocking = true,
+                    ChannelId = Guid.NewGuid().ToString(),
+                    Lifespan = null
+                });
             Tunnel.AddChannel(udpChannel);
         }
         catch {
-            udpClient.Dispose();
-            udpChannel.Dispose();
+            udpClient?.Dispose();
+            udpChannel?.Dispose();
+            transmitter?.Dispose();
             UseUdpChannel = false;
             throw;
         }

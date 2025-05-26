@@ -91,7 +91,7 @@ public class Tunnel : PassthroughPacketTransport
     private void VerifyMtu(IpPacket ipPacket)
     {
         // use RemoteMtu if the channel is streamed
-        if (ipPacket.PacketLength <= Mtu)
+        if (ipPacket.PacketLength > Mtu)
             return;
 
         var replyPacket = PacketBuilder.BuildIcmpPacketTooBigReply(ipPacket, (ushort)Mtu);

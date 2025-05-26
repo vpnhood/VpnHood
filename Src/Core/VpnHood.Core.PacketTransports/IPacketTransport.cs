@@ -8,5 +8,5 @@ public interface IPacketTransport : IDisposable
     bool IsSending { get; }
     bool SendPacketQueued(IpPacket ipPacket);
     ValueTask SendPacketQueuedAsync(IpPacket ipPacket);
-    public ReadOnlyPacketTransportStat PacketStat { get; }
+    ReadOnlyPacketTransportStat PacketStat { get; }
 }

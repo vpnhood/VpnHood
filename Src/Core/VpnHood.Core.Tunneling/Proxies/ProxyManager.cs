@@ -9,7 +9,7 @@ namespace VpnHood.Core.Tunneling.Proxies;
 
 public class ProxyManager : PassthroughPacketTransport
 {
-    private readonly List<StreamProxyChannel> _streamProxyChannels = [];
+    private readonly List<ProxyChannel> _streamProxyChannels = [];
     private readonly IPacketProxyPool? _pingProxyPool;
     private readonly IPacketProxyPool _udpProxyPool;
 
@@ -99,7 +99,7 @@ public class ProxyManager : PassthroughPacketTransport
         }
     }
 
-    public void AddChannel(StreamProxyChannel channel)
+    public void AddChannel(ProxyChannel channel)
     {
         if (IsDisposed)
             throw new ObjectDisposedException(nameof(ProxyManager));

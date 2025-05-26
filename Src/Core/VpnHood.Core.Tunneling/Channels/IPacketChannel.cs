@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public interface IPacketChannel : IChannel, IPacketTransport
+public interface IPacketChannel : IPacketTransport, IChannel
 {
-    bool IsStream { get; }
+    int Mtu { get; }
 }

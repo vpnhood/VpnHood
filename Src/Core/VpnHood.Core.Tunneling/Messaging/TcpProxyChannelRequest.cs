@@ -5,7 +5,7 @@ using VpnHood.Core.Toolkit.Converters;
 namespace VpnHood.Core.Tunneling.Messaging;
 
 public class StreamProxyChannelRequest()
-    : RequestBase(Messaging.RequestCode.StreamProxyChannel)
+    : RequestBase(Messaging.RequestCode.ProxyChannel)
 {
     [JsonConverter(typeof(IPEndPointConverter))]
     public required IPEndPoint DestinationEndPoint { get; set; }

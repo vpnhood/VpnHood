@@ -8,8 +8,10 @@ using VpnHood.Core.Tunneling.ClientStreams;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class StreamProxyChannel : IChannel, IJob
+// todo: rename to ProxyChannel 
+public class ProxyChannel : IProxyChannel, IJob
 {
+    private bool _disposed;
     private readonly int _orgStreamBufferSize;
     private readonly IClientStream _hostClientStream;
     private readonly int _tunnelStreamBufferSize;
@@ -17,13 +19,15 @@ public class StreamProxyChannel : IChannel, IJob
     private const int BufferSizeDefault = TunnelDefaults.StreamProxyBufferSize;
     private const int BufferSizeMax = 0x14000;
     private const int BufferSizeMin = 2048;
+    private bool _started;
+    private Traffic _traffic = new();
+    private readonly object _trafficLock = new();
     public JobSection JobSection { get; } = new(TunnelDefaults.TcpCheckInterval);
-    public bool Connected { get; private set; }
-    public Traffic Traffic { get; private set; }
+
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public string ChannelId { get; }
 
-    public StreamProxyChannel(string channelId, IClientStream orgClientStream, IClientStream tunnelClientStream,
+    public ProxyChannel(string channelId, IClientStream orgClientStream, IClientStream tunnelClientStream,
         int? orgStreamBufferSize = BufferSizeDefault, int? tunnelStreamBufferSize = BufferSizeDefault)
     {
         _hostClientStream = orgClientStream ?? throw new ArgumentNullException(nameof(orgClientStream));
@@ -36,16 +40,36 @@ public class StreamProxyChannel : IChannel, IJob
         _orgStreamBufferSize = orgStreamBufferSize is >= BufferSizeMin and <= BufferSizeMax
             ? orgStreamBufferSize.Value
             : throw new ArgumentOutOfRangeException(nameof(orgStreamBufferSize), orgStreamBufferSize,
-                $"Value must be greater or equal than {BufferSizeMin} and less than {BufferSizeMax}.");
+                $"Value must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}.");
 
         _tunnelStreamBufferSize = tunnelStreamBufferSize is >= BufferSizeMin and <= BufferSizeMax
             ? tunnelStreamBufferSize.Value
             : throw new ArgumentOutOfRangeException(nameof(tunnelStreamBufferSize), tunnelStreamBufferSize,
-                $"Value must be greater or equal than {BufferSizeMin} and less than {BufferSizeMax}");
+                $"Value must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}");
 
         ChannelId = channelId;
         JobRunner.Default.Add(this);
+   }
+
+    public Traffic Traffic {
+        get {
+            lock (_trafficLock) 
+                return _traffic;
+        }
     }
+
+
+    public PacketChannelState State {
+        get {
+            if (_disposed)
+                return PacketChannelState.Disposed;
+            
+            return _started 
+                ? PacketChannelState.Connected 
+                : PacketChannelState.NotStarted;
+        }
+    }
+
 
     public void Start()
     {
@@ -57,10 +81,10 @@ public class StreamProxyChannel : IChannel, IJob
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
 
-        if (Connected)
-            throw new InvalidOperationException("StreamProxyChannel is already started.");
+        if (_started)
+            throw new InvalidOperationException("ProxyChannel is already started.");
 
-        Connected = true;
+        _started = true;
         try {
             // let pass CancellationToken for the host only to save the tunnel for reuse
 
@@ -73,16 +97,29 @@ public class StreamProxyChannel : IChannel, IJob
                 CancellationToken.None, CancellationToken.None); // host => tunnel
 
             await Task.WhenAny(tunnelCopyTask, hostCopyTask).VhConfigureAwait();
+
+            // just to ensure that both tasks are completed gracefully, ClientStream should also handle it
+            await Task.WhenAll(
+                _hostClientStream.Stream.DisposeAsync().AsTask(),
+                _tunnelClientStream.Stream.DisposeAsync().AsTask())
+                .VhConfigureAwait();
+        }
+        catch (Exception) when(_disposed) {
+            // don't log if disposed
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, ex,
+                "Error while starting ProxyChannel. ChannelId: {ChannelId}", ChannelId);
         }
         finally {
-            _ = DisposeAsync();
+            Dispose();
         }
     }
 
     public Task RunJob()
     {
         // if either task is completed let graceful shutdown do its job
-        if (_disposed || !Connected)
+        if (_disposed || !_started)
             return Task.CompletedTask;
 
         CheckClientIsAlive();
@@ -95,13 +132,11 @@ public class StreamProxyChannel : IChannel, IJob
         if (_hostClientStream.Connected && _tunnelClientStream.Connected)
             return;
 
-        VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel,
-            "Disposing a StreamProxyChannel due to its error state. ChannelId: {ChannelId}", ChannelId);
+        VhLogger.Instance.LogInformation(GeneralEventId.ProxyChannel,
+            "Disposing a ProxyChannel due to its error state. ChannelId: {ChannelId}", ChannelId);
 
-        _ = DisposeAsync();
+        Dispose();
     }
-
-    private bool _isFinished;
 
     private async Task CopyToAsync(Stream source, Stream destination, bool isDestinationTunnel, int bufferSize,
         CancellationToken sourceCancellationToken, CancellationToken destinationCancellationToken)
@@ -109,17 +144,14 @@ public class StreamProxyChannel : IChannel, IJob
         try {
             await CopyToInternalAsync(source, destination, isDestinationTunnel, bufferSize,
                 sourceCancellationToken, destinationCancellationToken).VhConfigureAwait();
-            _isFinished = true;
         }
         catch (Exception ex) {
-            // show error if the stream hasn't been finished
-            if (_isFinished && VhLogger.IsSocketCloseException(ex))
-                return;
-
-            var log = isDestinationTunnel
-                ? "StreamProxyChannel: Error in copying to tunnel. ChannelId: {ChannelId}"
-                : "StreamProxyChannel: Error in copying from tunnel. ChannelId: {ChannelId}";
-            VhLogger.LogError(GeneralEventId.Tcp, ex, log, ChannelId);
+            if (isDestinationTunnel)
+                VhLogger.Instance.LogDebug(ex,
+                    "ProxyChannel: Error in copying to tunnel. ChannelId: {ChannelId}", ChannelId);
+            else
+                VhLogger.Instance.LogDebug(ex,
+                    "ProxyChannel: Error in copying from tunnel. ChannelId: {ChannelId}", ChannelId);
         }
     }
 
@@ -154,40 +186,34 @@ public class StreamProxyChannel : IChannel, IJob
 
             // write to destination
             if (destinationPreserved != null)
-                await destinationPreserved.WritePreservedAsync(readBuffer[..(preserveCount + bytesRead)], 
+                await destinationPreserved.WritePreservedAsync(readBuffer[..(preserveCount + bytesRead)],
                         cancellationToken: destinationCancellationToken).VhConfigureAwait();
             else
-                await destination.WriteAsync(readBuffer[preserveCount..bytesRead], 
+                await destination.WriteAsync(readBuffer[preserveCount..bytesRead],
                         destinationCancellationToken).VhConfigureAwait();
 
             // calculate transferred bytes
-            if (isSendingToTunnel)
-                Traffic += new Traffic(bytesRead, 0);
-            else
-                Traffic += new Traffic(0, bytesRead);
-
-            // set LastActivityTime as some data delegated
-            LastActivityTime = FastDateTime.Now;
+            lock (_trafficLock) {
+                // update traffic usage
+                if (isSendingToTunnel)
+                    _traffic += new Traffic(bytesRead, 0);
+                else
+                    _traffic += new Traffic(0, bytesRead);
+                
+                // set LastActivityTime as some data delegated
+                LastActivityTime = FastDateTime.Now;
+            }
         }
     }
 
-    public ValueTask DisposeAsync()
+   public void Dispose()
     {
-        return DisposeAsync(true);
-    }
-
-    private bool _disposed;
-    private readonly AsyncLock _disposeLock = new();
-
-    public async ValueTask DisposeAsync(bool graceful)
-    {
-        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
         _disposed = true;
 
-        Connected = false;
+        _started = false;
+        JobRunner.Default.Remove(this);
         _hostClientStream.Dispose();
-        Console.WriteLine($"zzz2: {_tunnelClientStream.ClientStreamId}"); //todo
         _tunnelClientStream.Dispose();
     }
 }

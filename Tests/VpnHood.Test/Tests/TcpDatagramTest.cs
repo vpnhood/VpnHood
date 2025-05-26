@@ -16,11 +16,11 @@ public class TcpDatagramChannelTest : TestBase
     [TestMethod]
     public void DatagramMessages()
     {
-        var ipPacket = DatagramMessageHandler.CreateMessage(new CloseDatagramMessage());
-        Assert.IsTrue(DatagramMessageHandler.IsDatagramMessage(ipPacket));
+        var ipPacket = PacketMessageHandler.CreateMessage(new ClosePacketMessage());
+        Assert.IsTrue(PacketMessageHandler.IsPacketMessage(ipPacket));
 
-        var message = DatagramMessageHandler.ReadMessage(ipPacket);
-        Assert.IsTrue(message is CloseDatagramMessage);
+        var message = PacketMessageHandler.ReadMessage(ipPacket);
+        Assert.IsTrue(message is ClosePacketMessage);
     }
 
     [TestMethod]

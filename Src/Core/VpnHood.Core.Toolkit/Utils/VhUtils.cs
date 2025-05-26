@@ -322,11 +322,6 @@ public static class VhUtils
         return timeSpan == TimeSpan.MaxValue || timeSpan == Timeout.InfiniteTimeSpan;
     }
 
-    public static ValueTask DisposeAsync(IAsyncDisposable? channel)
-    {
-        return channel?.DisposeAsync() ?? default;
-    }
-
     public static void ConfigTcpClient(TcpClient tcpClient, int? sendBufferSize, int? receiveBufferSize,
         bool? reuseAddress = null)
     {

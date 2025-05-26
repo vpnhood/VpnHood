@@ -1,19 +1,14 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
-using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class UdpChannel(UdpChannelOptions options)
-    : PacketTransport(new PacketTransportOptions {
-        AutoDisposePackets = options.AutoDisposePackets,
-        Blocking = options.Blocking,
-    }), IPacketChannel
+//todo: rename to UdpChannel
+public class UdpChannel(UdpChannelOptions options) : PacketChannel(options)
 {
     private IPEndPoint? _lastRemoteEp;
     private readonly Memory<byte> _buffer = new byte[TunnelDefaults.Mtu + UdpChannelTransmitter.HeaderLength];
@@ -21,27 +16,14 @@ public class UdpChannel(UdpChannelOptions options)
     private readonly BufferCryptor _sessionCryptorWriter = new(options.SessionKey);
     private readonly BufferCryptor _sessionCryptorReader = new(options.SessionKey);
     private readonly long _cryptorPosBase = options.LeaveTransmitterOpen ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
-    private bool _disposed;
     private readonly ulong _sessionId = options.SessionId;
     private readonly int _protocolVersion = options.ProtocolVersion;
     private readonly bool _leaveTransmitterOpen = options.LeaveTransmitterOpen;
 
-    public string ChannelId { get; } = Guid.NewGuid().ToString();
-    public bool IsStream => false;
-    public bool IsClosePending => false;
-    public bool Connected { get; private set; }
-    public DateTime LastActivityTime => PacketStat.LastActivityTime;
-    public Traffic Traffic => new (PacketStat.SentBytes, PacketStat.ReceivedBytes);
-
-    public void Start()
+    protected override Task StartReadTask()
     {
-        if (_disposed)
-            throw new ObjectDisposedException(GetType().Name);
-
-        if (Connected)
-            throw new InvalidOperationException("The udpChannel is already started.");
-
-        Connected = true;
+        // already started by UdpChannelTransmitter
+        return Task.CompletedTask;
     }
 
     public async Task SendBuffer(Memory<byte> buffer)
@@ -65,12 +47,6 @@ public class UdpChannel(UdpChannelOptions options)
 
     protected override async ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
     {
-        if (_disposed)
-            throw new ObjectDisposedException(VhLogger.FormatType(this));
-
-        if (!Connected)
-            throw new Exception($"The UdpChannel is disconnected. ChannelId: {ChannelId}.");
-
         try {
             // copy packets to buffer
             var bufferIndex = UdpChannelTransmitter.HeaderLength;
@@ -104,13 +80,33 @@ public class UdpChannel(UdpChannelOptions options)
                 await SendBuffer(_buffer[..bufferIndex]).VhConfigureAwait();
             }
         }
+        catch (Exception ex) when(ex is OperationCanceledException or ObjectDisposedException) {
+            // ignore cancellation
+            Dispose();
+        }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.Udp, ex,
-                "Error in sending packets. ChannelId: {ChannelId}", ChannelId);
-
-            if (IsInvalidState(ex))
-                await DisposeAsync().VhConfigureAwait();
+                "Unexpected error in sending packets. ChannelId: {ChannelId}", ChannelId);
+            
+            if (!CanRetry(ex))
+                Dispose();
         }
+    }
+
+    private static bool CanRetry(Exception ex)
+    {
+        if (ex is not SocketException socketException)
+            return false; // not a socket exception, no retry
+
+        return socketException.SocketErrorCode switch {
+            SocketError.TimedOut => true,
+            SocketError.Interrupted => true,
+            SocketError.NetworkUnreachable => true,
+            SocketError.HostUnreachable => true,
+            SocketError.ConnectionReset => true, // Common in UDP when destination port is closed
+            SocketError.TryAgain => true, // Possibly can retry depending on your use case
+            _ => false
+        };
     }
 
     public void SetRemote(UdpChannelTransmitter udpChannelTransmitter, IPEndPoint remoteEndPoint)
@@ -126,7 +122,7 @@ public class UdpChannel(UdpChannelOptions options)
         return packet;
     }
 
-    public void OnReceiveData(Memory<byte> buffer, long cryptorPosition)
+    public void OnDataReceived(Memory<byte> buffer, long cryptorPosition)
     {
         _sessionCryptorReader.Cipher(buffer.Span, cryptorPosition);
 
@@ -139,27 +135,14 @@ public class UdpChannel(UdpChannelOptions options)
         }
     }
 
-    private bool IsInvalidState(Exception ex)
-    {
-        return _disposed || ex is ObjectDisposedException or SocketException {
-            SocketErrorCode: SocketError.InvalidArgument
-        };
-    }
 
-    public ValueTask DisposeAsync(bool graceful)
+    protected override void Dispose(bool disposing)
     {
-        _ = graceful;
-        return DisposeAsync();
-    }
+        if (disposing) {
+            if (!_leaveTransmitterOpen)
+                _udpChannelTransmitter?.Dispose();
+        }
 
-    public ValueTask DisposeAsync()
-    {
-        if (_disposed) return default;
-        _disposed = true;
-        Connected = false;
-        if (!_leaveTransmitterOpen)
-            _udpChannelTransmitter?.Dispose();
-
-        return default;
+        base.Dispose(disposing);
     }
 }

@@ -203,7 +203,7 @@ internal class ClientHost(
     {
         if (orgTcpClient is null) throw new ArgumentNullException(nameof(orgTcpClient));
         ConnectorRequestResult<SessionResponse>? requestResult = null;
-        StreamProxyChannel? channel = null;
+        ProxyChannel? channel = null;
         var ipVersion = IpVersion.IPv4;
 
         try {
@@ -230,7 +230,7 @@ internal class ClientHost(
             // create a scope for the logger
             using var scope = VhLogger.Instance.BeginScope("LocalPort: {LocalPort}, RemoteEp: {RemoteEp}",
                 natItem.SourcePort, VhLogger.Format(natItem.DestinationAddress) + ":" + natItem.DestinationPort);
-            VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel, "New TcpProxy Request.");
+            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "New TcpProxy Request.");
 
             // check invalid income
             var catcherAddress = ipVersion == IpVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
@@ -278,8 +278,8 @@ internal class ClientHost(
                 .VhConfigureAwait();
             var proxyClientStream = requestResult.ClientStream;
 
-            // create a StreamProxyChannel
-            VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
+            // create a ProxyChannel
+            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
             var orgTcpClientStream =
                 new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
@@ -288,7 +288,7 @@ internal class ClientHost(
             await proxyClientStream.Stream.WriteAsync(filterResult.ReadData, cancellationToken);
 
             // add stream proxy
-            channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
+            channel = new ProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
             vpnHoodClient.Tunnel.AddChannel(channel);
             _stat.TcpTunnelledCount++;
         }
@@ -301,7 +301,7 @@ internal class ClientHost(
             if (channel != null) await channel.DisposeAsync().VhConfigureAwait();
             requestResult?.Dispose();
             orgTcpClient.Dispose();
-            VhLogger.LogError(GeneralEventId.StreamProxyChannel, ex, "");
+            VhLogger.LogError(GeneralEventId.ProxyChannel, ex, "");
         }
         finally {
             Interlocked.Decrement(ref _processingCount);

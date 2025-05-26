@@ -23,7 +23,7 @@ public class TunnelTest : TestBase
             Memory<byte> buffer)
         {
             udpChannel.SetRemote(this, remoteEndPoint);
-            udpChannel.OnReceiveData(buffer, channelCryptorPosition);
+            udpChannel.OnDataReceived(buffer, channelCryptorPosition);
         }
     }
 

@@ -156,8 +156,8 @@ internal class ConnectorService(
         return (RequestCode)request.RequestCode switch {
             RequestCode.Hello => GeneralEventId.Session,
             RequestCode.Bye => GeneralEventId.Session,
-            RequestCode.TcpDatagramChannel => GeneralEventId.DatagramChannel,
-            RequestCode.StreamProxyChannel => GeneralEventId.StreamProxyChannel,
+            RequestCode.TcpDatagramChannel => GeneralEventId.PacketChannel,
+            RequestCode.ProxyChannel => GeneralEventId.ProxyChannel,
             _ => GeneralEventId.Tcp
         };
     }

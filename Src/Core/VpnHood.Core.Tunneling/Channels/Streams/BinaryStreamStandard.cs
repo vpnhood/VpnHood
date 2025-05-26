@@ -13,12 +13,11 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
     private int _remainingChunkBytes;
     private bool _finished;
     private Exception? _exception;
-    private readonly CancellationTokenSource _disposeCts = new();
     private ValueTask<int> _readTask;
     private ValueTask _writeTask;
     private bool _isConnectionClosed;
     private readonly Memory<byte> _readChunkHeaderBuffer = new byte[ChunkHeaderLength];
-    private ValueTask? _closeStreamTask;
+    private Task? _closeStreamTask;
     private readonly object _closeStreamLock = new();
     public override bool CanReuse => !_isConnectionClosed && _exception == null && AllowReuse;
     public int PreserveWriteBufferLength => ChunkHeaderLength;
@@ -35,20 +34,14 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
     {
     }
 
-    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, 
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer,
         CancellationToken cancellationToken = default)
     {
-        // check if the stream has been disposed
-        if (_disposeCts.IsCancellationRequested)
-            throw new ObjectDisposedException(GetType().Name);
-
         try {
-            using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token, cancellationToken);
-
             // support zero length buffer. It should just call the base stream write
             _readTask = buffer.Length == 0
-                ? SourceStream.ReadAsync(buffer, tokenSource.Token)
-                : ReadInternalAsync(buffer, tokenSource.Token);
+                ? SourceStream.ReadAsync(buffer, cancellationToken)
+                : ReadInternalAsync(buffer, cancellationToken);
 
             // await needed to dispose tokenSource
             return await _readTask.VhConfigureAwait();
@@ -96,17 +89,11 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer,
         CancellationToken cancellationToken = default)
     {
-        // check if the stream has been disposed
-        if (_disposeCts.IsCancellationRequested) 
-            throw new ObjectDisposedException(GetType().Name);
-
         try {
-            using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token, cancellationToken);
-
             // support zero length buffer. It should just call the base stream write
             _writeTask = buffer.Length == 0
-                ? SourceStream.WriteAsync(buffer, tokenSource.Token)
-                : WriteInternalAsync(buffer, tokenSource.Token);
+                ? SourceStream.WriteAsync(buffer, cancellationToken)
+                : WriteInternalAsync(buffer, cancellationToken);
 
             // await needed to dispose tokenSource
             await _writeTask.VhConfigureAwait();
@@ -119,17 +106,11 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
 
     public async ValueTask WritePreservedAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        // check if the stream has been disposed
-        if (_disposeCts.IsCancellationRequested) 
-            throw new ObjectDisposedException(GetType().Name);
-
         try {
-            using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token, cancellationToken);
-
             // should not write a zero chunk if caller data is zero
             _writeTask = buffer.Length == PreserveWriteBufferLength
-                ? SourceStream.WriteAsync(buffer, tokenSource.Token)
-                : WriteInternalPreserverAsync(buffer, tokenSource.Token);
+                ? SourceStream.WriteAsync(buffer, cancellationToken)
+                : WriteInternalPreserverAsync(buffer, cancellationToken);
 
             // await needed to dispose tokenSource
             await _writeTask.VhConfigureAwait();
@@ -198,51 +179,48 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
 
     public override async Task<ChunkStream> CreateReuse()
     {
-        // make sure it is disposed
+        // try to close stream if it is not closed yet
         await DisposeAsync();
 
         // check if there is exception in the stream
         if (_exception != null)
             throw _exception;
 
+        // could not reuse the underlying stream has been closed
+        if (_isConnectionClosed) 
+            throw new EndOfStreamException(
+                $"Could not reuse a BinaryStream that its underling stream has been closed . StreamId: {StreamId}");
+
         // check if the stream can be reused
         if (!CanReuse)
             throw new InvalidOperationException("Can not reuse the stream.");
 
-        // try to close stream if it is not closed yet
-        lock (_closeStreamLock)
-            _closeStreamTask ??= CloseStream();
-
-        // ReSharper disable once InconsistentlySynchronizedField
-        await _closeStreamTask.Value;
-
-        // could not reuse the underlying stream has been closed
-        if (_isConnectionClosed) {
-            throw new EndOfStreamException(
-                $"Could not reuse a BinaryStream that its underling stream has been closed . StreamId: {StreamId}");
-        }
-
+        // create a new BinaryStreamStandard with the same source stream and stream id
         return new BinaryStreamStandard(SourceStream, StreamId, ReusedCount + 1);
     }
 
-    private async ValueTask CloseStream()
+    private Task CloseStreamAsync()
     {
-        if (!_disposeCts.IsCancellationRequested)
-            throw new InvalidOperationException("Could not close this stream before it is disposed.");
+        lock (_closeStreamLock)
+            _closeStreamTask ??= CloseStreamInternal();
+        return _closeStreamTask;
+    }
 
+    private async Task CloseStreamInternal()
+    {
         try {
-            // wait for write and read tasks to finish and return to caller otherwise it will throw pending tasks exception
-            // We just wait for its final return
-            try { await _writeTask.VhConfigureAwait(); }
-            catch{ /* ignore */}
-            try { await _readTask.VhConfigureAwait(); }
-            catch { /*ignore */}
-
             using var timeoutCts = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
+
+            // wait for write to finish and write the terminator
+            await _writeTask.AsTask().VhWait(timeoutCts.Token).VhConfigureAwait();
 
             // Finish the stream by sending the chunk terminator and 
             await WriteInternalAsync(ReadOnlyMemory<byte>.Empty, timeoutCts.Token).VhConfigureAwait();
 
+            // wait for the current read task to finish
+            await _readTask.AsTask().VhWait(timeoutCts.Token).VhConfigureAwait();
+
+            // todo: remove
             // wait for the sub stream to be closed
             if (!_finished)
                 await DiscardRemainingStreamData(timeoutCts.Token);
@@ -279,17 +257,11 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
 
     protected override void Dispose(bool disposing)
     {
-        if (!_disposeCts.IsCancellationRequested && disposing) {
-            _disposeCts.Cancel();
+        if (disposing) {
             if (CanReuse) {
                 // let it run in the background, the stream owner will close it
-                try {
-                    lock (_closeStreamLock)
-                        _closeStreamTask ??= CloseStream();
-                }
-                catch {
-                    // CloseStream will already dispose the stream on any exception
-                }
+                // CloseStream already handles the disposal and logging
+                CloseStreamAsync().ContinueWith(_ => { });
             }
             else {
                 SourceStream.Dispose();
@@ -299,4 +271,10 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
         base.Dispose(disposing);
     }
 
+    public override async ValueTask DisposeAsync()
+    {
+        // just ignore exceptions during close stream as close stream already handles logging
+        await VhUtils.TryInvokeAsync(null, CloseStreamAsync).VhConfigureAwait();
+        await base.DisposeAsync().VhConfigureAwait();
+    }
 }

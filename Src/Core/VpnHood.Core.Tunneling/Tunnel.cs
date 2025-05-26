@@ -1,215 +1,76 @@
-﻿using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.PacketTransports;
-using VpnHood.Core.Toolkit.Jobs;
-using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels;
-using VpnHood.Core.Tunneling.DatagramMessaging;
 
 namespace VpnHood.Core.Tunneling;
 
-public class Tunnel : PassthroughPacketTransport, IJob
+public class Tunnel : PassthroughPacketTransport
 {
-    private readonly object _channelListLock = new();
-    private readonly HashSet<StreamProxyChannel> _streamProxyChannels = [];
-    private readonly List<IPacketChannel> _packetChannels = [];
     private readonly Timer _speedMonitorTimer;
-    private int _maxDatagramChannelCount;
     private Traffic _lastTraffic = new();
-    private Traffic _trafficUsage = new();
     private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
     private readonly TimeSpan _speedTestThreshold = TimeSpan.FromSeconds(2);
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private readonly ChannelManager _channelManager;
+    private Traffic _speed = new();
+    private readonly object _speedLock = new();
 
-    public Traffic Speed { get; private set; } = new();
-    public JobSection JobSection { get; } = new();
+    public void AddChannel(IChannel channel) => _channelManager.AddChannel(channel);
+    public Traffic Traffic => _channelManager.Traffic;
+
+    public Traffic Speed {
+        get {
+            lock (_speedLock) return _speed;
+        }
+        private set {
+            lock (_speedLock) _speed = value;
+        }
+    }
+
     public int Mtu { get; set; } = TunnelDefaults.Mtu;
     public int RemoteMtu { get; set; } = TunnelDefaults.MtuRemote;
-    public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
 
     public Tunnel(TunnelOptions options)
         : base(options.AutoDisposePackets)
     {
-        _maxDatagramChannelCount = options.MaxDatagramChannelCount;
+        _channelManager = new ChannelManager(options.MaxDatagramChannelCount, Channel_OnPacketReceived);
         _speedMonitorTimer = new Timer(_ => UpdateSpeed(), null, TimeSpan.Zero, _speedTestThreshold);
-        JobRunner.Default.Add(this);
     }
 
-    public int StreamProxyChannelCount {
-        get {
-            lock (_channelListLock)
-                return _streamProxyChannels.Count;
-        }
-    }
+    //public bool IsUdpMode => UdpChannel != null;
 
-    public int DatagramChannelCount {
-        get {
-            lock (_channelListLock)
-                return _packetChannels.Count;
-        }
-    }
-
-    public bool IsUdpMode => UdpChannel != null;
-
-    public UdpChannel? UdpChannel {
-        get {
-            lock (_channelListLock)
-                return (UdpChannel?)_packetChannels.FirstOrDefault(x => x is UdpChannel);
-        }
-    }
-
-    public Traffic Traffic {
-        get {
-            lock (_channelListLock) {
-                return new Traffic {
-                    Sent = _trafficUsage.Sent + 
-                           _streamProxyChannels.Sum(x => x.Traffic.Sent) +
-                           _packetChannels.Sum(x => x.Traffic.Sent),
-                    Received = _trafficUsage.Received +
-                               _streamProxyChannels.Sum(x => x.Traffic.Received) +
-                               _packetChannels.Sum(x => x.Traffic.Received)
-                };
-            }
-        }
-    }
-
-    public int MaxDatagramChannelCount {
-        get => _maxDatagramChannelCount;
-        set {
-            if (_maxDatagramChannelCount < 1)
-                throw new ArgumentException("Value must equals or greater than 1", nameof(MaxDatagramChannelCount));
-            _maxDatagramChannelCount = value;
-        }
-    }
+    //public UdpChannel? UdpChannel {
+    //    get {
+    //        lock (_channelListLock)
+    //            return (UdpChannel?)_packetChannels.FirstOrDefault(x => x is UdpChannel);
+    //    }
+    //}
 
     private void UpdateSpeed()
     {
-        if (_disposed)
+        if (IsDisposed)
             return;
 
-        if (FastDateTime.Now - _lastSpeedUpdateTime < _speedTestThreshold)
-            return;
+        lock (_speedLock) {
+            var traffic = _channelManager.Traffic;
+            var duration = (FastDateTime.Now - _lastSpeedUpdateTime).TotalSeconds;
+            if (duration < 1)
+                return;
 
-        var traffic = Traffic;
-        var duration = (FastDateTime.Now - _lastSpeedUpdateTime).TotalSeconds;
-        if (duration < 1)
-            return;
+            var sendSpeed = (long)((traffic.Sent - _lastTraffic.Sent) / duration);
+            var receivedSpeed = (long)((traffic.Received - _lastTraffic.Received) / duration);
+            Speed = new Traffic(sendSpeed, receivedSpeed);
+            _lastSpeedUpdateTime = FastDateTime.Now;
 
-        var sendSpeed = (long)((traffic.Sent - _lastTraffic.Sent) / duration);
-        var receivedSpeed = (long)((traffic.Received - _lastTraffic.Received) / duration);
-        Speed = new Traffic(sendSpeed, receivedSpeed);
-        _lastSpeedUpdateTime = FastDateTime.Now;
-
-        // update traffic usage & last traffic if changed
-        if (_lastTraffic != traffic) {
-            LastActivityTime = FastDateTime.Now;
+            // update traffic usage & last traffic if changed
             _lastTraffic = traffic;
         }
     }
 
-    private bool IsChannelExists(IChannel channel)
-    {
-        lock (_channelListLock) {
-            return channel is IPacketChannel
-                ? _packetChannels.Contains(channel)
-                : _streamProxyChannels.Contains(channel);
-        }
-    }
-
-    public void AddChannel(IPacketChannel datagramChannel)
-    {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(Tunnel));
-
-        //should not be called in lock; its behaviour is unexpected
-        datagramChannel.PacketReceived += Channel_OnPacketReceived;
-        datagramChannel.Start();
-
-        // add to channel list
-        lock (_channelListLock) {
-            if (_packetChannels.Contains(datagramChannel))
-                throw new Exception("the DatagramChannel already exists in the collection.");
-
-            _packetChannels.Add(datagramChannel);
-            VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
-                "A DatagramChannel has been added. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}, ChannelType: {ChannelType}",
-                datagramChannel.ChannelId, _packetChannels.Count, datagramChannel.GetType().Name);
-
-            // remove additional Datagram channels
-            while (_packetChannels.Count > MaxDatagramChannelCount) {
-                VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
-                    "Removing an exceeded DatagramChannel. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}",
-                    datagramChannel.ChannelId, _packetChannels.Count);
-
-                RemoveChannel(_packetChannels[0]);
-            }
-
-            // UdpChannels and StreamChannels can not be added together
-            foreach (var channel in _packetChannels.Where(x => x.IsStream != datagramChannel.IsStream).ToArray())
-                RemoveChannel(channel);
-        }
-    }
-
-    public void AddChannel(StreamProxyChannel channel)
-    {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(Tunnel));
-
-        // should not be called in lock; its behaviour is unexpected
-        channel.Start();
-
-        // add channel
-        lock (_channelListLock)
-            if (!_streamProxyChannels.Add(channel))
-                throw new Exception($"Could not add {channel.GetType()}. ChannelId: {channel.ChannelId}");
-
-        VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
-            "A StreamProxyChannel has been added. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}",
-            channel.ChannelId, StreamProxyChannelCount);
-    }
-
-    private void RemoveChannel(IChannel channel)
-    {
-        if (!IsChannelExists(channel))
-            return; // channel already removed or does not exist
-
-        lock (_channelListLock) {
-            if (channel is IPacketChannel datagramChannel) {
-                _packetChannels.Remove(datagramChannel);
-                VhLogger.Instance.LogDebug(GeneralEventId.DatagramChannel,
-                    "A DatagramChannel has been removed. Channel: {Channel}, ChannelId: {ChannelId}, " +
-                    "ChannelCount: {ChannelCount}, Connected: {Connected}",
-                    VhLogger.FormatType(channel), channel.ChannelId, _packetChannels.Count, channel.Connected);
-            }
-            else if (channel is StreamProxyChannel streamProxyChannel) {
-                _streamProxyChannels.Remove(streamProxyChannel);
-                VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
-                    "A StreamProxyChannel has been removed. Channel: {Channel}, ChannelId: {ChannelId}, " +
-                    "ChannelCount: {ChannelCount}, Connected: {Connected}",
-                    VhLogger.FormatType(channel), channel.ChannelId, _streamProxyChannels.Count, channel.Connected);
-            }
-            else
-                throw new ArgumentOutOfRangeException(nameof(channel), "Unknown Channel.");
-        }
-
-        // clean up channel
-        _trafficUsage += channel.Traffic;
-        channel.DisposeAsync();
-    }
 
     private void Channel_OnPacketReceived(object sender, IpPacket ipPacket)
     {
-        if (_disposed)
-            return;
-
-        // check datagram message
-        if (DatagramMessageHandler.IsDatagramMessage(ipPacket)) {
-            ipPacket.Dispose();
-            return;
-        }
-
         OnPacketReceived(ipPacket);
     }
 
@@ -221,6 +82,8 @@ public class Tunnel : PassthroughPacketTransport, IJob
 
         // flush all packets to the same channel
         var channel = FindChannelForPacket(ipPacket);
+        if (channel is IPacketChannel)
+
         channel.SendPacketQueued(ipPacket);
     }
 
@@ -241,9 +104,9 @@ public class Tunnel : PassthroughPacketTransport, IJob
     {
         // remove channel if it is not connected
         var channel = FindChannelForPacketInternal(ipPacket);
-        if (!channel.Connected) {
-            RemoveChannel(channel);
-            return FindChannelForPacketInternal(ipPacket);
+        while (channel.State != PacketChannelState.Connected) {
+            _channelManager.CleanupChannels();
+            channel = FindChannelForPacketInternal(ipPacket);
         }
 
         return channel;
@@ -251,63 +114,33 @@ public class Tunnel : PassthroughPacketTransport, IJob
 
     private IPacketChannel FindChannelForPacketInternal(IpPacket ipPacket)
     {
-        // send packets directly if there is only one channel
-        lock (_packetChannels) {
-            var channelCount = _packetChannels.Count;
-            return channelCount switch {
-                0 => throw new Exception("There is no DatagramChannel to send packets."),
-                1 => _packetChannels[0],
-                _ => ipPacket.Protocol switch {
-                    // select channel by tcp source port
-                    IpProtocol.Tcp => _packetChannels[ipPacket.ExtractTcp().SourcePort % channelCount],
+        // find channel by protocol
+        var channelCount = _channelManager.PacketChannelCount;
+        var channelIndex = channelCount switch {
+            0 => throw new Exception("There is no DatagramChannel to send packets."),
+            1 => 0,
+            _ => ipPacket.Protocol switch {
+                // select channel by tcp source port
+                IpProtocol.Tcp => ipPacket.ExtractTcp().SourcePort % channelCount,
 
-                    // select channel by udp source port
-                    IpProtocol.Udp => _packetChannels[ipPacket.ExtractUdp().SourcePort % _packetChannels.Count],
+                // select channel by udp source port
+                IpProtocol.Udp => ipPacket.ExtractUdp().SourcePort % channelCount,
 
-                    // select the first channel for other protocols
-                    _ => _packetChannels[0]
-                }
-            };
-        }
+                // select the first channel for other protocols
+                _ => 0
+            }
+        };
+
+        return _channelManager.GetPacketChannel(channelIndex);
     }
 
-    public Task RunJob()
+    protected override void Dispose(bool disposing)
     {
-        // remove disconnected channels
-        lock (_channelListLock) {
-            foreach (var channel in _streamProxyChannels.Where(x => !x.Connected).ToArray())
-                RemoveChannel(channel);
-
-            foreach (var channel in _packetChannels.Where(x => !x.Connected).ToArray())
-                RemoveChannel(channel);
+        if (disposing) {
+            _channelManager.Dispose();
+            _speedMonitorTimer.Dispose();
+            Speed = new Traffic();
         }
-
-        return Task.CompletedTask;
-    }
-
-
-    private readonly AsyncLock _disposeLock = new();
-    private bool _disposed;
-
-    public async ValueTask DisposeAsync()
-    {
-        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
-        if (_disposed) return;
-        _disposed = true;
-        _cancellationTokenSource.Cancel();
-
-        // make sure to call RemoveChannel to perform proper clean up such as setting _sentByteCount and _receivedByteCount 
-        var disposeTasks = new List<Task>();
-        lock (_channelListLock) {
-            disposeTasks.AddRange(_streamProxyChannels.Select(channel => channel.DisposeAsync(false).AsTask()));
-            disposeTasks.AddRange(_packetChannels.Select(channel => channel.DisposeAsync(false).AsTask()));
-        }
-
-        // Stop speed monitor
-        await _speedMonitorTimer.DisposeAsync().VhConfigureAwait();
-        Speed = new Traffic();
-
-        // dispose all channels
-        await Task.WhenAll(disposeTasks).VhConfigureAwait();
+        base.Dispose(disposing);
     }
 }

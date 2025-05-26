@@ -16,7 +16,7 @@ public class ServerUdpChannelTransmitter(UdpClient udpClient, SessionManager ses
         //make sure UDP channel is added
         session.UseUdpChannel = true;
         session.UdpChannel?.SetRemote(this, remoteEndPoint);
-        session.UdpChannel?.OnReceiveData(buffer, channelCryptorPosition);
+        session.UdpChannel?.OnDataReceived(buffer, channelCryptorPosition);
     }
 
     public static ServerUdpChannelTransmitter Create(IPEndPoint ipEndPoint, SessionManager sessionManager)

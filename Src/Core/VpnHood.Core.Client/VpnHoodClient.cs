@@ -244,7 +244,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             cancellationToken: linkedCts.Token).VhConfigureAwait();
 
         // create and add the channel
-        var bypassChannel = new StreamProxyChannel(channelId, orgTcpClientStream,
+        var bypassChannel = new ProxyChannel(channelId, orgTcpClientStream,
             new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"));
 
         // flush initBuffer
@@ -470,7 +470,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             if (_disposed) return false;
             if (_datagramChannelsSemaphore.CurrentCount == 0) return false;
             if (UseUdpChannel != Tunnel.IsUdpMode) return true;
-            return !UseUdpChannel && Tunnel.DatagramChannelCount < Tunnel.MaxDatagramChannelCount;
+            return !UseUdpChannel && Tunnel.DatagramChannelCount < Tunnel.MaxPacketChannelCount;
         }
     }
 
@@ -497,7 +497,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
         catch (Exception ex) {
             if (_disposed) return;
-            VhLogger.LogError(GeneralEventId.DatagramChannel, ex, "Could not Manage DatagramChannels.");
+            VhLogger.LogError(GeneralEventId.PacketChannel, ex, "Could not Manage DatagramChannels.");
         }
         finally {
             _datagramChannelsSemaphore.Release();
@@ -738,8 +738,8 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             VhLogger.Instance.LogInformation("Configuring Datagram Channels...");
             Tunnel.Mtu = Math.Min(TunnelDefaults.Mtu, helloResponse.Mtu - TunnelDefaults.MtuOverhead);
             Tunnel.RemoteMtu = helloResponse.Mtu;
-            Tunnel.MaxDatagramChannelCount = helloResponse.MaxDatagramChannelCount != 0
-                ? Tunnel.MaxDatagramChannelCount =
+            Tunnel.MaxPacketChannelCount = helloResponse.MaxDatagramChannelCount != 0
+                ? Tunnel.MaxPacketChannelCount =
                     Math.Min(_maxDatagramChannelCount, helloResponse.MaxDatagramChannelCount)
                 : _maxDatagramChannelCount;
 

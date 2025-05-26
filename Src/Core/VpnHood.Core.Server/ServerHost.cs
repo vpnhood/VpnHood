@@ -475,7 +475,7 @@ public class ServerHost : IAsyncDisposable, IJob
                 await ProcessTcpDatagramChannel(clientStream, cancellationToken).VhConfigureAwait();
                 break;
 
-            case RequestCode.StreamProxyChannel:
+            case RequestCode.ProxyChannel:
                 await ProcessStreamProxyChannel(clientStream, cancellationToken).VhConfigureAwait();
                 break;
 
@@ -599,7 +599,7 @@ public class ServerHost : IAsyncDisposable, IJob
 #pragma warning restore CS0618 // Type or member is obsolete
             ProtocolVersion = sessionResponseEx.ProtocolVersion,
             SuppressedTo = sessionResponseEx.SuppressedTo,
-            MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
+            MaxDatagramChannelCount = session.Tunnel.MaxPacketChannelCount,
             ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,
             IncludeIpRanges = NetFilterIncludeIpRanges,
             VpnAdapterIncludeIpRanges = NetFilterVpnAdapterIncludeIpRanges,
@@ -689,7 +689,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessTcpDatagramChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel, "Reading the TcpDatagramChannelRequest...");
+        VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Reading the TcpDatagramChannelRequest...");
         var request = await ReadRequest<TcpDatagramChannelRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         // finding session
@@ -700,7 +700,7 @@ public class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessStreamProxyChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel, "Reading the StreamProxyChannelRequest...");
+        VhLogger.Instance.LogInformation(GeneralEventId.ProxyChannel, "Reading the StreamProxyChannelRequest...");
         var request = await ReadRequest<StreamProxyChannelRequest>(clientStream, cancellationToken).VhConfigureAwait();
 
         // find session

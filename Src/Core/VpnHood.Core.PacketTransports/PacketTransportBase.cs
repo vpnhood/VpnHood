@@ -29,12 +29,12 @@ public abstract class PacketTransportBase : IPacketTransport
         if (passthrough && !singleMode)
             throw new ArgumentException("Passthrough mode should be used with single mode only.", nameof(passthrough));
 
-        _queueCapacity = options.QueueCapacity;
+        _queueCapacity = options.QueueCapacity ?? 255;
         _autoDisposePackets = options.AutoDisposePackets;
         _blocking = options.Blocking;
         _singleMode = singleMode;
         _passthrough = passthrough;
-        _sendChannel = Channel.CreateBounded<IpPacket>(new BoundedChannelOptions(options.QueueCapacity) {
+        _sendChannel = Channel.CreateBounded<IpPacket>(new BoundedChannelOptions(_queueCapacity) {
             SingleReader = true,
             SingleWriter = false,
             FullMode = options.Blocking ? BoundedChannelFullMode.Wait : BoundedChannelFullMode.DropWrite
@@ -44,7 +44,7 @@ public abstract class PacketTransportBase : IPacketTransport
         _ = StartSendingPacketsAsync();
     }
 
-    protected void OnPacketReceived(IpPacket ipPacket)
+    protected virtual void OnPacketReceived(IpPacket ipPacket)
     {
         try {
             _stat.LastReceivedTime = FastDateTime.Now;
@@ -145,9 +145,15 @@ public abstract class PacketTransportBase : IPacketTransport
     {
         // send packets
         try {
+            // if the transport is disposed, do not send packets
+            if (IsDisposed) 
+                throw new ObjectDisposedException(VhLogger.FormatType(this));
+
+            // Set sending state and last sent time
             _isSending = true;
             _stat.LastSentTime = FastDateTime.Now;
 
+            // Send packets asynchronously
             var task = SendPacketsAsync(ipPackets);
             if (!task.IsCompleted)
                 await task;
@@ -206,6 +212,7 @@ public abstract class PacketTransportBase : IPacketTransport
         // Dispose managed resources
         if (disposing) {
             PacketReceived = null;
+            _sendChannel.Writer.TryComplete(); // complete the writer to stop sending packets
         }
 
         IsDisposed = true;

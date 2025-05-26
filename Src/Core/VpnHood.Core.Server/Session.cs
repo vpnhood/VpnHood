@@ -343,7 +343,7 @@ public class Session : IAsyncDisposable
         UseUdpChannel = false;
 
         // add channel
-        VhLogger.Instance.LogDebug(GeneralEventId.DatagramChannel,
+        VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
             "Creating a TcpDatagramChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
         var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
@@ -394,10 +394,10 @@ public class Session : IAsyncDisposable
 
         TcpClient? tcpClientHost = null;
         TcpClientStream? tcpClientStreamHost = null;
-        StreamProxyChannel? streamProxyChannel = null;
+        ProxyChannel? proxyChannel = null;
         try {
             // connect to requested site
-            VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
+            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
 
             // Apply limitation
@@ -427,19 +427,19 @@ public class Session : IAsyncDisposable
             await clientStream.WriteResponseAsync(SessionResponseEx, cancellationToken).VhConfigureAwait();
 
             // add the connection
-            VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
-                "Adding a StreamProxyChannel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
+            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
+                "Adding a ProxyChannel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
             tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
-            streamProxyChannel = new StreamProxyChannel(request.RequestId, tcpClientStreamHost, clientStream,
+            proxyChannel = new ProxyChannel(request.RequestId, tcpClientStreamHost, clientStream,
                 _tcpBufferSize, _tcpBufferSize);
 
-            Tunnel.AddChannel(streamProxyChannel);
+            Tunnel.AddChannel(proxyChannel);
         }
         catch (Exception ex) {
             tcpClientHost?.Dispose();
             tcpClientStreamHost?.Dispose();
-            if (streamProxyChannel != null) await streamProxyChannel.DisposeAsync().VhConfigureAwait();
+            proxyChannel?.Dispose();
 
             if (isRequestedEpException)
                 throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint,

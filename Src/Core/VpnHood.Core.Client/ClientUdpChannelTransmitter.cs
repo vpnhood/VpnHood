@@ -10,6 +10,6 @@ public class ClientUdpChannelTransmitter(UdpChannel udpChannel, UdpClient udpCli
     protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint, 
         long channelCryptorPosition, Memory<byte> buffer)
     {
-        udpChannel.OnReceiveData(buffer, channelCryptorPosition);
+        udpChannel.OnDataReceived(buffer, channelCryptorPosition);
     }
 }

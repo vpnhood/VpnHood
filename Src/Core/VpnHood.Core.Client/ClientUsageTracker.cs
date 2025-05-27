@@ -28,7 +28,7 @@ internal class ClientUsageTracker : IDisposable
         });
     }
 
-    public async Task Report(CancellationToken cancellationToken)
+    public async ValueTask Report(CancellationToken cancellationToken)
     {
         using var lockAsync = await _reportLock.LockAsync(TimeSpan.Zero, cancellationToken).VhConfigureAwait();
         if (!lockAsync.Succeeded)

@@ -8,13 +8,13 @@ public class VhJob : IDisposable
 {
     private readonly string _name;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly Func<CancellationToken, Task> _jobFunc;
+    private readonly Func<CancellationToken, ValueTask> _jobFunc;
     private readonly TimeSpan _dueTime;
     private readonly TimeSpan _period;
     private readonly int? _maxRetry;
     private bool _disposed;
 
-    public VhJob(Func<CancellationToken, Task> jobFunc, VhJobOptions options)
+    public VhJob(Func<CancellationToken, ValueTask> jobFunc, VhJobOptions options)
     {
         _jobFunc = jobFunc;
         _dueTime = options.DueTime ?? options.Period;
@@ -24,7 +24,7 @@ public class VhJob : IDisposable
         Task.Run(ReportTask);
     }
 
-    public VhJob(Func<CancellationToken, Task> jobFunc, TimeSpan period, string? name = null)
+    public VhJob(Func<CancellationToken, ValueTask> jobFunc, TimeSpan period, string? name = null)
         : this(jobFunc, new VhJobOptions {
             Period = period,
             Name = name,

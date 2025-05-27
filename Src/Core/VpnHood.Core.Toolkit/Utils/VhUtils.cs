@@ -426,6 +426,16 @@ public static class VhUtils
         }
     }
 
+    public static async Task TryInvokeAsync(string? actionName, Func<ValueTask> task)
+    {
+        try {
+            await task().VhConfigureAwait();
+        }
+        catch (Exception ex) {
+            LogInvokeError(ex, actionName);
+        }
+    }
+
     public static async Task TryInvokeAsync(string? actionName, Func<Task> task)
     {
         try {
@@ -433,6 +443,17 @@ public static class VhUtils
         }
         catch (Exception ex) {
             LogInvokeError(ex, actionName);
+        }
+    }
+
+    public static async ValueTask<T?> TryInvokeAsync<T>(string? actionName, Func<ValueTask<T>> task, T? defaultValue = default)
+    {
+        try {
+            return await task().VhConfigureAwait();
+        }
+        catch (Exception ex) {
+            LogInvokeError(ex, actionName);
+            return defaultValue;
         }
     }
 

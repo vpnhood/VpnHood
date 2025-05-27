@@ -23,14 +23,14 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Server;
 
-public class SessionManager : IAsyncDisposable, IDisposable, IJob
+public class SessionManager : IAsyncDisposable, IDisposable
 {
     private bool _disposed;
     private readonly IAccessManager _accessManager;
     private readonly ISocketFactory _socketFactory;
     private readonly IVpnAdapter? _vpnAdapter;
     private readonly TimeSpan _deadSessionTimeout;
-    private readonly JobSection _heartbeatSection;
+    private readonly VhJob _heartbeatJob;
     private readonly SessionLocalService _sessionLocalService;
     private readonly VirtualIpManager _virtualIpManager;
     private byte[] _serverSecret;
@@ -70,7 +70,6 @@ public class SessionManager : IAsyncDisposable, IDisposable, IJob
         _vpnAdapter = vpnAdapter;
         _serverSecret = VhUtils.GenerateKey(128);
         _deadSessionTimeout = options.DeadSessionTimeout;
-        _heartbeatSection = new JobSection(options.HeartbeatInterval);
         _sessionLocalService = new SessionLocalService(Path.Combine(storagePath, "sessions"));
         _virtualIpManager = new VirtualIpManager(options.VirtualIpNetworkV4, options.VirtualIpNetworkV6,
             Path.Combine(storagePath, "last-virtual-ips.json"));
@@ -82,7 +81,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, IJob
         if (_vpnAdapter != null)
             _vpnAdapter.PacketReceived += VpnAdapter_PacketReceived;
 
-        JobRunner.Default.Add(this);
+        _heartbeatJob = new VhJob(SendHeartbeat, options.HeartbeatInterval, "Heartbeat");
     }
 
     private Session CreateSessionInternal(
@@ -304,23 +303,17 @@ public class SessionManager : IAsyncDisposable, IDisposable, IJob
         return session;
     }
 
-    public async Task RunJob()
-    {
-        // anonymous heart_beat reporter
-        await _heartbeatSection.Enter(SendHeartbeat).VhConfigureAwait();
-    }
-
-    private Task SendHeartbeat()
+    private async ValueTask SendHeartbeat(CancellationToken cancellationToken)
     {
         if (Tracker == null)
-            return Task.CompletedTask;
+            return;
 
-        return Tracker.Track(new TrackEvent {
+        await Tracker.Track(new TrackEvent {
             EventName = "heartbeat",
             Parameters = new Dictionary<string, object> {
                 { "session_count", Sessions.Count(x => !x.Value.IsDisposed) }
             }
-        });
+        }, cancellationToken);
     }
 
     private void DisposeExpiredSessions()
@@ -464,7 +457,6 @@ public class SessionManager : IAsyncDisposable, IDisposable, IJob
     }
 
     private readonly AsyncLock _syncLock = new();
-
     public async Task Sync(bool force = false)
     {
         using var lockResult = await _syncLock.LockAsync().VhConfigureAwait();
@@ -523,9 +515,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, IJob
     {
         if (_disposed) return;
         _disposed = true;
-
-        // dispose the job
-        JobRunner.Default.Remove(this);
+        _heartbeatJob.Dispose();
 
         // dispose all sessions
         VhLogger.Instance.LogDebug("Disposing all sessions...");

@@ -190,8 +190,7 @@ public class Session : IDisposable
         UdpChannel? udpChannel = null;
         try {
             // add new channel
-            udpChannel = new UdpChannel(new UdpChannelOptions {
-                UdpChannelTransmitter = transmitter,
+            udpChannel = new UdpChannel(transmitter, new UdpChannelOptions {
                 RemoteEndPoint = remoteEndPoint,
                 Blocking = false,
                 SessionId = SessionId,

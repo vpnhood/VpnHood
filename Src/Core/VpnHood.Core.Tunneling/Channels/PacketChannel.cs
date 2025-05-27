@@ -59,7 +59,7 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
 
         // start reading packets
         VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
-            "Starting PacketChannel. ChannelId: {ChannelId}", ChannelId);
+            "Starting a PacketChannel. ChannelId: {ChannelId}", ChannelId);
         
         _ = StartTask();
         _started = true;

@@ -17,9 +17,19 @@ public abstract class UdpChannelTransmitter : IDisposable
     private readonly BufferCryptor _serverEncryptor;
     private readonly BufferCryptor _serverDecryptor; // decryptor must be different object for thread safety
     private readonly RandomNumberGenerator _randomGenerator = RandomNumberGenerator.Create();
+    private bool _disposed;
     public const int HeaderLength = 32; //IV (8) + Sign (2) + Reserved (6) + SessionId (8) + SessionPos (8)
     public const int SendHeaderLength = HeaderLength - 8; //IV will not be encrypted
-    private bool _disposed;
+    
+    public int? ReceiveBufferSize {
+        get => _udpClient.Client.ReceiveBufferSize;
+        set => _udpClient.Client.ReceiveBufferSize = value ?? new UdpClient().Client.ReceiveBufferSize;
+    }
+
+    public int? SendBufferSize {
+        get => _udpClient.Client.SendBufferSize;
+        set => _udpClient.Client.SendBufferSize = value ?? new UdpClient().Client.SendBufferSize;
+    }
 
     protected UdpChannelTransmitter(UdpClient udpClient, byte[] serverKey)
     {
@@ -27,13 +37,6 @@ public abstract class UdpChannelTransmitter : IDisposable
         _serverEncryptor = new BufferCryptor(serverKey);
         _serverDecryptor = new BufferCryptor(serverKey);
         _ = ReadTask();
-    }
-
-    public void Configure(int? sendBufferSize, int? receiveBufferSize)
-    {
-        using var udpClient = new UdpClient();
-        _udpClient.Client.ReceiveBufferSize = receiveBufferSize ?? udpClient.Client.ReceiveBufferSize;
-        _udpClient.Client.SendBufferSize = sendBufferSize ?? udpClient.Client.SendBufferSize;
     }
 
     public IPEndPoint LocalEndPoint => (IPEndPoint)_udpClient.Client.LocalEndPoint;

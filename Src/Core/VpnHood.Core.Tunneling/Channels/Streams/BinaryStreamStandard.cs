@@ -228,6 +228,9 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
 
             // wait for the current read task to finish
             await _readTask.AsTask().VhWait(timeoutCts.Token).VhConfigureAwait();
+            
+            // wait for end of stream
+            await DiscardRemainingStreamData(timeoutCts.Token);
         }
         catch (Exception ex) {
             _exception = ex; // indicate that the stream can not be reused
@@ -235,6 +238,27 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
                 "Could not close the stream gracefully. StreamId: {StreamId}", StreamId);
             await SourceStream.DisposeAsync();
             throw;
+        }
+    }
+
+    private async ValueTask DiscardRemainingStreamData(CancellationToken cancellationToken)
+    {
+        // read the rest of the stream until it is closed
+        Memory<byte> buffer = new byte[500];
+        var trashedLength = 0;
+        while (true) {
+            var read = await ReadInternalAsync(buffer, cancellationToken).VhConfigureAwait();
+            if (read == 0)
+                break;
+
+            trashedLength += read;
+        }
+
+        // Log if the stream has not been closed gracefully
+        if (trashedLength > 0) {
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+                "Trashing unexpected binary stream data. StreamId: {StreamId}, TrashedLength: {TrashedLength}",
+                StreamId, trashedLength);
         }
     }
 

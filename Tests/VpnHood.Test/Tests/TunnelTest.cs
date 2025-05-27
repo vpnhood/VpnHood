@@ -2,12 +2,15 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
+using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Test.Packets;
 
 namespace VpnHood.Test.Tests;
@@ -19,12 +22,56 @@ public class TunnelTest : TestBase
     private class ServerUdpChannelTransmitterTest(UdpClient udpClient, byte[] serverKey)
         : UdpChannelTransmitter(udpClient, serverKey)
     {
-        public Action<Memory<byte>, long>? DataReceivedCallback { get; set; }
+        public UdpChannel? UdpChannel { get; set; }
+
         protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint,
             Memory<byte> buffer, long channelCryptorPosition)
         {
-            DataReceivedCallback?.Invoke(buffer, channelCryptorPosition);
+            if (UdpChannel != null) {
+                UdpChannel.RemoteEndPoint = remoteEndPoint;
+                UdpChannel.OnDataReceived(buffer, channelCryptorPosition);
+            }
         }
+    }
+
+    private static UdpChannel CreateClientUdpChannel(IPEndPoint serverEndPoint, byte[] serverKey,
+        uint sessionId, byte[] sessionKey)
+    {
+        var clientUdpChannel = ClientUdpChannelFactory.Create(new ClientUdpChannelOptions {
+            SessionId = sessionId,
+            SessionKey = sessionKey,
+            AutoDisposePackets = true,
+            Blocking = false,
+            ProtocolVersion = 4,
+            RemoteEndPoint = serverEndPoint,
+            Lifespan = null,
+            ChannelId = Guid.CreateVersion7().ToString(),
+            SocketFactory = new SocketFactory(),
+            ServerKey = serverKey,
+            UdpReceiveBufferSize = null,
+            UdpSendBufferSize = null
+        });
+
+        return clientUdpChannel;
+    }
+
+    private static UdpChannel CreateServerUdpChannel(UdpClient udpClient, uint sessionId, byte[] serverKey, byte[] sessionKey)
+    {
+        var serverTransmitter = new ServerUdpChannelTransmitterTest(udpClient, serverKey);
+        var serverUdpChannel = new UdpChannel(serverTransmitter,
+            new UdpChannelOptions {
+                SessionKey = sessionKey,
+                RemoteEndPoint = new IPEndPoint(IPAddress.Loopback, 0), // This will be set later
+                ChannelId = Guid.CreateVersion7().ToString(),
+                Lifespan = null,
+                SessionId = sessionId,
+                AutoDisposePackets = true,
+                Blocking = false,
+                ProtocolVersion = 4,
+                LeaveTransmitterOpen = false,
+            });
+        serverTransmitter.UdpChannel = serverUdpChannel;
+        return serverUdpChannel;
     }
 
 
@@ -44,56 +91,24 @@ public class TunnelTest : TestBase
 
         // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint
-                             ?? throw new Exception("Server connection is not established");
-
-        using var serverUdpChannelTransmitter =
-            new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey);
-
-        var serverUdpChannel = new UdpChannel(
-            new UdpChannelOptions {
-                UdpChannelTransmitter = serverUdpChannelTransmitter,
-                ChannelId = Guid.CreateVersion7().ToString(),
-                SessionId = 1,
-                SessionKey = sessionKey,
-                AutoDisposePackets = true,
-                Blocking = false,
-                ProtocolVersion = 4,
-                LeaveTransmitterOpen = true,
-                Lifespan = null,
-                RemoteEndPoint = new IPEndPoint(IPAddress.Loopback, 0) // This will be set later
-            });
-        serverUdpChannelTransmitter.DataReceivedCallback = serverUdpChannel.OnDataReceived;
-        serverUdpChannel.Start();
-
+        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint ?? throw new Exception("Server connection is not established");
+        var serverUdpChannel = CreateServerUdpChannel(serverUdpClient, 1, serverKey: serverKey, sessionKey: sessionKey);
         var serverReceivedPackets = new List<IpPacket>();
         serverUdpChannel.PacketReceived += delegate (object? _, IpPacket ipPacket) {
+            // ReSharper disable once AccessToDisposedClosure
             serverReceivedPackets.Add(ipPacket);
             serverUdpChannel.SendPacketQueued(ipPacket.Clone());
         };
+        serverUdpChannel.Start();
 
         // Create client
-        var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var clientTransmitter = new ClientUdpChannelTransmitter(clientUdpClient, serverKey);
-        var clientUdpChannel = new UdpChannel(new UdpChannelOptions {
-            UdpChannelTransmitter = clientTransmitter,
-            SessionId = 1,
-            SessionKey = sessionKey,
-            AutoDisposePackets = true,
-            Blocking = false,
-            ProtocolVersion = 4,
-            LeaveTransmitterOpen = false,
-            RemoteEndPoint = serverEndPoint,
-            Lifespan = null,
-            ChannelId = Guid.CreateVersion7().ToString()
-        });
-        clientUdpChannel.Start();
-
+        var clientUdpChannel = CreateClientUdpChannel(serverEndPoint, serverKey: serverKey, sessionKey: sessionKey, sessionId: 1);
         var clientReceivedPackets = new List<IpPacket>();
         clientUdpChannel.PacketReceived += delegate (object? _, IpPacket ipPacket) {
             clientReceivedPackets.Add(ipPacket);
         };
-
+        clientUdpChannel.Start();
+        
         // send packet to server through channel
         foreach (var ipPacket in packets)
             clientUdpChannel.SendPacketQueued(ipPacket.Clone());
@@ -105,6 +120,8 @@ public class TunnelTest : TestBase
     [TestMethod]
     public async Task UdpChannel_via_Tunnel()
     {
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(LogLevel.Trace);
+
         var waitHandle = new EventWaitHandle(true, EventResetMode.AutoReset);
         waitHandle.Reset();
 
@@ -121,49 +138,24 @@ public class TunnelTest : TestBase
 
         // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint
-                             ?? throw new Exception("Server connection is not established");
-
-        using var serverTransmitter = new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey);
-        var serverUdpChannel = new UdpChannel(
-            new UdpChannelOptions {
-                RemoteEndPoint = new IPEndPoint(IPAddress.Loopback, 0), // This will be set later
-                UdpChannelTransmitter = serverTransmitter,
-                ChannelId = Guid.CreateVersion7().ToString(),
-                Lifespan = null,
-                SessionId = 1,
-                SessionKey = sessionKey,
-                AutoDisposePackets = true,
-                Blocking = false,
-                ProtocolVersion = 4,
-                LeaveTransmitterOpen = true,
-            });
-
+        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint ?? throw new Exception("Server connection is not established");
+        var serverUdpChannel = CreateServerUdpChannel(serverUdpClient, sessionId: 1, serverKey: serverKey, sessionKey: sessionKey);
         var serverReceivedPackets = new List<IpPacket>();
+
+        // Create server tunnel
         var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         serverTunnel.AddChannel(serverUdpChannel);
         serverTunnel.PacketReceived += delegate (object? _, IpPacket ipPacket) {
+            // ReSharper disable once AccessToDisposedClosure
             serverReceivedPackets.Add(ipPacket);
             serverUdpChannel.SendPacketQueued(ipPacket.Clone());
         };
 
         // Create client
-        var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var clientTransmitter = new ClientUdpChannelTransmitter(clientUdpClient, serverKey);
-        var clientUdpChannel = new UdpChannel(
-            new UdpChannelOptions {
-                RemoteEndPoint = serverEndPoint,
-                UdpChannelTransmitter = clientTransmitter,
-                SessionId = 1,
-                SessionKey = sessionKey,
-                AutoDisposePackets = true,
-                Blocking = false,
-                ProtocolVersion = 4,
-                LeaveTransmitterOpen = false,
-                Lifespan = null,
-                ChannelId = Guid.CreateVersion7().ToString()
-            });
+        var clientUdpChannel = CreateClientUdpChannel(serverEndPoint, serverKey: serverKey,
+            sessionId: 1, sessionKey: sessionKey);
 
+        // Create client tunnel
         var clientReceivedPackets = new List<IpPacket>();
         var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         clientTunnel.AddChannel(clientUdpChannel);
@@ -231,7 +223,7 @@ public class TunnelTest : TestBase
     {
         // create server
         var tcpListener = new TcpListener(IPAddress.Loopback, 0);
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var cts = new CancellationTokenSource();
         tcpListener.Start();
         _ = SimpleLoopback(tcpListener, cts.Token);
 

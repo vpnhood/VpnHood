@@ -7,10 +7,10 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class UdpChannel(UdpChannelOptions options) : PacketChannel(options)
+public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions options) 
+    : PacketChannel(options)
 {
     private readonly Memory<byte> _buffer = new byte[TunnelDefaults.Mtu + UdpChannelTransmitter.HeaderLength];
-    private readonly UdpChannelTransmitter _udpChannelTransmitter = options.UdpChannelTransmitter;
     private readonly BufferCryptor _sessionCryptorWriter = new(options.SessionKey);
     private readonly BufferCryptor _sessionCryptorReader = new(options.SessionKey);
     private readonly long _cryptorPosBase = options.LeaveTransmitterOpen ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
@@ -18,11 +18,12 @@ public class UdpChannel(UdpChannelOptions options) : PacketChannel(options)
     private readonly int _protocolVersion = options.ProtocolVersion;
     private readonly bool _leaveTransmitterOpen = options.LeaveTransmitterOpen;
     public IPEndPoint RemoteEndPoint { get; set; } = options.RemoteEndPoint;
+    private readonly TaskCompletionSource<bool> _readingTask = new();
 
     protected override Task StartReadTask()
     {
         // already started by UdpChannelTransmitter
-        return Task.CompletedTask;
+        return _readingTask.Task;
     }
 
     public async Task SendBuffer(Memory<byte> buffer)
@@ -30,7 +31,7 @@ public class UdpChannel(UdpChannelOptions options) : PacketChannel(options)
         if (RemoteEndPoint == null)
             throw new InvalidOperationException("RemoveEndPoint has not been initialized yet in UdpChannel.");
 
-        if (_udpChannelTransmitter == null)
+        if (transmitter == null)
             throw new InvalidOperationException("UdpChannelTransmitter has not been initialized yet in UdpChannel.");
 
         // encrypt packets
@@ -39,7 +40,7 @@ public class UdpChannel(UdpChannelOptions options) : PacketChannel(options)
             sessionCryptoPosition);
 
         // send buffer
-        await _udpChannelTransmitter
+        await transmitter
             .SendAsync(RemoteEndPoint, _sessionId, sessionCryptoPosition, buffer, _protocolVersion)
             .VhConfigureAwait();
     }
@@ -133,7 +134,10 @@ public class UdpChannel(UdpChannelOptions options) : PacketChannel(options)
     {
         if (disposing) {
             if (!_leaveTransmitterOpen)
-                _udpChannelTransmitter.Dispose();
+                transmitter.Dispose();
+
+            // finalize reading task
+            _readingTask.TrySetResult(true);
         }
 
         base.Dispose(disposing);

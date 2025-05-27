@@ -108,7 +108,8 @@ public class ServerHost : IAsyncDisposable, IJob
 
         // reconfigure all transmitters
         foreach (var udpChannelTransmitter in _udpChannelTransmitters) {
-            udpChannelTransmitter.Configure(sendBufferSize, receiveBufferSize);
+            udpChannelTransmitter.SendBufferSize = sendBufferSize;
+            udpChannelTransmitter.ReceiveBufferSize = receiveBufferSize;
         }
     }
 

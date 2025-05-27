@@ -48,5 +48,5 @@ public class HelloResponse : SessionResponse
     public string[] ServerTags { get; set; } = [];
     public AccessInfo? AccessInfo { get; set; }
     public bool IsTunProviderSupported { get; set; }
-    public int Mtu { get; set; } = 1500;
+    public int Mtu { get; set; } = TunnelDefaults.MaxPacketSize;
 }

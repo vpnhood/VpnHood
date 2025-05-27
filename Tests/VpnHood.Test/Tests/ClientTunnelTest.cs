@@ -21,6 +21,7 @@ public class ClientTunnelTest : TestBase
     public async Task UdpChannel()
     {
         VhLogger.IsDiagnoseMode = true;
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(LogLevel.Trace); //todo
         await using var clientServerDom = await ClientServerDom.Create(TestHelper, useUdpChannel: true);
 
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Testing by UdpChannel.");

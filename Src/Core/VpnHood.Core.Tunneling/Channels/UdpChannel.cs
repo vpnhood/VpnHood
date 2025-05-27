@@ -10,7 +10,7 @@ namespace VpnHood.Core.Tunneling.Channels;
 public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions options) 
     : PacketChannel(options)
 {
-    private readonly Memory<byte> _buffer = new byte[TunnelDefaults.Mtu + UdpChannelTransmitter.HeaderLength];
+    private readonly Memory<byte> _buffer = new byte[TunnelDefaults.MaxPacketSize];
     private readonly BufferCryptor _sessionCryptorWriter = new(options.SessionKey);
     private readonly BufferCryptor _sessionCryptorReader = new(options.SessionKey);
     private readonly long _cryptorPosBase = options.LeaveTransmitterOpen ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
@@ -19,12 +19,14 @@ public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions opt
     private readonly bool _leaveTransmitterOpen = options.LeaveTransmitterOpen;
     public IPEndPoint RemoteEndPoint { get; set; } = options.RemoteEndPoint;
     private readonly TaskCompletionSource<bool> _readingTask = new();
+    public override int OverheadLength => UdpChannelTransmitter.HeaderLength + TunnelDefaults.MtuOverhead;
 
     protected override Task StartReadTask()
     {
         // already started by UdpChannelTransmitter
         return _readingTask.Task;
     }
+
 
     public async Task SendBuffer(Memory<byte> buffer)
     {

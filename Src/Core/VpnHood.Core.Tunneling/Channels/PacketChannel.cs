@@ -19,9 +19,10 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
     protected CancellationToken CancellationToken => _cancellationTokenSource.Token;
     public string ChannelId { get; }
     public DateTime LastActivityTime => PacketStat.LastActivityTime;
-    public Traffic Traffic => new (PacketStat.SentBytes, PacketStat.ReceivedPackets);
+    public Traffic Traffic => new (PacketStat.SentBytes, PacketStat.ReceivedBytes);
     public JobSection JobSection { get; } = new();
     protected abstract Task StartReadTask();
+    public abstract int OverheadLength { get; }
 
     protected PacketChannel(PacketChannelOptions options)
         : base(new PacketTransportOptions {
@@ -146,5 +147,4 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
 
         base.Dispose(disposing);
     }
-
 }

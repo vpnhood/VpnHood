@@ -344,13 +344,13 @@ public class VpnHoodClient : IJob, IAsyncDisposable
     // WARNING: Performance Critical!
     private void ClientHost_PacketReceived(object sender, IpPacket ipPacket)
     {
-        Tunnel_PacketReceived(sender, ipPacket);
+        _vpnAdapter.SendPacketQueued(ipPacket);
     }
 
     // WARNING: Performance Critical!
     private void Proxy_PacketReceived(object sender, IpPacket ipPacket)
     {
-        Tunnel_PacketReceived(sender, ipPacket);
+        _vpnAdapter.SendPacketQueued(ipPacket);
     }
 
     // WARNING: Performance Critical!
@@ -418,8 +418,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         }
 
         // Udp
-        if (ipPacket.Protocol == IpProtocol.Udp &&
-            ShouldTunnelUdpPacket(ipPacket.ExtractUdp())) {
+        if (ipPacket.Protocol == IpProtocol.Udp && ShouldTunnelUdpPacket(ipPacket.ExtractUdp())) {
             Tunnel.SendPacketQueuedAsync(ipPacket).VhBlock();
             return;
         }
@@ -733,7 +732,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
             // Preparing tunnel
             VhLogger.Instance.LogInformation("Configuring Datagram Channels...");
-            Tunnel.Mtu = Math.Min(TunnelDefaults.Mtu, helloResponse.Mtu - TunnelDefaults.MtuOverhead);
+            Tunnel.RemoteMtu = helloResponse.Mtu;
             Tunnel.MaxPacketChannelCount = helloResponse.MaxPacketChannelCount != 0
                 ? Tunnel.MaxPacketChannelCount =
                     Math.Min(_maxPacketChannelCount, helloResponse.MaxPacketChannelCount)
@@ -756,7 +755,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                 DnsServers = SessionInfo.DnsServers,
                 VirtualIpNetworkV4 = networkV4,
                 VirtualIpNetworkV6 = networkV6,
-                Mtu = Tunnel.Mtu,
+                Mtu = helloResponse.Mtu - TunnelDefaults.MtuOverhead,
                 IncludeNetworks = BuildVpnAdapterIncludeNetworks(_connectorService.EndPointInfo.TcpEndPoint.Address),
                 SessionName = SessionName,
                 ExcludeApps = _excludeApps,

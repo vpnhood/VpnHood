@@ -2,4 +2,7 @@
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public interface IPacketChannel : IPacketTransport, IChannel;
+public interface IPacketChannel : IPacketTransport, IChannel
+{
+    int OverheadLength { get;  }
+}

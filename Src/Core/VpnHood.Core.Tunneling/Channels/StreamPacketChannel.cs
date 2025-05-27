@@ -9,6 +9,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options) : PacketCha
 {
     private readonly Memory<byte> _buffer = new byte[0xFFFF * 4];
     private readonly IClientStream _clientStream = options.ClientStream;
+    public override int OverheadLength => 0;
 
     protected override async ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
     {

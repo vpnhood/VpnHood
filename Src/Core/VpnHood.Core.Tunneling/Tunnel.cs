@@ -28,8 +28,8 @@ public class Tunnel : PassthroughPacketTransport
         set => _channelManager.MaxPacketChannelCount = value;
     }
 
-    public int Mtu { get; set; }
-    
+    public int RemoteMtu { get; set; } = TunnelDefaults.MaxPacketSize;
+
     public Traffic Speed {
         get {
             lock (_speedLock) return _speed;
@@ -82,22 +82,22 @@ public class Tunnel : PassthroughPacketTransport
         var channel = FindChannelForPacket(ipPacket);
 
         // check is there any packet larger than MTU
-        VerifyMtu(ipPacket);
+        VerifyMtu(ipPacket, channel.OverheadLength);
 
         // send packet
         channel.SendPacketQueued(ipPacket);
     }
 
-    private void VerifyMtu(IpPacket ipPacket)
+    private void VerifyMtu(IpPacket ipPacket, int overheadSize)
     {
         // use RemoteMtu if the channel is streamed
-        if (ipPacket.PacketLength > Mtu)
+        if (ipPacket.PacketLength + overheadSize <= RemoteMtu)
             return;
 
-        var replyPacket = PacketBuilder.BuildIcmpPacketTooBigReply(ipPacket, (ushort)Mtu);
+        var replyPacket = PacketBuilder.BuildIcmpPacketTooBigReply(ipPacket, (ushort)RemoteMtu);
         OnPacketReceived(replyPacket);
         throw new Exception(
-            $"The packet is larger than MTU. PacketLength: {ipPacket.PacketLength}, MTU: {Mtu}.");
+            $"The packet length is larger than MTU. PacketLength: {ipPacket.PacketLength}, MTU: {RemoteMtu}.");
     }
 
     private IPacketChannel FindChannelForPacket(IpPacket ipPacket)

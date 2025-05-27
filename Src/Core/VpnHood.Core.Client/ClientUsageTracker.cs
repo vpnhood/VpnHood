@@ -5,35 +5,34 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client;
 
-internal class ClientUsageTracker : IJob, IAsyncDisposable
+internal class ClientUsageTracker : IDisposable
 {
+    private readonly TimeSpan _reportInterval = TimeSpan.FromMinutes(25);
     private readonly AsyncLock _reportLock = new();
-    private readonly ISessionStatus _sessionStatus;
-    private readonly ITracker _tracker;
     private Traffic _lastTraffic = new();
     private int _lastRequestCount;
     private int _lastConnectionCount;
     private bool _disposed;
-    public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(25));
+    private readonly ISessionStatus _sessionStatus;
+    private readonly ITracker _tracker;
+    private readonly VhJob _reportJob;
 
     public ClientUsageTracker(ISessionStatus sessionStatus, ITracker tracker)
     {
         _sessionStatus = sessionStatus;
         _tracker = tracker;
-        JobRunner.Default.Add(this);
+        _reportJob = new VhJob(Report, new VhJobOptions {
+            Period = _reportInterval,
+            MaxRetry = 2,
+            Name = "ClientReporter"
+        });
     }
 
-    public Task RunJob()
+    public async Task Report(CancellationToken cancellationToken)
     {
-        return Report();
-    }
-
-    public async Task Report()
-    {
-        using var lockAsync = await _reportLock.LockAsync().VhConfigureAwait();
-
-        if (_disposed)
-            throw new ObjectDisposedException(GetType().Name);
+        using var lockAsync = await _reportLock.LockAsync(TimeSpan.Zero, cancellationToken).VhConfigureAwait();
+        if (!lockAsync.Succeeded)
+            return;
 
         var traffic = _sessionStatus.SessionTraffic;
         var usage = traffic - _lastTraffic;
@@ -43,23 +42,18 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
         var trackEvent = ClientTrackerBuilder.BuildUsage(usage, requestCount - _lastRequestCount,
             connectionCount - _lastConnectionCount);
 
-        await _tracker.Track([trackEvent]).VhConfigureAwait();
+        await _tracker.Track([trackEvent], cancellationToken).VhConfigureAwait();
         _lastTraffic = traffic;
         _lastRequestCount = requestCount;
         _lastConnectionCount = connectionCount;
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        try {
-            // Make sure no exception in dispose
-            if (_sessionStatus.SessionTraffic - _lastTraffic != new Traffic())
-                await Report().VhConfigureAwait();
-        }
-        catch {
-            // ignore
-        }
+        if (_disposed)
+            return;
 
+        _reportJob.Dispose();
         _disposed = true;
     }
 }

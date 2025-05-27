@@ -21,7 +21,7 @@ internal class ClientHost(
     VpnHoodClient vpnHoodClient,
     IPAddress catcherAddressIpV4,
     IPAddress catcherAddressIpV6)
-    : IAsyncDisposable
+    : IDisposable
 {
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -309,10 +309,10 @@ internal class ClientHost(
     }
 
 
-    public ValueTask DisposeAsync()
+    public void Dispose()
     {
         if (_disposed)
-            return default;
+            return;
 
         _cancellationTokenSource.Cancel();
         _tcpListenerIpV4?.Stop();
@@ -321,7 +321,6 @@ internal class ClientHost(
         PacketReceived = null;
 
         _disposed = true;
-        return default;
     }
 
     private class ClientHostStat : IClientHostStat

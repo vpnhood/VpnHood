@@ -7,12 +7,12 @@ public class TestTracker : ITracker
     public bool IsEnabled { get; set; }
     public List<TrackEvent> TrackEvents { get; } = [];
 
-    public Task Track(IEnumerable<TrackEvent> trackEvents)
+    public Task Track(IEnumerable<TrackEvent> trackEvents, CancellationToken cancellationToken)
     {
-        return Task.WhenAll(trackEvents.Select(Track));
+        return Task.WhenAll(trackEvents.Select(x=>Track(x, cancellationToken)));
     }
 
-    public Task Track(TrackEvent trackEvent)
+    public Task Track(TrackEvent trackEvent, CancellationToken cancellationToken)
     {
         TrackEvents.Add(trackEvent);
         return Task.CompletedTask;

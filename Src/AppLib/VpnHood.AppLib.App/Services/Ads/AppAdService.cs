@@ -104,6 +104,6 @@ public class AppAdService(
     {
         await device.TryBindProcessToVpn(true, delay, cancellationToken);
         if (tracker!=null)
-            await tracker.Track(trackEvent);
+            await tracker.Track(trackEvent, CancellationToken.None);
     }
 }

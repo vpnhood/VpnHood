@@ -10,7 +10,7 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
     public required int SessionCount { get; set; } = 1;
     public bool? IsMobile { get; init; }
 
-    public Task Track(Ga4TagEvent ga4Event)
+    public Task Track(Ga4TagEvent ga4Event, CancellationToken cancellationToken)
     {
         if (!IsEnabled)
             return Task.CompletedTask;
@@ -101,16 +101,16 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
 
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
         PrepareHttpHeaders(requestMessage.Headers);
-        return SendHttpRequest(requestMessage, "GTag");
+        return SendHttpRequest(requestMessage, "GTag", null, cancellationToken);
     }
 
-    public async Task Track(IEnumerable<Ga4TagEvent> ga4Events)
+    public async Task Track(IEnumerable<Ga4TagEvent> ga4Events, CancellationToken cancellationToken)
     {
         foreach (var ga4TagEvent in ga4Events)
-            await Track(ga4TagEvent).ConfigureAwait(false);
+            await Track(ga4TagEvent, cancellationToken).ConfigureAwait(false);
     }
 
-    public override Task Track(IEnumerable<TrackEvent> trackEvents)
+    public override Task Track(IEnumerable<TrackEvent> trackEvents, CancellationToken cancellationToken)
     {
         var ga4TagEvents = trackEvents.Select(x =>
             new Ga4TagEvent {
@@ -118,7 +118,7 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
                 Properties = x.Parameters
             });
 
-        return Track(ga4TagEvents);
+        return Track(ga4TagEvents, cancellationToken);
     }
 
     private static bool CheckIsMobileByUserAgent(string? userAgent)

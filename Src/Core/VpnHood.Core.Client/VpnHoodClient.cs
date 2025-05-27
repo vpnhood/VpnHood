@@ -27,7 +27,7 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client;
 
-public class VpnHoodClient : IJob, IAsyncDisposable
+public class VpnHoodClient : IJob, IDisposable, IAsyncDisposable
 {
     private const int MaxProtocolVersion = 8;
     private const int MinProtocolVersion = 4;
@@ -710,7 +710,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                         UserProperties = new Dictionary<string, object> { { "client_version", Version.ToString(3) } }
                     };
 
-                    _ = ga4Tracking.Track(new Ga4TagEvent { EventName = TrackEventNames.SessionStart });
+                    _ = ga4Tracking.Track(new Ga4TagEvent { EventName = TrackEventNames.SessionStart }, cancellationToken);
                 }
 
                 // Anonymous app usage tracker
@@ -720,7 +720,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
                         isIpV6Supported: IsIpV6SupportedByClient,
                         hasRedirected: !allowRedirect,
                         endPoint: _connectorService.EndPointInfo.TcpEndPoint,
-                        adNetworkName: adResult?.NetworkName));
+                        adNetworkName: adResult?.NetworkName), cancellationToken);
 
                     _clientUsageTracker = new ClientUsageTracker(_sessionStatus, Tracker);
                 }
@@ -948,22 +948,48 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         await DisposeAsync().VhConfigureAwait();
     }
 
-    public ValueTask DisposeAsync()
+  public async ValueTask DisposeAsync()
     {
-        return DisposeAsync(true);
+        if (_disposed)
+            return;
+
+        // dispose all resources before bye request
+        DisposeInternal();
+
+        // dispose async resources
+        var byeTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TunnelDefaults.ByeTimeout;
+
+        // close tracker
+        if (_clientUsageTracker != null) {
+            using var cts = new CancellationTokenSource(byeTimeout);
+            var cancellationToken = cts.Token;
+            await VhUtils.TryInvokeAsync(null, () => _clientUsageTracker.Report(cancellationToken)).VhConfigureAwait();
+        }
+
+        // Sending Bye
+        if (SessionInfo != null && LastException == null) {
+            VhLogger.Instance.LogInformation("Closing session on the server...");
+            using var cts = new CancellationTokenSource(byeTimeout);
+            var cancellationToken = cts.Token;
+            await VhUtils.TryInvokeAsync("close session on the server", () =>SendByeRequest(cancellationToken));
+        }
+
+        Dispose();
     }
 
-    private readonly AsyncLock _disposeLock = new();
-    private async ValueTask DisposeAsync(bool waitForBye)
+    private bool _disposedInternal;
+    private void DisposeInternal()
     {
-        using var disposeLock = await _disposeLock.LockAsync().VhConfigureAwait();
-        if (_disposed) return;
-        _disposed = true;
+        if (_disposedInternal) return;
+        _disposedInternal = true;
 
         // shutdown
         VhLogger.Instance.LogInformation("Shutting down...");
         _cancellationTokenSource.Cancel();
         State = ClientState.Disconnecting;
+
+        // dispose job runner (not required)
+        JobRunner.Default.Remove(this);
 
         // stop processing tunnel & adapter packets
         _vpnAdapter.PacketReceived -= VpnAdapter_PacketReceived;
@@ -975,15 +1001,9 @@ public class VpnHoodClient : IJob, IAsyncDisposable
             _vpnAdapter.Dispose();
         }
 
-        // dispose job runner (not required)
-        JobRunner.Default.Remove(this);
-
-        // Anonymous usage tracker
-        _ = _clientUsageTracker?.DisposeAsync();
-
         VhLogger.Instance.LogDebug("Disposing ClientHost...");
         _clientHost.PacketReceived -= ClientHost_PacketReceived;
-        await _clientHost.DisposeAsync().VhConfigureAwait();
+        _clientHost.Dispose();
 
         // Tunnel
         VhLogger.Instance.LogDebug("Disposing Tunnel...");
@@ -994,18 +1014,18 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         _proxyManager.PacketReceived -= Proxy_PacketReceived;
         _proxyManager.Dispose();
 
-        // don't wait for this. It is just for server clean up we should not wait the user for it
-        // Sending Bye
-        if (SessionInfo != null && LastException == null) {
-            try {
-                using var cancellationTokenSource = new CancellationTokenSource(
-                    waitForBye ? TunnelDefaults.TcpGracefulTimeout : TimeSpan.FromSeconds(1));
-                await SendByeRequest(cancellationTokenSource.Token).VhConfigureAwait();
-            }
-            catch (Exception ex) {
-                VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the bye request.");
-            }
-        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        // dispose all resources before bye request
+        DisposeInternal();
+
+        // Make sure async resources are disposed
+        _clientUsageTracker?.Dispose();
 
         // dispose ConnectorService
         VhLogger.Instance.LogDebug("Disposing ConnectorService...");
@@ -1013,6 +1033,7 @@ public class VpnHoodClient : IJob, IAsyncDisposable
 
         VhLogger.Instance.LogInformation("Bye Bye!");
         State = ClientState.Disposed; //everything is clean
+        _disposed = true;
     }
 
     private class ClientSessionStatus(VpnHoodClient client, AccessUsage accessUsage) : ISessionStatus
@@ -1038,4 +1059,5 @@ public class VpnHoodClient : IJob, IAsyncDisposable
         public int? ActiveClientCount => _accessUsage.ActiveClientCount;
         public AdRequest? AdRequest => client.AdService.AdRequest;
     }
+
 }

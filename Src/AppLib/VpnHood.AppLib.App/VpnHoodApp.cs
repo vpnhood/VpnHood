@@ -1105,13 +1105,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void ReportError(Exception ex, string message, [CallerMemberName] string action = "n/a")
     {
-        Services.Tracker?.VhTrackErrorAsync(ex, message, action);
+        Services.Tracker?.VhTrackErrorAsync(ex, message, action, CancellationToken.None);
         VhLogger.Instance.LogError(ex, message);
     }
 
     private void ReportWarning(Exception ex, string message, [CallerMemberName] string action = "n/a")
     {
-        Services.Tracker?.VhTrackWarningAsync(ex, message, action);
+        Services.Tracker?.VhTrackWarningAsync(ex, message, action, CancellationToken.None);
         VhLogger.Instance.LogWarning(ex, message);
     }
 

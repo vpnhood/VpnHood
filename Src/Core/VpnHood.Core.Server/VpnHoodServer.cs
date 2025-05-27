@@ -263,7 +263,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         catch (Exception ex) {
             State = ServerState.Waiting;
             _lastConfigException = ex;
-            SessionManager.Tracker?.VhTrackErrorAsync(ex, "Could not configure server!", "Configure");
+            SessionManager.Tracker?.VhTrackErrorAsync(ex, "Could not configure server!", "Configure", CancellationToken.None);
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.",
                 JobSection.Interval.TotalSeconds);
             await SendStatusToAccessManager(false).VhConfigureAwait();

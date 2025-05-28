@@ -22,6 +22,7 @@ public static class VpnHoodClientExtensions
             async () => {
                 if (useUpdateStatus)
                     try {
+                        // ReSharper disable once AccessToDisposedClosure
                         await client.UpdateSessionStatus();
                     }
                     catch {

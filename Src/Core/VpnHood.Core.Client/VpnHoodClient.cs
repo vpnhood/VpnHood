@@ -945,8 +945,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private async ValueTask DisposeAsync(Exception ex)
     {
         // DisposeAsync will try SendByte, and it may cause calling this dispose method again and go to deadlock
-        using var lockScope = await _disposeLock.LockAsync();
-        if (_disposed)
+        if (_disposed || _disposeLock.IsLocked) // IsLocked means that DisposeAsync is already running
             return;
 
         VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Error in connection that caused disposal.");
@@ -994,8 +993,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private void DisposeInternal()
     {
-        if (_disposedInternal) return;
-        _disposedInternal = true;
+        lock (_disposeLock) {
+            if (_disposedInternal) return;
+            _disposedInternal = true;
+        }
 
         // shutdown
         VhLogger.Instance.LogInformation("Client is shutting down...");

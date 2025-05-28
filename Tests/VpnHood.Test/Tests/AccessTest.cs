@@ -229,9 +229,10 @@ public class AccessTest : TestBase
         await client1.WaitForState(ClientState.Disposed);
         await server.SessionManager.Sync(true);
 
-        await Task.Delay(1000);
         var time = DateTime.UtcNow;
-        // suppress by yourself
+        await Task.Delay(200);
+
+        // create a new client with the same token, it should not suppress
         await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var accessInfo = client2.SessionInfo?.AccessInfo;
         Assert.IsNotNull(accessInfo);
@@ -247,7 +248,8 @@ public class AccessTest : TestBase
         await client2.WaitForState(ClientState.Disposed);
         await server.SessionManager.Sync(true);
 
-        await Task.Delay(1000);
+        // create a new client with the same token, it should not suppress
+        await Task.Delay(200);
         await using var client3 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         accessInfo = client3.SessionInfo?.AccessInfo;
         Assert.IsNotNull(accessInfo);

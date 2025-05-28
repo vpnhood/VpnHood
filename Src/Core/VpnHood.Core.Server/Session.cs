@@ -418,7 +418,7 @@ public class Session : IDisposable
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "Connecting to the requested endpoint. RequestedEP: {Format}", VhLogger.Format(request.DestinationEndPoint));
 
-            // Apply limitation
+            // Apply limitation and update endpoint if needed
             VerifyTcpChannelRequest(clientStream, request);
 
             // prepare client
@@ -448,7 +448,8 @@ public class Session : IDisposable
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "Adding a ProxyChannel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
-            tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
+            tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), 
+                request.RequestId + ":host");
             proxyChannel = new ProxyChannel(request.RequestId, tcpClientStreamHost, clientStream,
                 _tcpBufferSize, _tcpBufferSize);
 
@@ -462,7 +463,6 @@ public class Session : IDisposable
             if (isRequestedEpException)
                 throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint,
                     this, SessionErrorCode.GeneralError, request.RequestId, ex.Message);
-
             throw;
         }
         finally {
@@ -516,7 +516,6 @@ public class Session : IDisposable
     public void Dispose()
     {
         if (IsDisposed) return;
-        DisposedTime = DateTime.UtcNow;
 
         _proxyManager.PacketReceived -= Proxy_PacketsReceived;
         _proxyManager.Dispose();
@@ -536,6 +535,9 @@ public class Session : IDisposable
             "SessionId: {SessionId-5}\t{Mode,-5}\tActor: {Actor,-7}\tSuppressBy: {SuppressedBy,-8}\tErrorCode: {ErrorCode,-20}\tMessage: {message}",
             SessionId, "Close", reason, SessionResponseEx.SuppressedBy, SessionResponseEx.ErrorCode,
             SessionResponseEx.ErrorMessage ?? "None");
+
+        // it must be ended to let manager know that session is disposed and finish all tasks
+        DisposedTime = DateTime.UtcNow;
     }
 
     private class PacketProxyCallbacks(Session session) : IPacketProxyCallbacks

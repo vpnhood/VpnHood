@@ -117,7 +117,7 @@ public class Tunnel : PassthroughPacketTransport
         // find channel by protocol
         var channelCount = _channelManager.PacketChannelCount;
         var channelIndex = channelCount switch {
-            0 => throw new Exception("There is no PacketChannel to send packets."),
+            0 => throw new Exception("No available PacketChannel to send packets."),
             1 => 0,
             _ => ipPacket.Protocol switch {
                 // select channel by tcp source port

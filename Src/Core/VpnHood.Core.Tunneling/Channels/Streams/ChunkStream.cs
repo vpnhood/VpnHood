@@ -16,7 +16,7 @@ public abstract class ChunkStream : AsyncStreamDecorator
 
 
     protected ChunkStream(Stream sourceStream, string streamId)
-        : base(sourceStream, true)
+        : base(sourceStream, leaveOpen: true)
     {
         StreamId = streamId;
         ReusedCount = 0;

@@ -369,7 +369,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
     // remove sessions that are disposed a long time
     private void ProcessDeadSessions()
     {
-        VhLogger.Instance.LogDebug("Disposing all disposed sessions...");
+        VhLogger.Instance.LogDebug("Removing all disposed sessions...");
         var utcNow = DateTime.UtcNow;
         var deadSessions = Sessions.Values
             .Where(x =>

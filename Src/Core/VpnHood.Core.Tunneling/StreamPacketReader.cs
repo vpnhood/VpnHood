@@ -12,16 +12,22 @@ public class StreamPacketReader(Stream stream, int bufferSize)
     /// <returns>null if read nothing</returns>
     public async Task<IpPacket?> ReadAsync(CancellationToken cancellationToken)
     {
-
-        // read minimum packet header
-        await _stream.ReadExactAsync(_minHeader, cancellationToken);
+        // read minimum packet header and return null if we reach the end of the stream
+        try {
+            await _stream.ReadExactAsync(_minHeader, cancellationToken);
+        }
+        catch (EndOfStreamException) {
+            // if we reach the end of the stream, return null
+            // no more packet
+            return null;
+        }
 
         // read packet length
         var packetLength = PacketUtil.ReadPacketLength(_minHeader.Span);
 
         // check packet length
-        if (packetLength > TunnelDefaults.MaxPacketSize) 
-            throw new Exception($"Stream has been closed due an oversize packet. PacketLength: {packetLength}");
+        if (packetLength > TunnelDefaults.MaxPacketSize)
+            throw new InvalidOperationException($"Packet size exceeds the maximum allowed limit. PacketLength: {packetLength}");
 
         var memoryOwner = MemoryPool<byte>.Shared.Rent(packetLength);
         try {
@@ -35,7 +41,7 @@ public class StreamPacketReader(Stream stream, int bufferSize)
             var ipPacket = PacketBuilder.Attach(memoryOwner);
             return ipPacket;
         }
-        catch{
+        catch {
             memoryOwner.Dispose();
             throw;
         }

@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Packets;
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.ClientStreams;
@@ -57,8 +58,12 @@ public class StreamPacketChannel(StreamPacketChannelOptions options) : PacketCha
         
         while (!cancellationToken.IsCancellationRequested) {
             var ipPacket = await streamPacketReader.ReadAsync(cancellationToken).VhConfigureAwait();
-            if (ipPacket != null)
-                OnPacketReceived(ipPacket);
+            if (ipPacket == null) {
+                VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel, "Packet stream ended. Terminating read task.");
+                break;
+            }
+
+            OnPacketReceived(ipPacket);
         }
     }
 

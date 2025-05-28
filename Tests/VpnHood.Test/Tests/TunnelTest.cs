@@ -55,7 +55,8 @@ public class TunnelTest : TestBase
         return clientUdpChannel;
     }
 
-    private static UdpChannel CreateServerUdpChannel(UdpClient udpClient, uint sessionId, byte[] serverKey, byte[] sessionKey)
+    private static UdpChannel CreateServerUdpChannel(UdpClient udpClient, uint sessionId, byte[] serverKey,
+        byte[] sessionKey)
     {
         var serverTransmitter = new ServerUdpChannelTransmitterTest(udpClient, serverKey);
         var serverUdpChannel = new UdpChannel(serverTransmitter,
@@ -91,10 +92,11 @@ public class TunnelTest : TestBase
 
         // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint ?? throw new Exception("Server connection is not established");
+        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint ??
+                             throw new Exception("Server connection is not established");
         var serverUdpChannel = CreateServerUdpChannel(serverUdpClient, 1, serverKey: serverKey, sessionKey: sessionKey);
         var serverReceivedPackets = new List<IpPacket>();
-        serverUdpChannel.PacketReceived += delegate (object? _, IpPacket ipPacket) {
+        serverUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             // ReSharper disable once AccessToDisposedClosure
             serverReceivedPackets.Add(ipPacket);
             serverUdpChannel.SendPacketQueued(ipPacket.Clone());
@@ -102,13 +104,14 @@ public class TunnelTest : TestBase
         serverUdpChannel.Start();
 
         // Create client
-        var clientUdpChannel = CreateClientUdpChannel(serverEndPoint, serverKey: serverKey, sessionKey: sessionKey, sessionId: 1);
+        var clientUdpChannel =
+            CreateClientUdpChannel(serverEndPoint, serverKey: serverKey, sessionKey: sessionKey, sessionId: 1);
         var clientReceivedPackets = new List<IpPacket>();
-        clientUdpChannel.PacketReceived += delegate (object? _, IpPacket ipPacket) {
+        clientUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             clientReceivedPackets.Add(ipPacket);
         };
         clientUdpChannel.Start();
-        
+
         // send packet to server through channel
         foreach (var ipPacket in packets)
             clientUdpChannel.SendPacketQueued(ipPacket.Clone());
@@ -138,14 +141,16 @@ public class TunnelTest : TestBase
 
         // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint ?? throw new Exception("Server connection is not established");
-        var serverUdpChannel = CreateServerUdpChannel(serverUdpClient, sessionId: 1, serverKey: serverKey, sessionKey: sessionKey);
+        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint ??
+                             throw new Exception("Server connection is not established");
+        var serverUdpChannel =
+            CreateServerUdpChannel(serverUdpClient, sessionId: 1, serverKey: serverKey, sessionKey: sessionKey);
         var serverReceivedPackets = new List<IpPacket>();
 
         // Create server tunnel
         var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         serverTunnel.AddChannel(serverUdpChannel);
-        serverTunnel.PacketReceived += delegate (object? _, IpPacket ipPacket) {
+        serverTunnel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             // ReSharper disable once AccessToDisposedClosure
             serverReceivedPackets.Add(ipPacket);
             serverUdpChannel.SendPacketQueued(ipPacket.Clone());
@@ -159,7 +164,7 @@ public class TunnelTest : TestBase
         var clientReceivedPackets = new List<IpPacket>();
         var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         clientTunnel.AddChannel(clientUdpChannel);
-        clientTunnel.PacketReceived += delegate (object? _, IpPacket ipPacket) {
+        clientTunnel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             clientReceivedPackets.Add(ipPacket);
             waitHandle.Set();
         };
@@ -214,7 +219,8 @@ public class TunnelTest : TestBase
         CollectionAssert.AreEqual(readBuffer.ToArray(), writeBuffer);
 
         // make sure that the stream is closed
-        await Assert.ThrowsAsync<ObjectDisposedException>(() => stream.ReadAsync(readBuffer, cancellationToken).AsTask());
+        await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+            stream.ReadAsync(readBuffer, cancellationToken).AsTask());
     }
 
 
@@ -248,5 +254,4 @@ public class TunnelTest : TestBase
         await cts.CancelAsync();
         tcpListener.Stop();
     }
-
 }

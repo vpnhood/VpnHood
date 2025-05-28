@@ -25,6 +25,7 @@ internal class ConnectorService(
         where T : SessionResponse
     {
         var eventId = GetRequestEventId(request);
+        request.RequestId += ":client";
         VhLogger.Instance.LogDebug(eventId,
             "Sending a request. RequestCode: {RequestCode}, RequestId: {RequestId}",
             (RequestCode)request.RequestCode, request.RequestId);
@@ -82,8 +83,8 @@ internal class ConnectorService(
             }
         }
 
-        // create free connection
-        clientStream = await GetTlsConnectionToServer(requestId, cancellationToken).VhConfigureAwait();
+        // create a new connection
+        clientStream = await GetTlsConnectionToServer(requestId + ":tunnel", cancellationToken).VhConfigureAwait();
 
         // send request
         try {

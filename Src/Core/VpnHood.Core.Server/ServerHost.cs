@@ -245,7 +245,7 @@ public class ServerHost : IAsyncDisposable, IJob
         CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "Waiting for request...");
-        var streamId = Guid.NewGuid() + ":incoming";
+        var streamId = UniqueIdFactory.Create() + ":server:tunnel:incoming";
 
         // Version 2 is HTTP and starts with POST
         try {
@@ -253,7 +253,7 @@ public class ServerHost : IAsyncDisposable, IJob
                 await HttpUtil.ParseHeadersAsync(sslStream, cancellationToken).VhConfigureAwait()
                 ?? throw new Exception("Connection has been closed before receiving any request.");
 
-            Enum.TryParse<BinaryStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var binaryStreamType);
+            Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var binaryStreamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
             int.TryParse(headers.GetValueOrDefault("X-ProtocolVersion", "5"), out var protocolVersion);
             var authorization = headers.GetValueOrDefault("Authorization", string.Empty);
@@ -278,7 +278,7 @@ public class ServerHost : IAsyncDisposable, IJob
             }
 
             switch (binaryStreamType) {
-                case BinaryStreamType.Standard when protocolVersion <= 5:
+                case TunnelStreamType.Standard when protocolVersion <= 5:
                     return new TcpClientStream(tcpClient,
                         new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer),
                         streamId, ReuseClientStream) {
@@ -286,19 +286,19 @@ public class ServerHost : IAsyncDisposable, IJob
                     };
 
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                case BinaryStreamType.Standard when protocolVersion >= 6:
+                case TunnelStreamType.Standard when protocolVersion >= 6:
                     return new TcpClientStream(tcpClient,
                         new BinaryStreamStandard(sslStream, streamId, useBuffer),
                         streamId, ReuseClientStream) {
                         RequireHttpResponse = true
                     };
 
-                case BinaryStreamType.None:
+                case TunnelStreamType.None:
                     return new TcpClientStream(tcpClient, sslStream, streamId) {
                         RequireHttpResponse = protocolVersion >= 6
                     };
 
-                case BinaryStreamType.Unknown:
+                case TunnelStreamType.Unknown:
                 default:
                     throw new UnauthorizedAccessException(); //Unknown BinaryStreamType
             }
@@ -488,6 +488,10 @@ public class ServerHost : IAsyncDisposable, IJob
                 await ProcessRewardedAdRequest(clientStream, cancellationToken).VhConfigureAwait();
                 break;
 
+            case RequestCode.ServerCheck:
+                await ProcessServerCheck(clientStream, cancellationToken).VhConfigureAwait();
+                break;
+
             case RequestCode.Bye:
                 await ProcessBye(clientStream, cancellationToken).VhConfigureAwait();
                 break;
@@ -506,8 +510,14 @@ public class ServerHost : IAsyncDisposable, IJob
             VhLogger.FormatType<T>());
 
         var request = await StreamUtils.ReadObjectAsync<T>(clientStream.Stream, cancellationToken).VhConfigureAwait();
+
+        // check request id to server
         request.RequestId = request.RequestId.Replace(":client", ":server");
-        clientStream.ClientStreamId = request.RequestId;
+
+        // change and log request
+        // change ClientStreamId if it was incoming
+        if (clientStream.ClientStreamId.Contains(":incoming"))
+            clientStream.ClientStreamId = request.RequestId + ":tunnel";
 
         VhLogger.Instance.LogDebug(GeneralEventId.Session,
             "Request has been read. RequestType: {RequestType}. RequestId: {RequestId}",
@@ -662,6 +672,18 @@ public class ServerHost : IAsyncDisposable, IJob
         await session.ProcessSessionStatusRequest(request, clientStream, cancellationToken).VhConfigureAwait();
     }
 
+    private static async Task ProcessServerCheck(IClientStream clientStream, CancellationToken cancellationToken)
+    {
+        // unauthorized reply is enough to prevent fingerprinting and let the client knows that the server is alive
+        // no need to read the request, the header is enough to identify the request because bearer token exists in requests
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Process ServerCheck and return unauthorized for the request...");
+
+        // write unauthorized response
+        await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).VhConfigureAwait();
+        clientStream.DisposeWithoutReuse();
+    }
+
+
     private async Task ProcessBye(IClientStream clientStream, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading the Bye request...");
@@ -672,7 +694,8 @@ public class ServerHost : IAsyncDisposable, IJob
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
 
         // Dispose client stream
-        clientStream.DisposeWithoutReuse();
+        clientStream.PreventReuse();
+        await clientStream.DisposeAsync(new SessionResponse { ErrorCode = SessionErrorCode.Ok }, cancellationToken);
 
         // must be last
         await _sessionManager.CloseSession(session.SessionId);

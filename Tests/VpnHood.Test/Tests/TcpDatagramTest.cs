@@ -56,7 +56,7 @@ public class TcpPacketChannelTest : TestBase
         };
 
         // create client channel
-        using var clientStream = new TcpClientStream(tcpClient, tcpClient.GetStream(), Guid.NewGuid() + ":client");
+        using var clientStream = new TcpClientStream(tcpClient, tcpClient.GetStream(), Guid.NewGuid() + ":client:tunnel");
         using var clientChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
             ClientStream = clientStream,
             AutoDisposePackets = true,

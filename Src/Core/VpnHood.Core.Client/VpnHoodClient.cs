@@ -23,14 +23,16 @@ using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client;
 
-public class VpnHoodClient : IJob, IDisposable, IAsyncDisposable
+public class VpnHoodClient : IDisposable, IAsyncDisposable
 {
     private const int MaxProtocolVersion = 8;
     private const int MinProtocolVersion = 4;
+    private bool _disposedInternal;
     private bool _disposed;
     private readonly bool _autoDisposeVpnAdapter;
     private readonly CancellationTokenSource _cancellationTokenSource;
@@ -66,11 +68,11 @@ public class VpnHoodClient : IJob, IDisposable, IAsyncDisposable
     private readonly int _udpSendBufferSize;
     private readonly int _udpReceiveBufferSize;
     private readonly AsyncLock _packetChannelLock = new();
+    private readonly VhJob _cleanupJob;
 
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
     internal Tunnel Tunnel { get; }
     public ISocketFactory SocketFactory { get; }
-    public JobSection JobSection { get; } = new();
     public event EventHandler? StateChanged;
     public bool IsIpV6SupportedByServer { get; private set; }
     public bool IsIpV6SupportedByClient { get; internal set; }
@@ -198,7 +200,7 @@ public class VpnHoodClient : IJob, IDisposable, IAsyncDisposable
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
-        JobRunner.Default.Add(this);
+        _cleanupJob = new VhJob(Cleanup, "ClientCleanup");
     }
 
     public ClientState State {
@@ -565,7 +567,7 @@ public class VpnHoodClient : IJob, IDisposable, IAsyncDisposable
             };
 
             var request = new HelloRequest {
-                RequestId = Guid.NewGuid() + ":client",
+                RequestId = UniqueIdFactory.Create(),
                 EncryptedClientId = VhUtils.EncryptClientId(clientInfo.ClientId, Token.Secret),
                 ClientInfo = clientInfo,
                 TokenId = Token.TokenId,
@@ -799,7 +801,7 @@ public class VpnHoodClient : IJob, IDisposable, IAsyncDisposable
     {
         // Create and send the Request Message
         var request = new TcpPacketChannelRequest {
-            RequestId = Guid.NewGuid() + ":client",
+            RequestId = UniqueIdFactory.Create(),
             SessionId = SessionId,
             SessionKey = SessionKey
         };
@@ -910,7 +912,7 @@ public class VpnHoodClient : IJob, IDisposable, IAsyncDisposable
         // don't use SendRequest because it can be disposed
         using var requestResult = await SendRequest<SessionResponse>(
                 new SessionStatusRequest {
-                    RequestId = Guid.NewGuid() + ":client",
+                    RequestId = UniqueIdFactory.Create(),
                     SessionId = SessionId,
                     SessionKey = SessionKey
                 },
@@ -923,23 +925,27 @@ public class VpnHoodClient : IJob, IDisposable, IAsyncDisposable
         // don't use SendRequest because it can be disposed
         using var requestResult = await ConnectorService.SendRequest<SessionResponse>(
                 new ByeRequest {
-                    RequestId = Guid.NewGuid() + ":client",
+                    RequestId = UniqueIdFactory.Create(),
                     SessionId = SessionId,
                     SessionKey = SessionKey
                 },
                 cancellationToken)
             .VhConfigureAwait();
+        
+        requestResult.ClientStream.DisposeWithoutReuse();
     }
 
-    public async Task RunJob()
+    public ValueTask Cleanup(CancellationToken cancellationToken)
     {
-        if (FastDateTime.UtcNow > _sessionStatus?.SessionExpirationTime)
-            await DisposeAsync(new SessionException(SessionErrorCode.AccessExpired));
+        return FastDateTime.UtcNow > _sessionStatus?.SessionExpirationTime 
+            ? DisposeAsync(new SessionException(SessionErrorCode.AccessExpired)) 
+            : default;
     }
 
     private async ValueTask DisposeAsync(Exception ex)
     {
         // DisposeAsync will try SendByte, and it may cause calling this dispose method again and go to deadlock
+        using var lockScope = await _disposeLock.LockAsync();
         if (_disposed)
             return;
 
@@ -948,9 +954,11 @@ public class VpnHoodClient : IJob, IDisposable, IAsyncDisposable
         await DisposeAsync().VhConfigureAwait();
     }
 
-  public async ValueTask DisposeAsync()
+    private readonly AsyncLock _disposeLock = new();
+    public async ValueTask DisposeAsync()
     {
-        if (_disposed)
+        using var lockScope = await _disposeLock.LockAsync();
+        if (_disposed) 
             return;
 
         // dispose all resources before bye request
@@ -971,25 +979,33 @@ public class VpnHoodClient : IJob, IDisposable, IAsyncDisposable
             VhLogger.Instance.LogInformation("Closing session on the server...");
             using var cts = new CancellationTokenSource(byeTimeout);
             var cancellationToken = cts.Token;
-            await VhUtils.TryInvokeAsync("close session on the server", () =>SendByeRequest(cancellationToken));
+            try {
+                await SendByeRequest(cancellationToken);
+                VhLogger.Instance.LogInformation("Session has been closed on the server successfully.");
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Could not send the bye to the server..");
+            }
+
         }
 
         Dispose();
     }
 
-    private bool _disposedInternal;
     private void DisposeInternal()
     {
         if (_disposedInternal) return;
         _disposedInternal = true;
 
         // shutdown
-        VhLogger.Instance.LogInformation("Shutting down...");
+        VhLogger.Instance.LogInformation("Client is shutting down...");
         _cancellationTokenSource.Cancel();
+        _cleanupJob.Dispose();
         State = ClientState.Disconnecting;
 
-        // dispose job runner (not required)
-        JobRunner.Default.Remove(this);
+        // stop reusing tcp connections for faster disposal
+        if (_connectorService != null)
+            _connectorService.AllowTcpReuse = false;
 
         // stop processing tunnel & adapter packets
         _vpnAdapter.PacketReceived -= VpnAdapter_PacketReceived;
@@ -1013,13 +1029,14 @@ public class VpnHoodClient : IJob, IDisposable, IAsyncDisposable
         VhLogger.Instance.LogDebug("Disposing ProxyManager...");
         _proxyManager.PacketReceived -= Proxy_PacketReceived;
         _proxyManager.Dispose();
-
     }
 
     public void Dispose()
     {
-        if (_disposed)
-            return;
+        lock (_disposeLock) {
+            if (_disposed) return;
+            _disposed = true;
+        }
 
         // dispose all resources before bye request
         DisposeInternal();
@@ -1033,7 +1050,6 @@ public class VpnHoodClient : IJob, IDisposable, IAsyncDisposable
 
         VhLogger.Instance.LogInformation("Bye Bye!");
         State = ClientState.Disposed; //everything is clean
-        _disposed = true;
     }
 
     private class ClientSessionStatus(VpnHoodClient client, AccessUsage accessUsage) : ISessionStatus

@@ -2,7 +2,9 @@
 
 public class VhJobOptions
 {
-    public required TimeSpan Period { get; init; }
+    public static TimeSpan DefaultPeriod { get; set; } = TimeSpan.FromSeconds(30);
+
+    public TimeSpan Period { get; init; } = DefaultPeriod;
     public string? Name { get; init; }
     public TimeSpan? DueTime { get; init; }
     public int? MaxRetry { get; init; }

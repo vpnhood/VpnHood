@@ -528,7 +528,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         _disposed = true;
 
         using var scope = VhLogger.Instance.BeginScope("Server");
-        VhLogger.Instance.LogInformation("Shutting down...");
+        VhLogger.Instance.LogInformation("Server is shutting down...");
 
         // wait for configuration
         try {

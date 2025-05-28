@@ -12,6 +12,7 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client;
 
@@ -185,7 +186,7 @@ public class ServerFinder(
         try {
             var requestResult = await connector.SendRequest<SessionResponse>(
                     new ServerCheckRequest {
-                        RequestId = Guid.NewGuid().ToString()
+                        RequestId = UniqueIdFactory.Create()
                     },
                     cancellationToken)
                 .VhConfigureAwait();

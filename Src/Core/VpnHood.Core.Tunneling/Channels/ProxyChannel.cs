@@ -8,7 +8,6 @@ using VpnHood.Core.Tunneling.ClientStreams;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-// todo: rename to ProxyChannel 
 public class ProxyChannel : IProxyChannel, IJob
 {
     private bool _disposed;
@@ -22,6 +21,7 @@ public class ProxyChannel : IProxyChannel, IJob
     private bool _started;
     private Traffic _traffic = new();
     private readonly object _trafficLock = new();
+    private bool _isTunnelReadTaskFinished;
     public JobSection JobSection { get; } = new(TunnelDefaults.TcpCheckInterval);
 
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
@@ -49,11 +49,11 @@ public class ProxyChannel : IProxyChannel, IJob
 
         ChannelId = channelId;
         JobRunner.Default.Add(this);
-   }
+    }
 
     public Traffic Traffic {
         get {
-            lock (_trafficLock) 
+            lock (_trafficLock)
                 return _traffic;
         }
     }
@@ -63,9 +63,9 @@ public class ProxyChannel : IProxyChannel, IJob
         get {
             if (_disposed)
                 return PacketChannelState.Disposed;
-            
-            return _started 
-                ? PacketChannelState.Connected 
+
+            return _started
+                ? PacketChannelState.Connected
                 : PacketChannelState.NotStarted;
         }
     }
@@ -88,70 +88,71 @@ public class ProxyChannel : IProxyChannel, IJob
         try {
             // let pass CancellationToken for the host only to save the tunnel for reuse
 
-            var tunnelCopyTask = CopyToAsync(
-                _tunnelClientStream.Stream, _hostClientStream.Stream, false, _tunnelStreamBufferSize,
+            var tunnelReadTask = CopyFromTunnelAsync(
+                _tunnelClientStream.Stream, _hostClientStream.Stream, _tunnelStreamBufferSize,
                 CancellationToken.None, CancellationToken.None); // tunnel => host
-
-            var hostCopyTask = CopyToAsync(
-                _hostClientStream.Stream, _tunnelClientStream.Stream, true, _orgStreamBufferSize,
+            
+            var tunnelWriteTask = CopyToTunnelAsync(
+                _hostClientStream.Stream, _tunnelClientStream.Stream, _orgStreamBufferSize,
                 CancellationToken.None, CancellationToken.None); // host => tunnel
 
-            await Task.WhenAny(tunnelCopyTask, hostCopyTask).VhConfigureAwait();
+            var completedTask = await Task.WhenAny(tunnelReadTask, tunnelWriteTask).VhConfigureAwait();
+            _isTunnelReadTaskFinished = completedTask == tunnelReadTask;
+            if (_isTunnelReadTaskFinished)
+                VhLogger.Instance.LogInformation($"Finish reading tunnel. ChannelId: {ChannelId}, ClientStreamId: {_tunnelClientStream.ClientStreamId}"); //todo
+            else
+                VhLogger.Instance.LogInformation($"Finish reading host: ChannelId: {ChannelId}, ClientStreamId: {_hostClientStream.ClientStreamId}"); //todo
 
             // just to ensure that both tasks are completed gracefully, ClientStream should also handle it
             await Task.WhenAll(
-                _hostClientStream.Stream.DisposeAsync().AsTask(),
-                _tunnelClientStream.Stream.DisposeAsync().AsTask())
-                .VhConfigureAwait();
-        }
-        catch (Exception) when(_disposed) {
-            // don't log if disposed
+                    _hostClientStream.Stream.DisposeAsync().AsTask(),
+                    _tunnelClientStream.Stream.DisposeAsync().AsTask())
+                    .VhConfigureAwait();
+
+            VhLogger.Instance.LogInformation($"Dispose reading hosting: ChannelId: {ChannelId}, ClientStreamId: {_hostClientStream.ClientStreamId}"); //todo
+            VhLogger.Instance.LogInformation($"Dispose reading tunnel: ChannelId: {ChannelId}, ClientStreamId: {_tunnelClientStream.ClientStreamId}"); //todo
+
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, ex,
-                "Error while starting ProxyChannel. ChannelId: {ChannelId}", ChannelId);
+                "Error while starting a ProxyChannel. ChannelId: {ChannelId}, ProxyDisposal: {ProxyDisposal}", 
+                ChannelId, _disposed);
         }
         finally {
             Dispose();
         }
     }
 
-    public Task RunJob()
-    {
-        // if either task is completed let graceful shutdown do its job
-        if (_disposed || !_started)
-            return Task.CompletedTask;
-
-        CheckClientIsAlive();
-        return Task.CompletedTask;
-    }
-
-    private void CheckClientIsAlive()
-    {
-        // check tcp states
-        if (_hostClientStream.Connected && _tunnelClientStream.Connected)
-            return;
-
-        VhLogger.Instance.LogInformation(GeneralEventId.ProxyChannel,
-            "Disposing a ProxyChannel due to its error state. ChannelId: {ChannelId}", ChannelId);
-
-        Dispose();
-    }
-
-    private async Task CopyToAsync(Stream source, Stream destination, bool isDestinationTunnel, int bufferSize,
+    private async Task CopyFromTunnelAsync(Stream source, Stream destination, int bufferSize,
         CancellationToken sourceCancellationToken, CancellationToken destinationCancellationToken)
     {
         try {
-            await CopyToInternalAsync(source, destination, isDestinationTunnel, bufferSize,
+            await CopyToInternalAsync(source, destination, false, bufferSize,
                 sourceCancellationToken, destinationCancellationToken).VhConfigureAwait();
         }
         catch (Exception ex) {
-            if (isDestinationTunnel)
-                VhLogger.Instance.LogDebug(ex,
-                    "ProxyChannel: Error in copying to tunnel. ChannelId: {ChannelId}", ChannelId);
-            else
-                VhLogger.Instance.LogDebug(ex,
-                    "ProxyChannel: Error in copying from tunnel. ChannelId: {ChannelId}", ChannelId);
+            VhLogger.Instance.LogDebug(ex,
+                "ProxyChannel: Error while copying from tunnel. ChannelId: {ChannelId}", ChannelId);
+            throw;
+        }
+    }
+
+    private async Task CopyToTunnelAsync(Stream source, Stream destination, int bufferSize,
+        CancellationToken sourceCancellationToken, CancellationToken destinationCancellationToken)
+    {
+        try {
+            await CopyToInternalAsync(source, destination, true, bufferSize,
+                sourceCancellationToken, destinationCancellationToken).VhConfigureAwait();
+        }
+        catch (Exception ex) {
+            // tunnel read task has been finished, it is normal shutdown for host stream
+            // because we dispose and cancel reading from host stream
+            if (_isTunnelReadTaskFinished && VhLogger.IsSocketCloseException(ex))
+                return;
+
+            VhLogger.Instance.LogDebug(ex,
+                "ProxyChannel: Error while copying to tunnel. ChannelId: {ChannelId}", ChannelId);
+            throw;
         }
     }
 
@@ -199,14 +200,36 @@ public class ProxyChannel : IProxyChannel, IJob
                     _traffic += new Traffic(bytesRead, 0);
                 else
                     _traffic += new Traffic(0, bytesRead);
-                
+
                 // set LastActivityTime as some data delegated
                 LastActivityTime = FastDateTime.Now;
             }
         }
     }
 
-   public void Dispose()
+    public Task RunJob()
+    {
+        // if either task is completed let graceful shutdown do its job
+        if (_disposed || !_started)
+            return Task.CompletedTask;
+
+        CheckClientIsAlive();
+        return Task.CompletedTask;
+    }
+
+    private void CheckClientIsAlive()
+    {
+        // check tcp states
+        if (_hostClientStream.Connected && _tunnelClientStream.Connected)
+            return;
+
+        VhLogger.Instance.LogInformation(GeneralEventId.ProxyChannel,
+            "Disposing a ProxyChannel due to its error state. ChannelId: {ChannelId}", ChannelId);
+
+        Dispose();
+    }
+
+    public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;

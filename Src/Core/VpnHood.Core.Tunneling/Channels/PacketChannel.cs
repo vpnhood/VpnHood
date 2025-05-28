@@ -19,7 +19,7 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
     protected CancellationToken CancellationToken => _cancellationTokenSource.Token;
     public string ChannelId { get; }
     public DateTime LastActivityTime => PacketStat.LastActivityTime;
-    public Traffic Traffic => new (PacketStat.SentBytes, PacketStat.ReceivedBytes);
+    public Traffic Traffic => new(PacketStat.SentBytes, PacketStat.ReceivedBytes);
     public JobSection JobSection { get; } = new();
     protected abstract Task StartReadTask();
     public abstract int OverheadLength { get; }
@@ -38,14 +38,14 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
 
     public PacketChannelState State {
         get {
-            if (IsDisposed) return 
+            if (IsDisposed) return
                 PacketChannelState.Disposed;
 
-            if (_closeRequestTime!=null) 
+            if (_closeRequestTime != null)
                 return PacketChannelState.Disconnecting;
 
-            return _started 
-                ? PacketChannelState.Connected 
+            return _started
+                ? PacketChannelState.Connected
                 : PacketChannelState.NotStarted;
         }
     }
@@ -61,7 +61,7 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
         // start reading packets
         VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
             "Starting a PacketChannel. ChannelId: {ChannelId}", ChannelId);
-        
+
         _ = StartTask();
         _started = true;
     }
@@ -77,15 +77,18 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
         try {
             await StartReadTask();
         }
-        catch (OperationCanceledException ex) {
-            VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel, ex,
-                "StreamPacketChannel read operation was canceled.");
+        catch (OperationCanceledException) when (IsDisposed || _cancellationTokenSource.IsCancellationRequested) {
+            // normal cancellation, do nothing
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.PacketChannel, ex,
-                "Error while reading from StreamPacketChannel.");
+                "PacketChannel read task failed. ChannelId: {ChannelId}, Type: {Type}",
+                ChannelId, VhLogger.FormatType(this));
         }
         finally {
+            VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
+                "PacketChannel read task completed. ChannelId: {ChannelId}, Type: {Type}",
+                ChannelId, VhLogger.FormatType(this));
             Dispose();
         }
     }
@@ -93,13 +96,13 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
     private void CheckLifetime()
     {
         // if channel is disposed, do nothing
-        if (IsDisposed)
+        if (IsDisposed || _cancellationTokenSource.IsCancellationRequested)
             return;
 
         // dispose if its lifetime is over
-        if (_started && _closeRequestTime == null && 
+        if (_started && _closeRequestTime == null &&
             _lifespan.HasValue && FastDateTime.Now - PacketStat.CreatedTime > _lifespan.Value) {
-            
+
             VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
                 "PacketChannel lifetime is over. ChannelId: {ChannelId}, CreatedTime: {CreatedTime}, Lifespan: {Lifespan}",
                 ChannelId, PacketStat.CreatedTime, _lifespan);

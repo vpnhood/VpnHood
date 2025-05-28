@@ -254,9 +254,9 @@ internal class ClientHost(
             var isInIpRange = syncCustomData?.IsInIpRange ?? vpnHoodClient.IsInIpRange(natItem.DestinationAddress);
             if (filterResult.Action == DomainFilterAction.Exclude ||
                 (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
-                var channelId = Guid.NewGuid() + ":client";
+                var channelId = UniqueIdFactory.Create() + ":client:passthrough";
                 await vpnHoodClient.AddPassthruTcpStream(
-                        new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
+                        new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId + ":tunnel"),
                         new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
                         channelId, filterResult.ReadData, cancellationToken)
                     .VhConfigureAwait();
@@ -267,7 +267,7 @@ internal class ClientHost(
 
             // Create the Request
             var request = new StreamProxyChannelRequest {
-                RequestId = Guid.NewGuid() + ":client",
+                RequestId = UniqueIdFactory.Create(),
                 SessionId = vpnHoodClient.SessionId,
                 SessionKey = vpnHoodClient.SessionKey,
                 DestinationEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort)
@@ -282,7 +282,7 @@ internal class ClientHost(
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
             var orgTcpClientStream =
-                new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
+                new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), proxyClientStream.ClientStreamId.Replace(":tunnel", ":app"));
 
             // flush initBuffer
             await proxyClientStream.Stream.WriteAsync(filterResult.ReadData, cancellationToken);

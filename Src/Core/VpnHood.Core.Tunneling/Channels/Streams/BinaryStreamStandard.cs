@@ -24,7 +24,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
 
     public BinaryStreamStandard(Stream sourceStream, string streamId, bool useBuffer)
         : base(useBuffer
-            ? new ReadCacheStream(sourceStream, false, TunnelDefaults.StreamProxyBufferSize)
+            ? new ReadCacheStream(sourceStream, leaveOpen: false, TunnelDefaults.StreamProxyBufferSize)
             : sourceStream, streamId)
     {
     }
@@ -162,9 +162,6 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
     {
         if (_exception != null) return;
         _exception = ex;
-
-        VhLogger.Instance.LogError(GeneralEventId.TcpLife, ex,
-            "Disposing BinaryStream. StreamId: {StreamId}", StreamId);
         Dispose();
     }
 
@@ -272,6 +269,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
             }
             else {
                 SourceStream.Dispose();
+                Console.WriteLine($"Destroying original stream. {StreamId}"); //todo
             }
         }
 
@@ -281,7 +279,9 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
     public override async ValueTask DisposeAsync()
     {
         // just ignore exceptions during close stream as close stream already handles logging
-        await VhUtils.TryInvokeAsync(null, CloseStreamAsync).VhConfigureAwait();
+        if (CanReuse)
+            await VhUtils.TryInvokeAsync(null, CloseStreamAsync).VhConfigureAwait();
+
         await base.DisposeAsync().VhConfigureAwait();
     }
 }

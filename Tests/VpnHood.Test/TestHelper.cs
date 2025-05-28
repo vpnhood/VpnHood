@@ -52,7 +52,8 @@ public class TestHelper : IDisposable
         VhLogger.IsAnonymousMode = false;
         WebServer = TestWebServer.Create();
         NetFilter = new TestNetFilter();
-        NetFilter.Init([
+        NetFilter.Init([TestConstants.BlockedIp], 
+        [
             Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
             Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
             Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
@@ -70,6 +71,7 @@ public class TestHelper : IDisposable
                 IPEndPoint.Parse("[::1]:0"))
         ]);
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
+        VhJobOptions.DefaultPeriod = TimeSpan.FromMilliseconds(1000);
         JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
         JobSection.DefaultInterval = TimeSpan.FromMilliseconds(200);
     }
@@ -205,10 +207,11 @@ public class TestHelper : IDisposable
                 TestConstants.TcpEndPoint2.Address,
                 TestConstants.HttpsEndPoint1.Address,
                 TestConstants.HttpsEndPoint1.Address,
-                TestConstants.InvalidIp,
                 TestConstants.UdpV4EndPoint1.Address,
                 TestConstants.UdpV4EndPoint2.Address,
-                ClientOptions.Default.TcpProxyCatcherAddressIpV4
+                ClientOptions.Default.TcpProxyCatcherAddressIpV4,
+                TestConstants.InvalidIp,
+                TestConstants.BlockedIp
             };
             addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsUri1.Host));
             addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsUri2.Host));

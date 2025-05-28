@@ -21,7 +21,20 @@ public class ClientTunnelTest : TestBase
     public async Task UdpChannel()
     {
         VhLogger.IsDiagnoseMode = true;
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(LogLevel.Trace); //todo
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(LogLevel.Trace); 
+        await using var clientServerDom = await ClientServerDom.Create(TestHelper, useUdpChannel: true);
+
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Testing by UdpChannel.");
+        Assert.IsTrue(clientServerDom.Client.UseUdpChannel);
+        await AssertTunnel(clientServerDom);
+    }
+
+
+    [TestMethod]
+    public async Task UdpChannel_Switch()
+    {
+        VhLogger.IsDiagnoseMode = true;
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(LogLevel.Trace); 
         await using var clientServerDom = await ClientServerDom.Create(TestHelper, useUdpChannel: true);
 
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Testing by UdpChannel.");
@@ -31,6 +44,7 @@ public class ClientTunnelTest : TestBase
         // switch to tcp
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Switch to PacketChannel.");
         clientServerDom.Client.UseUdpChannel = false;
+        await VhTestUtil.AssertEqualsWait(true, () => clientServerDom.Client.SessionStatus?.PacketChannelCount > 0);
         await AssertTunnel(clientServerDom);
         await VhTestUtil.AssertEqualsWait(false, () => clientServerDom.Client.GetSessionStatus().IsUdpMode);
         Assert.IsFalse(clientServerDom.Client.UseUdpChannel);
@@ -38,6 +52,7 @@ public class ClientTunnelTest : TestBase
         // switch back to udp
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Switch back to UdpChannel.");
         clientServerDom.Client.UseUdpChannel = true;
+        await VhTestUtil.AssertEqualsWait(true, () => clientServerDom.Client.SessionStatus?.PacketChannelCount > 0);
         await AssertTunnel(clientServerDom);
         await VhTestUtil.AssertEqualsWait(true, () => clientServerDom.Client.GetSessionStatus().IsUdpMode);
         Assert.IsTrue(clientServerDom.Client.UseUdpChannel);
@@ -47,8 +62,11 @@ public class ClientTunnelTest : TestBase
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Invalid Https request.");
         using var httpClient = new HttpClient();
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
-            httpClient.GetStringAsync(TestConstants.HttpsRefusedUri));
+
+        // HttpsBlockedUri is faster than HttpsRefusedUri. 
+        // In windows HttpsRefusedUri takes 2 seconds to return error
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => 
+            httpClient.GetStringAsync(TestConstants.HttpsBlockedUri)); 
 
         Assert.AreEqual(HttpRequestError.SecureConnectionError, ex.HttpRequestError);
         Assert.AreEqual(ClientState.Connected, clientServer.Client.State);

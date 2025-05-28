@@ -10,11 +10,13 @@ public class TestNetFilter : NetFilter
 {
     private ConcurrentDictionary<Tuple<IpProtocol, IPEndPoint>, IPEndPoint> NetMap { get; } = new();
     private ConcurrentDictionary<Tuple<IpProtocol, IPEndPoint>, IPEndPoint> NetMapR { get; } = new();
+    private IPAddress[] _blockedAddresses = [];
 
-    public void Init(Tuple<IpProtocol, IPEndPoint, IPEndPoint>[] items)
+    public void Init(IPAddress[] blockedAddresses, Tuple<IpProtocol, IPEndPoint, IPEndPoint>[] items)
     {
         NetMap.Clear();
         NetMapR.Clear();
+        _blockedAddresses = blockedAddresses;
 
         foreach (var tuple in items) {
             Assert.IsTrue(NetMap.TryAdd(Tuple.Create(tuple.Item1, tuple.Item2), tuple.Item3));
@@ -26,6 +28,10 @@ public class TestNetFilter : NetFilter
     {
         var ipEndPoint = base.ProcessRequest(protocol, requestEndPoint);
         if (ipEndPoint == null)
+            return null;
+
+        // check if the destination address is blocked
+        if (_blockedAddresses.Contains(requestEndPoint.Address))
             return null;
 
         return NetMap.GetValueOrDefault(Tuple.Create(protocol, requestEndPoint), requestEndPoint);

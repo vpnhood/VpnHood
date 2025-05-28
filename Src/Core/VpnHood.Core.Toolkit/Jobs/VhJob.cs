@@ -13,7 +13,7 @@ public class VhJob : IDisposable
     private readonly TimeSpan _period;
     private readonly int? _maxRetry;
     private bool _disposed;
-
+    
     public VhJob(Func<CancellationToken, ValueTask> jobFunc, VhJobOptions options)
     {
         _jobFunc = jobFunc;
@@ -32,6 +32,15 @@ public class VhJob : IDisposable
         })
     {
     }
+    public VhJob(Func<CancellationToken, ValueTask> jobFunc, string? name = null)
+        : this(jobFunc, new VhJobOptions {
+            Name = name,
+            DueTime = TimeSpan.Zero,
+        })
+    {
+    }
+
+
 
     private async Task ReportTask()
     {

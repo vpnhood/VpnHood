@@ -32,6 +32,7 @@ public static class StreamUtils
         }
     }
 
+    //todo we already have extension method for this, remove it later
     public static async Task ReadExactAsync(Stream stream, Memory<byte> buffer, CancellationToken cancellationToken)
     {
         var totalRead = 0;

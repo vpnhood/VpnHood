@@ -81,7 +81,7 @@ public class TcpClientStream : IClientStream
             await Reuse(chunkStream, _reuseCallback).VhConfigureAwait();
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(GeneralEventId.TcpLife, ex,
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife, ex,
                 "Could not reuse the TcpClientStream. ClientStreamId: {ClientStreamId}", ClientStreamId);
 
             // dispose and we should not try to reuse the stream

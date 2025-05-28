@@ -17,7 +17,7 @@ public class Tunnel : PassthroughPacketTransport
     private readonly object _speedLock = new();
 
     public void AddChannel(IChannel channel) => _channelManager.AddChannel(channel);
-    public DateTime LastActivityTime { get; private set; }
+    public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public Traffic Traffic => _channelManager.Traffic;
     public int PacketChannelCount => _channelManager.PacketChannelCount;
     public int StreamProxyChannelCount => _channelManager.ProxyChannelCount;

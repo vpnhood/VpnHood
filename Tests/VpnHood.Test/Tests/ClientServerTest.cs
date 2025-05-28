@@ -288,25 +288,31 @@ public class ClientServerTest : TestBase
     [TestMethod]
     public async Task Reset_tcp_connection_immediately_after_vpn_connected()
     {
+        TestHelper.LogLevel = LogLevel.Trace;
+        
         // create server
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
-        using TcpClient tcpClient = new(TestConstants.HttpsExternalUri1.Host, 443);
+        // connect to a host
+        using TcpClient tcpClient = new();
+        using var connectCts = new CancellationTokenSource(2000);
+        await tcpClient.ConnectAsync(TestConstants.HttpsExternalUri1.Host, 443, connectCts.Token);
         await using var stream = tcpClient.GetStream();
 
         // create client
-        await using var client1 = await TestHelper.CreateClient(token);
+        await using var client = await TestHelper.CreateClient(token);
 
-        try {
-            stream.WriteByte(1);
-            stream.ReadByte();
-            Assert.Fail("Exception expected!");
-        }
-        catch (Exception ex)
-            when (ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionReset }) {
-            // OK
-        }
+        using var cts2 = new CancellationTokenSource(2000);
+        var ex = await Assert.ThrowsAsync<Exception>(async () => {
+            await stream.WriteAsync(new byte[1], cts2.Token);
+            // ReSharper disable once MustUseReturnValue
+            await stream.ReadAsync(new byte[1], cts2.Token);
+        });
+
+        var innerException = ex.InnerException;
+        Assert.AreEqual(typeof(SocketException), innerException?.GetType());
+        Assert.AreEqual(SocketError.ConnectionReset, ((SocketException)innerException!).SocketErrorCode);
     }
 
     [TestMethod]

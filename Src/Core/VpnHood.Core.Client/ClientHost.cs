@@ -107,6 +107,10 @@ internal class ClientHost(
     // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
     public void ProcessOutgoingPacket(IpPacket ipPacket)
     {
+        // ignore new packets 
+        if (_disposed)
+            throw new ObjectDisposedException(GetType().Name);
+        
         PacketLogger.LogPacket(ipPacket, "Processing a ClientHost packet...");
 
         // check packet type
@@ -116,23 +120,18 @@ internal class ClientHost(
 
         var catcherAddress = ipPacket.Version == IpVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
         var localEndPoint = ipPacket.Version == IpVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
-        TcpPacket? tcpPacket = null;
 
         try {
-            tcpPacket = ipPacket.ExtractTcp();
+            var tcpPacket = ipPacket.ExtractTcp();
 
             // check local endpoint
             if (localEndPoint == null)
                 throw new Exception("There is no localEndPoint registered for this packet.");
 
-            // ignore new packets 
-            if (_disposed)
-                throw new ObjectDisposedException(GetType().Name);
-
             // redirect to inbound
             if (catcherAddress.SpanEquals(ipPacket.DestinationAddressSpan)) {
                 var natItem = (NatItemEx?)_nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
-                              ?? throw new Exception("Could not find incoming tcp destination in NAT.");
+                              ?? throw new NatEndpointNotFoundException("Could not find incoming tcp destination in NAT.");
 
                 ipPacket.SourceAddress = natItem.DestinationAddress;
                 ipPacket.DestinationAddress = natItem.SourceAddress;
@@ -148,7 +147,7 @@ internal class ClientHost(
                 var natItem = syncCustomData != null
                     ? _nat.Add(ipPacket, true)
                     : _nat.Get(ipPacket) ??
-                      throw new Exception("Could not find outgoing tcp destination in NAT.");
+                      throw new NatEndpointNotFoundException("Could not find outgoing tcp destination in NAT.");
 
                 // set customData
                 if (syncCustomData != null)
@@ -163,10 +162,10 @@ internal class ClientHost(
             ipPacket.UpdateAllChecksums();
             PacketReceived?.Invoke(this, ipPacket);
         }
-        catch (Exception ex) when (tcpPacket != null) {
+        catch (NatEndpointNotFoundException ex) when (ipPacket.Protocol == IpProtocol.Tcp) {
             var resultPacket = PacketBuilder.BuildTcpResetReply(ipPacket);
             PacketReceived?.Invoke(this, resultPacket);
-            throw new PacketDropException("Dropping packet and sending TCP rest.", ex);
+            throw new PacketDropException("Packet dropped and TCP reset sent.", ex);
         }
     }
 

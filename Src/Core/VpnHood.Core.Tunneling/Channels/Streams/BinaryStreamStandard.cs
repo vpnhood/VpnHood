@@ -231,7 +231,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
         }
         catch (Exception ex) {
             _exception = ex; // indicate that the stream can not be reused
-            VhLogger.Instance.LogError(GeneralEventId.TcpLife, ex,
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife, ex,
                 "Could not close the stream gracefully. StreamId: {StreamId}", StreamId);
             await SourceStream.DisposeAsync();
             throw;

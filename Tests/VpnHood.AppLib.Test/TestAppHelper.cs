@@ -39,7 +39,7 @@ public class TestAppHelper : TestHelper
                 LoadAdPostDelay = TimeSpan.Zero
             },
             LogServiceOptions = {
-                LogLevel = LogVerbose ? LogLevel.Trace : LogLevel.Debug,
+                LogLevel = LogLevel,
                 SingleLineConsole = false
             }
         };

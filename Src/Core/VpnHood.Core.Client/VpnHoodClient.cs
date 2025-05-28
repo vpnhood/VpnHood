@@ -975,7 +975,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // Sending Bye
         if (SessionInfo != null && LastException == null) {
-            VhLogger.Instance.LogInformation("Closing session on the server...");
+            VhLogger.Instance.LogInformation("Sending bye to the server...");
             using var cts = new CancellationTokenSource(byeTimeout);
             var cancellationToken = cts.Token;
             try {

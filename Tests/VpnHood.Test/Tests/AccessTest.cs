@@ -61,8 +61,7 @@ public class AccessTest : TestBase
     public async Task Server_reject_expired_access_at_runtime()
     {
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        fileAccessManagerOptions.SessionOptions.SyncInterval =
-            TimeSpan.FromMinutes(10); // make sure the disconnect is not due to sync
+        fileAccessManagerOptions.SessionOptions.SyncInterval = TimeSpan.FromMinutes(10); // make sure the disconnect is not due to sync
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create a short expiring token
@@ -74,7 +73,7 @@ public class AccessTest : TestBase
         // test expiration
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {
             await server.SessionManager.Sync(true);
-            await TestHelper.Test_Https(throwError: false, timeout: 1000);
+            await TestHelper.Test_Https(throwError: false, timeout: 500);
             return client.State;
         });
         Assert.AreEqual(SessionErrorCode.AccessExpired, client.GetLastSessionErrorCode());

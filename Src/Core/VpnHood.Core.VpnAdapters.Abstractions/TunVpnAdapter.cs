@@ -277,7 +277,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     {
         lock (_stopLock) {
 
-            if (IsStarted) return;
+            if (!IsStarted) 
+                return;
 
             VhLogger.Instance.LogInformation("Stopping {AdapterName} adapter.", AdapterName);
             AdapterClose();

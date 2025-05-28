@@ -367,7 +367,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
     }
 
     // remove sessions that are disposed a long time
-    private void ProcessDeadSessions()
+    private void RemoveDisposedSessions()
     {
         VhLogger.Instance.LogDebug("Removing all disposed sessions...");
         var utcNow = DateTime.UtcNow;
@@ -450,7 +450,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         RemoveIdleSessions(); // dispose idle sessions
         DisposeExpiredSessions(); // dispose expired sessions
         DisposeFailedSessions(); // dispose failed sessions
-        ProcessDeadSessions(); // remove dead sessions
+        RemoveDisposedSessions(); // remove dead sessions
 
         // clear usage if sent successfully
         _pendingUsages = [];

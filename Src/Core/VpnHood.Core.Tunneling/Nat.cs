@@ -72,7 +72,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
             _map.Remove((natItem.IpVersion, natItem.Protocol, natItem.NatId), out _);
         }
 
-        VhLogger.Instance.LogDebug(GeneralEventId.Nat, $"NatItem has been removed. {natItem2}");
+        VhLogger.Instance.LogTrace(GeneralEventId.Nat, "NatItem has been removed. {NatItem}", natItem2);
         NatItemRemoved?.Invoke(this, new NatEventArgs(natItem2));
     }
 

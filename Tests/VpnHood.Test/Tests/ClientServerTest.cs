@@ -253,6 +253,9 @@ public class ClientServerTest : TestBase
         await server.DisposeAsync();
 
         // failed
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Waiting for client to be disposed.");
+        await Assert.ThrowsAsync<Exception>(() => TestHelper.Test_Https());
+        await Task.Delay(1000); // wait to finish session time after first error
         await Assert.ThrowsAsync<Exception>(() => TestHelper.Test_Https());
 
         await client.WaitForState(ClientState.Disposed);

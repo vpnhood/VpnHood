@@ -207,15 +207,9 @@ public class UdpProxyTest : TestBase
             tasks.Add(TestHelper.Test_Udp(udpClient, TestConstants.UdpV4EndPoint1, timeout: 2000));
         }
 
-        foreach (var task in tasks) {
-            try {
-                await task;
-            }
-            catch {
-                /* Ignore */
-            }
-        }
-
+        // wait for tasks to complete and not throw exceptions
+        await VhUtils.TryInvokeAsync("", () => Task.WhenAll(tasks));
+        
         // Check succeeded Udp
         Assert.AreEqual(maxUdpCount, tasks.Count(x => x.IsCompletedSuccessfully));
         Assert.AreEqual(1, tasks.Count(x => x.IsFaulted || x.IsCanceled));

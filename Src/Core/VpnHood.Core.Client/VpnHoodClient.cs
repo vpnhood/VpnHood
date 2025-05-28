@@ -960,6 +960,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (_disposed) 
             return;
 
+        // save the state before disposal
+        var shouldSendBye = LastException == null && State == ClientState.Connected;
+
         // dispose all resources before bye request
         DisposeInternal();
 
@@ -973,8 +976,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             await VhUtils.TryInvokeAsync(null, () => _clientUsageTracker.Report(cancellationToken)).VhConfigureAwait();
         }
 
-        // Sending Bye
-        if (SessionInfo != null && LastException == null) {
+        // Sending Bye if the session was active before disposal
+        if (shouldSendBye) {
             VhLogger.Instance.LogInformation("Sending bye to the server...");
             using var cts = new CancellationTokenSource(byeTimeout);
             var cancellationToken = cts.Token;

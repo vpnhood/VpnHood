@@ -123,7 +123,7 @@ public class TunnelTest : TestBase
     [TestMethod]
     public async Task UdpChannel_via_Tunnel()
     {
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(LogLevel.Trace);
+        VhLogger.MinLogLevel = LogLevel.Trace;
 
         var waitHandle = new EventWaitHandle(true, EventResetMode.AutoReset);
         waitHandle.Reset();

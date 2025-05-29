@@ -98,20 +98,12 @@ public class ProxyChannel : IProxyChannel, IJob
 
             var completedTask = await Task.WhenAny(tunnelReadTask, tunnelWriteTask).VhConfigureAwait();
             _isTunnelReadTaskFinished = completedTask == tunnelReadTask;
-            if (_isTunnelReadTaskFinished)
-                VhLogger.Instance.LogInformation($"Finish reading tunnel. ChannelId: {ChannelId}, ClientStreamId: {_tunnelClientStream.ClientStreamId}"); //todo
-            else
-                VhLogger.Instance.LogInformation($"Finish reading host: ChannelId: {ChannelId}, ClientStreamId: {_hostClientStream.ClientStreamId}"); //todo
-
+            
             // just to ensure that both tasks are completed gracefully, ClientStream should also handle it
             await Task.WhenAll(
                     _hostClientStream.Stream.DisposeAsync().AsTask(),
                     _tunnelClientStream.Stream.DisposeAsync().AsTask())
                     .VhConfigureAwait();
-
-            VhLogger.Instance.LogInformation($"Dispose reading hosting: ChannelId: {ChannelId}, ClientStreamId: {_hostClientStream.ClientStreamId}"); //todo
-            VhLogger.Instance.LogInformation($"Dispose reading tunnel: ChannelId: {ChannelId}, ClientStreamId: {_tunnelClientStream.ClientStreamId}"); //todo
-
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, ex,

@@ -108,7 +108,7 @@ public class ServerFinder(
             return res;
 
         _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
-            isIpV6Supported: IncludeIpV6, hasRedirected: true));
+            isIpV6Supported: IncludeIpV6, hasRedirected: true), CancellationToken.None);
 
         throw new UnreachableServerExceptionLocation(serverLocation: ServerLocation);
     }

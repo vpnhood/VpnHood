@@ -45,17 +45,17 @@ public class Session : IDisposable
     [Obsolete]
     private readonly bool _fixClientInternalIp;
 
-    private readonly EventReporter _netScanExceptionReporter = new(VhLogger.Instance,
+    private readonly EventReporter _netScanExceptionReporter = new(
         "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
 
-    private readonly EventReporter _maxTcpChannelExceptionReporter = new(VhLogger.Instance,
+    private readonly EventReporter _maxTcpChannelExceptionReporter = new(
         "Maximum TcpChannel has been reached.", GeneralEventId.NetProtect);
 
-    private readonly EventReporter _maxTcpConnectWaitExceptionReporter = new(VhLogger.Instance,
+    private readonly EventReporter _maxTcpConnectWaitExceptionReporter = new(
         "Maximum TcpConnectWait has been reached.", GeneralEventId.NetProtect);
 
-    private readonly EventReporter _filterReporter =
-        new(VhLogger.Instance, "Some requests has been blocked.", GeneralEventId.NetProtect);
+    private readonly EventReporter _filterReporter = new("Some requests has been blocked.", 
+        GeneralEventId.NetProtect);
 
     private Traffic _prevTraffic = new();
     private int _tcpConnectWaitCount;

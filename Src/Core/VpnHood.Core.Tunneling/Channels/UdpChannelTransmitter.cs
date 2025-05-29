@@ -10,7 +10,7 @@ namespace VpnHood.Core.Tunneling.Channels;
 
 public abstract class UdpChannelTransmitter : IDisposable
 {
-    private readonly EventReporter _udpSignReporter = new(VhLogger.Instance, "Invalid udp signature.", GeneralEventId.UdpSign);
+    private readonly EventReporter _udpSignReporter = new("Invalid udp signature.", GeneralEventId.UdpSign);
     private readonly byte[] _buffer = new byte[TunnelDefaults.MaxPacketSize];
     private readonly UdpClient _udpClient;
     private readonly SemaphoreSlim _semaphore = new(1, 1);

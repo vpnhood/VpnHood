@@ -27,7 +27,7 @@ public class UtilTest : TestBase
         // Test with LogLevel.Information
         VhLogger.MinLogLevel = LogLevel.Information;
 
-        using var reportCounter = new TestEventReporter(VhLogger.Instance, "UnitTest");
+        using var reportCounter = new TestEventReporter("UnitTest");
         reportCounter.JobSection.Interval = TimeSpan.FromMilliseconds(500);
 
         Assert.AreEqual(0, reportCounter.ReportedCount);

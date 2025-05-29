@@ -39,8 +39,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
         _maxClientCount = options.MaxClientCount;
         _sendBufferSize = options.SendBufferSize;
         _receiveBufferSize = options.ReceiveBufferSize;
-        _maxWorkerEventReporter = new EventReporter(VhLogger.Instance,
-            "Session has reached to Maximum local UDP ports.", GeneralEventId.NetProtect, logScope: options.LogScope);
+        _maxWorkerEventReporter = new EventReporter("Session has reached to Maximum local UDP ports.", GeneralEventId.NetProtect, logScope: options.LogScope);
 
         _udpProxies = new TimeoutDictionary<IPEndPoint, UdpProxy>(options.UdpTimeout);
         JobSection.Interval = options.UdpTimeout;

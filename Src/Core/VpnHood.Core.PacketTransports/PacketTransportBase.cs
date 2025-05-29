@@ -203,10 +203,13 @@ public abstract class PacketTransportBase : IPacketTransport
 
     protected virtual void LogPacket(IpPacket ipPacket, string message, LogLevel? logLevel = null, Exception? exception = null)
     {
-        if (VhLogger.IsDiagnoseMode) {
-            logLevel ??= exception != null ? LogLevel.Debug : LogLevel.Trace;
-            VhLogger.Instance.Log(logLevel.Value, message: $"{message}. {ipPacket}", exception: exception);
-        }
+        // LogPacket is so intensively used that we need to avoid unnecessary allocations or formatting
+        // Just log if the log level is Trace despite the required log level
+        if (VhLogger.MinLogLevel > LogLevel.Trace)
+            return;
+
+        logLevel ??= exception != null ? LogLevel.Debug : LogLevel.Trace;
+        VhLogger.Instance.Log(logLevel.Value, message: $"{message}. {ipPacket}", exception: exception);
     }
 
     public void Dispose()
@@ -228,7 +231,7 @@ public abstract class PacketTransportBase : IPacketTransport
         IsDisposed = true;
         IsDisposing = false;
     }
-    
+
     protected virtual void DisposeManaged()
     {
         PacketReceived = null;

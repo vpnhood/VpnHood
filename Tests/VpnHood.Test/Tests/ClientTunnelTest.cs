@@ -20,8 +20,8 @@ public class ClientTunnelTest : TestBase
     [TestMethod]
     public async Task UdpChannel()
     {
-        VhLogger.IsDiagnoseMode = true;
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(LogLevel.Trace); 
+        VhLogger.MinLogLevel = LogLevel.Trace;
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(); 
         await using var clientServerDom = await ClientServerDom.Create(TestHelper, useUdpChannel: true);
 
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Testing by UdpChannel.");
@@ -33,8 +33,8 @@ public class ClientTunnelTest : TestBase
     [TestMethod]
     public async Task UdpChannel_Switch()
     {
-        VhLogger.IsDiagnoseMode = true;
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(LogLevel.Trace); 
+        VhLogger.MinLogLevel = LogLevel.Trace;
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(); 
         await using var clientServerDom = await ClientServerDom.Create(TestHelper, useUdpChannel: true);
 
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Testing by UdpChannel.");

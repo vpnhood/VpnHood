@@ -1,4 +1,3 @@
-$ 
 # Upcoming
 * Fix: IPv6 ping
 * Improve: Drastically improve performance and stability

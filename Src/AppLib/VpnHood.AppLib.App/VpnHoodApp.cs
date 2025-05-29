@@ -423,11 +423,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private LogServiceOptions GetLogOptions()
     {
-        var logLevel = _logServiceOptions.LogLevel;
+        var logLevel = _logServiceOptions.MinLogLevel;
         if (HasDebugCommand(DebugCommands.LogDebug) || Features.IsDebugMode) logLevel = LogLevel.Debug;
         if (HasDebugCommand(DebugCommands.LogTrace)) logLevel = LogLevel.Trace;
         var logOptions = new LogServiceOptions {
-            LogLevel = logLevel,
+            MinLogLevel = logLevel,
             LogAnonymous = !Features.IsDebugMode && (_logServiceOptions.LogAnonymous == true || UserSettings.LogAnonymous),
             LogEventNames = LogService.GetLogEventNames(_logServiceOptions.LogEventNames, UserSettings.DebugData1 ?? "").ToArray(),
             SingleLineConsole = _logServiceOptions.SingleLineConsole,

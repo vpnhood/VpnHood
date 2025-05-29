@@ -9,7 +9,8 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class UtilTest : TestBase
 {
-    private class TestEventReporter(ILogger logger, string message) : EventReporter(logger, message)
+    private class TestEventReporter(string message) 
+        : EventReporter(message)
     {
         public int ReportedCount { get; private set; }
 
@@ -23,8 +24,10 @@ public class UtilTest : TestBase
     [TestMethod]
     public async Task EventReportCounter()
     {
+        // Test with LogLevel.Information
+        VhLogger.MinLogLevel = LogLevel.Information;
+
         using var reportCounter = new TestEventReporter(VhLogger.Instance, "UnitTest");
-        EventReporter.IsDiagnosticMode = false;
         reportCounter.JobSection.Interval = TimeSpan.FromMilliseconds(500);
 
         Assert.AreEqual(0, reportCounter.ReportedCount);

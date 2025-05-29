@@ -31,8 +31,6 @@ namespace VpnHood.Test;
 public class TestHelper : IDisposable
 {
     private static readonly string AssemblyWorkingPath = Path.Combine(Path.GetTempPath(), "VpnHood.Test");
-    private LogLevel _logLevel = LogLevel.Debug;
-
     public class TestAppUiContext : IUiContext
     {
         public bool IsActive => true;
@@ -47,8 +45,8 @@ public class TestHelper : IDisposable
     public TestHelper()
     {
         TunnelDefaults.TcpGracefulTimeout = TimeSpan.FromSeconds(10);
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(LogLevel);
-        VhLogger.IsDiagnoseMode = true;
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(); // min level is controlled by VhLogger.MinLevel
+        VhLogger.MinLogLevel = LogLevel.Debug;
         VhLogger.IsAnonymousMode = false;
         WebServer = TestWebServer.Create();
         NetFilter = new TestNetFilter();
@@ -74,16 +72,6 @@ public class TestHelper : IDisposable
         VhJobOptions.DefaultPeriod = TimeSpan.FromMilliseconds(1000);
         JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
         JobSection.DefaultInterval = TimeSpan.FromMilliseconds(200);
-    }
-
-    public LogLevel LogLevel {
-        get => _logLevel;
-        set {
-            _logLevel = value;
-            if (value == LogLevel.Trace)
-                VhLogger.IsDiagnoseMode = true;
-            VhLogger.Instance = VhLogger.CreateConsoleLogger(value);
-        }
     }
 
     public async Task<bool> IsIpV6Supported()

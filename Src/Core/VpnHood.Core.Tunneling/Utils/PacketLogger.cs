@@ -21,7 +21,9 @@ public static class PacketLogger
         Exception? exception = null, EventId? eventId = null)
     {
         try {
-            if (!VhLogger.IsDiagnoseMode) return;
+            if (VhLogger.MinLogLevel > LogLevel.Trace) 
+                return;
+
             var packetEventId = GeneralEventId.Packet;
             var packetPayload = new Memory<byte>();
 

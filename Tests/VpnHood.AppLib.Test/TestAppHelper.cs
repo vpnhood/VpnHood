@@ -1,12 +1,12 @@
 ﻿using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Test;
@@ -39,7 +39,7 @@ public class TestAppHelper : TestHelper
                 LoadAdPostDelay = TimeSpan.Zero
             },
             LogServiceOptions = {
-                LogLevel = LogLevel,
+                MinLogLevel = VhLogger.MinLogLevel,
                 SingleLineConsole = false
             }
         };

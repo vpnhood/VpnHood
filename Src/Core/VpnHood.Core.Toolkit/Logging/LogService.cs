@@ -18,8 +18,8 @@ public class LogService(string logFilePath) : IDisposable
         VhLogger.IsAnonymousMode = options.LogAnonymous is null or true;
         VhLogger.Instance = _logger = CreateLogger(options);
         LogEvents = options.LogEventNames;
-        if (options.LogLevel == LogLevel.Trace) {
-            VhLogger.IsDiagnoseMode = true;
+        VhLogger.MinLogLevel = options.MinLogLevel;
+        if (options.MinLogLevel == LogLevel.Trace) {
             if (!options.LogEventNames.Contains("*"))
                 LogEvents = LogEvents.Concat(["*"]).ToArray();
         }
@@ -39,7 +39,7 @@ public class LogService(string logFilePath) : IDisposable
         using var loggerFactory = CreateLoggerFactory(logServiceOptions);
         var logger = loggerFactory.CreateLogger(logServiceOptions.CategoryName ?? "");
 
-        logger = new FilterLogger(logger, eventId => {
+        logger = new FilterLogger(logger, (_, eventId) => {
             if (logServiceOptions.LogEventNames.Contains(eventId.Name, StringComparer.OrdinalIgnoreCase))
                 return true;
 
@@ -71,7 +71,7 @@ public class LogService(string logFilePath) : IDisposable
                 builder.AddProvider(provider);
             }
 
-            builder.SetMinimumLevel(logServiceOptions.LogLevel);
+            builder.SetMinimumLevel(logServiceOptions.MinLogLevel);
         });
 
         return loggerFactory;

@@ -14,14 +14,14 @@ public class AsyncStreamTracker(Stream sourceStream, bool leaveOpen)
 
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        if (VhLogger.IsDiagnoseMode)
+        if (VhLogger.MinLogLevel == LogLevel.Trace)
             VhLogger.Instance.LogTrace(LogPrefix + "Reading count. " + buffer.Length);
         return base.ReadAsync(buffer, cancellationToken);
     }
 
     public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        if (VhLogger.IsDiagnoseMode)
+        if (VhLogger.MinLogLevel == LogLevel.Trace)
             VhLogger.Instance.LogTrace(LogPrefix + "writing count. " + buffer.Length);
         return base.WriteAsync(buffer, cancellationToken);
     }

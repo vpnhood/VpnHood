@@ -119,7 +119,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         VhLogger.Instance.LogInformation("OS: {OS}", _systemInfoProvider.GetSystemInfo());
         VhLogger.Instance.LogInformation("VirtualNetworkV4: {VirtualIpV4}, VirtualNetworkV6: {VirtualIpV6}", 
             SessionManager.VirtualIpNetworkV4, SessionManager.VirtualIpNetworkV6);
-        VhLogger.Instance.LogInformation("IsDiagnoseMode: {IsDiagnoseMode}", VhLogger.IsDiagnoseMode);
+        VhLogger.Instance.LogInformation("MinLogLevel: {MinLogLevel}", VhLogger.MinLogLevel);
 
         // Report TcpBuffers
         var tcpClient = new TcpClient();

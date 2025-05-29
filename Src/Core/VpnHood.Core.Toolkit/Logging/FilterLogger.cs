@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Toolkit.Logging;
 
-public class FilterLogger(ILogger logger, Func<EventId, bool> eventFilter) : ILogger
+public class FilterLogger(ILogger logger, Func<LogLevel, EventId, bool> filterCallback) : ILogger
 {
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
@@ -17,7 +17,7 @@ public class FilterLogger(ILogger logger, Func<EventId, bool> eventFilter) : ILo
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
     {
-        if (eventFilter(eventId))
+        if (filterCallback(logLevel, eventId))
             logger.Log(logLevel, eventId, state, exception, formatter);
     }
 }

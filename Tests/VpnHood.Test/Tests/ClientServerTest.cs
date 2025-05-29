@@ -181,7 +181,7 @@ public class ClientServerTest : TestBase
     [TestMethod]
     public async Task PacketChannel_Udp()
     {
-        VhLogger.IsDiagnoseMode = true;
+        VhLogger.MinLogLevel = LogLevel.Trace;
 
         // Create Server
         await using var server = await TestHelper.CreateServer();
@@ -291,7 +291,7 @@ public class ClientServerTest : TestBase
     [TestMethod]
     public async Task Reset_tcp_connection_immediately_after_vpn_connected()
     {
-        TestHelper.LogLevel = LogLevel.Trace;
+        VhLogger.MinLogLevel = LogLevel.Trace;
         
         // create server
         await using var server = await TestHelper.CreateServer();

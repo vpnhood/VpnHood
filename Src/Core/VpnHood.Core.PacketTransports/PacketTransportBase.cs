@@ -17,6 +17,7 @@ public abstract class PacketTransportBase : IPacketTransport
     private readonly PacketTransportStat _stat = new();
     private bool _isSending;
     protected bool IsDisposed { get; private set; }
+    protected bool IsDisposing { get; private set; }
     protected abstract ValueTask SendPacketsAsync(IList<IpPacket> ipPackets);
 
     public event EventHandler<IpPacket>? PacketReceived;
@@ -62,14 +63,20 @@ public abstract class PacketTransportBase : IPacketTransport
 
     private async ValueTask SendPacketQueuedPassthroughAsync(IpPacket ipPacket)
     {
+        if (IsDisposed || IsDisposing)
+            throw new ObjectDisposedException(GetType().Name);
+
         _singlePacketBuffer[0] = ipPacket;
         await SendPacketsInternalAsync(_singlePacketBuffer);
     }
 
     public ValueTask SendPacketQueuedAsync(IpPacket ipPacket)
     {
-        return _passthrough ? 
-            SendPacketQueuedPassthroughAsync(ipPacket) : 
+        if (IsDisposed || IsDisposing)
+            throw new ObjectDisposedException(GetType().Name);
+
+        return _passthrough ?
+            SendPacketQueuedPassthroughAsync(ipPacket) :
             _sendChannel.Writer.WriteAsync(ipPacket);
     }
 
@@ -77,6 +84,9 @@ public abstract class PacketTransportBase : IPacketTransport
 
     public bool SendPacketQueued(IpPacket ipPacket)
     {
+        if (IsDisposed || IsDisposing)
+            throw new ObjectDisposedException(GetType().Name);
+
         LogPacket(ipPacket, $"{VhLogger.FormatType(this)}: Sending a packet to queue.");
         if (_passthrough) {
             lock (_singlePacketBuffer) {
@@ -122,7 +132,7 @@ public abstract class PacketTransportBase : IPacketTransport
     private async Task StartSendingPacketsAsync()
     {
         var ipPackets = new List<IpPacket>(_singleMode ? 1 : _queueCapacity);
-        while (await _sendChannel.Reader.WaitToReadAsync() && !IsDisposed) {
+        while (await _sendChannel.Reader.WaitToReadAsync() && !IsDisposed && !IsDisposing) {
             ipPackets.Clear();
 
             // dequeue all packets
@@ -146,7 +156,7 @@ public abstract class PacketTransportBase : IPacketTransport
         // send packets
         try {
             // if the transport is disposed, do not send packets
-            if (IsDisposed) 
+            if (IsDisposed)
                 throw new ObjectDisposedException(VhLogger.FormatType(this));
 
             // Set sending state and last sent time
@@ -201,20 +211,32 @@ public abstract class PacketTransportBase : IPacketTransport
 
     public void Dispose()
     {
+        IsDisposing = true;
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
     protected virtual void Dispose(bool disposing)
     {
-        if (IsDisposed) return;
+        if (IsDisposed)
+            return;
 
-        // Dispose managed resources
-        if (disposing) {
-            PacketReceived = null;
-            _sendChannel.Writer.TryComplete(); // complete the writer to stop sending packets
-        }
+        if (disposing)
+            DisposeManaged();
 
+        DisposeUnmanaged();
         IsDisposed = true;
+        IsDisposing = false;
+    }
+    
+    protected virtual void DisposeManaged()
+    {
+        PacketReceived = null;
+        _sendChannel.Writer.TryComplete(); // complete the writer to stop sending packets
+    }
+
+    protected virtual void DisposeUnmanaged()
+    {
+
     }
 }

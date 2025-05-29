@@ -23,7 +23,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private static readonly IpNetwork[] WebDeadNetworks = [IpNetwork.Parse("203.0.113.1/24"), IpNetwork.Parse("2001:4860:ffff::1234/48")];
     private readonly object _stopLock = new();
     private bool _isRestarting;
-
+    private bool _isStopping;
     protected bool UseNat { get; private set; }
     public abstract bool IsAppFilterSupported { get; }
     public abstract bool IsNatSupported { get; }
@@ -62,6 +62,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     public IPAddress? GatewayIpV6 { get; private set; }
     public bool IsIpVersionSupported(IpVersion ipVersion) => GetPrimaryAdapterAddress(ipVersion) != null;
     public bool IsStarted { get; private set; }
+    
+    // ReSharper disable once InconsistentlySynchronizedField
+    private bool IsReady => IsStarted && !_isStopping && !IsDisposed && !IsDisposing;
 
     protected TunVpnAdapter(VpnAdapterSettings adapterSettings)
         : base(adapterSettings)
@@ -221,7 +224,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
         catch (ExternalException ex) {
             VhLogger.Instance.LogError(ex, "Failed to start TUN adapter.");
-            Stop();
+            Stop(false);
             throw;
         }
     }
@@ -275,23 +278,43 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     public void Stop()
     {
-        lock (_stopLock) {
+        if (IsDisposed)
+            throw new ObjectDisposedException(GetType().Name);
 
-            if (!IsStarted) 
+        Stop(throwException: true);
+    }
+
+    private void Stop(bool throwException)
+    {
+        lock (_stopLock) {
+            if (!IsStarted || _isStopping) 
                 return;
 
-            VhLogger.Instance.LogInformation("Stopping {AdapterName} adapter.", AdapterName);
-            AdapterClose();
-            AdapterRemove();
+            try {
+                VhLogger.Instance.LogInformation("Stopping {AdapterName} adapter.", AdapterName);
+                _isStopping = true;
+                AdapterClose();
+                AdapterRemove();
 
-            PrimaryAdapterIpV4 = null;
-            PrimaryAdapterIpV6 = null;
-            AdapterIpNetworkV4 = null;
-            AdapterIpNetworkV6 = null;
-            GatewayIpV4 = null;
-            GatewayIpV6 = null;
-            IsStarted = false;
-            VhLogger.Instance.LogInformation("TUN adapter stopped.");
+                PrimaryAdapterIpV4 = null;
+                PrimaryAdapterIpV6 = null;
+                AdapterIpNetworkV4 = null;
+                AdapterIpNetworkV6 = null;
+                GatewayIpV4 = null;
+                GatewayIpV6 = null;
+                IsStarted = false;
+                VhLogger.Instance.LogInformation("TUN adapter stopped.");
+            }
+            catch (Exception ex) {
+                if (throwException)
+                    throw;
+                // log exception if it does not throw
+                VhLogger.Instance.LogError(ex, "Failed to stop the TUN adapter. AdapterName: {AdapterName}", 
+                    AdapterName);
+            }
+            finally {
+                _isStopping = false;
+            }
         }
     }
 
@@ -303,6 +326,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     public virtual bool ProtectSocket(Socket socket)
     {
+        if (IsDisposed)
+            throw new ObjectDisposedException(GetType().Name);
+
         if (socket.LocalEndPoint != null)
             throw new InvalidOperationException("Could not protect an already bound socket.");
 
@@ -320,6 +346,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     public virtual bool ProtectSocket(Socket socket, IPAddress remoteAddress)
     {
+        if (IsDisposed)
+            throw new ObjectDisposedException(GetType().Name);
+
         if (socket.LocalEndPoint != null)
             throw new InvalidOperationException("Could not protect an already bound socket.");
 
@@ -379,8 +408,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     protected void SendPacket(IpPacket ipPacket)
     {
-        if (!IsStarted)
-            throw new InvalidOperationException("TUN adapter is not started.");
+        if (!IsReady)
+            throw new InvalidOperationException("TUN adapter is not in ready state.");
 
         try {
             SendPacketInternal(ipPacket);
@@ -398,7 +427,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             }
 
             // stop the adapter if not restarting
-            Stop();
+            Stop(false);
             throw;
         }
     }
@@ -433,7 +462,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     protected virtual void StartReadingPackets()
     {
         // Read packets from TUN adapter
-        while (IsStarted && !IsDisposed) {
+        while (IsReady) {
             try {
                 // read next packet
                 var packet = ReadPacket(_mtu);
@@ -450,7 +479,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 // process the packet
                 OnPacketReceived(packet);
             }
-            catch (Exception) when (!IsStarted || IsDisposed) {
+            catch (Exception) when (!IsReady) {
                 break; // normal stop
             }
             catch (Exception ex) {
@@ -472,7 +501,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
         // stop the adapter if it is not stopped
         VhLogger.Instance.LogDebug("Finish reading the packets from the TUN adapter.");
-        Stop();
+        Stop(false);
     }
 
     protected virtual IpPacket? ReadPacket(int mtu)
@@ -527,16 +556,21 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
     }
 
-    protected override void Dispose(bool disposing)
+    protected sealed override void Dispose(bool disposing)
     {
-        // release managed resources when disposing
-        if (disposing) {
-            Stop();
+        if (disposing)
+            Stop(false);
 
-            // notify the subscribers that the adapter is disposed
-            NetworkChange.NetworkAddressChanged -= NetworkChange_NetworkAddressChanged;
-            Disposed?.Invoke(this, EventArgs.Empty);
-            Disposed = null;
-        }
+        base.Dispose(disposing);
+    }
+
+    protected override void DisposeManaged()
+    {
+        // notify the subscribers that the adapter is disposed
+        NetworkChange.NetworkAddressChanged -= NetworkChange_NetworkAddressChanged;
+        Disposed?.Invoke(this, EventArgs.Empty);
+        Disposed = null;
+
+        base.DisposeManaged();
     }
 }

@@ -102,12 +102,10 @@ public class NullVpnAdapter(bool autoDisposePackets, bool blocking) :
         return true;
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeManaged()
     {
-        if (disposing) {
-            _readBlockEvent?.Set();
-            _readBlockEvent = null;
-        }
-        base.Dispose(disposing);
+        _readBlockEvent?.Set();
+        _readBlockEvent = null;
+        base.DisposeManaged();
     }
 }

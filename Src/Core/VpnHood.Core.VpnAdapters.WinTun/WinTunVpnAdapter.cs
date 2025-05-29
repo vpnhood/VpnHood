@@ -321,13 +321,13 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
             throw new Win32Exception("Failed to load WinTun DLL.");
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeUnmanaged()
     {
-        base.Dispose(disposing);
-
         // The adapter is an unmanaged resource; it must be closed if it is open
         if (_tunAdapter != IntPtr.Zero)
             AdapterRemove();
+
+        base.DisposeUnmanaged();
     }
 
     ~WinTunVpnAdapter()

@@ -241,13 +241,13 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         };
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeUnmanaged()
     {
-        base.Dispose(disposing);
-
         // The adapter is an unmanaged resource; it must be closed if it is open
         if (_parcelFileDescriptor != null)
             AdapterRemove();
+
+        base.DisposeUnmanaged();
     }
 
     ~AndroidVpnAdapter()

@@ -20,7 +20,6 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
-    private readonly byte[] _readBuffer = new byte[0xFFFF];
     protected override bool IsSocketProtectedByBind => true;
     public override bool IsNatSupported => true;
     public override bool IsAppFilterSupported => false;
@@ -312,14 +311,13 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         return OsUtils.ExecuteCommandAsync("/bin/bash", $"-c \"{command}\"", cancellationToken);
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeUnmanaged()
     {
-        // The adapter is an unmanaged resource; it must be closed if it is open
         if (_tunAdapterFd != 0) {
             AdapterRemove();
         }
 
-        base.Dispose(disposing);
+        base.DisposeUnmanaged();
     }
 
     ~LinuxTunVpnAdapter()

@@ -38,22 +38,17 @@ public static class PacketMessageHandler
             return null;
 
         var udpPacket = ipPacket.ExtractUdp();
-
-        //todo: use buffer directly instead of MemoryStream for performance
-        // read version and messageCode
-        var buffer = new byte[2];
-        var stream = new MemoryStream(udpPacket.Payload.ToArray());
-        var res = stream.Read(buffer, 0, buffer.Length);
-        if (res != buffer.Length)
-            throw new Exception($"Invalid datagram message length. Length: {buffer.Length}");
+        if (udpPacket.Payload.Length < 2)
+            throw new InvalidDataException("The datagram message is too short to read version and message code.");
 
         // check version
-        var version = buffer[0];
+        var version = udpPacket.Payload.Span[0];
         if (version != 1)
             throw new NotSupportedException($"The datagram message version is not supported. Version: {version}");
 
         // check message code
-        var messageCode = (PacketMessageCode)buffer[1];
+        using var stream = new MemoryStream(udpPacket.Payload[2..].ToArray());
+        var messageCode = (PacketMessageCode)udpPacket.Payload.Span[1];
         return messageCode switch {
             PacketMessageCode.ClosePacketChannel => StreamUtils.ReadObject<ClosePacketMessage>(stream),
             _ => throw new NotSupportedException($"Unknown Datagram Message messageCode. MessageCode: {messageCode}")

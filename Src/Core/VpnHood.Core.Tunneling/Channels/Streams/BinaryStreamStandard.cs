@@ -169,7 +169,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
     {
         // read chunk header by cryptor
         try {
-            await StreamUtils.ReadExactAsync(SourceStream, _readChunkHeaderBuffer, cancellationToken).VhConfigureAwait();
+            await SourceStream.ReadExactAsync(_readChunkHeaderBuffer, cancellationToken).VhConfigureAwait();
         }
         catch (EndOfStreamException) {
             VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,

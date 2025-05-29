@@ -120,6 +120,7 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
 
     protected override void OnPacketReceived(IpPacket ipPacket)
     {
+        //todo need test
         // check close message
         var message = PacketMessageHandler.ReadMessage(ipPacket);
         if (message is ClosePacketMessage) {

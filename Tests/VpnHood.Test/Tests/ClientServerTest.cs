@@ -262,7 +262,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
-    public async Task Datagram_channel_after_client_reconnection()
+    public async Task PacketChannel_after_client_reconnection()
     {
         //create a shared udp client among connection
         // make sure using same local port to test Nat properly

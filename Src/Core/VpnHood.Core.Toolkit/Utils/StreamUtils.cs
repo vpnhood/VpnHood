@@ -6,54 +6,14 @@ namespace VpnHood.Core.Toolkit.Utils;
 
 public static class StreamUtils
 {
-    public static Memory<byte> ReadExact(Stream stream, int count)
-    {
-        Memory<byte> buffer = new byte[count];
-        ReadExact(stream, buffer.Span);
-        return buffer;
-    }
-
-    public static async Task<Memory<byte>> ReadExactAsync(Stream stream, int count, CancellationToken cancellationToken)
-    {
-        Memory<byte> buffer = new byte[count];
-        await ReadExactAsync(stream, buffer, cancellationToken).VhConfigureAwait();
-        return buffer;
-    }
-
-    public static void ReadExact(Stream stream, Span<byte> buffer)
-    {
-        var totalRead = 0;
-        while (totalRead != buffer.Length) {
-            var read = stream.Read(buffer[totalRead..]);
-            if (read == 0)
-                throw new EndOfStreamException();
-
-            totalRead += read;
-        }
-    }
-
-    //todo we already have extension method for this, remove it later
-    public static async Task ReadExactAsync(Stream stream, Memory<byte> buffer, CancellationToken cancellationToken)
-    {
-        var totalRead = 0;
-        while (totalRead != buffer.Length) {
-            var read = await stream.ReadAsync(buffer[totalRead..], cancellationToken).VhConfigureAwait();
-            // check end of stream
-            if (read == 0)
-                throw new EndOfStreamException();
-
-            // set total read bytes
-            totalRead += read;
-        }
-    }
-
     public static T ReadObject<T>(Stream stream, int maxLength = 0xFFFF)
     {
         // read length
-        var buffer = ReadExact(stream, 4);
+        Span<byte> lengthBuffer = stackalloc byte[4];
+        stream.ReadExact(lengthBuffer);
 
         // check json size
-        var jsonSize = BinaryPrimitives.ReadInt32LittleEndian(buffer.Span);
+        var jsonSize = BinaryPrimitives.ReadInt32LittleEndian(lengthBuffer);
         if (jsonSize == 0)
             throw new Exception("json length is zero!");
 
@@ -62,7 +22,8 @@ public static class StreamUtils
                 $"json length is too big! It should be less than {maxLength} bytes but it was {jsonSize} bytes");
 
         // read json body...
-        buffer = ReadExact(stream, jsonSize);
+        var buffer = new byte[jsonSize].AsMemory();
+        stream.ReadExact(buffer.Span);
 
         // serialize the request
         var ret = JsonSerializer.Deserialize<T>(buffer.Span) ?? throw new Exception("Could not read Message!");
@@ -81,14 +42,15 @@ public static class StreamUtils
         int maxLength = 0xFFFF)
     {
         // read length
-        var buffer = await ReadExactAsync(stream, 4, cancellationToken).VhConfigureAwait();
-
+        var lengthBuffer = new byte[4].AsMemory();
+        await stream.ReadExactAsync(lengthBuffer, cancellationToken);
+        
         // check unauthorized exception
-        if (buffer.Span.SequenceEqual("HTTP"u8))
+        if (lengthBuffer.Span.SequenceEqual("HTTP"u8))
             throw new UnauthorizedAccessException("Stream returned an HTTP response.");
 
         // check json size
-        var messageSize = BinaryPrimitives.ReadInt32LittleEndian(buffer.Span);
+        var messageSize = BinaryPrimitives.ReadInt32LittleEndian(lengthBuffer.Span);
         if (messageSize == 0)
             throw new Exception("json length is zero!");
 
@@ -97,7 +59,8 @@ public static class StreamUtils
                 $"json length is too big! It should be less than {maxLength} bytes but it was {messageSize} bytes");
 
         // read json body...
-        buffer = await ReadExactAsync(stream, messageSize, cancellationToken).VhConfigureAwait();
+        var buffer = new byte[messageSize].AsMemory();
+        await stream.ReadExactAsync(buffer, cancellationToken).VhConfigureAwait();
 
         // serialize the request
         var message = Encoding.UTF8.GetString(buffer.Span);

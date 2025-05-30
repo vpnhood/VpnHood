@@ -464,10 +464,6 @@ public class ServerHost : IAsyncDisposable, IJob
                 await ProcessHello(clientStream, cancellationToken).VhConfigureAwait();
                 break;
 
-            case RequestCode.ServerStatus:
-                await ProcessServerStatus(clientStream, cancellationToken).VhConfigureAwait();
-                break;
-
             case RequestCode.SessionStatus:
                 await ProcessSessionStatus(clientStream, cancellationToken).VhConfigureAwait();
                 break;
@@ -643,20 +639,6 @@ public class ServerHost : IAsyncDisposable, IJob
         var request = await ReadRequest<RewardedAdRequest>(clientStream, cancellationToken).VhConfigureAwait();
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
         await session.ProcessRewardedAdRequest(request, clientStream, cancellationToken).VhConfigureAwait();
-    }
-
-    private static async Task ProcessServerStatus(IClientStream clientStream, CancellationToken cancellationToken)
-    {
-        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading the ServerStatus request...");
-        var request = await ReadRequest<ServerStatusRequest>(clientStream, cancellationToken).VhConfigureAwait();
-
-        // Before calling CloseSession. Session must be validated by GetSession
-        await clientStream.DisposeAsync(
-                new ServerStatusResponse {
-                    ErrorCode = SessionErrorCode.Ok,
-                    Message = request.Message == "Hi, How are you?" ? "I am OK. How are you?" : "OK. Who are you?"
-                }, cancellationToken)
-            .VhConfigureAwait();
     }
 
     // todo: it must be removed

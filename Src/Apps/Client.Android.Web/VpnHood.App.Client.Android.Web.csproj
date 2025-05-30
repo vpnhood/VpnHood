@@ -10,16 +10,15 @@
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
-	<ItemGroup>
-		<!--todo-->
-		<TrimmerRootDescriptor Include="XMLFile1.xml" />
-	</ItemGroup>
-
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
 		<PublishTrimmed>True</PublishTrimmed>
 		<RunAOTCompilation>True</RunAOTCompilation>
-		<RuntimeIdentifiers>android-arm64;android-x64;android-arm</RuntimeIdentifiers>
+		<RuntimeIdentifiers>android-arm64;android-x64;android-x86</RuntimeIdentifiers>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<TrimmerRootDescriptor Include="Linker.xml" />
+	</ItemGroup>
 
 	<PropertyGroup>
 		<ImplicitUsings>enable</ImplicitUsings>

@@ -2,6 +2,7 @@
 * Fix: IPv6 ping
 * Improve: Drastically improve performance and stability
 * Improve: Drastically Reduce memory usage
+* Update: User WinTun as the default tun driver for Windows
 
 # v6.0.702
 * Fix: Update url for VpnHoodConnect app

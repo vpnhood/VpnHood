@@ -269,7 +269,6 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
             }
             else {
                 SourceStream.Dispose();
-                Console.WriteLine($"Destroying original stream. {StreamId}"); //todo
             }
         }
 

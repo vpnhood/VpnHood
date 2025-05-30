@@ -55,7 +55,8 @@ public class StreamPacketChannel(StreamPacketChannelOptions options) : PacketCha
 
         var streamPacketReader =
             new StreamPacketReader(_clientStream.Stream, TunnelDefaults.StreamPacketReaderBufferSize);
-        
+
+        // stop reading if State is not Connected (Such as getting the close request)
         while (!cancellationToken.IsCancellationRequested) {
             var ipPacket = await streamPacketReader.ReadAsync(cancellationToken).VhConfigureAwait();
             if (ipPacket == null) {

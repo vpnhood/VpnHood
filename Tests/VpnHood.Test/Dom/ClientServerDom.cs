@@ -8,7 +8,7 @@ using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Test.AccessManagers;
 
-namespace VpnHood.Test;
+namespace VpnHood.Test.Dom;
 
 internal class ClientServerDom : IAsyncDisposable
 {
@@ -53,11 +53,14 @@ internal class ClientServerDom : IAsyncDisposable
         Collect();
     }
 
-    public static async Task<ClientServerDom> Create(TestHelper testHelper, bool useUdpChannel = false)
+    public static async Task<ClientServerDom> Create(TestHelper testHelper, ClientOptions? clientOptions = null)
     {
         TestAccessManager? accessManager = null;
         VpnHoodServer? server = null;
         VpnHoodClient? client = null;
+        clientOptions ??= testHelper.CreateClientOptions();
+        if (!string.IsNullOrWhiteSpace(clientOptions.AccessKey))
+            throw new ArgumentException("AccessCode must left empty.", nameof(clientOptions.AccessKey));
 
         try {
             var clientVpnAdapter = testHelper.CreateTestVpnAdapter();
@@ -75,7 +78,8 @@ internal class ClientServerDom : IAsyncDisposable
             var token = testHelper.CreateAccessToken(server);
 
             // Create Client
-            var clientOptions = testHelper.CreateClientOptions(token, useUdpChannel: useUdpChannel);
+            clientOptions.AccessKey = token.ToAccessKey();
+
             client = await testHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: clientVpnAdapter);
             var clientServerDom = new ClientServerDom(token, client, server, accessManager, fileAccessManagerOptions);
             return clientServerDom;

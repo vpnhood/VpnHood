@@ -136,7 +136,7 @@ public class ClientServerTest : TestBase
         }
 
         Thread.Sleep(100);
-        Assert.AreEqual(3, client.GetSessionStatus().PacketChannelCount);
+        Assert.AreEqual(3, client.GetSessionStatus().ActivePacketChannelCount);
         await client.DisposeAsync();
 
         // --------
@@ -154,7 +154,7 @@ public class ClientServerTest : TestBase
         }
 
         Thread.Sleep(200);
-        Assert.AreEqual(1, client2.GetSessionStatus().PacketChannelCount);
+        Assert.AreEqual(1, client2.GetSessionStatus().ActivePacketChannelCount);
         await client.DisposeAsync();
     }
 

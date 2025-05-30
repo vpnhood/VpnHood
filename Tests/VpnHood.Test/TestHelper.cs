@@ -435,7 +435,7 @@ public class TestHelper : IDisposable
 
 
 
-    public ClientOptions CreateClientOptions(Token token, bool useUdpChannel = false, string? clientId = null)
+    public ClientOptions CreateClientOptions(Token? token = null, bool useUdpChannel = false, string? clientId = null)
     {
         return new ClientOptions {
             AppName = "VpnHoodTester",
@@ -448,7 +448,7 @@ public class TestHelper : IDisposable
             VpnAdapterIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToArray(),
             IncludeLocalNetwork = true,
             ConnectTimeout = TimeSpan.FromSeconds(3),
-            AccessKey = token.ToAccessKey()
+            AccessKey = token?.ToAccessKey() ?? "" // set it later
         };
     }
 

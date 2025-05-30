@@ -183,9 +183,15 @@ internal class ConnectorServiceBase : IDisposable
 
     private void PreventReuseSharedClients()
     {
-        lock (_sharedClientStream)
+        lock (_sharedClientStream) {
             foreach (var clientStream in _sharedClientStream)
                 clientStream.PreventReuse();
+
+            // release all free client streams
+            while (_freeClientStreams.TryDequeue(out var queueItem))
+                queueItem.ClientStream.DisposeWithoutReuse();
+            _freeClientStreams.Clear();
+        }
     }
 
     public bool AllowTcpReuse 

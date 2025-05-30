@@ -19,6 +19,7 @@ namespace VpnHood.Core.Client;
 
 internal class ClientHost(
     VpnHoodClient vpnHoodClient,
+    Tunnel tunnel,
     IPAddress catcherAddressIpV4,
     IPAddress catcherAddressIpV6)
     : IDisposable
@@ -288,7 +289,7 @@ internal class ClientHost(
 
             // add stream proxy
             channel = new ProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
-            vpnHoodClient.Tunnel.AddChannel(channel);
+            tunnel.AddChannel(channel);
             _stat.TcpTunnelledCount++;
         }
         catch (Exception ex) {

@@ -12,7 +12,8 @@ namespace VpnHood.Core.Tunneling.Channels;
 public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
 {
     private readonly TimeSpan? _lifespan;
-    private DateTime? _closeRequestTime;
+    private DateTime? _closeSentTime;
+    private DateTime? _closeReceivedTime;
     private bool _started;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
@@ -41,7 +42,7 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
             if (IsDisposed) return
                 PacketChannelState.Disposed;
 
-            if (_closeRequestTime != null)
+            if (_closeSentTime != null || _closeReceivedTime != null)
                 return PacketChannelState.Disconnecting;
 
             return _started
@@ -76,6 +77,9 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
     {
         try {
             await StartReadTask();
+            VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
+                "PacketChannel read task completed. ChannelId: {ChannelId}, Type: {Type}",
+                ChannelId, VhLogger.FormatType(this));
         }
         catch (OperationCanceledException) when (IsDisposed || _cancellationTokenSource.IsCancellationRequested) {
             // normal cancellation, do nothing
@@ -86,9 +90,6 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
                 ChannelId, VhLogger.FormatType(this));
         }
         finally {
-            VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
-                "PacketChannel read task completed. ChannelId: {ChannelId}, Type: {Type}",
-                ChannelId, VhLogger.FormatType(this));
             Dispose();
         }
     }
@@ -100,7 +101,7 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
             return;
 
         // dispose if its lifetime is over
-        if (_started && _closeRequestTime == null &&
+        if (_started && _closeSentTime == null &&
             _lifespan.HasValue && FastDateTime.Now - PacketStat.CreatedTime > _lifespan.Value) {
 
             VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
@@ -109,18 +110,17 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
 
             // send close message if not already sent
             SendPacketQueued(PacketMessageHandler.CreateMessage(new ClosePacketMessage()));
-            _closeRequestTime = FastDateTime.Now; // mark as closing
+            _closeSentTime = FastDateTime.Now; // mark as closing
         }
 
         // dispose if _closeMessageTime is set and more than graceful timeout
-        if (FastDateTime.Now - _closeRequestTime > TunnelDefaults.TcpGracefulTimeout)
+        if (FastDateTime.Now - _closeSentTime > TunnelDefaults.TcpGracefulTimeout)
             Dispose();
     }
 
 
     protected override void OnPacketReceived(IpPacket ipPacket)
     {
-        //todo need test
         // check close message
         var message = PacketMessageHandler.ReadMessage(ipPacket);
         if (message is ClosePacketMessage) {
@@ -128,7 +128,13 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
                 "PacketChannel received close message. ChannelId: {ChannelId}, CreatedTime: {CreatedTime}, Lifespan: {Lifespan}",
                 ChannelId, PacketStat.CreatedTime, _lifespan);
 
-            _closeRequestTime ??= FastDateTime.Now;
+            // send close message if closed messaged has not been received before
+            if (_closeReceivedTime == null) {
+                _closeReceivedTime ??= FastDateTime.Now;
+                _closeSentTime ??= FastDateTime.Now;
+                SendPacketQueued(PacketMessageHandler.CreateMessage(new ClosePacketMessage()));
+            }
+
             ipPacket.Dispose();
             return;
         }

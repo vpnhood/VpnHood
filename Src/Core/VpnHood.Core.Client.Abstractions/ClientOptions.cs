@@ -42,8 +42,8 @@ public class ClientOptions
     public bool IncludeLocalNetwork { get; set; }
     public int MaxPacketChannelCount { get; set; } = 4;
     public string UserAgent { get; set; } = Environment.OSVersion.ToString();
-    public TimeSpan MinTcpDatagramTimespan { get; set; } = TimeSpan.FromMinutes(5);
-    public TimeSpan MaxTcpDatagramTimespan { get; set; } = TimeSpan.FromMinutes(10);
+    public TimeSpan MinPacketChannelTimespan { get; set; } = TimeSpan.FromMinutes(5);
+    public TimeSpan MaxPacketChannelTimespan { get; set; } = TimeSpan.FromMinutes(10);
     public bool AllowAnonymousTracker { get; set; } = true;
     public bool AllowEndPointTracker { get; set; }
     public bool AllowTcpReuse { get; set; } = true;

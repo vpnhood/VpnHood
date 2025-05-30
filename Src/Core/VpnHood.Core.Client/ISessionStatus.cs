@@ -14,7 +14,8 @@ public interface ISessionStatus
     Traffic TotalTraffic { get; }
     int TcpTunnelledCount { get; }
     int TcpPassthruCount { get; }
-    int PacketChannelCount { get; }
+    int SessionPacketChannelCount { get; }
+    int ActivePacketChannelCount { get; }
     bool IsUdpMode { get; }
     bool CanExtendByRewardedAd { get; }
     long SessionMaxTraffic { get; }

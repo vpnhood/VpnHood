@@ -29,12 +29,13 @@ using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Common.IpLocations;
-using VpnHood.Core.Common.IpLocations.Providers;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Common.IpLocations.Providers.Offlines;
+using VpnHood.Core.Common.IpLocations.Providers.Onlines;
 
 namespace VpnHood.AppLib;
 
@@ -422,11 +423,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private LogServiceOptions GetLogOptions()
     {
-        var logLevel = _logServiceOptions.LogLevel;
+        var logLevel = _logServiceOptions.MinLogLevel;
         if (HasDebugCommand(DebugCommands.LogDebug) || Features.IsDebugMode) logLevel = LogLevel.Debug;
         if (HasDebugCommand(DebugCommands.LogTrace)) logLevel = LogLevel.Trace;
         var logOptions = new LogServiceOptions {
-            LogLevel = logLevel,
+            MinLogLevel = logLevel,
             LogAnonymous = !Features.IsDebugMode && (_logServiceOptions.LogAnonymous == true || UserSettings.LogAnonymous),
             LogEventNames = LogService.GetLogEventNames(_logServiceOptions.LogEventNames, UserSettings.DebugData1 ?? "").ToArray(),
             SingleLineConsole = _logServiceOptions.SingleLineConsole,
@@ -507,7 +508,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // create cancellationToken after disconnecting previous connection
             using var linkedCts =
                 CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectTimeoutCts.Token);
-            cancellationToken = linkedCts.Token;
 
             // reset connection state
             _appPersistState.LastClearedError = null; // it is a new connection
@@ -547,12 +547,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
             if (connectOptions.Diagnose) // log country name
                 VhLogger.Instance.LogInformation("CountryCode: {CountryCode}",
-                    VhUtils.TryGetCountryName(await GetCurrentCountryAsync(cancellationToken).VhConfigureAwait()));
+                    VhUtils.TryGetCountryName(await GetCurrentCountryAsync(linkedCts.Token).VhConfigureAwait()));
 
 
             // request features for the first time
             VhLogger.Instance.LogDebug("Requesting Features ...");
-            await RequestFeatures(cancellationToken).VhConfigureAwait();
+            await RequestFeatures(linkedCts.Token).VhConfigureAwait();
 
             // connect
             VhLogger.Instance.LogInformation("Client is Connecting ...");
@@ -562,7 +562,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     planId: connectOptions.PlanId,
                     accessCode: clientProfile.AccessCode,
                     allowUpdateToken: true,
-                    cancellationToken: cancellationToken)
+                    cancellationToken: linkedCts.Token)
                 .VhConfigureAwait();
         }
         catch (Exception ex) {
@@ -644,7 +644,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IncludeLocalNetwork = UserSettings.IncludeLocalNetwork && Features.IsLocalNetworkSupported,
             IncludeIpRanges = (await GetIncludeIpRanges(cancellationToken)).ToArray(),
             VpnAdapterIncludeIpRanges = vpnAdapterIpRanges.ToArray(),
-            MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount, 
+            MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,
             ConnectTimeout = TcpTimeout,
             ServerQueryTimeout = _serverQueryTimeout,
             UseNullCapture = HasDebugCommand(DebugCommands.NullCapture),
@@ -731,6 +731,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 allowUpdateToken &&
                 !VhUtils.IsNullOrEmpty(token.ServerToken.Urls) &&
                 await ClientProfileService.UpdateServerTokenByUrls(token, cancellationToken).VhConfigureAwait()) {
+                // reconnect using the new token
+                VhLogger.Instance.LogInformation("Reconnecting using the new token..");
                 token = ClientProfileService.GetToken(token.TokenId);
                 await ConnectInternal(token,
                         serverLocation: serverLocation,
@@ -1103,13 +1105,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void ReportError(Exception ex, string message, [CallerMemberName] string action = "n/a")
     {
-        Services.Tracker?.VhTrackErrorAsync(ex, message, action);
+        Services.Tracker?.VhTrackErrorAsync(ex, message, action, CancellationToken.None);
         VhLogger.Instance.LogError(ex, message);
     }
 
     private void ReportWarning(Exception ex, string message, [CallerMemberName] string action = "n/a")
     {
-        Services.Tracker?.VhTrackWarningAsync(ex, message, action);
+        Services.Tracker?.VhTrackWarningAsync(ex, message, action, CancellationToken.None);
         VhLogger.Instance.LogWarning(ex, message);
     }
 

@@ -1,86 +1,54 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
-using PacketDotNet;
-using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int protocolVersion)
-    : IDatagramChannel
+public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions options) 
+    : PacketChannel(options)
 {
-    private IPEndPoint? _lastRemoteEp;
-    private readonly byte[] _buffer = new byte[TunnelDefaults.Mtu + UdpChannelTransmitter.HeaderLength];
-    private UdpChannelTransmitter? _udpChannelTransmitter;
-    private readonly BufferCryptor _sessionCryptorWriter = new(sessionKey);
-    private readonly BufferCryptor _sessionCryptorReader = new(sessionKey);
-    private PacketReceivedEventArgs? _packetReceivedEventArgs;
-    private readonly IPPacket[] _sendingPackets = [null!];
-    private readonly long _cryptorPosBase = isServer ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
-    private bool _disposed;
+    private readonly Memory<byte> _buffer = new byte[TunnelDefaults.MaxPacketSize];
+    private readonly BufferCryptor _sessionCryptorWriter = new(options.SessionKey);
+    private readonly BufferCryptor _sessionCryptorReader = new(options.SessionKey);
+    private readonly long _cryptorPosBase = options.LeaveTransmitterOpen ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
+    private readonly ulong _sessionId = options.SessionId;
+    private readonly int _protocolVersion = options.ProtocolVersion;
+    private readonly bool _leaveTransmitterOpen = options.LeaveTransmitterOpen;
+    public IPEndPoint RemoteEndPoint { get; set; } = options.RemoteEndPoint;
+    private readonly TaskCompletionSource<bool> _readingTask = new();
+    public override int OverheadLength => UdpChannelTransmitter.HeaderLength + TunnelDefaults.MtuOverhead;
 
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
-    public string ChannelId { get; } = Guid.NewGuid().ToString();
-    public bool IsStream => false;
-    public bool IsClosePending => false;
-    public bool Connected { get; private set; }
-    public DateTime LastActivityTime { get; private set; }
-    public Traffic Traffic { get; } = new();
-
-    public void Start()
+    protected override Task StartReadTask()
     {
-        if (_disposed)
-            throw new ObjectDisposedException(GetType().Name);
-
-        if (Connected)
-            throw new InvalidOperationException("The udpChannel is already started.");
-
-        Connected = true;
-        LastActivityTime = FastDateTime.Now;
+        // already started by UdpChannelTransmitter
+        return _readingTask.Task;
     }
 
-    // it is not thread safe
-    public Task SendPacketAsync(IPPacket packet)
-    {
-        _sendingPackets[0] = packet;
-        return SendPacketAsync(_sendingPackets);
-    }
 
-    public async Task SendBuffer(byte[] buffer, int bufferLength)
+    public async Task SendBuffer(Memory<byte> buffer)
     {
-        if (_lastRemoteEp == null)
+        if (RemoteEndPoint == null)
             throw new InvalidOperationException("RemoveEndPoint has not been initialized yet in UdpChannel.");
 
-        if (_udpChannelTransmitter == null)
+        if (transmitter == null)
             throw new InvalidOperationException("UdpChannelTransmitter has not been initialized yet in UdpChannel.");
 
         // encrypt packets
-        var sessionCryptoPosition = _cryptorPosBase + Traffic.Sent;
-        _sessionCryptorWriter.Cipher(buffer,
-            UdpChannelTransmitter.HeaderLength,
-            bufferLength - UdpChannelTransmitter.HeaderLength, 
+        var sessionCryptoPosition = _cryptorPosBase + PacketStat.SentBytes;
+        _sessionCryptorWriter.Cipher(buffer.Span[UdpChannelTransmitter.HeaderLength..],
             sessionCryptoPosition);
 
         // send buffer
-        var ret = await _udpChannelTransmitter
-            .SendAsync(_lastRemoteEp, sessionId, sessionCryptoPosition, buffer, bufferLength, protocolVersion)
+        await transmitter
+            .SendAsync(RemoteEndPoint, _sessionId, sessionCryptoPosition, buffer, _protocolVersion)
             .VhConfigureAwait();
-
-        Traffic.Sent += ret;
-        LastActivityTime = FastDateTime.Now;
     }
 
-    public async Task SendPacketAsync(IList<IPPacket> ipPackets)
+    protected override async ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
     {
-        if (_disposed)
-            throw new ObjectDisposedException(VhLogger.FormatType(this));
-
-        if (!Connected)
-            throw new Exception($"The UdpChannel is disconnected. ChannelId: {ChannelId}.");
-
         try {
             // copy packets to buffer
             var bufferIndex = UdpChannelTransmitter.HeaderLength;
@@ -88,11 +56,11 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < ipPackets.Count; i++) {
                 var ipPacket = ipPackets[i];
-                var packetBytes = ipPacket.Bytes;
+                var packetBytes = ipPacket.Buffer;
 
                 // flush buffer if this packet does not fit
                 if (bufferIndex > UdpChannelTransmitter.HeaderLength && bufferIndex + packetBytes.Length > _buffer.Length) {
-                    await SendBuffer(_buffer, bufferIndex).VhConfigureAwait();
+                    await SendBuffer(_buffer[..bufferIndex]).VhConfigureAwait();
                     bufferIndex = UdpChannelTransmitter.HeaderLength;
                 }
 
@@ -105,74 +73,75 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
                 }
 
                 // add packet to buffer
-                Buffer.BlockCopy(packetBytes, 0, _buffer, bufferIndex, packetBytes.Length);
+                packetBytes.Span.CopyTo(_buffer.Span[bufferIndex..]);
                 bufferIndex += packetBytes.Length;
             }
 
             // send remaining buffer
             if (bufferIndex > UdpChannelTransmitter.HeaderLength) {
-                await SendBuffer(_buffer, bufferIndex).VhConfigureAwait();
+                await SendBuffer(_buffer[..bufferIndex]).VhConfigureAwait();
             }
+        }
+        catch (Exception ex) when(ex is OperationCanceledException or ObjectDisposedException) {
+            // ignore cancellation
+            Dispose();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.Udp, ex,
-                "Error in sending packets. ChannelId: {ChannelId}", ChannelId);
-
-            if (IsInvalidState(ex))
-                await DisposeAsync().VhConfigureAwait();
+                "Unexpected error in sending packets. ChannelId: {ChannelId}", ChannelId);
+            
+            if (!CanRetry(ex))
+                Dispose();
         }
     }
 
-    public void SetRemote(UdpChannelTransmitter udpChannelTransmitter, IPEndPoint remoteEndPoint)
+    private static bool CanRetry(Exception ex)
     {
-        _udpChannelTransmitter = udpChannelTransmitter;
-        _lastRemoteEp = remoteEndPoint;
-    }
+        if (ex is not SocketException socketException)
+            return false; // not a socket exception, no retry
 
-    public void OnReceiveData(long cryptorPosition, byte[] buffer, int bufferIndex)
-    {
-        _sessionCryptorReader.Cipher(buffer, bufferIndex, buffer.Length - bufferIndex, cryptorPosition);
-
-        // read all packets
-        try {
-            _packetReceivedEventArgs ??= new PacketReceivedEventArgs([]);
-            _packetReceivedEventArgs.IpPackets.Clear();
-
-            while (bufferIndex < buffer.Length) {
-                var ipPacket = PacketUtil.ReadNextPacket(buffer, ref bufferIndex);
-                Traffic.Received += ipPacket.TotalLength;
-                _packetReceivedEventArgs.IpPackets.Add(ipPacket);
-            }
-
-            PacketReceived?.Invoke(this, _packetReceivedEventArgs);
-            LastActivityTime = FastDateTime.Now;
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogWarning(GeneralEventId.Udp, ex, "Error in processing packets.");
-        }
-    }
-
-    private bool IsInvalidState(Exception ex)
-    {
-        return _disposed || ex is ObjectDisposedException or SocketException {
-            SocketErrorCode: SocketError.InvalidArgument
+        return socketException.SocketErrorCode switch {
+            SocketError.TimedOut => true,
+            SocketError.Interrupted => true,
+            SocketError.NetworkUnreachable => true,
+            SocketError.HostUnreachable => true,
+            SocketError.ConnectionReset => true, // Common in UDP when destination port is closed
+            SocketError.TryAgain => true, // Possibly can retry depending on your use case
+            _ => false
         };
     }
 
-    public ValueTask DisposeAsync(bool graceful)
+    private static IpPacket ReadNextPacketKeepMemory(Memory<byte> buffer)
     {
-        _ = graceful;
-        return DisposeAsync();
+        var packetLength = PacketUtil.ReadPacketLength(buffer.Span);
+        var packet = PacketBuilder.Attach(buffer[..packetLength]);
+        return packet;
     }
 
-    public ValueTask DisposeAsync()
+    public void OnDataReceived(Memory<byte> buffer, long cryptorPosition)
     {
-        if (_disposed) return default;
-        _disposed = true;
-        Connected = false;
-        if (!isServer)
-            _udpChannelTransmitter?.Dispose();
+        _sessionCryptorReader.Cipher(buffer.Span, cryptorPosition);
 
-        return default;
+        // read all packets
+        var bufferIndex = 0;
+        while (bufferIndex < buffer.Length) {
+            var ipPacket = ReadNextPacketKeepMemory(buffer[bufferIndex..]);
+            bufferIndex += ipPacket.PacketLength;
+            OnPacketReceived(ipPacket);
+        }
+    }
+
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) {
+            if (!_leaveTransmitterOpen)
+                transmitter.Dispose();
+
+            // finalize reading task
+            _readingTask.TrySetResult(true);
+        }
+
+        base.Dispose(disposing);
     }
 }

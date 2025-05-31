@@ -14,5 +14,5 @@ public class LogServiceOptions
     public string? CategoryName { get; set; } = "VpnHood";
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public LogLevel LogLevel { get; set; } = LogLevel.Information;
+    public LogLevel MinLogLevel { get; set; } = LogLevel.Information;
 }

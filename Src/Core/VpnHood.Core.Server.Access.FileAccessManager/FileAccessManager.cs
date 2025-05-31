@@ -10,7 +10,7 @@ using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Services;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Core.Common.IpLocations;
-using VpnHood.Core.Common.IpLocations.Providers;
+using VpnHood.Core.Common.IpLocations.Providers.Onlines;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 

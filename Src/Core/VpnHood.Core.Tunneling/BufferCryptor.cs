@@ -28,7 +28,7 @@ public class BufferCryptor : IDisposable
     }
 
     // not thread-safe
-    public void Cipher(byte[] buffer, int offset, int count, long cryptoPos)
+    public void Cipher(Span<byte> buffer, long cryptoPos)
     {
         //find block number
         var blockSizeInByte = (uint)_cryptor.OutputBlockSize;
@@ -37,7 +37,7 @@ public class BufferCryptor : IDisposable
 
         //buffer
         var init = false;
-        for (var i = offset; i < offset + count; i++) {
+        for (var i = 0; i < buffer.Length; i++) {
             //encrypt the nonce to form next xor buffer (unique key)
             if (!init || keyPos % blockSizeInByte == 0) {
                 BinaryPrimitives.WriteUInt64LittleEndian(_cipherNonce.AsSpan(0, 8), blockNumber);

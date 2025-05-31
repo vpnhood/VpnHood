@@ -4,7 +4,7 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -21,6 +21,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     private IntPtr _tunAdapter;
     private IntPtr _tunSession;
     private IntPtr _readEvent;
+    private readonly byte[] _writeBuffer = new byte[0xFFFF];
 
     public const int MinRingCapacity = 0x20000; // 128kiB
     public const int MaxRingCapacity = 0x4000000; // 64MiB
@@ -244,50 +245,31 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     }
 
 
-    protected override IPPacket? ReadPacket(int mtu)
+    protected override bool ReadPacket(byte[] buffer)
     {
-        const int maxErrorCount = 10;
-        var errorCount = 0;
-        while (Started) {
-            var tunReceivePacket = WinTunApi.WintunReceivePacket(_tunSession, out var size);
-            var lastError = (WintunReceivePacketError)Marshal.GetLastWin32Error();
-            if (tunReceivePacket != IntPtr.Zero) {
-                try {
-                    // read the packet
-                    var buffer = new byte[size];
-                    Marshal.Copy(tunReceivePacket, buffer, 0, size);
-                    var packet = Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>();
-                    if (packet.SourceAddress.Equals(PrimaryAdapterIpV4) || packet.SourceAddress.Equals(PrimaryAdapterIpV6))
-                        continue; // skip the packet
-                    return packet;
-                }
-                finally {
-                    WinTunApi.WintunReleaseReceivePacket(_tunSession, tunReceivePacket);
-                }
+        var tunReceivePacket = WinTunApi.WintunReceivePacket(_tunSession, out var size);
+        
+        // return if something is written
+        if (tunReceivePacket != IntPtr.Zero) {
+            try {
+                Marshal.Copy(tunReceivePacket, buffer, 0, size);
+                return true;
             }
-
-            switch (lastError) {
-                case WintunReceivePacketError.NoMoreItems:
-                    return null;
-
-                case WintunReceivePacketError.HandleEof:
-                    throw new IOException("WinTun adapter has been closed.");
-
-                case WintunReceivePacketError.InvalidData:
-                    VhLogger.Instance.LogWarning("Invalid data received from WinTun adapter.");
-                    if (++errorCount > maxErrorCount)
-                        throw new InvalidOperationException("Too many invalid data received from WinTun adapter."); // read the next packet
-                    continue; // read the next packet
-
-                default:
-                    VhLogger.Instance.LogDebug("Unknown error in reading packet from WinTun. LastError: {lastError}", lastError);
-                    if (++errorCount > maxErrorCount)
-                        throw new InvalidOperationException("Too many errors in reading packet from WinTun."); // read the next packet
-                    continue; // read the next packet
+            finally {
+                WinTunApi.WintunReleaseReceivePacket(_tunSession, tunReceivePacket);
             }
         }
 
-        return null;
+        // check  for errors
+        var lastError = (WintunReceivePacketError)Marshal.GetLastWin32Error();
+        return lastError switch {
+            WintunReceivePacketError.NoMoreItems => false,
+            WintunReceivePacketError.HandleEof => throw new IOException("WinTun adapter has been closed."),
+            WintunReceivePacketError.InvalidData => throw new InvalidOperationException(
+                "Invalid data received from WinTun adapter."),
+            _ => throw new PInvokeException(
+                $"Unknown error in reading packet from WinTun. LastError: {lastError}")
+        };
     }
 
     protected override void WaitForTunWrite()
@@ -295,9 +277,9 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         Thread.Sleep(1);
     }
 
-    protected override bool WritePacket(IPPacket ipPacket)
+    protected override bool WritePacket(IpPacket ipPacket)
     {
-        var packetBytes = ipPacket.Bytes;
+        var packetBytes = ipPacket.Buffer;
 
         // Allocate memory for the packet inside WinTun ring buffer
         var packetMemory = WinTunApi.WintunAllocateSendPacket(_tunSession, packetBytes.Length); // thread-safe
@@ -306,7 +288,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
 
         // Copy the raw packet data into WinTun memory
-        Marshal.Copy(packetBytes, 0, packetMemory, packetBytes.Length);
+        var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
+        Marshal.Copy(buffer, offset, packetMemory, length);
 
         // Send the packet through WinTun
         WinTunApi.WintunSendPacket(_tunSession, packetMemory); // thread-safe
@@ -338,13 +321,18 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
             throw new Win32Exception("Failed to load WinTun DLL.");
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeUnmanaged()
     {
-        base.Dispose(disposing);
-
         // The adapter is an unmanaged resource; it must be closed if it is open
         if (_tunAdapter != IntPtr.Zero)
             AdapterRemove();
+
+        base.DisposeUnmanaged();
+    }
+
+    ~WinTunVpnAdapter()
+    {
+        Dispose(false);
     }
 
 }

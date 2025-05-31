@@ -3,15 +3,13 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
 using SharpPcap;
 using SharpPcap.WinDivert;
-using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using ProtocolType = PacketDotNet.ProtocolType;
+using VpnHood.Core.Packets;
 
 namespace VpnHood.Core.VpnAdapters.WinDivert;
 
@@ -20,7 +18,6 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 {
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr LoadLibrary(string lpFileName);
-
     private WinDivertDevice? _device;
     private WinDivertHeader? _lastCaptureHeader;
     private readonly List<IpNetwork> _includeIpNetworks = [];
@@ -28,6 +25,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>> _lastDnsServersV4 = new(TimeSpan.FromSeconds(30));
     private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>> _lastDnsServersV6 = new(TimeSpan.FromSeconds(30));
     private readonly bool _excludeLocalNetwork = adapterSettings.ExcludeLocalNetwork;
+    private readonly bool _simulateDns = adapterSettings.SimulateDns;
 
     public const short ProtectedTtl = 111;
     public override bool IsAppFilterSupported => false;
@@ -37,9 +35,6 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
-        if (adapterSettings.MaxPacketCount != 1)
-            throw new InvalidOperationException("WinDivert adapter supports only 1 packet at a time.");
-
         // initialize devices
         _device = new WinDivertDevice { Flags = 0 };
 
@@ -71,7 +66,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         var ipRanges = _includeIpNetworks.ToIpRanges();
         if (_excludeLocalNetwork)
             ipRanges = ipRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
-        
+
         // create include and exclude phrases
         var phraseX = "true";
         if (!ipRanges.IsAll()) {
@@ -80,12 +75,16 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
                 : $"({Ip(x)}.DstAddr>={x.FirstIpAddress} and {Ip(x)}.DstAddr<={x.LastIpAddress})");
             var phrase = string.Join(" or ", phrases);
             phraseX += $" and ({phrase})";
+            phraseX = $"({phraseX})";
         }
+
+        // simulate dns servers
+        var dnsPhrase = _simulateDns ? "(udp.DstPort==53)" : "false";
 
         // add outbound; filter loopback
         var filter = $"(ip.TTL!={ProtectedTtl} or ipv6.HopLimit!={ProtectedTtl}) and " +
                      $"outbound and !loopback and " +
-                     $"(udp.DstPort==53 or ({phraseX}))";
+                     $"({dnsPhrase} or {phraseX})";
 
         filter = filter.Replace("ipv6.DstAddr>=::", "ipv6"); // WinDivert bug
         try {
@@ -153,7 +152,13 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return Task.CompletedTask;
     }
 
-    protected override IPPacket? ReadPacket(int mtu)
+    protected override bool ReadPacket(byte[] buffer)
+    {
+        throw new InvalidOperationException(
+            "ReadPacket with buffer should not be called when ReadPacket has the override.");
+    }
+
+    protected override IpPacket? ReadPacket(int mtu)
     {
         if (_device == null)
             throw new InvalidOperationException("Device is not initialized.");
@@ -164,8 +169,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
         _lastCaptureHeader = (WinDivertHeader)packetCapture.Header;
         var rawPacket = packetCapture.GetPacket();
-        var packet = Packet.ParsePacket(rawPacket.LinkLayerType, rawPacket.Data);
-        var ipPacket = packet.Extract<IPPacket>();
+        var ipPacket = PacketBuilder.Attach(rawPacket.Data);
 
         ProcessReadPacket(ipPacket);
         return ipPacket;
@@ -187,7 +191,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return true;
     }
 
-    protected virtual void ProcessReadPacket(IPPacket ipPacket)
+    protected virtual void ProcessReadPacket(IpPacket ipPacket)
     {
         // simulate adapter network
         SimulateAdapterNetwork(ipPacket, true);
@@ -197,11 +201,11 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     }
 
 
-    protected override bool WritePacket(IPPacket ipPacket)
+    protected override bool WritePacket(IpPacket ipPacket)
     {
 #if DEBUG
         if (GetIpNetwork(ipPacket.Version)?.Contains(ipPacket.DestinationAddress) is null or false)
-            throw new NotSupportedException("This adapter can send packets outside of its network.");
+            throw new NotSupportedException("This adapter can not send packets outside of its network.");
 #endif
 
         // simulate adapter network
@@ -215,7 +219,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return true;
     }
 
-    protected void WritePacketToAdapter(IPPacket ipPacket, bool outbound)
+    protected void WritePacketToAdapter(IpPacket ipPacket, bool outbound)
     {
         if (_lastCaptureHeader == null)
             throw new InvalidOperationException("Could not send any data without receiving a packet.");
@@ -225,7 +229,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
         // send by a device
         _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
-        _device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
+        _device.SendPacket(ipPacket.Buffer.Span, _lastCaptureHeader);
     }
 
     protected override void WaitForTunRead()
@@ -238,13 +242,13 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         // It is blocking, we don't need to block here
     }
 
-    private void SimulateAdapterNetwork(IPPacket ipPacket, bool read)
+    private void SimulateAdapterNetwork(IpPacket ipPacket, bool read)
     {
         if (read) {
             var adapterIp = GetIpNetwork(ipPacket.Version)?.Prefix;
             if (adapterIp == null) {
                 VhLogger.Instance.LogDebug("The arrival packet is not supported : {Packet}",
-                    VhLogger.FormatIpPacket(ipPacket.ToString()!));
+                    VhLogger.FormatIpPacket(ipPacket.ToString()));
                 return;
             }
 
@@ -258,16 +262,19 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
             ipPacket.DestinationAddress = primaryAdapterIp;
         }
 
-        ipPacket.UpdateIpChecksum();
+        ipPacket.UpdateAllChecksums();
     }
 
-    private void SimulateDnsServers(IPPacket ipPacket, bool read)
+    private void SimulateDnsServers(IpPacket ipPacket, bool read)
     {
-        if (ipPacket.Protocol != ProtocolType.Udp || _dnsServers.Length == 0)
+        if (!_simulateDns)
+            return;
+
+        if (ipPacket.Protocol != IpProtocol.Udp || _dnsServers.Length == 0)
             return;
 
         var udpPacket = ipPacket.ExtractUdp();
-        var lastDnsServers = ipPacket.Version == IPVersion.IPv4 ? _lastDnsServersV4 : _lastDnsServersV6;
+        var lastDnsServers = ipPacket.Version == IpVersion.IPv4 ? _lastDnsServersV4 : _lastDnsServersV6;
 
         if (read) {
             // check if the packet is a dns query
@@ -326,12 +333,8 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         LoadLibrary(Path.Combine(destinationFolder, "WinDivert.dll"));
     }
 
-    protected override void Dispose(bool disposing)
+    ~WinDivertVpnAdapter()
     {
-        base.Dispose(disposing);
-
-        // The adapter is an unmanaged resource; it must be closed if it is open
-        if (_device != null)
-            AdapterRemove();
+        Dispose(false);
     }
 }

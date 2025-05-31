@@ -2,7 +2,7 @@
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -19,6 +19,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     private string? _primaryAdapterName;
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
+    private readonly byte[] _writeBuffer = new byte[0xFFFF];
     protected override bool IsSocketProtectedByBind => true;
     public override bool IsNatSupported => true;
     public override bool IsAppFilterSupported => false;
@@ -220,16 +221,17 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         }
     }
 
-    protected override bool WritePacket(IPPacket ipPacket)
+    protected override bool WritePacket(IpPacket ipPacket)
     {
-        var packetBytes = ipPacket.Bytes;
+        var packetBytes = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var bufferLength);
 
         // Write the packet to the TUN device
         var offset = 0;
-        while (offset < packetBytes.Length) {
-            var bytesWritten = LinuxAPI.write(_tunAdapterFd, packetBytes, packetBytes.Length - offset);
+        while (offset < bufferLength) {
+            var bytesWritten = LinuxAPI.write(_tunAdapterFd, packetBytes, bufferLength - offset);
             if (bytesWritten > 0) {
-                offset += bytesWritten; // Advance buffer
+                offset += bytesWritten; // Advance offset
+                packetBytes = packetBytes[bytesWritten..]; // Advance buffer (rare case)
                 continue;
             }
 
@@ -253,33 +255,21 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         return true;
     }
 
-    protected override IPPacket? ReadPacket(int mtu)
+    protected override bool ReadPacket(byte[] buffer)
     {
-        var buffer = new byte[mtu];
-        while (Started) {
-            var bytesRead = LinuxAPI.read(_tunAdapterFd, buffer, buffer.Length);
-            if (bytesRead > 0)
-                return Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>();
+        var bytesRead = LinuxAPI.read(_tunAdapterFd, buffer, buffer.Length);
+        if (bytesRead > 0)
+            return true;
 
-            // check for errors
-            var errorCode = Marshal.GetLastWin32Error();
-            switch (errorCode) {
-                // No data available, wait
-                case OsConstants.Eagain:
-                    return null;
-
-                // Interrupted, retry
-                case OsConstants.Eintr: {
-                        VhLogger.Instance.LogTrace("Read from TUN was interrupted. Retrying...");
-                        continue;
-                    }
-
-                default:
-                    throw new PInvokeException("Could not read from TUN.", errorCode);
-            }
-        }
-
-        return null;
+        // check for errors
+        var errorCode = Marshal.GetLastWin32Error();
+        return errorCode switch {
+            // No data available, wait
+            OsConstants.Eagain => false,
+            // Interrupted, retry
+            OsConstants.Eintr => throw new IOException("Read from TUN was interrupted. Retrying..."),
+            _ => throw new PInvokeException("Could not read from TUN.", errorCode)
+        };
     }
 
     private static int OpenTunAdapter(string adapterName, bool blockingMode)
@@ -321,13 +311,17 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         return OsUtils.ExecuteCommandAsync("/bin/bash", $"-c \"{command}\"", cancellationToken);
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeUnmanaged()
     {
-        base.Dispose(disposing);
-
-        // The adapter is an unmanaged resource; it must be closed if it is open
         if (_tunAdapterFd != 0) {
             AdapterRemove();
         }
+
+        base.DisposeUnmanaged();
+    }
+
+    ~LinuxTunVpnAdapter()
+    {
+        Dispose(false);
     }
 }

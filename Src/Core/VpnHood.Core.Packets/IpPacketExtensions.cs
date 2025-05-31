@@ -1,61 +1,107 @@
 ﻿using System.Net;
-using PacketDotNet;
+using System.Runtime.InteropServices;
 using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Packets;
 
 public static class IpPacketExtensions
 {
-    public static IPPacket Clone(this IPPacket ipPacket)
+    public static IpPacket Clone(this IpPacket ipPacket)
     {
-        return Packet.ParsePacket(LinkLayers.Raw, ipPacket.Bytes).Extract<IPPacket>();
-    }
-    public static IcmpV4Packet ExtractIcmpV4(this IPPacket ipPacket)
-    {
-        return ipPacket.Extract<IcmpV4Packet>() ??
-               throw new InvalidDataException($"Invalid IcmpV4 packet. It is: {ipPacket.Protocol}");
+        return PacketBuilder.Parse(ipPacket.Buffer.Span);
     }
 
-    public static IcmpV6Packet ExtractIcmpV6(this IPPacket ipPacket)
+    public static UdpPacket ExtractUdp(this IpPacket ipPacket)
     {
-        return ipPacket.Extract<IcmpV6Packet>() ??
-               throw new InvalidDataException($"Invalid IcmpV6 packet. It is: {ipPacket.Protocol}");
+        if (ipPacket.Protocol != IpProtocol.Udp)
+            throw new InvalidDataException($"Invalid UDP packet. It is: {ipPacket.Protocol}");
+
+        ipPacket.PayloadPacket ??= new UdpPacket(ipPacket.Payload, false);
+        return (UdpPacket)ipPacket.PayloadPacket;
     }
 
-    public static UdpPacket ExtractUdp(this IPPacket ipPacket)
+    public static UdpPacket BuildUdp(this IpPacket ipPacket)
     {
-        return ipPacket.Extract<UdpPacket>() ??
-               throw new InvalidDataException($"Invalid UDP packet. It is: {ipPacket.Protocol}");
+        if (ipPacket.Protocol != IpProtocol.Udp)
+            throw new InvalidDataException($"Invalid UDP packet. It is: {ipPacket.Protocol}");
+
+        ipPacket.PayloadPacket ??= new UdpPacket(ipPacket.Payload, true);
+        return (UdpPacket)ipPacket.PayloadPacket;
     }
 
-    public static TcpPacket ExtractTcp(this IPPacket ipPacket)
+    public static TcpPacket ExtractTcp(this IpPacket ipPacket)
     {
-        return ipPacket.Extract<TcpPacket>() ??
-               throw new InvalidDataException($"Invalid TCP packet. It is: {ipPacket.Protocol}");
+        if (ipPacket.Protocol != IpProtocol.Tcp)
+            throw new InvalidDataException($"Invalid TCP packet. It is: {ipPacket.Protocol}");
+
+        ipPacket.PayloadPacket ??= new TcpPacket(ipPacket.Payload);
+        return (TcpPacket)ipPacket.PayloadPacket;
     }
 
-    public static bool IsMulticast(this IPPacket ipPacket)
+    public static TcpPacket BuildTcp(this IpPacket ipPacket, int optionsLength = 0)
+    {
+        if (ipPacket.Protocol != IpProtocol.Tcp)
+            throw new InvalidDataException($"Invalid TCP packet. It is: {ipPacket.Protocol}");
+
+        ipPacket.PayloadPacket ??= new TcpPacket(ipPacket.Payload, optionsLength);
+        return (TcpPacket)ipPacket.PayloadPacket;
+    }
+
+    public static IcmpV4Packet BuildIcmpV4(this IpPacket ipPacket)
+    {
+        if (ipPacket.Protocol != IpProtocol.IcmpV4)
+            throw new InvalidDataException($"Invalid IcmpV4 packet. It is: {ipPacket.Protocol}");
+
+        ipPacket.PayloadPacket ??= new IcmpV4Packet(ipPacket.Payload, true);
+        return (IcmpV4Packet)ipPacket.PayloadPacket;
+    }
+
+    public static IcmpV4Packet ExtractIcmpV4(this IpPacket ipPacket)
+    {
+        if (ipPacket.Protocol != IpProtocol.IcmpV4)
+            throw new InvalidDataException($"Invalid IcmpV4 packet. It is: {ipPacket.Protocol}");
+
+        ipPacket.PayloadPacket ??= new IcmpV4Packet(ipPacket.Payload, false);
+        return (IcmpV4Packet)ipPacket.PayloadPacket;
+    }
+
+    public static IcmpV6Packet BuildIcmpV6(this IpPacket ipPacket)
+    {
+        if (ipPacket.Protocol != IpProtocol.IcmpV6)
+            throw new InvalidDataException($"Invalid IcmpV6 packet. It is: {ipPacket.Protocol}");
+
+        ipPacket.PayloadPacket ??= new IcmpV6Packet(ipPacket.Payload, true);
+        return (IcmpV6Packet)ipPacket.PayloadPacket;
+    }
+
+    public static IcmpV6Packet ExtractIcmpV6(this IpPacket ipPacket)
+    {
+        if (ipPacket.Protocol != IpProtocol.IcmpV6)
+            throw new InvalidDataException($"Invalid IcmpV6 packet. It is: {ipPacket.Protocol}");
+
+        ipPacket.PayloadPacket ??= new IcmpV6Packet(ipPacket.Payload, false);
+        return (IcmpV6Packet)ipPacket.PayloadPacket;
+    }
+
+    public static bool IsMulticast(this IpPacket ipPacket)
     {
         // only UDP and ICMPv6 packets can use multicast
-        if (ipPacket.Protocol != ProtocolType.Udp && ipPacket.Protocol != ProtocolType.IcmpV6)
-            return false;
-
-        return
-            (ipPacket.Version == IPVersion.IPv4 && IpNetwork.MulticastNetworkV4.Contains(ipPacket.DestinationAddress)) ||
-            (ipPacket.Version == IPVersion.IPv6 && IpNetwork.MulticastNetworkV6.Contains(ipPacket.DestinationAddress));
+        return ipPacket.Protocol is IpProtocol.Udp or IpProtocol.IcmpV4 or IpProtocol.IcmpV6 &&
+               ipPacket.DestinationAddress.IsMulticast();
 
     }
-    public static IPEndPointPair GetEndPoints(this IPPacket ipPacket)
+
+    public static IPEndPointPair GetEndPoints(this IpPacket ipPacket)
     {
-        if (ipPacket.Protocol == ProtocolType.Tcp) {
-            var tcpPacket = ExtractTcp(ipPacket);
+        if (ipPacket.Protocol == IpProtocol.Tcp) {
+            var tcpPacket = ipPacket.ExtractTcp();
             return new IPEndPointPair(
                 new IPEndPoint(ipPacket.SourceAddress, tcpPacket.SourcePort),
                 new IPEndPoint(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
         }
 
-        if (ipPacket.Protocol == ProtocolType.Udp) {
-            var udpPacket = ExtractUdp(ipPacket);
+        if (ipPacket.Protocol == IpProtocol.Udp) {
+            var udpPacket = ipPacket.ExtractUdp();
             return new IPEndPointPair(
                 new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort),
                 new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort));
@@ -66,68 +112,88 @@ public static class IpPacketExtensions
             new IPEndPoint(ipPacket.DestinationAddress, 0));
     }
 
-    public static void UpdateIpChecksum(this IPPacket ipPacket)
+    public static void UpdateAllChecksums(this IpPacket ipPacket)
     {
-        // ICMPv6 & UDP & TCP checksum needs to be updated if IPv6 packet changes because they have pseudo header
-        if (ipPacket.Protocol is ProtocolType.IcmpV6 or ProtocolType.Udp or ProtocolType.Tcp) {
-            ipPacket.UpdatePayloadChecksum();
-        }
+        if (ipPacket is IpV4Packet ipV4Packet)
+            ipV4Packet.UpdateHeaderChecksum(ipV4Packet);
 
-        // ipv4 packet checksum needs to be updated if IPv4 packet changes
-        if (ipPacket is IPv4Packet ipV4Packet) {
-            ipV4Packet.UpdateIPChecksum(); // it is not the extension
-            ipPacket.UpdateCalculatedValues();
-        }
+        if (ipPacket.Protocol == IpProtocol.Udp)
+            ipPacket.ExtractUdp().UpdateChecksum(ipPacket);
+
+        if (ipPacket.Protocol == IpProtocol.Tcp)
+            ipPacket.ExtractTcp().UpdateChecksum(ipPacket);
+
+        if (ipPacket.Protocol == IpProtocol.IcmpV4)
+            ipPacket.ExtractIcmpV4().UpdateChecksum(ipPacket);
+
+        if (ipPacket.Protocol == IpProtocol.IcmpV6)
+            ipPacket.ExtractIcmpV6().UpdateChecksum(ipPacket);
+
     }
 
-    public static void UpdatePayloadChecksum(this IPPacket ipPacket, bool throwIfNotSupported = false)
+    public static bool IsChecksumValid(this IChecksumPayloadPacket payloadPacket, IpPacket ipPacket)
     {
-        switch (ipPacket.Protocol) {
-            case ProtocolType.Tcp:
-                var tcpPacket = ipPacket.ExtractTcp();
-                tcpPacket.UpdateTcpChecksum();
-                tcpPacket.UpdateCalculatedValues();
-                break;
-
-            case ProtocolType.Udp:
-                var udpPacket = ipPacket.ExtractUdp();
-                udpPacket.UpdateUdpChecksum();
-                udpPacket.UpdateCalculatedValues();
-                break;
-
-            case ProtocolType.Icmp:
-                var icmpPacket = ipPacket.ExtractIcmpV4();
-                icmpPacket.UpdateIcmpChecksum();
-                icmpPacket.UpdateCalculatedValues();
-                break;
-
-            case ProtocolType.IcmpV6:
-                var icmpV6Packet = ipPacket.ExtractIcmpV6();
-                // icmpV6Packet.UpdateIcmpChecksum(); // it has problem
-                icmpV6Packet.Checksum = 0;
-                icmpV6Packet.Checksum = PacketUtil.ComputeChecksum(
-                    ipPacket.SourceAddress.GetAddressBytes(),
-                    ipPacket.DestinationAddress.GetAddressBytes(),
-                    (byte)ProtocolType.IcmpV6,
-                    icmpV6Packet.Bytes);
-                icmpV6Packet.UpdateCalculatedValues();
-                break;
-
-            default:
-                if (throwIfNotSupported)
-                    throw new NotSupportedException("Does not support this packet.");
-                break;
-        }
+        return payloadPacket
+            .IsChecksumValid(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan);
     }
 
-    public static void UpdateAllChecksums(this IPPacket ipPacket, bool throwIfNotSupported = false)
+    public static ushort ComputeChecksum(this IChecksumPayloadPacket payloadPacket, IpPacket ipPacket)
     {
-        ipPacket.UpdatePayloadChecksum(throwIfNotSupported);
+        return payloadPacket
+            .ComputeChecksum(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan);
+    }
 
-        // ipv4 packet checksum needs to be updated if IPv4 packet changes
-        if (ipPacket is IPv4Packet ipV4Packet) {
-            ipV4Packet.UpdateIPChecksum(); // it is not the extension
-            ipV4Packet.UpdateCalculatedValues();
+    public static void UpdateChecksum(this IChecksumPayloadPacket payloadPacket, IpPacket ipPacket)
+    {
+        payloadPacket
+            .UpdateChecksum(ipPacket.SourceAddressSpan, ipPacket.DestinationAddressSpan);
+    }
+
+    public static bool IsV4(this IpPacket ipPacket)
+    {
+        return ipPacket.Version == IpVersion.IPv4;
+    }
+
+    public static bool IsV6(this IpPacket ipPacket)
+    {
+        return ipPacket.Version == IpVersion.IPv6;
+    }
+
+    public static bool IsIcmpEcho(this IpPacket ipPacket)
+    {
+        return ipPacket switch {
+            // IPv4
+            { Version: IpVersion.IPv4, Protocol: IpProtocol.IcmpV4 } => ipPacket.ExtractIcmpV4().IsEcho,
+            // IPv6
+            { Version: IpVersion.IPv6, Protocol: IpProtocol.IcmpV6 } => ipPacket.ExtractIcmpV6().IsEcho,
+            _ => false
+        };
+    }
+
+    public static byte[] GetUnderlyingBufferUnsafe(this IpPacket ipPacket, byte[] backupBuffer, out int length)
+    {
+        if (MemoryMarshal.TryGetArray<byte>(ipPacket.Buffer, out var segment) && segment.Offset == 0) {
+            length = segment.Count;
+            return segment.Array!;
         }
+
+        ipPacket.Buffer.CopyTo(backupBuffer);
+        length = ipPacket.Buffer.Length;
+        return backupBuffer;
+    }
+
+    public static byte[] GetUnderlyingBufferUnsafe(this IpPacket ipPacket,
+        byte[] backupBuffer, out int offset, out int length)
+    {
+        if (MemoryMarshal.TryGetArray<byte>(ipPacket.Buffer, out var segment)) {
+            offset = segment.Offset;
+            length = segment.Count;
+            return segment.Array!;
+        }
+
+        ipPacket.Buffer.CopyTo(backupBuffer);
+        offset = 0;
+        length = ipPacket.Buffer.Length;
+        return backupBuffer;
     }
 }

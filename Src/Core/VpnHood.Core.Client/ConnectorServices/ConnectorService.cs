@@ -1,11 +1,12 @@
-﻿using System.Net;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.Utils;
@@ -24,21 +25,20 @@ internal class ConnectorService(
         where T : SessionResponse
     {
         var eventId = GetRequestEventId(request);
+        request.RequestId += ":client";
         VhLogger.Instance.LogDebug(eventId,
             "Sending a request. RequestCode: {RequestCode}, RequestId: {RequestId}",
             (RequestCode)request.RequestCode, request.RequestId);
 
         // set request timeout
-        using var cancellationTokenSource = new CancellationTokenSource(RequestTimeout);
-        using var linkedCancellationTokenSource =
-            CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
-        cancellationToken = linkedCancellationTokenSource.Token;
+        using var localTimeoutCts = new CancellationTokenSource(RequestTimeout);
+        using var localCts = CancellationTokenSource.CreateLinkedTokenSource(localTimeoutCts.Token, cancellationToken);
 
         await using var mem = new MemoryStream();
         mem.WriteByte(1);
         mem.WriteByte(request.RequestCode);
-        await StreamUtils.WriteObjectAsync(mem, request, cancellationToken).VhConfigureAwait();
-        var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, cancellationToken).VhConfigureAwait();
+        await StreamUtils.WriteObjectAsync(mem, request, localCts.Token).VhConfigureAwait();
+        var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, localCts.Token).VhConfigureAwait();
 
         // log the response
         VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.", ret.Response.ErrorCode);
@@ -54,13 +54,13 @@ internal class ConnectorService(
         // try reuse
         var clientStream = GetFreeClientStream();
         if (clientStream != null) {
-            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
-                "A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}, LocalEp: {LocalEp}",
-                clientStream.ClientStreamId, clientStream.IpEndPointPair.LocalEndPoint);
-
             try {
-                // we may use this buffer to encrypt so clone it for retry
-                await clientStream.Stream.WriteAsync((byte[])request.Clone(), cancellationToken).VhConfigureAwait();
+                VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+                    "A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}, LocalEp: {LocalEp}",
+                    clientStream.ClientStreamId, clientStream.IpEndPointPair.LocalEndPoint);
+
+                // send the request
+                await clientStream.Stream.WriteAsync(request, cancellationToken).VhConfigureAwait();
                 var response = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken).VhConfigureAwait();
                 lock (Stat) Stat.ReusedConnectionSucceededCount++;
                 return new ConnectorRequestResult<T> {
@@ -70,20 +70,21 @@ internal class ConnectorService(
             }
             catch (SessionException) {
                 // let the caller handle the exception. there is no error in connection
+                clientStream.Dispose();
                 throw;
             }
             catch (Exception ex) {
                 // dispose the connection and retry with new connection
                 lock (Stat) Stat.ReusedConnectionFailedCount++;
-                DisposingTasks.Add(clientStream.DisposeAsync(false));
+                clientStream.DisposeWithoutReuse();
                 VhLogger.LogError(GeneralEventId.TcpLife, ex,
                     "Error in reusing the ClientStream. Try a new connection. ClientStreamId: {ClientStreamId}",
                     clientStream.ClientStreamId);
             }
         }
 
-        // create free connection
-        clientStream = await GetTlsConnectionToServer(requestId, cancellationToken).VhConfigureAwait();
+        // create a new connection
+        clientStream = await GetTlsConnectionToServer(requestId + ":tunnel", cancellationToken).VhConfigureAwait();
 
         // send request
         try {
@@ -109,10 +110,11 @@ internal class ConnectorService(
         }
         catch (SessionException) {
             // let the caller handle the exception. there is no error in connection
+            clientStream.Dispose();
             throw;
         }
         catch {
-            DisposingTasks.Add(clientStream.DisposeAsync(false));
+            clientStream.DisposeWithoutReuse();
             throw;
         }
     }
@@ -120,7 +122,7 @@ internal class ConnectorService(
     private static async Task<T> ReadSessionResponse<T>(Stream stream, CancellationToken cancellationToken)
         where T : SessionResponse
     {
-        var message = await StreamUtils.ReadMessage(stream, cancellationToken).VhConfigureAwait();
+        var message = await StreamUtils.ReadMessageAsync(stream, cancellationToken).VhConfigureAwait();
         try {
             var response = JsonUtils.Deserialize<T>(message);
             ProcessResponseException(response);
@@ -155,8 +157,8 @@ internal class ConnectorService(
         return (RequestCode)request.RequestCode switch {
             RequestCode.Hello => GeneralEventId.Session,
             RequestCode.Bye => GeneralEventId.Session,
-            RequestCode.TcpDatagramChannel => GeneralEventId.DatagramChannel,
-            RequestCode.StreamProxyChannel => GeneralEventId.StreamProxyChannel,
+            RequestCode.TcpPacketChannel => GeneralEventId.PacketChannel,
+            RequestCode.ProxyChannel => GeneralEventId.ProxyChannel,
             _ => GeneralEventId.Tcp
         };
     }

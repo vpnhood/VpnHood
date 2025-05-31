@@ -1,87 +1,106 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
 using VpnHood.Core.Packets;
+using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test.Providers;
 
-public class TestUdpServerVpnAdapter : IVpnAdapter, IPacketProxyReceiver
+public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProxyCallbacks
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
     private readonly UdpProxyPool _proxyPool;
     public IPAddress? VirtualIp { get; set; }
 
     public TestUdpServerVpnAdapter()
+        : base(new PacketTransportOptions {
+            Blocking = false,
+            AutoDisposePackets = true
+        })
     {
-        _proxyPool = new UdpProxyPool(this, new SocketFactory(), udpTimeout: null, maxClientCount: null);
+        _proxyPool = new UdpProxyPool(new UdpProxyPoolOptions {
+            SocketFactory = new SocketFactory(),
+            PacketProxyCallbacks = this,
+            UdpTimeout = TunnelDefaults.UdpTimeout,
+            MaxClientCount = TunnelDefaults.MaxUdpClientCount,
+            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
+            SendBufferSize = null,
+            ReceiveBufferSize = null,
+            AutoDisposePackets = true,
+            LogScope = null
+        });
+        _proxyPool.PacketReceived += Proxy_PacketReceived;
     }
 
     public event EventHandler? Disposed;
-    public bool Started { get; private set; }
+    public bool IsStarted { get; private set; }
     public bool IsNatSupported => true;
     public bool CanProtectSocket => false;
     public bool ProtectSocket(Socket socket) => false;
     public bool ProtectSocket(Socket socket, IPAddress ipAddress) => false;
     public Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
-        Started = true;
+        IsStarted = true;
         return Task.CompletedTask;
     }
 
     public void Stop()
     {
-        Started = false;
+        IsStarted = false;
     }
 
-    public void SendPacket(IPPacket ipPacket)
+    protected override ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
     {
-        if (ipPacket.Protocol != ProtocolType.Udp) {
+        foreach (var ipPacket in ipPackets)
+            SendPacket(ipPacket);
+
+        return default;
+    }
+
+    public void SendPacket(IpPacket ipPacket)
+    {
+        if (ipPacket.Protocol != IpProtocol.Udp) {
             VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestTunProvider: Not Udp packet.");
             return;
         }
 
-        _proxyPool.SendPacket(ipPacket).GetAwaiter().GetResult();
+        ipPacket = ipPacket.Clone(); // caller will dispose the packet
+        _proxyPool.SendPacketQueued(ipPacket);
     }
 
-    public void SendPackets(IList<IPPacket> ipPackets)
+    public IPAddress GetPrimaryAdapterAddress(IpVersion ipVersion)
     {
-        foreach (var ipPacket in ipPackets) {
-            _proxyPool.SendPacket(ipPacket).GetAwaiter().GetResult();
-        }
+        return ipVersion == IpVersion.IPv4 ? IPAddress.Loopback : IPAddress.IPv6Loopback;
     }
 
-    public IPAddress GetPrimaryAdapterAddress(IPVersion ipVersion)
+    public bool IsIpVersionSupported(IpVersion ipVersion) => true;
+
+    private void Proxy_PacketReceived(object? sender, IpPacket ipPacket)
     {
-        return ipVersion == IPVersion.IPv4 ? IPAddress.Loopback : IPAddress.IPv6Loopback;
+        OnPacketReceived(ipPacket);
     }
 
-    public bool IsIpVersionSupported(IPVersion ipVersion) => true;
-
-    public void OnPacketReceived(IPPacket ipPacket)
-    {
-        PacketReceived?.Invoke(this, new PacketReceivedEventArgs([ipPacket]));
-    }
-
-    public void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint)
+    public void OnConnectionRequested(IpProtocol protocolType, IPEndPoint remoteEndPoint)
     {
     }
 
-    public void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
+    public void OnConnectionEstablished(IpProtocol protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
         bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
     {
     }
 
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        _cancellationTokenSource.Dispose();
-        _proxyPool.Dispose();
-        Disposed?.Invoke(this, EventArgs.Empty);
+        if (disposing) {
+            _cancellationTokenSource.Dispose();
+            _proxyPool.Dispose();
+            Disposed?.Invoke(this, EventArgs.Empty);
+        }
+        base.Dispose(disposing);
     }
 }

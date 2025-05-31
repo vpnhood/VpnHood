@@ -31,17 +31,24 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings)
     {
         var debugData1 = _vpnServiceHost.ClientOptions?.DebugData1;
-        IVpnAdapter vpnAdapter = debugData1?.Contains("/wintun", StringComparison.OrdinalIgnoreCase) is true
-            ? new WinTunVpnAdapter(new WinVpnAdapterSettings {
+        IVpnAdapter vpnAdapter = debugData1?.Contains("/windivert", StringComparison.OrdinalIgnoreCase) is true
+            ? new WinDivertVpnAdapter(new WinDivertVpnAdapterSettings {
                 AdapterName = adapterSettings.AdapterName,
-                MaxPacketCount = adapterSettings.MaxPacketCount,
-                MaxAutoRestartCount = adapterSettings.MaxAutoRestartCount,
-                MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay
+                AutoRestart = adapterSettings.AutoRestart,
+                MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
+                Blocking = adapterSettings.Blocking,
+                AutoDisposePackets = adapterSettings.AutoDisposePackets,
+                QueueCapacity = adapterSettings.QueueCapacity,
+                ExcludeLocalNetwork = true
             })
-            : new WinDivertVpnAdapter(new WinDivertVpnAdapterSettings {
+            : new WinTunVpnAdapter(new WinVpnAdapterSettings {
                 AdapterName = adapterSettings.AdapterName,
-                MaxAutoRestartCount = adapterSettings.MaxAutoRestartCount,
-                MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay
+                AutoRestart = adapterSettings.AutoRestart,
+                MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
+                Blocking = adapterSettings.Blocking,
+                AutoDisposePackets = adapterSettings.AutoDisposePackets,
+                AutoMetric = adapterSettings.AutoMetric,
+                QueueCapacity = adapterSettings.QueueCapacity
             });
 
         return vpnAdapter;

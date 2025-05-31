@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Toolkit.Utils;
+﻿using System.Buffers;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
@@ -8,13 +9,12 @@ public class StreamCryptor : AsyncStreamDecorator
     private readonly bool _leaveOpen;
     private readonly long _maxCipherCount;
     private readonly Stream _stream;
-    private readonly bool _encryptInGivenBuffer;
 
     private long _readCount;
     private long _writeCount;
 
     private StreamCryptor(Stream stream, byte[] key, long maxCipherCount,
-        bool leaveOpen, bool encryptInGivenBuffer)
+        bool leaveOpen)
         : base(stream, leaveOpen)
     {
         if (key is null) throw new ArgumentNullException(nameof(key));
@@ -23,7 +23,6 @@ public class StreamCryptor : AsyncStreamDecorator
         _bufferCryptor = new BufferCryptor(key);
         _maxCipherCount = maxCipherCount;
         _leaveOpen = leaveOpen;
-        _encryptInGivenBuffer = encryptInGivenBuffer;
     }
 
     public override bool CanSeek => false;
@@ -47,48 +46,47 @@ public class StreamCryptor : AsyncStreamDecorator
                 encKey[i] ^= salt[i];
         }
 
-        return new StreamCryptor(stream, encKey, maxCipherPos, leaveOpen, encryptInGivenBuffer);
+        return new StreamCryptor(stream, encKey, maxCipherPos, leaveOpen);
     }
 
 
-    public void Decrypt(byte[] buffer, int offset, int count)
+    public void Decrypt(Span<byte> buffer)
     {
-        var cipherCount = Math.Min(count, _maxCipherCount - _readCount);
+        var cipherCount = (int)Math.Min(buffer.Length, _maxCipherCount - _readCount);
         if (cipherCount > 0) {
             lock (_bufferCryptor)
-                _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _readCount);
-            _readCount += count;
+                _bufferCryptor.Cipher(buffer[..cipherCount], _readCount);
+            _readCount += buffer.Length;
         }
     }
 
-    public void Encrypt(byte[] buffer, int offset, int count)
+    public void Encrypt(Span<byte> buffer)
     {
-        var cipherCount = Math.Min(count, _maxCipherCount - _writeCount);
+        var cipherCount = (int)Math.Min(buffer.Length, _maxCipherCount - _writeCount);
         if (cipherCount > 0) {
             lock (_bufferCryptor)
-                _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _writeCount);
+                _bufferCryptor.Cipher(buffer[..cipherCount], _writeCount);
             _writeCount += cipherCount;
         }
     }
 
-    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count,
-        CancellationToken cancellationToken)
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        var readCount = await _stream.ReadAsync(buffer, offset, count, cancellationToken).VhConfigureAwait();
-        Decrypt(buffer, offset, readCount);
+        var readCount = await _stream.ReadAsync(buffer, cancellationToken).VhConfigureAwait();
+        Decrypt(buffer.Span[..readCount]);
         return readCount;
     }
 
-    public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        if (_encryptInGivenBuffer) {
-            Encrypt(buffer, offset, count);
-            return _stream.WriteAsync(buffer, offset, count, cancellationToken);
-        }
+        // copy buffer to a shared buffer from memory pool to avoid memory allocation
+        using var memoryOwner = MemoryPool<byte>.Shared.Rent(buffer.Length);
+        var copyBuffer = memoryOwner.Memory[..buffer.Length]; // warning: the returned memory may be larger than the original buffer
+        buffer.Span.CopyTo(copyBuffer.Span);
+        Encrypt(copyBuffer.Span);
 
-        var copyBuffer = buffer[offset..count];
-        Encrypt(copyBuffer, 0, copyBuffer.Length);
-        return _stream.WriteAsync(copyBuffer, 0, copyBuffer.Length, cancellationToken);
+        // must await to let copyBuffer be disposed
+        await _stream.WriteAsync(copyBuffer, cancellationToken);
     }
 
     public override async ValueTask DisposeAsync()

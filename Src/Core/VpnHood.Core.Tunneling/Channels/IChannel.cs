@@ -2,12 +2,11 @@
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public interface IChannel : IAsyncDisposable
+public interface IChannel : IDisposable
 {
     string ChannelId { get; }
-    bool Connected { get; }
     DateTime LastActivityTime { get; }
     Traffic Traffic { get; }
     void Start();
-    ValueTask DisposeAsync(bool graceful);
+    PacketChannelState State { get; }
 }

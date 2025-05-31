@@ -22,7 +22,8 @@ public class BuiltInTrackerFactory : ITrackerFactory
         if (!string.IsNullOrEmpty(createParams.UserAgent))
             tracker.UserAgent = createParams.UserAgent;
 
-        _ = tracker.Track(new TrackEvent { EventName = TrackEventNames.SessionStart });
+        var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        _ = tracker.Track(new TrackEvent { EventName = TrackEventNames.SessionStart }, cancellationTokenSource.Token);
 
         return tracker;
     }

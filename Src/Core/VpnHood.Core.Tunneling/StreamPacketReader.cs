@@ -1,88 +1,50 @@
-﻿using Microsoft.Extensions.Logging;
-using PacketDotNet;
+﻿using System.Buffers;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
-public class StreamPacketReader(Stream stream) : IAsyncDisposable
+public class StreamPacketReader(Stream stream, int bufferSize)
 {
-    private readonly List<IPPacket> _ipPackets = [];
-    private readonly ReadCacheStream _stream = new(stream, true, 15000); // max batch
-    private byte[] _packetBuffer = new byte[1600];
-    private int _packetBufferCount;
-
+    private readonly ReadCacheStream _stream = new(stream, true, bufferSize);
+    private readonly Memory<byte> _minHeader = new byte[20];
 
     /// <returns>null if read nothing</returns>
-    public async Task<IList<IPPacket>?> ReadAsync(CancellationToken cancellationToken)
+    public async Task<IpPacket?> ReadAsync(CancellationToken cancellationToken)
     {
-        _ipPackets.Clear();
-
-        while (true) {
-            // read packet header
-            const int minPacketSize = 20;
-            if (_packetBufferCount < minPacketSize) {
-                var toRead = minPacketSize - _packetBufferCount;
-                var read = await _stream.ReadAsync(_packetBuffer, _packetBufferCount, toRead, cancellationToken)
-                    .VhConfigureAwait();
-                _packetBufferCount += read;
-
-                // is eof?
-                if (read == 0 && _packetBufferCount == 0)
-                    return null;
-
-                // is unexpected eof?
-                if (read == 0)
-                    throw new Exception("Stream has been unexpectedly closed before reading the rest of packet.");
-
-                // is uncompleted header?
-                if (toRead != read)
-                    break;
-
-                // is just header?
-                if (!_stream.DataAvailableInCache)
-                    break;
-            }
-
-            // find packet length
-            var packetLength = PacketUtil.ReadPacketLength(_packetBuffer, 0);
-            if (_packetBufferCount < packetLength) {
-                //not sure if we get any packet more than 1600
-                if (packetLength > _packetBuffer.Length) {
-                    Array.Resize(ref _packetBuffer, packetLength);
-                    VhLogger.Instance.LogWarning("Resizing a PacketLength to {packetLength}", packetLength);
-                }
-
-                var toRead = packetLength - _packetBufferCount;
-                var read = await _stream.ReadAsync(_packetBuffer, _packetBufferCount, toRead, cancellationToken)
-                    .VhConfigureAwait();
-                _packetBufferCount += read;
-                if (read == 0)
-                    throw new Exception("Stream has been unexpectedly closed before reading the rest of packet.");
-
-                // is packet read?
-                if (toRead != read)
-                    break;
-            }
-
-            // WARNING: we shouldn't use shared memory for packet
-            var packetBuffer = _packetBuffer[..packetLength]; //
-            var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer).Extract<IPPacket>();
-
-            _ipPackets.Add(ipPacket);
-            _packetBufferCount = 0;
-
-            // Don't try to read more packet if there is no data in cache
-            if (!_stream.DataAvailableInCache)
-                break;
+        // read minimum packet header and return null if we reach the end of the stream
+        try {
+            await _stream.ReadExactAsync(_minHeader, cancellationToken);
+        }
+        catch (EndOfStreamException) {
+            // if we reach the end of the stream, return null
+            // no more packet
+            return null;
         }
 
-        return _ipPackets;
-    }
+        // read packet length
+        var packetLength = PacketUtil.ReadPacketLength(_minHeader.Span);
 
-    public ValueTask DisposeAsync()
-    {
-        return _stream.DisposeAsync();
+        // check packet length
+        if (packetLength > TunnelDefaults.MaxPacketSize)
+            throw new InvalidOperationException($"Packet size exceeds the maximum allowed limit. PacketLength: {packetLength}");
+
+        var memoryOwner = MemoryPool<byte>.Shared.Rent(packetLength);
+        try {
+            // copy the minimum header to the memory owner
+            _minHeader.CopyTo(memoryOwner.Memory);
+
+            // read the rest of the packet
+            await _stream.ReadExactAsync(memoryOwner.Memory[_minHeader.Length..packetLength], cancellationToken);
+
+            // build the packet
+            var ipPacket = PacketBuilder.Attach(memoryOwner);
+            return ipPacket;
+        }
+        catch {
+            memoryOwner.Dispose();
+            throw;
+        }
+
     }
 }

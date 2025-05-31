@@ -1,68 +1,111 @@
 ﻿using System.Net;
-using System.Net.Sockets;
-using PacketDotNet;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.VpnAdapters.Abstractions;
 
-public class NullVpnAdapter : IVpnAdapter
+public class NullVpnAdapter(bool autoDisposePackets, bool blocking) :
+    TunVpnAdapter(new VpnAdapterSettings {
+        AdapterName = "NullAdapter",
+        Blocking = blocking,
+        AutoDisposePackets = autoDisposePackets
+    })
 {
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceived;
-    public event EventHandler? Disposed;
-    public virtual bool Started { get; set; }
-    public virtual bool IsNatSupported { get; set; } = true;
-    public virtual bool CanProtectSocket { get; set; } = true;
-
-    public virtual Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
+    public override bool IsAppFilterSupported => true;
+    public override bool IsNatSupported => true;
+    protected override bool IsSocketProtectedByBind  =>false;
+    protected override string AppPackageId => "VpnHood.NullAdapter";
+    protected override Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
-        Started = true;
-        _ = PacketReceived; //prevent not used warning
         return Task.CompletedTask;
     }
 
-    public virtual void Stop()
+    protected override Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
-        Started = false;    
+        return Task.CompletedTask;
     }
 
-    public virtual bool ProtectSocket(Socket socket)
+    protected override Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override Task AdapterAdd(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override void AdapterRemove()
+    {
+    }
+
+    protected override Task AdapterOpen(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override void AdapterClose()
+    {
+    }
+
+    protected override void WaitForTunWrite()
+    {
+    }
+
+    private ManualResetEventSlim? _readBlockEvent = new(false);
+
+    protected override void WaitForTunRead()
+    {
+        // wait for dispose or unblock
+        // NullVpnAdapter never returns any packets, so we need to wait for unblock
+        _readBlockEvent?.Wait();
+        _readBlockEvent?.Dispose();
+    }
+
+    protected override bool ReadPacket(byte[] buffer)
+    {
+        return false; // there is no packet
+    }
+
+    protected override bool WritePacket(IpPacket ipPacket)
     {
         return true;
     }
 
-    public virtual bool ProtectSocket(Socket socket, IPAddress ipAddress)
+    protected override void DisposeManaged()
     {
-        return true;
-    }
-
-
-    public virtual void SendPacket(IPPacket ipPacket)
-    {
-        // nothing
-    }
-
-    public virtual void SendPackets(IList<IPPacket> ipPackets)
-    {
-        // nothing
-    }
-
-    public IPAddress? GetPrimaryAdapterAddress(IPVersion ipVersion)
-    {
-            return ipVersion == IPVersion.IPv4 ? IPAddress.Loopback : IPAddress.IPv6Loopback;
-    }
-
-    public bool IsIpVersionSupported(IPVersion ipVersion)
-    {
-        return true;
-    }
-
-    private bool _disposed;
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-
-        Stop();
-        Disposed?.Invoke(this, EventArgs.Empty);
+        _readBlockEvent?.Set();
+        _readBlockEvent = null;
+        base.DisposeManaged();
     }
 }

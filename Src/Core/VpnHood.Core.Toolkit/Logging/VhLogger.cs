@@ -9,9 +9,7 @@ namespace VpnHood.Core.Toolkit.Logging;
 
 public static class VhLogger
 {
-    private static bool _isDiagnoseMode;
-
-    private static readonly VhLoggerDecorator InstanceDecorator = new ();
+    private static readonly VhLoggerDecorator InstanceDecorator = new();
 
     public static ILogger Instance {
         get => InstanceDecorator;
@@ -24,15 +22,9 @@ public static class VhLogger
     public static EventId TcpCloseEventId { get; set; } = new();
     public static bool IsAnonymousMode { get; set; } = true;
 
-    public static bool IsDiagnoseMode {
-        get => _isDiagnoseMode;
-        set {
-            _isDiagnoseMode = value;
-            EventReporter.IsDiagnosticMode = value;
-        }
-    }
+    public static LogLevel MinLogLevel { get; set; } = LogLevel.Information;
 
-    public static ILogger CreateConsoleLogger(LogLevel logLevel = LogLevel.Information, bool singleLine = false)
+    public static ILogger CreateConsoleLogger(LogLevel logLevel = LogLevel.Trace, bool singleLine = false)
     {
         // VhConsoleLoggerProvider is compatible with Blazor WebAssembly
         using var provider = new VhConsoleLoggerProvider(singleLine: singleLine, includeScopes: true);
@@ -41,7 +33,7 @@ public static class VhLogger
             builder.AddProvider(provider);
             builder.SetMinimumLevel(logLevel);
         });
-        
+
         var logger = loggerFactory.CreateLogger("");
         return logger;
     }
@@ -113,6 +105,8 @@ public static class VhLogger
 
         ipPacketText = RedactIpAddress(ipPacketText, "SourceAddress");
         ipPacketText = RedactIpAddress(ipPacketText, "DestinationAddress");
+        ipPacketText = RedactIpAddress(ipPacketText, "Src");
+        ipPacketText = RedactIpAddress(ipPacketText, "Dst");
         return ipPacketText;
     }
 
@@ -136,7 +130,6 @@ public static class VhLogger
         }
     }
 
-    // todo: check this
     public static bool IsSocketCloseException(Exception ex)
     {
         return (ex.InnerException != null && IsSocketCloseException(ex.InnerException)) ||
@@ -145,7 +138,8 @@ public static class VhLogger
                    OperationCanceledException or
                    TaskCanceledException or
                    SocketException {
-                       SocketErrorCode: SocketError.ConnectionAborted or
+                       SocketErrorCode:
+                       SocketError.ConnectionAborted or
                        SocketError.OperationAborted or
                        SocketError.ConnectionReset or
                        SocketError.ConnectionRefused or
@@ -167,7 +161,13 @@ public static class VhLogger
     {
         public ILogger Logger { get; set; } = CreateConsoleLogger();
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-            => Logger.Log(logLevel, eventId, state, exception, formatter);
+        {
+            if (MinLogLevel > logLevel)
+                return;
+
+            Logger.Log(logLevel, eventId, state, exception, formatter);
+        }
+
         public bool IsEnabled(LogLevel logLevel) => Logger.IsEnabled(logLevel);
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => Logger.BeginScope(state);
     }

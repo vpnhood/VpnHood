@@ -8,6 +8,7 @@ using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
@@ -18,19 +19,18 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test;
 
 public class TestHelper : IDisposable
 {
     private static readonly string AssemblyWorkingPath = Path.Combine(Path.GetTempPath(), "VpnHood.Test");
-
     public class TestAppUiContext : IUiContext
     {
         public bool IsActive => true;
@@ -39,36 +39,37 @@ public class TestHelper : IDisposable
     public string WorkingPath { get; } = Path.Combine(AssemblyWorkingPath, Guid.CreateVersion7().ToString());
     public TestWebServer WebServer { get; }
     public TestNetFilter NetFilter { get; }
-    public bool LogVerbose => true;
     private bool? _isIpV6Supported;
     private int _accessTokenIndex;
 
     public TestHelper()
     {
         TunnelDefaults.TcpGracefulTimeout = TimeSpan.FromSeconds(10);
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(LogLevel.Debug);
-        VhLogger.IsDiagnoseMode = true;
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(); // min level is controlled by VhLogger.MinLevel
+        VhLogger.MinLogLevel = LogLevel.Debug;
         VhLogger.IsAnonymousMode = false;
         WebServer = TestWebServer.Create();
         NetFilter = new TestNetFilter();
-        NetFilter.Init([
-            Tuple.Create(ProtocolType.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
-            Tuple.Create(ProtocolType.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
-            Tuple.Create(ProtocolType.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
-            Tuple.Create(ProtocolType.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
-            Tuple.Create(ProtocolType.Tcp, TestConstants.TcpRefusedEndPoint, WebServer.HttpsV4RefusedEndPoint1),
-            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
-            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
-            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
-            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
-            Tuple.Create(ProtocolType.Icmp, new IPEndPoint(TestConstants.PingV4Address1, 0),
+        NetFilter.Init([TestConstants.BlockedIp], 
+        [
+            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
+            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
+            Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
+            Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
+            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpRefusedEndPoint, WebServer.HttpsV4RefusedEndPoint1),
+            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
+            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
+            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
+            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
+            Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address1, 0),
                 IPEndPoint.Parse("127.0.0.1:0")),
-            Tuple.Create(ProtocolType.Icmp, new IPEndPoint(TestConstants.PingV4Address2, 0),
+            Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address2, 0),
                 IPEndPoint.Parse("127.0.0.2:0")),
-            Tuple.Create(ProtocolType.IcmpV6, new IPEndPoint(TestConstants.PingV6Address1, 0),
+            Tuple.Create(IpProtocol.IcmpV6, new IPEndPoint(TestConstants.PingV6Address1, 0),
                 IPEndPoint.Parse("[::1]:0"))
         ]);
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
+        VhJobOptions.DefaultPeriod = TimeSpan.FromMilliseconds(1000);
         JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
         JobSection.DefaultInterval = TimeSpan.FromMilliseconds(200);
     }
@@ -82,7 +83,7 @@ public class TestHelper : IDisposable
     private static Task<PingReply> SendPing(Ping? ping = null, IPAddress? ipAddress = null,
         int? timeout = null)
     {
-        timeout ??= TestConstants.DefaultTimeout;
+        timeout ??= TestConstants.DefaultPingTimeout;
 
         using var pingT = new Ping();
         ping ??= pingT;
@@ -103,13 +104,13 @@ public class TestHelper : IDisposable
 
     private async Task<bool> SendHttpGet(HttpClient httpClient, Uri uri, int? timeout)
     {
-        timeout ??= TestConstants.DefaultTimeout;
+        timeout ??= TestConstants.DefaultHttpTimeout;
         var cancellationTokenSource = new CancellationTokenSource(timeout.Value);
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
 
         // fix TLS host; it may map by NetFilter.ProcessRequest
         if (IPEndPoint.TryParse(requestMessage.RequestUri!.Authority, out var ipEndPoint))
-            requestMessage.Headers.Host = NetFilter.ProcessRequest(ProtocolType.Tcp, ipEndPoint)!.Address.ToString();
+            requestMessage.Headers.Host = NetFilter.ProcessRequest(IpProtocol.Tcp, ipEndPoint)!.Address.ToString();
 
         var response = await httpClient.SendAsync(requestMessage, cancellationTokenSource.Token);
         var res = await response.Content.ReadAsStringAsync(cancellationTokenSource.Token);
@@ -134,37 +135,44 @@ public class TestHelper : IDisposable
 
     public Task Test_Udp(int? timeout = null)
     {
-        timeout ??= TestConstants.DefaultTimeout;
-        return Test_Udp(TestConstants.UdpV4EndPoint1, timeout.Value);
+        return Test_Udp(TestConstants.UdpV4EndPoint1, timeout);
     }
 
     public async Task Test_Udp(IPEndPoint udpEndPoint, int? timeout = null)
     {
-        timeout ??= TestConstants.DefaultTimeout;
-
-        if (udpEndPoint.AddressFamily == AddressFamily.InterNetwork) {
+        if (udpEndPoint.IsV4()) {
             using var udpClientIpV4 = new UdpClient(AddressFamily.InterNetwork);
-            await Test_Udp(udpClientIpV4, udpEndPoint, timeout.Value);
+            await Test_Udp(udpClientIpV4, udpEndPoint, timeout);
         }
 
-        else if (udpEndPoint.AddressFamily == AddressFamily.InterNetworkV6) {
+        else if (udpEndPoint.IsV6()) {
             using var udpClientIpV6 = new UdpClient(AddressFamily.InterNetworkV6);
-            await Test_Udp(udpClientIpV6, udpEndPoint, timeout.Value);
+            await Test_Udp(udpClientIpV6, udpEndPoint, timeout);
         }
     }
 
     public async Task Test_Udp(UdpClient udpClient, IPEndPoint udpEndPoint, int? timeout = null)
     {
-        timeout ??= TestConstants.DefaultTimeout;
+        timeout ??= TestConstants.DefaultUdpTimeout;
 
         var buffer = new byte[1024];
         new Random().NextBytes(buffer);
+
         var sentBytes = await udpClient.SendAsync(buffer, udpEndPoint, new CancellationTokenSource(timeout.Value).Token);
         Assert.AreEqual(buffer.Length, sentBytes);
 
-        var res = await udpClient.ReceiveAsync(new CancellationTokenSource(timeout.Value).Token);
+        using var cts = new CancellationTokenSource(timeout.Value);
+        var res = await udpClient.ReceiveAsync(cts.Token);
         CollectionAssert.AreEquivalent(buffer, res.Buffer);
     }
+
+    public async Task Test_UdpByDNS(IPEndPoint udpEndPoint, int? timeout = null)
+    {
+        timeout ??= TestConstants.DefaultUdpTimeout;
+        var result = await DnsResolver.GetHostEntry("www.google.com", udpEndPoint, timeout.Value, CancellationToken.None);
+        Assert.IsTrue(result.AddressList.Length > 0);
+    }
+
 
     public async Task<bool> Test_Https(Uri? uri = null,
         int? timeout = null, bool throwError = true)
@@ -197,10 +205,11 @@ public class TestHelper : IDisposable
                 TestConstants.TcpEndPoint2.Address,
                 TestConstants.HttpsEndPoint1.Address,
                 TestConstants.HttpsEndPoint1.Address,
-                TestConstants.InvalidIp,
                 TestConstants.UdpV4EndPoint1.Address,
                 TestConstants.UdpV4EndPoint2.Address,
-                ClientOptions.Default.TcpProxyCatcherAddressIpV4
+                ClientOptions.Default.TcpProxyCatcherAddressIpV4,
+                TestConstants.InvalidIp,
+                TestConstants.BlockedIp
             };
             addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsUri1.Host));
             addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsUri2.Host));
@@ -394,12 +403,39 @@ public class TestHelper : IDisposable
 
     public TestDevice CreateNullDevice(ITracker? tracker = null)
     {
-        return new TestDevice(this, _ => new NullVpnAdapter());
+        return new TestDevice(this, _ => new TestNullVpnAdapter());
+    }
+
+    public UdpProxyPoolOptions CreateUdpProxyPoolOptions(IPacketProxyCallbacks callbacks)
+    {
+        var proxyPool = new UdpProxyPoolOptions {
+            PacketProxyCallbacks = callbacks,
+            SocketFactory = new TestSocketFactory(),
+            AutoDisposePackets = false,
+            UdpTimeout = TunnelDefaults.UdpTimeout,
+            MaxClientCount = 10,
+            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
+            SendBufferSize = TunnelDefaults.ClientUdpSendBufferSize,
+            ReceiveBufferSize = TunnelDefaults.ClientUdpReceiveBufferSize,
+            LogScope = null
+        };
+
+        return proxyPool;
+    }
+
+    public TunnelOptions CreateTunnelOptions()
+    {
+        var tunnelOptions = new TunnelOptions {
+            AutoDisposePackets = true,
+            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
+            MaxPacketChannelCount = TunnelDefaults.MaxPacketChannelCount
+        };
+        return tunnelOptions;
     }
 
 
 
-    public ClientOptions CreateClientOptions(Token token, bool useUdpChannel = false, string? clientId = null)
+    public ClientOptions CreateClientOptions(Token? token = null, bool useUdpChannel = false, string? clientId = null)
     {
         return new ClientOptions {
             AppName = "VpnHoodTester",
@@ -407,12 +443,12 @@ public class TestHelper : IDisposable
             ClientId = clientId ?? Guid.NewGuid().ToString(),
             AllowAnonymousTracker = true,
             AllowEndPointTracker = true,
-            MaxDatagramChannelCount = 1,
+            MaxPacketChannelCount = 1,
             UseUdpChannel = useUdpChannel,
             VpnAdapterIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToArray(),
             IncludeLocalNetwork = true,
             ConnectTimeout = TimeSpan.FromSeconds(3),
-            AccessKey = token.ToAccessKey()
+            AccessKey = token?.ToAccessKey() ?? "" // set it later
         };
     }
 

@@ -40,11 +40,12 @@ public static class AppDtoConverterExtensions
             ConnectorStat = sessionStatus.ConnectorStat.ToAppDto(),
             Speed = sessionStatus.Speed,
             SessionTraffic = sessionStatus.SessionTraffic,
+            SessionSplitTraffic = sessionStatus.SessionSplitTraffic,
             CycleTraffic = sessionStatus.CycleTraffic,
             TotalTraffic = sessionStatus.TotalTraffic,
             TcpTunnelledCount = sessionStatus.TcpTunnelledCount,
             TcpPassthruCount = sessionStatus.TcpPassthruCount,
-            DatagramChannelCount = sessionStatus.DatagramChannelCount,
+            PacketChannelCount = sessionStatus.PacketChannelCount,
             IsUdpMode = sessionStatus.IsUdpMode,
             IsWaitingForAd = sessionStatus.AdRequest != null,
             CanExtendByRewardedAd = sessionStatus.CanExtendByRewardedAd,
@@ -59,8 +60,7 @@ public static class AppDtoConverterExtensions
         apiError = (ApiError)apiError.Clone();
 
         // remove sensitive info like access key 
-        if (apiError.Data.ContainsKey(nameof(SessionResponse)))
-            apiError.Data.Remove(nameof(SessionResponse));
+        apiError.Data.Remove(nameof(SessionResponse));
 
         return apiError;
     }

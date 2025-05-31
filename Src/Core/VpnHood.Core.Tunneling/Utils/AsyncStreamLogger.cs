@@ -12,17 +12,17 @@ public class AsyncStreamTracker(Stream sourceStream, bool leaveOpen)
 {
     public string LogPrefix { get; set; } = "";
 
-    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        if (VhLogger.IsDiagnoseMode)
-            VhLogger.Instance.LogTrace(LogPrefix + "Reading count. " + count);
-        return base.ReadAsync(buffer, offset, count, cancellationToken);
+        if (VhLogger.MinLogLevel == LogLevel.Trace)
+            VhLogger.Instance.LogTrace(LogPrefix + "Reading count. " + buffer.Length);
+        return base.ReadAsync(buffer, cancellationToken);
     }
 
-    public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        if (VhLogger.IsDiagnoseMode)
-            VhLogger.Instance.LogTrace(LogPrefix + "writing count. " + count);
-        return base.WriteAsync(buffer, offset, count, cancellationToken);
+        if (VhLogger.MinLogLevel == LogLevel.Trace)
+            VhLogger.Instance.LogTrace(LogPrefix + "writing count. " + buffer.Length);
+        return base.WriteAsync(buffer, cancellationToken);
     }
 }

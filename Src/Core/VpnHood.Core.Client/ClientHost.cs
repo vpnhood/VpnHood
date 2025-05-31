@@ -1,31 +1,31 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.ClientStreams;
+using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Core.Client;
 
 internal class ClientHost(
     VpnHoodClient vpnHoodClient,
+    Tunnel tunnel,
     IPAddress catcherAddressIpV4,
     IPAddress catcherAddressIpV6)
-    : IAsyncDisposable
+    : IDisposable
 {
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly List<IPPacket> _ipPackets = [];
     private TcpListener? _tcpListenerIpV4;
     private TcpListener? _tcpListenerIpV6;
     private IPEndPoint? _localEndpointIpV4;
@@ -39,6 +39,7 @@ internal class ClientHost(
     public IPAddress CatcherAddressIpV6 { get; } = catcherAddressIpV6;
     public bool IsPassthruInProcessPacketsEnabled => _passthruInProcessPacketsCounter > 0;
     public IClientHostStat Stat => _stat;
+    public event EventHandler<IpPacket>? PacketReceived;
 
     public void EnablePassthruInProcessPackets(bool value)
     {
@@ -47,13 +48,14 @@ internal class ClientHost(
         else
             Interlocked.Decrement(ref _passthruInProcessPacketsCounter);
     }
-    public bool IsOwnPacket(IPPacket ipPacket)
+
+    public bool IsOwnPacket(IpPacket ipPacket)
     {
-        if (ipPacket.Protocol != ProtocolType.Tcp)
+        if (ipPacket.Protocol != IpProtocol.Tcp)
             return false;
 
-        return ipPacket.DestinationAddress.Equals(CatcherAddressIpV4) ||
-               ipPacket.DestinationAddress.Equals(CatcherAddressIpV6);
+        return CatcherAddressIpV4.SpanEquals(ipPacket.DestinationAddressSpan) ||
+               CatcherAddressIpV6.SpanEquals(ipPacket.DestinationAddressSpan);
     }
 
     public void Start()
@@ -66,8 +68,7 @@ internal class ClientHost(
         _tcpListenerIpV4 = new TcpListener(IPAddress.Any, 0);
         _tcpListenerIpV4.Start();
         _localEndpointIpV4 = (IPEndPoint)_tcpListenerIpV4.LocalEndpoint; //it is slow; make sure to cache it
-        VhLogger.Instance.LogInformation(
-            $"{VhLogger.FormatType(this)} is listening on {VhLogger.Format(_localEndpointIpV4)}");
+        VhLogger.Instance.LogInformation("ClientHost is listening. EndPoint: {EndPoint}", VhLogger.Format(_localEndpointIpV4));
         _ = AcceptTcpClientLoop(_tcpListenerIpV4);
 
         // IpV6
@@ -75,13 +76,12 @@ internal class ClientHost(
             _tcpListenerIpV6 = new TcpListener(IPAddress.IPv6Any, 0);
             _tcpListenerIpV6.Start();
             _localEndpointIpV6 = (IPEndPoint)_tcpListenerIpV6.LocalEndpoint; //it is slow; make sure to cache it
-            VhLogger.Instance.LogInformation(
-                $"{VhLogger.FormatType(this)} is listening on {VhLogger.Format(_localEndpointIpV6)}");
+            VhLogger.Instance.LogInformation("ClientHost is listening. EndPoint: {EndPoint}", VhLogger.Format(_localEndpointIpV6));
             _ = AcceptTcpClientLoop(_tcpListenerIpV6);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex,
-                $"Could not create listener on {VhLogger.Format(new IPEndPoint(IPAddress.IPv6Any, 0))}!");
+                "Could not create a listener. EndPoint: {EndPoint}", VhLogger.Format(new IPEndPoint(IPAddress.IPv6Any, 0)));
         }
     }
 
@@ -106,87 +106,71 @@ internal class ClientHost(
     }
 
     // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
-    // Warning: the return array is shared and will be invalid with next call
-    public IList<IPPacket> ProcessOutgoingPacket(IList<IPPacket> ipPackets)
+    public void ProcessOutgoingPacket(IpPacket ipPacket)
     {
+        // ignore new packets 
+        if (_disposed)
+            throw new ObjectDisposedException(GetType().Name);
+        
+        PacketLogger.LogPacket(ipPacket, "Processing a ClientHost packet...");
+
+        // check packet type
         if (_localEndpointIpV4 == null)
             throw new InvalidOperationException(
                 $"{nameof(_localEndpointIpV4)} has not been initialized! Did you call {nameof(Start)}!");
 
-        _ipPackets.Clear(); // prevent reallocation in this intensive method
-        var ret = _ipPackets;
+        var catcherAddress = ipPacket.Version == IpVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
+        var localEndPoint = ipPacket.Version == IpVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
 
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++) {
-            var ipPacket = ipPackets[i];
-            var catcherAddress = ipPacket.Version == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
-            var localEndPoint = ipPacket.Version == IPVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
-            TcpPacket? tcpPacket = null;
+        try {
+            var tcpPacket = ipPacket.ExtractTcp();
 
-            try {
-                tcpPacket = ipPacket.ExtractTcp();
+            // check local endpoint
+            if (localEndPoint == null)
+                throw new Exception("There is no localEndPoint registered for this packet.");
 
-                // check local endpoint
-                if (localEndPoint == null)
-                    throw new Exception("There is no localEndPoint registered for this packet.");
+            // redirect to inbound
+            if (catcherAddress.SpanEquals(ipPacket.DestinationAddressSpan)) {
+                var natItem = (NatItemEx?)_nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
+                              ?? throw new NatEndpointNotFoundException("Could not find incoming tcp destination in NAT.");
 
-                // ignore new packets 
-                if (_disposed)
-                    throw new ObjectDisposedException(GetType().Name);
-
-                // redirect to inbound
-                if (Equals(ipPacket.DestinationAddress, catcherAddress)) {
-                    var natItem = (NatItemEx?)_nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
-                                  ?? throw new Exception("Could not find incoming tcp destination in NAT.");
-
-                    ipPacket.SourceAddress = natItem.DestinationAddress;
-                    ipPacket.DestinationAddress = natItem.SourceAddress;
-                    tcpPacket.SourcePort = natItem.DestinationPort;
-                    tcpPacket.DestinationPort = natItem.SourcePort;
-                }
-
-                // Redirect outbound to the local address
-                else {
-                    var syncCustomData = ProcessOutgoingSyncPacket(ipPacket, tcpPacket);
-
-                    // add to nat if it is sync packet
-                    var natItem = syncCustomData != null
-                        ? _nat.Add(ipPacket, true)
-                        : _nat.Get(ipPacket) ??
-                          throw new Exception("Could not find outgoing tcp destination in NAT.");
-
-                    // set customData
-                    if (syncCustomData != null)
-                        natItem.CustomData = syncCustomData;
-
-                    tcpPacket.SourcePort = natItem.NatId; // 1
-                    ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
-                    ipPacket.SourceAddress = catcherAddress; //3
-                    tcpPacket.DestinationPort = (ushort)localEndPoint.Port; //4
-                }
-
-                ipPacket.UpdateAllChecksums();
-                ret.Add(ipPacket);
+                ipPacket.SourceAddress = natItem.DestinationAddress;
+                ipPacket.DestinationAddress = natItem.SourceAddress;
+                tcpPacket.SourcePort = natItem.DestinationPort;
+                tcpPacket.DestinationPort = natItem.SourcePort;
             }
-            catch (Exception ex) {
-                if (tcpPacket != null) {
-                    ret.Add(PacketBuilder.BuildTcpResetReply(ipPacket, true));
-                    PacketLogger.LogPacket(ipPacket,
-                        "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.",
-                        LogLevel.Debug, ex);
-                }
-                else {
-                    PacketLogger.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet.",
-                        LogLevel.Error, ex);
-                }
+
+            // Redirect outbound to the local address
+            else {
+                var syncCustomData = ProcessOutgoingSyncPacket(ipPacket, tcpPacket);
+
+                // add to nat if it is sync packet
+                var natItem = syncCustomData != null
+                    ? _nat.Add(ipPacket, true)
+                    : _nat.Get(ipPacket) ??
+                      throw new NatEndpointNotFoundException("Could not find outgoing tcp destination in NAT.");
+
+                // set customData
+                if (syncCustomData != null)
+                    natItem.CustomData = syncCustomData;
+
+                tcpPacket.SourcePort = natItem.NatId; // 1
+                ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
+                ipPacket.SourceAddress = catcherAddress; //3
+                tcpPacket.DestinationPort = (ushort)localEndPoint.Port; //4
             }
+
+            ipPacket.UpdateAllChecksums();
+            PacketReceived?.Invoke(this, ipPacket);
         }
-
-        //it is a shared buffer; to ToArray is necessary
-        return ret; 
+        catch (NatEndpointNotFoundException ex) when (ipPacket.Protocol == IpProtocol.Tcp) {
+            var resultPacket = PacketBuilder.BuildTcpResetReply(ipPacket);
+            PacketReceived?.Invoke(this, resultPacket);
+            throw new PacketDropException("Packet dropped and TCP reset sent.", ex);
+        }
     }
 
-    private SyncCustomData? ProcessOutgoingSyncPacket(IPPacket ipPacket, TcpPacket tcpPacket)
+    private SyncCustomData? ProcessOutgoingSyncPacket(IpPacket ipPacket, TcpPacket tcpPacket)
     {
         var sync = tcpPacket is { Synchronize: true, Acknowledgment: false };
         if (!sync)
@@ -196,7 +180,7 @@ internal class ClientHost(
             IsInIpRange = vpnHoodClient.IsInIpRange(ipPacket.DestinationAddress)
         };
 
-        if (ipPacket.Version == IPVersion.IPv6)
+        if (ipPacket.Version == IpVersion.IPv6)
             ProcessOutgoingSyncIpV6Packet(syncCustomData);
 
         return syncCustomData;
@@ -219,8 +203,8 @@ internal class ClientHost(
     {
         if (orgTcpClient is null) throw new ArgumentNullException(nameof(orgTcpClient));
         ConnectorRequestResult<SessionResponse>? requestResult = null;
-        StreamProxyChannel? channel = null;
-        var ipVersion = IPVersion.IPv4;
+        ProxyChannel? channel = null;
+        var ipVersion = IpVersion.IPv4;
 
         try {
             // check cancellation
@@ -233,11 +217,11 @@ internal class ClientHost(
             // get original remote from NAT
             var orgRemoteEndPoint = (IPEndPoint)orgTcpClient.Client.RemoteEndPoint;
             ipVersion = orgRemoteEndPoint.AddressFamily == AddressFamily.InterNetwork
-                ? IPVersion.IPv4
-                : IPVersion.IPv6;
+                ? IpVersion.IPv4
+                : IpVersion.IPv6;
 
             var natItem =
-                (NatItemEx?)_nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port) ??
+                (NatItemEx?)_nat.Resolve(ipVersion, IpProtocol.Tcp, (ushort)orgRemoteEndPoint.Port) ??
                 throw new Exception(
                     $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
 
@@ -246,10 +230,10 @@ internal class ClientHost(
             // create a scope for the logger
             using var scope = VhLogger.Instance.BeginScope("LocalPort: {LocalPort}, RemoteEp: {RemoteEp}",
                 natItem.SourcePort, VhLogger.Format(natItem.DestinationAddress) + ":" + natItem.DestinationPort);
-            VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel, "New TcpProxy Request.");
+            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "New TcpProxy Request.");
 
             // check invalid income
-            var catcherAddress = ipVersion == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
+            var catcherAddress = ipVersion == IpVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
             if (!Equals(orgRemoteEndPoint.Address, catcherAddress))
                 throw new Exception("TcpProxy rejected an outbound connection!");
 
@@ -270,9 +254,9 @@ internal class ClientHost(
             var isInIpRange = syncCustomData?.IsInIpRange ?? vpnHoodClient.IsInIpRange(natItem.DestinationAddress);
             if (filterResult.Action == DomainFilterAction.Exclude ||
                 (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
-                var channelId = Guid.NewGuid() + ":client";
+                var channelId = UniqueIdFactory.Create() + ":client:passthrough";
                 await vpnHoodClient.AddPassthruTcpStream(
-                        new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
+                        new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId + ":tunnel"),
                         new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
                         channelId, filterResult.ReadData, cancellationToken)
                     .VhConfigureAwait();
@@ -283,7 +267,7 @@ internal class ClientHost(
 
             // Create the Request
             var request = new StreamProxyChannelRequest {
-                RequestId = Guid.NewGuid() + ":client",
+                RequestId = UniqueIdFactory.Create(),
                 SessionId = vpnHoodClient.SessionId,
                 SessionKey = vpnHoodClient.SessionKey,
                 DestinationEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort)
@@ -294,30 +278,30 @@ internal class ClientHost(
                 .VhConfigureAwait();
             var proxyClientStream = requestResult.ClientStream;
 
-            // create a StreamProxyChannel
-            VhLogger.Instance.LogDebug(GeneralEventId.StreamProxyChannel,
+            // create a ProxyChannel
+            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
             var orgTcpClientStream =
-                new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
+                new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), proxyClientStream.ClientStreamId.Replace(":tunnel", ":app"));
 
             // flush initBuffer
             await proxyClientStream.Stream.WriteAsync(filterResult.ReadData, cancellationToken);
 
             // add stream proxy
-            channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
-            vpnHoodClient.Tunnel.AddChannel(channel);
+            channel = new ProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
+            tunnel.AddChannel(channel);
             _stat.TcpTunnelledCount++;
         }
         catch (Exception ex) {
             // disable IPv6 if detect the new network does not have IpV6
-            if (ipVersion == IPVersion.IPv6 &&
+            if (ipVersion == IpVersion.IPv6 &&
                 ex is SocketException { SocketErrorCode: SocketError.NetworkUnreachable })
                 vpnHoodClient.IsIpV6SupportedByClient = false;
 
-            if (channel != null) await channel.DisposeAsync().VhConfigureAwait();
-            if (requestResult != null) await requestResult.DisposeAsync().VhConfigureAwait();
+            channel?.Dispose();
+            requestResult?.Dispose();
             orgTcpClient.Dispose();
-            VhLogger.LogError(GeneralEventId.StreamProxyChannel, ex, "");
+            VhLogger.LogError(GeneralEventId.ProxyChannel, ex, "");
         }
         finally {
             Interlocked.Decrement(ref _processingCount);
@@ -325,15 +309,18 @@ internal class ClientHost(
     }
 
 
-    public ValueTask DisposeAsync()
+    public void Dispose()
     {
-        if (_disposed) return default;
-        _disposed = true;
+        if (_disposed)
+            return;
+
         _cancellationTokenSource.Cancel();
         _tcpListenerIpV4?.Stop();
         _tcpListenerIpV6?.Stop();
         _nat.Dispose();
-        return default;
+        PacketReceived = null;
+
+        _disposed = true;
     }
 
     private class ClientHostStat : IClientHostStat
@@ -346,5 +333,5 @@ internal class ClientHost(
     {
         public required bool IsInIpRange { get; init; }
     }
-   
+
 }

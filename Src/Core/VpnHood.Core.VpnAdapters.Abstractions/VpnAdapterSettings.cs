@@ -1,11 +1,12 @@
-﻿namespace VpnHood.Core.VpnAdapters.Abstractions;
+﻿using VpnHood.Core.PacketTransports;
 
-public class VpnAdapterSettings
+namespace VpnHood.Core.VpnAdapters.Abstractions;
+
+public class VpnAdapterSettings : PacketTransportOptions
 {
     public required string AdapterName { get; init; }
-    public int MaxPacketCount { get; init; } = 255;
     public TimeSpan MaxPacketSendDelay { get; init; } = TimeSpan.FromMilliseconds(500);
-    public int MaxAutoRestartCount { get; init; }
+    public bool AutoRestart { get; init; }
     
     /// <summary>
     /// Automatically adjusts route metrics by splitting routes when all routes are included.

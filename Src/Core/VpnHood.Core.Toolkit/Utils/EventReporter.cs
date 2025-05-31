@@ -9,7 +9,6 @@ public class EventReporter : IDisposable, IJob
     private readonly object _lockObject = new();
     private readonly string _message;
     private readonly EventId _eventId;
-    private readonly ILogger _logger;
     private bool _disposed;
 
     public JobSection JobSection { get; } = new(TimeSpan.FromSeconds(10));
@@ -17,15 +16,12 @@ public class EventReporter : IDisposable, IJob
     public int LastReportEventCount { get; private set; }
     public DateTime LastReportEventTime { get; private set; } = FastDateTime.Now;
     public LogScope LogScope { get; set; }
-    public static bool IsDiagnosticMode { get; set; }
 
-    public EventReporter(ILogger logger, string message, EventId eventId = new(), LogScope? logScope = null)
+    public EventReporter(string message, EventId eventId = new(), LogScope? logScope = null)
     {
-        _logger = logger;
         _message = message;
         _eventId = eventId;
         LogScope = logScope ?? new LogScope();
-
 
         JobRunner.Default.Add(this);
     }
@@ -37,7 +33,8 @@ public class EventReporter : IDisposable, IJob
         lock (_lockObject)
             TotalEventCount++;
 
-        if (IsDiagnosticMode || TotalEventCount == 1 || FastDateTime.Now - LastReportEventTime > JobSection.Interval)
+        if (VhLogger.MinLogLevel <= LogLevel.Debug || 
+            TotalEventCount == 1 || FastDateTime.Now - LastReportEventTime > JobSection.Interval)
             ReportInternal();
     }
 
@@ -67,7 +64,7 @@ public class EventReporter : IDisposable, IJob
             args = args.Concat(LogScope.Data).ToArray();
 
         var log = _message + " " + string.Join(", ", args.Select(x => $"{x.Item1}: {{{x.Item1}}}"));
-        _logger.LogInformation(_eventId, log, args.Select(x => x.Item2).ToArray());
+        VhLogger.Instance.LogInformation(_eventId, log, args.Select(x => x.Item2).ToArray());
     }
 
     public Task RunJob()
@@ -80,9 +77,12 @@ public class EventReporter : IDisposable, IJob
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (_disposed) 
+            return;
 
         ReportInternal();
+        JobRunner.Default.Remove(this);
+
+        _disposed = true;
     }
 }

@@ -1,98 +1,56 @@
-﻿using System.Text;
+﻿using System.Buffers.Binary;
+using System.Text;
 using System.Text.Json;
 
 namespace VpnHood.Core.Toolkit.Utils;
 
 public static class StreamUtils
 {
-    public static byte[]? ReadExact(Stream stream, int count)
-    {
-        var buffer = new byte[count];
-        return ReadExact(stream, buffer, 0, buffer.Length) ? buffer : null;
-    }
-
-    public static async Task<byte[]?> ReadExactAsync(Stream stream, int count,
-        CancellationToken cancellationToken)
-    {
-        var buffer = new byte[count];
-        if (!await ReadExactAsync(stream, buffer, 0, buffer.Length, cancellationToken).VhConfigureAwait())
-            return null;
-        return buffer;
-    }
-
-    public static bool ReadExact(Stream stream, byte[] buffer, int startIndex, int count)
-    {
-        var totalRead = 0;
-        while (totalRead != count) {
-            var read = stream.Read(buffer, startIndex + totalRead, count - totalRead);
-            totalRead += read;
-            if (read == 0)
-                return false;
-        }
-
-        return true;
-    }
-
-    public static async Task<bool> ReadExactAsync(Stream stream, byte[] buffer, int startIndex, int count,
-        CancellationToken cancellationToken)
-    {
-        var totalRead = 0;
-        while (totalRead != count) {
-            var read = await stream.ReadAsync(buffer, startIndex + totalRead, count - totalRead,
-                cancellationToken).VhConfigureAwait();
-            totalRead += read;
-            if (read == 0)
-                return false;
-        }
-
-        return true;
-    }
-
     public static T ReadObject<T>(Stream stream, int maxLength = 0xFFFF)
     {
         // read length
-        var buffer = ReadExact(stream, 4) ?? throw new Exception($"Could not read {typeof(T).Name}");
+        Span<byte> lengthBuffer = stackalloc byte[4];
+        stream.ReadExact(lengthBuffer);
 
         // check json size
-        var jsonSize = BitConverter.ToInt32(buffer);
+        var jsonSize = BinaryPrimitives.ReadInt32LittleEndian(lengthBuffer);
         if (jsonSize == 0)
             throw new Exception("json length is zero!");
+
         if (jsonSize > maxLength)
             throw new FormatException(
                 $"json length is too big! It should be less than {maxLength} bytes but it was {jsonSize} bytes");
 
         // read json body...
-        buffer = ReadExact(stream, jsonSize);
-        if (buffer == null)
-            throw new Exception("Could not read Message Length!");
+        var buffer = new byte[jsonSize].AsMemory();
+        stream.ReadExact(buffer.Span);
 
         // serialize the request
-        var json = Encoding.UTF8.GetString(buffer);
-        var ret = JsonSerializer.Deserialize<T>(json) ?? throw new Exception("Could not read Message!");
+        var ret = JsonSerializer.Deserialize<T>(buffer.Span) ?? throw new Exception("Could not read Message!");
         return ret;
     }
 
     public static async Task<T> ReadObjectAsync<T>(Stream stream, CancellationToken cancellationToken,
         int maxLength = 0xFFFF)
     {
-        var message = await ReadMessage(stream, cancellationToken, maxLength).VhConfigureAwait();
+        var message = await ReadMessageAsync(stream, cancellationToken, maxLength).VhConfigureAwait();
         var ret = JsonSerializer.Deserialize<T>(message) ?? throw new Exception("Could not read Message!");
         return ret;
     }
 
-    public static async Task<string> ReadMessage(Stream stream, CancellationToken cancellationToken,
+    public static async Task<string> ReadMessageAsync(Stream stream, CancellationToken cancellationToken,
         int maxLength = 0xFFFF)
     {
         // read length
-        var buffer = await ReadExactAsync(stream, 4, cancellationToken).VhConfigureAwait()
-                     ?? throw new Exception("Could not read message.");
-
+        var lengthBuffer = new byte[4].AsMemory();
+        await stream.ReadExactAsync(lengthBuffer, cancellationToken);
+        
         // check unauthorized exception
-        if (Encoding.UTF8.GetString(buffer) == "HTTP") //: HTTP/1.1 401
-            throw new UnauthorizedAccessException();
+        if (lengthBuffer.Span.SequenceEqual("HTTP"u8))
+            throw new UnauthorizedAccessException("Stream returned an HTTP response.");
 
         // check json size
-        var messageSize = BitConverter.ToInt32(buffer);
+        var messageSize = BinaryPrimitives.ReadInt32LittleEndian(lengthBuffer.Span);
         if (messageSize == 0)
             throw new Exception("json length is zero!");
 
@@ -101,27 +59,26 @@ public static class StreamUtils
                 $"json length is too big! It should be less than {maxLength} bytes but it was {messageSize} bytes");
 
         // read json body...
-        buffer = await ReadExactAsync(stream, messageSize, cancellationToken).VhConfigureAwait();
-        if (buffer == null)
-            throw new Exception("Could not read Message Length!");
+        var buffer = new byte[messageSize].AsMemory();
+        await stream.ReadExactAsync(buffer, cancellationToken).VhConfigureAwait();
 
         // serialize the request
-        var message = Encoding.UTF8.GetString(buffer);
+        var message = Encoding.UTF8.GetString(buffer.Span);
         return message;
     }
 
-    private static byte[] ObjectToJsonBuffer(object obj)
+    private static Memory<byte> ObjectToJsonBuffer(object obj)
     {
         var jsonBuffer = JsonSerializer.SerializeToUtf8Bytes(obj);
-        var buffer = new byte[4 + jsonBuffer.Length];
-        Buffer.BlockCopy(BitConverter.GetBytes(jsonBuffer.Length), 0, buffer, 0, 4);
-        Buffer.BlockCopy(jsonBuffer, 0, buffer, 4, jsonBuffer.Length);
+        Memory<byte> buffer = new byte[4 + jsonBuffer.Length];
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Span[..4], jsonBuffer.Length);
+        jsonBuffer.CopyTo(buffer[4..]);
         return buffer;
     }
 
     public static void WriteObject(Stream stream, object obj)
     {
-        stream.Write(ObjectToJsonBuffer(obj));
+        stream.Write(ObjectToJsonBuffer(obj).Span);
     }
 
     public static ValueTask WriteObjectAsync(Stream stream, object obj, CancellationToken cancellationToken)

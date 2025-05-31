@@ -1,23 +1,20 @@
 ﻿using System.Net;
-using PacketDotNet;
 using System.Net.Sockets;
 using VpnHood.Core.Packets;
+using VpnHood.Core.PacketTransports;
 
 namespace VpnHood.Core.VpnAdapters.Abstractions;
 
-public interface IVpnAdapter : IDisposable
+public interface IVpnAdapter : IPacketTransport
 {
-    event EventHandler<PacketReceivedEventArgs> PacketReceived;
     event EventHandler? Disposed;
-    bool Started { get; }
+    bool IsStarted { get; }
     bool IsNatSupported { get; }
     bool CanProtectSocket { get; }
     bool ProtectSocket(Socket socket);
     bool ProtectSocket(Socket socket, IPAddress ipAddress);
     Task Start(VpnAdapterOptions options, CancellationToken cancellationToken);
     void Stop();
-    void SendPacket(IPPacket ipPacket);
-    void SendPackets(IList<IPPacket> ipPackets);
-    IPAddress? GetPrimaryAdapterAddress(IPVersion ipVersion);
-    bool IsIpVersionSupported(IPVersion ipVersion);
+    IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion);
+    bool IsIpVersionSupported(IpVersion ipVersion);
 }

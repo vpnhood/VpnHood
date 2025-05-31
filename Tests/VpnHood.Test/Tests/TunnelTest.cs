@@ -1,15 +1,17 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PacketDotNet;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
+using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Test.Packets;
 
 namespace VpnHood.Test.Tests;
 
@@ -17,29 +19,71 @@ namespace VpnHood.Test.Tests;
 [SuppressMessage("ReSharper", "DisposeOnUsingVariable")]
 public class TunnelTest : TestBase
 {
-    private class ServerUdpChannelTransmitterTest(UdpClient udpClient, byte[] serverKey, UdpChannel udpChannel)
+    private class ServerUdpChannelTransmitterTest(UdpClient udpClient, byte[] serverKey)
         : UdpChannelTransmitter(udpClient, serverKey)
     {
-        protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint, long channelCryptorPosition,
-            byte[] buffer, int bufferIndex)
+        public UdpChannel? UdpChannel { get; set; }
+
+        protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint,
+            Memory<byte> buffer, long channelCryptorPosition)
         {
-            udpChannel.SetRemote(this, remoteEndPoint);
-            udpChannel.OnReceiveData(channelCryptorPosition, buffer, bufferIndex);
+            if (UdpChannel != null) {
+                UdpChannel.RemoteEndPoint = remoteEndPoint;
+                UdpChannel.OnDataReceived(buffer, channelCryptorPosition);
+            }
         }
+    }
+
+    private static UdpChannel CreateClientUdpChannel(IPEndPoint serverEndPoint, byte[] serverKey,
+        uint sessionId, byte[] sessionKey)
+    {
+        var clientUdpChannel = ClientUdpChannelFactory.Create(new ClientUdpChannelOptions {
+            SessionId = sessionId,
+            SessionKey = sessionKey,
+            AutoDisposePackets = true,
+            Blocking = false,
+            ProtocolVersion = 4,
+            RemoteEndPoint = serverEndPoint,
+            Lifespan = null,
+            ChannelId = Guid.CreateVersion7().ToString(),
+            SocketFactory = new SocketFactory(),
+            ServerKey = serverKey,
+            UdpReceiveBufferSize = null,
+            UdpSendBufferSize = null
+        });
+
+        return clientUdpChannel;
+    }
+
+    private static UdpChannel CreateServerUdpChannel(UdpClient udpClient, uint sessionId, byte[] serverKey,
+        byte[] sessionKey)
+    {
+        var serverTransmitter = new ServerUdpChannelTransmitterTest(udpClient, serverKey);
+        var serverUdpChannel = new UdpChannel(serverTransmitter,
+            new UdpChannelOptions {
+                SessionKey = sessionKey,
+                RemoteEndPoint = new IPEndPoint(IPAddress.Loopback, 0), // This will be set later
+                ChannelId = Guid.CreateVersion7().ToString(),
+                Lifespan = null,
+                SessionId = sessionId,
+                AutoDisposePackets = true,
+                Blocking = false,
+                ProtocolVersion = 4,
+                LeaveTransmitterOpen = false,
+            });
+        serverTransmitter.UdpChannel = serverUdpChannel;
+        return serverUdpChannel;
     }
 
 
     [TestMethod]
-    public void UdpChannel_Direct()
+    public async Task UdpChannel_Direct()
     {
-        EventWaitHandle waitHandle = new(true, EventResetMode.AutoReset);
-        waitHandle.Reset();
-
         // test packets
-        var packets = new List<IPPacket> {
-            IPPacket.RandomPacket(IPVersion.IPv4),
-            IPPacket.RandomPacket(IPVersion.IPv4),
-            IPPacket.RandomPacket(IPVersion.IPv4)
+        var packets = new List<IpPacket> {
+            PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)),
+            PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)),
+            PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true))
         };
 
         // create keys
@@ -48,50 +92,47 @@ public class TunnelTest : TestBase
 
         // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint
-                             ?? throw new Exception("Server connection is not established");
-        var serverUdpChannel = new UdpChannel(1, sessionKey, true, 4);
-        using var serverUdpChannelTransmitter =
-            new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
+        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint ??
+                             throw new Exception("Server connection is not established");
+        var serverUdpChannel = CreateServerUdpChannel(serverUdpClient, 1, serverKey: serverKey, sessionKey: sessionKey);
+        var serverReceivedPackets = new List<IpPacket>();
+        serverUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            // ReSharper disable once AccessToDisposedClosure
+            serverReceivedPackets.Add(ipPacket);
+            serverUdpChannel.SendPacketQueued(ipPacket.Clone());
+        };
         serverUdpChannel.Start();
 
-        var serverReceivedPackets = Array.Empty<IPPacket>();
-        serverUdpChannel.PacketReceived += delegate(object? sender, PacketReceivedEventArgs e) {
-            serverReceivedPackets = e.IpPackets.ToArray();
-            _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
-        };
-
         // Create client
-        var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var clientUdpChannel = new UdpChannel(1, sessionKey, false, 4);
-        clientUdpChannel.SetRemote(new ClientUdpChannelTransmitter(clientUdpChannel, clientUdpClient, serverKey),
-            serverEndPoint);
+        var clientUdpChannel =
+            CreateClientUdpChannel(serverEndPoint, serverKey: serverKey, sessionKey: sessionKey, sessionId: 1);
+        var clientReceivedPackets = new List<IpPacket>();
+        clientUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            clientReceivedPackets.Add(ipPacket);
+        };
         clientUdpChannel.Start();
 
-        var clientReceivedPackets = Array.Empty<IPPacket>();
-        clientUdpChannel.PacketReceived += delegate(object? _, PacketReceivedEventArgs e) {
-            clientReceivedPackets = e.IpPackets.ToArray();
-            waitHandle.Set();
-        };
-
         // send packet to server through channel
-        _ = clientUdpChannel.SendPacketAsync(packets.ToArray());
-        waitHandle.WaitOne(5000);
-        Assert.AreEqual(packets.Count, serverReceivedPackets.Length);
-        Assert.AreEqual(packets.Count, clientReceivedPackets.Length);
+        foreach (var ipPacket in packets)
+            clientUdpChannel.SendPacketQueued(ipPacket.Clone());
+
+        await VhTestUtil.AssertEqualsWait(packets.Count, () => serverReceivedPackets.Count);
+        await VhTestUtil.AssertEqualsWait(packets.Count, () => clientReceivedPackets.Count);
     }
 
     [TestMethod]
     public async Task UdpChannel_via_Tunnel()
     {
+        VhLogger.MinLogLevel = LogLevel.Trace;
+
         var waitHandle = new EventWaitHandle(true, EventResetMode.AutoReset);
         waitHandle.Reset();
 
         // test packets
-        var packets = new List<IPPacket> {
-            IPPacket.RandomPacket(IPVersion.IPv4),
-            IPPacket.RandomPacket(IPVersion.IPv4),
-            IPPacket.RandomPacket(IPVersion.IPv4)
+        var ipPackets = new List<IpPacket> {
+            PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)),
+            PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)),
+            PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true))
         };
 
         // create keys
@@ -100,38 +141,40 @@ public class TunnelTest : TestBase
 
         // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint
-                             ?? throw new Exception("Server connection is not established");
-        var serverUdpChannel = new UdpChannel(1, sessionKey, true, 4);
-        using var serverUdpChannelTransmitter =
-            new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
+        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint ??
+                             throw new Exception("Server connection is not established");
+        var serverUdpChannel =
+            CreateServerUdpChannel(serverUdpClient, sessionId: 1, serverKey: serverKey, sessionKey: sessionKey);
+        var serverReceivedPackets = new List<IpPacket>();
 
-        var serverReceivedPackets = Array.Empty<IPPacket>();
-        var serverTunnel = new Tunnel(new TunnelOptions());
+        // Create server tunnel
+        var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         serverTunnel.AddChannel(serverUdpChannel);
-        serverTunnel.PacketReceived += delegate(object? sender, PacketReceivedEventArgs e) {
-            serverReceivedPackets = e.IpPackets.ToArray();
-            _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
+        serverTunnel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            // ReSharper disable once AccessToDisposedClosure
+            serverReceivedPackets.Add(ipPacket);
+            serverUdpChannel.SendPacketQueued(ipPacket.Clone());
         };
 
         // Create client
-        var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var clientUdpChannel = new UdpChannel(1, sessionKey, false, 4);
-        clientUdpChannel.SetRemote(new ClientUdpChannelTransmitter(clientUdpChannel, clientUdpClient, serverKey),
-            serverEndPoint);
+        var clientUdpChannel = CreateClientUdpChannel(serverEndPoint, serverKey: serverKey,
+            sessionId: 1, sessionKey: sessionKey);
 
-        var clientReceivedPackets = Array.Empty<IPPacket>();
-        var clientTunnel = new Tunnel();
+        // Create client tunnel
+        var clientReceivedPackets = new List<IpPacket>();
+        var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         clientTunnel.AddChannel(clientUdpChannel);
-        clientTunnel.PacketReceived += delegate(object? _, PacketReceivedEventArgs e) {
-            clientReceivedPackets = e.IpPackets.ToArray();
+        clientTunnel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            clientReceivedPackets.Add(ipPacket);
             waitHandle.Set();
         };
 
         // send packet to server through tunnel
-        await clientTunnel.SendPacketsAsync(packets.ToArray());
-        await VhTestUtil.AssertEqualsWait(packets.Count, () => serverReceivedPackets.Length);
-        await VhTestUtil.AssertEqualsWait(packets.Count, () => clientReceivedPackets.Length);
+        foreach (var ipPacket in ipPackets)
+            clientTunnel.SendPacketQueued(ipPacket);
+
+        await VhTestUtil.AssertEqualsWait(ipPackets.Count, () => serverReceivedPackets.Count);
+        await VhTestUtil.AssertEqualsWait(ipPackets.Count, () => clientReceivedPackets.Count);
     }
 
     private static async Task SimpleLoopback(TcpListener tcpListener, CancellationToken cancellationToken)
@@ -141,27 +184,9 @@ public class TunnelTest : TestBase
         // Create a memory stream to store the incoming data
         ChunkStream binaryStream = new BinaryStreamStandard(client.GetStream(), Guid.NewGuid().ToString(), true);
         while (true) {
-            using var memoryStream = new MemoryStream();
-            // Read the request data from the client to memoryStream
-            var buffer = new byte[2048];
-            var bytesRead = await binaryStream.ReadAsync(buffer, 0, 4, cancellationToken);
-            if (bytesRead == 0)
-                break;
-
-            if (bytesRead != 4)
-                throw new Exception("Unexpected data.");
-
-            var length = BitConverter.ToInt32(buffer, 0);
-            var totalRead = 0;
-            while (totalRead != length) {
-                bytesRead = await binaryStream.ReadAsync(buffer, 0, 120, cancellationToken);
-                if (bytesRead == 0) throw new Exception("Unexpected data");
-                totalRead += bytesRead;
-                memoryStream.Write(buffer, 0, bytesRead);
-            }
-
-            await binaryStream.WriteAsync(memoryStream.ToArray(), cancellationToken);
-
+            // echo back the data to the client
+            await binaryStream.CopyToAsync(binaryStream, cancellationToken);
+            await binaryStream.DisposeAsync();
             if (!binaryStream.CanReuse)
                 break;
 
@@ -171,69 +196,40 @@ public class TunnelTest : TestBase
         Assert.IsFalse(binaryStream.CanReuse);
     }
 
-    [TestMethod]
-    public async Task ChunkStream()
+    private static async Task CheckStreamEcho(Stream stream, CancellationToken cancellationToken)
     {
-        // create server
-        var tcpListener = new TcpListener(IPAddress.Loopback, 0);
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        tcpListener.Start();
-        var workerTask = SimpleLoopback(tcpListener, cts.Token);
+        // read o data from stream
+        var readBuffer = new byte[10 * 1024 * 1024 + 2000].AsMemory(); // 10MB buffer size
+        var readingTask = stream.ReadExactlyAsync(readBuffer, cancellationToken);
 
-        // connect to server
-        using var tcpClient = new TcpClient();
-        await tcpClient.ConnectAsync((IPEndPoint)tcpListener.LocalEndpoint, cts.Token);
-        var stream = tcpClient.GetStream();
+        // write data in two parts
+        var writeBuffer = new byte[readBuffer.Length]; // 10MB buffer size
+        var random = new Random();
+        random.NextBytes(writeBuffer);
+        using var writeStream = new MemoryStream(writeBuffer);
 
-        // send data
-        var chunks = new List<string> {
-            "HelloHelloHelloHelloHelloHelloHelloHello\r\n",
-            "Apple1234,\r\nApple1234,Apple1234,Apple1234,Apple1234,Apple1234,Apple1234,Apple1234,Apple1234,Apple1234",
-            "Book009,Book009,Book009,Book009,Book009,Book009,Book009,Book009,Book009,Book009",
-            "550Clock\n\r,550Clock,550Clock,550Clock,550Clock,550Clock,550Clock,550Clock,550Clock,550Clock"
-        };
+        // write the length of the data
+        await writeStream.CopyToAsync(stream, cancellationToken);
 
-        // first stream
-        ChunkStream binaryStream = new BinaryStreamStandard(stream, Guid.NewGuid().ToString(), true);
-        await binaryStream.WriteAsync(BitConverter.GetBytes(chunks.Sum(x => x.Length)), cts.Token);
-        foreach (var chunk in chunks)
-            await binaryStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray(), cts.Token);
-        Assert.AreEqual(chunks.Count + 1, binaryStream.WroteChunkCount);
+        // wait for reading task to complete
+        await readingTask;
+        await stream.DisposeAsync();
 
-        // read first stream
-        var sr = new StreamReader(binaryStream, bufferSize: 10);
-        var res = await sr.ReadToEndAsync(cts.Token);
-        Assert.AreEqual(string.Join("", chunks), res);
+        // check the read data
+        CollectionAssert.AreEqual(readBuffer.ToArray(), writeBuffer);
 
-        // write second stream
-        binaryStream = await binaryStream.CreateReuse();
-        await binaryStream.WriteAsync(BitConverter.GetBytes(chunks.Sum(x => x.Length)).ToArray(), cts.Token);
-        foreach (var chunk in chunks)
-            await binaryStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray(), cts.Token);
-        Assert.AreEqual(chunks.Count + 1, binaryStream.WroteChunkCount);
-
-        // read second stream
-        sr = new StreamReader(binaryStream, bufferSize: 10);
-        res = await sr.ReadToEndAsync(cts.Token);
-        Assert.AreEqual(string.Join("", chunks), res);
-
-        await binaryStream.DisposeAsync();
-        tcpClient.Dispose();
-
-        // task must be completed after binaryStream.DisposeAsync
-        await workerTask.WaitAsync(TimeSpan.FromSeconds(2), cts.Token);
-        Assert.IsTrue(workerTask.IsCompletedSuccessfully);
-
-        tcpListener.Stop();
-        await cts.CancelAsync();
+        // make sure that the stream is closed
+        await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+            stream.ReadAsync(readBuffer, cancellationToken).AsTask());
     }
+
 
     [TestMethod]
     public async Task ChunkStream_Binary()
     {
         // create server
         var tcpListener = new TcpListener(IPAddress.Loopback, 0);
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var cts = new CancellationTokenSource();
         tcpListener.Start();
         _ = SimpleLoopback(tcpListener, cts.Token);
 
@@ -243,24 +239,19 @@ public class TunnelTest : TestBase
         var stream = tcpClient.GetStream();
 
         // send data
-        var writeBuffer = new byte[10 * 1024 * 1024 + 2000]; // 10MB buffer size
-        var random = new Random();
-        random.NextBytes(writeBuffer);
+        await using var binaryStream = new BinaryStreamStandard(stream, Guid.NewGuid().ToString(), true);
 
-        // write stream
-        ChunkStream binaryStream = new BinaryStreamStandard(stream, Guid.NewGuid().ToString(), true);
-        await binaryStream.WriteAsync(BitConverter.GetBytes(writeBuffer.Length), cts.Token);
-        await binaryStream.WriteAsync((byte[])writeBuffer.Clone(), cts.Token);
+        // check stream by echo
+        await CheckStreamEcho(binaryStream, cts.Token);
+        await CheckStreamEcho(await binaryStream.CreateReuse(), cts.Token);
+        await CheckStreamEcho(await binaryStream.CreateReuse(), cts.Token);
+        Assert.IsTrue(binaryStream.CanReuse);
 
-        // read stream
-        var readBuffer = new byte[writeBuffer.Length];
-        await binaryStream.ReadExactlyAsync(readBuffer, cts.Token);
-        CollectionAssert.AreEqual(writeBuffer, readBuffer);
+        binaryStream.PreventReuse();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => binaryStream.CreateReuse());
 
-        Assert.AreEqual(0, await binaryStream.ReadAsync(readBuffer, cts.Token));
-        await binaryStream.DisposeAsync();
-
-        tcpListener.Stop();
+        // read data from stream
         await cts.CancelAsync();
+        tcpListener.Stop();
     }
 }

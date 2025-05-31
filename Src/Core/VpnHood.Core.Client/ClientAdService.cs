@@ -5,6 +5,7 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client;
 
@@ -85,9 +86,9 @@ public class ClientAdService(VpnHoodClient client)
     public async Task SendRewardedAdResult(string adData, CancellationToken cancellationToken)
     {
         // request reward from server
-        await using var requestResult = await client.SendRequest<SessionResponse>(
+        using var requestResult = await client.SendRequest<SessionResponse>(
                 new RewardedAdRequest {
-                    RequestId = Guid.NewGuid() + ":client",
+                    RequestId = UniqueIdFactory.Create(),
                     SessionId = client.SessionId,
                     SessionKey = client.SessionKey,
                     AdData = adData

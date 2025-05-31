@@ -7,13 +7,13 @@ public class Ga4MeasurementTracker : TrackerBase, IGa4MeasurementTracker
     public required string ApiSecret { get; init; }
     public bool IsDebugEndPoint { get; set; }
 
-    public Task Track(Ga4MeasurementEvent ga4Event)
+    public Task Track(Ga4MeasurementEvent ga4Event, CancellationToken cancellationToken)
     {
         var tracks = new[] { ga4Event };
-        return Track(tracks);
+        return Track(tracks, cancellationToken);
     }
 
-    public Task Track(IEnumerable<Ga4MeasurementEvent> ga4Events)
+    public Task Track(IEnumerable<Ga4MeasurementEvent> ga4Events, CancellationToken cancellationToken)
     {
         if (!IsEnabled)
             return Task.CompletedTask;
@@ -48,10 +48,10 @@ public class Ga4MeasurementTracker : TrackerBase, IGa4MeasurementTracker
         var requestMessage = new HttpRequestMessage(HttpMethod.Post,
             new Uri(baseUri, $"?api_secret={ApiSecret}&measurement_id={MeasurementId}"));
         PrepareHttpHeaders(requestMessage.Headers);
-        return SendHttpRequest(requestMessage, "Measurement", ga4Payload);
+        return SendHttpRequest(requestMessage, "Measurement", ga4Payload, cancellationToken);
     }
 
-    public override Task Track(IEnumerable<TrackEvent> trackEvents)
+    public override Task Track(IEnumerable<TrackEvent> trackEvents, CancellationToken cancellationToken)
     {
         var ga4MeasurementEvents = trackEvents.Select(x =>
             new Ga4MeasurementEvent {
@@ -59,6 +59,6 @@ public class Ga4MeasurementTracker : TrackerBase, IGa4MeasurementTracker
                 Parameters = x.Parameters
             });
 
-        return Track(ga4MeasurementEvents);
+        return Track(ga4MeasurementEvents, cancellationToken);
     }
 }

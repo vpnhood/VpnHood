@@ -10,13 +10,16 @@ namespace VpnHood.Core.Tunneling.ClientStreams;
 
 public class TcpClientStream : IClientStream
 {
+    private bool _disposed;
+    private readonly object _reuseLock = new();
     private readonly ReuseCallback? _reuseCallback;
     private string _clientStreamId;
+    private readonly TcpClient _tcpClient;
+    private bool _allowReuse = true;
+    private bool _reusing;
 
-    public delegate Task ReuseCallback(IClientStream clientStream);
-
-    public TcpClient TcpClient { get; }
-    public Stream Stream { get; set; }
+    public delegate void ReuseCallback(IClientStream clientStream);
+    public Stream Stream { get; }
     public bool RequireHttpResponse { get; set; }
     public IPEndPointPair IpEndPointPair { get; }
 
@@ -34,91 +37,106 @@ public class TcpClientStream : IClientStream
         }
     }
 
-    public TcpClientStream(TcpClient tcpClient, Stream stream, string clientStreamId,
-        ReuseCallback? reuseCallback = null)
-        : this(tcpClient, stream, clientStreamId, reuseCallback, true)
-    {
-    }
-
-    private TcpClientStream(TcpClient tcpClient, Stream stream, string clientStreamId, ReuseCallback? reuseCallback,
-        bool log)
+    public TcpClientStream(TcpClient tcpClient, Stream stream, string clientStreamId, ReuseCallback? reuseCallback = null)
     {
         _clientStreamId = clientStreamId;
         _reuseCallback = reuseCallback;
         Stream = stream;
-        TcpClient = tcpClient;
-        IpEndPointPair = new IPEndPointPair((IPEndPoint)TcpClient.Client.LocalEndPoint,
-            (IPEndPoint)TcpClient.Client.RemoteEndPoint);
+        _tcpClient = tcpClient;
+        IpEndPointPair = new IPEndPointPair((IPEndPoint)_tcpClient.Client.LocalEndPoint,
+            (IPEndPoint)_tcpClient.Client.RemoteEndPoint);
 
-        if (log)
-            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
-                "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}, StreamType: {StreamType}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
-                ClientStreamId, stream.GetType().Name,
-                VhLogger.Format(IpEndPointPair.LocalEndPoint), VhLogger.Format(IpEndPointPair.RemoteEndPoint));
+        VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+            "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}, StreamType: {StreamType}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
+            ClientStreamId, stream.GetType().Name, VhLogger.Format(IpEndPointPair.LocalEndPoint), VhLogger.Format(IpEndPointPair.RemoteEndPoint));
     }
 
-    public bool CheckIsAlive()
-    {
-        return VhUtils.IsTcpClientHealthy(TcpClient);
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        return DisposeAsync(true);
-    }
-
-    private readonly AsyncLock _disposeLock = new();
-    public bool Disposed { get; private set; }
-
-    public async ValueTask DisposeAsync(bool graceful)
-    {
-        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
-        if (Disposed) return;
-        Disposed = true;
-        var chunkStream = Stream as ChunkStream;
-
-        // dispose the stream if we can't reuse it
-        if (!graceful || _reuseCallback == null || !CheckIsAlive() || chunkStream?.CanReuse != true) {
-            // close streams
-            await Stream.DisposeAsync().VhConfigureAwait(); // first close stream 2
-            TcpClient.Dispose();
-
-            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
-                "A TcpClientStream has been disposed. ClientStreamId: {ClientStreamId}",
-                ClientStreamId);
-            return;
+    public bool Connected {
+        get {
+            lock (_reuseLock)
+                return !_disposed && VhUtils.IsTcpClientHealthy(_tcpClient);
         }
+    }
 
-        // reuse the stream
+    private bool CanReuse => _reuseCallback != null && Stream is ChunkStream { CanReuse: true };
+
+    public void PreventReuse()
+    {
+        _allowReuse = false;
+        if (Stream is ChunkStream chunkStream)
+            chunkStream.PreventReuse();
+    }
+
+    private async Task ReuseThenDispose()
+    {
         try {
-            await Reuse(chunkStream, TcpClient, _reuseCallback, ClientStreamId).VhConfigureAwait();
+            _reusing = true;
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+                "Reusing a TcpClientStream. ClientStreamId: {ClientStreamId}", ClientStreamId);
+
+            // verify if we can reuse the stream
+            if (_reuseCallback == null) throw new InvalidOperationException("Can not reuse the stream when reuseCallback is null.");
+            if (Stream is not ChunkStream chunkStream) throw new InvalidOperationException("Can not reuse the stream when stream is not ChunkStream.");
+
+            await Reuse(chunkStream, _reuseCallback).VhConfigureAwait();
         }
         catch (Exception ex) {
-            VhLogger.LogError(GeneralEventId.TcpLife, ex,
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife, ex,
                 "Could not reuse the TcpClientStream. ClientStreamId: {ClientStreamId}", ClientStreamId);
 
-            await Stream.DisposeAsync().VhConfigureAwait();
-            TcpClient.Dispose();
+            // dispose and we should not try to reuse the stream
+            PreventReuse();
+            Dispose();
         }
-
+        finally {
+            _reusing = false;
+        }
     }
 
-    private async Task Reuse(ChunkStream chunkStream, TcpClient tcpClient, 
-        ReuseCallback reuseCallback, string clientStreamId)
+    private async Task Reuse(ChunkStream chunkStream, ReuseCallback reuseCallback)
     {
-        VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
-            "Reusing a TcpClientStream. ClientStreamId: {ClientStreamId}", ClientStreamId);
-
         var newStream = await chunkStream.CreateReuse().VhConfigureAwait();
+        lock (_reuseLock) {
+            if (_disposed)
+                throw new ObjectDisposedException(GetType().Name);
 
-        try {
             // we don't call SuppressFlow on debug to allow MsTest shows console output in nested task
-            using IDisposable? suppressFlow = IsDebug ? null : ExecutionContext.SuppressFlow();
-            _ = Task.Run(() => reuseCallback.Invoke(new TcpClientStream(tcpClient, newStream, clientStreamId, reuseCallback, false)));
+            using IDisposable? suppressFlow = IsDebug ? null : ExecutionContext.SuppressFlow(); 
+            var newTcpClientStream = new TcpClientStream(_tcpClient, newStream, _clientStreamId, reuseCallback);
+            Task.Run(() => reuseCallback(newTcpClientStream));
+
+            _disposed = true;
         }
-        catch (Exception) {
-            await newStream.DisposeAsync().VhConfigureAwait();
-            throw;
+    }
+
+    public void Dispose()
+    {
+        // prevent dispose when reuse is almost done. the owner is going to change soon 
+        lock (_reuseLock) {
+            if (_disposed)
+                return;
+
+            // If reuse is allowed, and we're not currently reusing, start reuse.
+            if (_allowReuse) {
+                // check if we are in the process of reusing the stream
+                if (_reusing)
+                    return;
+
+                // reuse the stream in background
+                // it will set _disposed to true 
+                if (CanReuse) {
+                    _ = ReuseThenDispose();
+                    return;
+                }
+            }
+
+            // prevent future reuse and stream reuse
+            PreventReuse();
+
+            // close stream and let cancel reuse if it is in progress
+            Stream.Dispose();
+            _tcpClient.Dispose();
+            _disposed = true;
         }
     }
 

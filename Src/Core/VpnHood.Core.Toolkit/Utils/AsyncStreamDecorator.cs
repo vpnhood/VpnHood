@@ -3,8 +3,8 @@
 public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
     where T : Stream
 {
-    protected T SourceStream = sourceStream;
-
+    protected readonly T SourceStream = sourceStream;
+    protected bool IsDisposed { get; private set; }
     public override bool CanRead => SourceStream.CanRead;
     public override bool CanSeek => SourceStream.CanSeek;
     public override bool CanWrite => SourceStream.CanWrite;
@@ -39,14 +39,24 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
         return SourceStream.FlushAsync(cancellationToken);
     }
 
-    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public sealed override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        return SourceStream.ReadAsync(buffer, offset, count, cancellationToken);
+        return ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
     }
 
-    public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        return SourceStream.WriteAsync(buffer, offset, count, cancellationToken);
+        return SourceStream.ReadAsync(buffer, cancellationToken);
+    }
+
+    public sealed override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        return WriteAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+    }
+
+    public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        return SourceStream.WriteAsync(buffer, cancellationToken);
     }
 
     public sealed override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
@@ -54,16 +64,36 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
         return base.CopyToAsync(destination, bufferSize, cancellationToken);
     }
 
-    public sealed override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    public override async ValueTask DisposeAsync()
     {
-        return base.ReadAsync(buffer, cancellationToken);
+        if (!leaveOpen)
+            await SourceStream.DisposeAsync();
+        
+        await base.DisposeAsync();
+
+        // the base class does not call Dispose(bool) so we need to do it manually
+        Dispose(true);
     }
 
-    public override ValueTask DisposeAsync()
+    protected override void Dispose(bool disposing)
     {
-        return leaveOpen ? default : SourceStream.DisposeAsync();
+        if (IsDisposed)
+            return;
+
+        if (disposing) {
+            if (!leaveOpen)
+                SourceStream.Dispose();
+        }
+
+        IsDisposed = true;
     }
 
+    public sealed override void Close()
+    {
+        if (!leaveOpen)
+            SourceStream.Close();
+    }
+    
     // Sealed
     public sealed override int WriteTimeout {
         get => SourceStream.WriteTimeout;
@@ -75,25 +105,9 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
         set => SourceStream.ReadTimeout = value;
     }
 
-    public sealed override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer,
-        CancellationToken cancellationToken = default)
-    {
-        return base.WriteAsync(buffer, cancellationToken);
-    }
-
     public sealed override int ReadByte()
     {
         throw new NotSupportedException("Use ReadAsync.");
-    }
-
-    public sealed override void Close()
-    {
-        throw new NotSupportedException("Use DisposeAsync.");
-    }
-
-    protected sealed override void Dispose(bool disposing)
-    {
-        throw new NotSupportedException("Use DisposeAsync.");
     }
 
     public sealed override void WriteByte(byte value)

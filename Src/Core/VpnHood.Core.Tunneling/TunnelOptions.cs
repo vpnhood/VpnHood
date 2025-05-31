@@ -2,6 +2,7 @@
 
 public class TunnelOptions
 {
-    public int MaxDatagramChannelCount { get; init; } = 8;
-    public int MaxQueueLength { get; init; } = 200;
+    public required int MaxPacketChannelCount { get; init; } = 8;
+    public required int PacketQueueCapacity { get; init; }
+    public required bool AutoDisposePackets { get; init; }
 }

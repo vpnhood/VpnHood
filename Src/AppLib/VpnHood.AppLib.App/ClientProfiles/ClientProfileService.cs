@@ -132,8 +132,15 @@ public class ClientProfileService
 
     private ClientProfile ImportAccessKey(string accessKey, bool isForAccount)
     {
-        var token = Token.FromAccessKey(accessKey);
-        return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false, isForAccount: isForAccount);
+        try {
+            var token = Token.FromAccessKey(accessKey);
+            return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false, isForAccount: isForAccount);
+
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not import access key.");
+            throw;
+        }
     }
 
     private readonly object _importLock = new();
@@ -257,7 +264,7 @@ public class ClientProfileService
                 cts.Token.ThrowIfCancellationRequested();
                 var newServerToken = ServerToken.Decrypt(token.ServerToken.Secret, encryptedServerToken);
 
-                // return older only if token body is same and created time is newer
+                // return if the token is not new
                 if (!token.ServerToken.IsTokenUpdated(newServerToken)) {
                     VhLogger.Instance.LogInformation("The remote ServerToken is not new and has not been updated.");
                     return false;

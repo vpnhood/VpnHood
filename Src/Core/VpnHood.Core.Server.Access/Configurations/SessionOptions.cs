@@ -21,7 +21,7 @@ public class SessionOptions
     public TimeSpan? SyncInterval { get; set; }
 
     public long? SyncCacheSize { get; set; }
-    public int? MaxDatagramChannelCount { get; set; }
+    public int? MaxPacketChannelCount { get; set; }
     public int? MaxUdpClientCount { get; set; }
     public int? MaxIcmpClientCount { get; set; }
     public int? TcpBufferSize { get; set; }
@@ -43,11 +43,13 @@ public class SessionOptions
     [JsonIgnore] public TimeSpan UdpTimeoutValue => UdpTimeout ?? TimeSpan.FromMinutes(1);
     [JsonIgnore] public int UdpSendBufferSizeValue => UdpSendBufferSize ?? 1024 * 1024 * 4;
     [JsonIgnore] public int UdpReceiveBufferSizeValue => UdpReceiveBufferSize ?? 1024 * 1024 * 4;
+    [JsonIgnore] public int? UdpProxySendBufferSizeValue => UdpProxySendBufferSize ?? null;
+    [JsonIgnore] public int? UdpProxyReceiveBufferSizeValue => UdpProxyReceiveBufferSize ?? null;
     [JsonIgnore] public TimeSpan TcpTimeoutValue => TcpTimeout ?? TimeSpan.FromMinutes(15);
     [JsonIgnore] public TimeSpan IcmpTimeoutValue => IcmpTimeout ?? TimeSpan.FromSeconds(30);
     [JsonIgnore] public TimeSpan SyncIntervalValue => SyncInterval ?? TimeSpan.FromMinutes(20);
     [JsonIgnore] public long SyncCacheSizeValue => SyncCacheSize ?? 100 * 1000000; // 100 MB
-    [JsonIgnore] public int MaxDatagramChannelCountValue => MaxDatagramChannelCount ?? 8;
+    [JsonIgnore] public int MaxPacketChannelCountValue => MaxPacketChannelCount ?? 8;
     [JsonIgnore] public int MaxUdpClientCountValue => MaxUdpClientCount ?? 500;
     [JsonIgnore] public int MaxIcmpClientCountValue => MaxIcmpClientCount ?? 20;
     [JsonIgnore] public TimeSpan TcpConnectTimeoutValue => TcpConnectTimeout ?? TimeSpan.FromSeconds(30);
@@ -64,7 +66,7 @@ public class SessionOptions
         if (obj.IcmpTimeout != null) IcmpTimeout = obj.IcmpTimeout;
         if (obj.SyncInterval != null) SyncInterval = obj.SyncInterval;
         if (obj.SyncCacheSize != null) SyncCacheSize = obj.SyncCacheSize;
-        if (obj.MaxDatagramChannelCount != null) MaxDatagramChannelCount = obj.MaxDatagramChannelCount;
+        if (obj.MaxPacketChannelCount != null) MaxPacketChannelCount = obj.MaxPacketChannelCount;
         if (obj.MaxUdpClientCount != null) MaxUdpClientCount = obj.MaxUdpClientCount;
         if (obj.MaxIcmpClientCount != null) MaxIcmpClientCount = obj.MaxIcmpClientCount;
         if (obj.TcpBufferSize != null) TcpBufferSize = obj.TcpBufferSize;
@@ -91,14 +93,14 @@ public class SessionOptions
         IcmpTimeout = IcmpTimeoutValue;
         SyncInterval = SyncIntervalValue;
         SyncCacheSize = SyncCacheSizeValue;
-        MaxDatagramChannelCount = MaxDatagramChannelCountValue;
+        MaxPacketChannelCount = MaxPacketChannelCountValue;
         MaxUdpClientCount = MaxUdpClientCountValue;
         MaxIcmpClientCount = MaxIcmpClientCountValue;
         TcpBufferSize = TcpBufferSize; //no default
         TcpKernelSendBufferSize = TcpKernelSendBufferSize; //no default
         TcpKernelReceiveBufferSize = TcpKernelReceiveBufferSize; //no default
-        UdpProxySendBufferSize = UdpProxySendBufferSize; //no default
-        UdpProxyReceiveBufferSize = UdpProxyReceiveBufferSize; //no default
+        UdpProxySendBufferSize = UdpProxySendBufferSizeValue; //no default
+        UdpProxyReceiveBufferSize = UdpProxyReceiveBufferSizeValue; //no default
         UdpSendBufferSize = UdpSendBufferSizeValue;
         UdpReceiveBufferSize = UdpReceiveBufferSizeValue;
         TcpConnectTimeout = TcpConnectTimeoutValue;

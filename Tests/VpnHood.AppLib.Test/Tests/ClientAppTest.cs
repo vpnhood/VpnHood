@@ -1,21 +1,22 @@
-﻿using System.Net;
-using System.Net.NetworkInformation;
+﻿using EmbedIO;
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
-using EmbedIO;
-using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Exceptions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
+using VpnHood.Core.Common.IpLocations.Providers.Offlines;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.IpLocations.Providers;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test;
+using VpnHood.Test.Device;
 
 // ReSharper disable DisposeOnUsingVariable
 
@@ -51,7 +52,7 @@ public class ClientAppTest : TestAppBase
             await OsUtils.ExecuteCommandAsync("git", $"{gitBase} push", CancellationToken.None);
 
         }
-        catch (ExternalException ex) when(ex.ErrorCode == 1) {
+        catch (ExternalException ex) when (ex.ErrorCode == 1) {
             VhLogger.Instance.LogInformation("Nothing has been updated.");
         }
 
@@ -95,7 +96,7 @@ public class ClientAppTest : TestAppBase
         Assert.IsTrue(app.State.HasDiagnoseRequested);
         Assert.IsTrue(app.State.HasDisconnectedByUser);
         Assert.IsTrue(app.State.IsIdle);
-        Assert.IsTrue(app.State.LastError?.Is<NoErrorFoundException>()); 
+        Assert.IsTrue(app.State.LastError?.Is<NoErrorFoundException>());
 
         app.ClearLastError();
         Assert.IsFalse(app.State.HasDiagnoseRequested);
@@ -116,7 +117,7 @@ public class ClientAppTest : TestAppBase
     }
 
     [TestMethod]
-    public async Task State_Error_InConnecting()
+    public async Task State_Error_Unreachable_Server()
     {
         // create server
         await using var server = await TestHelper.CreateServer();
@@ -126,7 +127,7 @@ public class ClientAppTest : TestAppBase
         // create app
         await using var app = TestAppHelper.CreateClientApp();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await Assert.ThrowsExceptionAsync<TimeoutException>(() => app.Connect(clientProfile.ClientProfileId));
+        await Assert.ThrowsExceptionAsync<UnreachableServerException>(() => app.Connect(clientProfile.ClientProfileId));
 
         await app.WaitForState(AppConnectionState.None);
         Assert.IsTrue(app.State.LogExists);
@@ -171,10 +172,13 @@ public class ClientAppTest : TestAppBase
     }
 
     [TestMethod]
-    public async Task IpFilters()
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task IpFilters(bool include)
     {
-        var testPing = false; //todo (not supported yet)
-        var device = TestHelper.CreateDevice();
+        var device = TestHelper.CreateDevice(new TestVpnAdapterOptions {
+            SimulateDns = false
+        });
 
         // Create Server
         await using var server = await TestHelper.CreateServer(socketFactory: device.SocketFactory);
@@ -183,160 +187,84 @@ public class ClientAppTest : TestAppBase
         // create app
         await using var app = TestAppHelper.CreateClientApp(device: device);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        var customIps = (await Dns.GetHostAddressesAsync(TestConstants.HttpsExternalUri1.Host))
-            .Select(x => new IpRange(x))
-            .Concat([
-                new IpRange(TestConstants.PingV4Address1),
-                new IpRange(TestConstants.NsEndPoint1.Address),
-                new IpRange(TestConstants.UdpV4EndPoint1.Address),
-                new IpRange(TestConstants.UdpV6EndPoint1.Address)
-            ])
-            .ToArray();
+
+            // add url2 and endpoint 2
+        var httpsExternalUriIps = await Dns.GetHostAddressesAsync(TestConstants.HttpsExternalUri1.Host);
+        var customIps = httpsExternalUriIps.Select(x => new IpRange(x)).ToList();
+        customIps.Add(new IpRange(TestConstants.NsEndPoint1.Address));
+        customIps.Add(new IpRange(TestConstants.PingV4Address1));
 
         // ************
         // *** TEST ***: Test Include ip filter
-        app.SettingsService.IpFilterSettings.AppIpFilterIncludes = customIps.ToText();
-        app.SettingsService.IpFilterSettings.AppIpFilterExcludes = "";
-        await app.Connect(clientProfile.ClientProfileId);
-        await app.WaitForState(AppConnectionState.Connected);
-        await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
+        if (include) {
+            app.SettingsService.IpFilterSettings.AppIpFilterIncludes = customIps.ToText();
+            app.SettingsService.IpFilterSettings.AppIpFilterExcludes = "";
+            await app.Connect(clientProfile.ClientProfileId);
+            await app.WaitForState(AppConnectionState.Connected);
+            await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
 
-        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Starting IpFilters_TestInclude...");
-        await IpFilters_TestInclude(app, testPing: testPing, testUdp: true, testDns: true);
-        await app.Disconnect();
+            VhLogger.Instance.LogDebug(GeneralEventId.Test, "Starting IpFilters_TestInclude...");
+            await IpFilters_AssertInclude(app, TestConstants.NsEndPoint1, TestConstants.HttpsExternalUri1);
+            await IpFilters_AssertExclude(app, TestConstants.NsEndPoint2, TestConstants.HttpsExternalUri2);
+            await app.Disconnect();
+        }
 
         // ************
         // *** TEST ***: Test Exclude ip filters
-        app.SettingsService.IpFilterSettings.AppIpFilterIncludes = "";
-        app.SettingsService.IpFilterSettings.AppIpFilterExcludes = customIps.ToText();
-        await app.Connect(clientProfile.ClientProfileId);
-        await app.WaitForState(AppConnectionState.Connected);
+        if (!include) {
+            app.SettingsService.IpFilterSettings.AppIpFilterIncludes = "";
+            app.SettingsService.IpFilterSettings.AppIpFilterExcludes = customIps.ToText();
+            await app.Connect(clientProfile.ClientProfileId);
+            await app.WaitForState(AppConnectionState.Connected);
 
-        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Starting IpFilters_TestExclude...");
-        await IpFilters_TestExclude(app, testPing: testPing, testUdp: true, testDns: true);
-        await app.Disconnect();
+            VhLogger.Instance.LogDebug(GeneralEventId.Test, "Starting IpFilters_TestExclude...");
+            await IpFilters_AssertInclude(app, TestConstants.NsEndPoint2, TestConstants.HttpsExternalUri2);
+            await IpFilters_AssertExclude(app, TestConstants.NsEndPoint1, TestConstants.HttpsExternalUri1);
+            await app.Disconnect();
+        }
     }
 
-    public async Task IpFilters_TestInclude(VpnHoodApp app, bool testUdp, bool testPing, bool testDns)
+    private async Task IpFilters_AssertInclude(VpnHoodApp app, IPEndPoint nameserver, Uri url, int delta = 200)
     {
-        // TCP
-        var oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-        await TestHelper.Test_Https(uri: TestConstants.HttpsExternalUri1);
-        Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
+        // NameServer
+        var oldSessionTraffic = app.GetSessionStatus().SessionTraffic;
+        var oldSplitTraffic = app.GetSessionStatus().SessionSplitTraffic;
+        await TestHelper.Test_UdpByDNS(nameserver);
+        Assert.AreNotEqual(oldSessionTraffic, app.GetSessionStatus().SessionTraffic);
+        Assert.AreEqual(oldSplitTraffic, app.GetSessionStatus().SessionSplitTraffic);
 
-        // TCP
-        oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-        await TestHelper.Test_Https(uri: TestConstants.HttpsExternalUri2);
-        Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
-
-        if (testPing) {
-            // ping
-            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-            await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
-
-            // ping
-            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-            try {
-                await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address2, timeout: 1000);
-                Assert.Fail("Exception expected as server should not exists.");
-            }
-            catch (Exception ex) {
-                Assert.AreEqual(nameof(PingException), ex.GetType().Name);
-            }
-
-            Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
-        }
-
-        if (testUdp) {
-            // UDP
-            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-            await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint1);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
-
-            // UDP
-            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-            await Assert.ThrowsAsync<OperationCanceledException>(() => TestHelper.Test_Udp(TestConstants.UdpV4EndPoint2, timeout: 1000),
-                "Exception ws expected as server should not exists.");
-     
-            Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
-        }
-
-        // DNS should always use tunnel regarding of any exclude or include option
-        if (testDns) {
-            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-            await TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint1);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
-
-            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-            await TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint2);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
-        }
+        // Http
+        oldSessionTraffic = app.GetSessionStatus().SessionTraffic;
+        oldSplitTraffic = app.GetSessionStatus().SessionSplitTraffic;
+        await TestHelper.Test_Https(url);
+        Assert.AreNotEqual(oldSessionTraffic.Received, app.GetSessionStatus().SessionTraffic.Received, delta: delta);
+        Assert.AreNotEqual(oldSessionTraffic.Sent, app.GetSessionStatus().SessionTraffic.Sent, delta: delta);
+        Assert.AreEqual(oldSplitTraffic.Received, app.GetSessionStatus().SessionSplitTraffic.Received, delta: delta);
+        Assert.AreEqual(oldSplitTraffic.Sent, app.GetSessionStatus().SessionSplitTraffic.Sent, delta: delta);
     }
 
-    public async Task IpFilters_TestExclude(VpnHoodApp app, bool testUdp, bool testPing, bool testDns)
+    private async Task IpFilters_AssertExclude(VpnHoodApp app, IPEndPoint nameserver, Uri url, int delta = 200)
     {
-        // TCP
-        var oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-        await TestHelper.Test_Https(uri: TestConstants.HttpsExternalUri1);
-        Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
+        // NameServer
+        var oldSessionTraffic = app.GetSessionStatus().SessionTraffic;
+        var oldSplitTraffic = app.GetSessionStatus().SessionSplitTraffic;
+        await TestHelper.Test_UdpByDNS(nameserver);
+        Assert.AreEqual(oldSessionTraffic, app.GetSessionStatus().SessionTraffic, 
+            $"Udp to {nameserver} should go to tunnel.");
 
-        // TCP
-        oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-        await TestHelper.Test_Https(uri: TestConstants.HttpsExternalUri2);
-        Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
+        Assert.AreNotEqual(oldSplitTraffic, app.GetSessionStatus().SessionSplitTraffic, 
+            $"Udp to {nameserver} should go not be split.");
 
-        if (testPing) {
-            // ping
-            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-            try {
-                await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1, timeout: 1000);
-                Assert.Fail("Exception expected as server should not exists.");
-            }
-            catch (Exception ex) {
-                Assert.AreEqual(nameof(PingException), ex.GetType().Name);
-            }
-
-            Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
-
-            // ping
-            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-            await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address2);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
-        }
-
-        if (testUdp) {
-            // UDP
-            VhLogger.Instance.LogDebug("Testing UDP include...");
-            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-            try {
-                await TestHelper.Test_Udp(udpEndPoint: TestConstants.UdpV4EndPoint1, timeout: 1000);
-                Assert.Fail("Exception expected as server should not exists.");
-            }
-            catch (Exception ex) {
-                Assert.AreEqual(nameof(OperationCanceledException), ex.GetType().Name);
-            }
-
-            Assert.AreEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
-
-            // UDP
-            VhLogger.Instance.LogDebug("Testing UDP exclude...");
-            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-            await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint2);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
-        }
-
-        // DNS should always use tunnel regarding of any exclude or include option
-        if (testDns) {
-            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-            await TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint1);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
-
-            oldReceivedByteCount = app.GetSessionStatus().SessionTraffic.Received;
-            await TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint2);
-            Assert.AreNotEqual(oldReceivedByteCount, app.GetSessionStatus().SessionTraffic.Received);
-        }
+        // Http
+        oldSessionTraffic = app.GetSessionStatus().SessionTraffic;
+        oldSplitTraffic = app.GetSessionStatus().SessionSplitTraffic;
+        await TestHelper.Test_Https(url);
+        Assert.AreEqual(oldSessionTraffic.Received, app.GetSessionStatus().SessionTraffic.Received, delta: delta);
+        Assert.AreEqual(oldSessionTraffic.Sent, app.GetSessionStatus().SessionTraffic.Sent, delta: delta);
+        Assert.AreNotEqual(oldSplitTraffic.Received, app.GetSessionStatus().SessionSplitTraffic.Received, delta: delta);
+        Assert.AreNotEqual(oldSplitTraffic.Sent, app.GetSessionStatus().SessionSplitTraffic.Sent, delta: delta);
     }
+
 
     [TestMethod]
     public async Task Connect_fail_ConnectionTimeoutException()
@@ -353,7 +281,7 @@ public class ClientAppTest : TestAppBase
         appOptions.ConnectTimeout = TimeSpan.FromSeconds(1);
         await using var app = TestAppHelper.CreateClientApp(appOptions, testDevice);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        
+
         await Assert.ThrowsExceptionAsync<ConnectionTimeoutException>(() => app.Connect(clientProfile.ClientProfileId));
         await app.WaitForState(AppConnectionState.None);
         Assert.AreEqual(nameof(ConnectionTimeoutException), app.State.LastError?.TypeName);

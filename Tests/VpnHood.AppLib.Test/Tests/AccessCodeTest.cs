@@ -1,5 +1,5 @@
-﻿using System.Text;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Text;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -16,7 +16,6 @@ public class AccessCodeTest : TestAppBase
     {
         await Task.CompletedTask;
     }
-
 
     [TestMethod]
     public async Task AccessCode_Accept()

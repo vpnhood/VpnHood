@@ -9,7 +9,7 @@ public static class TimeoutItemUtil
         var now = FastDateTime.Now;
         for (var i = list.Count - 1; i >= 0; i--) {
             var item = list[i];
-            if (item.Disposed || now - item.LastUsedTime > timeout) {
+            if (item.IsDisposed || now - item.LastUsedTime > timeout) {
                 item.Dispose();
                 list.RemoveAt(i);
             }

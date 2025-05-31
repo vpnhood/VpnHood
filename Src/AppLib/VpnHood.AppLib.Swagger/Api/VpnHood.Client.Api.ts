@@ -1925,7 +1925,7 @@ export class UserSettings implements IUserSettings {
     isLicenseAccepted!: boolean;
     cultureCode?: string | null;
     clientProfileId?: string | null;
-    maxDatagramChannelCount!: number;
+    maxPacketChannelCount!: number;
     tunnelClientCountry!: boolean;
     appFilters!: string[];
     appFiltersMode!: FilterMode;
@@ -1960,7 +1960,7 @@ export class UserSettings implements IUserSettings {
             this.isLicenseAccepted = _data["isLicenseAccepted"] !== undefined ? _data["isLicenseAccepted"] : <any>null;
             this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : <any>null;
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
-            this.maxDatagramChannelCount = _data["maxDatagramChannelCount"] !== undefined ? _data["maxDatagramChannelCount"] : <any>null;
+            this.maxPacketChannelCount = _data["maxPacketChannelCount"] !== undefined ? _data["maxPacketChannelCount"] : <any>null;
             this.tunnelClientCountry = _data["tunnelClientCountry"] !== undefined ? _data["tunnelClientCountry"] : <any>null;
             if (Array.isArray(_data["appFilters"])) {
                 this.appFilters = [] as any;
@@ -2005,7 +2005,7 @@ export class UserSettings implements IUserSettings {
         data["isLicenseAccepted"] = this.isLicenseAccepted !== undefined ? this.isLicenseAccepted : <any>null;
         data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : <any>null;
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
-        data["maxDatagramChannelCount"] = this.maxDatagramChannelCount !== undefined ? this.maxDatagramChannelCount : <any>null;
+        data["maxPacketChannelCount"] = this.maxPacketChannelCount !== undefined ? this.maxPacketChannelCount : <any>null;
         data["tunnelClientCountry"] = this.tunnelClientCountry !== undefined ? this.tunnelClientCountry : <any>null;
         if (Array.isArray(this.appFilters)) {
             data["appFilters"] = [];
@@ -2037,7 +2037,7 @@ export interface IUserSettings {
     isLicenseAccepted: boolean;
     cultureCode?: string | null;
     clientProfileId?: string | null;
-    maxDatagramChannelCount: number;
+    maxPacketChannelCount: number;
     tunnelClientCountry: boolean;
     appFilters: string[];
     appFiltersMode: FilterMode;
@@ -2709,7 +2709,7 @@ export class AppSessionStatus implements IAppSessionStatus {
     totalTraffic!: Traffic;
     tcpTunnelledCount!: number;
     tcpPassthruCount!: number;
-    datagramChannelCount!: number;
+    packetChannelCount!: number;
     isUdpMode!: boolean;
     isWaitingForAd!: boolean;
     canExtendByRewardedAd!: boolean;
@@ -2742,7 +2742,7 @@ export class AppSessionStatus implements IAppSessionStatus {
             this.totalTraffic = _data["totalTraffic"] ? Traffic.fromJS(_data["totalTraffic"]) : new Traffic();
             this.tcpTunnelledCount = _data["tcpTunnelledCount"] !== undefined ? _data["tcpTunnelledCount"] : <any>null;
             this.tcpPassthruCount = _data["tcpPassthruCount"] !== undefined ? _data["tcpPassthruCount"] : <any>null;
-            this.datagramChannelCount = _data["datagramChannelCount"] !== undefined ? _data["datagramChannelCount"] : <any>null;
+            this.packetChannelCount = _data["packetChannelCount"] !== undefined ? _data["packetChannelCount"] : <any>null;
             this.isUdpMode = _data["isUdpMode"] !== undefined ? _data["isUdpMode"] : <any>null;
             this.isWaitingForAd = _data["isWaitingForAd"] !== undefined ? _data["isWaitingForAd"] : <any>null;
             this.canExtendByRewardedAd = _data["canExtendByRewardedAd"] !== undefined ? _data["canExtendByRewardedAd"] : <any>null;
@@ -2768,7 +2768,7 @@ export class AppSessionStatus implements IAppSessionStatus {
         data["totalTraffic"] = this.totalTraffic ? this.totalTraffic.toJSON() : <any>null;
         data["tcpTunnelledCount"] = this.tcpTunnelledCount !== undefined ? this.tcpTunnelledCount : <any>null;
         data["tcpPassthruCount"] = this.tcpPassthruCount !== undefined ? this.tcpPassthruCount : <any>null;
-        data["datagramChannelCount"] = this.datagramChannelCount !== undefined ? this.datagramChannelCount : <any>null;
+        data["packetChannelCount"] = this.packetChannelCount !== undefined ? this.packetChannelCount : <any>null;
         data["isUdpMode"] = this.isUdpMode !== undefined ? this.isUdpMode : <any>null;
         data["isWaitingForAd"] = this.isWaitingForAd !== undefined ? this.isWaitingForAd : <any>null;
         data["canExtendByRewardedAd"] = this.canExtendByRewardedAd !== undefined ? this.canExtendByRewardedAd : <any>null;
@@ -2787,7 +2787,7 @@ export interface IAppSessionStatus {
     totalTraffic: Traffic;
     tcpTunnelledCount: number;
     tcpPassthruCount: number;
-    datagramChannelCount: number;
+    packetChannelCount: number;
     isUdpMode: boolean;
     isWaitingForAd: boolean;
     canExtendByRewardedAd: boolean;

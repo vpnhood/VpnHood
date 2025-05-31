@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 using VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
@@ -42,7 +43,10 @@ public class AppSettings
     public ServerConfig? ServerConfig { get; set; }
 
     public bool AllowAnonymousTracker { get; set; } = true;
-    public bool IsDiagnoseMode { get; set; }
 
     public string? ManagementSecret { get; set; }
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public LogLevel LogLevel { get; set; } = LogLevel.Information;
+
 }

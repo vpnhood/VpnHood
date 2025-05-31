@@ -6,19 +6,21 @@ namespace VpnHood.Core.Common.Utils;
 
 public static class VhTrackerExtensions
 {
-    public static Task VhTrackErrorAsync(this ITracker tracker, Exception exception, string message, string action)
+    public static Task VhTrackErrorAsync(this ITracker tracker, Exception exception, string message, string action,
+        CancellationToken cancellationToken)
     {
-        return VhTrackErrorAsync(tracker, exception, message, action, false);
+        return VhTrackErrorAsync(tracker, exception, message, action, false, cancellationToken);
     }
 
-    public static Task VhTrackWarningAsync(this ITracker tracker, Exception exception, string message, string action)
+    public static Task VhTrackWarningAsync(this ITracker tracker, Exception exception, string message, string action, 
+        CancellationToken cancellationToken)
     {
-        return VhTrackErrorAsync(tracker, exception, message, action, true);
+        return VhTrackErrorAsync(tracker, exception, message, action, true, cancellationToken);
     }
 
 
     private static async Task VhTrackErrorAsync(this ITracker tracker, Exception exception, string message,
-        string action, bool isWarning)
+        string action, bool isWarning, CancellationToken cancellationToken)
     {
         try {
             var trackEvent = new TrackEvent {
@@ -31,7 +33,7 @@ public static class VhTrackerExtensions
                 }
             };
 
-            await tracker.Track([trackEvent]);
+            await tracker.Track([trackEvent], cancellationToken);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not error to anonymous tracker.");

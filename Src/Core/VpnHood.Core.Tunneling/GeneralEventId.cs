@@ -14,8 +14,8 @@ public static class GeneralEventId
     public static EventId Tls = new((int)EventCode.Tls, nameof(Tls));
     public static EventId Udp = new((int)EventCode.Udp, nameof(Udp));
     public static EventId Packet = new((int)EventCode.Packet, nameof(Packet));
-    public static EventId StreamProxyChannel = new((int)EventCode.StreamChannel, nameof(StreamProxyChannel));
-    public static EventId DatagramChannel = new((int)EventCode.DatagramChannel, EventCode.DatagramChannel.ToString());
+    public static EventId ProxyChannel = new((int)EventCode.StreamChannel, nameof(ProxyChannel));
+    public static EventId PacketChannel = new((int)EventCode.PacketChannel, nameof(EventCode.PacketChannel));
     public static EventId Request = new((int)EventCode.Request, nameof(Request));
     public static EventId TcpLife = new((int)EventCode.TcpLife, nameof(TcpLife));
     public static EventId Test = new((int)EventCode.Test, nameof(Test));
@@ -42,7 +42,7 @@ public static class GeneralEventId
         Udp,
         UdpSign,
         StreamChannel,
-        DatagramChannel,
+        PacketChannel,
         Track,
         Tls,
         AccessManager,

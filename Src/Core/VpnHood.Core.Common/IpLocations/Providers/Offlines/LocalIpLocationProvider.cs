@@ -5,7 +5,7 @@ using System.Text;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Common.IpLocations.Providers;
+namespace VpnHood.Core.Common.IpLocations.Providers.Offlines;
 
 public class LocalIpLocationProvider : IIpLocationProvider
 {
@@ -82,11 +82,13 @@ public class LocalIpLocationProvider : IIpLocationProvider
     {
         // serialize to binary
         using var writer = new BinaryWriter(stream, Encoding.ASCII, true);
+        Span<byte> firstIpBuffer = stackalloc byte[16];
+        Span<byte> lastIpBuffer = stackalloc byte[16];
         writer.Write(_ipRangeInfoList.Count);
         foreach (var ipRangeInfo in _ipRangeInfoList) {
             var ipRange = ipRangeInfo.IpRanges;
-            var firstIpBytes = ipRange.FirstIpAddress.GetAddressBytes();
-            var lastIpBytes = ipRange.LastIpAddress.GetAddressBytes();
+            var firstIpBytes = ipRange.FirstIpAddress.GetAddressBytesFast(firstIpBuffer);
+            var lastIpBytes = ipRange.LastIpAddress.GetAddressBytesFast(lastIpBuffer);
             var countryBytes = Encoding.ASCII.GetBytes(ipRangeInfo.CountryCode);
 
             writer.Write((byte)firstIpBytes.Length);

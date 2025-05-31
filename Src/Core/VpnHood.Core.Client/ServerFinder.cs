@@ -12,6 +12,7 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client;
 
@@ -46,11 +47,6 @@ public class ServerFinder(
             hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6() || x.Address.Equals(IPAddress.IPv6Loopback))
                 .ToArray();
 
-        // for compatibility don't query server for single endpoint
-        // todo: does not need on 535 or upper due to ServerStatusRequest
-        if (hostEndPoints.Count(x => x.Address.IsV4()) == 1)
-            return hostEndPoints.First(x => x.Address.IsV4());
-
         // randomize endpoint 
         VhUtils.Shuffle(hostEndPoints);
 
@@ -70,8 +66,8 @@ public class ServerFinder(
             return res;
 
         _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
-            isIpV6Supported: IncludeIpV6, hasRedirected: false));
-        throw new UnreachableServer(serverLocation: ServerLocation);
+            isIpV6Supported: IncludeIpV6, hasRedirected: false), CancellationToken.None);
+        throw new UnreachableServerException(serverLocation: ServerLocation);
     }
 
     public async Task<IPEndPoint> FindBestRedirectedServerAsync(IPEndPoint[] hostEndPoints,
@@ -112,9 +108,9 @@ public class ServerFinder(
             return res;
 
         _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
-            isIpV6Supported: IncludeIpV6, hasRedirected: true));
+            isIpV6Supported: IncludeIpV6, hasRedirected: true), CancellationToken.None);
 
-        throw new UnreachableServerLocation(serverLocation: ServerLocation);
+        throw new UnreachableServerExceptionLocation(serverLocation: ServerLocation);
     }
 
     private Task TrackEndPointsAvailability(HostStatus[] oldStatuses, HostStatus[] newStatuses)
@@ -190,7 +186,7 @@ public class ServerFinder(
         try {
             var requestResult = await connector.SendRequest<SessionResponse>(
                     new ServerCheckRequest {
-                        RequestId = Guid.NewGuid().ToString()
+                        RequestId = UniqueIdFactory.Create()
                     },
                     cancellationToken)
                 .VhConfigureAwait();

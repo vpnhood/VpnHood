@@ -1,11 +1,11 @@
-﻿using System.Net;
-using System.Runtime.InteropServices;
-using Android.Net;
+﻿using Android.Net;
 using Android.OS;
 using Android.Systems;
 using Java.IO;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
+using System.Net;
+using System.Runtime.InteropServices;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -22,6 +22,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     private FileOutputStream? _outStream;
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
+    private readonly byte[] _writeBuffer = new byte[0xFFFF];
 
     public override bool IsNatSupported => false;
     public override bool IsAppFilterSupported => true;
@@ -214,39 +215,43 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         }
     }
 
-    protected override bool WritePacket(IPPacket ipPacket)
+    protected override bool WritePacket(IpPacket ipPacket)
     {
         if (_outStream == null)
             throw new InvalidOperationException("Adapter is not open.");
 
-        var packetBytes = ipPacket.Bytes;
-        _outStream.Write(packetBytes);
+        var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
+        _outStream.Write(buffer, offset, length);
         return true;
     }
 
-    protected override IPPacket? ReadPacket(int mtu)
+    protected override bool ReadPacket(byte[] buffer)
     {
         if (_inStream == null)
             throw new InvalidOperationException("Adapter is not open.");
 
-        var buffer = new byte[mtu];
+        // Read the packet from the input stream into the array
         var bytesRead = _inStream.Read(buffer);
+
+        // Check the number of bytes read
         return bytesRead switch {
-            // no more packet
-            0 => null,
-            // Parse the packet and add to the list
-            > 0 => Packet.ParsePacket(LinkLayers.Raw, buffer).Extract<IPPacket>(),
-            // error
-            < 0 => throw new System.IO.IOException("Could not read from TUN.")
+            0 => false, // no more packet
+            > 0 => true, // Successfully read a packet
+            < 0 => throw new System.IO.IOException("Could not read from TUN.")  // error
         };
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeUnmanaged()
     {
-        base.Dispose(disposing);
-
         // The adapter is an unmanaged resource; it must be closed if it is open
         if (_parcelFileDescriptor != null)
             AdapterRemove();
+
+        base.DisposeUnmanaged();
+    }
+
+    ~AndroidVpnAdapter()
+    {
+        Dispose(false);
     }
 }

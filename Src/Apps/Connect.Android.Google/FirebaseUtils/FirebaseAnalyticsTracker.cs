@@ -35,7 +35,7 @@ public class FirebaseAnalyticsTracker : Singleton<FirebaseAnalyticsTracker>, ITr
 
     public bool IsEnabled { get; set; }
 
-    public Task Track(IEnumerable<TrackEvent> trackEvents)
+    public Task Track(IEnumerable<TrackEvent> trackEvents, CancellationToken cancellationToken)
     {
         foreach (var trackEvent in trackEvents)
             TrackInternal(trackEvent);
@@ -43,7 +43,7 @@ public class FirebaseAnalyticsTracker : Singleton<FirebaseAnalyticsTracker>, ITr
         return Task.CompletedTask;
     }
 
-    public Task Track(TrackEvent trackEvent)
+    public Task Track(TrackEvent trackEvent, CancellationToken cancellationToken)
     {
         TrackInternal(trackEvent);
         return Task.CompletedTask;

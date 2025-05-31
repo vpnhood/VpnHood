@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Toolkit.Utils;
 
@@ -135,11 +136,14 @@ public static class VhUtils
             timeout = Timeout.InfiniteTimeSpan;
 
         var timeoutTask = Task.Delay(timeout, cancellationToken);
-        await Task.WhenAny(task, timeoutTask).VhConfigureAwait();
+        var completedTask = await Task.WhenAny(task, timeoutTask).VhConfigureAwait();
 
-        cancellationToken.ThrowIfCancellationRequested();
-        if (timeoutTask.IsCompleted)
-            throw new TimeoutException();
+        // Still check if it was actually a timeout
+        if (completedTask == timeoutTask) {
+            if (timeoutTask.IsCompletedSuccessfully)
+                throw new TimeoutException();
+            cancellationToken.ThrowIfCancellationRequested(); // clearer path for cancellation
+        }
 
         await task.VhConfigureAwait();
     }
@@ -244,14 +248,14 @@ public static class VhUtils
 
     public static string RedactIpAddress(IPAddress ipAddress)
     {
-        var addressBytes = ipAddress.GetAddressBytes();
+        var addressBytes = ipAddress.GetAddressBytesFast(stackalloc byte[16]);
 
-        if (ipAddress.AddressFamily == AddressFamily.InterNetwork &&
+        if (ipAddress.IsV4() &&
             !ipAddress.Equals(IPAddress.Any) &&
             !ipAddress.Equals(IPAddress.Loopback))
             return $"{addressBytes[0]}.*.*.{addressBytes[3]}";
 
-        if (ipAddress.AddressFamily == AddressFamily.InterNetworkV6 &&
+        if (ipAddress.IsV6() &&
             !ipAddress.Equals(IPAddress.IPv6Any) &&
             !ipAddress.Equals(IPAddress.IPv6Loopback))
             return $"{addressBytes[0]:x2}{addressBytes[1]:x2}:***:{addressBytes[14]:x2}{addressBytes[15]:x2}";
@@ -316,11 +320,6 @@ public static class VhUtils
     public static bool IsInfinite(TimeSpan timeSpan)
     {
         return timeSpan == TimeSpan.MaxValue || timeSpan == Timeout.InfiniteTimeSpan;
-    }
-
-    public static ValueTask DisposeAsync(IAsyncDisposable? channel)
-    {
-        return channel?.DisposeAsync() ?? default;
     }
 
     public static void ConfigTcpClient(TcpClient tcpClient, int? sendBufferSize, int? receiveBufferSize,
@@ -427,7 +426,7 @@ public static class VhUtils
         }
     }
 
-    public static async Task TryInvokeAsync(string actionName, Func<Task> task)
+    public static async Task TryInvokeAsync(string? actionName, Func<ValueTask> task)
     {
         try {
             await task().VhConfigureAwait();
@@ -437,7 +436,17 @@ public static class VhUtils
         }
     }
 
-    public static async Task<T?> TryInvokeAsync<T>(string actionName, Func<Task<T>> task, T? defaultValue = default)
+    public static async Task TryInvokeAsync(string? actionName, Func<Task> task)
+    {
+        try {
+            await task().VhConfigureAwait();
+        }
+        catch (Exception ex) {
+            LogInvokeError(ex, actionName);
+        }
+    }
+
+    public static async ValueTask<T?> TryInvokeAsync<T>(string? actionName, Func<ValueTask<T>> task, T? defaultValue = default)
     {
         try {
             return await task().VhConfigureAwait();
@@ -448,7 +457,18 @@ public static class VhUtils
         }
     }
 
-    public static void TryInvoke(string actionName, Action action)
+    public static async Task<T?> TryInvokeAsync<T>(string? actionName, Func<Task<T>> task, T? defaultValue = default)
+    {
+        try {
+            return await task().VhConfigureAwait();
+        }
+        catch (Exception ex) {
+            LogInvokeError(ex, actionName);
+            return defaultValue;
+        }
+    }
+
+    public static void TryInvoke(string? actionName, Action action)
     {
         try {
             action.Invoke();
@@ -458,7 +478,7 @@ public static class VhUtils
         }
     }
 
-    public static T? TryInvoke<T>(string actionName, Func<T> func, T? defaultValue = default)
+    public static T? TryInvoke<T>(string? actionName, Func<T> func, T? defaultValue = default)
     {
         try {
             return func();
@@ -469,9 +489,9 @@ public static class VhUtils
         }
     }
 
-    private static void LogInvokeError(Exception ex, string actionDesc)
+    private static void LogInvokeError(Exception ex, string? actionName)
     {
-        if (!string.IsNullOrEmpty(actionDesc))
-            VhLogger.Instance.LogDebug(ex, "Could not invoke {ActionDesc}", actionDesc);
+        if (!string.IsNullOrEmpty(actionName))
+            VhLogger.Instance.LogDebug(ex, "Could not invoke {ActionDesc}", actionName);
     }
 }

@@ -1,42 +1,17 @@
-﻿using System.Net;
-using PacketDotNet;
-
-// ReSharper disable UnusedMember.Global
+﻿// ReSharper disable UnusedMember.Global
 namespace VpnHood.Core.Packets;
 
 public static class PacketUtil
 {
-    public static ushort ReadPacketLength(byte[] buffer, int bufferIndex)
+    public static int ReadPacketLength(ReadOnlySpan<byte> buffer)
     {
-        var version = buffer[bufferIndex] >> 4;
-
-        // v4
-        if (version == 4) {
-            var packetLength = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer, bufferIndex + 2));
-            if (packetLength < 20)
-                throw new Exception($"A packet with invalid length has been received! Length: {packetLength}");
-            return packetLength;
-        }
-
-        // v6
-        if (version == 6) {
-            var payload = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer, bufferIndex + 4));
-            return (ushort)(40 + payload); //header + payload
-        }
-
-        // unknown
-        throw new Exception("Unknown packet version!");
-    }
-
-    public static IPPacket ReadNextPacket(byte[] buffer, ref int bufferIndex)
-    {
-        if (buffer is null) throw new ArgumentNullException(nameof(buffer));
-
-        var packetLength = ReadPacketLength(buffer, bufferIndex);
-        var packet = Packet.ParsePacket(LinkLayers.Raw, buffer[bufferIndex..(bufferIndex + packetLength)])
-            .Extract<IPPacket>();
-        bufferIndex += packetLength;
-        return packet;
+        var ipVersion = IpPacket.GetPacketVersion(buffer);
+        return ipVersion switch {
+            // v4
+            IpVersion.IPv4 => IpV4Packet.GetPacketLength(buffer),
+            IpVersion.IPv6 => IpV6Packet.GetPacketLength(buffer),
+            _ => throw new Exception("Unknown packet version.")
+        };
     }
 
     public static ushort ComputeChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress, 
@@ -51,7 +26,7 @@ public static class PacketUtil
             pseudoHeader[9] = protocol;
             pseudoHeader[10] = (byte)(data.Length >> 8);
             pseudoHeader[11] = (byte)(data.Length);
-            return ComputeChecksum(pseudoHeader, data);
+            return OnesComplementSum(pseudoHeader, data);
         }
 
         if (sourceAddress.Length == 16 && destinationAddress.Length == 16) {
@@ -67,39 +42,19 @@ public static class PacketUtil
             pseudoHeader[37] = 0;
             pseudoHeader[38] = 0;
             pseudoHeader[39] = protocol; // UDP protocol number
-            return ComputeChecksum(pseudoHeader, data);
+            return OnesComplementSum(pseudoHeader, data);
         }
 
         throw new ArgumentException("Invalid address lengths for checksum calculation.");
     }
 
-    public static ushort ComputeChecksum(ReadOnlySpan<byte> pseudoHeader, ReadOnlySpan<byte> data)
+    public static ushort OnesComplementSum(ReadOnlySpan<byte> data)
     {
-        uint sum = 0;
-        sum += ComputeSumWords(pseudoHeader);
-        sum += ComputeSumWords(data);
-
-        // Fold into 16 bits until it fits
-        while ((sum >> 16) != 0)
-            sum = (sum & 0xFFFF) + (sum >> 16);
-
-
-        // Invert and fix 0
-        var checksum = (ushort)(~sum & 0xFFFF);
-        if (checksum == 0)
-            checksum = 0xFFFF;
-
-        return checksum;
+        return OnesComplementSum(ReadOnlySpan<byte>.Empty, data);
     }
 
-
-    public static uint ComputeSumWords(ReadOnlySpan<byte> data)
+    public static ushort OnesComplementSum(ReadOnlySpan<byte> pseudoHeader, ReadOnlySpan<byte> data)
     {
-        uint sum = 0;
-        for (var i = 0; i < data.Length; i += 2) {
-            var word = (ushort)(data[i] << 8 | (i + 1 < data.Length ? data[i + 1] : 0));
-            sum += word;
-        }
-        return sum;
+        return ChecksumUtilsUnsafe.OnesComplementSum(pseudoHeader, data);
     }
 }

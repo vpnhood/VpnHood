@@ -2,6 +2,7 @@
 
 namespace VpnHood.Core.Toolkit.Jobs;
 
+// todo: use Action
 public class JobSection
 {
     private readonly object _lockObject = new();

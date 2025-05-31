@@ -25,7 +25,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>6.0.698</Version>
+		<Version>7.0.705</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
@@ -42,6 +42,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Xamarin.GooglePlayServices.Ads" Version="124.0.0" />
+	  <PackageReference Include="Xamarin.GooglePlayServices.Ads" Version="124.0.0.1" />
 	</ItemGroup>
 </Project>

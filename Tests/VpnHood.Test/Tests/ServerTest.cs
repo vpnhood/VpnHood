@@ -60,7 +60,7 @@ public class ServerTest : TestBase
     {
         // Create Server
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
-        serverOptions.SessionOptions.SyncCacheSize = 10000000;
+        serverOptions.SessionOptions.SyncCacheSize = 10;
         serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
         serverOptions.UpdateStatusInterval = TimeSpan.FromMilliseconds(200);
         var accessManager = TestHelper.CreateAccessManager(serverOptions);
@@ -132,7 +132,7 @@ public class ServerTest : TestBase
         serverConfig.SessionOptions.UdpTimeout = TimeSpan.FromSeconds(2071);
         serverConfig.SessionOptions.IcmpTimeout = TimeSpan.FromSeconds(2072);
         serverConfig.SessionOptions.Timeout = TimeSpan.FromSeconds(2073);
-        serverConfig.SessionOptions.MaxDatagramChannelCount = 2074;
+        serverConfig.SessionOptions.MaxPacketChannelCount = 2074;
         serverConfig.SessionOptions.SyncCacheSize = 2075;
         serverConfig.SessionOptions.TcpBufferSize = 2076;
         serverConfig.SessionOptions.UdpProxyReceiveBufferSize = 4001;
@@ -161,7 +161,7 @@ public class ServerTest : TestBase
         Assert.AreEqual(serverConfig.SessionOptions.IcmpTimeout, server.SessionManager.SessionOptions.IcmpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.UdpTimeout, server.SessionManager.SessionOptions.UdpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.Timeout, server.SessionManager.SessionOptions.Timeout);
-        Assert.AreEqual(serverConfig.SessionOptions.MaxDatagramChannelCount, server.SessionManager.SessionOptions.MaxDatagramChannelCount);
+        Assert.AreEqual(serverConfig.SessionOptions.MaxPacketChannelCount, server.SessionManager.SessionOptions.MaxPacketChannelCount);
         Assert.AreEqual(serverConfig.SessionOptions.SyncCacheSize, server.SessionManager.SessionOptions.SyncCacheSize);
         Assert.AreEqual(serverConfig.SessionOptions.TcpBufferSize, server.SessionManager.SessionOptions.TcpBufferSize);
         Assert.AreEqual(serverConfig.SessionOptions.UdpProxySendBufferSize, server.SessionManager.SessionOptions.UdpProxySendBufferSize);
@@ -270,7 +270,7 @@ public class ServerTest : TestBase
     {
         // create server
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
-        serverOptions.SessionOptions.SyncCacheSize = 1000000;
+        serverOptions.SessionOptions.SyncCacheSize = 10;
         serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
         using var accessManager = TestHelper.CreateAccessManager(serverOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
@@ -278,14 +278,15 @@ public class ServerTest : TestBase
         // create client
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
-
+        
+        Log("Clearing all sessions...");
         accessManager.SessionService.Sessions.Clear();
 
+        Log("Waiting for the client disposal...");
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {
-            await TestHelper.Test_Https(throwError: false, timeout: 1000);
+            await TestHelper.Test_Https(throwError: false, timeout: 100);
             return client.State;
         });
-        Assert.AreEqual(ClientState.Disposed, client.State);
         Assert.AreEqual(SessionErrorCode.AccessError, client.GetLastSessionErrorCode());
     }
 
@@ -319,7 +320,7 @@ public class ServerTest : TestBase
             },
             SessionOptions = new SessionOptions {
                 IcmpTimeout = TimeSpan.FromMinutes(50),
-                MaxDatagramChannelCount = 13,
+                MaxPacketChannelCount = 13,
                 MaxTcpChannelCount = 14,
                 MaxTcpConnectWaitCount = 16,
                 MaxUdpClientCount = 17,

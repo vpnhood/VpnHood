@@ -6,7 +6,7 @@ public sealed class TimeoutItem<T>(T value, bool autoDispose = false) : TimeoutI
 
     protected override void Dispose(bool disposing)
     {
-        if (Disposed)
+        if (IsDisposed)
             return;
 
         if (autoDispose && Value is IDisposable disposable)

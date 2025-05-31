@@ -5,16 +5,20 @@
 		<RootNamespace>VpnHood.App.Client.Droid.Web</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android.web.debug</ApplicationId>
-		<ApplicationVersion>696</ApplicationVersion>
-		<ApplicationDisplayVersion>6.0.696</ApplicationDisplayVersion>
+		<ApplicationVersion>705</ApplicationVersion>
+		<ApplicationDisplayVersion>7.0.705</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
 		<PublishTrimmed>True</PublishTrimmed>
 		<RunAOTCompilation>True</RunAOTCompilation>
-		<RuntimeIdentifiers>android-arm64;android-x64;android-arm</RuntimeIdentifiers>
+		<RuntimeIdentifiers>android-arm64;android-x64;android-x86</RuntimeIdentifiers>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<TrimmerRootDescriptor Include="Linker.xml" />
+	</ItemGroup>
 
 	<PropertyGroup>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -36,13 +40,13 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>6.0.696</Version>
+		<Version>7.0.705</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.683" />
+	  <PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.686" />
 	</ItemGroup>
 
 	<ItemGroup>

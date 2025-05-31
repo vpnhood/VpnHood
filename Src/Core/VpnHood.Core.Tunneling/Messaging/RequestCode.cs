@@ -4,8 +4,8 @@
 public enum RequestCode : byte
 {
     Hello = 1,
-    TcpDatagramChannel = 2,
-    StreamProxyChannel = 3,
+    TcpPacketChannel = 2,
+    ProxyChannel = 3,
     SessionStatus = 4,
     UdpPacket = 5,
     RewardedAd = 10,

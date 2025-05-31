@@ -119,7 +119,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         VhLogger.Instance.LogInformation("OS: {OS}", _systemInfoProvider.GetSystemInfo());
         VhLogger.Instance.LogInformation("VirtualNetworkV4: {VirtualIpV4}, VirtualNetworkV6: {VirtualIpV6}", 
             SessionManager.VirtualIpNetworkV4, SessionManager.VirtualIpNetworkV6);
-        VhLogger.Instance.LogInformation("IsDiagnoseMode: {IsDiagnoseMode}", VhLogger.IsDiagnoseMode);
+        VhLogger.Instance.LogInformation("MinLogLevel: {MinLogLevel}", VhLogger.MinLogLevel);
 
         // Report TcpBuffers
         var tcpClient = new TcpClient();
@@ -206,7 +206,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             ServerUtil.ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
             var allServerIps = serverInfo.PublicIpAddresses
                 .Concat(serverInfo.PrivateIpAddresses)
-                .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
+                .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? []);
 
             ConfigNetFilter(SessionManager.NetFilter, ServerHost, serverConfig.NetFilterOptions,
                 privateAddresses: allServerIps,
@@ -263,7 +263,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         catch (Exception ex) {
             State = ServerState.Waiting;
             _lastConfigException = ex;
-            SessionManager.Tracker?.VhTrackErrorAsync(ex, "Could not configure server!", "Configure");
+            SessionManager.Tracker?.VhTrackErrorAsync(ex, "Could not configure server!", "Configure", CancellationToken.None);
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.",
                 JobSection.Interval.TotalSeconds);
             await SendStatusToAccessManager(false).VhConfigureAwait();
@@ -528,7 +528,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         _disposed = true;
 
         using var scope = VhLogger.Instance.BeginScope("Server");
-        VhLogger.Instance.LogInformation("Shutting down...");
+        VhLogger.Instance.LogInformation("Server is shutting down...");
 
         // wait for configuration
         try {

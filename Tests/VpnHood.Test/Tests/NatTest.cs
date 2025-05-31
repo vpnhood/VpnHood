@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PacketDotNet;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Tunneling;
 
@@ -12,36 +11,35 @@ public class NatTest : TestBase
     [TestMethod]
     public void Nat_NatItem_Test()
     {
-        var ipPacket = PacketBuilder.BuildIpPacket(IPAddress.Parse("10.1.1.1"), IPAddress.Parse("10.1.1.2"));
-        var tcpPacket = new TcpPacket(100, 100);
-        ipPacket.PayloadPacket = tcpPacket;
+        var ipPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("10.1.1.1:100"), IPEndPoint.Parse("10.1.1.2:100"), null, null);
+        var tcpPacket = ipPacket.ExtractTcp();
 
         var nat = new Nat(false);
         var id = nat.Add(ipPacket).NatId;
 
         // un-map
-        var natItem = nat.Resolve(ipPacket.Version, ProtocolType.Tcp, id);
+        var natItem = nat.Resolve(ipPacket.Version, IpProtocol.Tcp, id);
         Assert.IsNotNull(natItem);
         Assert.AreEqual(ipPacket.SourceAddress, natItem.SourceAddress);
         Assert.AreEqual(tcpPacket.SourcePort, natItem.SourcePort);
 
-        var newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
+        var newIpPacket = ipPacket.Clone();
         Assert.AreEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Same NatId is expected for a same packet!");
 
-        newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
+        newIpPacket = ipPacket.Clone();
         newIpPacket.SourceAddress = IPAddress.Parse("10.2.1.1");
         Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Different NatId is expected for a new source!");
 
-        newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
+        newIpPacket = ipPacket.Clone();
         newIpPacket.ExtractTcp().SourcePort = (ushort)(tcpPacket.SourcePort + 1);
         Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId,
             "Different NatId is expected for a new SourcePort!");
 
-        newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
+        newIpPacket = ipPacket.Clone();
         newIpPacket.DestinationAddress = IPAddress.Parse("10.2.1.1");
         Assert.AreEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Same NatId is expected for a new destination!");
 
-        newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
+        newIpPacket = ipPacket.Clone();
         newIpPacket.ExtractTcp().DestinationPort = (ushort)(tcpPacket.DestinationPort + 1);
         Assert.AreEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Sme NatId is expected for a new destinationPort!");
     }
@@ -51,42 +49,39 @@ public class NatTest : TestBase
     {
         var nat = new Nat(true);
 
-        var ipPacket = PacketBuilder.BuildIpPacket(IPAddress.Parse("10.1.1.1"), IPAddress.Parse("10.1.1.2"));
-        var tcpPacket = new TcpPacket(100, 100);
-        ipPacket.PayloadPacket = tcpPacket;
+        var ipPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("10.1.1.1:100"), IPEndPoint.Parse("10.1.1.2:100"), null, null);
+        var tcpPacket = ipPacket.ExtractTcp();
         var id = nat.Add(ipPacket).NatId;
 
-        var ipPacket2 = PacketBuilder.BuildIpPacket(IPAddress.Parse("10.1.1.1"), IPAddress.Parse("10.1.1.2"));
-        var tcpPacket2 = new TcpPacket(101, 100);
-        ipPacket2.PayloadPacket = tcpPacket2;
+        var ipPacket2 = PacketBuilder.BuildTcp(IPEndPoint.Parse("10.1.1.1:101"), IPEndPoint.Parse("10.1.1.2:100"), null, null);
         nat.Add(ipPacket2);
 
         // un-map
-        var natItem = (NatItemEx?)nat.Resolve(ipPacket.Version, ProtocolType.Tcp, id);
+        var natItem = (NatItemEx?)nat.Resolve(ipPacket.Version, IpProtocol.Tcp, id);
         Assert.IsNotNull(natItem);
         Assert.AreEqual(ipPacket.SourceAddress, natItem.SourceAddress);
         Assert.AreEqual(ipPacket.DestinationAddress, natItem.DestinationAddress);
         Assert.AreEqual(tcpPacket.SourcePort, natItem.SourcePort);
         Assert.AreEqual(tcpPacket.DestinationPort, natItem.DestinationPort);
 
-        var newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
+        var newIpPacket = ipPacket.Clone();
         Assert.AreEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Same NatId is expected for a same packet!");
 
-        newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
+        newIpPacket = ipPacket.Clone();
         newIpPacket.SourceAddress = IPAddress.Parse("10.2.1.1");
         Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Different NatId is expected for a new source!");
 
-        newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
+        newIpPacket = ipPacket.Clone();
         newIpPacket.ExtractTcp().DestinationPort = (ushort)(tcpPacket.SourcePort + 1);
         Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId,
             "Different NatId is expected for a new SourcePort!");
 
-        newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
+        newIpPacket = ipPacket.Clone();
         newIpPacket.DestinationAddress = IPAddress.Parse("10.2.1.1");
         Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId,
             "Different NatId is expected for a new destination!");
 
-        newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
+        newIpPacket = ipPacket.Clone();
         newIpPacket.ExtractTcp().SourcePort = (ushort)(tcpPacket.DestinationPort + 1);
         Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId,
             "Different NatId is expected for a new destinationPort!");
@@ -95,10 +90,8 @@ public class NatTest : TestBase
     [TestMethod]
     public void Nat_OverFlow_Test()
     {
-        var ipPacket = PacketBuilder.BuildIpPacket(IPAddress.Parse("10.1.1.1"), IPAddress.Parse("10.1.1.2"));
-        var tcpPacket = new TcpPacket(100, 100);
-        ipPacket.PayloadPacket = tcpPacket;
-
+        var ipPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("10.1.1.1:100"), IPEndPoint.Parse("10.1.1.2:100"), null, null);
+        var tcpPacket = ipPacket.ExtractTcp();
         var nat = new Nat(true);
 
         // fill NAT

@@ -104,28 +104,28 @@ public class ClientServerTest : TestBase
 
         var clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.DropUdp = true;
-        clientOptions.MaxDatagramChannelCount = 6;
+        clientOptions.MaxPacketChannelCount = 6;
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions);
-        await Assert.ThrowsAsync<OperationCanceledException>(()=>TestHelper.Test_Udp(3000), "UDP must be failed.");
+        await Assert.ThrowsAsync<OperationCanceledException>(() => TestHelper.Test_Udp(3000), "UDP must be failed.");
     }
 
 
     [TestMethod]
-    public async Task MaxDatagramChannels()
+    public async Task MaxPacketChannels()
     {
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        fileAccessManagerOptions.SessionOptions.MaxDatagramChannelCount = 3;
+        fileAccessManagerOptions.SessionOptions.MaxPacketChannelCount = 3;
 
         // Create Server
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
         var token = TestHelper.CreateAccessToken(server);
 
         // --------
-        // Check: Client MaxDatagramChannelCount larger than server
+        // Check: Client MaxPacketChannelCount larger than server
         // --------
         var clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.UseUdpChannel = false;
-        clientOptions.MaxDatagramChannelCount = 6;
+        clientOptions.MaxPacketChannelCount = 6;
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: TestHelper.CreateTestVpnAdapter());
 
@@ -136,15 +136,15 @@ public class ClientServerTest : TestBase
         }
 
         Thread.Sleep(100);
-        Assert.AreEqual(3, client.GetSessionStatus().DatagramChannelCount);
+        Assert.AreEqual(3, client.GetSessionStatus().ActivePacketChannelCount);
         await client.DisposeAsync();
 
         // --------
-        // Check: Client MaxDatagramChannelCount smaller than server
+        // Check: Client MaxPacketChannelCount smaller than server
         // --------
         clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.UseUdpChannel = false;
-        clientOptions.MaxDatagramChannelCount = 1;
+        clientOptions.MaxPacketChannelCount = 1;
         await using var client2 = await TestHelper.CreateClient(clientOptions: clientOptions);
 
         // let channel be removed gradually
@@ -154,12 +154,12 @@ public class ClientServerTest : TestBase
         }
 
         Thread.Sleep(200);
-        Assert.AreEqual(1, client2.GetSessionStatus().DatagramChannelCount);
+        Assert.AreEqual(1, client2.GetSessionStatus().ActivePacketChannelCount);
         await client.DisposeAsync();
     }
 
     [TestMethod]
-    public async Task DatagramChannel_Stream()
+    public async Task PacketChannel_Stream()
     {
         // Create Server
         await using var server = await TestHelper.CreateServer();
@@ -167,7 +167,7 @@ public class ClientServerTest : TestBase
 
         // Create Client
         var clientOptions = TestHelper.CreateClientOptions(token);
-        clientOptions.MaxDatagramChannelCount = 4;
+        clientOptions.MaxPacketChannelCount = 4;
         await using var client = await TestHelper.CreateClient(
             vpnAdapter: TestHelper.CreateTestVpnAdapter(), clientOptions: clientOptions);
 
@@ -179,9 +179,9 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
-    public async Task DatagramChannel_Udp()
+    public async Task PacketChannel_Udp()
     {
-        VhLogger.IsDiagnoseMode = true;
+        VhLogger.MinLogLevel = LogLevel.Trace;
 
         // Create Server
         await using var server = await TestHelper.CreateServer();
@@ -199,7 +199,7 @@ public class ClientServerTest : TestBase
         await Task.WhenAll(tasks);
     }
 
-   
+
 
     [TestMethod]
     public async Task UdpChannel_custom_udp_port()
@@ -246,30 +246,23 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(
             vpnAdapter: TestHelper.CreateTestVpnAdapter(), clientOptions: clientOptions);
 
+        // success
         await TestHelper.Test_Https();
 
+        // stop server
         await server.DisposeAsync();
-        try {
-            await TestHelper.Test_Https(timeout: 3000);
-        }
-        catch {
-            /* ignored */
-        }
 
-        Thread.Sleep(1000);
-        try {
-            await TestHelper.Test_Https(timeout: 3000);
-        }
-        catch {
-            /* ignored */
-        }
+        // failed
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Waiting for client to be disposed.");
+        await Assert.ThrowsAsync<Exception>(() => TestHelper.Test_Https());
+        await Task.Delay(1000); // wait to finish session time after first error
+        await Assert.ThrowsAsync<Exception>(() => TestHelper.Test_Https());
 
         await client.WaitForState(ClientState.Disposed);
-        await client.DisposeAsync();
     }
 
     [TestMethod]
-    public async Task Datagram_channel_after_client_reconnection()
+    public async Task PacketChannel_after_client_reconnection()
     {
         //create a shared udp client among connection
         // make sure using same local port to test Nat properly
@@ -298,25 +291,31 @@ public class ClientServerTest : TestBase
     [TestMethod]
     public async Task Reset_tcp_connection_immediately_after_vpn_connected()
     {
+        VhLogger.MinLogLevel = LogLevel.Trace;
+        
         // create server
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
-        using TcpClient tcpClient = new(TestConstants.HttpsExternalUri1.Host, 443);
+        // connect to a host
+        using TcpClient tcpClient = new();
+        using var connectCts = new CancellationTokenSource(2000);
+        await tcpClient.ConnectAsync(TestConstants.HttpsExternalUri1.Host, 443, connectCts.Token);
         await using var stream = tcpClient.GetStream();
 
         // create client
-        await using var client1 = await TestHelper.CreateClient(token);
+        await using var client = await TestHelper.CreateClient(token);
 
-        try {
-            stream.WriteByte(1);
-            stream.ReadByte();
-            Assert.Fail("Exception expected!");
-        }
-        catch (Exception ex)
-            when (ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionReset }) {
-            // OK
-        }
+        using var cts2 = new CancellationTokenSource(2000);
+        var ex = await Assert.ThrowsAsync<Exception>(async () => {
+            await stream.WriteAsync(new byte[1], cts2.Token);
+            // ReSharper disable once MustUseReturnValue
+            await stream.ReadAsync(new byte[1], cts2.Token);
+        });
+
+        var innerException = ex.InnerException;
+        Assert.AreEqual(typeof(SocketException), innerException?.GetType());
+        Assert.AreEqual(SocketError.ConnectionReset, ((SocketException)innerException!).SocketErrorCode);
     }
 
     [TestMethod]
@@ -515,6 +514,8 @@ public class ClientServerTest : TestBase
         var lastReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
 
         // create one connection
+        await Task.Delay(500); // wait for connection to get ready
+        VhLogger.Instance.LogDebug("Test: Check the first HTTPS connection.");
         await TestHelper.Test_Https();
         Assert.AreEqual(lastReusedConnectionSucceededCount + 1, client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
         Assert.AreEqual(lastCreatedConnectionCount, client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
@@ -594,7 +595,7 @@ public class ClientServerTest : TestBase
     public async Task ServerVpnAdapter_by_udp()
     {
         using var vpnAdapter = new TestUdpServerVpnAdapter();
-        
+
         // check will server use the adapter 
         var adapterUsed = false;
         vpnAdapter.PacketReceived += (_, _) => {

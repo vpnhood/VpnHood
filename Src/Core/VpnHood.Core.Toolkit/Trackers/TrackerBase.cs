@@ -1,6 +1,6 @@
-﻿using System.Net.Http.Headers;
+﻿using Microsoft.Extensions.Logging;
+using System.Net.Http.Headers;
 using System.Text.Json;
-using Microsoft.Extensions.Logging;
 
 // ReSharper disable once CheckNamespace
 namespace Ga4.Trackers;
@@ -19,12 +19,13 @@ public abstract class TrackerBase : ITracker
     public ILogger? Logger { get; set; }
     public EventId LoggerEventId { get; set; } = new(0, "Ga4Tracker");
     public bool ThrowExceptionOnError { get; set; }
+    public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(10);
     public Dictionary<string, object> UserProperties { get; set; } = new();
 
-    public abstract Task Track(IEnumerable<TrackEvent> trackEvents);
-    public Task Track(TrackEvent trackEvent) => Track([trackEvent]);
+    public abstract Task Track(IEnumerable<TrackEvent> trackEvents, CancellationToken cancellationToken);
+    public Task Track(TrackEvent trackEvent, CancellationToken cancellationToken) => Track([trackEvent], cancellationToken);
 
-    public Task TrackError(string action, Exception ex)
+    public Task TrackError(string action, Exception ex, CancellationToken cancellationToken)
     {
         var trackEvent = new TrackEvent {
             EventName = "exception",
@@ -34,7 +35,7 @@ public abstract class TrackerBase : ITracker
             }
         };
 
-        return Track([trackEvent]);
+        return Track([trackEvent], cancellationToken);
     }
 
     protected void PrepareHttpHeaders(HttpHeaders httpHeaders)
@@ -45,10 +46,14 @@ public abstract class TrackerBase : ITracker
         //httpHeaders.Add("Sec-Ch-Ua-Platform", "\"Android\"");
     }
 
-    protected async Task SendHttpRequest(HttpRequestMessage requestMessage, string name, object? jsonData = null)
+    protected async Task SendHttpRequest(HttpRequestMessage requestMessage, string name, object? jsonData, 
+        CancellationToken cancellationToken)
     {
         if (!IsEnabled)
             return;
+
+        using var timeoutCts = new CancellationTokenSource(RequestTimeout);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
 
         try {
             // log
@@ -66,7 +71,7 @@ public abstract class TrackerBase : ITracker
                 Logger?.LogInformation(LoggerEventId, "Ga4Track Data: {Data}", data);
             }
 
-            var res = await HttpClient.SendAsync(requestMessage).ConfigureAwait(false);
+            var res = await HttpClient.SendAsync(requestMessage, linkedCts.Token).ConfigureAwait(false);
 
             // log
             var result = await res.Content.ReadAsStringAsync().ConfigureAwait(false);

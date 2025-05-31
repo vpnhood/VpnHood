@@ -75,4 +75,10 @@ public static class VhTaskExtensions
 
         await task;
     }
+
+    public static void VhBlock(this ValueTask task)
+    {
+        if (!task.IsCompleted)
+            task.GetAwaiter().GetResult();
+    }
 }

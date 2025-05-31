@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.App.Client.Droid.Google</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.client.android.debug</ApplicationId>
-		<ApplicationVersion>696</ApplicationVersion>
-		<ApplicationDisplayVersion>6.0.696</ApplicationDisplayVersion>
+		<ApplicationVersion>706</ApplicationVersion>
+		<ApplicationDisplayVersion>7.0.706</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
@@ -17,8 +17,12 @@
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
 		<PublishTrimmed>True</PublishTrimmed>
 		<RunAOTCompilation>True</RunAOTCompilation>
-		<RuntimeIdentifiers>android-arm;android-arm64;android-x64;android-x86;</RuntimeIdentifiers>
+		<RuntimeIdentifiers>android-arm64;android-arm;android-x64;android-x86;</RuntimeIdentifiers>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<TrimmerRootDescriptor Include="Linker.xml" />
+	</ItemGroup>
 
 	<PropertyGroup>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -40,7 +44,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>6.0.696</Version>
+		<Version>7.0.706</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>

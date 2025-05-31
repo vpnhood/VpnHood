@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using PacketDotNet;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -11,14 +10,14 @@ public class NatItem
 {
     public ushort NatId { get; internal set; }
     public object? CustomData { get; set; }
-    public IPVersion IpVersion { get; }
-    public ProtocolType Protocol { get; }
+    public IpVersion IpVersion { get; }
+    public IpProtocol Protocol { get; }
     public IPAddress SourceAddress { get; }
     public ushort SourcePort { get; }
     public ushort IcmpId { get; }
     public DateTime AccessTime { get; internal set; }
 
-    public NatItem(IPPacket ipPacket)
+    public NatItem(IpPacket ipPacket)
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
@@ -28,27 +27,27 @@ public class NatItem
         AccessTime = FastDateTime.Now;
 
         switch (ipPacket.Protocol) {
-            case ProtocolType.Tcp: {
-                var tcpPacket = ipPacket.ExtractTcp();
-                SourcePort = tcpPacket.SourcePort;
-                break;
-            }
+            case IpProtocol.Tcp: {
+                    var tcpPacket = ipPacket.ExtractTcp();
+                    SourcePort = tcpPacket.SourcePort;
+                    break;
+                }
 
-            case ProtocolType.Udp: {
-                var udpPacket = ipPacket.ExtractUdp();
-                SourcePort = udpPacket.SourcePort;
-                break;
-            }
+            case IpProtocol.Udp: {
+                    var udpPacket = ipPacket.ExtractUdp();
+                    SourcePort = udpPacket.SourcePort;
+                    break;
+                }
 
-            case ProtocolType.Icmp: {
-                IcmpId = GetIcmpId(ipPacket);
-                break;
-            }
+            case IpProtocol.IcmpV4: {
+                    IcmpId = GetIcmpV4Id(ipPacket);
+                    break;
+                }
 
-            case ProtocolType.IcmpV6: {
-                IcmpId = GetIcmpV6Id(ipPacket);
-                break;
-            }
+            case IpProtocol.IcmpV6: {
+                    IcmpId = GetIcmpV6Id(ipPacket);
+                    break;
+                }
 
             default:
                 throw new NotSupportedException($"{ipPacket.Protocol} is not yet supported by this NAT!");
@@ -57,53 +56,23 @@ public class NatItem
 
     //see https://datatracker.ietf.org/doc/html/rfc792
     [SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "<Pending>")]
-    private static ushort GetIcmpId(IPPacket ipPacket)
+    private static ushort GetIcmpV4Id(IpPacket ipPacket)
     {
         var icmpPacket = ipPacket.ExtractIcmpV4();
-        var type = (int)icmpPacket.TypeCode >> 8;
-        switch (type) {
-            // Identifier
-            case 08: // for echo message
-            case 13: // for timestamp message
-            case 15: // information request message
-                return icmpPacket.Id != 0 ? icmpPacket.Id : icmpPacket.Sequence;
+        if (icmpPacket.Type is IcmpV4Type.EchoRequest or IcmpV4Type.EchoReply)
+            return icmpPacket.Identifier;
 
-            case 00: // for echo message reply
-            case 14: // for timestamp reply message.
-            case 16: // for information reply message
-
-            // (Internet Header + 64 bits of Original Data Datagram )
-            case 03: // Destination Unreachable Message 
-            case 04: // Source Quench Message
-            case 05: // Redirect Message
-            case 11: // Time Exceeded Message 
-            case 12: // Parameter Problem Message
-                throw new Exception($"Unexpected Icmp Code from a client! type: {type}");
-
-            default:
-                throw new Exception($"Unsupported Icmp Code! Code: {type}");
-        }
+        throw new Exception($"Unsupported IcmpV4 Type for NAT. Type: {icmpPacket.Type}");
     }
 
     //see https://datatracker.ietf.org/doc/html/rfc4443
-    private static ushort GetIcmpV6Id(IPPacket ipPacket)
+    private static ushort GetIcmpV6Id(IpPacket ipPacket)
     {
         var icmpPacket = ipPacket.ExtractIcmpV6();
-        var type = (int)icmpPacket.Type;
+        if (icmpPacket.Type is IcmpV6Type.EchoRequest or IcmpV6Type.EchoReply)
+            return icmpPacket.Identifier;
 
-        switch (icmpPacket.Type) {
-            // Identifier
-            case IcmpV6Type.EchoRequest: // for echo message
-            case IcmpV6Type.EchoReply: // for echo message
-            {
-                var id = BitConverter.ToUInt16(icmpPacket.HeaderData, 2);
-                var sequence = BitConverter.ToUInt16(icmpPacket.HeaderData, 4);
-                return id != 0 ? id : sequence;
-            }
-
-            default:
-                throw new Exception($"Unsupported Icmp Code! Code: {type}");
-        }
+        throw new Exception($"Unsupported IcmpV6 Type for NAT. Type: {icmpPacket.Type}");
     }
 
     public override bool Equals(object? obj)

@@ -61,8 +61,7 @@ public class AccessTest : TestBase
     public async Task Server_reject_expired_access_at_runtime()
     {
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        fileAccessManagerOptions.SessionOptions.SyncInterval =
-            TimeSpan.FromMinutes(10); // make sure the disconnect is not due to sync
+        fileAccessManagerOptions.SessionOptions.SyncInterval = TimeSpan.FromMinutes(10); // make sure the disconnect is not due to sync
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create a short expiring token
@@ -74,7 +73,7 @@ public class AccessTest : TestBase
         // test expiration
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {
             await server.SessionManager.Sync(true);
-            await TestHelper.Test_Https(throwError: false, timeout: 1000);
+            await TestHelper.Test_Https(throwError: false, timeout: 500);
             return client.State;
         });
         Assert.AreEqual(SessionErrorCode.AccessExpired, client.GetLastSessionErrorCode());
@@ -229,9 +228,10 @@ public class AccessTest : TestBase
         await client1.WaitForState(ClientState.Disposed);
         await server.SessionManager.Sync(true);
 
-        await Task.Delay(1000);
         var time = DateTime.UtcNow;
-        // suppress by yourself
+        await Task.Delay(200);
+
+        // create a new client with the same token, it should not suppress
         await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var accessInfo = client2.SessionInfo?.AccessInfo;
         Assert.IsNotNull(accessInfo);
@@ -247,7 +247,8 @@ public class AccessTest : TestBase
         await client2.WaitForState(ClientState.Disposed);
         await server.SessionManager.Sync(true);
 
-        await Task.Delay(1000);
+        // create a new client with the same token, it should not suppress
+        await Task.Delay(200);
         await using var client3 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         accessInfo = client3.SessionInfo?.AccessInfo;
         Assert.IsNotNull(accessInfo);

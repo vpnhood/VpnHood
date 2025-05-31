@@ -56,7 +56,7 @@ internal class ApiController : IDisposable
             await using var stream = client.GetStream();
 
             // read api key and compare
-            var apiKey = StreamUtils.ReadObject<byte[]>(stream);
+            var apiKey = await StreamUtils.ReadObjectAsync<byte[]>(stream, cancellationToken);
             if (!ApiKey.SequenceEqual(apiKey))
                 throw new Exception("Invalid API key.");
 

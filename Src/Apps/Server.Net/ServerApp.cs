@@ -75,7 +75,7 @@ public class ServerApp : IDisposable
             : new AppSettings();
 
         // Init File Logger before starting server
-        VhLogger.IsDiagnoseMode = AppSettings.IsDiagnoseMode;
+        VhLogger.MinLogLevel = AppSettings.LogLevel;
         InitFileLogger(storagePath);
 
         //create command Listener
@@ -144,7 +144,7 @@ public class ServerApp : IDisposable
         options.PublicEndPoints ??= GetDefaultPublicEndPoints(options.TcpEndPointsValue, CancellationToken.None).Result;
 
         var accessManagerFolder = Path.Combine(storageFolderPath, "access");
-        VhLogger.Instance.LogInformation($"Using FileAccessManager. AccessFolder: {accessManagerFolder}");
+        VhLogger.Instance.LogInformation("Using FileAccessManager. AccessFolder: {AccessManagerFolder}", accessManagerFolder);
         var ret = new FileAccessManager(accessManagerFolder, options);
         return ret;
     }
@@ -271,7 +271,11 @@ public class ServerApp : IDisposable
     {
         try {
             var vpnAdapter = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-                ? new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings { AdapterName = "VpnHoodServer" })
+                ? new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {
+                    AdapterName = "VpnHoodServer", 
+                    Blocking = false, 
+                    AutoDisposePackets = true
+                })
                 : null;
 
             // start the adapter

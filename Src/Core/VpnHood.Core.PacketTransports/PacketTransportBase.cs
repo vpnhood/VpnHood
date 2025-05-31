@@ -180,15 +180,11 @@ public abstract class PacketTransportBase : IPacketTransport
             return true;
         }
         catch (Exception ex) {
-            if (ipPackets.Count == 1)
-                LogPacket(ipPackets[0],
-                    $"{VhLogger.FormatType(this)}: Error in sending packet via channel.", exception: ex);
-            else
-                VhLogger.Instance.LogError(ex,
-                    $"{VhLogger.FormatType(this)}: Error in sending some packets via channel.");
-
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < ipPackets.Count; i++) {
+                LogPacket(ipPackets[i],
+                    $"{VhLogger.FormatType(this)}: Error in sending packet via channel.", exception: ex);
+
                 _stat.DroppedPackets++;
                 if (_autoDisposePackets)
                     ipPackets[i].Dispose();

@@ -173,7 +173,7 @@ public abstract class PacketTransportBase : IPacketTransport
             for (var i = 0; i < ipPackets.Count; i++) {
                 _stat.SentBytes += ipPackets[i].PacketLength;
                 _stat.SentPackets++;
-                if (_autoDisposePackets && !_passthrough)
+                if (_autoDisposePackets)
                     ipPackets[i].Dispose();
             }
 

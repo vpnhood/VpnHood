@@ -39,7 +39,6 @@ public class ProxyManager : PassthroughPacketTransport
 
 
     public ProxyManager(ISocketFactory socketFactory, ProxyManagerOptions options)
-        : base(options.AutoDisposePackets)
     {
         var udpProxyPoolOptions = new UdpProxyPoolOptions {
             PacketProxyCallbacks = options.PacketProxyCallbacks,

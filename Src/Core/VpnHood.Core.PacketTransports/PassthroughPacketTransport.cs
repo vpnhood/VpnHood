@@ -2,9 +2,9 @@
 
 namespace VpnHood.Core.PacketTransports;
 
-public abstract class PassthroughPacketTransport(bool autoDisposePackets)
+public abstract class PassthroughPacketTransport()
     : PacketTransportBase(new PacketTransportOptions {
-        AutoDisposePackets = autoDisposePackets,
+        AutoDisposePackets = false,
         Blocking = false
     }, passthrough: true, singleMode: true)
 {

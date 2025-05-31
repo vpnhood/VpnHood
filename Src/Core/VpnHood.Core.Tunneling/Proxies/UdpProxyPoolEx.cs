@@ -38,7 +38,6 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool, IJob
     public JobSection JobSection { get; } = new();
 
     public UdpProxyPoolEx(UdpProxyPoolOptions options)
-        : base(options.AutoDisposePackets)
     {
         _autoDisposeSentPackets = options.AutoDisposePackets;
         _packetProxyCallbacks = options.PacketProxyCallbacks;

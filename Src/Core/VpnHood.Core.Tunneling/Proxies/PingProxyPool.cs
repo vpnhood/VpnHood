@@ -23,7 +23,6 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
 
     public PingProxyPool(PingProxyPoolOptions options)
-        : base(options.AutoDisposePackets)
     {
         _autoDisposeSentPackets = options.AutoDisposePackets;
         _maxClientCount = options.MaxClientCount;

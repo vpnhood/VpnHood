@@ -40,7 +40,6 @@ public class Tunnel : PassthroughPacketTransport
     }
 
     public Tunnel(TunnelOptions options)
-        : base(options.AutoDisposePackets)
     {
         _channelManager = new ChannelManager(options.MaxPacketChannelCount, Channel_OnPacketReceived);
         _speedMonitorTimer = new Timer(_ => UpdateSpeed(), null, TimeSpan.Zero, _speedTestThreshold);

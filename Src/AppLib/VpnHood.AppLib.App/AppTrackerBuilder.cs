@@ -15,4 +15,15 @@ public static class AppTrackerBuilder
             }
         };
     }
+
+    public static TrackEvent BuildFirstLaunch(string deviceId, string countryCode)
+    {
+        return new TrackEvent {
+            EventName = "vh_first_launch",
+            Parameters = new Dictionary<string, object> {
+                { "deviceId", deviceId },
+                { "country", countryCode }
+            }
+        };
+    }
 }

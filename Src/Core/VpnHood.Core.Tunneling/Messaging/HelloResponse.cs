@@ -8,9 +8,6 @@ namespace VpnHood.Core.Tunneling.Messaging;
 
 public class HelloResponse : SessionResponse
 {
-    [JsonConverter(typeof(IPAddressConverter))]
-    public required IPAddress ClientPublicAddress { get; set; }
-
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public IPAddress[]? DnsServers { get; set; }
 

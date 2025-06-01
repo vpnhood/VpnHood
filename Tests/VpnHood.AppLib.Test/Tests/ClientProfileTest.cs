@@ -122,7 +122,7 @@ public class ClientProfileTest : TestAppBase
         ];
 
         // test free US client
-        app.UpdateCurrentCountry("US");
+        app.UpdateClientCountry("US");
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         var clientProfileInfo = clientProfile.ToInfo();
 
@@ -154,7 +154,7 @@ public class ClientProfileTest : TestAppBase
         Assert.AreEqual(defaultPolicy.PremiumByTrial, location.Options.PremiumByTrial);
 
         // (US/*) no free for CA clients
-        app.UpdateCurrentCountry("CA");
+        app.UpdateClientCountry("CA");
         clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo();
         location = clientProfileInfo.LocationInfos.Single(x => x.ServerLocation == "US/*");
         Assert.IsFalse(location.Options.HasFree);
@@ -558,7 +558,7 @@ public class ClientProfileTest : TestAppBase
         billingProvider.SubscriptionPlanException = null;
 
         // test ca policy
-        app.UpdateCurrentCountry("CA");
+        app.UpdateClientCountry("CA");
         clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo();
         purchaseOptions = await app.GetPurchaseOptions();
         Assert.AreEqual(caPolicy.PurchaseUrlMode, clientProfileInfo.PurchaseUrlMode);
@@ -568,7 +568,7 @@ public class ClientProfileTest : TestAppBase
         Assert.IsNull(purchaseOptions.StoreError);
 
         // test cn policy
-        app.UpdateCurrentCountry("CN");
+        app.UpdateClientCountry("CN");
         clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo();
         purchaseOptions = await app.GetPurchaseOptions();
         Assert.AreEqual(cnPolicy.PurchaseUrlMode, clientProfileInfo.PurchaseUrlMode);

@@ -2,6 +2,6 @@
 
 public interface IRegionProvider
 {
-    string GetClientCountry();
-    Task<string> GetCurrentCountryAsync(CancellationToken cancellationToken);
+    string GetClientCountryCode(bool allowVpnServer);
+    Task<string> GetClientCountryCodeAsync(bool allowVpnServer, CancellationToken cancellationToken);
 }

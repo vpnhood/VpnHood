@@ -607,7 +607,6 @@ public class ServerHost : IAsyncDisposable, IJob
             ProtocolVersion = sessionResponseEx.ProtocolVersion,
             SuppressedTo = sessionResponseEx.SuppressedTo,
             MaxPacketChannelCount = session.Tunnel.MaxPacketChannelCount,
-            ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,
             IncludeIpRanges = NetFilterIncludeIpRanges,
             VpnAdapterIncludeIpRanges = NetFilterVpnAdapterIncludeIpRanges,
             IsIpV6Supported = IsIpV6Supported,
@@ -625,6 +624,7 @@ public class ServerHost : IAsyncDisposable, IJob
             ServerTags = sessionResponseEx.ServerTags,
             AccessInfo = sessionResponseEx.AccessInfo,
             IsTunProviderSupported = _sessionManager.IsVpnAdapterSupported,
+            ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,
             ClientCountry = sessionResponseEx.ClientCountry,
             VirtualIpNetworkV4 = new IpNetwork(session.VirtualIps.IpV4, _sessionManager.VirtualIpNetworkV4.PrefixLength),
             VirtualIpNetworkV6 = new IpNetwork(session.VirtualIps.IpV6, _sessionManager.VirtualIpNetworkV6.PrefixLength)

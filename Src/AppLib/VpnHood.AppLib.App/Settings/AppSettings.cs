@@ -1,4 +1,6 @@
-﻿namespace VpnHood.AppLib.Settings;
+﻿using VpnHood.Core.Common.IpLocations;
+
+namespace VpnHood.AppLib.Settings;
 
 public class AppSettings
 {
@@ -6,6 +8,9 @@ public class AppSettings
     public string ClientId { get; set; } = Guid.NewGuid().ToString();
     public bool? IsQuickLaunchEnabled { get; set; }
     public bool? IsNotificationEnabled { get; set; }
+    public bool IsStartupTrackerSent { get; set; }
+    public IpLocation? ClientIpLocation { get; set; }
+    public IpLocation? ClientIpLocationByServer { get; set; }
     public DateTime ConfigTime { get; set; } = DateTime.Now;
     public UserSettings UserSettings { get; set; } = new();
 

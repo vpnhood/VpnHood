@@ -30,4 +30,7 @@ public class SessionResponse
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? ClientCountry { get; set; }
+    
+    [JsonConverter(typeof(IPAddressConverter))]
+    public IPAddress? ClientPublicAddress { get; set; }
 }

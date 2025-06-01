@@ -13,7 +13,8 @@ public class VhJob : IDisposable
     private readonly TimeSpan _period;
     private readonly int? _maxRetry;
     private bool _disposed;
-    
+    public bool IsStarted { get; private set; }
+
     public VhJob(Func<CancellationToken, ValueTask> jobFunc, VhJobOptions options)
     {
         _jobFunc = jobFunc;
@@ -21,7 +22,8 @@ public class VhJob : IDisposable
         _period = options.Period;
         _maxRetry = options.MaxRetry;
         _name = options.Name ?? "NoName";
-        Task.Run(ReportTask);
+        if (options.AutoStart)
+            Start();
     }
 
     public VhJob(Func<CancellationToken, ValueTask> jobFunc, TimeSpan period, string? name = null)
@@ -40,13 +42,20 @@ public class VhJob : IDisposable
     {
     }
 
-
+    public void Start()
+    {
+        if (IsStarted)
+            throw new InvalidOperationException("Job is already started.");
+        Task.Run(ReportTask);
+    }
 
     private async Task ReportTask()
     {
+        IsStarted = true;
         var errorCounter = 0;
         long counter = 0;
-        while (!_disposed)             try {
+        while (!_disposed)
+            try {
                 // wait for cancellation or due time
                 counter++;
                 if (counter == 1 && _dueTime > TimeSpan.Zero)
@@ -75,5 +84,6 @@ public class VhJob : IDisposable
         _disposed = true;
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource.Dispose();
+        IsStarted = false;
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Globalization;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Exceptions;
@@ -14,6 +15,7 @@ public class ClientProfileService
     private List<ClientProfile> _clientProfiles;
     private readonly object _updateByUrlLock = new();
     private ClientProfileInfo? _cashInfo;
+    private string _clientCountryCode = RegionInfo.CurrentRegion.Name;
 
     private string ClientProfilesFilePath => Path.Combine(_folderPath, FilenameProfiles);
 
@@ -22,6 +24,18 @@ public class ClientProfileService
         _folderPath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
         _clientProfiles = Load().ToList();
     }
+
+    public string ClientCountryCode {
+        get => _clientCountryCode;
+        set {
+            if (_clientCountryCode == value)
+                return;
+           
+            _clientCountryCode = value;
+            Reload();
+        }
+    }
+
 
     public ClientProfileInfo? FindInfo(Guid clientProfileId)
     {

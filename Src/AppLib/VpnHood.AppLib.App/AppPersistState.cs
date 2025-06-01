@@ -15,8 +15,6 @@ internal class AppPersistState(string filePath)
         public ApiError? LastError { get; set; }
         public ApiError? LastClearedError { get; set; }
         public DateTime UpdateIgnoreTime { get; set; } = DateTime.MinValue;
-        public string? ClientCountryCode { get; set; }
-        public string? ClientCountryCodeByServer { get; set; }
         public bool HasDisconnectedByUser { get; set; }
         public DateTime? ConnectRequestTime { get; set; }
         public bool HasDiagnoseRequested { get; set; }
@@ -61,30 +59,6 @@ internal class AppPersistState(string filePath)
                 return;
 
             _data.UpdateIgnoreTime = value;
-            Save();
-        }
-    }
-
-    public string? ClientCountryCode {
-        get => _data.ClientCountryCode;
-        set {
-            if (string.Equals(_data.ClientCountryCode, value, StringComparison.OrdinalIgnoreCase))
-                return;
-
-            // set country code and its name
-            _data.ClientCountryCode = value?.ToUpper();
-            Save();
-        }
-    }
-
-    public string? ClientCountryCodeByServer {
-        get => _data.ClientCountryCodeByServer;
-        set {
-            if (string.Equals(_data.ClientCountryCodeByServer, value, StringComparison.OrdinalIgnoreCase))
-                return;
-
-            // set country code and its name
-            _data.ClientCountryCodeByServer = value?.ToUpper();
             Save();
         }
     }

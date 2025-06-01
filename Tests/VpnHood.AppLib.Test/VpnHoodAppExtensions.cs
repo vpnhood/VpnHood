@@ -1,4 +1,6 @@
-﻿using VpnHood.AppLib.Dtos;
+﻿using System.Net;
+using VpnHood.AppLib.Dtos;
+using VpnHood.Core.Common.IpLocations;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -29,5 +31,16 @@ public static class VpnHoodAppExtensions
             PlanId = planId,
             Diagnose = diagnose
         }, cancellationToken);
+    }
+
+    public static void UpdateClientCountry(this VpnHoodApp app, string countryCode)
+    {
+        app.SettingsService.AppSettings.ClientIpLocation = new IpLocation {
+            IpAddress = IPAddress.Parse("1.2.3.4"), // Dummy IP address
+            CountryCode = countryCode,
+            CountryName = VhUtils.TryGetCountryName(countryCode) ?? "Unknown",
+            CityName = null,
+            RegionName = null
+        };
     }
 }

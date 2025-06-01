@@ -4,6 +4,7 @@ using VpnHood.AppLib.Droid.GooglePlay.Utils;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
 using Xamarin.Google.Android.Play.Core.Install.Model;
 
@@ -17,7 +18,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
             var appUiContext = (AndroidUiContext)uiContext;
             using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
             using var appUpdateInfo =
-                await appUpdateManager.AppUpdateInfo.AsTask<AppUpdateInfo>().ConfigureAwait(false) ??
+                await appUpdateManager.AppUpdateInfo.AsTask<AppUpdateInfo>().VhConfigureAwait() ??
                 throw new Exception("Could not retrieve AppUpdateInfo");
 
             // play set UpdateAvailability.UpdateNotAvailable even when there is no connection to google

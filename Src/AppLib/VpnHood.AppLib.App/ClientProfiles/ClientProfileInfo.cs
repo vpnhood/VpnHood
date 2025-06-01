@@ -34,7 +34,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
 
     private ClientPolicy? ClientPolicy {
         get {
-            var countryCode = VpnHoodApp.Instance.GetClientCountry();
+            var countryCode = VpnHoodApp.Instance.GetClientCountryCode(allowVpnServer: true);
             return clientProfile.Token.ClientPolicies?.FirstOrDefault(x => 
                        x.ClientCountries.Any(y => y.Equals(countryCode, StringComparison.OrdinalIgnoreCase))) ??
                    clientProfile.Token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));

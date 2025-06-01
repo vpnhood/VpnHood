@@ -516,6 +516,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         if (_disposed) return;
         _disposed = true;
         _heartbeatJob.Dispose();
+        _sessionLocalService.Dispose();
 
         // dispose all sessions
         VhLogger.Instance.LogDebug("Disposing all sessions...");

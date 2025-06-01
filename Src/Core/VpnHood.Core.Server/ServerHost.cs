@@ -21,7 +21,7 @@ using Exception = System.Exception;
 
 namespace VpnHood.Core.Server;
 
-public class ServerHost : IAsyncDisposable, IJob
+public class ServerHost : IAsyncDisposable
 {
     private readonly HashSet<IClientStream> _clientStreams = [];
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -30,11 +30,11 @@ public class ServerHost : IAsyncDisposable, IJob
     private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = [];
     private readonly List<Task> _tcpListenerTasks = [];
     private bool _disposed;
+    private readonly VhJob _cleanupClientStreamJob;
 
     public const int MaxProtocolVersion = 8;
     public const int MinProtocolVersion = 4;
     public int MinClientProtocolVersion { get; set; } = 8;
-    public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
     public bool IsIpV6Supported { get; set; }
     public IpRange[]? NetFilterVpnAdapterIncludeIpRanges { get; set; }
     public IpRange[]? NetFilterIncludeIpRanges { get; set; }
@@ -47,7 +47,7 @@ public class ServerHost : IAsyncDisposable, IJob
     {
         _tcpListeners = [];
         _sessionManager = sessionManager;
-        JobRunner.Default.Add(this);
+        _cleanupClientStreamJob = new VhJob(CleanupClientStream, TimeSpan.FromMinutes(5), nameof(ServerHost));
     }
 
     internal async Task Configure(ServerHostConfiguration configuration)
@@ -715,13 +715,12 @@ public class ServerHost : IAsyncDisposable, IJob
         await session.ProcessTcpProxyRequest(request, clientStream, cancellationToken).VhConfigureAwait();
     }
 
-    public Task RunJob()
+    private ValueTask CleanupClientStream(CancellationToken cancellationToken)
     {
-        lock (_clientStreams) {
+        lock (_clientStreams)
             _clientStreams.RemoveWhere(x => !x.Connected);
-        }
 
-        return Task.CompletedTask;
+        return default;
     }
 
     private async Task Stop()
@@ -767,6 +766,7 @@ public class ServerHost : IAsyncDisposable, IJob
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
         _disposed = true;
+        _cleanupClientStreamJob.Dispose();
         await Stop().VhConfigureAwait();
     }
 

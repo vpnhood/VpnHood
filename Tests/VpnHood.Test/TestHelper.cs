@@ -70,6 +70,7 @@ public class TestHelper : IDisposable
         ]);
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
         VhJobOptions.DefaultPeriod = TimeSpan.FromMilliseconds(1000);
+        VhJobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
         JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
         JobSection.DefaultInterval = TimeSpan.FromMilliseconds(200);
     }

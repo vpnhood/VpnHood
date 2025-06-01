@@ -6,21 +6,19 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.NetTester.Utils;
 
-public class Speedometer : IJob, IDisposable
+public class Speedometer : IDisposable
 {
     private readonly string _name;
     private readonly bool _packetCounter;
     private readonly Stopwatch _stopwatch = new();
     private readonly Lock _lockObject = new();
-
+    private readonly VhJob _reportJob;
     private long _succeededCount;
     private long _failedCount;
     private long _transferSize;
     private long _lastTransferSize;
     private long _lastSucceededCount;
     private readonly DateTime _startTime;
-
-    public JobSection JobSection { get; }
 
     public Speedometer(string name,
         TimeSpan? interval = null,
@@ -30,8 +28,7 @@ public class Speedometer : IJob, IDisposable
         _name = name;
         _packetCounter = packetCounter;
         _stopwatch.Start();
-        JobSection = new JobSection(interval ?? TimeSpan.FromSeconds(1));
-        JobRunner.Default.Add(this);
+        _reportJob = new VhJob(ReportJob, interval ?? TimeSpan.FromSeconds(1), "Speedometer Report");
     }
 
     public void AddSucceeded(int bytes)
@@ -64,10 +61,17 @@ public class Speedometer : IJob, IDisposable
             _failedCount++;
     }
 
+    private ValueTask ReportJob(CancellationToken cancellationToken)
+    {
+        Report();
+        return ValueTask.CompletedTask;
+    }
+
     public void Report()
     {
         lock (_lockObject) {
-            if (_stopwatch.ElapsedMilliseconds == 0) return;
+            if (_stopwatch.ElapsedMilliseconds == 0) 
+                return;
 
             var curTransferSize = _transferSize - _lastTransferSize;
             var curSucceededCount = _succeededCount - _lastSucceededCount;
@@ -89,16 +93,10 @@ public class Speedometer : IJob, IDisposable
         }
     }
 
-    public Task RunJob()
-    {
-        Report();
-        return Task.CompletedTask;
-    }
 
     public void Dispose()
     {
-        Report();
+        _reportJob.Dispose();
         VhLogger.Instance.LogInformation("Elapsed: {Elapsed}", (DateTime.Now - _startTime).ToString(@"hh\:mm\:ss"));
-        JobRunner.Default.Remove(this);
     }
 }

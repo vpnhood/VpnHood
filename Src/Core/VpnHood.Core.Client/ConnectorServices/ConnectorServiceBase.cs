@@ -27,7 +27,6 @@ internal class ConnectorServiceBase : IDisposable
 
     public TimeSpan TcpConnectTimeout { get; set; }
     public ConnectorEndPointInfo EndPointInfo { get; }
-    public JobSection JobSection { get; }
     public ClientConnectorStat Stat { get; }
     public TimeSpan RequestTimeout { get; private set; }
     public TimeSpan TcpReuseTimeout { get; private set; }
@@ -40,11 +39,10 @@ internal class ConnectorServiceBase : IDisposable
         _allowTcpReuse = allowTcpReuse;
         Stat = new ClientConnectorStatImpl(this);
         TcpConnectTimeout = tcpConnectTimeout;
-        JobSection = new JobSection(tcpConnectTimeout);
         RequestTimeout = TimeSpan.FromSeconds(30);
         TcpReuseTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(30);
         EndPointInfo = endPointInfo;
-        _cleanupJob = new VhJob(CleanupTimeoutConnections, TimeSpan.FromSeconds(60), "ConnectorCleanup");
+        _cleanupJob = new VhJob(CleanupTimeoutConnectionsJob, tcpConnectTimeout, "ConnectorCleanup");
     }
 
     public void Init(int protocolVersion, TimeSpan tcpRequestTimeout, byte[]? serverSecret,
@@ -163,7 +161,7 @@ internal class ConnectorServiceBase : IDisposable
         return Task.CompletedTask;
     }
 
-    private ValueTask CleanupTimeoutConnections(CancellationToken cancellationToken)
+    private ValueTask CleanupTimeoutConnectionsJob(CancellationToken cancellationToken)
     {
         // Kill all expired client streams
         var now = FastDateTime.Now;

@@ -12,7 +12,7 @@ using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
-public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool, IJob
+public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
 {
     private readonly IPacketProxyCallbacks? _packetProxyCallbacks;
     private readonly ISocketFactory _socketFactory;
@@ -26,6 +26,7 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool, IJob
     private readonly int _maxClientCount;
     private readonly int _packetQueueCapacity;
     private readonly bool _autoDisposeSentPackets;
+    private readonly VhJob _cleanupTimeoutListJob;
 
     public int RemoteEndPointCount => _remoteEndPoints.Count;
 
@@ -34,8 +35,6 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool, IJob
             lock (_udpProxies) return _udpProxies.Count;
         }
     }
-
-    public JobSection JobSection { get; } = new();
 
     public UdpProxyPoolEx(UdpProxyPoolOptions options)
     {
@@ -51,9 +50,7 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool, IJob
 
         _connectionMap = new TimeoutDictionary<string, UdpProxyEx>(options.UdpTimeout);
         _udpTimeout = options.UdpTimeout;
-
-        JobSection.Interval = options.UdpTimeout;
-        JobRunner.Default.Add(this);
+        _cleanupTimeoutListJob = new VhJob(CleanupTimeoutList, options.UdpTimeout, nameof(UdpProxyPoolEx));
     }
 
     protected override void SendPacket(IpPacket ipPacket)
@@ -137,13 +134,13 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool, IJob
         return udpClient;
     }
 
-    public Task RunJob()
+    private ValueTask CleanupTimeoutList(CancellationToken cancellationToken)
     {
         // remove useless workers
         lock (_udpProxies)
             TimeoutItemUtil.CleanupTimeoutList(_udpProxies, _udpTimeout);
 
-        return Task.CompletedTask;
+        return default;
     }
 
     protected override void Dispose(bool disposing)
@@ -153,10 +150,10 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool, IJob
             lock (_udpProxies)
                 _udpProxies.ForEach(udpWorker => udpWorker.Dispose());
 
+            _cleanupTimeoutListJob.Dispose();
             _connectionMap.Dispose();
             _remoteEndPoints.Dispose();
             _maxWorkerEventReporter.Dispose();
-            JobRunner.Default.Remove(this);
         }
 
         base.Dispose(disposing);

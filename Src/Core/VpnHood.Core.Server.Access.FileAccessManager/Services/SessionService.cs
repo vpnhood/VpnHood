@@ -12,7 +12,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement.Services;
 
-public class SessionService : IDisposable, IJob
+public class SessionService : IDisposable
 {
     public bool IsUnitTest { get; }
     private const string SessionFileExtension = "session";
@@ -23,14 +23,13 @@ public class SessionService : IDisposable, IJob
     private long _lastSessionId;
     private readonly string _sessionsFolderPath;
     private readonly ConcurrentDictionary<ulong, bool> _updatedSessionIds = new();
+    private readonly VhJob _cleanupSessionsJob;
     public ConcurrentDictionary<ulong, Session> Sessions { get; }
-    public JobSection JobSection { get; } = new();
 
 
     public SessionService(string sessionsFolderPath, bool isUnitTest)
     {
         IsUnitTest = isUnitTest;
-        JobRunner.Default.Add(this);
         _sessionsFolderPath = sessionsFolderPath;
         Directory.CreateDirectory(sessionsFolderPath);
 
@@ -38,6 +37,8 @@ public class SessionService : IDisposable, IJob
         Sessions = LoadAllSessions(sessionsFolderPath);
         if (Sessions.Any())
             _lastSessionId = Sessions.Max(x => (long)x.Key);
+
+        _cleanupSessionsJob = new VhJob(CleanupSessions, name: nameof(CleanupSessions));
     }
 
     private static ConcurrentDictionary<ulong, Session> LoadAllSessions(string sessionsFolderPath)
@@ -58,18 +59,12 @@ public class SessionService : IDisposable, IJob
         return sessions;
     }
 
-    public Task RunJob()
-    {
-        CleanupSessions();
-        return Task.CompletedTask;
-    }
-
     private string GetSessionFilePath(ulong sessionId)
     {
         return Path.Combine(_sessionsFolderPath, $"{sessionId}.{SessionFileExtension}");
     }
 
-    private void CleanupSessions()
+    private ValueTask CleanupSessions(CancellationToken cancellationToken)
     {
         // timeout live session
         var minSessionTime = DateTime.UtcNow - _sessionPermanentlyTimeout;
@@ -83,6 +78,8 @@ public class SessionService : IDisposable, IJob
             Sessions.TryRemove(item.Key, out _);
             VhUtils.TryDeleteFile(GetSessionFilePath(item.Key));
         }
+
+        return default;
     }
 
     public string? FindTokenIdFromSessionId(ulong sessionId)
@@ -332,5 +329,6 @@ public class SessionService : IDisposable, IJob
 
     public void Dispose()
     {
+        _cleanupSessionsJob.Dispose();
     }
 }

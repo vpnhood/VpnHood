@@ -7,17 +7,18 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Server;
 
-internal class SessionLocalService : IJob
+internal class SessionLocalService : IDisposable
 {
     private readonly string _storagePath;
     private const string SessionFileExtension = "session";
-    public JobSection JobSection { get; } = new(TimeSpan.FromHours(24));
+    public JobSection JobSection { get; } = new();
+    private readonly VhJob _cleanupSessionFilesJob;
 
     public SessionLocalService(string storagePath)
     {
         _storagePath = storagePath;
         Directory.CreateDirectory(storagePath);
-        JobRunner.Default.Add(this);
+        _cleanupSessionFilesJob = new VhJob(CleanupSessionFiles, TimeSpan.FromHours(24), nameof(SessionLocalService));
     }
 
     private string GetSessionFilePath(ulong sessionId)
@@ -67,7 +68,7 @@ internal class SessionLocalService : IJob
         File.WriteAllText(filePath, JsonSerializer.Serialize(sessionLocalData));
     }
 
-    private void Cleanup()
+    private ValueTask CleanupSessionFiles(CancellationToken cancellationToken)
     {
         // remove all files that create for 7 days ago
         var utcNow = DateTime.UtcNow;
@@ -77,11 +78,12 @@ internal class SessionLocalService : IJob
             if (utcNow - lastWriteTime > TimeSpan.FromDays(7))
                 VhUtils.TryDeleteFile(file);
         }
-    }
-    public Task RunJob()
-    {
-        Cleanup();
-        return Task.CompletedTask;
+
+        return default;
     }
 
+    public void Dispose()
+    {
+        _cleanupSessionFilesJob.Dispose();
+    }
 }

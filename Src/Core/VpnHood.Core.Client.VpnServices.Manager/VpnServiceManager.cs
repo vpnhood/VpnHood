@@ -18,7 +18,7 @@ using FastDateTime = VpnHood.Core.Toolkit.Utils.FastDateTime;
 
 namespace VpnHood.Core.Client.VpnServices.Manager;
 
-public class VpnServiceManager : IJob, IDisposable
+public class VpnServiceManager : IDisposable
 {
     private const int VpnServiceUnreachableThreshold = 1; // after this count we stop the service
     private readonly TimeSpan _requestVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(120);
@@ -37,10 +37,10 @@ public class VpnServiceManager : IJob, IDisposable
     private CancellationTokenSource _updateConnectionInfoCts = new();
     private ConnectionInfo? _lastConnectionInfo;
     private Guid? _lastAdRequestId;
+    private readonly VhJob _updateConnectionInfoJob;
 
     public event EventHandler? StateChanged;
     public string LogFilePath => Path.Combine(_device.VpnServiceConfigFolder, ClientOptions.VpnLogFileName);
-    public JobSection JobSection { get; }
 
     public VpnServiceManager(IDevice device, IAdService? adService, TimeSpan? eventWatcherInterval)
     {
@@ -49,11 +49,11 @@ public class VpnServiceManager : IJob, IDisposable
         _vpnStatusFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
         _device = device;
         _adService = adService;
-        _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath) ??
-                          BuildConnectionInfo(ClientState.None);
-
-        JobSection = new JobSection(eventWatcherInterval ?? TimeSpan.MaxValue);
-        JobRunner.Default.Add(this);
+        _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath)
+                          ?? BuildConnectionInfo(ClientState.None);
+        
+        _updateConnectionInfoJob = new VhJob(UpdateConnectionInfoJob, 
+            eventWatcherInterval ?? TimeSpan.MaxValue, nameof(UpdateConnectionInfoJob));
     }
 
     public ConnectionInfo ConnectionInfo {
@@ -188,7 +188,7 @@ public class VpnServiceManager : IJob, IDisposable
 
             await Task.Delay(_connectionInfoTimeSpan, cancellationToken);
         }
-            
+
         VhLogger.Instance.LogDebug("The VpnService has established a connection.");
     }
 
@@ -429,16 +429,15 @@ public class VpnServiceManager : IJob, IDisposable
         return SendRequest(new ApiSendRewardedAdResultRequest { AdResult = adResult }, cancellationToken);
     }
 
-    public async Task RunJob()
+    private async ValueTask UpdateConnectionInfoJob(CancellationToken cancellationToken)
     {
-        // let _updateConnectionInfoCts inside UpdateConnection info handle the cancellation
-        await UpdateConnectionInfo(false, CancellationToken.None);
+        await UpdateConnectionInfo(false, cancellationToken);
     }
 
     public void Dispose()
     {
-        // do not stop, lets service keep running until user explicitly stop it
-        JobRunner.Default.Remove(this);
+        // do not stop the service, lets service keep running until user explicitly stop it
+        _updateConnectionInfoJob.Dispose();
         _updateConnectionInfoCts.Cancel();
         _tcpClient?.Dispose();
     }

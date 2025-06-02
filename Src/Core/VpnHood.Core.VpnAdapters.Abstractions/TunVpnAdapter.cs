@@ -556,12 +556,12 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
     }
 
-    protected sealed override void Dispose(bool disposing)
+    public sealed override void Dispose()
     {
-        if (disposing)
+        if (!IsDisposed)
             Stop(false);
 
-        base.Dispose(disposing);
+        base.Dispose();
     }
 
     protected override void DisposeManaged()

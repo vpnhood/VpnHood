@@ -68,13 +68,11 @@ public class StreamPacketChannel(StreamPacketChannelOptions options) : PacketCha
         }
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeManaged()
     {
-        if (disposing) {
-            Stop();
-            _clientStream.Dispose();
-        }
+        Stop();
+        _clientStream.Dispose();
 
-        base.Dispose(disposing);
+        base.DisposeManaged();
     }
 }

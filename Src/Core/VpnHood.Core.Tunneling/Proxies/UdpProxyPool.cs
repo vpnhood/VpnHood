@@ -106,15 +106,13 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
         return default;
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeManaged()
     {
-        if (disposing) {
-            _remoteEndPoints.Dispose();
-            _maxWorkerEventReporter.Dispose();
-            _udpProxies.Dispose();
-            _cleanupUdpJob.Dispose();
-        }
+        _remoteEndPoints.Dispose();
+        _maxWorkerEventReporter.Dispose();
+        _udpProxies.Dispose();
+        _cleanupUdpJob.Dispose();
 
-        base.Dispose(disposing);
+        base.DisposeManaged();
     }
 }

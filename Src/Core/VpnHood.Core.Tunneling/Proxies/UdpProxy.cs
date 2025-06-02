@@ -115,11 +115,10 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
         }
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeManaged()
     {
-        if (disposing) _udpClient.Dispose();
+        _udpClient.Dispose();
 
-        base.Dispose(disposing);
+        base.DisposeManaged();
     }
-
 }

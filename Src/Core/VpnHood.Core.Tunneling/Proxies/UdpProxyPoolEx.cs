@@ -143,19 +143,16 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
         return default;
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeManaged()
     {
-        if (disposing) {
-            // Dispose managed resources
-            lock (_udpProxies)
-                _udpProxies.ForEach(udpWorker => udpWorker.Dispose());
+        lock (_udpProxies)
+            _udpProxies.ForEach(udpWorker => udpWorker.Dispose());
 
-            _cleanupUdpWorkersJob.Dispose();
-            _connectionMap.Dispose();
-            _remoteEndPoints.Dispose();
-            _maxWorkerEventReporter.Dispose();
-        }
+        _cleanupUdpWorkersJob.Dispose();
+        _connectionMap.Dispose();
+        _remoteEndPoints.Dispose();
+        _maxWorkerEventReporter.Dispose();
 
-        base.Dispose(disposing);
+        base.DisposeManaged();
     }
 }

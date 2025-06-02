@@ -208,14 +208,14 @@ public abstract class PacketTransportBase : IPacketTransport
         VhLogger.Instance.Log(logLevel.Value, message: $"{message}. {ipPacket}", exception: exception);
     }
 
-    public void Dispose()
+    public virtual void Dispose()
     {
         IsDisposing = true;
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
-    protected virtual void Dispose(bool disposing)
+    protected void Dispose(bool disposing)
     {
         if (IsDisposed)
             return;
@@ -236,6 +236,5 @@ public abstract class PacketTransportBase : IPacketTransport
 
     protected virtual void DisposeUnmanaged()
     {
-
     }
 }

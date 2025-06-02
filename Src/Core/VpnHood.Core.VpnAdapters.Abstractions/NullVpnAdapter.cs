@@ -106,6 +106,7 @@ public class NullVpnAdapter(bool autoDisposePackets, bool blocking) :
     {
         _readBlockEvent?.Set();
         _readBlockEvent = null;
+
         base.DisposeManaged();
     }
 }

@@ -133,13 +133,12 @@ public class Tunnel : PassthroughPacketTransport
         return _channelManager.GetPacketChannel(channelIndex);
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeManaged()
     {
-        if (disposing) {
-            _channelManager.Dispose();
-            _speedMonitorTimer.Dispose();
-            Speed = new Traffic();
-        }
-        base.Dispose(disposing);
+        _channelManager.Dispose();
+        _speedMonitorTimer.Dispose();
+        Speed = new Traffic();
+
+        base.DisposeManaged();
     }
 }

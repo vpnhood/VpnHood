@@ -131,17 +131,14 @@ public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions opt
         }
     }
 
-
-    protected override void Dispose(bool disposing)
+    protected override void DisposeManaged()
     {
-        if (disposing) {
-            if (!_leaveTransmitterOpen)
-                transmitter.Dispose();
+        if (!_leaveTransmitterOpen)
+            transmitter.Dispose();
 
-            // finalize reading task
-            _readingTask.TrySetResult(true);
-        }
+        // finalize reading task
+        _readingTask.TrySetResult(true);
 
-        base.Dispose(disposing);
+        base.DisposeManaged();
     }
 }

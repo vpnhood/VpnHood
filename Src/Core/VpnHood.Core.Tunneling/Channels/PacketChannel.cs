@@ -147,13 +147,11 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
         base.OnPacketReceived(ipPacket);
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeManaged()
     {
-        if (disposing) {
-            _checkLifetimeJob.Dispose();
-            Stop();
-        }
+        _checkLifetimeJob.Dispose();
+        Stop();
 
-        base.Dispose(disposing);
+        base.DisposeManaged();
     }
 }

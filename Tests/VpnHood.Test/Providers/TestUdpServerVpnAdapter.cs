@@ -94,13 +94,12 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
     {
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeManaged()
     {
-        if (disposing) {
-            _cancellationTokenSource.Dispose();
-            _proxyPool.Dispose();
-            Disposed?.Invoke(this, EventArgs.Empty);
-        }
-        base.Dispose(disposing);
+        _cancellationTokenSource.Dispose();
+        _proxyPool.Dispose();
+        Disposed?.Invoke(this, EventArgs.Empty);
+
+        base.DisposeManaged();
     }
 }

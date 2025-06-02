@@ -313,9 +313,8 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
     protected override void DisposeUnmanaged()
     {
-        if (_tunAdapterFd != 0) {
+        if (_tunAdapterFd != 0)
             AdapterRemove();
-        }
 
         base.DisposeUnmanaged();
     }

@@ -210,12 +210,16 @@ public abstract class PacketTransportBase : IPacketTransport
 
     public void Dispose()
     {
+        if (IsDisposing)
+            return;
+
         IsDisposing = true;
+        PreDispose();
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
-    protected virtual void Dispose(bool disposing)
+    protected void Dispose(bool disposing)
     {
         if (IsDisposed)
             return;
@@ -228,6 +232,10 @@ public abstract class PacketTransportBase : IPacketTransport
         IsDisposing = false;
     }
 
+    protected virtual void PreDispose()
+    {
+    }
+    
     protected virtual void DisposeManaged()
     {
         PacketReceived = null;
@@ -236,6 +244,5 @@ public abstract class PacketTransportBase : IPacketTransport
 
     protected virtual void DisposeUnmanaged()
     {
-
     }
 }

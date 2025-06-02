@@ -78,12 +78,10 @@ public class PingProxy(bool autoDisposePackets)
         OnPacketReceived(replyPacket);
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeManaged()
     {
-        if (disposing)             // Dispose managed resources
-            _ping.Dispose();
+        _ping.Dispose();
 
-        base.Dispose(disposing);
+        base.DisposeManaged();
     }
-
 }

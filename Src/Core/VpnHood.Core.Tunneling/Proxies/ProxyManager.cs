@@ -108,23 +108,23 @@ public class ProxyManager : PassthroughPacketTransport
         channel.Start();
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeManaged()
     {
-        if (disposing) {
-            // dispose udp proxy pool
-            _udpProxyPool.PacketReceived -= Proxy_PacketReceived;
-            _udpProxyPool.Dispose();
+        // dispose udp proxy pool
+        _udpProxyPool.PacketReceived -= Proxy_PacketReceived;
+        _udpProxyPool.Dispose();
 
-            // dispose ping proxy pool
-            if (_pingProxyPool != null) {
-                _pingProxyPool.PacketReceived -= Proxy_PacketReceived;
-                _pingProxyPool.Dispose();
-            }
-
-            // dispose channels
-            lock (_streamProxyChannels)
-                foreach (var channel in _streamProxyChannels)
-                    channel.Dispose();
+        // dispose ping proxy pool
+        if (_pingProxyPool != null) {
+            _pingProxyPool.PacketReceived -= Proxy_PacketReceived;
+            _pingProxyPool.Dispose();
         }
+
+        // dispose channels
+        lock (_streamProxyChannels)
+            foreach (var channel in _streamProxyChannels)
+                channel.Dispose();
+
+        base.DisposeManaged();
     }
 }

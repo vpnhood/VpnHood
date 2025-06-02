@@ -107,20 +107,17 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
         return default;
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void DisposeManaged()
     {
-        if (disposing) {
-            lock (_pingProxies) foreach (var proxy in _pingProxies) {
-                proxy.PacketReceived -= PingProxy_PacketReceived;
-                proxy.Dispose();
-            }
-
-            _cleanupJob.Dispose();
-            _maxWorkerEventReporter.Dispose();
-            _remoteEndPoints.Dispose();
+        lock (_pingProxies) foreach (var proxy in _pingProxies) {
+            proxy.PacketReceived -= PingProxy_PacketReceived;
+            proxy.Dispose();
         }
 
-        base.Dispose(disposing);
-    }
+        _cleanupJob.Dispose();
+        _maxWorkerEventReporter.Dispose();
+        _remoteEndPoints.Dispose();
 
+        base.DisposeManaged();
+    }
 }

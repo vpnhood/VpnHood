@@ -337,6 +337,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     {
         _lastDnsServersV4.Dispose();
         _lastDnsServersV6.Dispose();
+
         base.DisposeManaged();
     }
 

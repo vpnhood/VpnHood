@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Core.Toolkit.Jobs;
 
-public class VhJobOptions
+public class JobOptions
 {
     public static TimeSpan DefaultPeriod { get; set; } = TimeSpan.FromSeconds(30);
 

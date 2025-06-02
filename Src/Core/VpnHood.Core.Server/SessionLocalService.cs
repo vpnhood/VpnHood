@@ -11,13 +11,13 @@ internal class SessionLocalService : IDisposable
 {
     private readonly string _storagePath;
     private const string SessionFileExtension = "session";
-    private readonly VhJob _cleanupSessionFilesJob;
+    private readonly Job _cleanupSessionFilesJob;
 
     public SessionLocalService(string storagePath)
     {
         _storagePath = storagePath;
         Directory.CreateDirectory(storagePath);
-        _cleanupSessionFilesJob = new VhJob(CleanupSessionFiles, TimeSpan.FromHours(24), nameof(SessionLocalService));
+        _cleanupSessionFilesJob = new Job(CleanupSessionFiles, TimeSpan.FromHours(24), nameof(SessionLocalService));
     }
 
     private string GetSessionFilePath(ulong sessionId)

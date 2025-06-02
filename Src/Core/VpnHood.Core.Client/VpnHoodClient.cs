@@ -69,7 +69,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly int _udpReceiveBufferSize;
     private int _sessionPacketChannelCount;
     private readonly AsyncLock _packetChannelLock = new();
-    private readonly VhJob _cleanupJob;
+    private readonly Job _cleanupJob;
     private readonly Tunnel _tunnel;
 
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
@@ -201,7 +201,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
-        _cleanupJob = new VhJob(Cleanup, "ClientCleanup");
+        _cleanupJob = new Job(Cleanup, nameof(VpnHoodClient));
     }
 
     public ClientState State {
@@ -940,7 +940,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         requestResult.ClientStream.DisposeWithoutReuse();
     }
 
-    public ValueTask Cleanup(CancellationToken cancellationToken)
+    private ValueTask Cleanup(CancellationToken cancellationToken)
     {
         return FastDateTime.UtcNow > _sessionStatus?.SessionExpirationTime
             ? DisposeAsync(new SessionException(SessionErrorCode.AccessExpired))

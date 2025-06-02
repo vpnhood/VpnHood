@@ -69,8 +69,8 @@ public class TestHelper : IDisposable
                 IPEndPoint.Parse("[::1]:0"))
         ]);
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
-        VhJobOptions.DefaultPeriod = TimeSpan.FromMilliseconds(1000);
-        VhJobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
+        JobOptions.DefaultPeriod = TimeSpan.FromMilliseconds(1000);
+        JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
     }
 
     public async Task<bool> IsIpV6Supported()

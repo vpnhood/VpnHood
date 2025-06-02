@@ -9,7 +9,7 @@ public class EventReporter : IDisposable
     private readonly object _lockObject = new();
     private readonly string _message;
     private readonly EventId _eventId;
-    private readonly VhJob _reportJob;
+    private readonly Job _reportJob;
     private bool _disposed;
 
     public int TotalEventCount { get; private set; }
@@ -23,7 +23,7 @@ public class EventReporter : IDisposable
         _message = message;
         _eventId = eventId;
         LogScope = logScope ?? new LogScope();
-        _reportJob = new VhJob(ReportJob, period ?? VhJobOptions.DefaultPeriod, nameof(EventReporter));
+        _reportJob = new Job(ReportJob, period ?? JobOptions.DefaultPeriod, nameof(EventReporter));
     }
 
     public void Raise()

@@ -16,7 +16,7 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
     private DateTime? _closeReceivedTime;
     private bool _started;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly VhJob _checkLifetimeJob;
+    private readonly Job _checkLifetimeJob;
 
     protected CancellationToken CancellationToken => _cancellationTokenSource.Token;
     public string ChannelId { get; }
@@ -34,7 +34,7 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
     {
         _lifespan = options.Lifespan;
         ChannelId = options.ChannelId;
-        _checkLifetimeJob = new VhJob(CheckLifetime, nameof(PacketChannel));
+        _checkLifetimeJob = new Job(CheckLifetime, nameof(PacketChannel));
     }
 
     public PacketChannelState State {

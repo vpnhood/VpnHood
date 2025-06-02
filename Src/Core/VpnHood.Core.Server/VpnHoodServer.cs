@@ -41,7 +41,7 @@ public class VpnHoodServer : IAsyncDisposable
     private readonly ISwapMemoryProvider? _swapMemoryProvider;
     private string? _tcpCongestionControl;
     private bool _isRestarted = true;
-    private readonly VhJob _configureAndSendStatusJob;
+    private readonly Job _configureAndSendStatusJob;
 
     public ServerHost ServerHost { get; }
     public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version;
@@ -84,7 +84,7 @@ public class VpnHoodServer : IAsyncDisposable
         ServerHost = new ServerHost(SessionManager);
 
         VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
-        _configureAndSendStatusJob = new VhJob(ConfigureAndSendStatus, options.ConfigureInterval, nameof(VpnHoodServer));
+        _configureAndSendStatusJob = new Job(ConfigureAndSendStatus, options.ConfigureInterval, nameof(VpnHoodServer));
     }
 
     public async ValueTask ConfigureAndSendStatus(CancellationToken cancellationToken)

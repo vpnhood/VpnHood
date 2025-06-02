@@ -30,7 +30,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
     private readonly ISocketFactory _socketFactory;
     private readonly IVpnAdapter? _vpnAdapter;
     private readonly TimeSpan _deadSessionTimeout;
-    private readonly VhJob _heartbeatJob;
+    private readonly Job _heartbeatJob;
     private readonly SessionLocalService _sessionLocalService;
     private readonly VirtualIpManager _virtualIpManager;
     private byte[] _serverSecret;
@@ -80,7 +80,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         if (_vpnAdapter != null)
             _vpnAdapter.PacketReceived += VpnAdapter_PacketReceived;
 
-        _heartbeatJob = new VhJob(SendHeartbeat, options.HeartbeatInterval, "Heartbeat");
+        _heartbeatJob = new Job(SendHeartbeat, options.HeartbeatInterval, "Heartbeat");
     }
 
     private Session CreateSessionInternal(

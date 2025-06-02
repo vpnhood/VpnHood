@@ -26,7 +26,7 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
     private readonly int _maxClientCount;
     private readonly int _packetQueueCapacity;
     private readonly bool _autoDisposeSentPackets;
-    private readonly VhJob _cleanupTimeoutListJob;
+    private readonly Job _cleanupUdpWorkersJob;
 
     public int RemoteEndPointCount => _remoteEndPoints.Count;
 
@@ -50,7 +50,7 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
 
         _connectionMap = new TimeoutDictionary<string, UdpProxyEx>(options.UdpTimeout);
         _udpTimeout = options.UdpTimeout;
-        _cleanupTimeoutListJob = new VhJob(CleanupTimeoutList, options.UdpTimeout, nameof(UdpProxyPoolEx));
+        _cleanupUdpWorkersJob = new Job(CleanupUdpWorkers, options.UdpTimeout, nameof(UdpProxyPoolEx));
     }
 
     protected override void SendPacket(IpPacket ipPacket)
@@ -134,7 +134,7 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
         return udpClient;
     }
 
-    private ValueTask CleanupTimeoutList(CancellationToken cancellationToken)
+    private ValueTask CleanupUdpWorkers(CancellationToken cancellationToken)
     {
         // remove useless workers
         lock (_udpProxies)
@@ -150,7 +150,7 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
             lock (_udpProxies)
                 _udpProxies.ForEach(udpWorker => udpWorker.Dispose());
 
-            _cleanupTimeoutListJob.Dispose();
+            _cleanupUdpWorkersJob.Dispose();
             _connectionMap.Dispose();
             _remoteEndPoints.Dispose();
             _maxWorkerEventReporter.Dispose();

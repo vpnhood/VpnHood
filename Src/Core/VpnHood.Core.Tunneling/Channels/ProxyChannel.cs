@@ -22,7 +22,7 @@ public class ProxyChannel : IProxyChannel
     private Traffic _traffic = new();
     private readonly object _trafficLock = new();
     private bool _isTunnelReadTaskFinished;
-    private readonly VhJob _checkAliveJob;
+    private readonly Job _checkAliveJob;
 
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public string ChannelId { get; }
@@ -48,7 +48,7 @@ public class ProxyChannel : IProxyChannel
                 $"Value must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}");
 
         ChannelId = channelId;
-        _checkAliveJob = new VhJob(CheckAlive, TunnelDefaults.TcpCheckInterval, nameof(ProxyChannel));
+        _checkAliveJob = new Job(CheckAlive, TunnelDefaults.TcpCheckInterval, nameof(ProxyChannel));
     }
 
     public Traffic Traffic {

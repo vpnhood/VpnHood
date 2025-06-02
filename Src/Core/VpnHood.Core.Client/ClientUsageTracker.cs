@@ -15,13 +15,13 @@ internal class ClientUsageTracker : IDisposable
     private bool _disposed;
     private readonly ISessionStatus _sessionStatus;
     private readonly ITracker _tracker;
-    private readonly VhJob _reportJob;
+    private readonly Job _reportJob;
 
     public ClientUsageTracker(ISessionStatus sessionStatus, ITracker tracker)
     {
         _sessionStatus = sessionStatus;
         _tracker = tracker;
-        _reportJob = new VhJob(Report, new VhJobOptions {
+        _reportJob = new Job(Report, new JobOptions {
             Period = _reportInterval,
             MaxRetry = 2,
             Name = "ClientReporter"

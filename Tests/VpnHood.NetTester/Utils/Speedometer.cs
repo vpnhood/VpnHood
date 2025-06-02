@@ -12,7 +12,7 @@ public class Speedometer : IDisposable
     private readonly bool _packetCounter;
     private readonly Stopwatch _stopwatch = new();
     private readonly Lock _lockObject = new();
-    private readonly VhJob _reportJob;
+    private readonly Job _reportJob;
     private long _succeededCount;
     private long _failedCount;
     private long _transferSize;
@@ -28,7 +28,7 @@ public class Speedometer : IDisposable
         _name = name;
         _packetCounter = packetCounter;
         _stopwatch.Start();
-        _reportJob = new VhJob(ReportJob, interval ?? TimeSpan.FromSeconds(1), "Speedometer Report");
+        _reportJob = new Job(ReportJob, interval ?? TimeSpan.FromSeconds(1), "Speedometer Report");
     }
 
     public void AddSucceeded(int bytes)

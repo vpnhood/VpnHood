@@ -4,7 +4,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Toolkit.Jobs;
 
-public class VhJob : IDisposable
+public class Job : IDisposable
 {
     private readonly string _name;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -21,7 +21,7 @@ public class VhJob : IDisposable
     public DateTime? StartedTime { get; set; }
     public DateTime? LastExecutedTime { get; private set; }
 
-    public VhJob(Func<CancellationToken, ValueTask> jobFunc, VhJobOptions options)
+    public Job(Func<CancellationToken, ValueTask> jobFunc, JobOptions options)
     {
         _jobFunc = jobFunc;
         _dueTime = options.DueTime ?? options.Period;
@@ -31,19 +31,19 @@ public class VhJob : IDisposable
         if (options.AutoStart)
             Start();
 
-        VhJobRunner.Default.Add(this);
+        JobRunner.Default.Add(this);
     }
 
-    public VhJob(Func<CancellationToken, ValueTask> jobFunc, TimeSpan period, string? name = null)
-        : this(jobFunc, new VhJobOptions {
+    public Job(Func<CancellationToken, ValueTask> jobFunc, TimeSpan period, string? name = null)
+        : this(jobFunc, new JobOptions {
             Period = period,
             Name = name,
             DueTime = TimeSpan.Zero,
         })
     {
     }
-    public VhJob(Func<CancellationToken, ValueTask> jobFunc, string? name = null)
-        : this(jobFunc, new VhJobOptions {
+    public Job(Func<CancellationToken, ValueTask> jobFunc, string? name = null)
+        : this(jobFunc, new JobOptions {
             Name = name,
             DueTime = TimeSpan.Zero,
         })
@@ -53,7 +53,7 @@ public class VhJob : IDisposable
     public void Start()
     {
         if (_disposed)
-            throw new ObjectDisposedException(nameof(VhJob));
+            throw new ObjectDisposedException(nameof(Job));
 
         if (IsStarted)
             throw new InvalidOperationException("Job is already started.");
@@ -105,7 +105,7 @@ public class VhJob : IDisposable
     private async Task RunInternal(CancellationToken cancellationToken)
     {
         if (_disposed)
-            throw new ObjectDisposedException(nameof(VhJob));
+            throw new ObjectDisposedException(nameof(Job));
 
         try {
             await _jobSemaphore.WaitAsync(cancellationToken).VhConfigureAwait();
@@ -145,6 +145,6 @@ public class VhJob : IDisposable
         _cancellationTokenSource.Dispose();
         _jobSemaphore.Dispose();
         StartedTime = null;
-        VhJobRunner.Default.Remove(this);
+        JobRunner.Default.Remove(this);
     }
 }

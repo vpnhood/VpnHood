@@ -22,7 +22,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly EventReporter _maxWorkerEventReporter;
     private readonly int _maxClientCount;
-    private readonly VhJob _cleanupJob;
+    private readonly Job _cleanupUdpJob;
 
     public int RemoteEndPointCount => _remoteEndPoints.Count;
     public int ClientCount => _udpProxies.Count;
@@ -40,7 +40,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
         _maxWorkerEventReporter = new EventReporter("Session has reached to Maximum local UDP ports.", GeneralEventId.NetProtect, logScope: options.LogScope);
 
         _udpProxies = new TimeoutDictionary<IPEndPoint, UdpProxy>(options.UdpTimeout);
-        _cleanupJob = new VhJob(CleanupUdpWorkers, options.UdpTimeout, nameof(UdpProxyPool));
+        _cleanupUdpJob = new Job(CleanupUdpWorkers, options.UdpTimeout, nameof(UdpProxyPool));
     }
 
     protected override void SendPacket(IpPacket ipPacket)
@@ -112,7 +112,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
             _remoteEndPoints.Dispose();
             _maxWorkerEventReporter.Dispose();
             _udpProxies.Dispose();
-            _cleanupJob.Dispose();
+            _cleanupUdpJob.Dispose();
         }
 
         base.Dispose(disposing);

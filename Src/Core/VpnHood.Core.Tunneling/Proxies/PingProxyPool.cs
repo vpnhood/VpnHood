@@ -17,7 +17,7 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly TimeSpan _workerTimeout = TimeSpan.FromMinutes(5);
     private readonly int _maxClientCount;
-    private readonly VhJob _cleanupWorkersJob;
+    private readonly Job _cleanupJob;
     public DateTime LastUsedTime { get; set; }
 
     public int RemoteEndPointCount => _remoteEndPoints.Count;
@@ -29,7 +29,7 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
         _packetProxyCallbacks = options.PacketProxyCallbacks;
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(options.IcmpTimeout);
         _maxWorkerEventReporter = new EventReporter("Session has reached to the maximum ping workers.", logScope: options.LogScope);
-        _cleanupWorkersJob = new VhJob(CleanupWorkers, nameof(PingProxyPool));
+        _cleanupJob = new Job(Cleanup, nameof(PingProxyPool));
     }
 
     public int ClientCount {
@@ -99,7 +99,7 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
                 isNewLocalEndPoint, isNewRemoteEndPoint);
     }
 
-    private ValueTask CleanupWorkers(CancellationToken cancellationToken)
+    private ValueTask Cleanup(CancellationToken cancellationToken)
     {
         lock (_pingProxies)
             TimeoutItemUtil.CleanupTimeoutList(_pingProxies, _workerTimeout);
@@ -115,7 +115,7 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
                 proxy.Dispose();
             }
 
-            _cleanupWorkersJob.Dispose();
+            _cleanupJob.Dispose();
             _maxWorkerEventReporter.Dispose();
             _remoteEndPoints.Dispose();
         }

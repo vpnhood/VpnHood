@@ -4,16 +4,16 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Toolkit.Jobs;
 
-public class VhJobRunner
+public class JobRunner
 {
     private SemaphoreSlim _semaphore;
-    private readonly LinkedList<WeakReference<VhJob>> _jobs = [];
-    private static readonly Lazy<VhJobRunner> DefaultLazy = new(() => new VhJobRunner());
+    private readonly LinkedList<WeakReference<Job>> _jobs = [];
+    private static readonly Lazy<JobRunner> DefaultLazy = new(() => new JobRunner());
     private int _maxDegreeOfParallelism = 2;
     private readonly TimeSpan _cleanupTimeSpan = TimeSpan.FromSeconds(60);
     private DateTime _lastCleanupTime = FastDateTime.Now;
 
-    public static VhJobRunner Default => DefaultLazy.Value;
+    public static JobRunner Default => DefaultLazy.Value;
     public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(5);
     public int MaxDegreeOfParallelism {
         get => _maxDegreeOfParallelism;
@@ -24,7 +24,7 @@ public class VhJobRunner
         }
     }
 
-    public VhJobRunner()
+    public JobRunner()
     {
         _semaphore = new SemaphoreSlim(_maxDegreeOfParallelism);
         Task.Run(RunJobs);
@@ -62,7 +62,7 @@ public class VhJobRunner
         }
     }
 
-    private async Task RunJob(VhJob job)
+    private async Task RunJob(Job job)
     {
         try {
             await job.RunNow().VhConfigureAwait();
@@ -97,11 +97,11 @@ public class VhJobRunner
         }
     }
 
-    private IList<VhJob> GetReadyJobs()
+    private IList<Job> GetReadyJobs()
     {
-        List<VhJob> jobs;
+        List<Job> jobs;
         lock (_jobs) {
-            jobs = new List<VhJob>(_jobs.Count);
+            jobs = new List<Job>(_jobs.Count);
             foreach (var jobRef in _jobs) {
                 if (jobRef.TryGetTarget(out var target) && target.IsReadyToRun) {
                     jobs.Add(target);
@@ -111,13 +111,13 @@ public class VhJobRunner
         return jobs;
     }
 
-    public void Add(VhJob job)
+    public void Add(Job job)
     {
         lock (_jobs)
-            _jobs.AddLast(new WeakReference<VhJob>(job));
+            _jobs.AddLast(new WeakReference<Job>(job));
     }
 
-    public void Remove(VhJob job)
+    public void Remove(Job job)
     {
         lock (_jobs) {
             var item = _jobs.FirstOrDefault(x => x.TryGetTarget(out var target) && target == job);

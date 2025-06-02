@@ -21,7 +21,7 @@ internal class ConnectorServiceBase : IDisposable
     private readonly ISocketFactory _socketFactory;
     private readonly ConcurrentQueue<ClientStreamItem> _freeClientStreams = new();
     private readonly HashSet<IClientStream> _sharedClientStream = new(50); // for preventing reuse
-    private readonly VhJob _cleanupJob;
+    private readonly Job _cleanupJob;
     private bool _disposed;
     private bool _allowTcpReuse;
 
@@ -42,7 +42,7 @@ internal class ConnectorServiceBase : IDisposable
         RequestTimeout = TimeSpan.FromSeconds(30);
         TcpReuseTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(30);
         EndPointInfo = endPointInfo;
-        _cleanupJob = new VhJob(CleanupTimeoutConnectionsJob, tcpConnectTimeout, "ConnectorCleanup");
+        _cleanupJob = new Job(Cleanup, tcpConnectTimeout, "ConnectorCleanup");
     }
 
     public void Init(int protocolVersion, TimeSpan tcpRequestTimeout, byte[]? serverSecret,
@@ -161,7 +161,7 @@ internal class ConnectorServiceBase : IDisposable
         return Task.CompletedTask;
     }
 
-    private ValueTask CleanupTimeoutConnectionsJob(CancellationToken cancellationToken)
+    private ValueTask Cleanup(CancellationToken cancellationToken)
     {
         // Kill all expired client streams
         var now = FastDateTime.Now;

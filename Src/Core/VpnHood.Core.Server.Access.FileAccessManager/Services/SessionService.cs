@@ -23,7 +23,7 @@ public class SessionService : IDisposable
     private long _lastSessionId;
     private readonly string _sessionsFolderPath;
     private readonly ConcurrentDictionary<ulong, bool> _updatedSessionIds = new();
-    private readonly VhJob _cleanupSessionsJob;
+    private readonly Job _cleanupSessionsJob;
     public ConcurrentDictionary<ulong, Session> Sessions { get; }
 
 
@@ -38,7 +38,7 @@ public class SessionService : IDisposable
         if (Sessions.Any())
             _lastSessionId = Sessions.Max(x => (long)x.Key);
 
-        _cleanupSessionsJob = new VhJob(CleanupSessions, name: nameof(CleanupSessions));
+        _cleanupSessionsJob = new Job(Cleanup, name: nameof(Cleanup));
     }
 
     private static ConcurrentDictionary<ulong, Session> LoadAllSessions(string sessionsFolderPath)
@@ -64,7 +64,7 @@ public class SessionService : IDisposable
         return Path.Combine(_sessionsFolderPath, $"{sessionId}.{SessionFileExtension}");
     }
 
-    private ValueTask CleanupSessions(CancellationToken cancellationToken)
+    private ValueTask Cleanup(CancellationToken cancellationToken)
     {
         // timeout live session
         var minSessionTime = DateTime.UtcNow - _sessionPermanentlyTimeout;

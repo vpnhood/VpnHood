@@ -76,7 +76,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private CultureInfo? _systemUiCulture;
     private UserSettings _oldUserSettings;
     private bool _isConnecting;
-    private readonly VhJob _versionCheckJob;
+    private readonly Job _versionCheckJob;
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -222,7 +222,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         AppUiContext.OnChanged += ActiveUiContext_OnChanged;
 
         // start the version check job
-        _versionCheckJob = new VhJob(VersionCheckJob, new VhJobOptions {
+        _versionCheckJob = new Job(VersionCheckJob, new JobOptions {
             Name = "VersionCheck",
             Period = options.VersionCheckInterval,
             DueTime = options.VersionCheckInterval > TimeSpan.FromSeconds(5)

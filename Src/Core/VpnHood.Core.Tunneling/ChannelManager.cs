@@ -17,13 +17,13 @@ internal class ChannelManager : IDisposable
     private Traffic _trafficUsage = new();
     private readonly EventHandler<IpPacket> _channelPacketReceived;
     private bool _disposed;
-    private readonly VhJob _cleanupChannelsJob;
+    private readonly Job _cleanupJob;
 
     public ChannelManager(int maxPacketChannelCount, EventHandler<IpPacket> channelPacketReceived)
     {
         MaxPacketChannelCount = maxPacketChannelCount;
         _channelPacketReceived = channelPacketReceived;
-        _cleanupChannelsJob = new VhJob(CleanupChannelsJob, nameof(ChannelManager));
+        _cleanupJob = new Job(Cleanup, nameof(ChannelManager));
     }
 
     public Traffic Traffic {
@@ -191,7 +191,7 @@ internal class ChannelManager : IDisposable
         channel.Dispose();
     }
 
-    private ValueTask CleanupChannelsJob(CancellationToken cancellationToken)
+    private ValueTask Cleanup(CancellationToken cancellationToken)
     {
         CleanupChannels();
         return default;
@@ -259,7 +259,7 @@ internal class ChannelManager : IDisposable
             _disposingChannels.Clear();
         }
 
-        _cleanupChannelsJob.Dispose();
+        _cleanupJob.Dispose();
         _disposed = true;
     }
 

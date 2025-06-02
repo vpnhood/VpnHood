@@ -1,5 +1,8 @@
-# v7.0.705
+# Upcoming
 * Fix: IPv6
+* Fix: Memory leak
+* Improve: Drastically improve performance and stability
+* Improve: Drastically reduce memory usage
 
 # v6.0.696
 * Improve: Watching media streaming

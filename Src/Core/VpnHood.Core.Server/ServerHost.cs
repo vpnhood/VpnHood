@@ -30,7 +30,7 @@ public class ServerHost : IAsyncDisposable
     private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = [];
     private readonly List<Task> _tcpListenerTasks = [];
     private bool _disposed;
-    private readonly VhJob _cleanupClientStreamJob;
+    private readonly Job _cleanupConnectionsJob;
 
     public const int MaxProtocolVersion = 8;
     public const int MinProtocolVersion = 4;
@@ -47,7 +47,7 @@ public class ServerHost : IAsyncDisposable
     {
         _tcpListeners = [];
         _sessionManager = sessionManager;
-        _cleanupClientStreamJob = new VhJob(CleanupClientStream, TimeSpan.FromMinutes(5), nameof(ServerHost));
+        _cleanupConnectionsJob = new Job(CleanupConnections, TimeSpan.FromMinutes(5), nameof(ServerHost));
     }
 
     internal async Task Configure(ServerHostConfiguration configuration)
@@ -715,7 +715,7 @@ public class ServerHost : IAsyncDisposable
         await session.ProcessTcpProxyRequest(request, clientStream, cancellationToken).VhConfigureAwait();
     }
 
-    private ValueTask CleanupClientStream(CancellationToken cancellationToken)
+    private ValueTask CleanupConnections(CancellationToken cancellationToken)
     {
         lock (_clientStreams)
             _clientStreams.RemoveWhere(x => !x.Connected);
@@ -766,7 +766,7 @@ public class ServerHost : IAsyncDisposable
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
         _disposed = true;
-        _cleanupClientStreamJob.Dispose();
+        _cleanupConnectionsJob.Dispose();
         await Stop().VhConfigureAwait();
     }
 

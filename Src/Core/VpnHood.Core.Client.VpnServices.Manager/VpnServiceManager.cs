@@ -37,7 +37,7 @@ public class VpnServiceManager : IDisposable
     private CancellationTokenSource _updateConnectionInfoCts = new();
     private ConnectionInfo? _lastConnectionInfo;
     private Guid? _lastAdRequestId;
-    private readonly VhJob _updateConnectionInfoJob;
+    private readonly Job _updateConnectionInfoJob;
 
     public event EventHandler? StateChanged;
     public string LogFilePath => Path.Combine(_device.VpnServiceConfigFolder, ClientOptions.VpnLogFileName);
@@ -52,7 +52,7 @@ public class VpnServiceManager : IDisposable
         _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath)
                           ?? BuildConnectionInfo(ClientState.None);
         
-        _updateConnectionInfoJob = new VhJob(UpdateConnectionInfoJob, 
+        _updateConnectionInfoJob = new Job(UpdateConnectionInfoJob, 
             eventWatcherInterval ?? TimeSpan.MaxValue, nameof(UpdateConnectionInfoJob));
     }
 

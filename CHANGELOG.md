@@ -1,4 +1,4 @@
-# v7.0.705
+# v7.0.708
 * Fix: IPv6 ping
 * Improve: Drastically improve performance and stability
 * Improve: Drastically reduce memory usage

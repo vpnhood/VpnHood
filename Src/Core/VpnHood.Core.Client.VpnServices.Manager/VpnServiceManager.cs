@@ -439,6 +439,7 @@ public class VpnServiceManager : IDisposable
         // do not stop the service, lets service keep running until user explicitly stop it
         _updateConnectionInfoJob.Dispose();
         _updateConnectionInfoCts.Cancel();
+        _updateConnectionInfoCts.Dispose();
         _tcpClient?.Dispose();
     }
 }

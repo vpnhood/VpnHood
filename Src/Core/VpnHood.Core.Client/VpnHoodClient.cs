@@ -187,7 +187,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _tunnel = new Tunnel(new TunnelOptions {
             AutoDisposePackets = true,
             PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
-            MaxPacketChannelCount = TunnelDefaults.MaxPacketChannelCount
+            MaxPacketChannelCount = TunnelDefaults.MaxPacketChannelCount,
+            UseSpeedometerTimer = true
         });
         _tunnel.PacketReceived += Tunnel_PacketReceived;
 
@@ -737,7 +738,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 IncludeIpRanges = [];
 
             // Preparing tunnel
-            VhLogger.Instance.LogInformation("Configuring Datagram Channels...");
+            VhLogger.Instance.LogInformation("Configuring Packet Channels...");
             _tunnel.RemoteMtu = helloResponse.Mtu;
             _tunnel.MaxPacketChannelCount = helloResponse.MaxPacketChannelCount != 0
                 ? _tunnel.MaxPacketChannelCount =

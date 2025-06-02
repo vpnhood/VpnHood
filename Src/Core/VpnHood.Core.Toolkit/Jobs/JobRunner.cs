@@ -8,13 +8,15 @@ public class JobRunner
 {
     private SemaphoreSlim _semaphore;
     private readonly LinkedList<WeakReference<Job>> _jobs = [];
-    private static readonly Lazy<JobRunner> DefaultLazy = new(() => new JobRunner());
+    private static readonly Lazy<JobRunner> SlowInstanceLazy = new(() => new JobRunner(TimeSpan.FromSeconds(10)));
+    private static readonly Lazy<JobRunner> FastInstanceLazy = new(() => new JobRunner(TimeSpan.FromSeconds(2)));
     private int _maxDegreeOfParallelism = 2;
     private readonly TimeSpan _cleanupTimeSpan = TimeSpan.FromSeconds(60);
     private DateTime _lastCleanupTime = FastDateTime.Now;
 
-    public static JobRunner Default => DefaultLazy.Value;
-    public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(5);
+    public static JobRunner SlowInstance => SlowInstanceLazy.Value;
+    public static JobRunner FastInstance => FastInstanceLazy.Value;
+    public TimeSpan Interval { get; set; }
     public int MaxDegreeOfParallelism {
         get => _maxDegreeOfParallelism;
         set {
@@ -24,8 +26,9 @@ public class JobRunner
         }
     }
 
-    public JobRunner()
+    public JobRunner(TimeSpan interval)
     {
+        Interval = interval;
         _semaphore = new SemaphoreSlim(_maxDegreeOfParallelism);
         Task.Run(RunJobs);
     }

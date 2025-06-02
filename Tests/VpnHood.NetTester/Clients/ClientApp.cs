@@ -21,7 +21,7 @@ internal class ClientApp : IDisposable
     private ClientApp(ClientOptions clientOptions)
     {
         _clientOptions = clientOptions;
-        JobRunner.Default.Interval = TimeSpan.FromMilliseconds(500);
+        JobRunner.SlowInstance.Interval = TimeSpan.FromMilliseconds(500);
 
         // dump clientOptions
         VhLogger.Instance.LogInformation("ClientOptions: {ClientOptions}",

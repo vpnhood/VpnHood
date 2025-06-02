@@ -70,7 +70,8 @@ public class TestHelper : IDisposable
         ]);
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
         JobOptions.DefaultPeriod = TimeSpan.FromMilliseconds(1000);
-        JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
+        JobRunner.SlowInstance.Interval = TimeSpan.FromMilliseconds(200);
+        JobRunner.FastInstance.Interval = TimeSpan.FromMilliseconds(200);
     }
 
     public async Task<bool> IsIpV6Supported()

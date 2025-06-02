@@ -14,6 +14,7 @@ public class Job : IDisposable
     private readonly int? _maxRetry;
     private long _currentFailedCount;
     private bool _disposed;
+    private readonly JobRunner _jobRunner;
     public TimeSpan Period { get; set; }
     public long SucceededCount { get; private set; }
     public long FailedCount { get; private set; }
@@ -31,7 +32,12 @@ public class Job : IDisposable
         if (options.AutoStart)
             Start();
 
-        JobRunner.Default.Add(this);
+        // initialize job runner based on the period
+        _jobRunner = options.Period >= JobRunner.SlowInstance.Interval 
+            ? JobRunner.SlowInstance 
+            : JobRunner.FastInstance;
+
+        _jobRunner.Add(this);
     }
 
     public Job(Func<CancellationToken, ValueTask> jobFunc, TimeSpan period, string? name = null)
@@ -145,6 +151,6 @@ public class Job : IDisposable
         _cancellationTokenSource.Dispose();
         _jobSemaphore.Dispose();
         StartedTime = null;
-        JobRunner.Default.Remove(this);
+        _jobRunner.Remove(this);
     }
 }

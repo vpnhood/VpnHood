@@ -1,6 +1,7 @@
 ﻿using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.PacketTransports;
+using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels;
 
@@ -8,13 +9,13 @@ namespace VpnHood.Core.Tunneling;
 
 public class Tunnel : PassthroughPacketTransport
 {
-    private readonly Timer _speedMonitorTimer;
     private Traffic _lastTraffic = new();
     private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
-    private readonly TimeSpan _speedTestThreshold = TimeSpan.FromSeconds(2);
+    private readonly TimeSpan _speedometerThreshold = TimeSpan.FromSeconds(2);
     private readonly ChannelManager _channelManager;
     private Traffic _speed = new();
     private readonly object _speedLock = new();
+    private readonly Job? _speedometerJob;
 
     public void AddChannel(IChannel channel) => _channelManager.AddChannel(channel);
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
@@ -32,43 +33,53 @@ public class Tunnel : PassthroughPacketTransport
 
     public Traffic Speed {
         get {
-            lock (_speedLock) return _speed;
-        }
-        private set {
-            lock (_speedLock) _speed = value;
+            if (IsDisposed) 
+                return new Traffic();
+
+            if (_speedometerJob == null)
+                UpdateSpeed(CancellationToken.None);
+
+            lock (_speedLock) {
+                return _speed;
+            }
         }
     }
 
     public Tunnel(TunnelOptions options)
     {
         _channelManager = new ChannelManager(options.MaxPacketChannelCount, Channel_OnPacketReceived);
-        _speedMonitorTimer = new Timer(_ => UpdateSpeed(), null, TimeSpan.Zero, _speedTestThreshold);
+        _speedometerJob = options.UseSpeedometerTimer
+            ? new Job(UpdateSpeed, _speedometerThreshold, "TunnelSpeedometer")
+            : null;
     }
 
-    private void UpdateSpeed()
+    private ValueTask UpdateSpeed(CancellationToken cancellationToken)
     {
         if (IsDisposed)
-            return;
+            throw new ObjectDisposedException(nameof(Tunnel));
 
         lock (_speedLock) {
+            var now = FastDateTime.Now;
             var traffic = _channelManager.Traffic;
-            var duration = (FastDateTime.Now - _lastSpeedUpdateTime).TotalSeconds;
+            var duration = (now - _lastSpeedUpdateTime).TotalSeconds;
             if (duration < 1)
-                return;
+                return default;
 
             var sendSpeed = (long)((traffic.Sent - _lastTraffic.Sent) / duration);
             var receivedSpeed = (long)((traffic.Received - _lastTraffic.Received) / duration);
-            Speed = new Traffic(sendSpeed, receivedSpeed);
-            _lastSpeedUpdateTime = FastDateTime.Now;
+            _speed = new Traffic(sendSpeed, receivedSpeed);
+            _lastSpeedUpdateTime = now;
 
             // update traffic usage & last traffic if changed
             if (_lastTraffic != traffic) {
-                LastActivityTime = FastDateTime.Now;
+                LastActivityTime = now;
                 _lastTraffic = traffic;
             }
         }
+
+        return default;
     }
-    
+
     private void Channel_OnPacketReceived(object sender, IpPacket ipPacket)
     {
         OnPacketReceived(ipPacket);
@@ -136,8 +147,8 @@ public class Tunnel : PassthroughPacketTransport
     protected override void DisposeManaged()
     {
         _channelManager.Dispose();
-        _speedMonitorTimer.Dispose();
-        Speed = new Traffic();
+        _speedometerJob?.Dispose();
+        _speed = new Traffic();
 
         base.DisposeManaged();
     }

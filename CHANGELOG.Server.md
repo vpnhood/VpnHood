@@ -1,4 +1,4 @@
-# Upcoming
+# v7.0.707
 * Fix: IPv6
 * Fix: Memory leak
 * Improve: Drastically improve performance and stability

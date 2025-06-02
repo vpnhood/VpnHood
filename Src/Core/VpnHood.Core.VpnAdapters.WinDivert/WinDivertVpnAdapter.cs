@@ -333,6 +333,13 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         LoadLibrary(Path.Combine(destinationFolder, "WinDivert.dll"));
     }
 
+    protected override void DisposeManaged()
+    {
+        _lastDnsServersV4.Dispose();
+        _lastDnsServersV6.Dispose();
+        base.DisposeManaged();
+    }
+
     ~WinDivertVpnAdapter()
     {
         Dispose(false);

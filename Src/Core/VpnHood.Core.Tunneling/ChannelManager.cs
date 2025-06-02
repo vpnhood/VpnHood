@@ -7,7 +7,7 @@ using VpnHood.Core.Tunneling.Channels;
 
 namespace VpnHood.Core.Tunneling;
 
-internal class ChannelManager : IDisposable, IJob
+internal class ChannelManager : IDisposable
 {
     private readonly object _channelListLock = new();
     private readonly HashSet<IChannel> _disposingChannels = [];
@@ -17,14 +17,13 @@ internal class ChannelManager : IDisposable, IJob
     private Traffic _trafficUsage = new();
     private readonly EventHandler<IpPacket> _channelPacketReceived;
     private bool _disposed;
-
-    public JobSection JobSection { get; } = new();
+    private readonly VhJob _cleanupChannelsJob;
 
     public ChannelManager(int maxPacketChannelCount, EventHandler<IpPacket> channelPacketReceived)
     {
         MaxPacketChannelCount = maxPacketChannelCount;
         _channelPacketReceived = channelPacketReceived;
-        JobRunner.Default.Add(this);
+        _cleanupChannelsJob = new VhJob(CleanupChannelsJob, nameof(ChannelManager));
     }
 
     public Traffic Traffic {
@@ -192,6 +191,12 @@ internal class ChannelManager : IDisposable, IJob
         channel.Dispose();
     }
 
+    private ValueTask CleanupChannelsJob(CancellationToken cancellationToken)
+    {
+        CleanupChannels();
+        return default;
+    }
+
     public void CleanupChannels()
     {
         CleanupChannels(_proxyChannels);
@@ -254,7 +259,7 @@ internal class ChannelManager : IDisposable, IJob
             _disposingChannels.Clear();
         }
 
-        JobRunner.Default.Remove(this);
+        _cleanupChannelsJob.Dispose();
         _disposed = true;
     }
 

@@ -434,12 +434,6 @@ public class FileAccessManager : IAccessManager
     }
 
 
-    public virtual void Dispose()
-    {
-        SessionService.Dispose();
-    }
-
-
     public string GetCertFilePath(IPEndPoint ipEndPoint)
     {
         return Path.Combine(CertsFolderPath, ipEndPoint.ToString().Replace(":", "-") + ".pfx");
@@ -453,5 +447,19 @@ public class FileAccessManager : IAccessManager
         Directory.CreateDirectory(Path.GetDirectoryName(certFilePath)!);
         File.WriteAllBytes(certFilePath, buf);
         return new X509Certificate2(certFilePath, password, X509KeyStorageFlags.Exportable);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing) {
+            SessionService.Dispose();
+            DefaultCert.Dispose();
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 }

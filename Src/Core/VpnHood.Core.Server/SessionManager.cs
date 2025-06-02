@@ -37,7 +37,6 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
     public string ApiKey { get; private set; }
     public INetFilter NetFilter { get; }
-    public JobSection JobSection { get; } = new(nameof(SessionManager));
     public Version ServerVersion { get; }
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();

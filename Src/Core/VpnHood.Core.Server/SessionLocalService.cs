@@ -11,7 +11,6 @@ internal class SessionLocalService : IDisposable
 {
     private readonly string _storagePath;
     private const string SessionFileExtension = "session";
-    public JobSection JobSection { get; } = new();
     private readonly VhJob _cleanupSessionFilesJob;
 
     public SessionLocalService(string storagePath)

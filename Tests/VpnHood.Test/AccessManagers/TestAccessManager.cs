@@ -119,4 +119,10 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
 
         return AccessCodes.GetValueOrDefault(validatedAccessCode);
     }
+
+    protected override void Dispose(bool disposing)
+    {
+        _adsData.Dispose();
+        base.Dispose(disposing);
+    }
 }

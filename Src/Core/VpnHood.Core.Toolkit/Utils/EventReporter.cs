@@ -4,38 +4,44 @@ using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Toolkit.Utils;
 
-public class EventReporter : IDisposable, IJob
+public class EventReporter : IDisposable
 {
     private readonly object _lockObject = new();
     private readonly string _message;
     private readonly EventId _eventId;
+    private readonly VhJob _reportJob;
     private bool _disposed;
 
-    public JobSection JobSection { get; } = new(TimeSpan.FromSeconds(10));
     public int TotalEventCount { get; private set; }
     public int LastReportEventCount { get; private set; }
     public DateTime LastReportEventTime { get; private set; } = FastDateTime.Now;
     public LogScope LogScope { get; set; }
 
-    public EventReporter(string message, EventId eventId = new(), LogScope? logScope = null)
+
+    public EventReporter(string message, EventId eventId = new(), LogScope? logScope = null, TimeSpan? period = null)
     {
         _message = message;
         _eventId = eventId;
         LogScope = logScope ?? new LogScope();
-
-        JobRunner.Default.Add(this);
+        _reportJob = new VhJob(ReportJob, period ?? VhJobOptions.DefaultPeriod, nameof(EventReporter));
     }
 
     public void Raise()
     {
-        if (_disposed) throw new ObjectDisposedException(GetType().Name);
+        if (_disposed) 
+            throw new ObjectDisposedException(GetType().Name);
 
         lock (_lockObject)
             TotalEventCount++;
 
-        if (VhLogger.MinLogLevel <= LogLevel.Debug || 
-            TotalEventCount == 1 || FastDateTime.Now - LastReportEventTime > JobSection.Interval)
+        if (VhLogger.MinLogLevel <= LogLevel.Debug)
             ReportInternal();
+    }
+
+    private ValueTask ReportJob(CancellationToken cancellationToken)
+    {
+        ReportInternal();
+        return default;
     }
 
     private void ReportInternal()
@@ -48,14 +54,13 @@ public class EventReporter : IDisposable, IJob
             Report();
             LastReportEventTime = FastDateTime.Now;
             LastReportEventCount = TotalEventCount;
-            JobSection.Leave();
         }
     }
 
     protected virtual void Report()
     {
         var args = new[] {
-            Tuple.Create("EventDuration", (object?)JobSection.Elapsed.ToString(@"hh\:mm\:ss")),
+            Tuple.Create("EventDuration", (object?)(FastDateTime.Now - LastReportEventTime).ToString(@"hh\:mm\:ss")),
             Tuple.Create("EventCount", (object?)(TotalEventCount - LastReportEventCount)),
             Tuple.Create("EventTotal", (object?)TotalEventCount)
         };
@@ -67,22 +72,13 @@ public class EventReporter : IDisposable, IJob
         VhLogger.Instance.LogInformation(_eventId, log, args.Select(x => x.Item2).ToArray());
     }
 
-    public Task RunJob()
-    {
-        if (_disposed) throw new ObjectDisposedException(GetType().Name);
-
-        ReportInternal();
-        return Task.CompletedTask;
-    }
-
     public void Dispose()
     {
         if (_disposed) 
             return;
 
         ReportInternal();
-        JobRunner.Default.Remove(this);
-
+        _reportJob.Dispose();
         _disposed = true;
     }
 }

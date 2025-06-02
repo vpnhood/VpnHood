@@ -28,8 +28,8 @@ public class Session : IDisposable
     private readonly INetFilter _netFilter;
     private readonly IAccessManager _accessManager;
     private readonly IVpnAdapter? _vpnAdapter;
-    private readonly ProxyManager _proxyManager;
     private readonly ISocketFactory _socketFactory;
+    private readonly ProxyManager _proxyManager;
     private readonly object _verifyRequestLock = new();
     private readonly int _maxTcpConnectWaitCount;
     private readonly int _maxTcpChannelCount;
@@ -524,6 +524,7 @@ public class Session : IDisposable
         _netScanExceptionReporter.Dispose();
         _maxTcpChannelExceptionReporter.Dispose();
         _maxTcpConnectWaitExceptionReporter.Dispose();
+        NetScanDetector?.Dispose();
 
         // if there is no reason it is temporary
         var reason = "Cleanup";

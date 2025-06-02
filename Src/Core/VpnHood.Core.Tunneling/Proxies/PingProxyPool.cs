@@ -8,7 +8,7 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
-public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
+public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
 {
     private readonly bool _autoDisposeSentPackets;
     private readonly IPacketProxyCallbacks? _packetProxyCallbacks;
@@ -17,10 +17,10 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly TimeSpan _workerTimeout = TimeSpan.FromMinutes(5);
     private readonly int _maxClientCount;
+    private readonly VhJob _cleanupWorkersJob;
     public DateTime LastUsedTime { get; set; }
 
     public int RemoteEndPointCount => _remoteEndPoints.Count;
-    public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
 
     public PingProxyPool(PingProxyPoolOptions options)
     {
@@ -29,8 +29,7 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
         _packetProxyCallbacks = options.PacketProxyCallbacks;
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(options.IcmpTimeout);
         _maxWorkerEventReporter = new EventReporter("Session has reached to the maximum ping workers.", logScope: options.LogScope);
-
-        JobRunner.Default.Add(this);
+        _cleanupWorkersJob = new VhJob(CleanupWorkers, nameof(PingProxyPool));
     }
 
     public int ClientCount {
@@ -100,12 +99,12 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
                 isNewLocalEndPoint, isNewRemoteEndPoint);
     }
 
-    public Task RunJob()
+    private ValueTask CleanupWorkers(CancellationToken cancellationToken)
     {
         lock (_pingProxies)
             TimeoutItemUtil.CleanupTimeoutList(_pingProxies, _workerTimeout);
 
-        return Task.CompletedTask;
+        return default;
     }
 
     protected override void Dispose(bool disposing)
@@ -116,8 +115,9 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
                 proxy.Dispose();
             }
 
+            _cleanupWorkersJob.Dispose();
             _maxWorkerEventReporter.Dispose();
-            JobRunner.Default.Remove(this);
+            _remoteEndPoints.Dispose();
         }
 
         base.Dispose(disposing);

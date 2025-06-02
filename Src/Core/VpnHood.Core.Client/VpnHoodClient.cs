@@ -581,7 +581,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             using var requestResult =
                 await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();
+
             var helloResponse = requestResult.Response;
+            if (helloResponse.ClientPublicAddress is null)
+                throw new NotSupportedException($"Server must returns {nameof(helloResponse.ClientPublicAddress)}.");
 
 #pragma warning disable CS0618 // Type or member is obsolete
             if (helloResponse is { MinProtocolVersion: 0, ServerProtocolVersion: 5 }) {

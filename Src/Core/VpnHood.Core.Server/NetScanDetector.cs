@@ -4,7 +4,7 @@ using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Server;
 
-public class NetScanDetector(int itemLimit, TimeSpan itemTimeout)
+public class NetScanDetector(int itemLimit, TimeSpan itemTimeout) : IDisposable
 {
     private readonly TimeoutDictionary<IPAddress, NetworkIpAddressItem> _networkIpAddresses = new(itemTimeout);
 
@@ -42,5 +42,10 @@ public class NetScanDetector(int itemLimit, TimeSpan itemTimeout)
         return _networkIpAddresses.TryGetValue(GetNetworkIpAddress(ipEndPoint), out var value)
             ? value.EndPoints.Count
             : 0;
+    }
+
+    public void Dispose()
+    {
+        _networkIpAddresses.Dispose();
     }
 }

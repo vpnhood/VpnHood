@@ -11,10 +11,10 @@ public class VhJob : IDisposable
     private readonly SemaphoreSlim _jobSemaphore = new(1, 1);
     private readonly Func<CancellationToken, ValueTask> _jobFunc;
     private readonly TimeSpan _dueTime;
-    private readonly TimeSpan _period;
     private readonly int? _maxRetry;
     private long _currentFailedCount;
     private bool _disposed;
+    public TimeSpan Period { get; set; }
     public long SucceededCount { get; private set; }
     public long FailedCount { get; private set; }
     public bool IsStarted => StartedTime != null;
@@ -25,7 +25,7 @@ public class VhJob : IDisposable
     {
         _jobFunc = jobFunc;
         _dueTime = options.DueTime ?? options.Period;
-        _period = options.Period;
+        Period = options.Period;
         _maxRetry = options.MaxRetry;
         _name = options.Name ?? "NoName";
         if (options.AutoStart)
@@ -87,7 +87,7 @@ public class VhJob : IDisposable
                 return now - StartedTime >= _dueTime;
 
             // interval execution
-            return now - LastExecutedTime >= _period;
+            return now - LastExecutedTime >= Period;
         }
     }
 

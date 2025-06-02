@@ -10,7 +10,7 @@ using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
-public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
+public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
 {
     private readonly bool _autoDisposeSentPackets;
     private readonly IPacketProxyCallbacks? _packetProxyCallbacks;
@@ -22,10 +22,10 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly EventReporter _maxWorkerEventReporter;
     private readonly int _maxClientCount;
+    private readonly VhJob _cleanupJob;
 
     public int RemoteEndPointCount => _remoteEndPoints.Count;
     public int ClientCount => _udpProxies.Count;
-    public JobSection JobSection { get; } = new();
 
     public UdpProxyPool(UdpProxyPoolOptions options)
     {
@@ -40,8 +40,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
         _maxWorkerEventReporter = new EventReporter("Session has reached to Maximum local UDP ports.", GeneralEventId.NetProtect, logScope: options.LogScope);
 
         _udpProxies = new TimeoutDictionary<IPEndPoint, UdpProxy>(options.UdpTimeout);
-        JobSection.Interval = options.UdpTimeout;
-        JobRunner.Default.Add(this);
+        _cleanupJob = new VhJob(CleanupUdpWorkers, options.UdpTimeout, nameof(UdpProxyPool));
     }
 
     protected override void SendPacket(IpPacket ipPacket)
@@ -100,11 +99,11 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
         return udpClient;
     }
 
-    public Task RunJob()
+    private ValueTask CleanupUdpWorkers(CancellationToken cancellationToken)
     {
         // remove useless workers
         _udpProxies.Cleanup();
-        return Task.CompletedTask;
+        return default;
     }
 
     protected override void Dispose(bool disposing)
@@ -113,7 +112,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool, IJob
             _remoteEndPoints.Dispose();
             _maxWorkerEventReporter.Dispose();
             _udpProxies.Dispose();
-            JobRunner.Default.Remove(this);
+            _cleanupJob.Dispose();
         }
 
         base.Dispose(disposing);

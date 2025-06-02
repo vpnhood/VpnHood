@@ -8,7 +8,7 @@ using VpnHood.Core.Tunneling.ClientStreams;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class ProxyChannel : IProxyChannel, IJob
+public class ProxyChannel : IProxyChannel
 {
     private bool _disposed;
     private readonly int _orgStreamBufferSize;
@@ -22,7 +22,7 @@ public class ProxyChannel : IProxyChannel, IJob
     private Traffic _traffic = new();
     private readonly object _trafficLock = new();
     private bool _isTunnelReadTaskFinished;
-    public JobSection JobSection { get; } = new(TunnelDefaults.TcpCheckInterval);
+    private readonly VhJob _checkAliveJob;
 
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public string ChannelId { get; }
@@ -48,7 +48,7 @@ public class ProxyChannel : IProxyChannel, IJob
                 $"Value must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}");
 
         ChannelId = channelId;
-        JobRunner.Default.Add(this);
+        _checkAliveJob = new VhJob(CheckAlive, TunnelDefaults.TcpCheckInterval, nameof(ProxyChannel));
     }
 
     public Traffic Traffic {
@@ -91,14 +91,14 @@ public class ProxyChannel : IProxyChannel, IJob
             var tunnelReadTask = CopyFromTunnelAsync(
                 _tunnelClientStream.Stream, _hostClientStream.Stream, _tunnelStreamBufferSize,
                 CancellationToken.None, CancellationToken.None); // tunnel => host
-            
+
             var tunnelWriteTask = CopyToTunnelAsync(
                 _hostClientStream.Stream, _tunnelClientStream.Stream, _orgStreamBufferSize,
                 CancellationToken.None, CancellationToken.None); // host => tunnel
 
             var completedTask = await Task.WhenAny(tunnelReadTask, tunnelWriteTask).VhConfigureAwait();
             _isTunnelReadTaskFinished = completedTask == tunnelReadTask;
-            
+
             // just to ensure that both tasks are completed gracefully, ClientStream should also handle it
             await Task.WhenAll(
                     _hostClientStream.Stream.DisposeAsync().AsTask(),
@@ -107,7 +107,7 @@ public class ProxyChannel : IProxyChannel, IJob
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, ex,
-                "Error while starting a ProxyChannel. ChannelId: {ChannelId}, ProxyDisposal: {ProxyDisposal}", 
+                "Error while starting a ProxyChannel. ChannelId: {ChannelId}, ProxyDisposal: {ProxyDisposal}",
                 ChannelId, _disposed);
         }
         finally {
@@ -199,26 +199,24 @@ public class ProxyChannel : IProxyChannel, IJob
         }
     }
 
-    public Task RunJob()
-    {
-        // if either task is completed let graceful shutdown do its job
-        if (_disposed || !_started)
-            return Task.CompletedTask;
 
-        CheckClientIsAlive();
-        return Task.CompletedTask;
-    }
-
-    private void CheckClientIsAlive()
+    private ValueTask CheckAlive(CancellationToken cancellationToken)
     {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(ProxyChannel));
+
+        if (!_started)
+            return default;
+
         // check tcp states
         if (_hostClientStream.Connected && _tunnelClientStream.Connected)
-            return;
+            return default;
 
         VhLogger.Instance.LogInformation(GeneralEventId.ProxyChannel,
             "Disposing a ProxyChannel due to its error state. ChannelId: {ChannelId}", ChannelId);
 
         Dispose();
+        return default;
     }
 
     public void Dispose()
@@ -226,8 +224,8 @@ public class ProxyChannel : IProxyChannel, IJob
         if (_disposed) return;
         _disposed = true;
 
+        _checkAliveJob.Dispose();
         _started = false;
-        JobRunner.Default.Remove(this);
         _hostClientStream.Dispose();
         _tunnelClientStream.Dispose();
     }

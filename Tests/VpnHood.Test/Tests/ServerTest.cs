@@ -403,7 +403,7 @@ public class ServerTest : TestBase
 
         // check initial status. AppSize should be 0
         swapMemoryProvider.AppUsed = 0;
-        await server.RunJob();
+        await server.ConfigureAndSendStatus(CancellationToken.None);
         var serverStatus = accessManager.LastServerStatus;
         Assert.AreEqual(swapMemoryProvider.OtherSize, swapMemoryProvider.Info.TotalSize);
         Assert.AreEqual(0, swapMemoryProvider.Info.AppSize);
@@ -416,7 +416,7 @@ public class ServerTest : TestBase
         swapMemoryProvider.AppSize = 50 * VhUtils.Megabytes;
         swapMemoryProvider.AppUsed = 10 * VhUtils.Megabytes;
 
-        await server.RunJob();
+        await server.ConfigureAndSendStatus(CancellationToken.None);
         serverStatus = accessManager.LastServerStatus;
         Assert.AreEqual(swapMemoryProvider.Info.TotalSize, accessManager.LastServerStatus?.TotalSwapMemory);
         Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed,
@@ -426,7 +426,7 @@ public class ServerTest : TestBase
         accessManager.ServerConfig.SwapMemorySizeMb = 2500;
         accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         swapMemoryProvider.AppUsed = 100 * VhUtils.Megabytes;
-        await server.RunJob();
+        await server.ConfigureAndSendStatus(CancellationToken.None);
         serverStatus = accessManager.LastServerStatus;
         Assert.AreEqual(swapMemoryProvider.Info.TotalSize, 2500 * VhUtils.Megabytes);
         Assert.AreEqual(swapMemoryProvider.Info.TotalSize, accessManager.LastServerStatus?.TotalSwapMemory);

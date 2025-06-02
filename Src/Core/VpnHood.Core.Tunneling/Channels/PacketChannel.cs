@@ -9,19 +9,19 @@ using VpnHood.Core.Tunneling.DatagramMessaging;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
+public abstract class PacketChannel : PacketTransport, IPacketChannel
 {
     private readonly TimeSpan? _lifespan;
     private DateTime? _closeSentTime;
     private DateTime? _closeReceivedTime;
     private bool _started;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private readonly VhJob _checkLifetimeJob;
 
     protected CancellationToken CancellationToken => _cancellationTokenSource.Token;
     public string ChannelId { get; }
     public DateTime LastActivityTime => PacketStat.LastActivityTime;
     public Traffic Traffic => new(PacketStat.SentBytes, PacketStat.ReceivedBytes);
-    public JobSection JobSection { get; } = new();
     protected abstract Task StartReadTask();
     public abstract int OverheadLength { get; }
 
@@ -34,7 +34,7 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
     {
         _lifespan = options.Lifespan;
         ChannelId = options.ChannelId;
-        JobRunner.Default.Add(this);
+        _checkLifetimeJob = new VhJob(CheckLifetime, nameof(PacketChannel));
     }
 
     public PacketChannelState State {
@@ -94,11 +94,14 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
         }
     }
 
-    private void CheckLifetime()
+    private ValueTask CheckLifetime(CancellationToken cancellationToken)
     {
+        if (IsDisposed)
+            throw new ObjectDisposedException(nameof(CheckLifetime));
+
         // if channel is disposed, do nothing
-        if (IsDisposed || _cancellationTokenSource.IsCancellationRequested)
-            return;
+        if (_cancellationTokenSource.IsCancellationRequested)
+            return default;
 
         // dispose if its lifetime is over
         if (_started && _closeSentTime == null &&
@@ -116,6 +119,8 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
         // dispose if _closeMessageTime is set and more than graceful timeout
         if (FastDateTime.Now - _closeSentTime > TunnelDefaults.TcpGracefulTimeout)
             Dispose();
+
+        return default;
     }
 
 
@@ -142,16 +147,10 @@ public abstract class PacketChannel : PacketTransport, IJob, IPacketChannel
         base.OnPacketReceived(ipPacket);
     }
 
-    public Task RunJob()
-    {
-        CheckLifetime();
-        return Task.CompletedTask;
-    }
-
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
-            JobRunner.Default.Remove(this);
+            _checkLifetimeJob.Dispose();
             Stop();
         }
 

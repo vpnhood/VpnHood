@@ -24,7 +24,7 @@ using VpnHood.Core.Tunneling;
 
 namespace VpnHood.Core.Server;
 
-public class VpnHoodServer : IAsyncDisposable, IJob
+public class VpnHoodServer : IAsyncDisposable
 {
     private readonly bool _autoDisposeAccessManager;
     private readonly string _lastConfigFilePath;
@@ -41,9 +41,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private readonly ISwapMemoryProvider? _swapMemoryProvider;
     private string? _tcpCongestionControl;
     private bool _isRestarted = true;
+    private readonly VhJob _configureAndSendStatusJob;
 
     public ServerHost ServerHost { get; }
-    public JobSection JobSection { get; }
     public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version;
     public SessionManager SessionManager { get; }
     public ServerState State { get; private set; } = ServerState.NotStarted;
@@ -59,7 +59,6 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         AccessManager = accessManager;
         _systemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
-        JobSection = new JobSection(options.ConfigureInterval);
         SessionManager = new SessionManager(accessManager,
             options.NetFilter,
             options.SocketFactory,
@@ -85,10 +84,10 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         ServerHost = new ServerHost(SessionManager);
 
         VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
-        JobRunner.Default.Add(this);
+        _configureAndSendStatusJob = new VhJob(ConfigureAndSendStatus, options.ConfigureInterval, nameof(VpnHoodServer));
     }
 
-    public async Task RunJob()
+    public async ValueTask ConfigureAndSendStatus(CancellationToken cancellationToken)
     {
         if (_disposed) 
             throw new ObjectDisposedException(VhLogger.FormatType(this));
@@ -146,7 +145,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         // ReSharper disable once DisposeOnUsingVariable
         scope?.Dispose();
-        await JobRunner.RunNow(this).VhConfigureAwait();
+        await _configureAndSendStatusJob.RunNow(CancellationToken.None);
     }
 
     private async Task Configure()
@@ -198,7 +197,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
             SessionManager.ServerSecret = serverConfig.ServerSecret ?? SessionManager.ServerSecret;
-            JobSection.Interval = serverConfig.UpdateStatusIntervalValue < serverConfig.SessionOptions.SyncIntervalValue
+            _configureAndSendStatusJob.Period = serverConfig.UpdateStatusIntervalValue < serverConfig.SessionOptions.SyncIntervalValue
                 ? serverConfig.UpdateStatusIntervalValue // update status interval must be less than sync interval
                 : serverConfig.SessionOptions.SyncIntervalValue;
 
@@ -265,7 +264,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             _lastConfigException = ex;
             SessionManager.Tracker?.VhTrackErrorAsync(ex, "Could not configure server!", "Configure", CancellationToken.None);
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.",
-                JobSection.Interval.TotalSeconds);
+                _configureAndSendStatusJob.Period.TotalSeconds);
             await SendStatusToAccessManager(false).VhConfigureAwait();
         }
     }
@@ -529,6 +528,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         using var scope = VhLogger.Instance.BeginScope("Server");
         VhLogger.Instance.LogInformation("Server is shutting down...");
+
+        // dispose update job
+        _configureAndSendStatusJob.Dispose();
 
         // wait for configuration
         try {

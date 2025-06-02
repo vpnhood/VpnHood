@@ -14,4 +14,13 @@ internal class UdpProxyEx(UdpClient udpClient, TimeSpan udpTimeout, int queueCap
             ? sourceEndPoint.Value 
             : null;
     }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) {
+            DestinationEndPointMap.Dispose();
+        }
+
+        base.Dispose(disposing);
+    }
 }

@@ -231,6 +231,25 @@ internal class ChannelManager : IDisposable
         return Task.CompletedTask;
     }
 
+    public IPacketChannel GetPacketChannel(int channelIndex)
+    {
+        lock (_channelListLock) {
+            if (channelIndex >= _packetChannels.Count)
+                channelIndex = _packetChannels.Count - 1;
+
+            if (channelIndex < 0)
+                throw new ArgumentOutOfRangeException(nameof(channelIndex), "Channel index is out of range.");
+
+            return _packetChannels[channelIndex];
+        }
+    }
+
+    public void RemoveAllPacketChannels()
+    {
+        foreach (var channel in _packetChannels.ToArray())
+            RemoveChannel(channel);
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -263,22 +282,4 @@ internal class ChannelManager : IDisposable
         _disposed = true;
     }
 
-    public IPacketChannel GetPacketChannel(int channelIndex)
-    {
-        lock (_channelListLock) {
-            if (channelIndex >= _packetChannels.Count)
-                channelIndex = _packetChannels.Count - 1;
-
-            if (channelIndex < 0)
-                throw new ArgumentOutOfRangeException(nameof(channelIndex), "Channel index is out of range.");
-
-            return _packetChannels[channelIndex];
-        }
-    }
-
-    public void RemoveAllPacketChannels()
-    {
-        foreach (var channel in _packetChannels.ToArray())
-            RemoveChannel(channel);
-    }
 }

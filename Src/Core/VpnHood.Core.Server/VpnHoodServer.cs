@@ -537,8 +537,7 @@ public class VpnHoodServer : IAsyncDisposable
             /* no error*/
         }
 
-        await ServerHost.DisposeAsync()
-            .VhConfigureAwait(); // before disposing session manager to prevent recovering sessions
+        await ServerHost.DisposeAsync().VhConfigureAwait(); // before disposing session manager to prevent recovering sessions
         await SessionManager.DisposeAsync().VhConfigureAwait();
         _http01ChallengeService?.Dispose();
         if (_netConfigurationService != null)

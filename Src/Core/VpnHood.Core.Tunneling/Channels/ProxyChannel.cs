@@ -73,20 +73,19 @@ public class ProxyChannel : IProxyChannel
 
     public void Start()
     {
-        _ = StartInternal();
-    }
-
-    private async Task StartInternal()
-    {
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
 
         if (_started)
             throw new InvalidOperationException("ProxyChannel is already started.");
 
-        _started = true;
+        _ = StartInternal();
+    }
+
+    private async Task StartInternal()
+    {
         try {
-            // let pass CancellationToken for the host only to save the tunnel for reuse
+            _started = true;
 
             var tunnelReadTask = CopyFromTunnelAsync(
                 _tunnelClientStream.Stream, _hostClientStream.Stream, _tunnelStreamBufferSize,

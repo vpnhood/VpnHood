@@ -89,7 +89,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
         }
     }
 
-    public async Task StartReceivingAsync()
+    private async Task StartReceivingAsync()
     {
         try {
             while (!IsDisposed) {

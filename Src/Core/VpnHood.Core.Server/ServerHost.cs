@@ -316,13 +316,13 @@ public class ServerHost : IAsyncDisposable
 
     private async Task ProcessTcpClient(TcpClient tcpClient, CancellationToken cancellationToken)
     {
-        // add timeout to cancellationToken
-        using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
-        using var localCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
-
         IClientStream? clientStream = null;
         SslStream? sslStream = null;
         try {
+            // add timeout to cancellationToken
+            using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
+            using var localCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
+
             // establish SSL
             sslStream = await AuthenticateAsServerAsync(tcpClient.GetStream(), localCts.Token)
                 .VhConfigureAwait();

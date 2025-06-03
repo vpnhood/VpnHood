@@ -52,10 +52,10 @@ public abstract class TrackerBase : ITracker
         if (!IsEnabled)
             return;
 
-        using var timeoutCts = new CancellationTokenSource(RequestTimeout);
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
-
         try {
+            using var timeoutCts = new CancellationTokenSource(RequestTimeout);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
+
             // log
             Logger?.LogInformation(LoggerEventId,
                 "Sending Ga4Track: {name}, Url: {Url},  Headers: {Headers}",

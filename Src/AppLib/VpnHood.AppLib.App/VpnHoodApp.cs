@@ -153,7 +153,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // initialize features
         Features = new AppFeatures {
-            Version = typeof(VpnHoodApp).Assembly.GetName().Version,
+            Version = typeof(VpnHoodApp).Assembly.GetName().Version ?? new Version(),
             IsExcludeAppsSupported = _device.IsExcludeAppsSupported,
             IsIncludeAppsSupported = _device.IsIncludeAppsSupported,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
@@ -303,7 +303,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private void ActiveUiContext_OnChanged(object sender, EventArgs e)
+    private void ActiveUiContext_OnChanged(object? sender, EventArgs e)
     {
         var uiContext = AppUiContext.Context;
         if (IsIdle && Services.AdService.IsPreloadAdEnabled && uiContext != null)
@@ -833,7 +833,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         UserSettings.CultureCode = firstSelected;
     }
 
-    private void SettingsBeforeSave(object sender, EventArgs e)
+    private void SettingsBeforeSave(object? sender, EventArgs e)
     {
         ApplySettings();
     }
@@ -926,7 +926,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private void VpnService_StateChanged(object sender, EventArgs e)
+    private void VpnService_StateChanged(object? sender, EventArgs e)
     {
         // clear last error when get out of idle state, because it indicates a new connection has started
         if (!IsIdle)
@@ -946,7 +946,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _isDisconnecting = true;
         using var workScope = new AutoDispose(() => { _isDisconnecting = false; FireConnectionStateChanged(); });
         _appPersistState.HasDisconnectedByUser = true;
-        _connectCts.Cancel();
+        
+        await _connectCts.CancelAsync().VhConfigureAwait();
+        _connectCts.Dispose();
+
         await _vpnServiceManager.Stop().VhConfigureAwait();
     }
 

@@ -50,9 +50,10 @@ public class DiagnoseUtil
                 "HttpTest: {HttpTestStatus}, Url: {url}, Timeout: {timeout}...",
                 "Started", uri, timeout);
 
+            using var timeoutCts = new CancellationTokenSource(timeout);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
             using var httpClient = new HttpClient();
-            var result = await httpClient.GetStringAsync(uri)
-                .VhWait(timeout, cancellationToken)
+            var result = await httpClient.GetStringAsync(uri, linkedCts.Token)
                 .VhConfigureAwait();
 
             if (result.Length < 100)

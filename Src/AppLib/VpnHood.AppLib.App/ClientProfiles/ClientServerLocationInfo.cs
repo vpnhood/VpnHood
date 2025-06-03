@@ -124,7 +124,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
             });
 
         // set head sub auto items
-        foreach (var locationInfo in results.Where(x => !x.IsAuto && x.RegionName == "*")) {
+        foreach (var locationInfo in results.Where(x => x is { IsAuto: false, RegionName: "*" })) {
             locationInfo.Tags =
                 CalcCategoryTags(results.Where(x => x.CountryCode == locationInfo.CountryCode && x.RegionName != "*"))
                     .ToArray();
@@ -145,7 +145,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
     {
         // get distinct of all tags in items and include the partial tag (~#tag) if the tag does not present in all items
         var itemArray = items.ToArray();
-        var tags = itemArray.SelectMany(x => x.Tags).Distinct().ToList();
+        var tags = itemArray.SelectMany(x => x.Tags ?? []).Distinct().ToList();
         foreach (var tag in tags.Where(x => x.Length > 0 && x[0] != '~').ToArray()) {
             if (itemArray.Any(x => x.Tags?.Contains(tag) != true)) {
                 tags.Remove(tag);

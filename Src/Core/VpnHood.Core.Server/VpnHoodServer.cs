@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Trackers;
-using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Configurations;
@@ -89,11 +88,11 @@ public class VpnHoodServer : IAsyncDisposable
 
     public async ValueTask ConfigureAndSendStatus(CancellationToken cancellationToken)
     {
-        if (_disposed) 
+        if (_disposed)
             throw new ObjectDisposedException(VhLogger.FormatType(this));
 
         using var scope = VhLogger.Instance.BeginScope("Server");
-        
+
         if (State == ServerState.Waiting && _configureTask.IsCompleted) {
             _configureTask = Configure(); // configure does not throw any error
             await _configureTask.VhConfigureAwait();
@@ -116,7 +115,7 @@ public class VpnHoodServer : IAsyncDisposable
         // Report current OS Version
         VhLogger.Instance.LogInformation("Module: {Module}", GetType().Assembly.GetName().FullName);
         VhLogger.Instance.LogInformation("OS: {OS}", _systemInfoProvider.GetSystemInfo());
-        VhLogger.Instance.LogInformation("VirtualNetworkV4: {VirtualIpV4}, VirtualNetworkV6: {VirtualIpV6}", 
+        VhLogger.Instance.LogInformation("VirtualNetworkV4: {VirtualIpV4}, VirtualNetworkV6: {VirtualIpV6}",
             SessionManager.VirtualIpNetworkV4, SessionManager.VirtualIpNetworkV6);
         VhLogger.Instance.LogInformation("MinLogLevel: {MinLogLevel}", VhLogger.MinLogLevel);
 
@@ -127,7 +126,13 @@ public class VpnHoodServer : IAsyncDisposable
             tcpClient.SendBufferSize, tcpClient.ReceiveBufferSize);
 
         // Report Anonymous info
-        _ = GaTrackStart();
+        _ = SessionManager.Tracker?.TryTrack(new TrackEvent {
+            EventName = TrackEventNames.SessionStart,
+            Parameters = new Dictionary<string, object> {
+                { "access_manager", AccessManager.GetType().Name }
+            }
+        });
+
 
         // Configure
         State = ServerState.Waiting;
@@ -236,8 +241,7 @@ public class VpnHoodServer : IAsyncDisposable
             }
 
             // Reconfigure server host
-            await ServerHost.Configure(new ServerHostConfiguration
-            {
+            await ServerHost.Configure(new ServerHostConfiguration {
                 DnsServers = serverConfig.DnsServersValue,
                 TcpEndPoints = serverConfig.TcpEndPointsValue,
                 UdpEndPoints = serverConfig.UdpEndPointsValue,
@@ -262,7 +266,7 @@ public class VpnHoodServer : IAsyncDisposable
         catch (Exception ex) {
             State = ServerState.Waiting;
             _lastConfigException = ex;
-            SessionManager.Tracker?.VhTrackErrorAsync(ex, "Could not configure server!", "Configure", CancellationToken.None);
+            SessionManager.Tracker?.TryTrackError(ex, "Could not configure server!", "Configure");
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.",
                 _configureAndSendStatusJob.Period.TotalSeconds);
             await SendStatusToAccessManager(false).VhConfigureAwait();
@@ -494,20 +498,6 @@ public class VpnHoodServer : IAsyncDisposable
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not send the server status.");
         }
-    }
-
-    private Task GaTrackStart()
-    {
-        if (SessionManager.Tracker == null)
-            return Task.CompletedTask;
-
-        // track
-        return SessionManager.Tracker.Track(new TrackEvent {
-            EventName = TrackEventNames.SessionStart,
-            Parameters = new Dictionary<string, object> {
-                { "access_manager", AccessManager.GetType().Name }
-            }
-        });
     }
 
     public void Dispose()

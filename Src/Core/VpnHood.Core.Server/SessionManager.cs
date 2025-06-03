@@ -166,7 +166,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
             helloRequest.RequestId, isRecovery: false);
 
         // Anonymous Report to GA
-        _ = GaTrackNewSession(helloRequest.ClientInfo);
+        _ = TryTrackNewSession(helloRequest.ClientInfo);
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
             "New session has been created. SessionId: {SessionId}",
@@ -175,14 +175,14 @@ public class SessionManager : IAsyncDisposable, IDisposable
         return sessionResponseEx;
     }
 
-    private Task GaTrackNewSession(ClientInfo clientInfo)
+    private Task<bool> TryTrackNewSession(ClientInfo clientInfo)
     {
         if (Tracker == null)
-            return Task.CompletedTask;
+            return Task.FromResult(false);
 
         // track new session
         var serverVersion = ServerVersion.ToString(3);
-        return Tracker.Track([
+        return Tracker.TryTrack([
             new TrackEvent {
                 EventName = TrackEventNames.PageView,
                 Parameters = new Dictionary<string, object> {

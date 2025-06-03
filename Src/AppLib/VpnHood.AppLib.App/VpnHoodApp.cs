@@ -30,7 +30,6 @@ using VpnHood.Core.Common.IpLocations.Providers.Offlines;
 using VpnHood.Core.Common.IpLocations.Providers.Onlines;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Common.Utils;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Jobs;
@@ -1184,13 +1183,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void ReportError(Exception ex, string message, [CallerMemberName] string action = "n/a")
     {
-        Services.Tracker?.VhTrackErrorAsync(ex, message, action, CancellationToken.None);
+        _ = Services.Tracker?.TryTrackError(ex, message, action);
         VhLogger.Instance.LogError(ex, message);
     }
 
     private void ReportWarning(Exception ex, string message, [CallerMemberName] string action = "n/a")
     {
-        Services.Tracker?.VhTrackWarningAsync(ex, message, action, CancellationToken.None);
+        _ = Services.Tracker?.TryTrackWarningAsync(ex, message, action);
         VhLogger.Instance.LogWarning(ex, message);
     }
 

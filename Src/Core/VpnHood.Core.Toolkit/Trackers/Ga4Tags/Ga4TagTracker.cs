@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 
 // ReSharper disable once CheckNamespace
 namespace Ga4.Trackers.Ga4Tags;
@@ -9,6 +10,16 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
 {
     public required int SessionCount { get; set; } = 1;
     public bool? IsMobile { get; init; }
+
+    public async Task TryTrack(Ga4TagEvent ga4Event, ILogger logger)
+    {
+        try {
+            await Track(ga4Event, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex) {
+            logger.LogDebug(ex, "Failed to track GA4 Tag Event: {EventName}", ga4Event.EventName);
+        }
+    }
 
     public Task Track(Ga4TagEvent ga4Event, CancellationToken cancellationToken)
     {

@@ -61,12 +61,12 @@ public class ServerFinder(
             _hostEndPointStatuses.Count(x => x.Available == false),
             _hostEndPointStatuses.Count(x => x.Available == null));
 
-        _ = TrackEndPointsAvailability([], _hostEndPointStatuses).VhConfigureAwait();
+        _ = TryTrackEndPointsAvailability([], _hostEndPointStatuses).VhConfigureAwait();
         if (res != null)
             return res;
 
-        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
-            isIpV6Supported: IncludeIpV6, hasRedirected: false), CancellationToken.None);
+        _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
+            isIpV6Supported: IncludeIpV6, hasRedirected: false));
         throw new UnreachableServerException(serverLocation: ServerLocation);
     }
 
@@ -103,17 +103,17 @@ public class ServerFinder(
             VhLogger.Format(res));
 
         // track new endpoints availability 
-        _ = TrackEndPointsAvailability(_hostEndPointStatuses, endpointStatuses).VhConfigureAwait();
+        _ = TryTrackEndPointsAvailability(_hostEndPointStatuses, endpointStatuses).VhConfigureAwait();
         if (res != null)
             return res;
 
-        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
-            isIpV6Supported: IncludeIpV6, hasRedirected: true), CancellationToken.None);
+        _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
+            isIpV6Supported: IncludeIpV6, hasRedirected: true));
 
         throw new UnreachableServerExceptionLocation(serverLocation: ServerLocation);
     }
 
-    private Task TrackEndPointsAvailability(HostStatus[] oldStatuses, HostStatus[] newStatuses)
+    private Task TryTrackEndPointsAvailability(HostStatus[] oldStatuses, HostStatus[] newStatuses)
     {
         // find new discovered statuses
         var changesStatus = newStatuses
@@ -132,7 +132,7 @@ public class ServerFinder(
             changesStatus.Select(x => $"{VhLogger.Format(x.TcpEndPoint)} => {x.Available}"));
         VhLogger.Instance.LogInformation(GeneralEventId.Session, "HostEndPoints: {EndPoints}", endPointReport);
 
-        return tracker?.Track(trackEvents) ?? Task.CompletedTask;
+        return tracker?.TryTrack(trackEvents) ?? Task.CompletedTask;
     }
 
     private async Task<HostStatus[]> VerifyServersStatus(IPEndPoint[] hostEndPoints, bool byOrder,

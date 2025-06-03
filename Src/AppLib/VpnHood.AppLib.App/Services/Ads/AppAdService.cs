@@ -84,14 +84,14 @@ public class AppAdService(
             };
 
             var trackEvent = AppTrackerBuilder.BuildShowAdStatus(networkName);
-            _ = RestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
+            _ = TryRestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
 
             //wait for finishing trackers
             return showAdResult;
         }
         catch (Exception ex) {
             var trackEvent = AppTrackerBuilder.BuildShowAdStatus("all", ex.Message);
-            _ = RestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
+            _ = TryRestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
             
             if (ex is UiContextNotAvailableException)
                 throw new ShowAdNoUiException();
@@ -100,10 +100,10 @@ public class AppAdService(
         }
     }
 
-    private async Task RestoreProcessVpn(TrackEvent trackEvent, TimeSpan delay, CancellationToken cancellationToken)
+    private async Task TryRestoreProcessVpn(TrackEvent trackEvent, TimeSpan delay, CancellationToken cancellationToken)
     {
         await device.TryBindProcessToVpn(true, delay, cancellationToken);
         if (tracker!=null)
-            await tracker.Track(trackEvent, CancellationToken.None);
+            await tracker.TryTrack(trackEvent);
     }
 }

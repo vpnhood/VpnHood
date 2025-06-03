@@ -717,17 +717,17 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                         UserProperties = new Dictionary<string, object> { { "client_version", Version.ToString(3) } }
                     };
 
-                    _ = ga4Tracking.Track(new Ga4TagEvent { EventName = TrackEventNames.SessionStart }, cancellationToken);
+                    _ = ga4Tracking.TryTrack(new Ga4TagEvent { EventName = TrackEventNames.SessionStart }, VhLogger.Instance);
                 }
 
                 // Anonymous app usage tracker
                 if (Tracker != null) {
-                    _ = Tracker.Track(ClientTrackerBuilder.BuildConnectionSucceeded(
+                    _ = Tracker.TryTrack(ClientTrackerBuilder.BuildConnectionSucceeded(
                         _serverFinder.ServerLocation,
                         isIpV6Supported: IsIpV6SupportedByClient,
                         hasRedirected: !allowRedirect,
                         endPoint: _connectorService.EndPointInfo.TcpEndPoint,
-                        adNetworkName: adResult?.NetworkName), cancellationToken);
+                        adNetworkName: adResult?.NetworkName));
 
                     _clientUsageTracker = new ClientUsageTracker(_sessionStatus, Tracker);
                 }

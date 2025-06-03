@@ -87,13 +87,12 @@ internal class ClientHost(
 
     private async Task AcceptTcpClientLoop(TcpListener tcpListener)
     {
-        var cancellationToken = _cancellationTokenSource.Token;
         var localEp = (IPEndPoint)tcpListener.LocalEndpoint;
 
         try {
-            while (!cancellationToken.IsCancellationRequested) {
+            while (!_cancellationTokenSource.IsCancellationRequested) {
                 var tcpClient = await tcpListener.AcceptTcpClientAsync().VhConfigureAwait();
-                _ = ProcessClient(tcpClient, cancellationToken);
+                _ = ProcessClient(tcpClient, _cancellationTokenSource.Token);
             }
         }
         catch (Exception ex) {

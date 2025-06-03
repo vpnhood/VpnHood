@@ -213,7 +213,7 @@ public abstract class PacketTransportBase : IPacketTransport
         VhLogger.Instance.Log(logLevel.Value, message: $"{message}. {ipPacket}", exception: exception);
     }
 
-    public void Dispose()
+    public virtual void Dispose()
     {
         if (IsDisposing)
             return;

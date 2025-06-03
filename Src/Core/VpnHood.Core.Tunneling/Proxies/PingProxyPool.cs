@@ -109,10 +109,11 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
 
     protected override void DisposeManaged()
     {
-        lock (_pingProxies) foreach (var proxy in _pingProxies) {
-            proxy.PacketReceived -= PingProxy_PacketReceived;
-            proxy.Dispose();
-        }
+        lock (_pingProxies)
+            foreach (var proxy in _pingProxies) {
+                proxy.PacketReceived -= PingProxy_PacketReceived;
+                proxy.Dispose();
+            }
 
         _cleanupJob.Dispose();
         _maxWorkerEventReporter.Dispose();

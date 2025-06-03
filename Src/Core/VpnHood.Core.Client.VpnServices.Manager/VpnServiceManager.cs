@@ -23,6 +23,7 @@ public class VpnServiceManager : IDisposable
     private const int VpnServiceUnreachableThreshold = 1; // after this count we stop the service
     private readonly TimeSpan _requestVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(120);
     private readonly TimeSpan _startVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(20);
+    private bool _disposed;
 
     private readonly TimeSpan _connectionInfoTimeSpan = TimeSpan.FromSeconds(1);
     private readonly IDevice _device;
@@ -436,6 +437,9 @@ public class VpnServiceManager : IDisposable
 
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+
         // do not stop the service, lets service keep running until user explicitly stop it
         _updateConnectionInfoJob.Dispose();
         _updateConnectionInfoCts.Cancel();

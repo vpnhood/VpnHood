@@ -42,7 +42,7 @@ public abstract class PacketTransportBase : IPacketTransport
         });
 
         PacketStat = new ReadOnlyPacketTransportStat(_stat);
-        _ = StartSendingPacketsAsync();
+        Task.Run(StartSendingPacketsAsync);
     }
 
     protected virtual void OnPacketReceived(IpPacket ipPacket)
@@ -131,24 +131,29 @@ public abstract class PacketTransportBase : IPacketTransport
 
     private async Task StartSendingPacketsAsync()
     {
-        var ipPackets = new List<IpPacket>(_singleMode ? 1 : _queueCapacity);
-        while (await _sendChannel.Reader.WaitToReadAsync() && !IsDisposed && !IsDisposing) {
-            ipPackets.Clear();
+        try {
+            var ipPackets = new List<IpPacket>(_singleMode ? 1 : _queueCapacity);
+            while (await _sendChannel.Reader.WaitToReadAsync() && !IsDisposed && !IsDisposing) {
+                ipPackets.Clear();
 
-            // dequeue all packets
-            while (ipPackets.Count < ipPackets.Capacity && _sendChannel.Reader.TryRead(out var ipPacket))
-                ipPackets.Add(ipPacket);
+                // dequeue all packets
+                while (ipPackets.Count < ipPackets.Capacity && _sendChannel.Reader.TryRead(out var ipPacket))
+                    ipPackets.Add(ipPacket);
 
-            // send packets
-            var task = SendPacketsInternalAsync(ipPackets);
-            if (!task.IsCompleted)
-                await task;
+                // send packets
+                var task = SendPacketsInternalAsync(ipPackets);
+                if (!task.IsCompleted)
+                    await task;
+            }
+
+            // dispose remaining packets
+            if (_autoDisposePackets)
+                while (_sendChannel.Reader.TryRead(out var ipPacket))
+                    ipPacket.Dispose();
         }
-
-        // dispose remaining packets
-        if (_autoDisposePackets)
-            while (_sendChannel.Reader.TryRead(out var ipPacket))
-                ipPacket.Dispose();
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Error in SendingPacketsAsync loop. Type: {Type}", VhLogger.FormatType(this));
+        }
     }
 
     private async ValueTask<bool> SendPacketsInternalAsync(IList<IpPacket> ipPackets)
@@ -235,7 +240,7 @@ public abstract class PacketTransportBase : IPacketTransport
     protected virtual void PreDispose()
     {
     }
-    
+
     protected virtual void DisposeManaged()
     {
         PacketReceived = null;

@@ -17,11 +17,10 @@ using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
-using Exception = System.Exception;
 
 namespace VpnHood.Core.Server;
 
-public class ServerHost : IAsyncDisposable
+public class ServerHost : IDisposable, IAsyncDisposable
 {
     private readonly HashSet<IClientStream> _clientStreams = [];
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -723,10 +722,17 @@ public class ServerHost : IAsyncDisposable
         return default;
     }
 
-    private async Task Stop()
+    public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+
+        // cancel all running tasks
         VhLogger.Instance.LogDebug("Stopping ServerHost...");
         _cancellationTokenSource.Cancel();
+
+        // Job
+        _cleanupConnectionsJob.Dispose();
 
         // UDPs
         VhLogger.Instance.LogDebug("Disposing UdpChannelTransmitters...");
@@ -746,28 +752,24 @@ public class ServerHost : IAsyncDisposable
             foreach (var clientStream in _clientStreams)
                 clientStream.DisposeWithoutReuse();
 
+        // clear list of listeners
+        _tcpListenerTasks.Clear();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        var tcpListenerTasks = _tcpListenerTasks.ToArray();
+        Dispose();
+
         // wait for finalizing all listener tasks
         VhLogger.Instance.LogDebug("Disposing current processing requests...");
         try {
-            await VhUtils.RunTask(Task.WhenAll(_tcpListenerTasks), TimeSpan.FromSeconds(15)).VhConfigureAwait();
+            await VhUtils.RunTask(Task.WhenAll(tcpListenerTasks), TimeSpan.FromSeconds(15)).VhConfigureAwait();
         }
         catch (Exception ex) {
             if (ex is TimeoutException)
                 VhLogger.Instance.LogError(ex, "Error in stopping ServerHost.");
         }
-
-        _tcpListenerTasks.Clear();
-    }
-
-    private readonly AsyncLock _disposeLock = new();
-
-    public async ValueTask DisposeAsync()
-    {
-        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
-        if (_disposed) return;
-        _disposed = true;
-        _cleanupConnectionsJob.Dispose();
-        await Stop().VhConfigureAwait();
     }
 
     // cache HostName for performance

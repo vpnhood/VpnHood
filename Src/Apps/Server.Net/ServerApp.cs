@@ -76,7 +76,6 @@ public class ServerApp : IDisposable
 
         // Init File Logger before starting server
         VhLogger.MinLogLevel = AppSettings.LogLevel;
-        InitFileLogger(storagePath);
 
         //create command Listener
         _commandListener = new CommandListener(Path.Combine(storagePath, FileNameAppCommand));
@@ -186,20 +185,29 @@ public class ServerApp : IDisposable
 
         if (e.Arguments[0] == "gc") {
             VhLogger.Instance.LogInformation("I have received the gc command!");
-            VhLogger.Instance.LogInformation("[GC] Before: Memory: {TotalMemory}, TotalAllocatedBytes: {TotalAllocatedBytes}", 
+            VhLogger.Instance.LogInformation("[GC] Before: TotalMemory: {TotalMemory}, TotalAllocatedBytes: {TotalAllocatedBytes}", 
                 VhUtils.FormatBytes(GC.GetTotalMemory(forceFullCollection: false)), VhUtils.FormatBytes(GC.GetTotalAllocatedBytes()));
 
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
             GC.WaitForPendingFinalizers();
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
 
-            VhLogger.Instance.LogInformation("[GC] After: Memory: {TotalMemory}, TotalAllocatedBytes: {TotalAllocatedBytes}",
+            VhLogger.Instance.LogInformation("[GC] After: TotalMemory: {TotalMemory}, TotalAllocatedBytes: {TotalAllocatedBytes}",
                 VhUtils.FormatBytes(GC.GetTotalMemory(forceFullCollection: false)), VhUtils.FormatBytes(GC.GetTotalAllocatedBytes()));
 
             // Report session manager
             _vpnHoodServer?.SessionManager.Report();
         }
 
+    }
+
+    private void RunGc(CommandLineApplication cmdApp)
+    {
+        cmdApp.Description = "Run Garbage Collector for debugging purpose.";
+        cmdApp.OnExecute(() => {
+            VhLogger.Instance.LogInformation("Sending GC request...");
+            _commandListener.SendCommand("gc");
+        });
     }
 
     private void StopServer(CommandLineApplication cmdApp)
@@ -237,6 +245,9 @@ public class ServerApp : IDisposable
             if (IsAnotherInstanceRunning())
                 throw new AnotherInstanceIsRunning();
 
+            // initialize logger
+            InitFileLogger(StoragePath);
+            
             // check FileAccessManager
             if (FileAccessManager != null && await FileAccessManager.AccessTokenService.GetTotalCount() == 0)
                 VhLogger.Instance.LogWarning(
@@ -348,6 +359,7 @@ public class ServerApp : IDisposable
 
         cmdApp.Command("start", StartServer);
         cmdApp.Command("stop", StopServer);
+        cmdApp.Command("gc", RunGc);
 
         if (FileAccessManager != null)
             new FileAccessManagerCommand(FileAccessManager)

@@ -228,12 +228,12 @@ public class Session : IDisposable
         return ipVersion == IpVersion.IPv4 ? _clientInternalIpV4 : _clientInternalIpV6;
     }
 
-    private void Proxy_PacketsReceived(object sender, IpPacket ipPacket)
+    private void Proxy_PacketsReceived(object? sender, IpPacket ipPacket)
     {
         Proxy_PacketReceived(ipPacket);
     }
 
-    public void Adapter_PacketReceived(object sender, IpPacket ipPacket)
+    public void Adapter_PacketReceived(object? sender, IpPacket ipPacket)
     {
         Proxy_PacketReceived(ipPacket);
     }
@@ -261,7 +261,7 @@ public class Session : IDisposable
         Tunnel.SendPacketQueued(ipPacket);
     }
 
-    private void Tunnel_PacketReceived(object sender, IpPacket ipPacket)
+    private void Tunnel_PacketReceived(object? sender, IpPacket ipPacket)
     {
         if (IsDisposed)
             return;
@@ -438,7 +438,7 @@ public class Session : IDisposable
 
             //tracking
             LogTrack(IpProtocol.Tcp,
-                localEndPoint: (IPEndPoint)tcpClientHost.Client.LocalEndPoint,
+                localEndPoint: (IPEndPoint?)tcpClientHost.Client.LocalEndPoint,
                 destinationEndPoint: request.DestinationEndPoint,
                 isNewLocal: true, isNewRemote: true, failReason: null);
 

@@ -336,8 +336,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         return Sessions
             .Values
             .Where(x =>
-                !x.IsDisposed &&
-                !x.IsSyncRequired &&
+                x is { IsDisposed: false, IsSyncRequired: false } &&
                 x.LastActivityTime < minSessionActivityTime)
             .ToArray(); // make sure make a copy to avoid modification in the loop
     }
@@ -347,8 +346,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         return Sessions
             .Values
             .Where(x =>
-                !x.IsDisposed &&
-                !x.IsSyncRequired &&
+                x is { IsDisposed: false, IsSyncRequired: false } &&
                 x.SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
             .ToArray();
     }
@@ -359,8 +357,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         return Sessions
             .Values
             .Where(x =>
-                x.IsDisposed &&
-                !x.IsSyncRequired &&
+                x is { IsDisposed: true, IsSyncRequired: false } &&
                 utcNow - x.DisposedTime > _deadSessionTimeout)
             .ToArray(); // make sure make a copy to avoid modification in the loop
     }
@@ -548,7 +545,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         _sessionLocalService.Remove(session.SessionId);
     }
 
-    private void VpnAdapter_PacketReceived(object sender, IpPacket ipPacket)
+    private void VpnAdapter_PacketReceived(object? sender, IpPacket ipPacket)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
         var session = GetSessionByVirtualIp(ipPacket.DestinationAddress);

@@ -42,9 +42,12 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
     private async Task AcceptTcpClient(TcpListener tcpListener, CancellationToken cancellationToken)
     {
         while (IsStarted && !cancellationToken.IsCancellationRequested) {
-            using var client = await tcpListener.AcceptTcpClientAsync().VhConfigureAwait();
+            using var client = await tcpListener.AcceptTcpClientAsync(cancellationToken).VhConfigureAwait();
             try {
                 await HandleRequest(client, token, keyAuthorization, cancellationToken).VhConfigureAwait();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                // service is stopping
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(GeneralEventId.DnsChallenge, ex, "Could not process the HTTP-01 challenge.");

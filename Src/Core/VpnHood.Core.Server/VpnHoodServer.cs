@@ -43,7 +43,7 @@ public class VpnHoodServer : IAsyncDisposable
     private readonly Job _configureAndSendStatusJob;
 
     public ServerHost ServerHost { get; }
-    public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version;
+    public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version ?? new Version();
     public SessionManager SessionManager { get; }
     public ServerState State { get; private set; } = ServerState.NotStarted;
     public IAccessManager AccessManager { get; }

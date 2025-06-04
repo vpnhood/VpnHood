@@ -13,7 +13,8 @@ internal static class ServerUtil
         for (var port = start.Value; port < start + 1000; port++) {
             try {
                 using var udpClient = new UdpClient(port, addressFamily);
-                return ((IPEndPoint)udpClient.Client.LocalEndPoint).Port;
+                var localEndPoint = (IPEndPoint?)udpClient.Client.LocalEndPoint ?? throw new InvalidOperationException("LocalEndPoint is null");
+                return localEndPoint.Port;
             }
             catch (SocketException ex) when (ex.SocketErrorCode != SocketError.AddressAlreadyInUse) {
                 break;
@@ -26,7 +27,8 @@ internal static class ServerUtil
         // try any port
         try {
             using var udpClient = new UdpClient(0, addressFamily);
-            return ((IPEndPoint)udpClient.Client.LocalEndPoint).Port;
+            var localEndPoint = (IPEndPoint?)udpClient.Client.LocalEndPoint ?? throw new InvalidOperationException("LocalEndPoint is null");
+            return localEndPoint.Port;
         }
         catch {
             return 0;

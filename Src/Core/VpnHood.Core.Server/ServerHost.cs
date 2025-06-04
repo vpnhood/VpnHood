@@ -222,7 +222,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         }
     }
 
-    private X509Certificate ServerCertificateSelectionCallback(object sender, string hostname)
+    private X509Certificate ServerCertificateSelectionCallback(object sender, string? hostname)
     {
         var certificate =
             Certificates.SingleOrDefault(x => x.HostName.Equals(hostname, StringComparison.OrdinalIgnoreCase))

@@ -294,17 +294,20 @@ public class FileAccessManager : IAccessManager
                 ErrorMessage = "Session does not exist."
             };
 
-        // read accessItem
-        var accessTokenData = await AccessTokenService.Get(tokenId).VhConfigureAwait();
-        if (accessTokenData == null)
+        try {
+            // read accessItem
+            var accessTokenData = await AccessTokenService.Get(tokenId).VhConfigureAwait();
+
+            // read usage
+            return SessionService.GetSessionResponse(sessionId, accessTokenData, hostEndPoint);
+        }
+        catch (KeyNotFoundException) {
             return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
                 SessionId = sessionId,
                 ErrorMessage = "Token does not exist."
             };
-
-        // read usage
-        return SessionService.GetSessionResponse(sessionId, accessTokenData, hostEndPoint);
+        }
     }
 
     public async Task<SessionResponseEx[]> Session_GetAll()

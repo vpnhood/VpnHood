@@ -15,7 +15,7 @@ Write-Output "Build Server...";
 dotnet publish $projectDir `
     -c "Release" `
     --output "$publishDir/$versionTag" `
-    --framework "net9.0" `
+    --framework "net8.0" `
     --self-contained `
     --runtime "$runtime" `
     -p:SolutionDir=$solutionDir `

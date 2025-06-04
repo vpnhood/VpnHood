@@ -5,6 +5,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -85,15 +86,6 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     public IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion)
     {
         return ipVersion == IpVersion.IPv4 ? PrimaryAdapterIpV4 : PrimaryAdapterIpV6;
-    }
-
-    public IPAddress? GetPrimaryAdapterAddress(AddressFamily addressFamily)
-    {
-        return addressFamily switch {
-            AddressFamily.InterNetwork => GetPrimaryAdapterAddress(IpVersion.IPv4),
-            AddressFamily.InterNetworkV6 => GetPrimaryAdapterAddress(IpVersion.IPv6),
-            _ => throw new NotSupportedException("Address family is not supported.")
-        };
     }
 
     public IPAddress? GetGatewayIp(IpVersion ipVersion)
@@ -333,7 +325,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             throw new InvalidOperationException("Could not protect an already bound socket.");
 
         // get the primary adapter IP
-        var primaryAdapterIp = GetPrimaryAdapterAddress(socket.AddressFamily);
+        var primaryAdapterIp = GetPrimaryAdapterAddress(socket.AddressFamily.IpVersion());
         if (primaryAdapterIp == null) {
             BindToAny(socket);
             return false;
@@ -353,7 +345,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             throw new InvalidOperationException("Could not protect an already bound socket.");
 
         // get the primary adapter IP
-        var primaryAdapterIp = GetPrimaryAdapterAddress(socket.AddressFamily);
+        var primaryAdapterIp = GetPrimaryAdapterAddress(socket.AddressFamily.IpVersion());
         if (primaryAdapterIp == null) {
             BindToAny(socket);
             return false;

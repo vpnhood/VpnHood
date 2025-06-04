@@ -176,10 +176,30 @@ public class ServerApp : IDisposable
 
     private void CommandListener_CommandReceived(object? sender, CommandReceivedEventArgs e)
     {
-        if (!VhUtils.IsNullOrEmpty(e.Arguments) && e.Arguments[0] == "stop") {
+        if (VhUtils.IsNullOrEmpty(e.Arguments))
+            return;
+
+        if (e.Arguments[0] == "stop") {
             VhLogger.Instance.LogInformation("I have received the stop command!");
             _vpnHoodServer?.Dispose();
         }
+
+        if (e.Arguments[0] == "gc") {
+            VhLogger.Instance.LogInformation("I have received the gc command!");
+            VhLogger.Instance.LogInformation("[GC] Before: Memory: {TotalMemory}, TotalAllocatedBytes: {TotalAllocatedBytes}", 
+                VhUtils.FormatBytes(GC.GetTotalMemory(forceFullCollection: false)), VhUtils.FormatBytes(GC.GetTotalAllocatedBytes()));
+
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
+            GC.WaitForPendingFinalizers();
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
+
+            VhLogger.Instance.LogInformation("[GC] After: Memory: {TotalMemory}, TotalAllocatedBytes: {TotalAllocatedBytes}",
+                VhUtils.FormatBytes(GC.GetTotalMemory(forceFullCollection: false)), VhUtils.FormatBytes(GC.GetTotalAllocatedBytes()));
+
+            // Report session manager
+            _vpnHoodServer?.SessionManager.Report();
+        }
+
     }
 
     private void StopServer(CommandLineApplication cmdApp)

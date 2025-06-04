@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Test.Packets;
 

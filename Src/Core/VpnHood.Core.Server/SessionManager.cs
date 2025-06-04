@@ -169,10 +169,25 @@ public class SessionManager : IAsyncDisposable, IDisposable
         _ = TryTrackNewSession(helloRequest.ClientInfo);
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
-            "New session has been created. SessionId: {SessionId}",
-            VhLogger.FormatSessionId(session.SessionId));
+            "New session has been created. SessionId: {SessionId}", VhLogger.FormatSessionId(session.SessionId));
+        Report();
 
         return sessionResponseEx;
+    }
+
+    public void Report()
+    {
+        var totalCount = Sessions.Count;
+        var idleCount = GetIdleSessions().Length;
+        var deadCount = GetDeadSessions().Length;
+        var activeCount = totalCount - idleCount - deadCount;
+
+        VhLogger.Instance.LogInformation(
+            "Sessions Status. " +
+            "ActiveSessions: {ActiveSessions}, IdleSessions: {idleCount}, DeadSessions: {DeadSessions}, TotalSessions: {TotalSessions}, " +
+            "TotalTcpChannels: {TotalTcpChannels}, TotalUdpChannels: {TotalUdpChannels}",
+            activeCount, idleCount, deadCount, totalCount,
+            Sessions.Sum(x => x.Value.TcpChannelCount), Sessions.Sum(x => x.Value.UdpConnectionCount));
     }
 
     private Task<bool> TryTrackNewSession(ClientInfo clientInfo)
@@ -315,14 +330,82 @@ public class SessionManager : IAsyncDisposable, IDisposable
         }, cancellationToken);
     }
 
+    private Session[] GetIdleSessions()
+    {
+        var minSessionActivityTime = FastDateTime.Now - SessionOptions.TimeoutValue;
+        return Sessions
+            .Values
+            .Where(x =>
+                !x.IsDisposed &&
+                !x.IsSyncRequired &&
+                x.LastActivityTime < minSessionActivityTime)
+            .ToArray(); // make sure make a copy to avoid modification in the loop
+    }
+
+    private Session[] GetFailedSessions()
+    {
+        return Sessions
+            .Values
+            .Where(x =>
+                !x.IsDisposed &&
+                !x.IsSyncRequired &&
+                x.SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
+            .ToArray();
+    }
+
+    private Session[] GetDeadSessions()
+    {
+        var utcNow = DateTime.UtcNow;
+        return Sessions
+            .Values
+            .Where(x =>
+                x.IsDisposed &&
+                !x.IsSyncRequired &&
+                utcNow - x.DisposedTime > _deadSessionTimeout)
+            .ToArray(); // make sure make a copy to avoid modification in the loop
+    }
+
+    // remove sessions from memory that are idle but not disposed yet
+    private void RemoveIdleSessions()
+    {
+        var idleSessions = GetIdleSessions();
+        if (idleSessions.Length == 0)
+            return;
+
+        // 
+        var notSyncedIdleSessions = idleSessions.Where(x => x.Traffic.Total > 0).ToArray();
+        if (notSyncedIdleSessions.Length >0 )
+            VhLogger.Instance.LogDebug(GeneralEventId.Session, "Syncing {IdleSessions} idle sessions...", notSyncedIdleSessions.Length);
+
+        var syncedIdleSessions = idleSessions.Where(x => x.Traffic.Total == 0).ToArray();
+        if (syncedIdleSessions.Length > 0) {
+            VhLogger.Instance.LogDebug(GeneralEventId.Session, "Removing {IdleSessions} idle sessions...", syncedIdleSessions.Length);
+            RemoveSessions(syncedIdleSessions);
+        }
+    }
+    private void DisposeFailedSessions()
+    {
+        var failedSessions = GetFailedSessions();
+        if (failedSessions.Length == 0)
+            return;
+
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Disposing {FailedSessions} failed sessions...", failedSessions.Length);
+        foreach (var failedSession in failedSessions)
+            failedSession.Dispose();
+    }
+
     private void DisposeExpiredSessions()
     {
-        VhLogger.Instance.LogDebug("Disposing expired sessions...");
         var utcNow = DateTime.UtcNow;
-        var timeoutSessions = Sessions.Values
-            .Where(x => !x.IsDisposed && x.SessionResponseEx.AccessUsage?.ExpirationTime < utcNow);
+        var expiredSessions = Sessions.Values
+            .Where(x => !x.IsDisposed && x.SessionResponseEx.AccessUsage?.ExpirationTime < utcNow)
+            .ToArray();
 
-        foreach (var session in timeoutSessions) {
+        if (expiredSessions.Length == 0)
+            return;
+
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Disposing {ExpiredSessions} expired sessions...", expiredSessions.Length);
+        foreach (var session in expiredSessions) {
             session.SessionResponseEx = new SessionResponse {
                 ErrorCode = SessionErrorCode.AccessExpired
             };
@@ -330,55 +413,20 @@ public class SessionManager : IAsyncDisposable, IDisposable
         }
     }
 
-    // remove sessions from memory that are idle but not disposed yet
-    private void RemoveIdleSessions()
-    {
-        VhLogger.Instance.LogDebug("Disposing all idle sessions...");
-        var minSessionActivityTime = FastDateTime.Now - SessionOptions.TimeoutValue;
-        var timeoutSessions = Sessions
-            .Where(x =>
-                !x.Value.IsDisposed &&
-                !x.Value.IsSyncRequired &&
-                x.Value.LastActivityTime < minSessionActivityTime)
-            .ToArray(); // make sure make a copy to avoid modification in the loop
-
-        foreach (var session in timeoutSessions) {
-            if (session.Value.Traffic.Total > 0) {
-                session.Value.SetSyncRequired(); // let's remove it in the next sync
-            }
-            else {
-                RemoveSession(session.Value);
-            }
-        }
-    }
-    private void DisposeFailedSessions()
-    {
-        VhLogger.Instance.LogDebug("Process all failed sessions...");
-        var failedSessions = Sessions
-            .Where(x =>
-                !x.Value.IsDisposed &&
-                !x.Value.IsSyncRequired &&
-                x.Value.SessionResponseEx.ErrorCode != SessionErrorCode.Ok);
-
-        foreach (var failedSession in failedSessions) {
-            failedSession.Value.Dispose();
-        }
-    }
-
     // remove sessions that are disposed a long time
     private void RemoveDisposedSessions()
     {
-        VhLogger.Instance.LogDebug("Removing all disposed sessions...");
-        var utcNow = DateTime.UtcNow;
-        var deadSessions = Sessions.Values
-            .Where(x =>
-                x.IsDisposed &&
-                !x.IsSyncRequired &&
-                utcNow - x.DisposedTime > _deadSessionTimeout)
-            .ToArray(); // make sure make a copy to avoid modification in the loop
+        var deadSessions = GetDeadSessions();
+        if (deadSessions.Length == 0)
+            return;
 
-        // remove dead sessions
-        foreach (var session in deadSessions)
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Removing {DeadSessions} disposed sessions...", deadSessions.Length);
+        RemoveSessions(deadSessions);
+    }
+
+    public void RemoveSessions(Session[] sessions)
+    {
+        foreach (var session in sessions)
             RemoveSession(session);
     }
 
@@ -439,26 +487,48 @@ public class SessionManager : IAsyncDisposable, IDisposable
     public void ApplySessionResponses(Dictionary<ulong, SessionResponse> sessionResponses)
     {
         // update sessions from the result of access manager
-        foreach (var pair in sessionResponses) {
-            if (pair.Value.ErrorCode == SessionErrorCode.Ok) continue;
-            if (Sessions.TryGetValue(pair.Key, out var session)) {
-                session.SessionResponseEx = pair.Value;
+        var failedSessionResponsePairs = sessionResponses
+            .Where(x => x.Value.ErrorCode != SessionErrorCode.Ok)
+            .ToArray();
+
+        if (failedSessionResponsePairs.Length > 0) {
+            VhLogger.Instance.LogInformation(GeneralEventId.Session, 
+                "Set error responses from Access Manager to {FailedSessions} sessions.", 
+                failedSessionResponsePairs.Length);
+
+            foreach (var responsePair in failedSessionResponsePairs) {
+                if (Sessions.TryGetValue(responsePair.Key, out var session)) {
+                    VhLogger.Instance.LogDebug(GeneralEventId.Session,
+                        "Set Access Manager error response to a session. SessionId: {SessionId}, ErrorCode: {ErrorCode}",
+                        responsePair.Key, responsePair.Value.ErrorCode);
+
+                    session.SessionResponseEx = responsePair.Value;
+                }
             }
         }
 
+        // clear usage if sent successfully
+        _pendingUsages = [];
+
+        // cleanup sessions that are not in the response
+        Cleanup();
+    }
+
+    private void Cleanup()
+    {
         RemoveIdleSessions(); // dispose idle sessions
         DisposeExpiredSessions(); // dispose expired sessions
         DisposeFailedSessions(); // dispose failed sessions
         RemoveDisposedSessions(); // remove dead sessions
-
-        // clear usage if sent successfully
-        _pendingUsages = [];
     }
 
     private readonly AsyncLock _syncLock = new();
     public async Task Sync(bool force = false)
     {
-        using var lockResult = await _syncLock.LockAsync().VhConfigureAwait();
+        using var lockResult = await _syncLock.LockAsync(TimeSpan.Zero).VhConfigureAwait();
+        if (!lockResult.Succeeded) 
+            return;
+
         var sessionUsages = CollectSessionUsages(force);
         var sessionResponses = await _accessManager.Session_AddUsages(sessionUsages).VhConfigureAwait();
         ApplySessionResponses(sessionResponses);

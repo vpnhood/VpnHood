@@ -12,6 +12,7 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -346,25 +347,25 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     }
 
     // WARNING: Performance Critical!
-    private void ClientHost_PacketReceived(object sender, IpPacket ipPacket)
+    private void ClientHost_PacketReceived(object? sender, IpPacket ipPacket)
     {
         _vpnAdapter.SendPacketQueued(ipPacket);
     }
 
     // WARNING: Performance Critical!
-    private void Proxy_PacketReceived(object sender, IpPacket ipPacket)
+    private void Proxy_PacketReceived(object? sender, IpPacket ipPacket)
     {
         _vpnAdapter.SendPacketQueued(ipPacket);
     }
 
     // WARNING: Performance Critical!
-    private void Tunnel_PacketReceived(object sender, IpPacket ipPacket)
+    private void Tunnel_PacketReceived(object? sender, IpPacket ipPacket)
     {
         _vpnAdapter.SendPacketQueued(ipPacket);
     }
 
     // WARNING: Performance Critical!
-    private void VpnAdapter_PacketReceived(object sender, IpPacket ipPacket)
+    private void VpnAdapter_PacketReceived(object? sender, IpPacket ipPacket)
     {
         // stop traffic if the client has been disposed
         if (_disposed || _initConnectedTime is null)

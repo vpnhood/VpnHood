@@ -10,6 +10,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Extensions;
 
 namespace VpnHood.Core.VpnAdapters.WinDivert;
 

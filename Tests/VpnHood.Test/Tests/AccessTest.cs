@@ -223,37 +223,41 @@ public class AccessTest : TestBase
             maxTrafficByteCount: 2_000_000);
 
         // create default token with 2 client count
-        var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
-        await client1.DisposeAsync();
-        await client1.WaitForState(ClientState.Disposed);
-        await server.SessionManager.Sync(true);
+        await using (var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token)) {
+            await client1.WaitForState(ClientState.Connected);
+        }
 
+        await server.SessionManager.Sync(true);
+        await Task.Delay(1000);
+        // remove milliseconds from time for comparison
         var time = DateTime.UtcNow;
-        await Task.Delay(200);
+        time = new DateTime(time.Year, time.Month, time.Day, time.Hour, time.Minute, time.Second, DateTimeKind.Utc);
 
         // create a new client with the same token, it should not suppress
-        await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
-        var accessInfo = client2.SessionInfo?.AccessInfo;
-        Assert.IsNotNull(accessInfo);
-        Assert.IsNull(client1.LastException);
-        Assert.AreEqual(SessionSuppressType.None, client2.SessionInfo?.SuppressedTo);
-        Assert.AreEqual(2, accessInfo.MaxDeviceCount);
-        Assert.AreEqual(2_000_000, accessInfo.MaxTotalTraffic);
-        Assert.AreEqual(true, accessInfo.IsPremium);
-        Assert.AreEqual(expired, accessInfo.ExpirationTime);
-        Assert.IsTrue(accessInfo.CreatedTime < time);
-        Assert.IsTrue(accessInfo.LastUsedTime < time);
-        await client2.DisposeAsync();
-        await client2.WaitForState(ClientState.Disposed);
+        await using (var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token)) {
+            var accessInfo = client2.SessionInfo?.AccessInfo;
+            Assert.IsNotNull(accessInfo);
+            Assert.IsNull(client2.LastException);
+            Assert.AreEqual(SessionSuppressType.None, client2.SessionInfo?.SuppressedTo);
+            Assert.AreEqual(2, accessInfo.MaxDeviceCount);
+            Assert.AreEqual(2_000_000, accessInfo.MaxTotalTraffic);
+            Assert.AreEqual(true, accessInfo.IsPremium);
+            Assert.AreEqual(expired, accessInfo.ExpirationTime);
+            Assert.IsTrue(accessInfo.CreatedTime <= time);
+            Assert.IsTrue(accessInfo.LastUsedTime <= time, $"Diff: {(time - accessInfo.LastUsedTime).TotalSeconds}sec");
+        }
+
         await server.SessionManager.Sync(true);
+        await Task.Delay(200);
 
         // create a new client with the same token, it should not suppress
-        await Task.Delay(200);
-        await using var client3 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
-        accessInfo = client3.SessionInfo?.AccessInfo;
-        Assert.IsNotNull(accessInfo);
-        Assert.IsNotNull(accessInfo);
-        Assert.IsTrue(accessInfo.CreatedTime < time);
-        Assert.IsTrue(accessInfo.LastUsedTime > time);
+        await using (var client3 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token))
+        {
+            var accessInfo = client3.SessionInfo?.AccessInfo;
+            Assert.IsNotNull(accessInfo);
+            Assert.IsNotNull(accessInfo);
+            Assert.IsTrue(accessInfo.CreatedTime < time);
+            Assert.IsTrue(accessInfo.LastUsedTime > time);
+        }
     }
 }

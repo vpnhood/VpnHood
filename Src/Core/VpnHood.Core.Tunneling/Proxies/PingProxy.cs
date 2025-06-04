@@ -1,5 +1,6 @@
 ﻿using System.Net.NetworkInformation;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Utils;

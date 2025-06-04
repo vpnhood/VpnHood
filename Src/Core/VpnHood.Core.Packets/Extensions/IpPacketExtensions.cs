@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.Core.Packets;
+namespace VpnHood.Core.Packets.Extensions;
 
 public static class IpPacketExtensions
 {

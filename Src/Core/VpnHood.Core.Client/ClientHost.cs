@@ -5,6 +5,7 @@ using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
@@ -110,7 +111,7 @@ internal class ClientHost(
         // ignore new packets 
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
-        
+
         PacketLogger.LogPacket(ipPacket, "Processing a ClientHost packet...");
 
         // check packet type
@@ -214,11 +215,10 @@ internal class ClientHost(
             VhUtils.ConfigTcpClient(orgTcpClient, null, null);
 
             // get original remote from NAT
-            var orgRemoteEndPoint = (IPEndPoint)orgTcpClient.Client.RemoteEndPoint;
-            ipVersion = orgRemoteEndPoint.AddressFamily == AddressFamily.InterNetwork
-                ? IpVersion.IPv4
-                : IpVersion.IPv6;
+            var orgRemoteEndPoint = (IPEndPoint?)orgTcpClient.Client.RemoteEndPoint ?? 
+                                    throw new Exception("Could not get original remote endpoint from TcpClient.");
 
+            ipVersion = orgRemoteEndPoint.IpVersion();
             var natItem =
                 (NatItemEx?)_nat.Resolve(ipVersion, IpProtocol.Tcp, (ushort)orgRemoteEndPoint.Port) ??
                 throw new Exception(

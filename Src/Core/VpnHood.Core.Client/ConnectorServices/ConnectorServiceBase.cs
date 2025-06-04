@@ -166,8 +166,8 @@ internal class ConnectorServiceBase : IDisposable
         // Kill all expired client streams
         var now = FastDateTime.Now;
         while (_freeClientStreams.TryPeek(out var queueItem) && queueItem.EnqueueTime + TcpReuseTimeout <= now) {
-            _freeClientStreams.TryDequeue(out queueItem);
-            queueItem.ClientStream.DisposeWithoutReuse();
+            if (_freeClientStreams.TryDequeue(out queueItem))
+                queueItem.ClientStream.DisposeWithoutReuse();
         }
 
         // remove unconnected client streams from shared collection
@@ -192,8 +192,7 @@ internal class ConnectorServiceBase : IDisposable
         }
     }
 
-    public bool AllowTcpReuse 
-    {
+    public bool AllowTcpReuse {
         get => _allowTcpReuse;
         set {
             if (value == false)
@@ -202,7 +201,7 @@ internal class ConnectorServiceBase : IDisposable
         }
     }
 
-    private bool UserCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain,
+    private bool UserCertificateValidationCallback(object sender, X509Certificate? certificate, X509Chain? chain,
         SslPolicyErrors sslPolicyErrors)
     {
         if (certificate == null!) // for android 6 (API 23)
@@ -221,7 +220,7 @@ internal class ConnectorServiceBase : IDisposable
 
         // Stop the cleanup job
         _cleanupJob.Dispose();
-        
+
         // Prevent reuse of client streams
         PreventReuseSharedClients();
 

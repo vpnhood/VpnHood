@@ -1,3 +1,6 @@
+# Upcoming
+* Imrove: Windows: Digitally sign the installer
+
 # v7.0.708
 * Fix: IPv6 ping
 * Improve: Drastically improve performance and stability

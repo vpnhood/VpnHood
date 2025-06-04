@@ -12,6 +12,7 @@ using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Test.Packets;
+using VpnHood.Core.Packets.Extensions;
 
 namespace VpnHood.Test.Tests;
 

@@ -46,7 +46,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.686" />
+	  <PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.687" />
 	</ItemGroup>
 
 	<ItemGroup>

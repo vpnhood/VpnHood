@@ -35,7 +35,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="SharpPcap" Version="6.3.0" />
+		<PackageReference Include="SharpPcap" Version="6.3.1" />
 	</ItemGroup>
 
 	<ItemGroup>

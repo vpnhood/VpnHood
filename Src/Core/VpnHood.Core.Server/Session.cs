@@ -39,12 +39,7 @@ public class Session : IDisposable
     private readonly int? _tcpKernelReceiveBufferSize;
     private readonly TimeSpan _tcpConnectTimeout;
     private readonly TrackingOptions _trackingOptions;
-    private IPAddress? _clientInternalIpV6;
-    private IPAddress? _clientInternalIpV4;
     private UdpChannel? _udpChannel;
-
-    [Obsolete]
-    private readonly bool _fixClientInternalIp;
 
     private readonly EventReporter _netScanExceptionReporter = new(
         "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
@@ -90,9 +85,6 @@ public class Session : IDisposable
         var logScope = new LogScope();
         logScope.Data.Add(sessionTuple);
 
-#pragma warning disable CS0612 // Type or member is obsolete
-        _fixClientInternalIp = sessionResponseEx.ProtocolVersion < 8;
-#pragma warning restore CS0612 // Type or member is obsolete
         _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _vpnAdapter = vpnAdapter;
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
@@ -222,12 +214,6 @@ public class Session : IDisposable
         return ipVersion == IpVersion.IPv4 ? VirtualIps.IpV4 : VirtualIps.IpV6;
     }
 
-    [Obsolete]
-    private IPAddress? GetClientInternalIp(IpVersion ipVersion)
-    {
-        return ipVersion == IpVersion.IPv4 ? _clientInternalIpV4 : _clientInternalIpV6;
-    }
-
     private void Proxy_PacketsReceived(object? sender, IpPacket ipPacket)
     {
         Proxy_PacketReceived(ipPacket);
@@ -240,25 +226,12 @@ public class Session : IDisposable
 
     private void Proxy_PacketReceived(IpPacket ipPacket)
     {
-        if (IsDisposed) return;
+        if (IsDisposed) 
+            return;
+        
         PacketLogger.LogPacket(ipPacket, "Delegating a packet to client...");
-
         ipPacket = _netFilter.ProcessReply(ipPacket);
-
-#pragma warning disable CS0612 // Type or member is obsolete
-        if (_fixClientInternalIp) {
-            // fix client internal ip
-            // todo: consider using allocated private ip and prevent recalculate checksum
-            var clientInternalIp = GetClientInternalIp(ipPacket.Version);
-            if (clientInternalIp != null && !ipPacket.DestinationAddress.Equals(clientInternalIp)) {
-                ipPacket.DestinationAddress = clientInternalIp;
-                ipPacket.UpdateAllChecksums();
-            }
-        }
-#pragma warning restore CS0612 // Type or member is obsolete
-
-        // PacketEnqueue will dispose packets
-        Tunnel.SendPacketQueued(ipPacket);
+        Tunnel.SendPacketQueued(ipPacket); // PacketEnqueue will dispose packets
     }
 
     private void Tunnel_PacketReceived(object? sender, IpPacket ipPacket)
@@ -267,25 +240,7 @@ public class Session : IDisposable
             return;
 
         // filter requests
-        // ReSharper disable once ForCanBeConvertedToForeach
         var virtualIp = GetClientVirtualIp(ipPacket.Version);
-
-        // todo: legacy save caller internal ip at first call
-#pragma warning disable CS0612 // Type or member is obsolete
-        if (_fixClientInternalIp) {
-            if (ipPacket.Version == IpVersion.IPv4)
-                _clientInternalIpV4 ??= ipPacket.SourceAddress;
-            else if (ipPacket.Version == IpVersion.IPv6)
-                _clientInternalIpV6 ??= ipPacket.SourceAddress;
-
-            // update source client virtual ip. will be obsolete in future if client set correct ip
-            if (!virtualIp.Equals(ipPacket.SourceAddress)) {
-                PacketLogger.LogPacket(ipPacket, "Invalid tunnel packet source ip.");
-                ipPacket.SourceAddress = virtualIp;
-                ipPacket.UpdateAllChecksums();
-            }
-        }
-#pragma warning restore CS0612 // Type or member is obsolete
 
         // reject if packet source does not match client internal ip
         if (!ipPacket.SourceAddress.Equals(virtualIp)) {

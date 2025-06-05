@@ -95,14 +95,14 @@ public class ProxyChannel : IProxyChannel
                 _hostClientStream.Stream, _tunnelClientStream.Stream, _orgStreamBufferSize,
                 CancellationToken.None, CancellationToken.None); // host => tunnel
 
-            var completedTask = await Task.WhenAny(tunnelReadTask, tunnelWriteTask).VhConfigureAwait();
+            var completedTask = await Task.WhenAny(tunnelReadTask, tunnelWriteTask).Vhc();
             _isTunnelReadTaskFinished = completedTask == tunnelReadTask;
 
             // just to ensure that both tasks are completed gracefully, ClientStream should also handle it
             await Task.WhenAll(
                     _hostClientStream.Stream.DisposeAsync().AsTask(),
                     _tunnelClientStream.Stream.DisposeAsync().AsTask())
-                    .VhConfigureAwait();
+                    .Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, ex,
@@ -119,7 +119,7 @@ public class ProxyChannel : IProxyChannel
     {
         try {
             await CopyToInternalAsync(source, destination, false, bufferSize,
-                sourceCancellationToken, destinationCancellationToken).VhConfigureAwait();
+                sourceCancellationToken, destinationCancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(ex,
@@ -133,7 +133,7 @@ public class ProxyChannel : IProxyChannel
     {
         try {
             await CopyToInternalAsync(source, destination, true, bufferSize,
-                sourceCancellationToken, destinationCancellationToken).VhConfigureAwait();
+                sourceCancellationToken, destinationCancellationToken).Vhc();
         }
         catch (Exception ex) {
             // tunnel read task has been finished, it is normal shutdown for host stream
@@ -170,7 +170,7 @@ public class ProxyChannel : IProxyChannel
             // read from source
             var bytesRead = await source
                 .ReadAsync(readBuffer[preserveCount..], sourceCancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
 
             // check end of the stream
             if (bytesRead == 0)
@@ -179,10 +179,10 @@ public class ProxyChannel : IProxyChannel
             // write to destination
             if (destinationPreserved != null)
                 await destinationPreserved.WritePreservedAsync(readBuffer[..(preserveCount + bytesRead)],
-                        cancellationToken: destinationCancellationToken).VhConfigureAwait();
+                        cancellationToken: destinationCancellationToken).Vhc();
             else
                 await destination.WriteAsync(readBuffer[preserveCount..bytesRead],
-                        destinationCancellationToken).VhConfigureAwait();
+                        destinationCancellationToken).Vhc();
 
             // calculate transferred bytes
             lock (_trafficLock) {

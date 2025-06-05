@@ -33,7 +33,7 @@ public class LocalIpRangeLocationProvider(
 
     public async Task<IpRangeOrderedList> GetIpRanges(string countryCode)
     {
-        var ipRanges = await GetIpRangesInternal(countryCode).VhConfigureAwait();
+        var ipRanges = await GetIpRangesInternal(countryCode).Vhc();
         _countryIpRanges.TryAdd(countryCode, ipRanges);
         return ipRanges;
     }
@@ -60,9 +60,9 @@ public class LocalIpRangeLocationProvider(
     public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         var ipAddress =
-            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken).VhConfigureAwait() ??
+            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken).Vhc() ??
             await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken)
-                .VhConfigureAwait() ??
+                .Vhc() ??
             throw new Exception("Could not find any public ip address.");
 
         var ipLocation = await GetLocation(ipAddress, cancellationToken);
@@ -74,7 +74,7 @@ public class LocalIpRangeLocationProvider(
     {
         // first try CurrentCountryCode for performance
         if (CurrentCountryCode != null) {
-            var ipRanges = await GetIpRanges(CurrentCountryCode).VhConfigureAwait();
+            var ipRanges = await GetIpRanges(CurrentCountryCode).Vhc();
             if (ipRanges.Any(x => x.IsInRange(ipAddress)))
                 return BuildIpLocation(CurrentCountryCode, ipAddress);
         }
@@ -82,7 +82,7 @@ public class LocalIpRangeLocationProvider(
         // iterate through all countries
         var countryCodes = await GetCountryCodes();
         foreach (var countryCode in countryCodes) {
-            var ipRanges = await GetIpRanges(countryCode).VhConfigureAwait();
+            var ipRanges = await GetIpRanges(countryCode).Vhc();
             if (ipRanges.Any(x => x.IsInRange(ipAddress)))
                 return BuildIpLocation(countryCode, ipAddress);
         }

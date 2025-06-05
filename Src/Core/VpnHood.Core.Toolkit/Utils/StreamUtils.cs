@@ -33,7 +33,7 @@ public static class StreamUtils
     public static async Task<T> ReadObjectAsync<T>(Stream stream, CancellationToken cancellationToken,
         int maxLength = 0xFFFF)
     {
-        var message = await ReadMessageAsync(stream, cancellationToken, maxLength).VhConfigureAwait();
+        var message = await ReadMessageAsync(stream, cancellationToken, maxLength).Vhc();
         var ret = JsonSerializer.Deserialize<T>(message) ?? throw new Exception("Could not read Message!");
         return ret;
     }
@@ -60,7 +60,7 @@ public static class StreamUtils
 
         // read json body...
         var buffer = new byte[messageSize].AsMemory();
-        await stream.ReadExactAsync(buffer, cancellationToken).VhConfigureAwait();
+        await stream.ReadExactAsync(buffer, cancellationToken).Vhc();
 
         // serialize the request
         var message = Encoding.UTF8.GetString(buffer.Span);

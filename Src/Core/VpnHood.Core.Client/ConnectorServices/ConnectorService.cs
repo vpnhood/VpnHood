@@ -37,8 +37,8 @@ internal class ConnectorService(
         await using var mem = new MemoryStream();
         mem.WriteByte(1);
         mem.WriteByte(request.RequestCode);
-        await StreamUtils.WriteObjectAsync(mem, request, localCts.Token).VhConfigureAwait();
-        var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, localCts.Token).VhConfigureAwait();
+        await StreamUtils.WriteObjectAsync(mem, request, localCts.Token).Vhc();
+        var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, localCts.Token).Vhc();
 
         // log the response
         VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.", ret.Response.ErrorCode);
@@ -60,8 +60,8 @@ internal class ConnectorService(
                     clientStream.ClientStreamId, clientStream.IpEndPointPair.LocalEndPoint);
 
                 // send the request
-                await clientStream.Stream.WriteAsync(request, cancellationToken).VhConfigureAwait();
-                var response = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken).VhConfigureAwait();
+                await clientStream.Stream.WriteAsync(request, cancellationToken).Vhc();
+                var response = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken).Vhc();
                 lock (Stat) Stat.ReusedConnectionSucceededCount++;
                 return new ConnectorRequestResult<T> {
                     Response = response,
@@ -84,17 +84,17 @@ internal class ConnectorService(
         }
 
         // create a new connection
-        clientStream = await GetTlsConnectionToServer(requestId + ":tunnel", cancellationToken).VhConfigureAwait();
+        clientStream = await GetTlsConnectionToServer(requestId + ":tunnel", cancellationToken).Vhc();
 
         // send request
         try {
             // send the request
-            await clientStream.Stream.WriteAsync(request, cancellationToken).VhConfigureAwait();
+            await clientStream.Stream.WriteAsync(request, cancellationToken).Vhc();
 
             // parse the HTTP request
             if (clientStream.RequireHttpResponse) {
                 clientStream.RequireHttpResponse = false;
-                var responseMessage = await HttpUtil.ReadResponse(clientStream.Stream, cancellationToken).VhConfigureAwait();
+                var responseMessage = await HttpUtil.ReadResponse(clientStream.Stream, cancellationToken).Vhc();
                 if (responseMessage.StatusCode == HttpStatusCode.Unauthorized)
                     throw new UnauthorizedAccessException();
 
@@ -102,7 +102,7 @@ internal class ConnectorService(
             }
 
             // read the response
-            var response2 = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken).VhConfigureAwait();
+            var response2 = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken).Vhc();
             return new ConnectorRequestResult<T> {
                 Response = response2,
                 ClientStream = clientStream
@@ -122,7 +122,7 @@ internal class ConnectorService(
     private static async Task<T> ReadSessionResponse<T>(Stream stream, CancellationToken cancellationToken)
         where T : SessionResponse
     {
-        var message = await StreamUtils.ReadMessageAsync(stream, cancellationToken).VhConfigureAwait();
+        var message = await StreamUtils.ReadMessageAsync(stream, cancellationToken).Vhc();
         try {
             var response = JsonUtils.Deserialize<T>(message);
             ProcessResponseException(response);

@@ -35,11 +35,11 @@ public class ReadCacheStream : AsyncStreamDecorator
     {
         // read directly to user buffer if there is no buffer, and it is larger than cache
         if (_cacheRemain == 0 && buffer.Length > _cache.Length)
-            return await base.ReadAsync(buffer, cancellationToken).VhConfigureAwait();
+            return await base.ReadAsync(buffer, cancellationToken).Vhc();
 
         // fill cache
         if (_cacheRemain == 0 && buffer.Length <= _cache.Length) {
-            _cacheRemain = await base.ReadAsync(_cache, cancellationToken).VhConfigureAwait();
+            _cacheRemain = await base.ReadAsync(_cache, cancellationToken).Vhc();
             if (_cacheRemain == 0)
                 return 0; // end of stream
 

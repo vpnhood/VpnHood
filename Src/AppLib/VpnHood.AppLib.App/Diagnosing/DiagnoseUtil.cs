@@ -32,7 +32,7 @@ public class DiagnoseUtil
     {
         Exception? exception = null;
         while (tasks.Length > 0) {
-            var task = await Task.WhenAny(tasks).VhConfigureAwait();
+            var task = await Task.WhenAny(tasks).Vhc();
             exception = task.Result;
             if (exception == null)
                 return null; //at least one task is success
@@ -54,7 +54,7 @@ public class DiagnoseUtil
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
             using var httpClient = new HttpClient();
             var result = await httpClient.GetStringAsync(uri, linkedCts.Token)
-                .VhConfigureAwait();
+                .Vhc();
 
             if (result.Length < 100)
                 throw new Exception("The http response data length is not expected!");
@@ -84,7 +84,7 @@ public class DiagnoseUtil
                 "Started", dnsName, nsIpEndPoint, timeout);
 
             var res = await DnsResolver.GetHostEntry(dnsName, nsIpEndPoint, udpClient, timeout, cancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
 
             if (res.AddressList.Length == 0)
                 throw new Exception("Could not find any host!");
@@ -114,7 +114,7 @@ public class DiagnoseUtil
                 "Started", VhLogger.Format(ipAddress), timeout);
 
             var pingReply = await ping.SendPingAsync(ipAddress, timeout, buffer: null, options: null, cancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
 
             if (pingReply.Status != IPStatus.Success)
                 throw new Exception($"Status: {pingReply.Status}");

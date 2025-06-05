@@ -70,7 +70,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
 
             // send packet to destination
             var sentBytes = await _udpClient.SendAsync(udpPacket.Payload, _destinationEndPoint)
-                .VhConfigureAwait();
+                .Vhc();
 
             if (sentBytes != udpPacket.Payload.Length)
                 throw new Exception(
@@ -88,7 +88,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
     {
         try {
             while (!IsDisposed) {
-                var udpResult = await _udpClient.ReceiveAsync().VhConfigureAwait();
+                var udpResult = await _udpClient.ReceiveAsync().Vhc();
 
                 // find the audience (sourceEndPoint)
                 var sourceEndPoint = GetSourceEndPoint(udpResult.RemoteEndPoint);

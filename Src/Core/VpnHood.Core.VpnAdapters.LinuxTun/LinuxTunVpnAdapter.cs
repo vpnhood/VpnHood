@@ -33,7 +33,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
     private static async Task<string> GetPrimaryAdapterName(CancellationToken cancellationToken)
     {
-        var mainInterface = await ExecuteCommandAsync("ip route | grep default | awk '{print $5}'", cancellationToken).VhConfigureAwait();
+        var mainInterface = await ExecuteCommandAsync("ip route | grep default | awk '{print $5}'", cancellationToken).Vhc();
         mainInterface = mainInterface.Trim();
         if (string.IsNullOrEmpty(mainInterface))
             throw new InvalidOperationException("No active network interface found.");
@@ -54,16 +54,16 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
         // Create and configure tun interface
         VhLogger.Instance.LogDebug("Creating tun adapter...");
-        await ExecuteCommandAsync($"ip tuntap add dev {AdapterName} mode tun", cancellationToken).VhConfigureAwait();
+        await ExecuteCommandAsync($"ip tuntap add dev {AdapterName} mode tun", cancellationToken).Vhc();
 
         // Enable IP forwarding
         VhLogger.Instance.LogDebug("Enabling IP forwarding...");
-        await ExecuteCommandAsync("sysctl -w net.ipv4.ip_forward=1", cancellationToken).VhConfigureAwait();
-        await ExecuteCommandAsync("sysctl -w net.ipv6.conf.all.forwarding=1", cancellationToken).VhConfigureAwait();
+        await ExecuteCommandAsync("sysctl -w net.ipv4.ip_forward=1", cancellationToken).Vhc();
+        await ExecuteCommandAsync("sysctl -w net.ipv6.conf.all.forwarding=1", cancellationToken).Vhc();
 
         // Bring up the interface
         VhLogger.Instance.LogDebug("Bringing up the TUN...");
-        await ExecuteCommandAsync($"ip link set {AdapterName} up", cancellationToken).VhConfigureAwait();
+        await ExecuteCommandAsync($"ip link set {AdapterName} up", cancellationToken).Vhc();
     }
 
     protected override void AdapterRemove()
@@ -124,15 +124,15 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         // Configure NAT with iptables
         var iptables = ipNetwork.IsV4 ? "iptables" : "ip6tables";
         await ExecuteCommandAsync($"{iptables} -t nat -A POSTROUTING -s {ipNetwork} -o {_primaryAdapterName} -j MASQUERADE",
-                cancellationToken).VhConfigureAwait();
+                cancellationToken).Vhc();
 
         // sudo iptables 
         await ExecuteCommandAsync($"{iptables} -A FORWARD -i {AdapterName} -o {_primaryAdapterName} -j ACCEPT",
-            cancellationToken).VhConfigureAwait();
+            cancellationToken).Vhc();
 
         // sudo iptables 
         await ExecuteCommandAsync($"{iptables} -A FORWARD -i {_primaryAdapterName} -o {AdapterName} -m state --state RELATED,ESTABLISHED -j ACCEPT",
-            cancellationToken).VhConfigureAwait();
+            cancellationToken).Vhc();
     }
 
     private void TryRemoveNat(IpNetwork ipNetwork)
@@ -154,7 +154,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     protected override async Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         await ExecuteCommandAsync($"ip addr add {ipNetwork} dev {AdapterName}",
-            cancellationToken).VhConfigureAwait();
+            cancellationToken).Vhc();
     }
 
     protected override async Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
@@ -166,7 +166,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         if (_metric != null)
             command += $" metric {_metric}";
 
-        await ExecuteCommandAsync(command, cancellationToken).VhConfigureAwait();
+        await ExecuteCommandAsync(command, cancellationToken).Vhc();
     }
 
     protected override Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
@@ -184,15 +184,15 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     protected override async Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         var command = $"ip link set dev {AdapterName} mtu {mtu}";
-        await ExecuteCommandAsync(command, cancellationToken).VhConfigureAwait();
+        await ExecuteCommandAsync(command, cancellationToken).Vhc();
     }
 
     protected override async Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
     {
         var allDns = string.Join(" ", dnsServers.Select(x => x.ToString()));
         var command = $"resolvectl dns {AdapterName} {allDns}";
-        await ExecuteCommandAsync(command, cancellationToken).VhConfigureAwait();
-        await ExecuteCommandAsync($"resolvectl domain {AdapterName} \"~.\"", cancellationToken).VhConfigureAwait();
+        await ExecuteCommandAsync(command, cancellationToken).Vhc();
+        await ExecuteCommandAsync($"resolvectl domain {AdapterName} \"~.\"", cancellationToken).Vhc();
     }
 
     protected override void WaitForTunRead()

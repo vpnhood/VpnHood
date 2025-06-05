@@ -26,9 +26,9 @@ internal class StoreBillingProvider(
     {
         try {
             PurchaseState = BillingPurchaseState.Started;
-            var providerOrderId = await billingProvider.Purchase(uiContext, planId).VhConfigureAwait();
+            var providerOrderId = await billingProvider.Purchase(uiContext, planId).Vhc();
             PurchaseState = BillingPurchaseState.Processing;
-            await WaitForProcessProviderOrder(providerOrderId).VhConfigureAwait();
+            await WaitForProcessProviderOrder(providerOrderId).Vhc();
             return providerOrderId;
         }
         finally {
@@ -45,7 +45,7 @@ internal class StoreBillingProvider(
         for (var counter = 0;; counter++) {
             try {
                 var subscriptionOrder = await currentVpnUserClient
-                    .GetSubscriptionOrderByProviderOrderIdAsync(storeAppId, providerOrderId).VhConfigureAwait();
+                    .GetSubscriptionOrderByProviderOrderIdAsync(storeAppId, providerOrderId).Vhc();
                 if (subscriptionOrder.IsProcessed)
                     return;
                 throw new Exception("Order has not processed yet.");
@@ -54,7 +54,7 @@ internal class StoreBillingProvider(
                 // We might encounter a �not exist� exception. Therefore, we need to wait for Google to send the provider order to the Store.
                 VhLogger.Instance.LogWarning(ex, ex.Message);
                 if (counter == 5) throw;
-                await Task.Delay(TimeSpan.FromSeconds(5)).VhConfigureAwait();
+                await Task.Delay(TimeSpan.FromSeconds(5)).Vhc();
             }
         }
     }

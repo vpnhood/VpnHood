@@ -28,14 +28,14 @@ public class StreamPacketChannel(StreamPacketChannelOptions options) : PacketCha
 
             // flush current buffer if this packet does not fit
             if (bufferIndex > 0 && bufferIndex + packetBytes.Length > buffer.Length) {
-                await _clientStream.Stream.WriteAsync(buffer[..bufferIndex], cancellationToken).VhConfigureAwait();
+                await _clientStream.Stream.WriteAsync(buffer[..bufferIndex], cancellationToken).Vhc();
                 bufferIndex = 0;
             }
 
             // Write the packet directly if it does not fit in the buffer or there is only one packet
             if (packetBytes.Length > buffer.Length || ipPackets.Count == 1) {
                 // send packet
-                await _clientStream.Stream.WriteAsync(packetBytes, cancellationToken).VhConfigureAwait();
+                await _clientStream.Stream.WriteAsync(packetBytes, cancellationToken).Vhc();
                 continue;
             }
 
@@ -45,7 +45,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options) : PacketCha
 
         // send remaining buffer
         if (bufferIndex > 0) {
-            await _clientStream.Stream.WriteAsync(buffer[..bufferIndex], cancellationToken).VhConfigureAwait();
+            await _clientStream.Stream.WriteAsync(buffer[..bufferIndex], cancellationToken).Vhc();
         }
     }
 
@@ -58,7 +58,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options) : PacketCha
 
         // stop reading if State is not Connected (Such as getting the close request)
         while (!cancellationToken.IsCancellationRequested) {
-            var ipPacket = await streamPacketReader.ReadAsync(cancellationToken).VhConfigureAwait();
+            var ipPacket = await streamPacketReader.ReadAsync(cancellationToken).Vhc();
             if (ipPacket == null) {
                 VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel, "Packet stream ended. Terminating read task.");
                 break;

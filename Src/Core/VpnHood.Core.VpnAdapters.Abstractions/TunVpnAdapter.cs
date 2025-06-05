@@ -132,13 +132,13 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
             // create tun adapter
             VhLogger.Instance.LogInformation("Adding TUN adapter...");
-            await AdapterAdd(cancellationToken).VhConfigureAwait();
+            await AdapterAdd(cancellationToken).Vhc();
 
             // Set adapter IPv4 address
             if (AdapterIpNetworkV4 != null) {
                 VhLogger.Instance.LogDebug("Adding IPv4 address to adapter ...");
                 GatewayIpV4 = BuildGatewayFromFromNetwork(AdapterIpNetworkV4);
-                await AddAddress(AdapterIpNetworkV4, cancellationToken).VhConfigureAwait();
+                await AddAddress(AdapterIpNetworkV4, cancellationToken).Vhc();
             }
 
             // Set adapter IPv6 address
@@ -146,7 +146,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 VhLogger.Instance.LogDebug("Adding IPv6 address to adapter ...");
                 try {
                     GatewayIpV6 = BuildGatewayFromFromNetwork(AdapterIpNetworkV6);
-                    await AddAddress(AdapterIpNetworkV6, cancellationToken).VhConfigureAwait();
+                    await AddAddress(AdapterIpNetworkV6, cancellationToken).Vhc();
                 }
                 catch (Exception ex) {
                     VhLogger.Instance.LogError(ex,
@@ -162,7 +162,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 await SetMetric(options.Metric.Value,
                     ipV4: AdapterIpNetworkV4 != null,
                     ipV6: AdapterIpNetworkV6 != null,
-                    cancellationToken).VhConfigureAwait();
+                    cancellationToken).Vhc();
             }
 
             // set mtu
@@ -171,7 +171,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 await SetMtu(options.Mtu.Value,
                     ipV4: AdapterIpNetworkV4 != null,
                     ipV6: AdapterIpNetworkV6 != null,
-                    cancellationToken).VhConfigureAwait();
+                    cancellationToken).Vhc();
             }
 
             // set DNS servers
@@ -181,7 +181,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 dnsServers = dnsServers.Where(x => !x.IsV4()).ToArray();
             if (AdapterIpNetworkV6 == null)
                 dnsServers = dnsServers.Where(x => !x.IsV6()).ToArray();
-            await SetDnsServers(dnsServers, cancellationToken).VhConfigureAwait();
+            await SetDnsServers(dnsServers, cancellationToken).Vhc();
 
             // exclude dead networks
             var includeNetworks = options.IncludeNetworks;
@@ -196,18 +196,18 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             // add routes
             VhLogger.Instance.LogDebug("Adding routes...");
             if (AdapterIpNetworkV4 != null)
-                await AddRouteHelper(includeNetworks, AddressFamily.InterNetwork, cancellationToken).VhConfigureAwait();
+                await AddRouteHelper(includeNetworks, AddressFamily.InterNetwork, cancellationToken).Vhc();
             if (AdapterIpNetworkV6 != null)
-                await AddRouteHelper(includeNetworks, AddressFamily.InterNetworkV6, cancellationToken).VhConfigureAwait();
+                await AddRouteHelper(includeNetworks, AddressFamily.InterNetworkV6, cancellationToken).Vhc();
 
             // add NAT
             if (UseNat) {
                 VhLogger.Instance.LogDebug("Adding NAT...");
                 if (AdapterIpNetworkV4 != null && PrimaryAdapterIpV4 != null)
-                    await AddNat(AdapterIpNetworkV4, cancellationToken).VhConfigureAwait();
+                    await AddNat(AdapterIpNetworkV4, cancellationToken).Vhc();
 
                 if (AdapterIpNetworkV6 != null && PrimaryAdapterIpV6 != null)
-                    await AddNat(AdapterIpNetworkV6, cancellationToken).VhConfigureAwait();
+                    await AddNat(AdapterIpNetworkV6, cancellationToken).Vhc();
             }
 
             // add app filter
@@ -216,7 +216,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
             // open the adapter
             VhLogger.Instance.LogInformation("Opening TUN adapter...");
-            await AdapterOpen(cancellationToken).VhConfigureAwait();
+            await AdapterOpen(cancellationToken).Vhc();
 
             // start reading packets
             _ = Task.Run(StartReadingPackets, CancellationToken.None);
@@ -250,7 +250,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
         // ReSharper disable once PossibleMultipleEnumeration
         foreach (var network in ipNetworks)
-            await AddRoute(network, cancellationToken).VhConfigureAwait();
+            await AddRoute(network, cancellationToken).Vhc();
     }
 
     private async Task SetAppFilters(string[]? includeApps, string[]? excludeApps, CancellationToken cancellationToken)

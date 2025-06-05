@@ -6,22 +6,22 @@ public static class VhTaskExtensions
 {
     public static bool DefaultContinueOnCapturedContext { get; set; }
 
-    public static ConfiguredTaskAwaitable VhConfigureAwait(this Task task)
+    public static ConfiguredTaskAwaitable Vhc(this Task task)
     {
         return task.ConfigureAwait(DefaultContinueOnCapturedContext);
     }
 
-    public static ConfiguredTaskAwaitable<T> VhConfigureAwait<T>(this Task<T> task)
+    public static ConfiguredTaskAwaitable<T> Vhc<T>(this Task<T> task)
     {
         return task.ConfigureAwait(DefaultContinueOnCapturedContext);
     }
 
-    public static ConfiguredValueTaskAwaitable VhConfigureAwait(this ValueTask task)
+    public static ConfiguredValueTaskAwaitable Vhc(this ValueTask task)
     {
         return task.ConfigureAwait(DefaultContinueOnCapturedContext);
     }
 
-    public static ConfiguredValueTaskAwaitable<T> VhConfigureAwait<T>(this ValueTask<T> task)
+    public static ConfiguredValueTaskAwaitable<T> Vhc<T>(this ValueTask<T> task)
     {
         return task.ConfigureAwait(DefaultContinueOnCapturedContext);
     }

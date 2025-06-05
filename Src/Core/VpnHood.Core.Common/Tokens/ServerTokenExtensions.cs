@@ -17,7 +17,7 @@ public static class ServerTokenExtensions
                     VhLogger.FormatHostName(serverToken.HostName));
 
                 var hostEntities = await Dns.GetHostEntryAsync(serverToken.HostName, cancellationToken)
-                    .VhConfigureAwait();
+                    .Vhc();
 
                 if (!VhUtils.IsNullOrEmpty(hostEntities.AddressList)) {
                     return hostEntities.AddressList
@@ -42,7 +42,7 @@ public static class ServerTokenExtensions
     public static async Task<IPEndPoint[]> ResolveHostEndPoints(this ServerToken serverToken,
         CancellationToken cancellationToken)
     {
-        var ipEndPoints = await ResolveHostEndPointsInternal(serverToken, cancellationToken).VhConfigureAwait();
+        var ipEndPoints = await ResolveHostEndPointsInternal(serverToken, cancellationToken).Vhc();
         if (VhUtils.IsNullOrEmpty(ipEndPoints))
             throw new Exception("Could not resolve any host endpoint from AccessToken.");
 

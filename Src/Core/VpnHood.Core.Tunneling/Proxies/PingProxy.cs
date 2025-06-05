@@ -42,7 +42,7 @@ public class PingProxy(bool autoDisposePackets)
         var noFragment = (ipPacket.FragmentFlags & 0x2) != 0;
         var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, noFragment);
         var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)PingTimeout.TotalMilliseconds,
-            icmpPacket.Payload.ToArray(), pingOptions).VhConfigureAwait();
+            icmpPacket.Payload.ToArray(), pingOptions).Vhc();
 
         if (pingReply.Status != IPStatus.Success)
             throw new Exception($"Ping Reply has been failed! Status: {pingReply.Status}. Packet: {PacketLogger.Format(ipPacket)}");
@@ -65,7 +65,7 @@ public class PingProxy(bool autoDisposePackets)
 
         var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, true);
         var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)PingTimeout.TotalMilliseconds,
-            icmpPacket.Payload.ToArray(), pingOptions).VhConfigureAwait();
+            icmpPacket.Payload.ToArray(), pingOptions).Vhc();
 
         if (pingReply.Status != IPStatus.Success)
             throw new Exception($"Ping Reply has been failed. Status: {pingReply.Status}. Packet: {PacketLogger.Format(ipPacket)}");

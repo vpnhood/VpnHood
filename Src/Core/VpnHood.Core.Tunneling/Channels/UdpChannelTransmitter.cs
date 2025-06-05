@@ -46,7 +46,7 @@ public abstract class UdpChannelTransmitter : IDisposable
         Memory<byte> buffer, int protocolVersion)
     {
         try {
-            await _semaphore.WaitAsync().VhConfigureAwait();
+            await _semaphore.WaitAsync().Vhc();
             var bufferSpan = buffer.Span;
             Span<byte> sendIv = stackalloc byte[8];
 
@@ -77,8 +77,8 @@ public abstract class UdpChannelTransmitter : IDisposable
 
             // send packet to destination
             var ret = ipEndPoint != null
-                ? await _udpClient.SendAsync(_buffer, bufferSpan.Length, ipEndPoint).VhConfigureAwait()
-                : await _udpClient.SendAsync(_buffer, bufferSpan.Length).VhConfigureAwait();
+                ? await _udpClient.SendAsync(_buffer, bufferSpan.Length, ipEndPoint).Vhc()
+                : await _udpClient.SendAsync(_buffer, bufferSpan.Length).Vhc();
 
             if (ret != buffer.Length)
                 throw new Exception($"UdpClient: Send {ret} bytes instead {buffer.Length} bytes.");
@@ -108,7 +108,7 @@ public abstract class UdpChannelTransmitter : IDisposable
             IPEndPoint? remoteEndPoint = null;
             try {
                 remoteEndPoint = null;
-                var udpResult = await _udpClient.ReceiveAsync().VhConfigureAwait();
+                var udpResult = await _udpClient.ReceiveAsync().Vhc();
                 remoteEndPoint = udpResult.RemoteEndPoint;
                 var buffer = udpResult.Buffer;
                 if (buffer.Length < HeaderLength)

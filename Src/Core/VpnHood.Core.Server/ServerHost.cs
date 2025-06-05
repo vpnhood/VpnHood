@@ -58,7 +58,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             throw new ObjectDisposedException(GetType().Name);
 
         // wait for last configure to finish
-        using var lockResult = await _configureLock.LockAsync(_cancellationTokenSource.Token).VhConfigureAwait();
+        using var lockResult = await _configureLock.LockAsync(_cancellationTokenSource.Token).Vhc();
 
         // reconfigure
         DnsServers = configuration.DnsServers;
@@ -158,7 +158,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         // Listening for new connection
         while (Started) {
             try {
-                var tcpClient = await tcpListener.AcceptTcpClientAsync().VhConfigureAwait();
+                var tcpClient = await tcpListener.AcceptTcpClientAsync().Vhc();
                 if (!Started)
                     throw new ObjectDisposedException("ServerHost has been stopped.");
 
@@ -214,7 +214,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                         ServerCertificateSelectionCallback = ServerCertificateSelectionCallback
                     },
                     cancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
             return sslStream;
         }
         catch (Exception ex) {
@@ -249,7 +249,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         // Version 2 is HTTP and starts with POST
         try {
             var headers =
-                await HttpUtil.ParseHeadersAsync(sslStream, cancellationToken).VhConfigureAwait()
+                await HttpUtil.ParseHeadersAsync(sslStream, cancellationToken).Vhc()
                 ?? throw new Exception("Connection has been closed before receiving any request.");
 
             Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var binaryStreamType);
@@ -269,11 +269,11 @@ public class ServerHost : IDisposable, IAsyncDisposable
                         throw new UnauthorizedAccessException();
 
                     await sslStream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken)
-                        .VhConfigureAwait();
+                        .Vhc();
                     return new TcpClientStream(tcpClient, sslStream, streamId);
                 }
 
-                await sslStream.WriteAsync(HttpResponseBuilder.Ok(), cancellationToken).VhConfigureAwait();
+                await sslStream.WriteAsync(HttpResponseBuilder.Ok(), cancellationToken).Vhc();
             }
 
             switch (binaryStreamType) {
@@ -308,7 +308,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             var response = ex is UnauthorizedAccessException
                 ? HttpResponseBuilder.Unauthorized()
                 : HttpResponseBuilder.BadRequest();
-            await sslStream.WriteAsync(response, cancellationToken).VhConfigureAwait();
+            await sslStream.WriteAsync(response, cancellationToken).Vhc();
             throw;
         }
     }
@@ -318,17 +318,15 @@ public class ServerHost : IDisposable, IAsyncDisposable
         IClientStream? clientStream = null;
         SslStream? sslStream = null;
         try {
-            // add timeout to cancellationToken
-            using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
-            using var localCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
-
             // establish SSL
-            sslStream = await AuthenticateAsServerAsync(tcpClient.GetStream(), localCts.Token)
-                .VhConfigureAwait();
+            using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
+            using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
+            sslStream = await AuthenticateAsServerAsync(tcpClient.GetStream(), connectCts.Token).Vhc();
 
             // create client stream
-            clientStream = await CreateClientStream(tcpClient, sslStream, localCts.Token).VhConfigureAwait();
-            await ProcessClientStream(clientStream, localCts.Token).VhConfigureAwait();
+            clientStream = await CreateClientStream(tcpClient, sslStream, connectCts.Token).Vhc();
+
+            await ProcessClientStream(clientStream, timeoutCts: null, connectCts.Token).Vhc();
         }
         catch (TlsAuthenticateException ex) {
             VhLogger.Instance.LogInformation(GeneralEventId.Tls, ex, "Error in Client TLS authentication.");
@@ -366,14 +364,13 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
             // add client stream to reuse list and take the ownership
             using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
-            using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
-            var cancellationToken = cancellationTokenSource.Token;
+            using var reusedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
 
             VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "ServerHost.ReuseClientStream: A shared ClientStream is pending for reuse. ClientStreamId: {ClientStreamId}",
                 clientStream.ClientStreamId);
 
-            await ProcessClientStream(clientStream, cancellationToken).VhConfigureAwait();
+            await ProcessClientStream(clientStream, timeoutCt, reusedCts.Token).Vhc();
 
             VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "ServerHost.ReuseClientStream: A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}",
@@ -388,7 +385,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task ProcessClientStream(IClientStream clientStream, CancellationToken cancellationToken)
+    private async Task ProcessClientStream(IClientStream clientStream, 
+        CancellationTokenSource? timeoutCts, CancellationToken cancellationToken)
     {
         using var scope = VhLogger.Instance.BeginScope($"RemoteEp: {VhLogger.Format(clientStream.IpEndPointPair.RemoteEndPoint)}");
 
@@ -397,7 +395,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             lock (_clientStreams)
                 _clientStreams.Add(clientStream);
 
-            await ProcessRequest(clientStream, cancellationToken).VhConfigureAwait();
+            await ProcessRequest(clientStream, timeoutCts, cancellationToken).Vhc();
         }
         catch (SessionException ex) {
             if (ex is ISelfLog loggable)
@@ -412,7 +410,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
             // reply the error to caller if it is SessionException
             // Should not reply anything when user is unknown. ServerUnauthorizedException will be thrown when user is unauthenticated
-            await clientStream.DisposeAsync(ex.SessionResponse, cancellationToken).VhConfigureAwait();
+            await clientStream.DisposeAsync(ex.SessionResponse, cancellationToken).Vhc();
         }
         catch (Exception ex) when (VhLogger.IsSocketCloseException(ex)) {
             VhLogger.LogError(GeneralEventId.Tcp, ex,
@@ -430,7 +428,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                     clientStream.ClientStreamId);
 
             // return 401 for ANY non SessionException to keep server's anonymity
-            await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).VhConfigureAwait();
+            await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).Vhc();
             clientStream.DisposeWithoutReuse();
         }
         finally {
@@ -439,56 +437,59 @@ public class ServerHost : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task ProcessRequest(IClientStream clientStream, CancellationToken cancellationToken)
+    private async Task ProcessRequest(IClientStream clientStream, CancellationTokenSource? timeoutCts, CancellationToken cancellationToken)
     {
         var buffer = new byte[1];
 
-        // read request version
-        var rest = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).VhConfigureAwait();
+        // read request version. We may wait here for reuse timeout
+        var rest = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
         if (rest == 0)
             throw new Exception("ClientStream has been closed before receiving any request.");
+
+        // a new request is coming, reset timeout, to reset the reuse timeout if it is a reused stream
+        timeoutCts?.CancelAfter(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
 
         var version = buffer[0];
         if (version != 1)
             throw new NotSupportedException($"The request version is not supported. Version: {version}");
 
         // read request code
-        var res = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).VhConfigureAwait();
+        var res = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
         if (res == 0)
             throw new Exception("ClientStream has been closed before receiving any request.");
 
         var requestCode = (RequestCode)buffer[0];
         switch (requestCode) {
             case RequestCode.Hello:
-                await ProcessHello(clientStream, cancellationToken).VhConfigureAwait();
+                await ProcessHello(clientStream, cancellationToken).Vhc();
                 break;
 
             case RequestCode.SessionStatus:
-                await ProcessSessionStatus(clientStream, cancellationToken).VhConfigureAwait();
+                await ProcessSessionStatus(clientStream, cancellationToken).Vhc();
                 break;
 
             case RequestCode.TcpPacketChannel:
-                await ProcessTcpPacketChannel(clientStream, cancellationToken).VhConfigureAwait();
+                await ProcessTcpPacketChannel(clientStream, cancellationToken).Vhc();
                 break;
 
             case RequestCode.ProxyChannel:
-                await ProcessStreamProxyChannel(clientStream, cancellationToken).VhConfigureAwait();
+                await ProcessStreamProxyChannel(clientStream, cancellationToken).Vhc();
                 break;
 
             case RequestCode.UdpPacket:
-                await ProcessUdpPacketRequest(clientStream, cancellationToken).VhConfigureAwait();
+                await ProcessUdpPacketRequest(clientStream, cancellationToken).Vhc();
                 break;
 
             case RequestCode.RewardedAd:
-                await ProcessRewardedAdRequest(clientStream, cancellationToken).VhConfigureAwait();
+                await ProcessRewardedAdRequest(clientStream, cancellationToken).Vhc();
                 break;
 
             case RequestCode.ServerCheck:
-                await ProcessServerCheck(clientStream, cancellationToken).VhConfigureAwait();
+                await ProcessServerCheck(clientStream, cancellationToken).Vhc();
                 break;
 
             case RequestCode.Bye:
-                await ProcessBye(clientStream, cancellationToken).VhConfigureAwait();
+                await ProcessBye(clientStream, cancellationToken).Vhc();
                 break;
 
             default:
@@ -504,7 +505,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             "Processing a request. RequestType: {RequestType}.",
             VhLogger.FormatType<T>());
 
-        var request = await StreamUtils.ReadObjectAsync<T>(clientStream.Stream, cancellationToken).VhConfigureAwait();
+        var request = await StreamUtils.ReadObjectAsync<T>(clientStream.Stream, cancellationToken).Vhc();
 
         // check request id to server
         request.RequestId = request.RequestId.Replace(":client", ":server");
@@ -529,7 +530,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogDebug(GeneralEventId.Session, "Processing hello request... ClientIp: {ClientIp}",
             VhLogger.Format(ipEndPointPair.RemoteEndPoint.Address));
 
-        var request = await ReadRequest<HelloRequest>(clientStream, cancellationToken).VhConfigureAwait();
+        var request = await ReadRequest<HelloRequest>(clientStream, cancellationToken).Vhc();
 
         // find best version (for future)
         var protocolVersion = Math.Min(MaxProtocolVersion, request.ClientInfo.MaxProtocolVersion);
@@ -539,7 +540,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             "Creating a session... TokenId: {TokenId}, ClientId: {ClientId}, ClientVersion: {ClientVersion}, UserAgent: {UserAgent}",
             VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId),
             request.ClientInfo.ClientVersion, request.ClientInfo.UserAgent);
-        var sessionResponseEx = await _sessionManager.CreateSession(request, ipEndPointPair, protocolVersion).VhConfigureAwait();
+        var sessionResponseEx = await _sessionManager.CreateSession(request, ipEndPointPair, protocolVersion).Vhc();
         var session = _sessionManager.GetSessionById(sessionResponseEx.SessionId) ??
                       throw new InvalidOperationException("Session is lost!");
 
@@ -629,28 +630,28 @@ public class ServerHost : IDisposable, IAsyncDisposable
             VirtualIpNetworkV6 = new IpNetwork(session.VirtualIps.IpV6, _sessionManager.VirtualIpNetworkV6.PrefixLength)
         };
 
-        await clientStream.DisposeAsync(helloResponse, cancellationToken).VhConfigureAwait();
+        await clientStream.DisposeAsync(helloResponse, cancellationToken).Vhc();
     }
 
     private async Task ProcessRewardedAdRequest(IClientStream clientStream, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading the RewardedAd request...");
-        var request = await ReadRequest<RewardedAdRequest>(clientStream, cancellationToken).VhConfigureAwait();
-        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
-        await session.ProcessRewardedAdRequest(request, clientStream, cancellationToken).VhConfigureAwait();
+        var request = await ReadRequest<RewardedAdRequest>(clientStream, cancellationToken).Vhc();
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).Vhc();
+        await session.ProcessRewardedAdRequest(request, clientStream, cancellationToken).Vhc();
     }
 
     // todo: it must be removed
     private async Task ProcessSessionStatus(IClientStream clientStream, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading the SessionStatus request...");
-        var request = await ReadRequest<SessionStatusRequest>(clientStream, cancellationToken).VhConfigureAwait();
+        var request = await ReadRequest<SessionStatusRequest>(clientStream, cancellationToken).Vhc();
 
         // finding session
-        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).Vhc();
 
         // processing request
-        await session.ProcessSessionStatusRequest(request, clientStream, cancellationToken).VhConfigureAwait();
+        await session.ProcessSessionStatusRequest(request, clientStream, cancellationToken).Vhc();
     }
 
     private static async Task ProcessServerCheck(IClientStream clientStream, CancellationToken cancellationToken)
@@ -660,7 +661,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogDebug(GeneralEventId.Session, "Process ServerCheck and return unauthorized for the request...");
 
         // write unauthorized response
-        await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).VhConfigureAwait();
+        await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).Vhc();
         clientStream.DisposeWithoutReuse();
     }
 
@@ -668,11 +669,11 @@ public class ServerHost : IDisposable, IAsyncDisposable
     private async Task ProcessBye(IClientStream clientStream, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading the Bye request...");
-        var request = await ReadRequest<ByeRequest>(clientStream, cancellationToken).VhConfigureAwait();
+        var request = await ReadRequest<ByeRequest>(clientStream, cancellationToken).Vhc();
 
         // finding session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
-        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).Vhc();
 
         // Dispose client stream
         clientStream.PreventReuse();
@@ -685,33 +686,33 @@ public class ServerHost : IDisposable, IAsyncDisposable
     private async Task ProcessUdpPacketRequest(IClientStream clientStream, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Session, "Reading a UdpPacket request...");
-        var request = await ReadRequest<UdpPacketRequest>(clientStream, cancellationToken).VhConfigureAwait();
+        var request = await ReadRequest<UdpPacketRequest>(clientStream, cancellationToken).Vhc();
 
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
-        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
-        await session.ProcessUdpPacketRequest(request, clientStream, cancellationToken).VhConfigureAwait();
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).Vhc();
+        await session.ProcessUdpPacketRequest(request, clientStream, cancellationToken).Vhc();
     }
 
     private async Task ProcessTcpPacketChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Reading the TcpPacketChannelRequest...");
-        var request = await ReadRequest<TcpPacketChannelRequest>(clientStream, cancellationToken).VhConfigureAwait();
+        var request = await ReadRequest<TcpPacketChannelRequest>(clientStream, cancellationToken).Vhc();
 
         // finding session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
-        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
-        await session.ProcessTcpPacketChannelRequest(request, clientStream, cancellationToken).VhConfigureAwait();
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).Vhc();
+        await session.ProcessTcpPacketChannelRequest(request, clientStream, cancellationToken).Vhc();
     }
 
     private async Task ProcessStreamProxyChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.ProxyChannel, "Reading the StreamProxyChannelRequest...");
-        var request = await ReadRequest<StreamProxyChannelRequest>(clientStream, cancellationToken).VhConfigureAwait();
+        var request = await ReadRequest<StreamProxyChannelRequest>(clientStream, cancellationToken).Vhc();
 
         // find session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
-        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).VhConfigureAwait();
-        await session.ProcessTcpProxyRequest(request, clientStream, cancellationToken).VhConfigureAwait();
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).Vhc();
+        await session.ProcessTcpProxyRequest(request, clientStream, cancellationToken).Vhc();
     }
 
     private ValueTask CleanupConnections(CancellationToken cancellationToken)
@@ -764,7 +765,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         // wait for finalizing all listener tasks
         VhLogger.Instance.LogDebug("Disposing current processing requests...");
         try {
-            await VhUtils.RunTask(Task.WhenAll(tcpListenerTasks), TimeSpan.FromSeconds(15)).VhConfigureAwait();
+            await VhUtils.RunTask(Task.WhenAll(tcpListenerTasks), TimeSpan.FromSeconds(15)).Vhc();
         }
         catch (Exception ex) {
             if (ex is TimeoutException)

@@ -63,7 +63,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
     public async Task<SubscriptionPlan[]> GetSubscriptionPlans()
     {
-        await EnsureConnected().VhConfigureAwait();
+        await EnsureConnected().Vhc();
 
         // Check if the purchase subscription is supported on the user's device
         try {

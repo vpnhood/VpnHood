@@ -12,17 +12,17 @@ public static class ClientStreamExtensions
         // If the client stream requires an HTTP response, write it to the client stream
         if (clientStream.RequireHttpResponse) {
             clientStream.RequireHttpResponse = false;
-            await clientStream.Stream.WriteAsync(HttpResponseBuilder.Ok(), cancellationToken).VhConfigureAwait();
+            await clientStream.Stream.WriteAsync(HttpResponseBuilder.Ok(), cancellationToken).Vhc();
         }
 
         // Write the session response to the client stream
-        await StreamUtils.WriteObjectAsync(clientStream.Stream, sessionResponse, cancellationToken).VhConfigureAwait();
+        await StreamUtils.WriteObjectAsync(clientStream.Stream, sessionResponse, cancellationToken).Vhc();
     }
 
     public static async Task DisposeAsync(this IClientStream clientStream, SessionResponse sessionResponse, CancellationToken cancellationToken)
     {
         // Write the session response to the client stream
-        await clientStream.WriteResponseAsync(sessionResponse, cancellationToken).VhConfigureAwait();
+        await clientStream.WriteResponseAsync(sessionResponse, cancellationToken).Vhc();
         clientStream.Dispose();
     }
 }

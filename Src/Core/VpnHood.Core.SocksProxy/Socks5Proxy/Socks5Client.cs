@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.SocksProxy.Socks5Proxy;
 
@@ -11,14 +10,13 @@ public class Socks5Client(Socks5Options options)
     private readonly string? _username = options.Username;
     private readonly string? _password = options.Password;
 
-    public async Task ConnectAsync(TcpClient tcpClient, IPEndPoint remoteEp, TimeSpan timeout,
-        CancellationToken cancellationToken)
+    public async Task ConnectAsync(TcpClient tcpClient, IPEndPoint remoteEp, CancellationToken cancellationToken)
     {
         if (options == null)
             throw new ArgumentNullException(nameof(options));
 
         try {
-            await tcpClient.VhConnectAsync(ProxyEndPoint, timeout, cancellationToken);
+            await tcpClient.ConnectAsync(ProxyEndPoint, cancellationToken);
             var stream = tcpClient.GetStream();
             await SelectAuth(stream, cancellationToken);
             await PerformConnect(stream, remoteEp, cancellationToken);

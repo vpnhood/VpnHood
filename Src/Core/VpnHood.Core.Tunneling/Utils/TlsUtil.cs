@@ -19,7 +19,7 @@ public static class SniExtractor
         var initBuffer = new byte[1000];
         var bufCount = await tcpStream
             .ReadAsync(initBuffer, 0, initBuffer.Length, cancellationToken)
-            .VhConfigureAwait();
+            .Vhc();
 
         return new SniData {
             Sni = ExtractSni(initBuffer[..bufCount]),

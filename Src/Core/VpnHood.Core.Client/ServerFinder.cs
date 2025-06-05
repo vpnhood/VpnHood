@@ -61,7 +61,7 @@ public class ServerFinder(
             _hostEndPointStatuses.Count(x => x.Available == false),
             _hostEndPointStatuses.Count(x => x.Available == null));
 
-        _ = TryTrackEndPointsAvailability([], _hostEndPointStatuses).VhConfigureAwait();
+        _ = TryTrackEndPointsAvailability([], _hostEndPointStatuses).Vhc();
         if (res != null)
             return res;
 
@@ -103,7 +103,7 @@ public class ServerFinder(
             VhLogger.Format(res));
 
         // track new endpoints availability 
-        _ = TryTrackEndPointsAvailability(_hostEndPointStatuses, endpointStatuses).VhConfigureAwait();
+        _ = TryTrackEndPointsAvailability(_hostEndPointStatuses, endpointStatuses).Vhc();
         if (res != null)
             return res;
 
@@ -152,7 +152,7 @@ public class ServerFinder(
 
                 // ReSharper disable once AccessToDisposedClosure
                 hostStatus.Available = await VerifyServerStatus(connector, linkedCancellationTokenSource.Token)
-                    .VhConfigureAwait();
+                    .Vhc();
 
                 // ReSharper disable once AccessToDisposedClosure
                 if (hostStatus.Available == true && !byOrder)
@@ -172,7 +172,7 @@ public class ServerFinder(
                         }
                     }
                 }
-            }, maxDegreeOfParallelism, linkedCancellationTokenSource.Token).VhConfigureAwait();
+            }, maxDegreeOfParallelism, linkedCancellationTokenSource.Token).Vhc();
         }
         catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested) {
             // it means a server has been found
@@ -189,7 +189,7 @@ public class ServerFinder(
                         RequestId = UniqueIdFactory.Create()
                     },
                     cancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
 
             // this should be already handled by the connector and never happen
             if (requestResult.Response.ErrorCode != SessionErrorCode.Ok)

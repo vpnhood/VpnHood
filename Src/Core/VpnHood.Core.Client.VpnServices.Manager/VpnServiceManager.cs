@@ -98,7 +98,7 @@ public class VpnServiceManager : IDisposable
         // wait for vpn service
         try {
             if (IsStarted)
-                await TryStop().VhConfigureAwait();
+                await TryStop().Vhc();
 
             _isInitializing = true;
             _vpnServiceUnreachableCount = 0;
@@ -109,20 +109,20 @@ public class VpnServiceManager : IDisposable
 
             // save vpn config
             await File.WriteAllTextAsync(_vpnConfigFilePath, JsonSerializer.Serialize(clientOptions), cancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
 
             // prepare vpn service
             VhLogger.Instance.LogInformation("Requesting VpnService...");
             if (!clientOptions.UseNullCapture)
                 await _device.RequestVpnService(AppUiContext.Context, _requestVpnServiceTimeout, cancellationToken)
-                    .VhConfigureAwait();
+                    .Vhc();
 
             // start vpn service
             VhLogger.Instance.LogInformation("Starting VpnService...");
-            await _device.StartVpnService(cancellationToken).VhConfigureAwait();
+            await _device.StartVpnService(cancellationToken).Vhc();
 
             // wait for vpn service to start
-            await WaitForVpnService(cancellationToken).VhConfigureAwait();
+            await WaitForVpnService(cancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not start VpnService.");
@@ -138,7 +138,7 @@ public class VpnServiceManager : IDisposable
         }
 
         // wait for connection or error
-        await WaitForConnection(cancellationToken).VhConfigureAwait();
+        await WaitForConnection(cancellationToken).Vhc();
     }
 
     private async Task WaitForVpnService(CancellationToken cancellationToken)
@@ -286,7 +286,7 @@ public class VpnServiceManager : IDisposable
     private async Task<T?> SendRequest<T>(IApiRequest request, CancellationToken cancellationToken)
     {
         // for simplicity, we send one request at a time
-        using var scopeLock = await _sendLock.LockAsync(TimeSpan.FromSeconds(5), cancellationToken).VhConfigureAwait();
+        using var scopeLock = await _sendLock.LockAsync(TimeSpan.FromSeconds(5), cancellationToken).Vhc();
 
         if (_connectionInfo.Error != null)
             throw new VpnServiceNotReadyException("VpnService is not ready.");
@@ -319,16 +319,16 @@ public class VpnServiceManager : IDisposable
                 await tcpClient.ConnectAsync(hostEndPoint, cancellationToken);
                 await StreamUtils
                     .WriteObjectAsync(tcpClient.GetStream(), _connectionInfo.ApiKey ?? [], cancellationToken)
-                    .AsTask().VhConfigureAwait();
+                    .AsTask().Vhc();
                 VhLogger.Instance.LogDebug("Connected to VpnService Host.");
             }
 
             await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request.GetType().Name, cancellationToken)
-                .AsTask().VhConfigureAwait();
+                .AsTask().Vhc();
             await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request, cancellationToken).AsTask()
-                .VhConfigureAwait();
+                .Vhc();
             var ret = await StreamUtils.ReadObjectAsync<ApiResponse<T>>(tcpClient.GetStream(), cancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
 
             return ret;
         }
@@ -357,7 +357,7 @@ public class VpnServiceManager : IDisposable
         // send disconnect request
         try {
             VhLogger.Instance.LogDebug("Sending disconnect request...");
-            await SendRequest(new ApiDisconnectRequest(), cancellationTokenSource.Token).VhConfigureAwait();
+            await SendRequest(new ApiDisconnectRequest(), cancellationTokenSource.Token).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(ex, "Could not send disconnect request.");

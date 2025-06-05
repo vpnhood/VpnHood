@@ -29,7 +29,7 @@ internal class ClientProfileController : WebApiController, IClientProfileControl
     public async Task<ClientProfileInfo> Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
         _ = updateParams;
-        updateParams = await HttpContext.GetRequestDataAsync<ClientProfileUpdateParams>().VhConfigureAwait();
+        updateParams = await HttpContext.GetRequestDataAsync<ClientProfileUpdateParams>().Vhc();
         var clientProfile = App.ClientProfileService.Update(clientProfileId, updateParams);
         return clientProfile.ToInfo();
     }
@@ -38,7 +38,7 @@ internal class ClientProfileController : WebApiController, IClientProfileControl
     public async Task Delete(Guid clientProfileId)
     {
         if (clientProfileId == App.CurrentClientProfileInfo?.ClientProfileId)
-            await App.Disconnect().VhConfigureAwait();
+            await App.Disconnect().Vhc();
 
         App.ClientProfileService.Delete(clientProfileId);
     }

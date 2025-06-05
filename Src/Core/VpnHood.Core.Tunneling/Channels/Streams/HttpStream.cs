@@ -67,7 +67,7 @@ public class HttpStream : ChunkStream
         // Create CancellationToken
         using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_readCts.Token, cancellationToken);
         _readTask = ReadInternalAsync(buffer, tokenSource.Token);
-        return await _readTask.VhConfigureAwait(); // await needed to dispose tokenSource
+        return await _readTask.Vhc(); // await needed to dispose tokenSource
     }
 
     private async ValueTask<int> ReadInternalAsync(Memory<byte> buffer, CancellationToken cancellationToken)
@@ -76,7 +76,7 @@ public class HttpStream : ChunkStream
             // ignore header
             if (!_isHttpHeaderRead) {
                 using var headerBuffer =
-                    await HttpUtil.ReadHeadersAsync(SourceStream, cancellationToken).VhConfigureAwait();
+                    await HttpUtil.ReadHeadersAsync(SourceStream, cancellationToken).Vhc();
                 if (headerBuffer.Length == 0) {
                     _isFinished = true;
                     _isConnectionClosed = true;
@@ -92,7 +92,7 @@ public class HttpStream : ChunkStream
 
             // If there are no more in the chunks read the next chunk
             if (_remainingChunkBytes == 0)
-                _remainingChunkBytes = await ReadChunkHeaderAsync(cancellationToken).VhConfigureAwait();
+                _remainingChunkBytes = await ReadChunkHeaderAsync(cancellationToken).Vhc();
 
             // check last chunk
             _isFinished = _remainingChunkBytes == 0;
@@ -101,7 +101,7 @@ public class HttpStream : ChunkStream
 
             var bytesToRead = Math.Min(_remainingChunkBytes, buffer.Length);
             var bytesRead = await SourceStream.ReadAsync(buffer[..bytesToRead], cancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
             if (bytesRead == 0 && buffer.Length != 0) // count zero is used for checking the connection
                 throw new Exception("HttpStream has been closed unexpectedly.");
 
@@ -127,7 +127,7 @@ public class HttpStream : ChunkStream
     {
         // read the end of last chunk if it is not first chunk
         if (ReadChunkCount != 0)
-            await ReadNextLine(cancellationToken).VhConfigureAwait();
+            await ReadNextLine(cancellationToken).Vhc();
 
         // read chunk
         var bufferOffset = 0;
@@ -135,7 +135,7 @@ public class HttpStream : ChunkStream
             if (bufferOffset == _chunkHeaderBuffer.Length)
                 throw new InvalidDataException("Chunk header exceeds the maximum size.");
             var bytesRead = await SourceStream.ReadAsync(_chunkHeaderBuffer, bufferOffset, 1, cancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
 
             if (bytesRead == 0)
                 throw new InvalidDataException("Could not read HTTP Chunk header.");
@@ -152,7 +152,7 @@ public class HttpStream : ChunkStream
             throw new InvalidDataException("Invalid HTTP chunk size.");
 
         if (chunkSize == 0)
-            await ReadNextLine(cancellationToken).VhConfigureAwait(); //read the end of stream
+            await ReadNextLine(cancellationToken).Vhc(); //read the end of stream
         else
             ReadChunkCount++;
 
@@ -176,7 +176,7 @@ public class HttpStream : ChunkStream
                 ? SourceStream.WriteAsync(buffer, tokenSource.Token)
                 : WriteInternalAsync(buffer, tokenSource.Token);
 
-            await _writeTask.VhConfigureAwait();
+            await _writeTask.Vhc();
         }
         catch (Exception ex) {
             CloseByError(ex);
@@ -191,20 +191,20 @@ public class HttpStream : ChunkStream
             // write header for first time
             if (!_isHttpHeaderSent) {
                 await SourceStream.WriteAsync(Encoding.UTF8.GetBytes(CreateHttpHeader()), cancellationToken)
-                    .VhConfigureAwait();
+                    .Vhc();
                 _isHttpHeaderSent = true;
             }
 
             // Write the chunk header
             var headerBytes = Encoding.ASCII.GetBytes(buffer.Length.ToString("X") + "\r\n");
-            await SourceStream.WriteAsync(headerBytes, cancellationToken).VhConfigureAwait();
+            await SourceStream.WriteAsync(headerBytes, cancellationToken).Vhc();
 
             // Write the chunk data
-            await SourceStream.WriteAsync(buffer, cancellationToken).VhConfigureAwait();
+            await SourceStream.WriteAsync(buffer, cancellationToken).Vhc();
 
             // Write the chunk footer
-            await SourceStream.WriteAsync(_newLineBytes, cancellationToken).VhConfigureAwait();
-            await FlushAsync(cancellationToken).VhConfigureAwait();
+            await SourceStream.WriteAsync(_newLineBytes, cancellationToken).Vhc();
+            await FlushAsync(cancellationToken).Vhc();
 
             WroteChunkCount++;
         }
@@ -216,7 +216,7 @@ public class HttpStream : ChunkStream
 
     private async Task ReadNextLine(CancellationToken cancellationToken)
     {
-        var bytesRead = await SourceStream.ReadAsync(_nextLineBuffer, 0, 2, cancellationToken).VhConfigureAwait();
+        var bytesRead = await SourceStream.ReadAsync(_nextLineBuffer, 0, 2, cancellationToken).Vhc();
         if (bytesRead < 2 || _nextLineBuffer[0] != '\r' || _nextLineBuffer[1] != '\n')
             throw new InvalidDataException("Could not find expected line feed in HTTP chunk header.");
     }
@@ -238,14 +238,14 @@ public class HttpStream : ChunkStream
 
         // Dispose the stream but keep the original stream open
         _keepOpen = true;
-        await DisposeAsync().VhConfigureAwait();
+        await DisposeAsync().Vhc();
 
         // reuse if the stream has been closed gracefully
         if (_isFinished && !_hasError)
             return new HttpStream(SourceStream, StreamId, _host);
 
         // dispose and throw the ungraceful HttpStream
-        await base.DisposeAsync().VhConfigureAwait();
+        await base.DisposeAsync().Vhc();
         throw new InvalidOperationException(
             $"Could not reuse a HttpStream that has not been closed gracefully. StreamId: {StreamId}");
     }
@@ -257,7 +257,7 @@ public class HttpStream : ChunkStream
         _writeCts.CancelAfter(TunnelDefaults.TcpGracefulTimeout);
 
         try {
-            await _writeTask.VhConfigureAwait();
+            await _writeTask.Vhc();
         }
         catch {
             /* Ignore */
@@ -267,7 +267,7 @@ public class HttpStream : ChunkStream
 
         // finish writing current HttpStream gracefully
         try {
-            await WriteInternalAsync(Memory<byte>.Empty,  cancellationToken).VhConfigureAwait();
+            await WriteInternalAsync(Memory<byte>.Empty,  cancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.TcpLife, ex,
@@ -277,7 +277,7 @@ public class HttpStream : ChunkStream
 
         // make sure current caller read has been finished gracefully or wait for cancellation time
         try {
-            await _readTask.VhConfigureAwait();
+            await _readTask.Vhc();
         }
         catch {
             /* Ignore */
@@ -293,7 +293,7 @@ public class HttpStream : ChunkStream
 
             if (!_isFinished) {
                 Memory<byte> buffer = new byte[10];
-                var read = await ReadInternalAsync(buffer, cancellationToken).VhConfigureAwait();
+                var read = await ReadInternalAsync(buffer, cancellationToken).Vhc();
                 if (read != 0)
                     throw new InvalidDataException("HttpStream read unexpected data on end.");
             }
@@ -310,7 +310,7 @@ public class HttpStream : ChunkStream
 
     public override async ValueTask DisposeAsync()
     {
-        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
+        using var lockResult = await _disposeLock.LockAsync().Vhc();
         if (_disposed) return;
         _disposed = true;
 
@@ -318,10 +318,10 @@ public class HttpStream : ChunkStream
         if (!_hasError && !_isConnectionClosed) {
             // create a new cancellation token for CloseStream
             using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
-            await CloseStream(cancellationTokenSource.Token).VhConfigureAwait();
+            await CloseStream(cancellationTokenSource.Token).Vhc();
         }
 
         if (!_keepOpen)
-            await base.DisposeAsync().VhConfigureAwait();
+            await base.DisposeAsync().Vhc();
     }
 }

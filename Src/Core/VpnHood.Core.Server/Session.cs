@@ -311,7 +311,7 @@ public class Session : IDisposable
         CancellationToken cancellationToken)
     {
         // send OK reply
-        await clientStream.WriteResponseAsync(SessionResponseEx, cancellationToken).VhConfigureAwait();
+        await clientStream.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
 
         // Disable UdpChannel
         if (_udpChannel != null) {
@@ -349,15 +349,15 @@ public class Session : IDisposable
     public async Task ProcessSessionStatusRequest(SessionStatusRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
-        await clientStream.DisposeAsync(SessionResponseEx, cancellationToken).VhConfigureAwait();
+        await clientStream.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
     }
 
     public async Task ProcessRewardedAdRequest(RewardedAdRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
         SessionResponseEx = await _accessManager
-            .Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData).VhConfigureAwait();
-        await clientStream.DisposeAsync(SessionResponseEx, cancellationToken).VhConfigureAwait();
+            .Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData).Vhc();
+        await clientStream.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
     }
 
     public async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IClientStream clientStream,
@@ -387,8 +387,7 @@ public class Session : IDisposable
 
             // connect to requested destination
             isRequestedEpException = true;
-            await tcpClientHost.VhConnectAsync(request.DestinationEndPoint, _tcpConnectTimeout, cancellationToken)
-                .VhConfigureAwait();
+            await tcpClientHost.ConnectAsync(request.DestinationEndPoint, cancellationToken).Vhc();
             isRequestedEpException = false;
 
             //tracking
@@ -397,8 +396,9 @@ public class Session : IDisposable
                 destinationEndPoint: request.DestinationEndPoint,
                 isNewLocal: true, isNewRemote: true, failReason: null);
 
-            // send response
-            await clientStream.WriteResponseAsync(SessionResponseEx, cancellationToken).VhConfigureAwait();
+            // send response, using original cancellation token without timeout
+            // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+            await clientStream.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
 
             // add the connection
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,

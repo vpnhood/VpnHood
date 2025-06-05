@@ -122,8 +122,8 @@ public static class VhUtils
     public static async Task<T> RunTask<T>(Task<T> task, TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
-        await RunTask((Task)task, timeout, cancellationToken).VhConfigureAwait();
-        return await task.VhConfigureAwait();
+        await RunTask((Task)task, timeout, cancellationToken).Vhc();
+        return await task.Vhc();
     }
 
     public static Task RunTask(Task task, CancellationToken cancellationToken = default)
@@ -137,7 +137,7 @@ public static class VhUtils
             timeout = Timeout.InfiniteTimeSpan;
 
         var timeoutTask = Task.Delay(timeout, cancellationToken);
-        var completedTask = await Task.WhenAny(task, timeoutTask).VhConfigureAwait();
+        var completedTask = await Task.WhenAny(task, timeoutTask).Vhc();
 
         // Still check if it was actually a timeout
         if (completedTask == timeoutTask) {
@@ -146,7 +146,7 @@ public static class VhUtils
             cancellationToken.ThrowIfCancellationRequested(); // clearer path for cancellation
         }
 
-        await task.VhConfigureAwait();
+        await task.Vhc();
     }
 
     public static bool IsNullOrEmpty<T>([NotNullWhen(false)] IEnumerable<T>? array)
@@ -382,13 +382,13 @@ public static class VhUtils
 
             tasks.Add(body(t));
             if (tasks.Count == maxDegreeOfParallelism) {
-                await Task.WhenAny(tasks).VhConfigureAwait();
+                await Task.WhenAny(tasks).Vhc();
                 foreach (var completedTask in tasks.Where(x => x.IsCompleted).ToArray())
                     tasks.Remove(completedTask);
             }
         }
 
-        await Task.WhenAll(tasks).VhConfigureAwait();
+        await Task.WhenAll(tasks).Vhc();
     }
 
     public static bool TryDeleteFile(string filePath)
@@ -430,7 +430,7 @@ public static class VhUtils
     public static async Task TryInvokeAsync(string? actionName, Func<ValueTask> task)
     {
         try {
-            await task().VhConfigureAwait();
+            await task().Vhc();
         }
         catch (Exception ex) {
             LogInvokeError(ex, actionName);
@@ -440,7 +440,7 @@ public static class VhUtils
     public static async Task TryInvokeAsync(string? actionName, Func<Task> task)
     {
         try {
-            await task().VhConfigureAwait();
+            await task().Vhc();
         }
         catch (Exception ex) {
             LogInvokeError(ex, actionName);
@@ -450,7 +450,7 @@ public static class VhUtils
     public static async ValueTask<T?> TryInvokeAsync<T>(string? actionName, Func<ValueTask<T>> task, T? defaultValue = default)
     {
         try {
-            return await task().VhConfigureAwait();
+            return await task().Vhc();
         }
         catch (Exception ex) {
             LogInvokeError(ex, actionName);
@@ -461,7 +461,7 @@ public static class VhUtils
     public static async Task<T?> TryInvokeAsync<T>(string? actionName, Func<Task<T>> task, T? defaultValue = default)
     {
         try {
-            return await task().VhConfigureAwait();
+            return await task().Vhc();
         }
         catch (Exception ex) {
             LogInvokeError(ex, actionName);

@@ -81,7 +81,7 @@ public class AndroidDevice : IDevice
             VhLogger.Instance.LogDebug("Requesting user consent...");
             activityEvent.Activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
             await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(userIntentTimeout, cancellationToken))
-                .VhConfigureAwait();
+                .Vhc();
 
             if (!_grantPermissionTaskSource.Task.IsCompletedSuccessfully)
                 throw new TimeoutException("Could not grant VPN permission in the given time.");

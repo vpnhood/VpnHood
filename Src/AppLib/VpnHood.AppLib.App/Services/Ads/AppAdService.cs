@@ -55,14 +55,14 @@ public class AppAdService(
 
     private async Task LoadAd(AppCompositeAdService appCompositeAdService, IUiContext uiContext, CancellationToken cancellationToken)
     {
-        var countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).VhConfigureAwait();
+        var countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
         await appCompositeAdService.LoadAd(
                 uiContext, countryCode: countryCode,
                 forceReload: false, loadAdTimeout: adOptions.LoadAdTimeout, cancellationToken)
-            .VhConfigureAwait();
+            .Vhc();
 
         // apply delay to prevent showing ads immediately after loading
-        await Task.Delay(adOptions.LoadAdPostDelay, cancellationToken).VhConfigureAwait();
+        await Task.Delay(adOptions.LoadAdPostDelay, cancellationToken).Vhc();
     }
 
     private async Task<AdResult> ShowAd(AppCompositeAdService appCompositeAdService,

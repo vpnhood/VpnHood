@@ -26,7 +26,7 @@ public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni)
             };
 
         // extract SNI
-        var sniData = await SniExtractor.ExtractSni(tlsStream, cancellationToken).VhConfigureAwait();
+        var sniData = await SniExtractor.ExtractSni(tlsStream, cancellationToken).Vhc();
         VhLogger.Instance.LogInformation(GeneralEventId.Sni,
             "Domain: {Domain}, DestEp: {IP}",
             VhLogger.FormatHostName(sniData.Sni), VhLogger.Format(remoteAddress));

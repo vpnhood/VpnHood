@@ -35,12 +35,12 @@ public static class DnsResolver
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
         await udpClient
             .SendAsync(query.AsMemory(), linkedCts.Token)
-            .VhConfigureAwait();
+            .Vhc();
 
         // Wait for response with a timeout
         var task = await udpClient
             .ReceiveAsync(linkedCts.Token)
-            .VhConfigureAwait();
+            .Vhc();
 
         var response = task.Buffer;
 

@@ -139,11 +139,11 @@ public class FileAccessManager : IAccessManager
                 ]);
 
                 var ipLocation = await ipLocationProvider.GetCurrentLocation(cancellationTokenSource.Token)
-                    .VhConfigureAwait();
+                    .Vhc();
                 serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName,
                     ipLocation.CityName);
                 await File.WriteAllTextAsync(serverCountryFile, serverLocation, CancellationToken.None)
-                    .VhConfigureAwait();
+                    .Vhc();
             }
 
             VhLogger.Instance.LogInformation("ServerLocation: {ServerLocation}", serverLocation ?? "Unknown");
@@ -170,7 +170,7 @@ public class FileAccessManager : IAccessManager
     {
         ServerStatus = serverStatus;
         var result = new ServerCommand(ServerConfig.ConfigCode) {
-            SessionResponses = await Session_AddUsages(serverStatus.SessionUsages).VhConfigureAwait()
+            SessionResponses = await Session_AddUsages(serverStatus.SessionUsages).Vhc()
         };
         return result;
     }
@@ -234,7 +234,7 @@ public class FileAccessManager : IAccessManager
     public virtual async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
         // validate token
-        var accessTokenDataOrg = await AccessTokenService.Find(sessionRequestEx.TokenId).VhConfigureAwait();
+        var accessTokenDataOrg = await AccessTokenService.Find(sessionRequestEx.TokenId).Vhc();
         if (!ValidateRequest(sessionRequestEx, accessTokenDataOrg))
             return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
@@ -248,7 +248,7 @@ public class FileAccessManager : IAccessManager
         if (!string.IsNullOrWhiteSpace(sessionRequestEx.AccessCode)) {
             var accessTokenId = GetAccessTokenIdFromAccessCode(sessionRequestEx.AccessCode);
             accessTokenData = accessTokenId != null
-                ? await AccessTokenService.Find(accessTokenId).VhConfigureAwait()
+                ? await AccessTokenService.Find(accessTokenId).Vhc()
                 : null;
             if (accessTokenData == null)
                 return new SessionResponseEx {
@@ -296,7 +296,7 @@ public class FileAccessManager : IAccessManager
 
         try {
             // read accessItem
-            var accessTokenData = await AccessTokenService.Get(tokenId).VhConfigureAwait();
+            var accessTokenData = await AccessTokenService.Get(tokenId).Vhc();
 
             // read usage
             return SessionService.GetSessionResponse(sessionId, accessTokenData, hostEndPoint);
@@ -317,7 +317,7 @@ public class FileAccessManager : IAccessManager
         foreach (var session in SessionService.Sessions) {
             try {
                 // read accessItem
-                var accessTokenData = await AccessTokenService.Find(session.Value.TokenId).VhConfigureAwait();
+                var accessTokenData = await AccessTokenService.Find(session.Value.TokenId).Vhc();
                 if (accessTokenData != null)
                     responses.Add(SessionService.GetSessionResponse(session.Key, accessTokenData,
                         session.Value.HostEndPoint));
@@ -405,7 +405,7 @@ public class FileAccessManager : IAccessManager
             };
 
         // read accessItem
-        var accessTokenData = await AccessTokenService.Find(tokenId).VhConfigureAwait();
+        var accessTokenData = await AccessTokenService.Find(tokenId).Vhc();
         if (accessTokenData == null)
             return new SessionResponse {
                 ErrorCode = SessionErrorCode.AccessError,

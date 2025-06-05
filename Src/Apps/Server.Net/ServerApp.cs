@@ -291,9 +291,9 @@ public class ServerApp : IDisposable
             _commandListener.Start();
 
             // start server
-            await _vpnHoodServer.Start().VhConfigureAwait();
+            await _vpnHoodServer.Start().Vhc();
             while (_vpnHoodServer.State != ServerState.Disposed)
-                await Task.Delay(1000, cancellationToken).VhConfigureAwait();
+                await Task.Delay(1000, cancellationToken).Vhc();
             return 0;
         });
     }
@@ -365,6 +365,6 @@ public class ServerApp : IDisposable
             new FileAccessManagerCommand(FileAccessManager)
                 .AddCommands(cmdApp);
 
-        await cmdApp.ExecuteAsync(args).VhConfigureAwait();
+        await cmdApp.ExecuteAsync(args).Vhc();
     }
 }

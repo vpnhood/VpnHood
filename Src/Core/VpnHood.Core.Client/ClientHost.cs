@@ -92,7 +92,7 @@ internal class ClientHost(
 
         try {
             while (!_cancellationTokenSource.IsCancellationRequested) {
-                var tcpClient = await tcpListener.AcceptTcpClientAsync().VhConfigureAwait();
+                var tcpClient = await tcpListener.AcceptTcpClientAsync().Vhc();
                 _ = ProcessClient(tcpClient, _cancellationTokenSource.Token);
             }
         }
@@ -239,7 +239,7 @@ internal class ClientHost(
             // Filter by SNI
             var filterResult = await vpnHoodClient.DomainFilterService
                 .Process(orgTcpClient.GetStream(), natItem.DestinationAddress, cancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
 
             if (filterResult.Action == DomainFilterAction.Block) {
                 VhLogger.Instance.LogInformation(GeneralEventId.Sni,
@@ -258,7 +258,7 @@ internal class ClientHost(
                         new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId + ":tunnel"),
                         new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
                         channelId, filterResult.ReadData, cancellationToken)
-                    .VhConfigureAwait();
+                    .Vhc();
 
                 _stat.TcpPassthruCount++;
                 return;
@@ -274,7 +274,7 @@ internal class ClientHost(
 
             // read the response
             requestResult = await vpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
             var proxyClientStream = requestResult.ClientStream;
 
             // create a ProxyChannel

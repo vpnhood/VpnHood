@@ -68,7 +68,7 @@ internal class ConnectorServiceBase : IDisposable
             "\r\n";
 
         // Send header and wait for its response
-        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).VhConfigureAwait();
+        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
         var clientStream = streamType == TunnelStreamType.None
             ? new TcpClientStream(tcpClient, sslStream, streamId)
             : new TcpClientStream(tcpClient, new BinaryStreamStandard(sslStream, streamId, useBuffer), streamId, ClientStreamReuseCallback);
@@ -92,7 +92,7 @@ internal class ConnectorServiceBase : IDisposable
             // Client.SessionTimeout does not affect in ConnectAsync
             VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "Establishing a new TCP to the Server... EndPoint: {EndPoint}",
                 VhLogger.Format(tcpEndPoint));
-            await tcpClient.VhConnectAsync(tcpEndPoint, TcpConnectTimeout, cancellationToken).VhConfigureAwait();
+            await tcpClient.VhConnectAsync(tcpEndPoint, TcpConnectTimeout, cancellationToken).Vhc();
             return await GetTlsConnectionToServer(streamId, tcpClient, cancellationToken);
         }
         catch {
@@ -114,9 +114,9 @@ internal class ConnectorServiceBase : IDisposable
                 TargetHost = hostName,
                 EnabledSslProtocols = SslProtocols.None // auto
             }, cancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
 
-            var clientStream = await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken).VhConfigureAwait();
+            var clientStream = await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken).Vhc();
             lock (Stat) Stat.CreatedConnectionCount++;
             return clientStream;
         }

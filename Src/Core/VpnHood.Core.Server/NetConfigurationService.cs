@@ -48,13 +48,13 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
             }
 
             // add new ip address if it does not exist in the system
-            if (await IpAddressExists(ipAddress).VhConfigureAwait())
+            if (await IpAddressExists(ipAddress).Vhc())
                 return;
 
             VhLogger.Instance.LogInformation("Adding IP address to system. IP: {IP}, InterfaceName: {interfaceName}",
                 ipAddress, interfaceName);
 
-            await netConfigurationProvider.AddIpAddress(ipAddress, interfaceName).VhConfigureAwait();
+            await netConfigurationProvider.AddIpAddress(ipAddress, interfaceName).Vhc();
             _ipAddresses.TryAdd(ipAddress, interfaceName);
         }
         catch (Exception ex) {
@@ -77,7 +77,7 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
                 "Removing IP address from system. IP: {IP}, InterfaceName: {interfaceName}",
                 ipAddress, interfaceName);
 
-            await netConfigurationProvider.RemoveIpAddress(ipAddress, interfaceName).VhConfigureAwait();
+            await netConfigurationProvider.RemoveIpAddress(ipAddress, interfaceName).Vhc();
             _ipAddresses.TryRemove(ipAddress, out _);
         }
         catch (Exception ex) {

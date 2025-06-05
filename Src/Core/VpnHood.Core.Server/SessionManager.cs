@@ -151,7 +151,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
             IsIpV6Supported = helloRequest.IsIpV6Supported,
             AccessCode = helloRequest.AccessCode,
             ProtocolVersion = protocolVersion
-        }).VhConfigureAwait();
+        }).Vhc();
 
         // Access Error should not pass to the client in create session
         if (sessionResponseEx.ErrorCode is SessionErrorCode.AccessError)
@@ -213,7 +213,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
     public async Task RecoverSessions()
     {
         // recover all sessions
-        var responseExs = await _accessManager.Session_GetAll().VhConfigureAwait();
+        var responseExs = await _accessManager.Session_GetAll().Vhc();
         foreach (var responseEx in responseExs) {
             try {
                 var session = BuildSessionFromResponseEx(responseEx, true);
@@ -232,7 +232,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
     private async Task<Session> RecoverSession(RequestBase sessionRequest, IPEndPointPair ipEndPointPair)
     {
         using var recoverLock =
-            await AsyncLock.LockAsync($"Recover_session_{sessionRequest.SessionId}").VhConfigureAwait();
+            await AsyncLock.LockAsync($"Recover_session_{sessionRequest.SessionId}").Vhc();
         var session = GetSessionById(sessionRequest.SessionId);
         if (session != null)
             return session;
@@ -253,7 +253,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
             // get the session from the access server
             var sessionResponse = await _accessManager.Session_Get(sessionRequest.SessionId,
                     ipEndPointPair.LocalEndPoint, ipEndPointPair.RemoteEndPoint.Address)
-                .VhConfigureAwait();
+                .Vhc();
 
             // Check session key for recovery
             if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
@@ -295,7 +295,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         }
         // try to restore session if not found
         else {
-            session = await RecoverSession(requestBase, ipEndPointPair).VhConfigureAwait();
+            session = await RecoverSession(requestBase, ipEndPointPair).Vhc();
         }
 
         if (session.SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
@@ -522,12 +522,12 @@ public class SessionManager : IAsyncDisposable, IDisposable
     private readonly AsyncLock _syncLock = new();
     public async Task Sync(bool force = false)
     {
-        using var lockResult = await _syncLock.LockAsync(TimeSpan.Zero).VhConfigureAwait();
+        using var lockResult = await _syncLock.LockAsync(TimeSpan.Zero).Vhc();
         if (!lockResult.Succeeded) 
             return;
 
         var sessionUsages = CollectSessionUsages(force);
-        var sessionResponses = await _accessManager.Session_AddUsages(sessionUsages).VhConfigureAwait();
+        var sessionResponses = await _accessManager.Session_AddUsages(sessionUsages).Vhc();
         ApplySessionResponses(sessionResponses);
     }
 
@@ -567,7 +567,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
         // sync sessions
         try {
-            await Sync(force: true).VhConfigureAwait();
+            await Sync(force: true).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not sync sessions in disposing.");

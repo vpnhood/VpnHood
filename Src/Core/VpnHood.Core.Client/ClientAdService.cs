@@ -51,12 +51,12 @@ public class ClientAdService(VpnHoodClient client)
 
     public async Task<AdResult> Show(AdRequest adRequest, CancellationToken cancellationToken)
     {
-        using var lockAsync = await _showLock.LockAsync(cancellationToken).VhConfigureAwait();
+        using var lockAsync = await _showLock.LockAsync(cancellationToken).Vhc();
         try {
             client.EnablePassthruInProcessPackets(true);
             AdRequestTaskCompletionSource = new TaskCompletionSource<AdResult>();
             AdRequest = adRequest;
-            var adResult = await AdRequestTaskCompletionSource.Task.WaitAsync(cancellationToken).VhConfigureAwait();
+            var adResult = await AdRequestTaskCompletionSource.Task.WaitAsync(cancellationToken).Vhc();
             _ = Task.Delay(2000, CancellationToken.None)
                 .ContinueWith(_ => client.EnablePassthruInProcessPackets(false),
                     CancellationToken.None); // not cancellation
@@ -68,7 +68,7 @@ public class ClientAdService(VpnHoodClient client)
                     throw new InvalidOperationException("There is no AdData in the result RewardedAd.");
 
                 // Send the rewarded ad result to the server to update the state
-                await SendRewardedAdResult(adResult.AdData, cancellationToken).VhConfigureAwait();
+                await SendRewardedAdResult(adResult.AdData, cancellationToken).Vhc();
             }
 
             return adResult;
@@ -94,6 +94,6 @@ public class ClientAdService(VpnHoodClient client)
                     AdData = adData
                 },
                 cancellationToken)
-            .VhConfigureAwait();
+            .Vhc();
     }
 }

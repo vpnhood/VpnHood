@@ -46,12 +46,12 @@ public class IpLocationIoProvider(HttpClient httpClient, string userAgent, strin
         requestMessage.Headers.Add("User-Agent", userAgent);
         var responseMessage = await httpClient
             .SendAsync(requestMessage, cancellationToken)
-            .VhConfigureAwait();
+            .Vhc();
 
         responseMessage.EnsureSuccessStatusCode();
         var json = await responseMessage.Content
             .ReadAsStringAsync(cancellationToken)
-            .VhConfigureAwait();
+            .Vhc();
 
         var apiLocation = JsonUtils.Deserialize<ApiLocation>(json);
         var regionName = apiLocation.RegionName?.ToUpper() == "NA" || string.IsNullOrEmpty(apiLocation.CityName)

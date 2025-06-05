@@ -41,7 +41,7 @@ public class Ip2LocationDbParser
 
     public static async Task BuildLocalIpRangeLocationDb(Stream crvStream, string outputZipFile, CancellationToken cancellationToken)
     {
-        var countryIpRanges = await ParseIp2LocationCrv(crvStream, cancellationToken).VhConfigureAwait();
+        var countryIpRanges = await ParseIp2LocationCrv(crvStream, cancellationToken).Vhc();
 
         // Building the IpGroups directory structure
         VhLogger.Instance.LogDebug("Building the optimized Ip2Location archive...");
@@ -57,7 +57,7 @@ public class Ip2LocationDbParser
 
     public static async Task BuildLocalIpLocationDb(Stream crvStream, string outputFile, CancellationToken cancellationToken)
     {
-        var countries = await ParseIp2LocationCrv(crvStream, cancellationToken).VhConfigureAwait();
+        var countries = await ParseIp2LocationCrv(crvStream, cancellationToken).Vhc();
 
         // Building the IpGroups directory structure
         VhLogger.Instance.LogDebug("Building the optimized Ip2Location archive...");
@@ -85,7 +85,7 @@ public class Ip2LocationDbParser
         using var streamReader = new StreamReader(ipLocationsCrvStream);
         while (!streamReader.EndOfStream) {
             cancellationToken.ThrowIfCancellationRequested();
-            var line = (await streamReader.ReadLineAsync(cancellationToken).VhConfigureAwait()) ?? "";
+            var line = (await streamReader.ReadLineAsync(cancellationToken).Vhc()) ?? "";
             var items = line.Replace("\"", "").Split(',');
             if (items.Length != 4)
                 continue;

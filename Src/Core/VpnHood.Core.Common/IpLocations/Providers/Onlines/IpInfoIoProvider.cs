@@ -61,9 +61,9 @@ public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string? a
         // get json from the service provider
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
         requestMessage.Headers.Add("User-Agent", userAgent);
-        var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken).VhConfigureAwait();
+        var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken).Vhc();
         responseMessage.EnsureSuccessStatusCode();
-        var json = await responseMessage.Content.ReadAsStringAsync(cancellationToken).VhConfigureAwait();
+        var json = await responseMessage.Content.ReadAsStringAsync(cancellationToken).Vhc();
         var apiLocation = JsonUtils.Deserialize<ApiLocation>(json);
 
         var regionName = apiLocation.RegionName?.ToUpper() == "NA" || string.IsNullOrEmpty(apiLocation.CityName)

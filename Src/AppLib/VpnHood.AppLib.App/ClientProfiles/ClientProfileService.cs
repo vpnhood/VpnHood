@@ -248,7 +248,7 @@ public class ClientProfileService
 
         // wait for any of the tasks to complete successfully
         while (tasks.Count > 0) {
-            var finishedTask = await Task.WhenAny(tasks).VhConfigureAwait();
+            var finishedTask = await Task.WhenAny(tasks).Vhc();
             if (await finishedTask)
                 return true;
 
@@ -271,7 +271,7 @@ public class ClientProfileService
         try {
             var encryptedServerToken = await VhUtils
                 .RunTask(httpClient.GetStringAsync(url), TimeSpan.FromSeconds(20), cts.Token)
-                .VhConfigureAwait();
+                .Vhc();
 
             // update token
             lock (_updateByUrlLock) {

@@ -202,7 +202,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
             // let's throw error in ipv4
             var natName = $"{AdapterName}Nat";
             await ExecutePowerShellCommandAsync($"New-NetNat -Name {natName} -InternalIPInterfaceAddressPrefix {ipNetwork}",
-                cancellationToken).VhConfigureAwait();
+                cancellationToken).Vhc();
         }
         else {
             var natName = $"{AdapterName}NatIpV6";

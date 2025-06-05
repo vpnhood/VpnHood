@@ -60,7 +60,7 @@ public class AndroidUiProvider : IAppUiProvider
                 RequestPostNotificationId);
             var res = await _requestPostNotificationsCompletionTask.Task
                 .WaitAsync(cancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
             return res == Permission.Granted;
         }
         finally {

@@ -60,7 +60,7 @@ public static class IPAddressUtil
 
         var ipV4Task = GetPrivateIpAddress(AddressFamily.InterNetwork);
         var ipV6Task = GetPrivateIpAddress(AddressFamily.InterNetworkV6);
-        await Task.WhenAll(ipV4Task, ipV6Task).VhConfigureAwait();
+        await Task.WhenAll(ipV4Task, ipV6Task).Vhc();
 
         if (ipV4Task.Result != null) ret.Add(ipV4Task.Result);
         if (ipV6Task.Result != null) ret.Add(ipV6Task.Result);
@@ -88,7 +88,7 @@ public static class IPAddressUtil
 
             foreach (var pingTask in pingTasks) {
                 try {
-                    if ((await pingTask.VhConfigureAwait()).Status == IPStatus.Success)
+                    if ((await pingTask.Vhc()).Status == IPStatus.Success)
                         return true;
                 }
                 catch {
@@ -108,8 +108,8 @@ public static class IPAddressUtil
         var ret = new List<IPAddress>();
 
         //note: api.ipify.org may not work in parallel call
-        var ipV4Task = await GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken).VhConfigureAwait();
-        var ipV6Task = await GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken).VhConfigureAwait();
+        var ipV4Task = await GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken).Vhc();
+        var ipV6Task = await GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken).Vhc();
 
         if (ipV4Task != null) ret.Add(ipV4Task);
         if (ipV6Task != null) ret.Add(ipV6Task);
@@ -153,7 +153,7 @@ public static class IPAddressUtil
         httpClient.DefaultRequestHeaders.Add("User-Agent", "VpnHood");
         var content = await httpClient
             .GetStringAsync(url, cancellationToken)
-            .VhConfigureAwait();
+            .Vhc();
 
         // Split the response into lines
         var lines = content.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
@@ -177,7 +177,7 @@ public static class IPAddressUtil
         httpClient.DefaultRequestHeaders.Add("User-Agent", "VpnHood");
         var json = await httpClient
             .GetStringAsync(url, cancellationToken)
-            .VhConfigureAwait();
+            .Vhc();
 
         var document = JsonDocument.Parse(json);
         var ipString = document.RootElement.GetProperty("ip").GetString();

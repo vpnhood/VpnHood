@@ -27,9 +27,9 @@ public class LocalIpLocationProvider : IIpLocationProvider
     public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         var ipAddress =
-            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken).VhConfigureAwait() ??
+            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken).Vhc() ??
             await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken)
-                .VhConfigureAwait() ??
+                .Vhc() ??
             throw new Exception("Could not find any public ip address.");
 
         var ipLocation = await GetLocation(ipAddress, cancellationToken);

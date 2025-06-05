@@ -76,7 +76,7 @@ public class VpnServiceHost : IDisposable
             if (!forceReconnect && client is { State: ClientState.Connected or ClientState.Connecting or ClientState.Waiting }) {
                 // user must disconnect first
                 VhLogger.Instance.LogWarning("VpnService connection is already in progress.");
-                await Context.TryWriteConnectionInfo(client.ToConnectionInfo(_apiController), _connectCts.Token).VhConfigureAwait();
+                await Context.TryWriteConnectionInfo(client.ToConnectionInfo(_apiController), _connectCts.Token).Vhc();
                 return false;
             }
 

@@ -9,7 +9,7 @@ public static class TrackerExtensions
     public static async Task<bool> TryTrack(this ITracker tracker, TrackEvent trackEvent)
     {
         try {
-            await tracker.Track(trackEvent).VhConfigureAwait();
+            await tracker.Track(trackEvent).Vhc();
             return true;
         }
         catch (Exception ex) {
@@ -21,7 +21,7 @@ public static class TrackerExtensions
     public static async Task<bool> TryTrack(this ITracker tracker, IEnumerable<TrackEvent> trackEvents)
     {
         try {
-            await tracker.Track(trackEvents).VhConfigureAwait();
+            await tracker.Track(trackEvents).Vhc();
             return true;
         }
         catch (Exception ex) {

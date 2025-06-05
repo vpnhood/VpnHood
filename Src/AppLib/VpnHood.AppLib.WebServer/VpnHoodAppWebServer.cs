@@ -163,7 +163,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
                 new JsonSerializerOptions {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                 }))
-            .VhConfigureAwait();
+            .Vhc();
     }
 
     // manage SPA fallback

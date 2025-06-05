@@ -49,7 +49,7 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         Dictionary<string, object?>? parameters, HttpRequestMessage request, CancellationToken cancellationToken)
     {
         try {
-            return await base.HttpSendAsync<T>(urlPart, parameters, request, cancellationToken).VhConfigureAwait();
+            return await base.HttpSendAsync<T>(urlPart, parameters, request, cancellationToken).Vhc();
         }
         catch (Exception ex) when (VhUtils.IsConnectionRefusedException(ex)) {
             IsMaintenanceMode = true;

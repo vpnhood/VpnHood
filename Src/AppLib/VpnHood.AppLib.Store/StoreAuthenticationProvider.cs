@@ -77,7 +77,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
                 ApiKey = await authenticationClient
                     .RefreshTokenAsync(new RefreshTokenRequest { RefreshToken = ApiKey.RefreshToken.Value })
-                    .VhConfigureAwait();
+                    .Vhc();
                 return ApiKey;
             }
         }
@@ -91,13 +91,13 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
                 throw new Exception("UI context is not available.");
 
             var idToken = _authenticationExternalProvider != null
-                ? await _authenticationExternalProvider.SignIn(uiContext, true).VhConfigureAwait()
+                ? await _authenticationExternalProvider.SignIn(uiContext, true).Vhc()
                 : null;
 
             if (!string.IsNullOrWhiteSpace(idToken)) {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
                 ApiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken })
-                    .VhConfigureAwait();
+                    .Vhc();
                 return ApiKey;
             }
         }
@@ -113,8 +113,8 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
         if (_authenticationExternalProvider == null)
             throw new InvalidOperationException("Google sign in is not supported.");
 
-        var idToken = await _authenticationExternalProvider.SignIn(uiContext, false).VhConfigureAwait();
-        await SignInToVpnHoodStore(idToken, true).VhConfigureAwait();
+        var idToken = await _authenticationExternalProvider.SignIn(uiContext, false).Vhc();
+        await SignInToVpnHoodStore(idToken, true).Vhc();
     }
 
     public async Task SignOut(IUiContext uiContext)
@@ -125,7 +125,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
 
 
         if (_authenticationExternalProvider != null)
-            await _authenticationExternalProvider.SignOut(uiContext).VhConfigureAwait();
+            await _authenticationExternalProvider.SignOut(uiContext).Vhc();
     }
 
     private async Task SignInToVpnHoodStore(string idToken, bool autoSignUp)
@@ -137,12 +137,12 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
                         IdToken = idToken,
                         RefreshTokenType = RefreshTokenType.None
                     })
-                .VhConfigureAwait();
+                .Vhc();
         }
         // store must update its nuget package to support UnregisteredUserException
         catch (ApiException ex) {
             if (ex.ExceptionTypeName == "UnregisteredUserException" && autoSignUp)
-                await SignUpToVpnHoodStore(idToken).VhConfigureAwait();
+                await SignUpToVpnHoodStore(idToken).Vhc();
             else
                 throw;
         }
@@ -156,7 +156,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
                     IdToken = idToken,
                     RefreshTokenType = RefreshTokenType.None
                 })
-            .VhConfigureAwait();
+            .Vhc();
     }
 
     public void Dispose()
@@ -174,11 +174,11 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            var apiKey = await accountProvider.TryGetApiKey(AppUiContext.Context).VhConfigureAwait();
+            var apiKey = await accountProvider.TryGetApiKey(AppUiContext.Context).Vhc();
             request.Headers.Authorization = apiKey != null
                 ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value)
                 : null;
-            return await base.SendAsync(request, cancellationToken).VhConfigureAwait();
+            return await base.SendAsync(request, cancellationToken).Vhc();
         }
     }
 }

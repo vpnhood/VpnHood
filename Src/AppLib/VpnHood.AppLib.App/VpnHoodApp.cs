@@ -466,15 +466,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // protect double call
             if (!IsIdle) {
                 VhLogger.Instance.LogInformation("Disconnecting due to user request to connect...");
-                await Disconnect().VhConfigureAwait();
+                await Disconnect().Vhc();
             }
 
             // wait for previous connection to be disposed
-            using var connectLock = await _connectLock.LockAsync(cancellationToken).VhConfigureAwait();
+            using var connectLock = await _connectLock.LockAsync(cancellationToken).Vhc();
 
             // protect double call. Disconnect if still in progress
             if (!IsIdle)
-                await Disconnect().VhConfigureAwait();
+                await Disconnect().Vhc();
 
             // create connect cancellation token
             _connectCts = new CancellationTokenSource();
@@ -560,11 +560,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
             if (connectOptions.Diagnose) // log country name
                 VhLogger.Instance.LogInformation("CountryCode: {CountryCode}",
-                    VhUtils.TryGetCountryName(await GetClientCountryCodeAsync(allowVpnServer:false, allowCache: true, linkedCts.Token).VhConfigureAwait()));
+                    VhUtils.TryGetCountryName(await GetClientCountryCodeAsync(allowVpnServer:false, allowCache: true, linkedCts.Token).Vhc()));
 
             // request features for the first time
             VhLogger.Instance.LogDebug("Requesting Features ...");
-            await RequestFeatures(linkedCts.Token).VhConfigureAwait();
+            await RequestFeatures(linkedCts.Token).Vhc();
 
             // connect
             VhLogger.Instance.LogInformation("Client is Connecting ...");
@@ -575,7 +575,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     accessCode: clientProfile.AccessCode,
                     allowUpdateToken: true,
                     cancellationToken: linkedCts.Token)
-                .VhConfigureAwait();
+                .Vhc();
         }
         catch (Exception ex) {
             ReportError(ex, "Could not connect.");
@@ -609,7 +609,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (_autoDiagnose && ex is not SessionException &&
                 _appPersistState is { HasDisconnectedByUser: false, HasDiagnoseRequested: false }) {
                 VhLogger.Instance.LogDebug("Start checking client network...");
-                await Diagnoser.CheckPureNetwork(orgCancellationToken).VhConfigureAwait();
+                await Diagnoser.CheckPureNetwork(orgCancellationToken).Vhc();
             }
 
             // throw ConnectionTimeoutException if timeout
@@ -692,15 +692,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // start diagnose if requested
             if (_appPersistState.HasDiagnoseRequested) {
-                var hostEndPoints = await token.ServerToken.ResolveHostEndPoints(cancellationToken).VhConfigureAwait();
-                await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).VhConfigureAwait();
-                await Diagnoser.CheckPureNetwork(cancellationToken).VhConfigureAwait();
-                await _vpnServiceManager.Start(clientOptions, cancellationToken).VhConfigureAwait();
-                await Diagnoser.CheckVpnNetwork(cancellationToken).VhConfigureAwait();
+                var hostEndPoints = await token.ServerToken.ResolveHostEndPoints(cancellationToken).Vhc();
+                await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).Vhc();
+                await Diagnoser.CheckPureNetwork(cancellationToken).Vhc();
+                await _vpnServiceManager.Start(clientOptions, cancellationToken).Vhc();
+                await Diagnoser.CheckVpnNetwork(cancellationToken).Vhc();
             }
             // start client
             else {
-                await _vpnServiceManager.Start(clientOptions, cancellationToken).VhConfigureAwait();
+                await _vpnServiceManager.Start(clientOptions, cancellationToken).Vhc();
             }
 
             var connectionInfo = ConnectionInfo;
@@ -742,7 +742,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 !_appPersistState.HasDisconnectedByUser &&
                 allowUpdateToken &&
                 !VhUtils.IsNullOrEmpty(token.ServerToken.Urls) &&
-                await ClientProfileService.UpdateServerTokenByUrls(token, cancellationToken).VhConfigureAwait()) {
+                await ClientProfileService.UpdateServerTokenByUrls(token, cancellationToken).Vhc()) {
                 // reconnect using the new token
                 VhLogger.Instance.LogInformation("Reconnecting using the new token..");
                 token = ClientProfileService.GetToken(token.TokenId);
@@ -753,7 +753,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                         accessCode: accessCode,
                         allowUpdateToken: false,
                         cancellationToken: cancellationToken)
-                    .VhConfigureAwait();
+                    .Vhc();
                 return;
             }
 
@@ -787,7 +787,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 VhLogger.Instance.LogInformation("Prompting for Quick Launch...");
                 Settings.IsQuickLaunchEnabled =
                     await Services.UiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, cancellationToken)
-                        .VhConfigureAwait();
+                        .Vhc();
             }
             catch (Exception ex) {
                 ReportError(ex, "Could not add QuickLaunch.");
@@ -804,7 +804,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 VhLogger.Instance.LogInformation("Prompting for notifications...");
                 Settings.IsNotificationEnabled =
                     await Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, cancellationToken)
-                        .VhConfigureAwait();
+                        .Vhc();
             }
             catch (Exception ex) {
                 ReportError(ex, "Could not enable Notification.");
@@ -875,7 +875,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // try to get current ip location by local service
-        var ipLocation = await TryGetCurrentIpLocationByLocal(cancellationToken).VhConfigureAwait();
+        var ipLocation = await TryGetCurrentIpLocationByLocal(cancellationToken).Vhc();
         if (ipLocation != null)
             return ipLocation;
 
@@ -911,7 +911,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             var compositeProvider = new CompositeIpLocationProvider(VhLogger.Instance, providers,
                 providerTimeout: _locationServiceTimeout);
-            var ipLocation = await compositeProvider.GetCurrentLocation(cancellationToken).VhConfigureAwait();
+            var ipLocation = await compositeProvider.GetCurrentLocation(cancellationToken).Vhc();
             SettingsService.AppSettings.ClientIpLocation = ipLocation;
             SettingsService.AppSettings.Save();
             return ipLocation;
@@ -943,7 +943,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public async Task TryDisconnect()
     {
         try {
-            await Disconnect().VhConfigureAwait();
+            await Disconnect().Vhc();
         }
         catch (Exception e) {
             Console.WriteLine(e);
@@ -959,10 +959,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _isDisconnecting = true;
             _appPersistState.HasDisconnectedByUser = true;
 
-            await _connectCts.CancelAsync().VhConfigureAwait();
+            await _connectCts.CancelAsync().Vhc();
             _connectCts.Dispose();
 
-            await _vpnServiceManager.TryStop().VhConfigureAwait();
+            await _vpnServiceManager.TryStop().Vhc();
 
         }
         finally {
@@ -991,18 +991,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async Task VersionCheck(bool force = false, TimeSpan? delay = null, CancellationToken cancellationToken = default)
     {
-        using var lockAsync = await _versionCheckLock.LockAsync(cancellationToken).VhConfigureAwait();
+        using var lockAsync = await _versionCheckLock.LockAsync(cancellationToken).Vhc();
         if (!force && _appPersistState.UpdateIgnoreTime + _versionCheckInterval > DateTime.Now)
             return;
 
         // wait for delay. Useful for waiting for ad to send its tracker
         if (delay != null)
-            await Task.Delay(delay.Value, cancellationToken).VhConfigureAwait();
+            await Task.Delay(delay.Value, cancellationToken).Vhc();
 
         // check version by app container
         try {
             if (AppUiContext.Context != null && Services.UpdaterProvider != null &&
-                await Services.UpdaterProvider.Update(AppUiContext.RequiredContext).VhConfigureAwait()) {
+                await Services.UpdaterProvider.Update(AppUiContext.RequiredContext).Vhc()) {
                 VersionCheckPostpone();
                 return;
             }
@@ -1012,13 +1012,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // check version by UpdateInfoUrl
-        _versionCheckResult = await VersionCheckByUpdateInfo().VhConfigureAwait();
+        _versionCheckResult = await VersionCheckByUpdateInfo().Vhc();
 
         // save the result
         if (_versionCheckResult != null)
             await File.WriteAllTextAsync(VersionCheckFilePath,
                     JsonSerializer.Serialize(_versionCheckResult), cancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
 
         else if (File.Exists(VersionCheckFilePath))
             File.Delete(VersionCheckFilePath);
@@ -1033,7 +1033,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogDebug("Retrieving the latest publish info...");
 
             using var httpClient = new HttpClient();
-            var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl).VhConfigureAwait();
+            var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl).Vhc();
             var latestPublishInfo = JsonUtils.Deserialize<PublishInfo>(publishInfoJson);
             VersionStatus versionStatus;
 
@@ -1096,8 +1096,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 throw new InvalidOperationException("Could not use internal location service because it is disabled.");
 
             // do not use cache and server country code, maybe client on satellite, and they need to split their own country IPs 
-            var countryCode = await GetClientCountryCodeAsync(allowVpnServer: false, allowCache: false, cancellationToken).VhConfigureAwait();
-            var countryIpRanges = await IpRangeLocationProvider.GetIpRanges(countryCode).VhConfigureAwait();
+            var countryCode = await GetClientCountryCodeAsync(allowVpnServer: false, allowCache: false, cancellationToken).Vhc();
+            var countryIpRanges = await IpRangeLocationProvider.GetIpRanges(countryCode).Vhc();
             VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}", VhUtils.TryGetCountryName(countryCode));
             ipRanges = ipRanges.Exclude(countryIpRanges);
         }
@@ -1280,7 +1280,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public async ValueTask DisposeAsync()
     {
         if (_disconnectOnDispose && ConnectionState.CanDisconnect())
-            await Disconnect().VhConfigureAwait();
+            await Disconnect().Vhc();
 
         Dispose();
     }

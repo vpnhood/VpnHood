@@ -37,7 +37,7 @@ public class JobRunner
     private async Task RunJobs()
     {
         while (true) {
-            await Task.Delay(Interval).VhConfigureAwait();
+            await Task.Delay(Interval).Vhc();
 
             // Periodic cleanup of dead jobs based on CleanupTimeSpan
             var now = FastDateTime.Now;
@@ -47,7 +47,7 @@ public class JobRunner
             }
 
             // Run jobs
-            await RunJobsInternal().VhConfigureAwait();
+            await RunJobsInternal().Vhc();
         }
 
         // ReSharper disable once FunctionNeverReturns
@@ -60,7 +60,7 @@ public class JobRunner
 
         // run jobs
         foreach (var jobCallback in jobCallbacks) {
-            await _semaphore.WaitAsync().VhConfigureAwait();
+            await _semaphore.WaitAsync().Vhc();
             _ = RunJob(jobCallback);
         }
     }
@@ -68,7 +68,7 @@ public class JobRunner
     private async Task RunJob(Job job)
     {
         try {
-            await job.RunNow().VhConfigureAwait();
+            await job.RunNow().Vhc();
         }
         catch (ObjectDisposedException) {
             Remove(job);

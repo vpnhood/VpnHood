@@ -251,7 +251,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // connect to host
         var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint);
-        await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, linkedCts.Token).VhConfigureAwait();
+        await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, linkedCts.Token).Vhc();
 
         // create and add the channel
         var channel = new ProxyChannel(channelId, orgTcpClientStream,
@@ -312,8 +312,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
 
             // Establish first connection and create a session
-            var hostEndPoint = await _serverFinder.FindReachableServerAsync(linkedCts.Token).VhConfigureAwait();
-            await ConnectInternal(hostEndPoint, true, linkedCts.Token).VhConfigureAwait();
+            var hostEndPoint = await _serverFinder.FindReachableServerAsync(linkedCts.Token).Vhc();
+            await ConnectInternal(hostEndPoint, true, linkedCts.Token).Vhc();
 
             // Create Tcp Proxy Host
             _clientHost.Start();
@@ -499,7 +499,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (UseUdpChannel)
                 AddUdpChannel();
             else
-                await AddTcpPacketChannel(cancellationToken).VhConfigureAwait();
+                await AddTcpPacketChannel(cancellationToken).Vhc();
         }
         catch (Exception ex) {
             if (!_disposed)
@@ -585,7 +585,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             };
 
             using var requestResult =
-                await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();
+                await SendRequest<HelloResponse>(request, cancellationToken).Vhc();
 
             var helloResponse = requestResult.Response;
             if (helloResponse.ClientPublicAddress is null)
@@ -750,7 +750,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 : _maxPacketChannelCount;
 
             // manage datagram channels
-            await ManagePacketChannels(cancellationToken).VhConfigureAwait();
+            await ManagePacketChannels(cancellationToken).Vhc();
 
             // prepare packet capture
             // Set a default to capture & drop the packets if the server does not provide a network
@@ -784,7 +784,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // init new connector
             _connectorService?.Dispose();
             var redirectedEndPoint = await _serverFinder.FindBestRedirectedServerAsync(ex.RedirectHostEndPoints.ToArray(), cancellationToken);
-            await ConnectInternal(redirectedEndPoint, false, cancellationToken).VhConfigureAwait();
+            await ConnectInternal(redirectedEndPoint, false, cancellationToken).Vhc();
         }
     }
 
@@ -798,8 +798,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         State = ClientState.WaitingForAd;
 
         var adResult = adRequirement switch {
-            AdRequirement.Flexible => await AdService.TryShowInterstitial(sessionId.ToString(), cancellationToken).VhConfigureAwait(),
-            AdRequirement.Rewarded => await AdService.ShowRewarded(sessionId.ToString(), cancellationToken).VhConfigureAwait(),
+            AdRequirement.Flexible => await AdService.TryShowInterstitial(sessionId.ToString(), cancellationToken).Vhc(),
+            AdRequirement.Rewarded => await AdService.ShowRewarded(sessionId.ToString(), cancellationToken).Vhc(),
             _ => null
         };
 
@@ -815,7 +815,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             SessionKey = SessionKey
         };
 
-        var requestResult = await SendRequest<SessionResponse>(request, cancellationToken).VhConfigureAwait();
+        var requestResult = await SendRequest<SessionResponse>(request, cancellationToken).Vhc();
         StreamPacketChannel? channel = null;
         try {
             // find timespan
@@ -855,7 +855,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         try {
             // create a connection and send the request 
-            var requestResult = await ConnectorService.SendRequest<T>(request, cancellationToken).VhConfigureAwait();
+            var requestResult = await ConnectorService.SendRequest<T>(request, cancellationToken).Vhc();
             _sessionStatus?.Update(requestResult.Response.AccessUsage);
 
             // client is disposed meanwhile
@@ -927,7 +927,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     SessionKey = SessionKey
                 },
                 linkedCts.Token)
-            .VhConfigureAwait();
+            .Vhc();
     }
 
     private async Task SendByeRequest(CancellationToken cancellationToken)
@@ -940,7 +940,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     SessionKey = SessionKey
                 },
                 cancellationToken)
-            .VhConfigureAwait();
+            .Vhc();
 
         requestResult.ClientStream.DisposeWithoutReuse();
     }
@@ -960,7 +960,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Error in connection that caused disposal.");
         LastException = ex;
-        await DisposeAsync().VhConfigureAwait();
+        await DisposeAsync().Vhc();
     }
 
     private readonly AsyncLock _disposeLock = new();
@@ -984,7 +984,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (_clientUsageTracker != null) {
             using var cts = new CancellationTokenSource(byeTimeout);
             var cancellationToken = cts.Token;
-            await VhUtils.TryInvokeAsync(null, () => _clientUsageTracker.Report(cancellationToken)).VhConfigureAwait();
+            await VhUtils.TryInvokeAsync(null, () => _clientUsageTracker.Report(cancellationToken)).Vhc();
         }
 
         // Sending Bye if the session was active before disposal

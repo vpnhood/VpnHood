@@ -18,9 +18,9 @@ public class CloudflareLocationProvider(HttpClient httpClient, string userAgent)
         // get data from the service provider
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
         requestMessage.Headers.Add("User-Agent", userAgent);
-        var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken).VhConfigureAwait();
+        var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken).Vhc();
         responseMessage.EnsureSuccessStatusCode();
-        var content = await responseMessage.Content.ReadAsStringAsync(cancellationToken).VhConfigureAwait();
+        var content = await responseMessage.Content.ReadAsStringAsync(cancellationToken).Vhc();
 
         // Split the response into lines
         var lines = content.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);

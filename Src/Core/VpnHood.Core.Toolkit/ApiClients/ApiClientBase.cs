@@ -51,7 +51,7 @@ public class ApiClientBase : ApiClientCommon
         IReadOnlyDictionary<string, IEnumerable<string>> headers, CancellationToken cancellationToken)
     {
         if (ReadResponseAsString) {
-            var responseText = await response.Content.ReadAsStringAsync(cancellationToken).VhConfigureAwait();
+            var responseText = await response.Content.ReadAsStringAsync(cancellationToken).Vhc();
             try {
                 var typedBody = JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
                 return new HttpResult<T?> { ResponseMessage = response, Object = typedBody, Text = responseText };
@@ -63,9 +63,9 @@ public class ApiClientBase : ApiClientCommon
         }
 
         try {
-            await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).VhConfigureAwait();
+            await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).Vhc();
             var typedBody = await JsonSerializer
-                .DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).VhConfigureAwait();
+                .DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).Vhc();
             return new HttpResult<T?> { ResponseMessage = response, Object = typedBody, Text = string.Empty };
         }
         catch (JsonException exception) {
@@ -116,7 +116,7 @@ public class ApiClientBase : ApiClientCommon
         CancellationToken cancellationToken = default)
     {
         var res = await HttpSendExAsync<HttpNoResult>(httpMethod, urlPart, parameters, data, cancellationToken)
-            .VhConfigureAwait();
+            .Vhc();
         return res.Text;
     }
 
@@ -124,7 +124,7 @@ public class ApiClientBase : ApiClientCommon
         Dictionary<string, object?>? parameters = null, object? data = null,
         CancellationToken cancellationToken = default)
     {
-        var res = await HttpSendExAsync<T>(httpMethod, urlPart, parameters, data, cancellationToken).VhConfigureAwait();
+        var res = await HttpSendExAsync<T>(httpMethod, urlPart, parameters, data, cancellationToken).Vhc();
         return res.Object;
     }
 
@@ -143,13 +143,13 @@ public class ApiClientBase : ApiClientCommon
         }
 
         // don't return Task as request will be disposed
-        return await HttpSendAsync<T>(urlPart, parameters, request, cancellationToken).VhConfigureAwait();
+        return await HttpSendAsync<T>(urlPart, parameters, request, cancellationToken).Vhc();
     }
 
     protected async Task<string> HttpSendAsync(string urlPart, Dictionary<string, object?>? parameters,
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var res = await HttpSendAsync<HttpNoResult>(urlPart, parameters, request, cancellationToken).VhConfigureAwait();
+        var res = await HttpSendAsync<HttpNoResult>(urlPart, parameters, request, cancellationToken).Vhc();
         return res.Text;
     }
 
@@ -158,7 +158,7 @@ public class ApiClientBase : ApiClientCommon
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
         try {
-            var ret = await HttpSendAsyncImpl<T>(urlPart, parameters, request, cancellationToken).VhConfigureAwait();
+            var ret = await HttpSendAsyncImpl<T>(urlPart, parameters, request, cancellationToken).Vhc();
 
             // report the log
             Logger.LogInformation(LoggerEventId,
@@ -200,12 +200,12 @@ public class ApiClientBase : ApiClientCommon
         }
 
         var client = HttpClient ?? throw new Exception("HttpClient has not been set.");
-        await PrepareRequestAsync(client, request, urlBuilder, cancellationToken).VhConfigureAwait();
+        await PrepareRequestAsync(client, request, urlBuilder, cancellationToken).Vhc();
 
 
         using var response =
             await HttpClientSendAsync(client, request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-                .VhConfigureAwait();
+                .Vhc();
         var headers = response.Headers.ToDictionary(h => h.Key, h => h.Value);
 
         // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
@@ -214,7 +214,7 @@ public class ApiClientBase : ApiClientCommon
                 headers[item.Key] = item.Value;
         }
 
-        await ProcessResponseAsync(client, response, cancellationToken).VhConfigureAwait();
+        await ProcessResponseAsync(client, response, cancellationToken).Vhc();
 
         var status = (int)response.StatusCode;
         if (status is >= 200 and < 300) {
@@ -222,7 +222,7 @@ public class ApiClientBase : ApiClientCommon
                 return new HttpResult<T> { ResponseMessage = response, Object = default!, Text = string.Empty };
 
             var objectResponse =
-                await ReadObjectResponseAsync<T>(response, headers, cancellationToken).VhConfigureAwait();
+                await ReadObjectResponseAsync<T>(response, headers, cancellationToken).Vhc();
             if (objectResponse.Object == null)
                 throw new ApiException("Response was null which was not expected.", status, objectResponse.Text,
                     headers, null);
@@ -231,7 +231,7 @@ public class ApiClientBase : ApiClientCommon
         }
 
         var responseData = response.Content != null
-            ? await response.Content.ReadAsStringAsync(cancellationToken).VhConfigureAwait()
+            ? await response.Content.ReadAsStringAsync(cancellationToken).Vhc()
             : null;
         throw new ApiException("The HTTP status code of the response was not expected (" + status + ").", status,
             responseData, headers, null);

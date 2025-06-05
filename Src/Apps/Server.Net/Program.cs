@@ -8,7 +8,7 @@ internal class Program
     {
         try {
             using var serverApp = new ServerApp();
-            await serverApp.Start(args).VhConfigureAwait();
+            await serverApp.Start(args).Vhc();
         }
         catch (Exception ex) {
             throw new Exception(ex.Message);

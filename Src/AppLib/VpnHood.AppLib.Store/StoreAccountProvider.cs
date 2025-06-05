@@ -23,11 +23,11 @@ public class StoreAccountProvider(
 
         var httpClient = AuthenticationProvider.HttpClient;
         var authenticationClient = new AuthenticationClient(httpClient);
-        var currentUser = await authenticationClient.GetCurrentUserAsync().VhConfigureAwait();
+        var currentUser = await authenticationClient.GetCurrentUserAsync().Vhc();
 
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
         var activeSubscription =
-            await currentVpnUserClient.ListSubscriptionsAsync(storeAppId, false, false).VhConfigureAwait();
+            await currentVpnUserClient.ListSubscriptionsAsync(storeAppId, false, false).Vhc();
         var subscriptionLastOrder = activeSubscription.SingleOrDefault()?.LastOrder;
 
         var appAccount = new AppAccount {
@@ -52,12 +52,12 @@ public class StoreAccountProvider(
         var httpClient = AuthenticationProvider.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
         var accessTokens = await currentVpnUserClient
-            .ListAccessTokensAsync(storeAppId, subscriptionId: Guid.Parse(subscriptionId)).VhConfigureAwait();
+            .ListAccessTokensAsync(storeAppId, subscriptionId: Guid.Parse(subscriptionId)).Vhc();
 
         var accessKeyList = new List<string>();
         foreach (var accessToken in accessTokens) {
             var accessKey = await currentVpnUserClient.GetAccessKeyAsync(storeAppId, accessToken.AccessTokenId)
-                .VhConfigureAwait();
+                .Vhc();
             accessKeyList.Add(accessKey);
         }
 

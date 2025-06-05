@@ -116,8 +116,8 @@ public class Job : IDisposable
             throw new ObjectDisposedException(nameof(Job));
 
         try {
-            await _jobSemaphore.WaitAsync(cancellationToken).VhConfigureAwait();
-            await _jobFunc(cancellationToken).VhConfigureAwait();
+            await _jobSemaphore.WaitAsync(cancellationToken).Vhc();
+            await _jobFunc(cancellationToken).Vhc();
             _currentFailedCount = 0;
             SucceededCount++;
         }

@@ -56,7 +56,7 @@ public class Diagnoser
         // check ping
         var pingRes = await DiagnoseUtil
             .CheckPing(ipEndPoints.Select(x => x.Address).ToArray(), NsTimeout, cancellationToken)
-            .VhConfigureAwait();
+            .Vhc();
 
         if (pingRes == null)
             VhLogger.Instance.LogInformation("At least an endpoint has been pinged successfully.");
@@ -68,15 +68,15 @@ public class Diagnoser
     public async Task CheckPureNetwork(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("Checking the Internet connection...");
-        if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true, cancellationToken).VhConfigureAwait())
+        if (!await NetworkCheck(successOnAny: true, checkPing: true, checkUdp: true, cancellationToken).Vhc())
             throw new NoInternetException();
     }
 
     public async Task CheckVpnNetwork(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("Checking the Vpn Connection...");
-        await Task.Delay(2000, cancellationToken).VhConfigureAwait(); // connections can not be established on android immediately
-        if (!await NetworkCheck(successOnAny: false, checkPing: true, checkUdp: true, cancellationToken).VhConfigureAwait())
+        await Task.Delay(2000, cancellationToken).Vhc(); // connections can not be established on android immediately
+        if (!await NetworkCheck(successOnAny: false, checkPing: true, checkUdp: true, cancellationToken).Vhc())
             throw new NoStableVpnException();
         VhLogger.Instance.LogInformation("VPN has been established and tested successfully.");
     }
@@ -99,7 +99,7 @@ public class Diagnoser
         var taskHttps = DiagnoseUtil.CheckHttps(TestHttpUris, HttpTimeout, cancellationToken);
 
         try {
-            await Task.WhenAll(taskPing, taskUdp, taskHttps).VhConfigureAwait();
+            await Task.WhenAll(taskPing, taskUdp, taskHttps).Vhc();
             var hasInternet = successOnAny
                 ? taskPing.Result == null || taskUdp.Result == null || taskHttps.Result == null
                 : taskPing.Result == null && taskUdp.Result == null && taskHttps.Result == null;

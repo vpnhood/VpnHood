@@ -47,7 +47,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
                 : ReadInternalAsync(buffer, cancellationToken);
 
             // await needed to dispose tokenSource
-            return await _readTask.VhConfigureAwait();
+            return await _readTask.Vhc();
         }
         catch (Exception ex) {
             CloseByError(ex);
@@ -63,7 +63,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
 
         // If there are no more in the chunks read the next chunk
         if (_remainingChunkBytes == 0) {
-            _remainingChunkBytes = await ReadChunkHeaderAsync(cancellationToken).VhConfigureAwait();
+            _remainingChunkBytes = await ReadChunkHeaderAsync(cancellationToken).Vhc();
 
             // check if the stream has been closed
             if (_remainingChunkBytes == 0) {
@@ -75,7 +75,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
         // Determine the number of bytes to read based on the remaining chunk size and buffer length
         var bytesToRead = Math.Min(_remainingChunkBytes, buffer.Length);
         var bytesRead = await SourceStream.ReadAsync(buffer[..bytesToRead], cancellationToken)
-            .VhConfigureAwait();
+            .Vhc();
 
         // if bytesRead is 0 and _remainingChunkBytes is not 0, it means the stream has been closed unexpectedly
         if (bytesRead == 0)
@@ -102,7 +102,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
                 : WriteInternalAsync(buffer, cancellationToken);
 
             // await needed to dispose tokenSource
-            await _writeTask.VhConfigureAwait();
+            await _writeTask.Vhc();
         }
         catch (Exception ex) {
             CloseByError(ex);
@@ -122,7 +122,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
                 : WriteInternalPreserverAsync(buffer, cancellationToken);
 
             // await needed to dispose tokenSource
-            await _writeTask.VhConfigureAwait();
+            await _writeTask.Vhc();
         }
         catch (Exception ex) {
             CloseByError(ex);
@@ -137,7 +137,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
 
         // create the chunk header
         BinaryPrimitives.WriteInt32LittleEndian(buffer.Span, buffer.Length - PreserveWriteBufferLength);
-        await SourceStream.WriteAsync(buffer, cancellationToken).VhConfigureAwait();
+        await SourceStream.WriteAsync(buffer, cancellationToken).Vhc();
         WroteChunkCount++;
     }
 
@@ -154,7 +154,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
         buffer.CopyTo(fullBuffer[ChunkHeaderLength..]);
 
         // Copy write buffer to output
-        await SourceStream.WriteAsync(fullBuffer, cancellationToken).VhConfigureAwait();
+        await SourceStream.WriteAsync(fullBuffer, cancellationToken).Vhc();
         WroteChunkCount++;
     }
 
@@ -169,7 +169,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
     {
         // read chunk header by cryptor
         try {
-            await SourceStream.ReadExactAsync(_readChunkHeaderBuffer, cancellationToken).VhConfigureAwait();
+            await SourceStream.ReadExactAsync(_readChunkHeaderBuffer, cancellationToken).Vhc();
         }
         catch (EndOfStreamException) {
             VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
@@ -218,13 +218,13 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
             using var timeoutCts = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
 
             // wait for write to finish and write the terminator
-            await _writeTask.AsTask().WaitAsync(timeoutCts.Token).VhConfigureAwait();
+            await _writeTask.AsTask().WaitAsync(timeoutCts.Token).Vhc();
 
             // Finish the stream by sending the chunk terminator and 
-            await WriteInternalAsync(ReadOnlyMemory<byte>.Empty, timeoutCts.Token).VhConfigureAwait();
+            await WriteInternalAsync(ReadOnlyMemory<byte>.Empty, timeoutCts.Token).Vhc();
 
             // wait for the current read task to finish
-            await _readTask.AsTask().WaitAsync(timeoutCts.Token).VhConfigureAwait();
+            await _readTask.AsTask().WaitAsync(timeoutCts.Token).Vhc();
             
             // wait for end of stream
             await DiscardRemainingStreamData(timeoutCts.Token);
@@ -244,7 +244,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
         Memory<byte> buffer = new byte[500];
         var trashedLength = 0;
         while (true) {
-            var read = await ReadInternalAsync(buffer, cancellationToken).VhConfigureAwait();
+            var read = await ReadInternalAsync(buffer, cancellationToken).Vhc();
             if (read == 0)
                 break;
 
@@ -279,8 +279,8 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
     {
         // just ignore exceptions during close stream as close stream already handles logging
         if (CanReuse)
-            await VhUtils.TryInvokeAsync(null, CloseStreamAsync).VhConfigureAwait();
+            await VhUtils.TryInvokeAsync(null, CloseStreamAsync).Vhc();
 
-        await base.DisposeAsync().VhConfigureAwait();
+        await base.DisposeAsync().Vhc();
     }
 }

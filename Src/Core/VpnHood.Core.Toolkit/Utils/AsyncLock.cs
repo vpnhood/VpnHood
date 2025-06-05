@@ -44,13 +44,13 @@ public sealed class AsyncLock
 
     public async Task<ILockAsyncResult> LockAsync(CancellationToken cancellationToken = default)
     {
-        await _semaphoreSlimEx.WaitAsync(cancellationToken).VhConfigureAwait();
+        await _semaphoreSlimEx.WaitAsync(cancellationToken).Vhc();
         return new SemaphoreLock(_semaphoreSlimEx, true, null);
     }
 
     public async Task<ILockAsyncResult> LockAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
     {
-        var succeeded = await _semaphoreSlimEx.WaitAsync(timeout, cancellationToken).VhConfigureAwait();
+        var succeeded = await _semaphoreSlimEx.WaitAsync(timeout, cancellationToken).Vhc();
         return new SemaphoreLock(_semaphoreSlimEx, succeeded, null);
     }
 
@@ -69,7 +69,7 @@ public sealed class AsyncLock
         }
 
         try {
-            var succeeded = await semaphoreSlim.WaitAsync(timeout, cancellationToken).VhConfigureAwait();
+            var succeeded = await semaphoreSlim.WaitAsync(timeout, cancellationToken).Vhc();
             return new SemaphoreLock(semaphoreSlim, succeeded, name);
         }
         catch {

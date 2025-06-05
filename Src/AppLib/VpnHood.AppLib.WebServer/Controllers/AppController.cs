@@ -19,13 +19,13 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Patch, "/configure")]
     public async Task<AppData> Configure(ConfigParams configParams)
     {
-        configParams = await HttpContext.GetRequestDataAsync<ConfigParams>().VhConfigureAwait();
+        configParams = await HttpContext.GetRequestDataAsync<ConfigParams>().Vhc();
         App.Services.CultureProvider.AvailableCultures = configParams.AvailableCultures;
         if (configParams.Strings != null) 
             App.Resources.Strings = configParams.Strings;
 
         App.UpdateUi();
-        return await GetConfig().VhConfigureAwait();
+        return await GetConfig().Vhc();
     }
 
     [Route(HttpVerbs.Get, "/config")]
@@ -60,7 +60,7 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Put, "/ip-filters")]
     public async Task SetIpFilters(IpFilters ipFilters)
     {
-        ipFilters = await HttpContext.GetRequestDataAsync<IpFilters>().VhConfigureAwait();
+        ipFilters = await HttpContext.GetRequestDataAsync<IpFilters>().Vhc();
         App.SettingsService.IpFilterSettings.AdapterIpFilterExcludes = ipFilters.AdapterIpFilterExcludes;
         App.SettingsService.IpFilterSettings.AdapterIpFilterIncludes = ipFilters.AdapterIpFilterIncludes;
         App.SettingsService.IpFilterSettings.AppIpFilterExcludes = ipFilters.AppIpFilterExcludes;
@@ -135,7 +135,7 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Put, "/user-settings")]
     public async Task SetUserSettings(UserSettings userSettings)
     {
-        userSettings = await HttpContext.GetRequestDataAsync<UserSettings>().VhConfigureAwait();
+        userSettings = await HttpContext.GetRequestDataAsync<UserSettings>().Vhc();
         App.SettingsService.AppSettings.UserSettings = userSettings;
         App.SettingsService.Save();
     }
@@ -145,7 +145,7 @@ internal class AppController : WebApiController, IAppController
     {
         Response.ContentType = MimeType.PlainText;
         var stream = HttpContext.OpenResponseStream(); // do not dispose, EmbedIO will do it
-        await App.CopyLogToStream(stream).VhConfigureAwait();
+        await App.CopyLogToStream(stream).Vhc();
         HttpContext.SetHandled();
         return ""; // already wrote to stream
     }

@@ -52,7 +52,7 @@ internal class AppCompositeAdService
         if (_adProviderItems.Length == 0)
             throw new Exception("There is no AdService registered in this app.");
 
-        using var lockAsync = await _loadAdLock.LockAsync(cancellationToken).VhConfigureAwait();
+        using var lockAsync = await _loadAdLock.LockAsync(cancellationToken).Vhc();
         if (!forceReload && !ShouldLoadAd())
             return;
 
@@ -70,7 +70,7 @@ internal class AppCompositeAdService
                 VhLogger.Instance.LogInformation("Trying to load ad. ItemName: {ItemName}", adProviderItem.Name);
                 using var timeoutCts = new CancellationTokenSource(loadAdTimeout);
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-                await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).VhConfigureAwait();
+                await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).Vhc();
                 _loadedAdProviderItem = adProviderItem;
                 return;
             }
@@ -80,7 +80,7 @@ internal class AppCompositeAdService
 
             // do not catch if parent cancel the operation
             catch (Exception ex) {
-                await VerifyActiveUi().VhConfigureAwait();
+                await VerifyActiveUi().Vhc();
                 VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.",
                     adProviderItem.Name);
             }
@@ -100,7 +100,7 @@ internal class AppCompositeAdService
 
         // wait for the UI to be active
         for (var i = 0; i < 3; i++) {
-            await Task.Delay(250).VhConfigureAwait();
+            await Task.Delay(250).Vhc();
             if (AppUiContext.Context?.IsActive == true)
                 return;
         }
@@ -119,7 +119,7 @@ internal class AppCompositeAdService
         // show the ad
         try {
             VhLogger.Instance.LogInformation("Trying to show ad. ItemName: {ItemName}", _loadedAdProviderItem.Name);
-            await _loadedAdProviderItem.AdProvider.ShowAd(uiContext, customData, cancellationToken).VhConfigureAwait();
+            await _loadedAdProviderItem.AdProvider.ShowAd(uiContext, customData, cancellationToken).Vhc();
             VhLogger.Instance.LogDebug("Showing ad has been completed. {ItemName}", _loadedAdProviderItem.Name);
             await VerifyActiveUi(false); // some ad provider may not raise exception on minimize
             return _loadedAdProviderItem.Name;

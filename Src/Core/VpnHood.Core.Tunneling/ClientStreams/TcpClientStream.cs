@@ -77,7 +77,7 @@ public class TcpClientStream : IClientStream
             if (_reuseCallback == null) throw new InvalidOperationException("Can not reuse the stream when reuseCallback is null.");
             if (Stream is not ChunkStream chunkStream) throw new InvalidOperationException("Can not reuse the stream when stream is not ChunkStream.");
 
-            await Reuse(chunkStream, _reuseCallback).VhConfigureAwait();
+            await Reuse(chunkStream, _reuseCallback).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.TcpLife, ex,
@@ -94,7 +94,7 @@ public class TcpClientStream : IClientStream
 
     private async Task Reuse(ChunkStream chunkStream, ReuseCallback reuseCallback)
     {
-        var newStream = await chunkStream.CreateReuse().VhConfigureAwait();
+        var newStream = await chunkStream.CreateReuse().Vhc();
         lock (_reuseLock) {
             if (_disposed)
                 throw new ObjectDisposedException(GetType().Name);

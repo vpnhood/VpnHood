@@ -30,7 +30,7 @@ internal class ClientUsageTracker : IDisposable
 
     public async ValueTask Report(CancellationToken cancellationToken)
     {
-        using var lockAsync = await _reportLock.LockAsync(TimeSpan.Zero, cancellationToken).VhConfigureAwait();
+        using var lockAsync = await _reportLock.LockAsync(TimeSpan.Zero, cancellationToken).Vhc();
         if (!lockAsync.Succeeded)
             return;
 
@@ -42,7 +42,7 @@ internal class ClientUsageTracker : IDisposable
         var trackEvent = ClientTrackerBuilder.BuildUsage(usage, requestCount - _lastRequestCount,
             connectionCount - _lastConnectionCount);
 
-        await _tracker.Track([trackEvent], cancellationToken).VhConfigureAwait();
+        await _tracker.Track([trackEvent], cancellationToken).Vhc();
         _lastTraffic = traffic;
         _lastRequestCount = requestCount;
         _lastConnectionCount = connectionCount;

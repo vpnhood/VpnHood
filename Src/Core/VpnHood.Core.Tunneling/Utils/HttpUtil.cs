@@ -18,7 +18,7 @@ public static class HttpUtil
             var readBuffer = new byte[1];
             var lfCounter = 0;
             while (lfCounter < 4) {
-                var bytesRead = await stream.ReadAsync(readBuffer, 0, 1, cancellationToken).VhConfigureAwait();
+                var bytesRead = await stream.ReadAsync(readBuffer, 0, 1, cancellationToken).Vhc();
                 if (bytesRead == 0)
                     return memStream.Length == 0
                         ? memStream // connection has been closed gracefully before sending anything
@@ -29,7 +29,7 @@ public static class HttpUtil
                 else
                     lfCounter = 0;
 
-                await memStream.WriteAsync(readBuffer, 0, 1, cancellationToken).VhConfigureAwait();
+                await memStream.WriteAsync(readBuffer, 0, 1, cancellationToken).Vhc();
 
                 if (memStream.Length > maxLength)
                     throw new Exception("HTTP header is too big.");
@@ -39,7 +39,7 @@ public static class HttpUtil
             return memStream;
         }
         catch {
-            await memStream.DisposeAsync().VhConfigureAwait();
+            await memStream.DisposeAsync().Vhc();
             throw;
         }
     }

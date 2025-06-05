@@ -44,7 +44,7 @@ public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions opt
         // send buffer
         await transmitter
             .SendAsync(RemoteEndPoint, _sessionId, sessionCryptoPosition, buffer, _protocolVersion)
-            .VhConfigureAwait();
+            .Vhc();
     }
 
     protected override async ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
@@ -60,7 +60,7 @@ public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions opt
 
                 // flush buffer if this packet does not fit
                 if (bufferIndex > UdpChannelTransmitter.HeaderLength && bufferIndex + packetBytes.Length > _buffer.Length) {
-                    await SendBuffer(_buffer[..bufferIndex]).VhConfigureAwait();
+                    await SendBuffer(_buffer[..bufferIndex]).Vhc();
                     bufferIndex = UdpChannelTransmitter.HeaderLength;
                 }
 
@@ -79,7 +79,7 @@ public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions opt
 
             // send remaining buffer
             if (bufferIndex > UdpChannelTransmitter.HeaderLength) {
-                await SendBuffer(_buffer[..bufferIndex]).VhConfigureAwait();
+                await SendBuffer(_buffer[..bufferIndex]).Vhc();
             }
         }
         catch (Exception ex) when(ex is OperationCanceledException or ObjectDisposedException) {

@@ -54,13 +54,13 @@ public class AppAccountService
 
     public async Task Refresh(bool updateCurrentClientProfile = false)
     {
-        _appAccount = await _accountProvider.GetAccount().VhConfigureAwait();
+        _appAccount = await _accountProvider.GetAccount().Vhc();
         Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
-        await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount)).VhConfigureAwait();
+        await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount)).Vhc();
 
         // update profiles
         var accessKeys = _appAccount?.SubscriptionId != null
-            ? await ListAccessKeys(_appAccount.SubscriptionId).VhConfigureAwait()
+            ? await ListAccessKeys(_appAccount.SubscriptionId).Vhc()
             : [];
 
         // update profiles

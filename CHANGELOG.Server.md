@@ -1,4 +1,8 @@
 # v7.1.710
+* Improve: Speed and stability
+* Update: Move libraries to .NET 8.0
+
+# v7.1.710
 * Fix: IPv6
 * Fix: Memory leak
 * Improve: Drastically improve performance and stability

@@ -43,7 +43,6 @@ $serverRepoDir = Join-Path $vhDir "VpnHood.App.Server";
 Push-Location -Path $serverRepoDir;
 
 gh release delete "$versionTag" --cleanup-tag --yes;
-Write-Host "*** zzzz" -BackgroundColor Blue;
 gh release create "$versionTag" `
 	--title "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `

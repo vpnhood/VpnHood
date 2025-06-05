@@ -12,7 +12,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Device.Droid;
 
-public class AndroidDevice : Singleton<AndroidDevice>, IDevice
+public class AndroidDevice : IDevice
 {
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
     private const int RequestVpnPermissionId = 20100;
@@ -183,6 +183,5 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 
     public void Dispose()
     {
-        DisposeSingleton();
     }
 }

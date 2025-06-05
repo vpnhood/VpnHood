@@ -1268,7 +1268,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _vpnServiceManager.Dispose();
         _vpnServiceManager.StateChanged -= VpnService_StateChanged;
 
-        await _device.DisposeAsync().VhConfigureAwait();
+        _device.Dispose();
         LogService.Dispose();
         DisposeSingleton();
         AppUiContext.OnChanged -= ActiveUiContext_OnChanged;

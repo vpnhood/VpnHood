@@ -212,7 +212,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (_state == value) return;
             _state = value; //must set before raising the event; 
             VhLogger.Instance.LogInformation("Client state is changed. NewState: {NewState}", State);
-            Task.Run(() => StateChanged?.Invoke(this, EventArgs.Empty), CancellationToken.None);
+            Task.Run(() => {
+                StateChanged?.Invoke(this, EventArgs.Empty);
+                if (value == ClientState.Disposed)
+                    StateChanged = null; //no more event will be raised after disposed
+            }, CancellationToken.None);
         }
     }
 
@@ -1064,6 +1068,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         ConnectorService.Dispose();
 
         State = ClientState.Disposed; //everything is clean
+
+        // Changing state fire events in a task, so we should not do it immediately after disposing
+        // StateChanged = null; 
         VhLogger.Instance.LogInformation("Bye Bye!");
     }
 

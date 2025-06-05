@@ -64,11 +64,9 @@ public class TestDevice(
         VpnService.OnConnect();
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        if (VpnService != null)
-            await VpnService.DisposeAsync();
-
+        VpnService?.Dispose();
         VpnService = null;
     }
 

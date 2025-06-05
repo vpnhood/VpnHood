@@ -46,11 +46,11 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         switch (action) {
             // signal start command
             case null or "android.net.VpnService" or "connect":
-                _vpnServiceHost.Connect(forceReconnect: action == "connect");
+                _ = _vpnServiceHost.TryConnect(forceReconnect: action == "connect");
                 return StartCommandResult.Sticky;
 
             case "disconnect":
-                _vpnServiceHost.Disconnect();
+                _ = _vpnServiceHost.TryDisconnect();
                 return StartCommandResult.NotSticky;
 
             default:
@@ -58,7 +58,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         }
     }
 
-    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings)
+    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
         return new AndroidVpnAdapter(this, new AndroidVpnAdapterSettings {
             AdapterName = adapterSettings.AdapterName, 
@@ -97,9 +97,10 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     public override void OnDestroy()
     {
         VhLogger.Instance.LogDebug("VpnService is destroying.");
-        _ = _vpnServiceHost.DisposeAsync();
 
         StopNotification();
+        
+        _vpnServiceHost.Dispose();
         base.OnDestroy();
     }
 }

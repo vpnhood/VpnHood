@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Client.Device;
 
-public interface IDevice : IAsyncDisposable
+public interface IDevice : IDisposable
 {
     string VpnServiceConfigFolder { get; }
     bool IsTv { get; }

@@ -181,9 +181,8 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         connectivityManager.BindProcessToNetwork(network);
     }
 
-    public ValueTask DisposeAsync()
+    public void Dispose()
     {
         DisposeSingleton();
-        return default;
     }
 }

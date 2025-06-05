@@ -273,7 +273,7 @@ public class ClientAppTest : TestAppBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create device
-        await using var testDevice = TestHelper.CreateNullDevice();
+        using var testDevice = TestHelper.CreateNullDevice();
         testDevice.StartServiceDelay = TimeSpan.FromSeconds(100);
 
         // create app

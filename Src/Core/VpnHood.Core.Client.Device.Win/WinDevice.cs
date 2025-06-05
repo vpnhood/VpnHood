@@ -61,10 +61,9 @@ public class WinDevice(string storageFolder, bool isDebugMode) : IDevice
         throw new NotSupportedException();
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        if (_vpnService != null)
-            await _vpnService.DisposeAsync();
+        _vpnService?.Dispose();
         _vpnService = null;
     }
 }

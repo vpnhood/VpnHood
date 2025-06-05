@@ -7,7 +7,7 @@ using VpnHood.Core.VpnAdapters.WinTun;
 
 namespace VpnHood.Core.Client.Device.Win;
 
-public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
+public class WinVpnService : IVpnServiceHandler, IDisposable
 {
     private readonly VpnServiceHost _vpnServiceHost;
     public bool IsDisposed { get; private set; }
@@ -20,18 +20,17 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
 
     public void OnConnect()
     {
-        _vpnServiceHost.Connect();
+        _ = _vpnServiceHost.TryConnect();
     }
 
     public void OnDisconnect()
     {
-        _vpnServiceHost.Disconnect();
+        _ = _vpnServiceHost.TryDisconnect();
     }
 
-    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings)
+    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
-        var debugData1 = _vpnServiceHost.ClientOptions?.DebugData1;
-        IVpnAdapter vpnAdapter = debugData1?.Contains("/windivert", StringComparison.OrdinalIgnoreCase) is true
+        IVpnAdapter vpnAdapter = debugData?.Contains("/windivert", StringComparison.OrdinalIgnoreCase) is true
             ? new WinDivertVpnAdapter(new WinDivertVpnAdapterSettings {
                 AdapterName = adapterSettings.AdapterName,
                 AutoRestart = adapterSettings.AutoRestart,
@@ -64,13 +63,14 @@ public class WinVpnService : IVpnServiceHandler, IAsyncDisposable
 
     public void StopSelf()
     {
-        _ = DisposeAsync();
+        Dispose();
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
         if (IsDisposed) return;
-        await _vpnServiceHost.DisposeAsync();
         IsDisposed = true;
+
+        _vpnServiceHost.Dispose();
     }
 }

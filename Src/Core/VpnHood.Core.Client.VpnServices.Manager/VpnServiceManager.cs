@@ -59,7 +59,7 @@ public class VpnServiceManager : IDisposable
 
     public ConnectionInfo ConnectionInfo {
         get {
-            _ = UpdateConnectionInfo(false, CancellationToken.None);
+            _ = TryUpdateConnectionInfo(false, CancellationToken.None);
             return _connectionInfo;
         }
     }
@@ -195,6 +195,16 @@ public class VpnServiceManager : IDisposable
 
     public Task ForceUpdateState(CancellationToken cancellationToken) => UpdateConnectionInfo(true, cancellationToken);
 
+    private async Task<ConnectionInfo> TryUpdateConnectionInfo(bool force, CancellationToken cancellationToken)
+    {
+        try {
+            return await UpdateConnectionInfo(force, cancellationToken);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not update connection info.");
+            return _connectionInfo;
+        }
+    }
 
     private readonly AsyncLock _connectionInfoLock = new();
     private async Task<ConnectionInfo> UpdateConnectionInfo(bool force, CancellationToken cancellationToken)

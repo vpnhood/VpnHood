@@ -3,28 +3,26 @@ using System.Diagnostics;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
-using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 
-public class VpnServiceHost : IAsyncDisposable
+public class VpnServiceHost : IDisposable
 {
-    private readonly object _connectLock = new();
     private readonly ApiController _apiController;
     private readonly IVpnServiceHandler _vpnServiceHandler;
     private readonly ISocketFactory _socketFactory;
     private readonly LogService? _logService;
-    private bool _isDisposed;
-    private readonly TimeSpan _killServiceTimeout = TimeSpan.FromSeconds(120);
+    private bool _disposed;
+    private CancellationTokenSource _connectCts = new();
 
     internal VpnHoodClient? Client { get; private set; }
     internal VpnHoodClient RequiredClient => Client ?? throw new InvalidOperationException("Client is not initialized.");
     internal VpnServiceContext Context { get; }
-    public ClientOptions? ClientOptions { get; private set; }
 
     public VpnServiceHost(
         string configFolder,
@@ -35,74 +33,91 @@ public class VpnServiceHost : IAsyncDisposable
         Context = new VpnServiceContext(configFolder);
         _socketFactory = socketFactory;
         _vpnServiceHandler = vpnServiceHandler;
-        _apiController = new ApiController(this);
         _logService = withLogger ? new LogService(Context.LogFilePath) : null;
         VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
 
-        // write initial state including api endpoint and key
-        _ = Context.WriteConnectionInfo(BuildConnectionInfo(ClientState.None, null));
+        // start apiController
+        _apiController = new ApiController(this);
         VhLogger.Instance.LogInformation("VpnServiceHost has been initiated...");
     }
 
-    private void VpnHoodClient_StateChanged(object sender, EventArgs e)
+    private void VpnHoodClient_StateChanged(object? sender, EventArgs e)
     {
-        var client = (VpnHoodClient)sender;
-        if (client != Client)
+        var client = (VpnHoodClient?)sender;
+        if (client == null)
             return;
 
         // update last sate
         VhLogger.Instance.LogDebug("VpnService update the connection info file. State:{State}, LastError: {LastError}",
             client.State, client.LastException?.Message);
-        _ = Context.WriteConnectionInfo(client.ToConnectionInfo(_apiController));
+        _ = Context.TryWriteConnectionInfo(client.ToConnectionInfo(_apiController), _connectCts.Token);
 
         // no client in progress, let's stop the service
-        // handler is responsible to dispose this service
-        if (client.State is ClientState.Disposed or ClientState.Disconnecting) {
-            VhLogger.Instance.LogDebug("VpnServiceHost requests to stop the notification.");
+        if (client.State is ClientState.Disposed) {
+            // client is disposed or disconnecting, stop the notification and service
+            VhLogger.Instance.LogDebug("VpnServiceHost requests to stop the notification and service.");
             _vpnServiceHandler.StopNotification();
+            _vpnServiceHandler.StopSelf(); // it may be a red flag for android if we don't stop the service after stopping the notification
+            return;
         }
-        else {
-            _vpnServiceHandler.ShowNotification(client.ToConnectionInfo(_apiController));
-        }
+
+        // show notification
+        _vpnServiceHandler.ShowNotification(client.ToConnectionInfo(_apiController));
     }
 
-    private void VpnHoodClient_StateChangedForDisposal(object sender, EventArgs e)
+    public async Task<bool> TryConnect(bool forceReconnect = false)
     {
-        var client = (VpnHoodClient)sender;
-        if (client.State != ClientState.Disposed) return;
-        client.StateChanged -= VpnHoodClient_StateChangedForDisposal;
+        if (_disposed)
+            return false;
 
-        // let the service stop if there is no client
-        Task.Delay(_killServiceTimeout).ContinueWith(_ => {
-            if (Client == client) {
-                VhLogger.Instance.LogDebug("VpnServiceHost requests to StopSelf.");
-                _vpnServiceHandler.StopSelf();
+        try {
+            // handle previous client
+            var client = Client;
+            if (!forceReconnect && client is { State: ClientState.Connected or ClientState.Connecting or ClientState.Waiting }) {
+                // user must disconnect first
+                VhLogger.Instance.LogWarning("VpnService connection is already in progress.");
+                await Context.TryWriteConnectionInfo(client.ToConnectionInfo(_apiController), _connectCts.Token).VhConfigureAwait();
+                return false;
             }
-        });
+
+            // cancel previous connection if exists
+            _connectCts.Cancel();
+            _connectCts.Dispose();
+            if (client != null) {
+                VhLogger.Instance.LogWarning("VpnService killing the previous connection.");
+
+                // this prevents the previous connection to overwrite the state or stop the service
+                client.StateChanged -= VpnHoodClient_StateChanged;
+
+                // ReSharper disable once MethodHasAsyncOverload
+                // Don't call disposeAsync here. We don't need graceful shutdown.
+                // Graceful shutdown should be handled by disconnect or by client itself.
+                client.Dispose();
+                Client = null;
+            }
+
+            // start connecting 
+            _connectCts = new CancellationTokenSource();
+            await Connect(_connectCts.Token);
+            return true;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "VpnServiceHost could not establish the connection.");
+            return false;
+        }
     }
 
-    public void Connect(bool forceReconnect = false)
+    private async Task Connect(CancellationToken cancellationToken)
     {
-        if (_isDisposed)
-            throw new ObjectDisposedException(nameof(VpnServiceHost));
+        try {
+            var clientOptions = Context.ReadClientOptions();
+            _logService?.Start(clientOptions.LogServiceOptions);
 
-        // handle previous client
-        var client = Client;
-        if (!forceReconnect && client is { State: ClientState.Connected or ClientState.Connecting or ClientState.Waiting }) {
-            // user must disconnect first
-            VhLogger.Instance.LogWarning("VpnService connection is already in progress.");
+            // restart the log service
+            VhLogger.Instance.LogInformation("VpnService is connecting... ProcessId: {ProcessId}", Process.GetCurrentProcess().Id);
 
-            // update last state
-            _ = Context.WriteConnectionInfo(client.ToConnectionInfo(_apiController));
-            return; 
-        }
-
-        var clientOptions = Context.ReadClientOptions();
-
-        // create a connection info for notification
-        var connectInfo = client != null
-            ? client.ToConnectionInfo(_apiController)
-            : new ConnectionInfo {
+            // create a connection info for notification
+            var connectInfo = new ConnectionInfo {
                 ClientState = ClientState.Initializing,
                 ApiKey = _apiController.ApiKey,
                 ApiEndPoint = _apiController.ApiEndPoint,
@@ -113,37 +128,10 @@ public class VpnServiceHost : IAsyncDisposable
                 HasSetByService = true
             };
 
-        // show notification as soon as possible
-        _vpnServiceHandler.ShowNotification(connectInfo);
+            // show notification as soon as possible
+            _vpnServiceHandler.ShowNotification(connectInfo);
 
-        // run the connection in background
-        Task.Run(() => {
-            lock (_connectLock) {
-                ConnectTask(clientOptions);
-            }
-        });
-    }
-
-    private void ConnectTask(ClientOptions clientOptions)
-    {
-        VhLogger.Instance.LogDebug("VpnService is connecting... ProcessId: {ProcessId}", Process.GetCurrentProcess().Id);
-
-        // handle previous client
-        var client = Client;
-        if (client != null) {
-            lock (client) {
-
-                // before VpnHoodClient disposed, don't let the old connection overwrite the state or stop the service
-                client.StateChanged -= VpnHoodClient_StateChanged;
-                _ = client.DisposeAsync(); //let dispose in the background
-                Client = null;
-            }
-        }
-
-        // create service
-        try {
             // read client options and start log service
-            ClientOptions = clientOptions;
             _logService?.Start(clientOptions.LogServiceOptions);
 
             // sni is sensitive, must be explicitly enabled
@@ -167,44 +155,31 @@ public class VpnServiceHost : IAsyncDisposable
                 Blocking = false,
                 AutoDisposePackets = true
             };
-            Client = new VpnHoodClient(
+
+            var client = new VpnHoodClient(
                 vpnAdapter: clientOptions.UseNullCapture
-                    ? new NullVpnAdapter(autoDisposePackets: true, blocking:false)
-                    : _vpnServiceHandler.CreateAdapter(adapterSetting),
+                    ? new NullVpnAdapter(autoDisposePackets: true, blocking: false)
+                    : _vpnServiceHandler.CreateAdapter(adapterSetting, clientOptions.DebugData1),
                 tracker: tracker,
                 socketFactory: _socketFactory,
                 options: clientOptions
             );
-            Client.StateChanged += VpnHoodClient_StateChanged;
-            Client.StateChanged += VpnHoodClient_StateChangedForDisposal;
+            client.StateChanged += VpnHoodClient_StateChanged;
+            Client = client;
 
             // show notification.
-            _vpnServiceHandler.ShowNotification(Client.ToConnectionInfo(_apiController));
+            _vpnServiceHandler.ShowNotification(client.ToConnectionInfo(_apiController));
 
             // let connect in the background
             // ignore cancellation because it will be cancelled by disconnect or dispose
-            _ = Client.Connect(CancellationToken.None);
+            await client.Connect(cancellationToken);
         }
         catch (Exception ex) {
-            _ = Context.WriteConnectionInfo(BuildConnectionInfo(ClientState.Disposed, ex));
+            await Context.TryWriteConnectionInfo(_apiController.BuildConnectionInfo(ClientState.Disposed, ex), _connectCts.Token);
             _vpnServiceHandler.StopNotification();
             _vpnServiceHandler.StopSelf();
+            throw;
         }
-    }
-
-    private ConnectionInfo BuildConnectionInfo(ClientState clientState, Exception? ex)
-    {
-        var connectionInfo = new ConnectionInfo {
-            SessionInfo = null,
-            SessionStatus = null,
-            ApiEndPoint = _apiController.ApiEndPoint,
-            ApiKey = _apiController.ApiKey,
-            ClientState = clientState,
-            Error = ex?.ToApiError(),
-            HasSetByService = true
-        };
-
-        return connectionInfo;
     }
 
     private static ITrackerFactory? TryCreateTrackerFactory(string? assemblyQualifiedName)
@@ -226,32 +201,43 @@ public class VpnServiceHost : IAsyncDisposable
         }
     }
 
-    public void Disconnect()
+    public async Task TryDisconnect()
     {
-        if (_isDisposed)
-            throw new ObjectDisposedException(nameof(VpnServiceHost));
+        if (_disposed)
+            return;
 
-        // let dispose in the background
-        _ = Client?.DisposeAsync();
+        try {
+            // let dispose in the background
+            var client = Client;
+            if (client != null)
+                await client.DisposeAsync();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not disconnect the client.");
+        }
     }
-    
-    public async ValueTask DisposeAsync()
+
+    public void Dispose()
     {
-        if (_isDisposed) return;
+        if (_disposed) return;
+        _disposed = true;
+
+        // cancel connection if exists
         VhLogger.Instance.LogDebug("VpnService Host is destroying...");
+        _connectCts.Cancel();
+        _connectCts.Dispose();
 
         // dispose client
         var client = Client;
         if (client != null) {
-            await client.DisposeAsync();
             client.StateChanged -= VpnHoodClient_StateChanged; // after VpnHoodClient disposed
+            client.Dispose();
         }
 
         // dispose api controller
         _apiController.Dispose();
         VhLogger.Instance.LogDebug("VpnService has been destroyed.");
         _logService?.Dispose();
-        _isDisposed = true;
     }
 }
 

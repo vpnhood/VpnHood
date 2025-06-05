@@ -6,7 +6,7 @@ using VpnHood.Test.Providers;
 namespace VpnHood.Test.Device;
 
 public class TestVpnService
-    : IVpnServiceHandler, IAsyncDisposable
+    : IVpnServiceHandler, IDisposable
 {
     private readonly Func<VpnAdapterSettings, IVpnAdapter> _vpnAdapterFactory;
     private readonly VpnServiceHost _vpnServiceHost;
@@ -25,15 +25,15 @@ public class TestVpnService
     // it is not async to simulate real environment
     public void OnConnect()
     {
-        _vpnServiceHost.Connect();
+        _ = _vpnServiceHost.TryConnect();
     }
 
     public void OnStop()
     {
-        _vpnServiceHost.Disconnect();
+        _ = _vpnServiceHost.TryDisconnect();
     }
 
-    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings)
+    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
         CurrentVpnAdapter = _vpnAdapterFactory(adapterSettings);
         CurrentVpnAdapter.Disposed += (_, _) => CurrentVpnAdapter = null;
@@ -50,13 +50,14 @@ public class TestVpnService
 
     public void StopSelf()
     {
-        _ = DisposeAsync();
+        Dispose();
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
         if (IsDisposed) return;
-        await _vpnServiceHost.DisposeAsync();
         IsDisposed = true;
+
+        _vpnServiceHost.Dispose();
     }
 }

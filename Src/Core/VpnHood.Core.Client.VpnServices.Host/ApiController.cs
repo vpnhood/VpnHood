@@ -1,6 +1,7 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Toolkit.ApiClients;
@@ -11,6 +12,7 @@ namespace VpnHood.Core.Client.VpnServices.Host;
 
 internal class ApiController : IDisposable
 {
+    private int _disposed;
     private readonly VpnServiceHost _vpnHoodService;
     private readonly TcpListener _tcpListener;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -23,20 +25,23 @@ internal class ApiController : IDisposable
     {
         _vpnHoodService = vpnHoodService;
         _tcpListener = new TcpListener(IPAddress.Loopback, 0);
-        _ = Start();
+        _ = Start(_cancellationTokenSource.Token);
     }
 
 
-    private async Task Start()
+    private async Task Start(CancellationToken cancellationToken)
     {
         try {
             _tcpListener.Start();
             ApiEndPoint = (IPEndPoint)_tcpListener.LocalEndpoint;
+
+            // write initial connection info after setting ApiEndPoint
+            await _vpnHoodService.Context.TryWriteConnectionInfo(BuildConnectionInfo(ClientState.None, null), cancellationToken);
             VhLogger.Instance.LogInformation("VpnService host Listener has started. EndPoint: {EndPoint}", ApiEndPoint);
 
-            while (!_cancellationTokenSource.IsCancellationRequested) {
+            while (!cancellationToken.IsCancellationRequested) {
                 var client = await _tcpListener.AcceptTcpClientAsync();
-                _ = ProcessClientAsync(client, _cancellationTokenSource.Token);
+                _ = ProcessClientAsync(client, cancellationToken);
             }
         }
         catch (Exception ex) {
@@ -44,9 +49,9 @@ internal class ApiController : IDisposable
                 VhLogger.Instance.LogError(ex, "VpnService host Listener has stopped.");
         }
         finally {
-            _cancellationTokenSource.Cancel();
             _tcpListener.Stop();
             VhLogger.Instance.LogDebug("VpnService host Listener has been stopped. EndPoint: {EndPoint}", ApiEndPoint);
+            Dispose();
         }
     }
 
@@ -142,7 +147,7 @@ internal class ApiController : IDisposable
     {
         var connectionInfo = _vpnHoodService.Client?.ToConnectionInfo(this);
         return connectionInfo != null ?
-            _vpnHoodService.Context.WriteConnectionInfo(connectionInfo)
+            _vpnHoodService.Context.TryWriteConnectionInfo(connectionInfo, cancellationToken)
             : Task.CompletedTask;
     }
 
@@ -179,8 +184,22 @@ internal class ApiController : IDisposable
         return VpnHoodClient.AdService.SendRewardedAdResult(request.AdResult.AdData, cancellationToken);
     }
 
+    public ConnectionInfo BuildConnectionInfo(ClientState clientState, Exception? ex)
+    {
+        var connectionInfo = new ConnectionInfo {
+            SessionInfo = null,
+            SessionStatus = null,
+            ApiEndPoint = ApiEndPoint,
+            ApiKey = ApiKey,
+            ClientState = clientState,
+            Error = ex?.ToApiError(),
+            HasSetByService = true
+        };
 
-    private int _disposed;
+        return connectionInfo;
+    }
+
+
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 1)

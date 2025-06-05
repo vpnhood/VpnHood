@@ -9,7 +9,7 @@ public class FileLogger(string filePath, bool includeScopes = true, bool autoFlu
 {
     private const int DefaultBufferSize = 1024;
     private readonly object _lock = new();
-    private StreamWriter? _streamWriter = new(
+    private readonly StreamWriter _streamWriter = new(
         new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite),
         Encoding.UTF8, DefaultBufferSize);
 
@@ -19,9 +19,9 @@ public class FileLogger(string filePath, bool includeScopes = true, bool autoFlu
         var text = FormatLog(logLevel, eventId, state, exception, formatter);
         lock (_lock) {
             try {
-                _streamWriter?.WriteLine(text);
+                _streamWriter.WriteLine(text);
                 if (autoFlush || logLevel >= LogLevel.Error)
-                    _streamWriter?.Flush();
+                    _streamWriter.Flush();
             }
             catch (Exception ex) {
                 Console.WriteLine($"Error: Could not write the log. {ex.Message}");
@@ -32,12 +32,8 @@ public class FileLogger(string filePath, bool includeScopes = true, bool autoFlu
     public void Dispose()
     {
         lock (_lock) {
-            if (_streamWriter == null)
-                return;
-
             _streamWriter.Flush();
             _streamWriter.Dispose();
-            _streamWriter = null;
         }
     }
 }

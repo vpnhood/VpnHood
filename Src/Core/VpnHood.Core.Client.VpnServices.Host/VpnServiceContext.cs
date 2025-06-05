@@ -23,16 +23,18 @@ internal class VpnServiceContext(string configFolder)
 
 
     private readonly AsyncLock _connectionInfoLock = new();
-    public async Task WriteConnectionInfo(ConnectionInfo connectionInfo)
+    public async Task<bool> TryWriteConnectionInfo(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
-        using var scopeLock = await _connectionInfoLock.LockAsync();
+        using var scopeLock = await _connectionInfoLock.LockAsync(cancellationToken);
         var json = JsonSerializer.Serialize(connectionInfo);
 
         try {
-            await FileUtils.WriteAllTextRetryAsync(StatusFilePath, json, timeout: TimeSpan.FromSeconds(2));
+            await FileUtils.WriteAllTextRetryAsync(StatusFilePath, json, timeout: TimeSpan.FromSeconds(2), cancellationToken: cancellationToken);
+            return true;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not save connection info to file. FilePath: {FilePath}", StatusFilePath);
+            return false;
         }
     }
 

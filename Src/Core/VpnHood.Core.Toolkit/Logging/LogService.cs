@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Core.Toolkit.Logging;
 
@@ -23,10 +24,16 @@ public class LogService(string logFilePath) : IDisposable
             if (!options.LogEventNames.Contains("*"))
                 LogEvents = LogEvents.Concat(["*"]).ToArray();
         }
+
+        // report logger to VhLogger
+        VhLogger.Instance.LogDebug("LogService has started. Options: {Options}", 
+            JsonSerializer.Serialize(options));
     }
 
     public void Stop()
     {
+        VhLogger.Instance.LogDebug("LogService is stopping...");
+
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
         foreach (var loggerProvider in _loggerProviders)
             loggerProvider.Dispose();

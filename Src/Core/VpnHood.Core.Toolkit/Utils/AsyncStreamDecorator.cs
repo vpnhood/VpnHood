@@ -72,6 +72,7 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
         await base.DisposeAsync();
 
         // the base class does not call Dispose(bool) so we need to do it manually
+        // ReSharper disable once MethodHasAsyncOverload
         Dispose(true);
     }
 

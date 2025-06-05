@@ -15,8 +15,19 @@ public class Singleton<T> where T : Singleton<T>
         _instance = (T?)this;
     }
 
-    protected void DisposeSingleton()
+    protected virtual void Dispose(bool disposing)
     {
-        _instance = null;
+        if (!IsInit)
+            return;
+
+        if (disposing) {
+            _instance = null;
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 }

@@ -1065,7 +1065,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // dispose ConnectorService
         VhLogger.Instance.LogDebug("Disposing ConnectorService...");
-        ConnectorService.Dispose();
+        _connectorService?.Dispose();
 
         State = ClientState.Disposed; //everything is clean
 

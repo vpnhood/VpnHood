@@ -40,7 +40,7 @@ using VpnHood.Core.Toolkit.Utils;
 namespace VpnHood.AppLib;
 
 public class VpnHoodApp : Singleton<VpnHoodApp>,
-    IAsyncDisposable, IRegionProvider
+    IDisposable, IAsyncDisposable, IRegionProvider
 {
     private const string FileNameLog = "app.log";
     private const string FileNamePersistState = "state.json";
@@ -603,7 +603,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
             // stop client on any error
-            _ = _vpnServiceManager.Stop();
+            _ = _vpnServiceManager.TryStop();
 
             // check no internet connection, use original cancellation token to avoid timeout exception
             if (_autoDiagnose && ex is not SessionException &&
@@ -940,17 +940,35 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         FireConnectionStateChanged();
     }
 
+    public async Task TryDisconnect()
+    {
+        try {
+            await Disconnect().VhConfigureAwait();
+        }
+        catch (Exception e) {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
     public async Task Disconnect()
     {
         VhLogger.Instance.LogInformation("User requested to disconnect.");
-        _isDisconnecting = true;
-        using var workScope = new AutoDispose(() => { _isDisconnecting = false; FireConnectionStateChanged(); });
-        _appPersistState.HasDisconnectedByUser = true;
-        
-        await _connectCts.CancelAsync().VhConfigureAwait();
-        _connectCts.Dispose();
 
-        await _vpnServiceManager.Stop().VhConfigureAwait();
+        try {
+            _isDisconnecting = true;
+            _appPersistState.HasDisconnectedByUser = true;
+
+            await _connectCts.CancelAsync().VhConfigureAwait();
+            _connectCts.Dispose();
+
+            await _vpnServiceManager.TryStop().VhConfigureAwait();
+
+        }
+        finally {
+            _isDisconnecting = false;
+            FireConnectionStateChanged();
+        }
     }
 
     public void VersionCheckPostpone()
@@ -1264,13 +1282,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (_disconnectOnDispose && ConnectionState.CanDisconnect())
             await Disconnect().VhConfigureAwait();
 
-        _versionCheckJob.Dispose();
-        _vpnServiceManager.Dispose();
-        _vpnServiceManager.StateChanged -= VpnService_StateChanged;
+        Dispose();
+    }
 
+    protected override void Dispose(bool disposing)
+    {
+        _vpnServiceManager.StateChanged -= VpnService_StateChanged;
+        _vpnServiceManager.Dispose();
+        _versionCheckJob.Dispose();
         _device.Dispose();
         LogService.Dispose();
-        DisposeSingleton();
         AppUiContext.OnChanged -= ActiveUiContext_OnChanged;
+
+        base.Dispose(disposing);
     }
 }

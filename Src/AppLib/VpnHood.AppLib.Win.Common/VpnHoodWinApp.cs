@@ -18,7 +18,6 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
     private Mutex? _instanceMutex;
     private SystemTray? _sysTray;
     private readonly CommandListener _commandListener;
-    private bool _disposed;
     private readonly string _storageFolder;
     private readonly Icon _appIcon;
     private Icon? _disconnectedIcon;
@@ -252,15 +251,6 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         File.WriteAllText(lastFirewallConfig, exeMark);
     }
 
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-
-        _sysTray?.Dispose();
-        DisposeSingleton();
-    }
-
     public static Uri? RegisterLocalDomain(IPEndPoint hostEndPoint, string localHost)
     {
         // check default ip
@@ -325,6 +315,15 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not register local domain.");
             return null;
+        }
+    }
+    
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) {
+            _commandListener.Dispose();
+            _instanceMutex?.Dispose();
+            _sysTray?.Dispose();
         }
     }
 }

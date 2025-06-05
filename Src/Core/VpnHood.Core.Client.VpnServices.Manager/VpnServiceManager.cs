@@ -98,7 +98,7 @@ public class VpnServiceManager : IDisposable
         // wait for vpn service
         try {
             if (IsStarted)
-                await Stop().VhConfigureAwait();
+                await TryStop().VhConfigureAwait();
 
             _isInitializing = true;
             _vpnServiceUnreachableCount = 0;
@@ -346,11 +346,11 @@ public class VpnServiceManager : IDisposable
     /// Stop the VPN service and disconnect from the server if running. This method is idempotent.
     /// No exception will be thrown
     /// </summary>
-    public async Task Stop(TimeSpan? timeout = null)
+    public async Task<bool> TryStop(TimeSpan? timeout = null)
     {
         // stop the service
         if (!ConnectionInfo.IsStarted())
-            return;
+            return true;
 
         using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
@@ -372,9 +372,11 @@ public class VpnServiceManager : IDisposable
             }
 
             VhLogger.Instance.LogDebug("VpnService has been stopped.");
+            return true;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not stop the VpnService.");
+            return false;
         }
     }
 

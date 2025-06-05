@@ -35,10 +35,12 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     public string SpaHash =>
         _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
 
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        Stop();
-        DisposeSingleton();
+        if (disposing)
+            Stop();
+
+        base.Dispose(disposing);
     }
 
     public static VpnHoodAppWebServer Init(WebServerOptions options)

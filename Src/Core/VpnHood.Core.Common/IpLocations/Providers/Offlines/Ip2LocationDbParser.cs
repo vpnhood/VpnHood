@@ -10,7 +10,8 @@ namespace VpnHood.Core.Common.IpLocations.Providers.Offlines;
 
 public class Ip2LocationDbParser
 {
-    public static async Task UpdateLocalDb(string filePath, string apiKey, bool forIpRange, TimeSpan? interval = null)
+    public static async Task UpdateLocalDb(string filePath, string apiKey, bool forIpRange, TimeSpan? interval = null, 
+        CancellationToken cancellationToken = default)
     {
         interval ??= TimeSpan.FromDays(7);
         if (File.GetLastWriteTime(filePath) > DateTime.Now - interval)
@@ -20,9 +21,9 @@ public class Ip2LocationDbParser
         using var httpClient = new HttpClient();
         // ReSharper disable once StringLiteralTypo
         var url = $"https://www.ip2location.com/download/?token={apiKey}&file=DB1LITECSVIPV6";
-        await using var ipLocationZipNetStream = await httpClient.GetStreamAsync(url);
+        await using var ipLocationZipNetStream = await httpClient.GetStreamAsync(url, cancellationToken);
         using var ipLocationZipStream = new MemoryStream();
-        await ipLocationZipNetStream.CopyToAsync(ipLocationZipStream);
+        await ipLocationZipNetStream.CopyToAsync(ipLocationZipStream, cancellationToken);
         ipLocationZipStream.Position = 0;
 
         // build new ipLocation filePath
@@ -33,14 +34,14 @@ public class Ip2LocationDbParser
 
         await using var crvStream = ipLocationEntry.Open();
         if (forIpRange)
-            await BuildLocalIpRangeLocationDb(crvStream, filePath);
+            await BuildLocalIpRangeLocationDb(crvStream, filePath, cancellationToken);
         else
-            await BuildLocalIpLocationDb(crvStream, filePath);
+            await BuildLocalIpLocationDb(crvStream, filePath, cancellationToken);
     }
 
-    public static async Task BuildLocalIpRangeLocationDb(Stream crvStream, string outputZipFile)
+    public static async Task BuildLocalIpRangeLocationDb(Stream crvStream, string outputZipFile, CancellationToken cancellationToken)
     {
-        var countryIpRanges = await ParseIp2LocationCrv(crvStream).VhConfigureAwait();
+        var countryIpRanges = await ParseIp2LocationCrv(crvStream, cancellationToken).VhConfigureAwait();
 
         // Building the IpGroups directory structure
         VhLogger.Instance.LogDebug("Building the optimized Ip2Location archive...");
@@ -54,19 +55,21 @@ public class Ip2LocationDbParser
         }
     }
 
-    public static async Task BuildLocalIpLocationDb(Stream crvStream, string outputFile)
+    public static async Task BuildLocalIpLocationDb(Stream crvStream, string outputFile, CancellationToken cancellationToken)
     {
-        var countries = await ParseIp2LocationCrv(crvStream).VhConfigureAwait();
+        var countries = await ParseIp2LocationCrv(crvStream, cancellationToken).VhConfigureAwait();
 
         // Building the IpGroups directory structure
         VhLogger.Instance.LogDebug("Building the optimized Ip2Location archive...");
         var ipRangeInfos = new List<LocalIpLocationProvider.IpRangeInfo>();
-        foreach (var country in countries)
+        foreach (var country in countries) {
+            cancellationToken.ThrowIfCancellationRequested();
             ipRangeInfos.AddRange(
                 country.Value.Select(ipRange => new LocalIpLocationProvider.IpRangeInfo {
                     CountryCode = country.Key,
                     IpRanges = ipRange
                 }));
+        }
 
         // write to file
         await using var outputStream = File.Create(outputFile);
@@ -74,13 +77,15 @@ public class Ip2LocationDbParser
         ipRangeLocationProvider.Serialize(outputStream);
     }
 
-    private static async Task<Dictionary<string, List<IpRange>>> ParseIp2LocationCrv(Stream ipLocationsCrvStream)
+    private static async Task<Dictionary<string, List<IpRange>>> ParseIp2LocationCrv(Stream ipLocationsCrvStream, 
+        CancellationToken cancellationToken)
     {
         // extract IpGroups
         var ipGroupIpRanges = new Dictionary<string, List<IpRange>>();
         using var streamReader = new StreamReader(ipLocationsCrvStream);
         while (!streamReader.EndOfStream) {
-            var line = await streamReader.ReadLineAsync().VhConfigureAwait();
+            cancellationToken.ThrowIfCancellationRequested();
+            var line = (await streamReader.ReadLineAsync(cancellationToken).VhConfigureAwait()) ?? "";
             var items = line.Replace("\"", "").Split(',');
             if (items.Length != 4)
                 continue;

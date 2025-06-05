@@ -72,7 +72,7 @@ public class ProxyManager : PassthroughPacketTransport
         }
     }
 
-    private void Proxy_PacketReceived(object sender, IpPacket ipPacket)
+    private void Proxy_PacketReceived(object? sender, IpPacket ipPacket)
     {
         OnPacketReceived(ipPacket);
     }

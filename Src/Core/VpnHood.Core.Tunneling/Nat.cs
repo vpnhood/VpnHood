@@ -14,7 +14,6 @@ public class Nat(bool isDestinationSensitive) : IDisposable
     private bool _disposed;
     private DateTime _lastCleanupTime = FastDateTime.Now;
 
-    public event EventHandler<NatEventArgs>? NatItemRemoved;
     public TimeSpan TcpTimeout { get; set; } = TimeSpan.FromMinutes(15);
     public TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(2);
     public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
@@ -66,14 +65,14 @@ public class Nat(bool isDestinationSensitive) : IDisposable
 
     private void Remove(NatItem natItem)
     {
-        NatItem natItem2;
+        NatItem? natItem2;
         lock (_lockObject) {
             _mapR.Remove(natItem, out natItem2);
             _map.Remove((natItem.IpVersion, natItem.Protocol, natItem.NatId), out _);
         }
 
-        VhLogger.Instance.LogTrace(GeneralEventId.Nat, "NatItem has been removed. {NatItem}", natItem2);
-        NatItemRemoved?.Invoke(this, new NatEventArgs(natItem2));
+        if (natItem2 != null && VhLogger.MinLogLevel <= LogLevel.Trace)
+            VhLogger.Instance.LogTrace(GeneralEventId.Nat, "NatItem has been removed. {NatItem}", natItem2);
     }
 
     private ushort GetFreeNatId(IpVersion ipVersion, IpProtocol protocol)
@@ -152,7 +151,8 @@ public class Nat(bool isDestinationSensitive) : IDisposable
             }
         }
 
-        VhLogger.Instance.LogTrace(GeneralEventId.Nat, "New NAT record. NatItem: {NatItem}", natItem);
+        if (VhLogger.MinLogLevel <= LogLevel.Trace)
+            VhLogger.Instance.LogTrace(GeneralEventId.Nat, "New NAT record. NatItem: {NatItem}", natItem);
         return natItem;
     }
 

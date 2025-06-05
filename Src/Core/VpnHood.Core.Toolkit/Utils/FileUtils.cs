@@ -6,7 +6,7 @@ public static class FileUtils
     {
         // don't use fast date time, it's not accurate enough
         var startTime = DateTime.Now;
-        while (true)             try {
+        while (true) try {
                 await File.WriteAllTextAsync(filePath, content, cancellationToken);
                 return;
             }
@@ -19,14 +19,16 @@ public static class FileUtils
     {
         // don't use fast date time, it's not accurate enough
         var startTime = DateTime.Now;
-        while (true)             try {
+        while (true) {
+            try {
                 await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
                 using var reader = new StreamReader(stream);
-                var content = await reader.ReadToEndAsync();
+                var content = await reader.ReadToEndAsync(cancellationToken);
                 return content;
             }
             catch (IOException) when (DateTime.Now - startTime < timeout) {
                 await Task.Delay(100, cancellationToken);
             }
+        }
     }
 }

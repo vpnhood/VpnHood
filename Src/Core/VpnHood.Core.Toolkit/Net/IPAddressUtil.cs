@@ -152,8 +152,7 @@ public static class IPAddressUtil
         using var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("User-Agent", "VpnHood");
         var content = await httpClient
-            .GetStringAsync(url)
-            .VhWait(cancellationToken)
+            .GetStringAsync(url, cancellationToken)
             .VhConfigureAwait();
 
         // Split the response into lines
@@ -177,8 +176,7 @@ public static class IPAddressUtil
         using var httpClient = new HttpClient(handler);
         httpClient.DefaultRequestHeaders.Add("User-Agent", "VpnHood");
         var json = await httpClient
-            .GetStringAsync(url)
-            .VhWait(cancellationToken)
+            .GetStringAsync(url, cancellationToken)
             .VhConfigureAwait();
 
         var document = JsonDocument.Parse(json);
@@ -204,7 +202,9 @@ public static class IPAddressUtil
             var addressFamily = udpClient.Client.AddressFamily;
             var remoteIp = KidsSafeCloudflareDnsServers.First(x => x.AddressFamily == addressFamily);
             udpClient.Connect(remoteIp, 53);
-            var endPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
+            var endPoint = (IPEndPoint?)udpClient.Client.LocalEndPoint
+                           ?? throw new InvalidOperationException("Could not get local endpoint from UdpClient!");
+
             var ipAddress = endPoint.Address;
             return Task.FromResult(ipAddress.AddressFamily == addressFamily ? ipAddress : null);
         }
@@ -234,8 +234,12 @@ public static class IPAddressUtil
         Verify(ipAddress.AddressFamily);
     }
 
-    public static int Compare(IPAddress ipAddress1, IPAddress ipAddress2)
+    public static int Compare(IPAddress? ipAddress1, IPAddress? ipAddress2)
     {
+        if (ipAddress1 == null && ipAddress2 == null) return 0;
+        if (ipAddress1 == null) return -1; // null is less than any address
+        if (ipAddress2 == null) return +1; // any address is greater than null
+
         Verify(ipAddress1);
         Verify(ipAddress2);
 

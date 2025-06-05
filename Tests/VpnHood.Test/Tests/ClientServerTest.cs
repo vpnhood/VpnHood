@@ -106,7 +106,7 @@ public class ClientServerTest : TestBase
         clientOptions.DropUdp = true;
         clientOptions.MaxPacketChannelCount = 6;
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions);
-        await Assert.ThrowsAsync<OperationCanceledException>(() => TestHelper.Test_Udp(3000), "UDP must be failed.");
+        await Assert.ThrowsAsync<OperationCanceledException>(() => TestHelper.Test_Udp(TimeSpan.FromSeconds(3)), "UDP must be failed.");
     }
 
 

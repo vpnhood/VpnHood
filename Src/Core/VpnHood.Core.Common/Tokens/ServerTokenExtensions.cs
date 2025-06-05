@@ -16,8 +16,7 @@ public static class ServerTokenExtensions
                 VhLogger.Instance.LogInformation("Resolving IP from host name: {HostName}...",
                     VhLogger.FormatHostName(serverToken.HostName));
 
-                var hostEntities = await Dns.GetHostEntryAsync(serverToken.HostName)
-                    .VhWait(cancellationToken)
+                var hostEntities = await Dns.GetHostEntryAsync(serverToken.HostName, cancellationToken)
                     .VhConfigureAwait();
 
                 if (!VhUtils.IsNullOrEmpty(hostEntities.AddressList)) {

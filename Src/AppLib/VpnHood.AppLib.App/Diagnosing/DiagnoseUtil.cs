@@ -9,20 +9,20 @@ namespace VpnHood.AppLib.Diagnosing;
 
 public class DiagnoseUtil
 {
-    public static Task<Exception?> CheckHttps(Uri[] uris, int timeout, CancellationToken cancellationToken)
+    public static Task<Exception?> CheckHttps(Uri[] uris, TimeSpan timeout, CancellationToken cancellationToken)
     {
         var tasks = uris.Select(x => CheckHttps(x, timeout, cancellationToken));
         return WhenAnySuccess(tasks.ToArray());
     }
 
-    public static Task<Exception?> CheckUdp(IPEndPoint[] nsIpEndPoints, int timeout,
+    public static Task<Exception?> CheckUdp(IPEndPoint[] nsIpEndPoints, TimeSpan timeout,
         CancellationToken cancellationToken)
     {
         var tasks = nsIpEndPoints.Select(x => CheckUdp(x, timeout, cancellationToken));
         return WhenAnySuccess(tasks.ToArray());
     }
 
-    public static Task<Exception?> CheckPing(IPAddress[] ipAddresses, int timeout, CancellationToken cancellationToken)
+    public static Task<Exception?> CheckPing(IPAddress[] ipAddresses, TimeSpan timeout, CancellationToken cancellationToken)
     {
         var tasks = ipAddresses.Select(x => CheckPing(x, timeout, cancellationToken));
         return WhenAnySuccess(tasks.ToArray());
@@ -43,7 +43,7 @@ public class DiagnoseUtil
         return exception;
     }
 
-    public static async Task<Exception?> CheckHttps(Uri uri, int timeout, CancellationToken cancellationToken)
+    public static async Task<Exception?> CheckHttps(Uri uri, TimeSpan timeout, CancellationToken cancellationToken)
     {
         try {
             VhLogger.Instance.LogInformation(
@@ -73,7 +73,7 @@ public class DiagnoseUtil
         }
     }
 
-    public static async Task<Exception?> CheckUdp(IPEndPoint nsIpEndPoint, int timeout,
+    public static async Task<Exception?> CheckUdp(IPEndPoint nsIpEndPoint, TimeSpan timeout,
         CancellationToken cancellationToken)
     {
         using var udpClient = new UdpClient();
@@ -84,7 +84,6 @@ public class DiagnoseUtil
                 "Started", dnsName, nsIpEndPoint, timeout);
 
             var res = await DnsResolver.GetHostEntry(dnsName, nsIpEndPoint, udpClient, timeout, cancellationToken)
-                .VhWait(cancellationToken)
                 .VhConfigureAwait();
 
             if (res.AddressList.Length == 0)
@@ -105,7 +104,7 @@ public class DiagnoseUtil
         }
     }
 
-    public static async Task<Exception?> CheckPing(IPAddress ipAddress, int timeout,
+    public static async Task<Exception?> CheckPing(IPAddress ipAddress, TimeSpan timeout,
         CancellationToken cancellationToken)
     {
         try {
@@ -114,8 +113,7 @@ public class DiagnoseUtil
                 "PingTest: {PingTestStatus}, RemoteAddress: {RemoteAddress}, Timeout: {Timeout}...",
                 "Started", VhLogger.Format(ipAddress), timeout);
 
-            var pingReply = await ping.SendPingAsync(ipAddress, timeout)
-                .VhWait(cancellationToken)
+            var pingReply = await ping.SendPingAsync(ipAddress, timeout, buffer: null, options: null, cancellationToken)
                 .VhConfigureAwait();
 
             if (pingReply.Status != IPStatus.Success)

@@ -74,7 +74,7 @@ public abstract class TrackerBase : ITracker
             var res = await HttpClient.SendAsync(requestMessage, linkedCts.Token).ConfigureAwait(false);
 
             // log
-            var result = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var result = await res.Content.ReadAsStringAsync(linkedCts.Token).ConfigureAwait(false);
             Logger?.LogInformation(LoggerEventId, "Ga4Track Result: {Result}", result);
         }
         catch (Exception ex) {

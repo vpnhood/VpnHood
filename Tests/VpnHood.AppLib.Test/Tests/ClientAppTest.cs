@@ -159,14 +159,14 @@ public class ClientAppTest : TestAppBase
         // dispose server and wait for waiting state
         await server1.DisposeAsync();
         await VhTestUtil.AssertEqualsWait(AppConnectionState.Waiting, async () => {
-            await TestHelper.Test_Https(throwError: false, timeout: 100);
+            await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
             return app.State.ConnectionState;
         });
 
         // start a new server & waiting for connected state
         await using var server2 = await TestHelper.CreateServer(accessManager);
         await VhTestUtil.AssertEqualsWait(AppConnectionState.Connected, async () => {
-            await TestHelper.Test_Https(throwError: false, timeout: 100);
+            await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
             return app.State.ConnectionState;
         });
     }

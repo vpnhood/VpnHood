@@ -56,7 +56,7 @@ public class ClientAdService(VpnHoodClient client)
             client.EnablePassthruInProcessPackets(true);
             AdRequestTaskCompletionSource = new TaskCompletionSource<AdResult>();
             AdRequest = adRequest;
-            var adResult = await AdRequestTaskCompletionSource.Task.VhWait(cancellationToken).VhConfigureAwait();
+            var adResult = await AdRequestTaskCompletionSource.Task.WaitAsync(cancellationToken).VhConfigureAwait();
             _ = Task.Delay(2000, CancellationToken.None)
                 .ContinueWith(_ => client.EnablePassthruInProcessPackets(false),
                     CancellationToken.None); // not cancellation

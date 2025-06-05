@@ -40,7 +40,7 @@ internal class ApiController : IDisposable
             VhLogger.Instance.LogInformation("VpnService host Listener has started. EndPoint: {EndPoint}", ApiEndPoint);
 
             while (!cancellationToken.IsCancellationRequested) {
-                var client = await _tcpListener.AcceptTcpClientAsync();
+                var client = await _tcpListener.AcceptTcpClientAsync(cancellationToken);
                 _ = ProcessClientAsync(client, cancellationToken);
             }
         }

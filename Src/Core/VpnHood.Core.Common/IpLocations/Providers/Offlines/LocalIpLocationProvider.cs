@@ -65,8 +65,12 @@ public class LocalIpLocationProvider : IIpLocationProvider
 
     private class IpRangeSearchComparer : IComparer<IpRangeInfo>
     {
-        public int Compare(IpRangeInfo x, IpRangeInfo y)
+        public int Compare(IpRangeInfo? x, IpRangeInfo? y)
         {
+            if (x is null && y is null) return 0;
+            if (x is null) return -1; // null is less than any non-null value
+            if (y is null) return +1; // any non-null value is greater than null
+
             if (IPAddressUtil.Compare(x.IpRanges.FirstIpAddress, y.IpRanges.FirstIpAddress) <= 0 &&
                 IPAddressUtil.Compare(x.IpRanges.LastIpAddress, y.IpRanges.LastIpAddress) >= 0)
                 return 0;

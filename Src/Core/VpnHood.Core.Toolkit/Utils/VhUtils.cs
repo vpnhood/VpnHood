@@ -50,8 +50,9 @@ public static class VhUtils
         try {
             // check recommended port
             using var udpClient = new UdpClient(new IPEndPoint(ipAddress, defaultPort));
-            var port = ((IPEndPoint)udpClient.Client.LocalEndPoint).Port;
-            return new IPEndPoint(ipAddress, port);
+            var localEndPoint = (IPEndPoint?)udpClient.Client.LocalEndPoint ?? 
+                                throw new InvalidOperationException("Failed to get local endpoint for UDP client.");
+            return new IPEndPoint(ipAddress, localEndPoint.Port);
         }
         catch when (defaultPort != 0) {
             return GetFreeUdpEndPoint(ipAddress);

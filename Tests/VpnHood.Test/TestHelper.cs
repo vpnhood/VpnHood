@@ -81,7 +81,7 @@ public class TestHelper : IDisposable
     }
 
     private static Task<PingReply> SendPing(Ping? ping = null, IPAddress? ipAddress = null,
-        int? timeout = null)
+        TimeSpan? timeout = null)
     {
         timeout ??= TestConstants.DefaultPingTimeout;
 
@@ -92,7 +92,7 @@ public class TestHelper : IDisposable
         return ping.SendPingAsync(ipAddress ?? TestConstants.PingV4Address1, timeout.Value, buffer);
     }
 
-    private async Task<bool> SendHttpGet(Uri uri, int? timeout = null)
+    private async Task<bool> SendHttpGet(Uri uri, TimeSpan? timeout = null)
     {
         using var httpClient = new HttpClient(new HttpClientHandler {
             CheckCertificateRevocationList = false,
@@ -102,7 +102,7 @@ public class TestHelper : IDisposable
         return await SendHttpGet(httpClient, uri, timeout);
     }
 
-    private async Task<bool> SendHttpGet(HttpClient httpClient, Uri uri, int? timeout)
+    private async Task<bool> SendHttpGet(HttpClient httpClient, Uri uri, TimeSpan? timeout)
     {
         timeout ??= TestConstants.DefaultHttpTimeout;
         var cancellationTokenSource = new CancellationTokenSource(timeout.Value);
@@ -117,28 +117,29 @@ public class TestHelper : IDisposable
         return res.Length > 100;
     }
 
-    public async Task Test_Ping(Ping? ping = null, IPAddress? ipAddress = null, int? timeout = null)
+    public async Task Test_Ping(Ping? ping = null, IPAddress? ipAddress = null, TimeSpan? timeout = null)
     {
         var pingReply = await SendPing(ping, ipAddress, timeout);
         if (pingReply.Status != IPStatus.Success)
             throw new PingException($"Ping failed. Status: {pingReply.Status}");
     }
 
-    public async Task Test_Dns(IPEndPoint? nsEndPoint = null, int timeout = 3000,
+    public async Task Test_Dns(IPEndPoint? nsEndPoint = null, TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        timeout ??= TimeSpan.FromSeconds(3);
         var hostEntry = await DnsResolver.GetHostEntry("www.google.com", nsEndPoint ?? TestConstants.NsEndPoint1,
-            timeout, cancellationToken);
+            timeout.Value, cancellationToken);
         Assert.IsNotNull(hostEntry);
         Assert.IsTrue(hostEntry.AddressList.Length > 0);
     }
 
-    public Task Test_Udp(int? timeout = null)
+    public Task Test_Udp(TimeSpan? timeout = null)
     {
         return Test_Udp(TestConstants.UdpV4EndPoint1, timeout);
     }
 
-    public async Task Test_Udp(IPEndPoint udpEndPoint, int? timeout = null)
+    public async Task Test_Udp(IPEndPoint udpEndPoint, TimeSpan? timeout = null)
     {
         if (udpEndPoint.IsV4()) {
             using var udpClientIpV4 = new UdpClient(AddressFamily.InterNetwork);
@@ -151,7 +152,7 @@ public class TestHelper : IDisposable
         }
     }
 
-    public async Task Test_Udp(UdpClient udpClient, IPEndPoint udpEndPoint, int? timeout = null)
+    public async Task Test_Udp(UdpClient udpClient, IPEndPoint udpEndPoint, TimeSpan? timeout = null)
     {
         timeout ??= TestConstants.DefaultUdpTimeout;
 
@@ -166,7 +167,7 @@ public class TestHelper : IDisposable
         CollectionAssert.AreEquivalent(buffer, res.Buffer);
     }
 
-    public async Task Test_UdpByDNS(IPEndPoint udpEndPoint, int? timeout = null)
+    public async Task Test_UdpByDNS(IPEndPoint udpEndPoint, TimeSpan? timeout = null)
     {
         timeout ??= TestConstants.DefaultUdpTimeout;
         var result = await DnsResolver.GetHostEntry("www.google.com", udpEndPoint, timeout.Value, CancellationToken.None);
@@ -175,7 +176,7 @@ public class TestHelper : IDisposable
 
 
     public async Task<bool> Test_Https(Uri? uri = null,
-        int? timeout = null, bool throwError = true)
+        TimeSpan? timeout = null, bool throwError = true)
     {
         uri ??= TestConstants.HttpsUri1;
 

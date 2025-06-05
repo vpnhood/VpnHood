@@ -50,8 +50,7 @@ public class IpLocationIoProvider(HttpClient httpClient, string userAgent, strin
 
         responseMessage.EnsureSuccessStatusCode();
         var json = await responseMessage.Content
-            .ReadAsStringAsync()
-            .VhWait(cancellationToken)
+            .ReadAsStringAsync(cancellationToken)
             .VhConfigureAwait();
 
         var apiLocation = JsonUtils.Deserialize<ApiLocation>(json);

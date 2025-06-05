@@ -3,9 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace VpnHood.Core.Toolkit.Converters;
 
-public class ArrayConverter<T, TConverter> : JsonConverter<T[]> where TConverter : JsonConverter<T>
+public class ArrayConverter<T, TConverter> : JsonConverter<T[]> where TConverter : JsonConverter<T>, new()
 {
-    private readonly TConverter _typeConverter = (TConverter)Activator.CreateInstance(typeof(TConverter));
+    private readonly TConverter _typeConverter = new();
 
     public override T[] Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

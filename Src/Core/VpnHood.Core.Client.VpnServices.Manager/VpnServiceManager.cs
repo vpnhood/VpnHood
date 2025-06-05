@@ -102,7 +102,7 @@ public class VpnServiceManager : IDisposable
 
             _isInitializing = true;
             _vpnServiceUnreachableCount = 0;
-            _updateConnectionInfoCts.Cancel();
+            await _updateConnectionInfoCts.CancelAsync();
             _updateConnectionInfoCts = new CancellationTokenSource();
 
             _connectionInfo = SetConnectionInfo(ClientState.Initializing);
@@ -316,7 +316,7 @@ public class VpnServiceManager : IDisposable
                 VhLogger.Instance.LogDebug("Connecting to VpnService Host... EndPoint: {EndPoint}", hostEndPoint);
                 tcpClient?.Dispose();
                 tcpClient = new TcpClient();
-                await tcpClient.VhConnectAsync(hostEndPoint, cancellationToken);
+                await tcpClient.ConnectAsync(hostEndPoint, cancellationToken);
                 await StreamUtils
                     .WriteObjectAsync(tcpClient.GetStream(), _connectionInfo.ApiKey ?? [], cancellationToken)
                     .AsTask().VhConfigureAwait();

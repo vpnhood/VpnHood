@@ -41,7 +41,7 @@ public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : 
         requestMessage.Headers.Add("User-Agent", userAgent);
         var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken).VhConfigureAwait();
         responseMessage.EnsureSuccessStatusCode();
-        var json = await responseMessage.Content.ReadAsStringAsync().VhConfigureAwait();
+        var json = await responseMessage.Content.ReadAsStringAsync(cancellationToken).VhConfigureAwait();
 
         var apiLocation = JsonUtils.Deserialize<ApiLocation>(json);
         var ipLocation = new IpLocation {

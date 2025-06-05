@@ -73,7 +73,7 @@ public class AccessTest : TestBase
         // test expiration
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {
             await server.SessionManager.Sync(true);
-            await TestHelper.Test_Https(throwError: false, timeout: 500);
+            await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(500));
             return client.State;
         });
         Assert.AreEqual(SessionErrorCode.AccessExpired, client.GetLastSessionErrorCode());
@@ -98,7 +98,7 @@ public class AccessTest : TestBase
 
         VhLogger.Instance.LogDebug("Test: second try should get the AccessTrafficOverflow status.");
         await VhTestUtil.AssertEqualsWait(SessionErrorCode.AccessTrafficOverflow, async () => {
-            await TestHelper.Test_Https(timeout: 2000, throwError: false);
+            await TestHelper.Test_Https(timeout: TimeSpan.FromMilliseconds(2000), throwError: false);
             return client1.GetLastSessionErrorCode();
         });
 

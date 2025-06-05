@@ -70,7 +70,7 @@ public class ClientTunnelTest : TestBase
         clientOption.MaxPacketChannelCount = 1;
         await using var clientServerDom = await ClientServerDom.Create(TestHelper, clientOption);
         await VhTestUtil.AssertEqualsWait(true, async () => {
-            await VhUtils.TryInvokeAsync(null, () => TestHelper.Test_Udp(500)); // just try transfer
+            await VhUtils.TryInvokeAsync(null, () => TestHelper.Test_Udp(TimeSpan.FromMilliseconds(500))); // just try transfer
             return clientServerDom.Client.SessionStatus?.SessionPacketChannelCount >= 3;
         }, timeout: 6000);
     }

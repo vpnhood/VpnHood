@@ -10,8 +10,9 @@ public class IpRangeOrderedList :
 {
     private readonly List<IpRange> _orderedList;
 
-    public IOrderedEnumerable<IpRange> CreateOrderedEnumerable<TKey>(Func<IpRange, TKey> keySelector,
-        IComparer<TKey> comparer, bool descending) =>
+    public IOrderedEnumerable<IpRange> CreateOrderedEnumerable<TKey>(
+        Func<IpRange, TKey> keySelector,
+        IComparer<TKey>? comparer, bool descending) =>
         descending
             ? _orderedList.OrderByDescending(keySelector, comparer)
             : _orderedList.OrderBy(keySelector, comparer);
@@ -303,8 +304,12 @@ public class IpRangeOrderedList :
 
     private class IpRangeSearchComparer : IComparer<IpRange>
     {
-        public int Compare(IpRange x, IpRange y)
+        public int Compare(IpRange? x, IpRange? y)
         {
+            if (x is null && y is null) return 0;
+            if (x is null) return -1; // x is less than y
+            if (y is null) return +1; // x is greater than y
+
             if (IPAddressUtil.Compare(x.FirstIpAddress, y.FirstIpAddress) <= 0 &&
                 IPAddressUtil.Compare(x.LastIpAddress, y.LastIpAddress) >= 0)
                 return 0;

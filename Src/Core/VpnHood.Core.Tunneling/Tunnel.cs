@@ -81,7 +81,7 @@ public class Tunnel : PassthroughPacketTransport
         return default;
     }
 
-    private void Channel_OnPacketReceived(object sender, IpPacket ipPacket)
+    private void Channel_OnPacketReceived(object? sender, IpPacket ipPacket)
     {
         OnPacketReceived(ipPacket);
     }

@@ -77,7 +77,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
     }
 
-    private void NetworkChange_NetworkAddressChanged(object sender, EventArgs e)
+    private void NetworkChange_NetworkAddressChanged(object? sender, EventArgs e)
     {
         PrimaryAdapterIpV4 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetwork);
         PrimaryAdapterIpV6 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);

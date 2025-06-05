@@ -16,6 +16,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
 {
     private readonly UdpClient _udpClient;
     private readonly IPEndPoint? _sourceEndPoint;
+    private IPEndPoint? _destinationEndPoint;
     public IPEndPoint LocalEndPoint { get; }
     public AddressFamily AddressFamily { get; }
     public DateTime LastUsedTime { get; set; }
@@ -31,7 +32,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
         _udpClient = udpClient;
         _sourceEndPoint = sourceEndPoint;
         LastUsedTime = FastDateTime.Now;
-        LocalEndPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
+        LocalEndPoint = udpClient.Client.GetLocalEndPoint();
         AddressFamily = LocalEndPoint.AddressFamily;
 
         // prevent raise exception when there is no listener
@@ -54,8 +55,6 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
             or SocketException { SocketErrorCode: SocketError.OperationAborted };
     }
 
-    private readonly byte[] _payloadBuffer = new byte[1500]; //todo: Use SendAsync(Memory<>) later
-    private IPEndPoint? _destinationEndPoint;
     protected override async ValueTask SendPacketAsync(IpPacket ipPacket)
     {
         try {
@@ -69,13 +68,8 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
             if (_destinationEndPoint == null || !_destinationEndPoint.Address.Equals(ipPacket.DestinationAddress) || _destinationEndPoint.Port != udpPacket.DestinationPort)
                 _destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
 
-            // check if the payload is too large for the buffer
-            if (udpPacket.Payload.Length > _payloadBuffer.Length)
-                throw new InvalidOperationException("UDP payload too large for buffer.");
-            udpPacket.Payload.CopyTo(_payloadBuffer);
-
             // send packet to destination
-            var sentBytes = await _udpClient.SendAsync(_payloadBuffer, udpPacket.Payload.Length, _destinationEndPoint)
+            var sentBytes = await _udpClient.SendAsync(udpPacket.Payload, _destinationEndPoint)
                 .VhConfigureAwait();
 
             if (sentBytes != udpPacket.Payload.Length)

@@ -102,10 +102,12 @@ public class Job : IDisposable
         return RunInternal(_cancellationTokenSource.Token);
     }
 
-    public Task RunNow(CancellationToken cancellationToken)
+    public async Task RunNow(CancellationToken cancellationToken)
     {
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
-        return RunInternal(linkedCts.Token);
+
+        // await required for linkedCts to be disposed properly
+        await RunInternal(linkedCts.Token); 
     }
 
     private async Task RunInternal(CancellationToken cancellationToken)

@@ -156,7 +156,7 @@ public class ServerFinder(
 
                 // ReSharper disable once AccessToDisposedClosure
                 if (hostStatus.Available == true && !byOrder)
-                    cancellationTokenSource.Cancel(); // no need to continue, we find a server
+                    await cancellationTokenSource.CancelAsync(); // no need to continue, we find a server
 
                 // search by order
                 if (byOrder) {
@@ -167,7 +167,7 @@ public class ServerFinder(
 
                         if (item.Available.Value) {
                             // ReSharper disable once AccessToDisposedClosure
-                            cancellationTokenSource.Cancel();
+                            await cancellationTokenSource.CancelAsync();
                             break;
                         }
                     }

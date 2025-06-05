@@ -228,10 +228,10 @@ public class ServerTest : TestBase
         await server.DisposeAsync();
         await using var server2 = await TestHelper.CreateServer(accessManager);
         await Task.WhenAll(
-            TestHelper.Test_Https(timeout: 10000, throwError: false),
-            TestHelper.Test_Https(timeout: 10000, throwError: false),
-            TestHelper.Test_Https(timeout: 10000, throwError: false),
-            TestHelper.Test_Https(timeout: 10000, throwError: false)
+            TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(10), throwError: false),
+            TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(10), throwError: false),
+            TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(10), throwError: false),
+            TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(10), throwError: false)
         );
 
         Assert.AreEqual(0, accessManager.SessionGetCounter, "session must be loaded in startup.");
@@ -241,10 +241,10 @@ public class ServerTest : TestBase
 
         // try using recovery
         await Task.WhenAll(
-            TestHelper.Test_Https(timeout: 10000, throwError: false),
-            TestHelper.Test_Https(timeout: 10000, throwError: false),
-            TestHelper.Test_Https(timeout: 10000, throwError: false),
-            TestHelper.Test_Https(timeout: 10000, throwError: false)
+            TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(10), throwError: false),
+            TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(10), throwError: false),
+            TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(10), throwError: false),
+            TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(10), throwError: false)
         );
 
         Assert.AreEqual(1, accessManager.SessionGetCounter, "session must be recovered once.");
@@ -284,7 +284,7 @@ public class ServerTest : TestBase
 
         Log("Waiting for the client disposal...");
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {
-            await TestHelper.Test_Https(throwError: false, timeout: 100);
+            await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
             return client.State;
         });
         Assert.AreEqual(SessionErrorCode.AccessError, client.GetLastSessionErrorCode());

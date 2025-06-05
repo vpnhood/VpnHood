@@ -251,8 +251,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // connect to host
         var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint);
-        await VhUtils.RunTask(tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port),
-            cancellationToken: linkedCts.Token).VhConfigureAwait();
+        await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, linkedCts.Token).VhConfigureAwait();
 
         // create and add the channel
         var channel = new ProxyChannel(channelId, orgTcpClientStream,

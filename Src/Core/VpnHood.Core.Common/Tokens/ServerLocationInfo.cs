@@ -13,8 +13,10 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
     public string CountryName => GetCountryName(CountryCode);
     public bool IsAuto => IsAutoLocation(ServerLocation);
 
-    public int CompareTo(ServerLocationInfo other)
+    public int CompareTo(ServerLocationInfo? other)
     {
+        if (other == null) return 1; // null is considered less than any instance
+
         var countryComparison = string.Compare(CountryName, other.CountryName, StringComparison.OrdinalIgnoreCase);
         return countryComparison != 0
             ? countryComparison

@@ -22,8 +22,8 @@ public class Diagnoser
     public Uri[] TestHttpUris { get; set; } =
         [new("https://weather.com/"), new("https://www.who.int/"), new("https://www.microsoft.com/")];
 
-    public int HttpTimeout { get; set; } = 10 * 1000;
-    public int NsTimeout { get; set; } = 10 * 1000;
+    public TimeSpan HttpTimeout { get; set; } = TimeSpan.FromSeconds(10);
+    public TimeSpan NsTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
     public event EventHandler? StateChanged;
     

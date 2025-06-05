@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
@@ -39,7 +40,7 @@ public abstract class UdpChannelTransmitter : IDisposable
         _ = ReadTask();
     }
 
-    public IPEndPoint LocalEndPoint => (IPEndPoint)_udpClient.Client.LocalEndPoint;
+    public IPEndPoint LocalEndPoint => _udpClient.Client.GetLocalEndPoint();
 
     public async Task<int> SendAsync(IPEndPoint? ipEndPoint, ulong sessionId, long sessionCryptoPosition,
         Memory<byte> buffer, int protocolVersion)

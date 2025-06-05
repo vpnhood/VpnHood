@@ -218,13 +218,13 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
             using var timeoutCts = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
 
             // wait for write to finish and write the terminator
-            await _writeTask.AsTask().VhWait(timeoutCts.Token).VhConfigureAwait();
+            await _writeTask.AsTask().WaitAsync(timeoutCts.Token).VhConfigureAwait();
 
             // Finish the stream by sending the chunk terminator and 
             await WriteInternalAsync(ReadOnlyMemory<byte>.Empty, timeoutCts.Token).VhConfigureAwait();
 
             // wait for the current read task to finish
-            await _readTask.AsTask().VhWait(timeoutCts.Token).VhConfigureAwait();
+            await _readTask.AsTask().WaitAsync(timeoutCts.Token).VhConfigureAwait();
             
             // wait for end of stream
             await DiscardRemainingStreamData(timeoutCts.Token);

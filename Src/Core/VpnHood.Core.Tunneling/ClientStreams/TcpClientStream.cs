@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -43,8 +42,8 @@ public class TcpClientStream : IClientStream
         _reuseCallback = reuseCallback;
         Stream = stream;
         _tcpClient = tcpClient;
-        IpEndPointPair = new IPEndPointPair((IPEndPoint)_tcpClient.Client.LocalEndPoint,
-            (IPEndPoint)_tcpClient.Client.RemoteEndPoint);
+        IpEndPointPair = new IPEndPointPair(
+            _tcpClient.Client.GetLocalEndPoint(), _tcpClient.Client.GetRemoteEndPoint());
 
         VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
             "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}, StreamType: {StreamType}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",

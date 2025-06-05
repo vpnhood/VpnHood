@@ -51,7 +51,7 @@ public class ApiClientBase : ApiClientCommon
         IReadOnlyDictionary<string, IEnumerable<string>> headers, CancellationToken cancellationToken)
     {
         if (ReadResponseAsString) {
-            var responseText = await response.Content.ReadAsStringAsync().VhConfigureAwait();
+            var responseText = await response.Content.ReadAsStringAsync(cancellationToken).VhConfigureAwait();
             try {
                 var typedBody = JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
                 return new HttpResult<T?> { ResponseMessage = response, Object = typedBody, Text = responseText };
@@ -63,7 +63,7 @@ public class ApiClientBase : ApiClientCommon
         }
 
         try {
-            await using var responseStream = await response.Content.ReadAsStreamAsync().VhConfigureAwait();
+            await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).VhConfigureAwait();
             var typedBody = await JsonSerializer
                 .DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).VhConfigureAwait();
             return new HttpResult<T?> { ResponseMessage = response, Object = typedBody, Text = string.Empty };
@@ -92,7 +92,8 @@ public class ApiClientBase : ApiClientCommon
 
                 var converted =
                     Convert.ToString(Convert.ChangeType(value, Enum.GetUnderlyingType(value.GetType()), cultureInfo));
-                return converted;
+
+                return converted ?? "";
             }
         }
         else if (value is bool b) {
@@ -230,7 +231,7 @@ public class ApiClientBase : ApiClientCommon
         }
 
         var responseData = response.Content != null
-            ? await response.Content.ReadAsStringAsync().VhConfigureAwait()
+            ? await response.Content.ReadAsStringAsync(cancellationToken).VhConfigureAwait()
             : null;
         throw new ApiException("The HTTP status code of the response was not expected (" + status + ").", status,
             responseData, headers, null);

@@ -87,7 +87,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
         udpProxy.SendPacketQueued(ipPacket);
     }
 
-    private void UdpProxy_OnPacketReceived(object sender, IpPacket ipPacket)
+    private void UdpProxy_OnPacketReceived(object? sender, IpPacket ipPacket)
     {
         OnPacketReceived(ipPacket);
     }

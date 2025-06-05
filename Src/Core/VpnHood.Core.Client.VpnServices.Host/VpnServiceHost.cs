@@ -81,7 +81,7 @@ public class VpnServiceHost : IDisposable
             }
 
             // cancel previous connection if exists
-            _connectCts.Cancel();
+            await _connectCts.CancelAsync();
             _connectCts.Dispose();
             if (client != null) {
                 VhLogger.Instance.LogWarning("VpnService killing the previous connection.");

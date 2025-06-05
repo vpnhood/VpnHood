@@ -29,7 +29,7 @@ public class ClientOptions
     public IPAddress TcpProxyCatcherAddressIpV6 { get; set; } = IPAddress.Parse("2000::");
 
     [JsonConverter(typeof(VersionConverter))]
-    public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
+    public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version ?? new Version();
     public required string AppName { get; set; }
     public required string AccessKey { get; set; }
     public required string ClientId { get; set; }

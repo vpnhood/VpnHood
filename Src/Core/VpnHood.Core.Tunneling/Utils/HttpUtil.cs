@@ -49,7 +49,7 @@ public static class HttpUtil
     {
         using var headerStream = await ReadHeadersAsync(stream, cancellationToken, maxLength);
         using var reader = new StreamReader(headerStream, Encoding.UTF8);
-        var firstLine = await reader.ReadLineAsync() ?? string.Empty; // it may return null
+        var firstLine = await reader.ReadLineAsync(cancellationToken) ?? string.Empty; // it may return null
 
         // Check if the first line starts with "HTTP/" (basic HTTP format validation).
         if (firstLine.StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase) != true)
@@ -76,7 +76,7 @@ public static class HttpUtil
         // Read the header lines until an empty line is encountered
         while (true) {
             // ReSharper disable once MethodHasAsyncOverload
-            var line = reader.ReadLine();
+            var line = await reader.ReadLineAsync(cancellationToken);
             if (string.IsNullOrEmpty(line))
                 break;
 

@@ -1,10 +1,11 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Toolkit.Collections;
 
 public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : IDisposable
-    where TValue : ITimeoutItem
+    where TValue : ITimeoutItem where TKey : notnull
 {
     private readonly ConcurrentDictionary<TKey, TValue> _items = new();
     private DateTime _lastCleanupTime = DateTime.MinValue;
@@ -41,7 +42,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
         }
     }
 
-    public bool TryGetValue(TKey key, out TValue value)
+    public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value)
     {
         AutoCleanupInternal();
 
@@ -88,12 +89,12 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
         return true;
     }
 
-    public bool TryRemove(TKey key, out TValue value)
+    public bool TryRemove(TKey key, out TValue? value)
     {
         // try add
         var ret = _items.TryRemove(key, out value);
         if (ret)
-            value.Dispose();
+            value?.Dispose();
 
         return ret;
     }

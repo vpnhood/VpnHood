@@ -51,8 +51,8 @@ public static class OsUtils
         process.StartInfo = processInfo;
         process.Start();
 
-        var error = await process.StandardError.ReadToEndAsync().VhWait(cancellationToken);
-        var output = await process.StandardOutput.ReadToEndAsync().VhWait(cancellationToken);
+        var error = await process.StandardError.ReadToEndAsync(cancellationToken);
+        var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
 
         await WaitForExitAsync(process, cancellationToken);
         if (process.ExitCode != 0)
@@ -71,6 +71,6 @@ public static class OsUtils
         process.EnableRaisingEvents = true;
 
         // Wait for process exit or cancellation
-        await tcs.Task.VhWait(cancellationToken);
+        await tcs.Task.WaitAsync(cancellationToken);
     }
 }

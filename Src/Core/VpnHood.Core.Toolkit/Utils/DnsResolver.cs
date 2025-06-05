@@ -7,14 +7,14 @@ namespace VpnHood.Core.Toolkit.Utils;
 public static class DnsResolver
 {
     public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint,
-        int timeout, CancellationToken cancellationToken)
+        TimeSpan timeout, CancellationToken cancellationToken)
     {
         using var udpClientTemp = new UdpClient();
         return await GetHostEntry(host, dnsEndPoint, udpClientTemp, timeout, cancellationToken);
     }
 
     public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint,
-        UdpClient udpClient, int timeout, CancellationToken cancellationToken)
+        UdpClient udpClient, TimeSpan timeout, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(host)) {
             throw new ArgumentException("Host cannot be null or empty", nameof(host));
@@ -31,15 +31,15 @@ public static class DnsResolver
         var query = BuildDnsQuery(queryId, host);
 
         // Send the DNS query
+        using var timeoutCts = new CancellationTokenSource(timeout);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
         await udpClient
-            .SendAsync(query, query.Length)
-            .VhWait(timeout, cancellationToken)
+            .SendAsync(query.AsMemory(), linkedCts.Token)
             .VhConfigureAwait();
 
         // Wait for response with a timeout
         var task = await udpClient
-            .ReceiveAsync()
-            .VhWait(timeout, cancellationToken)
+            .ReceiveAsync(linkedCts.Token)
             .VhConfigureAwait();
 
         var response = task.Buffer;

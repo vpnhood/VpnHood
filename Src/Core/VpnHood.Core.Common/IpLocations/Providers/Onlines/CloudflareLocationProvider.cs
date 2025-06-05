@@ -20,7 +20,7 @@ public class CloudflareLocationProvider(HttpClient httpClient, string userAgent)
         requestMessage.Headers.Add("User-Agent", userAgent);
         var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken).VhConfigureAwait();
         responseMessage.EnsureSuccessStatusCode();
-        var content = await responseMessage.Content.ReadAsStringAsync().VhConfigureAwait();
+        var content = await responseMessage.Content.ReadAsStringAsync(cancellationToken).VhConfigureAwait();
 
         // Split the response into lines
         var lines = content.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);

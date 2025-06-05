@@ -65,7 +65,7 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
         }
     }
 
-    private void PingProxy_PacketReceived(object sender, IpPacket ipPacket)
+    private void PingProxy_PacketReceived(object? sender, IpPacket ipPacket)
     {
         OnPacketReceived(ipPacket);
     }

@@ -150,7 +150,7 @@ public class VpnHoodServer : IAsyncDisposable
 
         // ReSharper disable once DisposeOnUsingVariable
         scope?.Dispose();
-        await _configureAndSendStatusJob.RunNow(CancellationToken.None);
+        await _configureAndSendStatusJob.RunNow();
     }
 
     private async Task Configure()

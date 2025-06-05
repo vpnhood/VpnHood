@@ -41,7 +41,7 @@ public static class VhLogger
     public static string Format(EndPoint? endPoint)
     {
         if (endPoint == null) return "<null>";
-        return endPoint is IPEndPoint ipEndPoint ? Format(ipEndPoint) : endPoint.ToString();
+        return endPoint is IPEndPoint ipEndPoint ? Format(ipEndPoint) : endPoint.ToString() ?? "<null>";
     }
 
     public static string Format(IPEndPoint? endPoint)
@@ -80,7 +80,7 @@ public static class VhLogger
     {
         if (id == null) return "<null>";
 
-        var str = id.ToString();
+        var str = id.ToString() ?? "";
         return IsAnonymousMode ? "**" + str[(str.Length / 2)..] : str;
     }
 

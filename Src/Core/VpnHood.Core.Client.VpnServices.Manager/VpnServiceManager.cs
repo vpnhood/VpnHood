@@ -59,7 +59,7 @@ public class VpnServiceManager : IDisposable
 
     public ConnectionInfo ConnectionInfo {
         get {
-            _ = TryUpdateConnectionInfo(false, CancellationToken.None);
+            _ = TryRefreshConnectionInfo(false, CancellationToken.None);
             return _connectionInfo;
         }
     }
@@ -102,7 +102,8 @@ public class VpnServiceManager : IDisposable
 
             _isInitializing = true;
             _vpnServiceUnreachableCount = 0;
-            await _updateConnectionInfoCts.CancelAsync();
+            await _updateConnectionInfoCts.TryCancelAsync();
+            _updateConnectionInfoCts.Dispose();
             _updateConnectionInfoCts = new CancellationTokenSource();
 
             _connectionInfo = SetConnectionInfo(ClientState.Initializing);
@@ -193,12 +194,12 @@ public class VpnServiceManager : IDisposable
         VhLogger.Instance.LogDebug("The VpnService has established a connection.");
     }
 
-    public Task ForceUpdateState(CancellationToken cancellationToken) => UpdateConnectionInfo(true, cancellationToken);
+    public Task ForceRefreshState(CancellationToken cancellationToken) => RefreshConnectionInfo(true, cancellationToken);
 
-    private async Task<ConnectionInfo> TryUpdateConnectionInfo(bool force, CancellationToken cancellationToken)
+    private async Task<ConnectionInfo> TryRefreshConnectionInfo(bool force, CancellationToken cancellationToken)
     {
         try {
-            return await UpdateConnectionInfo(force, cancellationToken);
+            return await RefreshConnectionInfo(force, cancellationToken);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not update connection info.");
@@ -207,18 +208,11 @@ public class VpnServiceManager : IDisposable
     }
 
     private readonly AsyncLock _connectionInfoLock = new();
-    private async Task<ConnectionInfo> UpdateConnectionInfo(bool force, CancellationToken cancellationToken)
+    private async Task<ConnectionInfo> RefreshConnectionInfo(bool force, CancellationToken cancellationToken)
     {
-        // read from cache if not expired
-        if (_isInitializing || (!force && FastDateTime.Now - _connectionInfoTime < _connectionInfoTimeSpan))
-            return _connectionInfo;
-
         // build a new token source to cancel the previous request
-        var updateConnectionInfoCt = _updateConnectionInfoCts.Token;
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, updateConnectionInfoCt);
-
-        // lock to prevent multiple updates
-        using var scopeLock = await _connectionInfoLock.LockAsync(linkedCts.Token).ConfigureAwait(false);
+        using var updateCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _updateConnectionInfoCts.Token);
+        using var scopeLock = await _connectionInfoLock.LockAsync(updateCts.Token).ConfigureAwait(false);
 
         // read from cache if not expired
         if (_isInitializing || (!force && FastDateTime.Now - _connectionInfoTime < _connectionInfoTimeSpan))
@@ -228,9 +222,8 @@ public class VpnServiceManager : IDisposable
         // VpnClient always update the file when ConnectionState changes
         // Should send request if service is in initializing state, because SendRequest will set the state to disposed if failed
         var connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath) ?? _connectionInfo;
-        var serviceStopByItself = connectionInfo.HasSetByService && (connectionInfo.Error != null || !connectionInfo.IsStarted());
-        if (_isInitializing || serviceStopByItself) {
-            CheckForEvents(connectionInfo, linkedCts.Token);
+        if (_isInitializing || connectionInfo.Error != null || !connectionInfo.IsStarted()) {
+            CheckForEvents(connectionInfo, updateCts.Token);
             _connectionInfoTime = FastDateTime.Now;
             _connectionInfo = connectionInfo;
             return connectionInfo;
@@ -238,10 +231,10 @@ public class VpnServiceManager : IDisposable
 
         // connect to the server and get the connection info
         try {
-            await SendRequest(new ApiGetConnectionInfoRequest(), linkedCts.Token);
+            await SendRequest(new ApiGetConnectionInfoRequest(), updateCts.Token);
             _vpnServiceUnreachableCount = 0; // reset the count if we successfully get the connection info
         }
-        catch (Exception ex) when (updateConnectionInfoCt.IsCancellationRequested) {
+        catch (Exception ex) when (_updateConnectionInfoCts.IsCancellationRequested) {
             // it is a dead request from previous session
             VhLogger.Instance.LogWarning(ex, "Previous UpdateConnection Info has been ignored due to the new service.");
 
@@ -270,7 +263,7 @@ public class VpnServiceManager : IDisposable
             VhLogger.Instance.LogError(ex, "Could not update connection info.");
         }
 
-        CheckForEvents(_connectionInfo, linkedCts.Token);
+        CheckForEvents(_connectionInfo, updateCts.Token);
         _connectionInfoTime = FastDateTime.Now;
         return _connectionInfo;
     }
@@ -367,7 +360,7 @@ public class VpnServiceManager : IDisposable
         VhLogger.Instance.LogDebug("Waiting for VpnService to stop.");
         try {
             while (ConnectionInfo.IsStarted()) {
-                await UpdateConnectionInfo(true, cancellationTokenSource.Token);
+                await RefreshConnectionInfo(true, cancellationTokenSource.Token);
                 await Task.Delay(200, cancellationTokenSource.Token);
             }
 
@@ -444,7 +437,7 @@ public class VpnServiceManager : IDisposable
 
     private async ValueTask UpdateConnectionInfoJob(CancellationToken cancellationToken)
     {
-        await UpdateConnectionInfo(false, cancellationToken);
+        await RefreshConnectionInfo(false, cancellationToken);
     }
 
     public void Dispose()
@@ -454,7 +447,7 @@ public class VpnServiceManager : IDisposable
 
         // do not stop the service, lets service keep running until user explicitly stop it
         _updateConnectionInfoJob.Dispose();
-        _updateConnectionInfoCts.Cancel();
+        _updateConnectionInfoCts.TryCancel();
         _updateConnectionInfoCts.Dispose();
         _tcpClient?.Dispose();
     }

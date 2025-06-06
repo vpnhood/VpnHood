@@ -37,7 +37,6 @@ public class Session : IDisposable
     private readonly int? _tcpBufferSize;
     private readonly int? _tcpKernelSendBufferSize;
     private readonly int? _tcpKernelReceiveBufferSize;
-    private readonly TimeSpan _tcpConnectTimeout;
     private readonly TrackingOptions _trackingOptions;
     private UdpChannel? _udpChannel;
 
@@ -109,7 +108,6 @@ public class Session : IDisposable
         _tcpBufferSize = options.TcpBufferSize;
         _tcpKernelSendBufferSize = options.TcpKernelSendBufferSize;
         _tcpKernelReceiveBufferSize = options.TcpKernelReceiveBufferSize;
-        _tcpConnectTimeout = options.TcpConnectTimeoutValue;
         _netFilter = netFilter;
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);

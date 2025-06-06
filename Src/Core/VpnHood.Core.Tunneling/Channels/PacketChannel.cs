@@ -70,7 +70,7 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
 
     protected void Stop()
     {
-        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.TryCancel();
     }
 
     private async Task StartTask()
@@ -149,9 +149,10 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
 
     protected override void DisposeManaged()
     {
-        _checkLifetimeJob.Dispose();
         Stop();
-
+        _checkLifetimeJob.Dispose();
+        _cancellationTokenSource.TryCancel();
+        _cancellationTokenSource.Dispose();
         base.DisposeManaged();
     }
 }

@@ -17,8 +17,9 @@ public class VpnServiceHost : IDisposable
     private readonly IVpnServiceHandler _vpnServiceHandler;
     private readonly ISocketFactory _socketFactory;
     private readonly LogService? _logService;
-    private bool _disposed;
     private CancellationTokenSource _connectCts = new();
+    private readonly TimeSpan _killServiceTimeout = TimeSpan.FromSeconds(3);
+    private int _isDisposed;
 
     internal VpnHoodClient? Client { get; private set; }
     internal VpnHoodClient RequiredClient => Client ?? throw new InvalidOperationException("Client is not initialized.");
@@ -57,7 +58,13 @@ public class VpnServiceHost : IDisposable
             // client is disposed or disconnecting, stop the notification and service
             VhLogger.Instance.LogDebug("VpnServiceHost requests to stop the notification and service.");
             _vpnServiceHandler.StopNotification();
-            _vpnServiceHandler.StopSelf(); // it may be a red flag for android if we don't stop the service after stopping the notification
+
+            // it may be a red flag for android if we don't stop the service after stopping the notification
+            Task.Delay(_killServiceTimeout).ContinueWith(_ => {
+                if (client != Client) return;
+                VhLogger.Instance.LogDebug("VpnServiceHost requests to StopSelf.");
+                _vpnServiceHandler.StopSelf();
+            });
             return;
         }
 
@@ -67,7 +74,7 @@ public class VpnServiceHost : IDisposable
 
     public async Task<bool> TryConnect(bool forceReconnect = false)
     {
-        if (_disposed)
+        if (_isDisposed == 1)
             return false;
 
         try {
@@ -81,8 +88,9 @@ public class VpnServiceHost : IDisposable
             }
 
             // cancel previous connection if exists
-            await _connectCts.CancelAsync();
+            await _connectCts.TryCancelAsync();
             _connectCts.Dispose();
+
             if (client != null) {
                 VhLogger.Instance.LogWarning("VpnService killing the previous connection.");
 
@@ -203,7 +211,7 @@ public class VpnServiceHost : IDisposable
 
     public async Task TryDisconnect()
     {
-        if (_disposed)
+        if (_isDisposed == 1)
             return;
 
         try {
@@ -219,12 +227,12 @@ public class VpnServiceHost : IDisposable
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+            return;
 
         // cancel connection if exists
         VhLogger.Instance.LogDebug("VpnService Host is destroying...");
-        _connectCts.Cancel();
+        _connectCts.TryCancel();
         _connectCts.Dispose();
 
         // dispose client

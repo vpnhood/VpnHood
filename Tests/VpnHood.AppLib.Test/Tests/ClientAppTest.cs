@@ -373,6 +373,13 @@ public class ClientAppTest : TestAppBase
     }
 
     [TestMethod]
+    public void update_server_token_from_server_token_url_foo() //todo
+    {
+        update_server_token_from_server_token_url().GetAwaiter().GetResult();
+    }
+
+
+    [TestMethod]
     public async Task update_server_token_from_server_token_url()
     {
         // create update webserver

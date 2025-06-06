@@ -37,7 +37,8 @@ public class ServerFinder(
     // There are much work to be done here
     public async Task<IPEndPoint> FindReachableServerAsync(CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.Session, "Finding a reachable server...");
+        VhLogger.Instance.LogInformation(GeneralEventId.Session, "Finding a reachable server... QueryTimeout: {QueryTimeout}", 
+            serverQueryTimeout);
 
         // get all endpoints from serverToken
         var hostEndPoints = await serverToken.ResolveHostEndPoints(cancellationToken);
@@ -51,8 +52,7 @@ public class ServerFinder(
         VhUtils.Shuffle(hostEndPoints);
 
         // find the best server
-        _hostEndPointStatuses =
-            await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
+        _hostEndPointStatuses = await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
         var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
@@ -67,6 +67,7 @@ public class ServerFinder(
 
         _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
             isIpV6Supported: IncludeIpV6, hasRedirected: false));
+
         throw new UnreachableServerException(serverLocation: ServerLocation);
     }
 
@@ -92,8 +93,7 @@ public class ServerFinder(
             hostStatus.Available = _hostEndPointStatuses
                 .FirstOrDefault(x => x.TcpEndPoint.Equals(hostStatus.TcpEndPoint))?.Available;
 
-        var endpointStatuses =
-            await VerifyServersStatus(hostEndPoints, byOrder: true, cancellationToken: cancellationToken);
+        var endpointStatuses = await VerifyServersStatus(hostEndPoints, byOrder: true, cancellationToken: cancellationToken);
         var res = endpointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
@@ -142,21 +142,22 @@ public class ServerFinder(
             .Select(x => new HostStatus { TcpEndPoint = x })
             .ToArray();
 
-        using var cancellationTokenSource = new CancellationTokenSource();
+        using var searchingCts = new CancellationTokenSource(); // this will be cancelled when a server is found
+        using var parallelCts = CancellationTokenSource.CreateLinkedTokenSource(searchingCts.Token, cancellationToken);
         try {
             // check all servers
-            using var linkedCancellationTokenSource =
-                CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
-            await VhUtils.ParallelForEachAsync(hostStatuses, async hostStatus => {
+            var parallelOptions = new ParallelOptions {
+                CancellationToken = parallelCts.Token,
+                MaxDegreeOfParallelism = maxDegreeOfParallelism
+            };
+            await Parallel.ForEachAsync(hostStatuses, parallelOptions, async (hostStatus, ct) => {
                 var connector = CreateConnector(hostStatus.TcpEndPoint);
 
-                // ReSharper disable once AccessToDisposedClosure
-                hostStatus.Available = await VerifyServerStatus(connector, linkedCancellationTokenSource.Token)
-                    .Vhc();
+                hostStatus.Available = await VerifyServerStatus(connector, serverQueryTimeout, ct).Vhc();
 
                 // ReSharper disable once AccessToDisposedClosure
                 if (hostStatus.Available == true && !byOrder)
-                    await cancellationTokenSource.CancelAsync(); // no need to continue, we find a server
+                    await searchingCts.CancelAsync().Vhc(); // no need to continue, we find a server
 
                 // search by order
                 if (byOrder) {
@@ -167,28 +168,29 @@ public class ServerFinder(
 
                         if (item.Available.Value) {
                             // ReSharper disable once AccessToDisposedClosure
-                            await cancellationTokenSource.CancelAsync();
+                            await searchingCts.CancelAsync().Vhc();
                             break;
                         }
                     }
                 }
-            }, maxDegreeOfParallelism, linkedCancellationTokenSource.Token).Vhc();
+            }).Vhc();
         }
-        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested) {
+        catch (OperationCanceledException) when (searchingCts.IsCancellationRequested) {
             // it means a server has been found
         }
+
 
         return hostStatuses;
     }
 
-    private static async Task<bool> VerifyServerStatus(ConnectorService connector, CancellationToken cancellationToken)
+    private static async Task<bool> VerifyServerStatus(ConnectorService connector, TimeSpan queryTimeout,
+        CancellationToken cancellationToken)
     {
         try {
-            var requestResult = await connector.SendRequest<SessionResponse>(
-                    new ServerCheckRequest {
-                        RequestId = UniqueIdFactory.Create()
-                    },
-                    cancellationToken)
+            using var queryTimeoutCts = new CancellationTokenSource(queryTimeout); // timeout for each server query
+            using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(queryTimeoutCts.Token, cancellationToken);
+            var requestResult = await connector
+                .SendRequest<SessionResponse>(new ServerCheckRequest { RequestId = UniqueIdFactory.Create() }, requestCts.Token)
                 .Vhc();
 
             // this should be already handled by the connector and never happen
@@ -204,7 +206,7 @@ public class ServerFinder(
             throw; // query cancelled due to discovery cancellationToken
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could not get server status. EndPoint: {EndPoint}",
+            VhLogger.Instance.LogInformation(ex, "Could not get server status. EndPoint: {EndPoint}",
                 VhLogger.Format(connector.EndPointInfo.TcpEndPoint));
 
             return false;
@@ -220,7 +222,8 @@ public class ServerFinder(
         };
         var connector = new ConnectorService(endPointInfo, socketFactory, serverQueryTimeout, false);
         connector.Init(
-            protocolVersion: connector.ProtocolVersion, tcpRequestTimeout: serverQueryTimeout, serverSecret: null,
+            protocolVersion: connector.ProtocolVersion, serverSecret: null,
+            requestTimeout: serverQueryTimeout,
             tcpReuseTimeout: TimeSpan.Zero);
         return connector;
     }

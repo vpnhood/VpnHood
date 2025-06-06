@@ -1,10 +1,11 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using EmbedIO;
+using EmbedIO.Routing;
+using EmbedIO.WebApi;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using EmbedIO;
-using EmbedIO.Routing;
-using EmbedIO.WebApi;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Test;
 
@@ -124,7 +125,8 @@ public class TestWebServer : IDisposable
 
     public void Dispose()
     {
-        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.TryCancel();
+        _cancellationTokenSource.Dispose();
         _webServer.Dispose();
         foreach (var udpClient in UdpClients)
             udpClient.Dispose();

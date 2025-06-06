@@ -14,10 +14,12 @@ public abstract class PacketTransportBase : IPacketTransport
     private readonly bool _blocking;
     private readonly bool _singleMode;
     private readonly bool _passthrough;
+    private int _isDisposed;
+    private int _isDisposing;
     private readonly PacketTransportStat _stat = new();
     private bool _isSending;
-    protected bool IsDisposed { get; private set; }
-    protected bool IsDisposing { get; private set; }
+    protected bool IsDisposed => _isDisposed == 1;
+    protected bool IsDisposing => _isDisposing == 1;
     protected abstract ValueTask SendPacketsAsync(IList<IpPacket> ipPackets);
 
     public event EventHandler<IpPacket>? PacketReceived;
@@ -215,10 +217,9 @@ public abstract class PacketTransportBase : IPacketTransport
 
     public virtual void Dispose()
     {
-        if (IsDisposing)
+        if (Interlocked.Exchange(ref _isDisposing, 1) == 1)
             return;
 
-        IsDisposing = true;
         PreDispose();
         Dispose(true);
         GC.SuppressFinalize(this);
@@ -226,15 +227,14 @@ public abstract class PacketTransportBase : IPacketTransport
 
     protected void Dispose(bool disposing)
     {
-        if (IsDisposed)
+        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
             return;
 
         if (disposing)
             DisposeManaged();
 
         DisposeUnmanaged();
-        IsDisposed = true;
-        IsDisposing = false;
+        _isDisposing = 0;
     }
 
     protected virtual void PreDispose()

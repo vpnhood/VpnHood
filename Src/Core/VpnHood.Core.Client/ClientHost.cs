@@ -1,6 +1,6 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Common.Messaging;
@@ -273,8 +273,7 @@ internal class ClientHost(
             };
 
             // read the response
-            requestResult = await vpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken)
-                .Vhc();
+            requestResult = await vpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken).Vhc();
             var proxyClientStream = requestResult.ClientStream;
 
             // create a ProxyChannel
@@ -313,7 +312,9 @@ internal class ClientHost(
         if (_disposed)
             return;
 
-        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.TryCancel();
+        _cancellationTokenSource.Dispose();
+
         _tcpListenerIpV4?.Stop();
         _tcpListenerIpV6?.Stop();
         _nat.Dispose();

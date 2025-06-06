@@ -15,19 +15,19 @@ public class ClientProfileController : ControllerBase, IClientProfileController
         throw new SwaggerOnlyException();
     }
 
-    [HttpGet("{clientProfileId:guid}")]
+    [HttpGet("{clientProfileI}")]
     public Task<ClientProfileInfo> Get(Guid clientProfileId)
     {
         throw new SwaggerOnlyException();
     }
 
-    [HttpPatch("{clientProfileId:guid}")]
+    [HttpPatch("{clientProfileId}")]
     public Task<ClientProfileInfo> Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
         throw new SwaggerOnlyException();
     }
 
-    [HttpDelete("{clientProfileId:guid}")]
+    [HttpDelete("{clientProfileId}")]
     public Task Delete(Guid clientProfileId)
     {
         throw new SwaggerOnlyException();

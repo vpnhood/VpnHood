@@ -1,8 +1,8 @@
-﻿using System.Diagnostics;
-using System.Net;
-using Ga4.Trackers;
+﻿using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
@@ -245,20 +245,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         string channelId, byte[] initBuffer, CancellationToken cancellationToken)
     {
         // set timeout
-        using var cts = new CancellationTokenSource(ConnectorService.RequestTimeout);
-        using var linkedCts =
-            CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
+        using var timeoutCts = new CancellationTokenSource(ConnectorService.RequestTimeout);
+        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
 
         // connect to host
         var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint);
-        await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, linkedCts.Token).Vhc();
+        await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, connectCts.Token).Vhc();
 
         // create and add the channel
         var channel = new ProxyChannel(channelId, orgTcpClientStream,
             new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"));
 
         // flush initBuffer
-        await tcpClient.GetStream().WriteAsync(initBuffer, linkedCts.Token);
+        await tcpClient.GetStream().WriteAsync(initBuffer, connectCts.Token);
 
         try {
             _proxyManager.AddChannel(channel);
@@ -556,8 +555,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     TcpEndPoint = hostEndPoint,
                     CertificateHash = Token.ServerToken.CertificateHash
                 },
-                SocketFactory,
-                tcpConnectTimeout: _tcpConnectTimeout,
+                socketFactory: SocketFactory,
+                requestTimeout: _tcpConnectTimeout,
                 allowTcpReuse: AllowTcpReuse);
 
             // send hello request
@@ -610,9 +609,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // initialize the connector
             _connectorService.Init(
                 protocolVersion,
-                Debugger.IsAttached ? Timeout.InfiniteTimeSpan : helloResponse.RequestTimeout,
-                helloResponse.ServerSecret,
-                helloResponse.TcpReuseTimeout);
+                requestTimeout: Debugger.IsAttached ? Timeout.InfiniteTimeSpan : helloResponse.RequestTimeout,
+                tcpReuseTimeout: helloResponse.TcpReuseTimeout,
+                serverSecret: helloResponse.ServerSecret);
 
             // log response
             VhLogger.Instance.LogInformation(GeneralEventId.Session,
@@ -914,11 +913,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    public async Task UpdateSessionStatus(CancellationToken cancellationToken = default)
+    public async Task UpdateSessionStatus(CancellationToken cancellationToken)
     {
-        using var linkedCts =
-            CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
-
         // don't use SendRequest because it can be disposed
         using var requestResult = await SendRequest<SessionResponse>(
                 new SessionStatusRequest {
@@ -926,23 +922,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     SessionId = SessionId,
                     SessionKey = SessionKey
                 },
-                linkedCts.Token)
-            .Vhc();
-    }
-
-    private async Task SendByeRequest(CancellationToken cancellationToken)
-    {
-        // don't use SendRequest because it can be disposed
-        using var requestResult = await ConnectorService.SendRequest<SessionResponse>(
-                new ByeRequest {
-                    RequestId = UniqueIdFactory.Create(),
-                    SessionId = SessionId,
-                    SessionKey = SessionKey
-                },
                 cancellationToken)
             .Vhc();
-
-        requestResult.ClientStream.DisposeWithoutReuse();
     }
 
     private ValueTask Cleanup(CancellationToken cancellationToken)
@@ -990,10 +971,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // Sending Bye if the session was active before disposal
         if (shouldSendBye) {
             VhLogger.Instance.LogInformation("Sending bye to the server...");
-            using var cts = new CancellationTokenSource(byeTimeout);
-            var cancellationToken = cts.Token;
             try {
-                await SendByeRequest(cancellationToken);
+                // don't use SendRequest because it can be disposed
+                using var byteCts = new CancellationTokenSource(byeTimeout);
+                using var requestResult = await ConnectorService.SendRequest<SessionResponse>(
+                        new ByeRequest {
+                            RequestId = UniqueIdFactory.Create(),
+                            SessionId = SessionId,
+                            SessionKey = SessionKey
+                        },
+                        byteCts.Token)
+                    .Vhc();
+
+                requestResult.ClientStream.DisposeWithoutReuse();
                 VhLogger.Instance.LogInformation("Session has been closed on the server successfully.");
             }
             catch (Exception ex) {
@@ -1014,7 +1004,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // shutdown
         VhLogger.Instance.LogInformation("Client is shutting down...");
-        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.TryCancel();
+        _cancellationTokenSource.Dispose();
+
         _cleanupJob.Dispose();
         State = ClientState.Disconnecting;
 

@@ -730,7 +730,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
         // cancel all running tasks
         VhLogger.Instance.LogDebug("Stopping ServerHost...");
-        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.TryCancel();
+        _cancellationTokenSource.Dispose();
 
         // Job
         _cleanupConnectionsJob.Dispose();

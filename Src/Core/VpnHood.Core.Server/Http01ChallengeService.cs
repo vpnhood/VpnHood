@@ -1,6 +1,6 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -96,7 +96,8 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
         }
 
         _tcpListeners.Clear();
-        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.TryCancel();
+        _cancellationTokenSource.Dispose();
         IsStarted = false;
     }
 

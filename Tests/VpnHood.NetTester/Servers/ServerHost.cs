@@ -1,8 +1,9 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.NetTester.Testers.HttpTesters;
 using VpnHood.NetTester.Testers.QuicTesters;
 using VpnHood.NetTester.Testers.TcpTesters;
@@ -90,7 +91,8 @@ internal class ServerHost(IPAddress listenerIp) : IDisposable
 
     public void Stop()
     {
-        _cancellationTokenSource?.Cancel();
+        _cancellationTokenSource?.TryCancel();
+        _cancellationTokenSource?.Dispose();
         _tcpTesterServer?.Dispose();
         _httpTesterServer?.Dispose();
         _quicTesterServer?.Dispose();

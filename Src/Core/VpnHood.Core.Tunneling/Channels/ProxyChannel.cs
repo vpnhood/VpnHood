@@ -148,7 +148,7 @@ public class ProxyChannel : IProxyChannel
     }
 
     private async Task CopyToInternalAsync(Stream source, Stream destination, bool isSendingToTunnel, int bufferSize,
-        CancellationToken sourceCancellationToken, CancellationToken destinationCancellationToken)
+        CancellationToken sourceCt, CancellationToken destinationCt)
     {
         // Microsoft Stream Source Code:
         // We pick a value that is the largest multiple of 4096 that is still smaller than the large object heap threshold (85K).
@@ -165,11 +165,10 @@ public class ProxyChannel : IProxyChannel
 
         // <<----------------- the MOST memory consuming in the APP! >> ----------------------
         Memory<byte> readBuffer = new byte[bufferSize];
-        while (!sourceCancellationToken.IsCancellationRequested &&
-               !destinationCancellationToken.IsCancellationRequested) {
+        while (!sourceCt.IsCancellationRequested && !destinationCt.IsCancellationRequested) {
             // read from source
             var bytesRead = await source
-                .ReadAsync(readBuffer[preserveCount..], sourceCancellationToken)
+                .ReadAsync(readBuffer[preserveCount..], sourceCt)
                 .Vhc();
 
             // check end of the stream
@@ -179,10 +178,10 @@ public class ProxyChannel : IProxyChannel
             // write to destination
             if (destinationPreserved != null)
                 await destinationPreserved.WritePreservedAsync(readBuffer[..(preserveCount + bytesRead)],
-                        cancellationToken: destinationCancellationToken).Vhc();
+                        cancellationToken: destinationCt).Vhc();
             else
                 await destination.WriteAsync(readBuffer[preserveCount..bytesRead],
-                        destinationCancellationToken).Vhc();
+                        destinationCt).Vhc();
 
             // calculate transferred bytes
             lock (_trafficLock) {

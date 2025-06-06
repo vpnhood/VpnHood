@@ -22,34 +22,27 @@ internal class ConnectorServiceBase : IDisposable
     private readonly ConcurrentQueue<ClientStreamItem> _freeClientStreams = new();
     private readonly HashSet<IClientStream> _sharedClientStream = new(50); // for preventing reuse
     private readonly Job _cleanupJob;
-    private bool _disposed;
+    private int _isDisposed;
     private bool _allowTcpReuse;
 
-    public TimeSpan TcpConnectTimeout { get; set; }
     public ConnectorEndPointInfo EndPointInfo { get; }
     public ClientConnectorStat Stat { get; }
-    public TimeSpan RequestTimeout { get; private set; }
     public TimeSpan TcpReuseTimeout { get; private set; }
     public int ProtocolVersion { get; private set; } = 6;
 
-    public ConnectorServiceBase(ConnectorEndPointInfo endPointInfo, ISocketFactory socketFactory,
-        TimeSpan tcpConnectTimeout, bool allowTcpReuse)
+    public ConnectorServiceBase(ConnectorEndPointInfo endPointInfo, ISocketFactory socketFactory, bool allowTcpReuse)
     {
         _socketFactory = socketFactory;
         _allowTcpReuse = allowTcpReuse;
         Stat = new ClientConnectorStatImpl(this);
-        TcpConnectTimeout = tcpConnectTimeout;
-        RequestTimeout = TimeSpan.FromSeconds(30);
         TcpReuseTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(30);
         EndPointInfo = endPointInfo;
-        _cleanupJob = new Job(Cleanup, tcpConnectTimeout, "ConnectorCleanup");
+        _cleanupJob = new Job(Cleanup, "ConnectorCleanup");
     }
 
-    public void Init(int protocolVersion, TimeSpan tcpRequestTimeout, byte[]? serverSecret,
-        TimeSpan tcpReuseTimeout)
+    protected void Init(int protocolVersion, byte[]? serverSecret, TimeSpan tcpReuseTimeout)
     {
         ProtocolVersion = protocolVersion;
-        RequestTimeout = tcpRequestTimeout;
         TcpReuseTimeout = tcpReuseTimeout;
     }
 
@@ -92,8 +85,8 @@ internal class ConnectorServiceBase : IDisposable
             // Client.SessionTimeout does not affect in ConnectAsync
             VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "Establishing a new TCP to the Server... EndPoint: {EndPoint}",
                 VhLogger.Format(tcpEndPoint));
-            await tcpClient.VhConnectAsync(tcpEndPoint, TcpConnectTimeout, cancellationToken).Vhc();
-            return await GetTlsConnectionToServer(streamId, tcpClient, cancellationToken);
+            await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();
+            return await GetTlsConnectionToServer(streamId, tcpClient, cancellationToken).Vhc();
         }
         catch {
             tcpClient.Dispose();
@@ -143,7 +136,7 @@ internal class ConnectorServiceBase : IDisposable
     private void ClientStreamReuseCallback(IClientStream clientStream)
     {
         // Check if the connector service is disposed
-        if (_disposed || !_allowTcpReuse) {
+        if (_isDisposed != 0 || !_allowTcpReuse) {
             VhLogger.Instance.LogDebug(GeneralEventId.Tcp,
                 "Disposing the reused client stream because the connector service is either disposed or reuse is no longer allowed. " +
                 "ClientStreamId: {ClientStreamId}", clientStream.ClientStreamId);
@@ -213,24 +206,32 @@ internal class ConnectorServiceBase : IDisposable
         return ret;
     }
 
+    protected virtual void Dispose(bool disposing)
+    {
+        if (Interlocked.Exchange(ref _isDisposed, 1) == 0) {
+            if (disposing) {
+                // Stop the cleanup job
+                _cleanupJob.Dispose();
+
+                // Prevent reuse of client streams
+                PreventReuseSharedClients();
+
+                // Kill and remove all owned client streams
+                while (_freeClientStreams.TryDequeue(out var queueItem))
+                    queueItem.ClientStream.DisposeWithoutReuse();
+                _freeClientStreams.Clear();
+
+                // remove all shared client streams
+                lock (_sharedClientStream)
+                    _sharedClientStream.Clear();
+            }
+        }
+    }
+
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
-
-        // Stop the cleanup job
-        _cleanupJob.Dispose();
-
-        // Prevent reuse of client streams
-        PreventReuseSharedClients();
-
-        // Kill and remove all owned client streams
-        while (_freeClientStreams.TryDequeue(out var queueItem))
-            queueItem.ClientStream.DisposeWithoutReuse();
-        _freeClientStreams.Clear();
-
-        // remove all shared client streams
-        _sharedClientStream.Clear();
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 
     private class ClientStreamItem

@@ -16,29 +16,39 @@ namespace VpnHood.Core.Client.ConnectorServices;
 internal class ConnectorService(
     ConnectorEndPointInfo endPointInfo,
     ISocketFactory socketFactory,
-    TimeSpan tcpConnectTimeout,
+    TimeSpan requestTimeout,
     bool allowTcpReuse = true)
-    : ConnectorServiceBase(endPointInfo, socketFactory, tcpConnectTimeout, allowTcpReuse)
+    : ConnectorServiceBase(endPointInfo, socketFactory, allowTcpReuse)
 {
-    public async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request,
-        CancellationToken cancellationToken)
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private int _isDisposed;
+
+    public TimeSpan RequestTimeout { get; private set; } = requestTimeout;
+
+    public void Init(int protocolVersion, byte[]? serverSecret, TimeSpan requestTimeout, TimeSpan tcpReuseTimeout)
+    {
+        RequestTimeout = requestTimeout;
+        base.Init(protocolVersion, serverSecret, tcpReuseTimeout);
+    }
+
+    public async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request, CancellationToken cancellationToken)
         where T : SessionResponse
     {
+        using var timeoutCts = new CancellationTokenSource(RequestTimeout);
+        using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(
+            timeoutCts.Token, cancellationToken, _cancellationTokenSource.Token);
+
         var eventId = GetRequestEventId(request);
         request.RequestId += ":client";
         VhLogger.Instance.LogDebug(eventId,
             "Sending a request. RequestCode: {RequestCode}, RequestId: {RequestId}",
             (RequestCode)request.RequestCode, request.RequestId);
 
-        // set request timeout
-        using var localTimeoutCts = new CancellationTokenSource(RequestTimeout);
-        using var localCts = CancellationTokenSource.CreateLinkedTokenSource(localTimeoutCts.Token, cancellationToken);
-
         await using var mem = new MemoryStream();
         mem.WriteByte(1);
         mem.WriteByte(request.RequestCode);
-        await StreamUtils.WriteObjectAsync(mem, request, localCts.Token).Vhc();
-        var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, localCts.Token).Vhc();
+        await StreamUtils.WriteObjectAsync(mem, request, requestCts.Token).Vhc();
+        var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, requestCts.Token).Vhc();
 
         // log the response
         VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.", ret.Response.ErrorCode);
@@ -161,5 +171,17 @@ internal class ConnectorService(
             RequestCode.ProxyChannel => GeneralEventId.ProxyChannel,
             _ => GeneralEventId.Tcp
         };
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (Interlocked.Exchange(ref _isDisposed, 1) == 0) {
+            if (disposing) {
+                _cancellationTokenSource.TryCancel(); // cancel all pending requests
+                _cancellationTokenSource.Dispose(); // dispose the cancellation token source
+            }
+        }
+
+        base.Dispose(disposing);
     }
 }

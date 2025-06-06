@@ -13,7 +13,7 @@ public class Job : IDisposable
     private readonly TimeSpan _dueTime;
     private readonly int? _maxRetry;
     private long _currentFailedCount;
-    private bool _disposed;
+    private int _isDisposed;
     private readonly JobRunner _jobRunner;
     public TimeSpan Period { get; set; }
     public long SucceededCount { get; private set; }
@@ -33,8 +33,8 @@ public class Job : IDisposable
             Start();
 
         // initialize job runner based on the period
-        _jobRunner = options.Period >= JobRunner.SlowInstance.Interval 
-            ? JobRunner.SlowInstance 
+        _jobRunner = options.Period >= JobRunner.SlowInstance.Interval
+            ? JobRunner.SlowInstance
             : JobRunner.FastInstance;
 
         _jobRunner.Add(this);
@@ -58,7 +58,7 @@ public class Job : IDisposable
 
     public void Start()
     {
-        if (_disposed)
+        if (_isDisposed != 0)
             throw new ObjectDisposedException(nameof(Job));
 
         if (IsStarted)
@@ -107,12 +107,12 @@ public class Job : IDisposable
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
 
         // await required for linkedCts to be disposed properly
-        await RunInternal(linkedCts.Token); 
+        await RunInternal(linkedCts.Token);
     }
 
     private async Task RunInternal(CancellationToken cancellationToken)
     {
-        if (_disposed)
+        if (_isDisposed != 0)
             throw new ObjectDisposedException(nameof(Job));
 
         try {
@@ -147,9 +147,10 @@ public class Job : IDisposable
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
-        _cancellationTokenSource.Cancel();
+        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+            return;
+
+        _cancellationTokenSource.TryCancel();
         _cancellationTokenSource.Dispose();
         _jobSemaphore.Dispose();
         StartedTime = null;

@@ -372,25 +372,6 @@ public static class VhUtils
         return string.IsNullOrEmpty(metadataAttribute?.Value) ? defaultValue : metadataAttribute.Value;
     }
 
-    public static async Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> body,
-        int maxDegreeOfParallelism,
-        CancellationToken cancellationToken)
-    {
-        var tasks = new List<Task>();
-        foreach (var t in source) {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            tasks.Add(body(t));
-            if (tasks.Count == maxDegreeOfParallelism) {
-                await Task.WhenAny(tasks).Vhc();
-                foreach (var completedTask in tasks.Where(x => x.IsCompleted).ToArray())
-                    tasks.Remove(completedTask);
-            }
-        }
-
-        await Task.WhenAll(tasks).Vhc();
-    }
-
     public static bool TryDeleteFile(string filePath)
     {
         try {

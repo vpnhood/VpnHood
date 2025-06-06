@@ -220,6 +220,12 @@ public class ClientServerTest : TestBase
         Assert.IsTrue(fileAccessManagerOptions.UdpEndPoints.Any(x => x.Port == client.HostUdpEndPoint?.Port));
     }
 
+    [TestMethod]
+    public void Client_must_dispose_after_device_closed_foo()
+    {
+        Client_must_dispose_after_device_closed().GetAwaiter().GetResult();
+    }
+
 
     [TestMethod]
     public async Task Client_must_dispose_after_device_closed()
@@ -230,7 +236,10 @@ public class ClientServerTest : TestBase
         using var vpnAdapter = new TestNullVpnAdapter();
         await using var client = await TestHelper.CreateClient(token, vpnAdapter);
 
+        Log("Disposing teh adapter...");
         vpnAdapter.Dispose();
+        
+        Log("Waiting for Disposed state...");
         await client.WaitForState(ClientState.Disposed);
     }
 

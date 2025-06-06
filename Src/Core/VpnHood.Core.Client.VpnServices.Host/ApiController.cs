@@ -12,7 +12,7 @@ namespace VpnHood.Core.Client.VpnServices.Host;
 
 internal class ApiController : IDisposable
 {
-    private int _disposed;
+    private int _isDisposed;
     private readonly VpnServiceHost _vpnHoodService;
     private readonly TcpListener _tcpListener;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -45,7 +45,7 @@ internal class ApiController : IDisposable
             }
         }
         catch (Exception ex) {
-            if (_disposed == 0)
+            if (_isDisposed == 0)
                 VhLogger.Instance.LogError(ex, "VpnService host Listener has stopped.");
         }
         finally {
@@ -69,7 +69,7 @@ internal class ApiController : IDisposable
                 await ProcessRequests(stream, cancellationToken);
         }
         catch (Exception ex) {
-            if (_disposed == 0)
+            if (_isDisposed == 0)
                 VhLogger.Instance.LogError(ex, "Could not handle API request.");
         }
         finally {
@@ -96,7 +96,7 @@ internal class ApiController : IDisposable
             };
             await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
         }
-        catch (Exception ex) when (_disposed == 0) {
+        catch (Exception ex) when (_isDisposed == 0) {
             var response = new ApiResponse<object> {
                 ApiError = ex.ToApiError(),
                 ConnectionInfo = await GetConnectionInfoOrDefault(),
@@ -202,7 +202,7 @@ internal class ApiController : IDisposable
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
             return;
 
         _cancellationTokenSource.Cancel();

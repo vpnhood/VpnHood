@@ -104,7 +104,7 @@ public class ProxyChannel : IProxyChannel
                     _tunnelClientStream.Stream.DisposeAsync().AsTask())
                 .Vhc();
         }
-        catch (Exception ex) when (VhLogger.IsSocketCloseException(ex)) {
+        catch (Exception ex) when (_disposed && VhLogger.IsSocketCloseException(ex)) {
             // this is normal shutdown for host stream, no need to log it
         }
         catch (Exception ex) {
@@ -124,7 +124,7 @@ public class ProxyChannel : IProxyChannel
             await CopyToInternalAsync(source, destination, false, bufferSize,
                 sourceCancellationToken, destinationCancellationToken).Vhc();
         }
-        catch (Exception ex) when (VhLogger.IsSocketCloseException(ex)) {
+        catch (Exception ex) when (_disposed && VhLogger.IsSocketCloseException(ex)) {
             // this is normal shutdown for host stream, no need to log it
         }
         catch (Exception ex) {
@@ -141,7 +141,7 @@ public class ProxyChannel : IProxyChannel
             await CopyToInternalAsync(source, destination, true, bufferSize,
                 sourceCancellationToken, destinationCancellationToken).Vhc();
         }
-        catch (Exception ex) when (VhLogger.IsSocketCloseException(ex)) {
+        catch (Exception ex) when (_disposed && VhLogger.IsSocketCloseException(ex)) {
             // this is normal shutdown for host stream, no need to log it
         }
         catch (Exception ex) {

@@ -12,12 +12,12 @@ public class LogService(string logFilePath) : IDisposable
     public bool Exists => File.Exists(LogFilePath);
     public bool IsStarted => _logger != null;
 
-    public void Start(LogServiceOptions options)
+    public void Start(LogServiceOptions options, bool deleteOldReport = true)
     {
         Stop();
 
         VhLogger.IsAnonymousMode = options.LogAnonymous is null or true;
-        VhLogger.Instance = _logger = CreateLogger(options);
+        VhLogger.Instance = _logger = CreateLogger(options, deleteOldReport);
         LogEvents = options.LogEventNames;
         VhLogger.MinLogLevel = options.MinLogLevel;
         if (options.MinLogLevel == LogLevel.Trace) {
@@ -41,9 +41,9 @@ public class LogService(string logFilePath) : IDisposable
         _logger = null;
     }
 
-    private ILogger CreateLogger(LogServiceOptions logServiceOptions)
+    private ILogger CreateLogger(LogServiceOptions logServiceOptions, bool deleteOldReport)
     {
-        using var loggerFactory = CreateLoggerFactory(logServiceOptions);
+        using var loggerFactory = CreateLoggerFactory(logServiceOptions, deleteOldReport);
         var logger = loggerFactory.CreateLogger(logServiceOptions.CategoryName ?? "");
 
         logger = new FilterLogger(logger, (_, eventId) => {
@@ -56,10 +56,10 @@ public class LogService(string logFilePath) : IDisposable
         return logger;
     }
 
-    private ILoggerFactory CreateLoggerFactory(LogServiceOptions logServiceOptions)
+    private ILoggerFactory CreateLoggerFactory(LogServiceOptions logServiceOptions, bool deleteOldReport)
     {
         // delete last lgo
-        if (File.Exists(LogFilePath))
+        if (deleteOldReport && File.Exists(LogFilePath))
             File.Delete(LogFilePath);
 
         var loggerFactory = LoggerFactory.Create(builder => {

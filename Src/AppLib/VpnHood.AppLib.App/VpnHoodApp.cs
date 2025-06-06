@@ -426,7 +426,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Directory.CreateDirectory(options.StorageFolderPath); //make sure directory exists
         var settingsService = new AppSettingsService(options.StorageFolderPath);
         var logService = new LogService(Path.Combine(options.StorageFolderPath, FileNameLog));
-        logService.Start(GetLogOptions(settingsService.AppSettings.UserSettings, options.LogServiceOptions, options.IsDebugMode));
+        logService.Start(GetLogOptions(settingsService.AppSettings.UserSettings, options.LogServiceOptions, options.IsDebugMode),
+            deleteOldReport: false);
         return new VpnHoodApp(device, settingsService, logService, options);
     }
 

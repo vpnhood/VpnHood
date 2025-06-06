@@ -3,14 +3,17 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Core.Toolkit.Logging;
 
-public class FileLogger(string filePath, bool includeScopes = true, bool autoFlush = false,
+public class FileLogger(
+    string filePath,
+    bool includeScopes = true,
+    bool autoFlush = false,
     string? categoryName = null)
     : TextLogger(includeScopes, categoryName), IDisposable
 {
     private const int DefaultBufferSize = 1024;
     private readonly object _lock = new();
     private readonly StreamWriter _streamWriter = new(
-        new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite),
+        new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.Read),
         Encoding.UTF8, DefaultBufferSize);
 
     public override void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,

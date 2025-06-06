@@ -952,6 +952,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (_disposed)
             return;
 
+        // set state to disconnecting
+        VhLogger.Instance.LogInformation("Client is getting ready to shutdown...");
+
         // save the state before disposal
         var shouldSendBye = LastException == null && State == ClientState.Connected;
 

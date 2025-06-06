@@ -151,6 +151,9 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     private static async Task ResponseSerializerCallback(IHttpContext context, object? data)
     {
+        if (context.IsHandled) 
+            return;
+
         if (data is null) {
             context.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return;

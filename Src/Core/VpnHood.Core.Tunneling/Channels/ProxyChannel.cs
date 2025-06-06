@@ -102,7 +102,10 @@ public class ProxyChannel : IProxyChannel
             await Task.WhenAll(
                     _hostClientStream.Stream.DisposeAsync().AsTask(),
                     _tunnelClientStream.Stream.DisposeAsync().AsTask())
-                    .Vhc();
+                .Vhc();
+        }
+        catch (Exception ex) when (VhLogger.IsSocketCloseException(ex)) {
+            // this is normal shutdown for host stream, no need to log it
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, ex,
@@ -121,6 +124,9 @@ public class ProxyChannel : IProxyChannel
             await CopyToInternalAsync(source, destination, false, bufferSize,
                 sourceCancellationToken, destinationCancellationToken).Vhc();
         }
+        catch (Exception ex) when (VhLogger.IsSocketCloseException(ex)) {
+            // this is normal shutdown for host stream, no need to log it
+        }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(ex,
                 "ProxyChannel: Error while copying from tunnel. ChannelId: {ChannelId}", ChannelId);
@@ -134,6 +140,9 @@ public class ProxyChannel : IProxyChannel
         try {
             await CopyToInternalAsync(source, destination, true, bufferSize,
                 sourceCancellationToken, destinationCancellationToken).Vhc();
+        }
+        catch (Exception ex) when (VhLogger.IsSocketCloseException(ex)) {
+            // this is normal shutdown for host stream, no need to log it
         }
         catch (Exception ex) {
             // tunnel read task has been finished, it is normal shutdown for host stream

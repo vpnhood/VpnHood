@@ -1083,7 +1083,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             return checkResult; // Job done
         }
         catch (Exception ex) {
-            ReportWarning(ex, "Could not retrieve the latest publish info information.");
+            VhLogger.Instance.LogWarning("Could not retrieve the latest publish info information. Error: {Error}", 
+                ex.Message);
             return null; // could not retrieve the latest publish info. try later
         }
     }

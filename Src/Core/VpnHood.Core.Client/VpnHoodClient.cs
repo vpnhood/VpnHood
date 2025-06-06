@@ -846,7 +846,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             }
 
             _lastConnectionErrorTime = null;
-            if (SessionInfo != null)
+            if (SessionInfo != null && _vpnAdapter.IsStarted)
                 State = ClientState.Connected;
             return requestResult;
         }

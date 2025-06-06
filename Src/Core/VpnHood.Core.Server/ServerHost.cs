@@ -32,7 +32,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
     private readonly Job _cleanupConnectionsJob;
 
     public const int MaxProtocolVersion = 8;
-    public const int MinProtocolVersion = 4;
+    public const int MinProtocolVersion = 6;
     public int MinClientProtocolVersion { get; set; } = 8;
     public bool IsIpV6Supported { get; set; }
     public IpRange[]? NetFilterVpnAdapterIncludeIpRanges { get; set; }
@@ -231,15 +231,6 @@ public class ServerHost : IDisposable, IAsyncDisposable
         return certificate.Certificate;
     }
 
-    private bool CheckApiKeyAuthorization(string authorization)
-    {
-        var parts = authorization.Split(' ');
-        return
-            parts.Length >= 2 &&
-            parts[0].Equals("ApiKey", StringComparison.OrdinalIgnoreCase) &&
-            parts[1].Equals(_sessionManager.ApiKey, StringComparison.OrdinalIgnoreCase);
-    }
-
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream,
         CancellationToken cancellationToken)
     {
@@ -254,38 +245,15 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
             Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var binaryStreamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
-            int.TryParse(headers.GetValueOrDefault("X-ProtocolVersion", "5"), out var protocolVersion);
-            var authorization = headers.GetValueOrDefault("Authorization", string.Empty);
+            int.TryParse(headers.GetValueOrDefault("X-ProtocolVersion", "0"), out var protocolVersion);
 
             // check version; Throw unauthorized to prevent fingerprinting
             if (protocolVersion is < MinProtocolVersion or > MaxProtocolVersion)
                 throw new UnauthorizedAccessException();
 
-            // read api key
-            if (protocolVersion <= 5) {
-                if (!CheckApiKeyAuthorization(authorization)) {
-                    // process hello without api key
-                    if (authorization != "ApiKey")
-                        throw new UnauthorizedAccessException();
-
-                    await sslStream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken)
-                        .Vhc();
-                    return new TcpClientStream(tcpClient, sslStream, streamId);
-                }
-
-                await sslStream.WriteAsync(HttpResponseBuilder.Ok(), cancellationToken).Vhc();
-            }
-
             switch (binaryStreamType) {
-                case TunnelStreamType.Standard when protocolVersion <= 5:
-                    return new TcpClientStream(tcpClient,
-                        new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer),
-                        streamId, ReuseClientStream) {
-                        RequireHttpResponse = false
-                    };
-
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                case TunnelStreamType.Standard when protocolVersion >= 6:
+                case TunnelStreamType.Standard:
                     return new TcpClientStream(tcpClient,
                         new BinaryStreamStandard(sslStream, streamId, useBuffer),
                         streamId, ReuseClientStream) {
@@ -294,7 +262,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
                 case TunnelStreamType.None:
                     return new TcpClientStream(tcpClient, sslStream, streamId) {
-                        RequireHttpResponse = protocolVersion >= 6
+                        RequireHttpResponse = true
                     };
 
                 case TunnelStreamType.Unknown:
@@ -599,11 +567,6 @@ public class ServerHost : IDisposable, IAsyncDisposable
             UdpPort = udpPort,
             GaMeasurementId = sessionResponseEx.GaMeasurementId,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
-#pragma warning disable CS0618 // Type or member is obsolete
-            ServerProtocolVersion = protocolVersion,
-            MaxProtocolVersion = 7,
-            MinProtocolVersion = MinProtocolVersion,
-#pragma warning restore CS0618 // Type or member is obsolete
             ProtocolVersion = sessionResponseEx.ProtocolVersion,
             SuppressedTo = sessionResponseEx.SuppressedTo,
             MaxPacketChannelCount = session.Tunnel.MaxPacketChannelCount,

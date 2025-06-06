@@ -28,7 +28,7 @@ internal class ConnectorServiceBase : IDisposable
     public ConnectorEndPointInfo EndPointInfo { get; }
     public ClientConnectorStat Stat { get; }
     public TimeSpan TcpReuseTimeout { get; private set; }
-    public int ProtocolVersion { get; private set; } = 6;
+    public int ProtocolVersion { get; private set; } = 8;
 
     public ConnectorServiceBase(ConnectorEndPointInfo endPointInfo, ISocketFactory socketFactory, bool allowTcpReuse)
     {

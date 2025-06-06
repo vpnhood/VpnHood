@@ -563,10 +563,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             var clientInfo = new ClientInfo {
                 ClientId = ClientId,
                 ClientVersion = Version.ToString(3),
-#pragma warning disable CS0618 // Type or member is obsolete
-                ProtocolVersion = _connectorService.ProtocolVersion,
-#pragma warning restore CS0618 // Type or member is obsolete
-                MinProtocolVersion = MinProtocolVersion,
+                MinProtocolVersion = _connectorService.ProtocolVersion,
                 MaxProtocolVersion = MaxProtocolVersion,
                 UserAgent = UserAgent
             };
@@ -590,25 +587,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (helloResponse.ClientPublicAddress is null)
                 throw new NotSupportedException($"Server must returns {nameof(helloResponse.ClientPublicAddress)}.");
 
-#pragma warning disable CS0618 // Type or member is obsolete
-            if (helloResponse is { MinProtocolVersion: 0, ServerProtocolVersion: 5 }) {
-                helloResponse.MinProtocolVersion = 5;
-                helloResponse.MaxProtocolVersion = 5;
-            }
-
-            var protocolVersion = helloResponse.ProtocolVersion ?? Math.Min(helloResponse.MaxProtocolVersion, MaxProtocolVersion);
-            if (protocolVersion < MinProtocolVersion)
-                throw new SessionException(SessionErrorCode.UnsupportedServer,
-                    "The server is outdated and does not support by your app!");
-
-            if (protocolVersion > MaxProtocolVersion)
-                throw new SessionException(SessionErrorCode.UnsupportedServer,
-                    "This app is outdated and does not support by the server!");
-#pragma warning restore CS0618 // Type or member is obsolete
 
             // initialize the connector
             _connectorService.Init(
-                protocolVersion,
+                helloResponse.ProtocolVersion,
                 requestTimeout: Debugger.IsAttached ? Timeout.InfiniteTimeSpan : helloResponse.RequestTimeout,
                 tcpReuseTimeout: helloResponse.TcpReuseTimeout,
                 serverSecret: helloResponse.ServerSecret);
@@ -618,7 +600,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 "Hurray! Client has been connected! " +
                 $"SessionId: {VhLogger.FormatId(helloResponse.SessionId)}, " +
                 $"ServerVersion: {helloResponse.ServerVersion}, " +
-                $"ProtocolVersion: {protocolVersion}, " +
+                $"ProtocolVersion: {helloResponse.ProtocolVersion}, " +
                 $"CurrentProtocolVersion: {_connectorService.ProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(helloResponse.ClientPublicAddress)}, " +
                 $"IsTunProviderSupported: {helloResponse.IsTunProviderSupported}, " +

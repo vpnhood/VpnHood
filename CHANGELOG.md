@@ -1,5 +1,7 @@
 # Upcoming
-* Imrove: Windows: Digitally sign the installer
+* Improve: Improve performance and stability
+* Improve: Windows: Digitally sign the installer
+* Update: Remove legacy protocol
 
 # v7.0.708
 * Fix: IPv6 ping

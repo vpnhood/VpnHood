@@ -4,8 +4,6 @@ public class ClientInfo
 {
     public required string ClientId { get; init; }
     public required string ClientVersion { get; init; }
-    [Obsolete("Server returns the protocol")]
-    public int ProtocolVersion { get; init; } // obsolete
     public int MinProtocolVersion { get; init; }
     public int MaxProtocolVersion { get; init; }
     public required string UserAgent { get; init; }

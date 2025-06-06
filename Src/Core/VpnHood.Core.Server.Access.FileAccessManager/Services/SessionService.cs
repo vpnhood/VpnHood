@@ -104,9 +104,7 @@ public class SessionService : IDisposable
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,
             ExtraData = sessionRequestEx.ExtraData,
-#pragma warning disable CS0618 // Type or member is obsolete
-            ProtocolVersion = sessionRequestEx.ProtocolVersion ?? sessionRequestEx.ClientInfo.ProtocolVersion
-#pragma warning restore CS0618 // Type or member is obsolete
+            ProtocolVersion = sessionRequestEx.ProtocolVersion
         };
 
         // process plan id

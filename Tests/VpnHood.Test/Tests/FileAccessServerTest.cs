@@ -167,9 +167,6 @@ public class FileAccessManagerTest : TestBase
                 ClientId = clientId,
                 UserAgent = "Test",
                 ClientVersion = "1.0.0",
-#pragma warning disable CS0618 // Type or member is obsolete
-                ProtocolVersion = 4,
-#pragma warning restore CS0618 // Type or member is obsolete
                 MinProtocolVersion = 5,
                 MaxProtocolVersion = 6,
             },

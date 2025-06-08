@@ -1005,12 +1005,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _clientHost.PacketReceived -= ClientHost_PacketReceived;
         _proxyManager.PacketReceived -= Proxy_PacketReceived;
 
-        // disposing VpnAdapter
-        if (_autoDisposeVpnAdapter) {
-            VhLogger.Instance.LogDebug("Stopping the VpnAdapter...");
-            VhUtils.TryInvoke("Stop the VpnAdapter", () => _vpnAdapter.Stop());
-        }
-
         VhLogger.Instance.LogDebug("Disposing ClientHost...");
         _clientHost.Dispose();
 
@@ -1024,6 +1018,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // Make sure async resources are disposed
         _clientUsageTracker?.Dispose();
 
+        // disposing VpnAdapter. It must be at the end of the disposal process so channels can be disposed properly
+        // because network change events can cause problems
+        if (_autoDisposeVpnAdapter) {
+            VhLogger.Instance.LogDebug("Stopping the VpnAdapter...");
+            VhUtils.TryInvoke("Stop the VpnAdapter", () => _vpnAdapter.Stop());
+        }
     }
 
     public void Dispose()

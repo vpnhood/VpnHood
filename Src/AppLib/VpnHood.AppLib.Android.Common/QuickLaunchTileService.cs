@@ -8,6 +8,7 @@ using Java.Util.Functions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using Exception = System.Exception;
 using Object = Java.Lang.Object;
 
@@ -46,21 +47,28 @@ public class QuickLaunchTileService : TileService
 
     public override void OnClick()
     {
+        _ = TryClick();
+    }
+
+    private async Task TryClick()
+    {
         try {
             if (VpnHoodApp.Instance.ConnectionState == AppConnectionState.None) {
                 _isConnectByClick = true;
-                _ = VpnHoodApp.Instance.Connect();
+                await VpnHoodApp.Instance.Connect().Vhc();
             }
             else {
-                _ = VpnHoodApp.Instance.Disconnect();
+                await VpnHoodApp.Instance.Disconnect().Vhc();
             }
         }
         catch (Exception ex) {
             Toast.MakeText(this, ex.Message, ToastLength.Long)?.Show();
         }
-
-        Refresh();
+        finally {
+            Refresh();
+        }
     }
+
 
     public override void OnTileAdded()
     {

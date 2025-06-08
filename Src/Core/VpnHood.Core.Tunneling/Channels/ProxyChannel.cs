@@ -10,7 +10,7 @@ namespace VpnHood.Core.Tunneling.Channels;
 
 public class ProxyChannel : IProxyChannel
 {
-    private bool _disposed;
+    private int _isDisposed;
     private readonly int _orgStreamBufferSize;
     private readonly IClientStream _hostClientStream;
     private readonly int _tunnelStreamBufferSize;
@@ -23,6 +23,7 @@ public class ProxyChannel : IProxyChannel
     private readonly object _trafficLock = new();
     private bool _isTunnelReadTaskFinished;
     private readonly Job _checkAliveJob;
+    private bool IsDisposed =>_isDisposed == 1;
 
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public string ChannelId { get; }
@@ -61,7 +62,7 @@ public class ProxyChannel : IProxyChannel
 
     public PacketChannelState State {
         get {
-            if (_disposed)
+            if (IsDisposed)
                 return PacketChannelState.Disposed;
 
             return _started
@@ -73,8 +74,7 @@ public class ProxyChannel : IProxyChannel
 
     public void Start()
     {
-        if (_disposed)
-            throw new ObjectDisposedException(GetType().Name);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         if (_started)
             throw new InvalidOperationException("ProxyChannel is already started.");
@@ -104,13 +104,13 @@ public class ProxyChannel : IProxyChannel
                     _tunnelClientStream.Stream.DisposeAsync().AsTask())
                 .Vhc();
         }
-        catch (Exception ex) when (_disposed && VhLogger.IsSocketCloseException(ex)) {
+        catch (Exception ex) when (IsDisposed && VhLogger.IsSocketCloseException(ex)) {
             // this is normal shutdown for host stream, no need to log it
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, ex,
-                "Error while starting a ProxyChannel. ChannelId: {ChannelId}, ProxyDisposal: {ProxyDisposal}",
-                ChannelId, _disposed);
+                "Error while using a ProxyChannel. ChannelId: {ChannelId}, IsDisposed: {IsDisposed}",
+                ChannelId, IsDisposed);
         }
         finally {
             Dispose();
@@ -124,12 +124,13 @@ public class ProxyChannel : IProxyChannel
             await CopyToInternalAsync(source, destination, false, bufferSize,
                 sourceCancellationToken, destinationCancellationToken).Vhc();
         }
-        catch (Exception ex) when (_disposed && VhLogger.IsSocketCloseException(ex)) {
+        catch (Exception ex) when (IsDisposed && VhLogger.IsSocketCloseException(ex)) {
             // this is normal shutdown for host stream, no need to log it
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(ex,
-                "ProxyChannel: Error while copying from tunnel. ChannelId: {ChannelId}", ChannelId);
+                "ProxyChannel: Error while copying from tunnel. ChannelId: {ChannelId}, IsDisposed: {IsDisposed}"
+                , ChannelId, IsDisposed);
             throw;
         }
     }
@@ -141,7 +142,7 @@ public class ProxyChannel : IProxyChannel
             await CopyToInternalAsync(source, destination, true, bufferSize,
                 sourceCancellationToken, destinationCancellationToken).Vhc();
         }
-        catch (Exception ex) when (_disposed && VhLogger.IsSocketCloseException(ex)) {
+        catch (Exception ex) when (IsDisposed && VhLogger.IsSocketCloseException(ex)) {
             // this is normal shutdown for host stream, no need to log it
         }
         catch (Exception ex) {
@@ -209,8 +210,7 @@ public class ProxyChannel : IProxyChannel
 
     private ValueTask CheckAlive(CancellationToken cancellationToken)
     {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(ProxyChannel));
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         if (!_started)
             return default;
@@ -228,8 +228,8 @@ public class ProxyChannel : IProxyChannel
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (Interlocked.Exchange(ref _isDisposed, 1) == 1) 
+            return;
 
         _checkAliveJob.Dispose();
         _started = false;

@@ -61,7 +61,7 @@ internal class ClientHost(
 
     public void Start()
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(ClientHost));
+        ObjectDisposedException.ThrowIf(_disposed, this);
         using var logScope = VhLogger.Instance.BeginScope("ClientHost");
         VhLogger.Instance.LogInformation("Starting ClientHost...");
 
@@ -108,16 +108,13 @@ internal class ClientHost(
     // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
     public void ProcessOutgoingPacket(IpPacket ipPacket)
     {
-        // ignore new packets 
-        if (_disposed)
-            throw new ObjectDisposedException(GetType().Name);
-
+        ObjectDisposedException.ThrowIf(_disposed, this);
         PacketLogger.LogPacket(ipPacket, "Processing a ClientHost packet...");
 
         // check packet type
         if (_localEndpointIpV4 == null)
             throw new InvalidOperationException(
-                $"{nameof(_localEndpointIpV4)} has not been initialized! Did you call {nameof(Start)}!");
+                $"{nameof(_localEndpointIpV4)} has not been initialized! Did you call Start!");
 
         var catcherAddress = ipPacket.Version == IpVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
         var localEndPoint = ipPacket.Version == IpVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;

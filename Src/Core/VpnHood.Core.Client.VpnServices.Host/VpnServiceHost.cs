@@ -20,6 +20,7 @@ public class VpnServiceHost : IDisposable
     private CancellationTokenSource _connectCts = new();
     private readonly TimeSpan _killServiceTimeout = TimeSpan.FromSeconds(3);
     private int _isDisposed;
+    private bool _disconnectRequested;
 
     internal VpnHoodClient? Client { get; private set; }
     internal VpnHoodClient RequiredClient => Client ?? throw new InvalidOperationException("Client is not initialized.");
@@ -78,6 +79,8 @@ public class VpnServiceHost : IDisposable
             return false;
 
         try {
+            _disconnectRequested = false;
+
             // handle previous client
             var client = Client;
             if (!forceReconnect && client is { State: ClientState.Connected or ClientState.Connecting or ClientState.Waiting }) {
@@ -110,7 +113,9 @@ public class VpnServiceHost : IDisposable
             return true;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "VpnServiceHost could not establish the connection.");
+            if (!_disconnectRequested)
+                VhLogger.Instance.LogError(ex, "VpnServiceHost could not establish the connection.");
+
             return false;
         }
     }
@@ -215,6 +220,8 @@ public class VpnServiceHost : IDisposable
             return;
 
         try {
+            _disconnectRequested = true;
+
             // let dispose in the background
             var client = Client;
             if (client != null)

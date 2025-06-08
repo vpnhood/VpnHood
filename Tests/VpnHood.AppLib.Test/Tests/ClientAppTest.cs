@@ -96,7 +96,7 @@ public class ClientAppTest : TestAppBase
         Assert.IsTrue(app.State.HasDiagnoseRequested);
         Assert.IsTrue(app.State.HasDisconnectedByUser);
         Assert.IsTrue(app.State.IsIdle);
-        Assert.IsTrue(app.State.LastError?.Is<NoErrorFoundException>());
+        Assert.AreEqual(nameof(NoErrorFoundException), app.State.LastError?.TypeName);
 
         app.ClearLastError();
         Assert.IsFalse(app.State.HasDiagnoseRequested);

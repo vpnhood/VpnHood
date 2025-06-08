@@ -79,6 +79,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     private void NetworkChange_NetworkAddressChanged(object? sender, EventArgs e)
     {
+        // Do not update the primary adapter IPs if the adapter is stopping or disposed
+        // it will be updated on the next start
+        if (_isStopping || IsDisposed || IsDisposing)
+            return;
+
         PrimaryAdapterIpV4 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetwork);
         PrimaryAdapterIpV6 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
     }
@@ -381,7 +386,14 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             // IPv6 needs the addressFamily to be set
             using var udpClient = new UdpClient(addressFamily);
             udpClient.Connect(remoteEndPoint);
-            return (udpClient.Client.LocalEndPoint as IPEndPoint)?.Address;
+            var localEndPoint = udpClient.Client.GetLocalEndPoint();
+
+            // log the discovered primary adapter IP
+            VhLogger.Instance.LogDebug(
+                "Primary adapter IP discovered. PrimaryAdapterIp: {PrimaryAdapterIp}",
+                VhLogger.Format(localEndPoint.Address));
+
+            return localEndPoint.Address;
         }
         catch (Exception) {
             VhLogger.Instance.LogDebug("Failed to get primary adapter IP. RemoteEndPoint: {RemoteEndPoint}",

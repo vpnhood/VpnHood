@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="17.7" version="22.3" Modules="professional" RootPath="." Language="en" Id="{F5BEDA55-1847-4909-B85B-443D6C887C92}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="17.7" version="22.7" Modules="professional" RootPath="." Language="en" Id="{F5BEDA55-1847-4909-B85B-443D6C887C92}">
   <COMPONENT cid="caphyon.advinst.msicomp.MsiPropsComponent">
     <ROW Property="AI_APP_FILE" Value="[#VpnHoodConnect.exe]"/>
     <ROW Property="AI_BITMAP_DISPLAY_MODE" Value="0"/>
@@ -19,10 +19,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{DE773234-88C8-4687-B68D-67C65C7D08BF} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{9C49608A-0414-4222-BA4D-0486C72D6A1E} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood! CONNECT"/>
-    <ROW Property="ProductVersion" Value="5.0.616" Options="20"/>
+    <ROW Property="ProductVersion" Value="7.1.712" Options="20"/>
     <ROW Property="RUNAPPLICATION" Value="1" Type="4"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND"/>
     <ROW Property="UpgradeCode" Value="{CD5160B9-4A66-4F81-A162-9BA69FC81313}"/>
@@ -72,7 +72,7 @@
     <ROW Directory="zhHant_Dir" Directory_Parent="APPDIR" DefaultDir="zh-Hant" DirectoryOptions="3"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{F341B220-9D69-49D8-BE48-B23AED402B32}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{DEFC217A-A8CE-41A6-A2CF-6EC3E38F63F5}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{21851DB9-D1F6-4B22-9844-D91CE291D8A3}" Directory_="APPDIR" Attributes="260" KeyPath="NoModify" Options="1"/>
     <ROW Component="APPDIR" ComponentId="{6782C70B-B5DB-4ACB-ACED-FA77FF112859}" Directory_="APPDIR" Attributes="0"/>
     <ROW Component="Accessibility.dll" ComponentId="{6125235F-C8DC-42E0-BC59-0E11D956B841}" Directory_="APPDIR" Attributes="0" KeyPath="Accessibility.dll"/>
@@ -364,6 +364,19 @@
     <ROW Component="System.Windows.Controls.Ribbon.resources.dll_9" ComponentId="{DC2E74C5-7B21-4916-9F6E-F0CE271AD3AA}" Directory_="ru_Dir" Attributes="0" KeyPath="System.Windows.Controls.Ribbon.resources.dll_9"/>
     <ROW Component="System.Windows.Extensions.dll" ComponentId="{226E7AEE-EAD4-4F6D-87DA-72848F8EE390}" Directory_="APPDIR" Attributes="256" KeyPath="System.Windows.Extensions.dll"/>
     <ROW Component="System.Windows.Input.Manipulations.dll" ComponentId="{0F14955F-AE8E-4DF3-B85E-EC48A47A711B}" Directory_="APPDIR" Attributes="256" KeyPath="System.Windows.Input.Manipulations.dll"/>
+    <ROW Component="System.Windows.Input.Manipulations.resources.dll" ComponentId="{02A27B77-6D49-4AAE-BFD0-D75DFF08C4BD}" Directory_="cs_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations.resources.dll"/>
+    <ROW Component="System.Windows.Input.Manipulations_10_.resources.dll" ComponentId="{0F975F36-2006-4D20-B65D-DDFA0DCE3C2C}" Directory_="tr_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations_10_.resources.dll"/>
+    <ROW Component="System.Windows.Input.Manipulations_11_.resources.dll" ComponentId="{E6C36F9E-2AD9-48C9-AEF6-BD98FD3D309C}" Directory_="zhHans_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations_11_.resources.dll"/>
+    <ROW Component="System.Windows.Input.Manipulations_12_.resources.dll" ComponentId="{B2C27D7D-AC62-4CA3-85E3-FF092CFE0FB2}" Directory_="zhHant_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations_12_.resources.dll"/>
+    <ROW Component="System.Windows.Input.Manipulations_1_.resources.dll" ComponentId="{1950E5D7-D15A-4E50-BE3C-7F713B485140}" Directory_="de_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations_1_.resources.dll"/>
+    <ROW Component="System.Windows.Input.Manipulations_2_.resources.dll" ComponentId="{C386C544-241B-4DB5-A4F6-197247DCCEA7}" Directory_="es_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations_2_.resources.dll"/>
+    <ROW Component="System.Windows.Input.Manipulations_3_.resources.dll" ComponentId="{BD70584E-2D6B-418B-AADD-BDA44F5BAF91}" Directory_="fr_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations_3_.resources.dll"/>
+    <ROW Component="System.Windows.Input.Manipulations_4_.resources.dll" ComponentId="{63F88C80-230D-4DAB-B958-A9672623448E}" Directory_="it_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations_4_.resources.dll"/>
+    <ROW Component="System.Windows.Input.Manipulations_5_.resources.dll" ComponentId="{0F900B0E-C912-4704-A594-1E42D4E2D1D0}" Directory_="ja_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations_5_.resources.dll"/>
+    <ROW Component="System.Windows.Input.Manipulations_6_.resources.dll" ComponentId="{86C90CD5-5C9E-4ED5-A99F-5B027701BD45}" Directory_="ko_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations_6_.resources.dll"/>
+    <ROW Component="System.Windows.Input.Manipulations_7_.resources.dll" ComponentId="{41F16920-2E15-47D2-94BA-3F83109F2D2B}" Directory_="pl_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations_7_.resources.dll"/>
+    <ROW Component="System.Windows.Input.Manipulations_8_.resources.dll" ComponentId="{A917532B-60D9-4678-9433-FCB1CE1779F9}" Directory_="ptBR_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations_8_.resources.dll"/>
+    <ROW Component="System.Windows.Input.Manipulations_9_.resources.dll" ComponentId="{B2501BB6-27D3-44C0-9566-8F1C981A2DC2}" Directory_="ru_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations_9_.resources.dll"/>
     <ROW Component="System.Windows.Presentation.dll" ComponentId="{324E20B2-405A-4546-8BFD-EED3669FEAC4}" Directory_="APPDIR" Attributes="256" KeyPath="System.Windows.Presentation.dll"/>
     <ROW Component="System.Windows.dll" ComponentId="{B18782FF-F9AC-42EA-AD21-D8BC42ECACE7}" Directory_="APPDIR" Attributes="0" KeyPath="System.Windows.dll"/>
     <ROW Component="System.Xaml.dll" ComponentId="{1B762D3F-35D1-4E2C-965A-FBFC08B0A924}" Directory_="APPDIR" Attributes="256" KeyPath="System.Xaml.dll"/>
@@ -447,17 +460,29 @@
     <ROW Component="UIAutomationTypes.resources.dll_8" ComponentId="{3A5025FE-C99F-4F81-BA47-FA0FF343A8B5}" Directory_="ptBR_Dir" Attributes="0" KeyPath="UIAutomationTypes.resources.dll_8"/>
     <ROW Component="UIAutomationTypes.resources.dll_9" ComponentId="{1C010A2B-5A5D-4953-A8B5-4099B60715E1}" Directory_="ru_Dir" Attributes="0" KeyPath="UIAutomationTypes.resources.dll_9"/>
     <ROW Component="Version" ComponentId="{029AE9DA-065B-44EB-91C6-9FB1CC756628}" Directory_="APPDIR" Attributes="260" KeyPath="Version_2"/>
+    <ROW Component="VpnHood.App.Client.dll" ComponentId="{8415FA86-750E-41DA-BD44-08E57BDC27C2}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.App.Client.dll"/>
     <ROW Component="VpnHood.AppLib.Abstractions.dll" ComponentId="{4B0631CE-FDE9-4D78-B485-10B9D166B360}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.Abstractions.dll"/>
     <ROW Component="VpnHood.AppLib.App.dll" ComponentId="{98A9895E-9A0A-4129-BE11-B2F8D1756AC5}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.App.dll"/>
-    <ROW Component="VpnHood.AppLib.Resources.dll" ComponentId="{1C42202D-B082-4BEF-B100-F8CA23AD726C}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.Resources.dll"/>
+    <ROW Component="VpnHood.AppLib.Assets.ClassicSpa.dll" ComponentId="{9F105DDC-D7DD-4DF5-A18F-9033A9A2C06E}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.Assets.ClassicSpa.dll"/>
+    <ROW Component="VpnHood.AppLib.Assets.Ip2LocationLite.dll" ComponentId="{CC775992-2F25-45CA-AA55-79D579BAD01B}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.Assets.Ip2LocationLite.dll"/>
     <ROW Component="VpnHood.AppLib.WebServer.dll" ComponentId="{64CE30EA-20B9-4C58-BB02-A8CAC9F1B38D}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.WebServer.dll"/>
     <ROW Component="VpnHood.AppLib.Win.Common.WpfSpa.dll" ComponentId="{10EF9DE7-8FDD-4F54-B500-CF67FA44D5D0}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.Win.Common.WpfSpa.dll"/>
     <ROW Component="VpnHood.AppLib.Win.Common.dll" ComponentId="{8DA734FD-0957-423D-BDBC-9CFBAA4582C0}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.Win.Common.dll"/>
-    <ROW Component="VpnHood.Core.Client.Device.WinDivert.dll" ComponentId="{2C439574-CA53-4A9E-A9CD-E75045D82EAE}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.Device.WinDivert.dll"/>
+    <ROW Component="VpnHood.Core.Client.Abstractions.dll" ComponentId="{122F937D-A65A-42D2-90FD-8920D44F2E4B}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.Abstractions.dll"/>
+    <ROW Component="VpnHood.Core.Client.Device.Win.dll" ComponentId="{E83D3E9C-CC7F-4731-B1A7-66DFEF9015F8}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.Device.Win.dll"/>
     <ROW Component="VpnHood.Core.Client.Device.dll" ComponentId="{7E5D98FC-3AA0-49F8-85CE-4E04B9066454}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.Device.dll"/>
+    <ROW Component="VpnHood.Core.Client.VpnServices.Abstractions.dll" ComponentId="{3513C408-70D0-472F-84FD-28597BB979C8}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.VpnServices.Abstractions.dll"/>
+    <ROW Component="VpnHood.Core.Client.VpnServices.Host.dll" ComponentId="{81D0106E-B9A7-4652-9965-44EA82AEB6D7}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.VpnServices.Host.dll"/>
+    <ROW Component="VpnHood.Core.Client.VpnServices.Manager.dll" ComponentId="{0B60DE40-CF7E-4D99-A37B-E3F73EA0334F}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.VpnServices.Manager.dll"/>
     <ROW Component="VpnHood.Core.Client.dll" ComponentId="{C24B7E88-F738-4387-B235-C2D42B7BC413}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.dll"/>
     <ROW Component="VpnHood.Core.Common.dll" ComponentId="{D63907D2-DEA2-407E-9500-BBC4E44862C8}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Common.dll"/>
+    <ROW Component="VpnHood.Core.PacketTransports.dll" ComponentId="{976BEB2F-913B-43D8-940D-630DE14328BE}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.PacketTransports.dll"/>
+    <ROW Component="VpnHood.Core.Packets.dll" ComponentId="{3676100E-1030-46D1-80B4-6991F8267CE7}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Packets.dll"/>
+    <ROW Component="VpnHood.Core.Toolkit.dll" ComponentId="{8685379D-2738-4EF6-8F8A-7918014A76DF}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Toolkit.dll"/>
     <ROW Component="VpnHood.Core.Tunneling.dll" ComponentId="{4EB7AEE0-35EF-43BC-98C0-A4E6AFD8A439}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Tunneling.dll"/>
+    <ROW Component="VpnHood.Core.VpnAdapters.Abstractions.dll" ComponentId="{E2F53E2E-D605-4A74-8364-535945C31F88}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.VpnAdapters.Abstractions.dll"/>
+    <ROW Component="VpnHood.Core.VpnAdapters.WinDivert.dll" ComponentId="{0308CC77-5EED-4C3B-B4B0-F84B2768BDAD}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.VpnAdapters.WinDivert.dll"/>
+    <ROW Component="VpnHood.Core.VpnAdapters.WinTun.dll" ComponentId="{BEAE656B-3118-4B1B-8AFE-68838FEA870B}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.VpnAdapters.WinTun.dll"/>
     <ROW Component="VpnHoodClient.deps.json" ComponentId="{E2DDB1EC-9611-4645-8C18-38DA85981DA0}" Directory_="APPDIR" Attributes="0" KeyPath="Microsoft.Web.WebView2.Core.xml" Type="0"/>
     <ROW Component="VpnHoodConnect.dll" ComponentId="{138911F3-B11A-4042-8A53-05A3839602A9}" Directory_="APPDIR" Attributes="256" KeyPath="VpnHoodConnect.dll"/>
     <ROW Component="VpnHoodConnect.exe" ComponentId="{935D4806-BF91-4B92-BFA0-7338D7688A6E}" Directory_="APPDIR" Attributes="256" KeyPath="VpnHoodConnect.exe"/>
@@ -482,20 +507,6 @@
     <ROW Component="WindowsBase.resources.dll_7" ComponentId="{39973525-A688-4283-B811-CCE68AF812E7}" Directory_="pl_Dir" Attributes="0" KeyPath="WindowsBase.resources.dll_7"/>
     <ROW Component="WindowsBase.resources.dll_8" ComponentId="{1AF23F6D-14E0-469A-B140-EA8153CFF1CC}" Directory_="ptBR_Dir" Attributes="0" KeyPath="WindowsBase.resources.dll_8"/>
     <ROW Component="WindowsBase.resources.dll_9" ComponentId="{619E12B5-FDFB-4961-BB01-1EBCFA5470C2}" Directory_="ru_Dir" Attributes="0" KeyPath="WindowsBase.resources.dll_9"/>
-    <ROW Component="WindowsFormsIntegration.dll" ComponentId="{6A1BAA90-6CD3-460D-96BB-57E31088E067}" Directory_="APPDIR" Attributes="256" KeyPath="WindowsFormsIntegration.dll"/>
-    <ROW Component="WindowsFormsIntegration.resources.dll" ComponentId="{AD56BEF2-6450-4D58-91E5-3485D9AFB743}" Directory_="cs_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll"/>
-    <ROW Component="WindowsFormsIntegration.resources.dll_1" ComponentId="{9EABA26C-94AC-4046-9048-81FD8126BD74}" Directory_="de_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_1"/>
-    <ROW Component="WindowsFormsIntegration.resources.dll_10" ComponentId="{43C9D5AC-4B2A-4F3B-BE94-4FAA633F97BD}" Directory_="tr_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_10"/>
-    <ROW Component="WindowsFormsIntegration.resources.dll_11" ComponentId="{2F31E9D8-0E91-4F0A-B6A2-D5BA77594ADC}" Directory_="zhHans_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_11"/>
-    <ROW Component="WindowsFormsIntegration.resources.dll_12" ComponentId="{7C3FEBB2-023A-4B8D-BE54-81D9B97640D2}" Directory_="zhHant_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_12"/>
-    <ROW Component="WindowsFormsIntegration.resources.dll_2" ComponentId="{7E8E7127-D3C6-492D-AF03-7F5346626D38}" Directory_="es_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_2"/>
-    <ROW Component="WindowsFormsIntegration.resources.dll_3" ComponentId="{1C1270C8-EE4F-4A23-BC17-A5AF80EA1826}" Directory_="fr_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_3"/>
-    <ROW Component="WindowsFormsIntegration.resources.dll_4" ComponentId="{81411FE2-CD68-4ED7-B4FC-F209960211C8}" Directory_="it_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_4"/>
-    <ROW Component="WindowsFormsIntegration.resources.dll_5" ComponentId="{27CE641E-626C-447F-B911-DCC21CB2C1B7}" Directory_="ja_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_5"/>
-    <ROW Component="WindowsFormsIntegration.resources.dll_6" ComponentId="{81468674-8BE5-4C33-927A-7CB09ABCE00C}" Directory_="ko_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_6"/>
-    <ROW Component="WindowsFormsIntegration.resources.dll_7" ComponentId="{F942E8DB-728F-4DAE-A2A7-6A9DD94DF074}" Directory_="pl_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_7"/>
-    <ROW Component="WindowsFormsIntegration.resources.dll_8" ComponentId="{093CEA6C-BED0-43DB-82DC-A48C9D2F0D65}" Directory_="ptBR_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_8"/>
-    <ROW Component="WindowsFormsIntegration.resources.dll_9" ComponentId="{41669CFC-46F2-467D-AA8B-D806AD06E7CD}" Directory_="ru_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_9"/>
     <ROW Component="clretwrc.dll" ComponentId="{E89F84E6-2C22-402A-AD95-95A3D76BB62C}" Directory_="APPDIR" Attributes="256" KeyPath="clretwrc.dll"/>
     <ROW Component="clrgc.dll" ComponentId="{12F87F35-8601-4808-972F-1C61A9E0801E}" Directory_="APPDIR" Attributes="256" KeyPath="clrgc.dll"/>
     <ROW Component="clrgcexp.dll" ComponentId="{995B15C1-84C8-4026-B4EA-89AC7A410CF1}" Directory_="APPDIR" Attributes="256" KeyPath="clrgcexp.dll"/>
@@ -505,7 +516,7 @@
     <ROW Component="hostfxr.dll" ComponentId="{BC0967F4-7DF4-4A37-8C80-3C76828B0F66}" Directory_="APPDIR" Attributes="256" KeyPath="hostfxr.dll"/>
     <ROW Component="hostpolicy.dll" ComponentId="{37A1012B-C8BE-498A-9BD7-2CD78581BB7B}" Directory_="APPDIR" Attributes="256" KeyPath="hostpolicy.dll"/>
     <ROW Component="mscordaccore.dll" ComponentId="{EA8A69E4-1B6B-4AAD-A48D-9EB59FA6AB15}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore.dll"/>
-    <ROW Component="mscordaccore_amd64_amd64_9.0.24.52809.dll" ComponentId="{C1C635AA-972E-4E8F-8AD3-54C0525BC217}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore_amd64_amd64_9.0.24.52809.dll"/>
+    <ROW Component="mscordaccore_amd64_amd64_9.0.525.21509.dll" ComponentId="{873DDCDF-F78F-40DE-86E0-FD135227F56A}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore_amd64_amd64_9.0.525.21509.dll"/>
     <ROW Component="mscordbi.dll" ComponentId="{EBA3A2AB-FBCE-495D-8012-0465D47E5B42}" Directory_="APPDIR" Attributes="256" KeyPath="mscordbi.dll"/>
     <ROW Component="mscorlib.dll" ComponentId="{5E6D16B7-22DA-4FCB-AC28-AD3A361BF6C5}" Directory_="APPDIR" Attributes="0" KeyPath="mscorlib.dll"/>
     <ROW Component="mscorrc.dll" ComponentId="{F98E0E0B-1EC3-41F4-8FC2-528E33EF3A9A}" Directory_="APPDIR" Attributes="256" KeyPath="mscorrc.dll"/>
@@ -561,7 +572,6 @@
     <ROW File="UIAutomationProvider.resources.dll" Component_="UIAutomationProvider.resources.dll" FileName="UIAUTO~3.DLL|UIAutomationProvider.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\cs\UIAutomationProvider.resources.dll" SelfReg="false"/>
     <ROW File="UIAutomationTypes.resources.dll" Component_="UIAutomationTypes.resources.dll" FileName="UIAUTO~4.DLL|UIAutomationTypes.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\cs\UIAutomationTypes.resources.dll" SelfReg="false"/>
     <ROW File="WindowsBase.resources.dll" Component_="WindowsBase.resources.dll" FileName="WINDOW~1.DLL|WindowsBase.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\cs\WindowsBase.resources.dll" SelfReg="false"/>
-    <ROW File="WindowsFormsIntegration.resources.dll" Component_="WindowsFormsIntegration.resources.dll" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\cs\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
     <ROW File="D3DCompiler_47_cor3.dll" Component_="D3DCompiler_47_cor3.dll" FileName="D3DCOM~1.DLL|D3DCompiler_47_cor3.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\D3DCompiler_47_cor3.dll" SelfReg="false"/>
     <ROW File="PresentationCore.resources.dll_1" Component_="PresentationCore.resources.dll_1" FileName="PRESEN~1.DLL|PresentationCore.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\de\PresentationCore.resources.dll" SelfReg="false"/>
     <ROW File="PresentationFramework.resources.dll_1" Component_="PresentationFramework.resources.dll_1" FileName="PRESEN~2.DLL|PresentationFramework.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\de\PresentationFramework.resources.dll" SelfReg="false"/>
@@ -574,7 +584,6 @@
     <ROW File="UIAutomationProvider.resources.dll_1" Component_="UIAutomationProvider.resources.dll_1" FileName="UIAUTO~3.DLL|UIAutomationProvider.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\de\UIAutomationProvider.resources.dll" SelfReg="false"/>
     <ROW File="UIAutomationTypes.resources.dll_1" Component_="UIAutomationTypes.resources.dll_1" FileName="UIAUTO~4.DLL|UIAutomationTypes.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\de\UIAutomationTypes.resources.dll" SelfReg="false"/>
     <ROW File="WindowsBase.resources.dll_1" Component_="WindowsBase.resources.dll_1" FileName="WINDOW~1.DLL|WindowsBase.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\de\WindowsBase.resources.dll" SelfReg="false"/>
-    <ROW File="WindowsFormsIntegration.resources.dll_1" Component_="WindowsFormsIntegration.resources.dll_1" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\de\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
     <ROW File="DirectWriteForwarder.dll" Component_="DirectWriteForwarder.dll" FileName="DIRECT~1.DLL|DirectWriteForwarder.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\DirectWriteForwarder.dll" SelfReg="false"/>
     <ROW File="PresentationCore.resources.dll_2" Component_="PresentationCore.resources.dll_2" FileName="PRESEN~1.DLL|PresentationCore.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\es\PresentationCore.resources.dll" SelfReg="false"/>
     <ROW File="PresentationFramework.resources.dll_2" Component_="PresentationFramework.resources.dll_2" FileName="PRESEN~2.DLL|PresentationFramework.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\es\PresentationFramework.resources.dll" SelfReg="false"/>
@@ -587,7 +596,6 @@
     <ROW File="UIAutomationProvider.resources.dll_2" Component_="UIAutomationProvider.resources.dll_2" FileName="UIAUTO~3.DLL|UIAutomationProvider.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\es\UIAutomationProvider.resources.dll" SelfReg="false"/>
     <ROW File="UIAutomationTypes.resources.dll_2" Component_="UIAutomationTypes.resources.dll_2" FileName="UIAUTO~4.DLL|UIAutomationTypes.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\es\UIAutomationTypes.resources.dll" SelfReg="false"/>
     <ROW File="WindowsBase.resources.dll_2" Component_="WindowsBase.resources.dll_2" FileName="WINDOW~1.DLL|WindowsBase.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\es\WindowsBase.resources.dll" SelfReg="false"/>
-    <ROW File="WindowsFormsIntegration.resources.dll_2" Component_="WindowsFormsIntegration.resources.dll_2" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\es\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
     <ROW File="PresentationCore.resources.dll_3" Component_="PresentationCore.resources.dll_3" FileName="PRESEN~1.DLL|PresentationCore.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\fr\PresentationCore.resources.dll" SelfReg="false"/>
     <ROW File="PresentationFramework.resources.dll_3" Component_="PresentationFramework.resources.dll_3" FileName="PRESEN~2.DLL|PresentationFramework.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\fr\PresentationFramework.resources.dll" SelfReg="false"/>
     <ROW File="PresentationUI.resources.dll_3" Component_="PresentationUI.resources.dll_3" FileName="PRESEN~3.DLL|PresentationUI.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\fr\PresentationUI.resources.dll" SelfReg="false"/>
@@ -599,7 +607,6 @@
     <ROW File="UIAutomationProvider.resources.dll_3" Component_="UIAutomationProvider.resources.dll_3" FileName="UIAUTO~3.DLL|UIAutomationProvider.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\fr\UIAutomationProvider.resources.dll" SelfReg="false"/>
     <ROW File="UIAutomationTypes.resources.dll_3" Component_="UIAutomationTypes.resources.dll_3" FileName="UIAUTO~4.DLL|UIAutomationTypes.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\fr\UIAutomationTypes.resources.dll" SelfReg="false"/>
     <ROW File="WindowsBase.resources.dll_3" Component_="WindowsBase.resources.dll_3" FileName="WINDOW~1.DLL|WindowsBase.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\fr\WindowsBase.resources.dll" SelfReg="false"/>
-    <ROW File="WindowsFormsIntegration.resources.dll_3" Component_="WindowsFormsIntegration.resources.dll_3" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\fr\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
     <ROW File="hostfxr.dll" Component_="hostfxr.dll" FileName="hostfxr.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\hostfxr.dll" SelfReg="false"/>
     <ROW File="hostpolicy.dll" Component_="hostpolicy.dll" FileName="HOSTPO~1.DLL|hostpolicy.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\hostpolicy.dll" SelfReg="false"/>
     <ROW File="PresentationCore.resources.dll_4" Component_="PresentationCore.resources.dll_4" FileName="PRESEN~1.DLL|PresentationCore.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\it\PresentationCore.resources.dll" SelfReg="false"/>
@@ -613,7 +620,6 @@
     <ROW File="UIAutomationProvider.resources.dll_4" Component_="UIAutomationProvider.resources.dll_4" FileName="UIAUTO~3.DLL|UIAutomationProvider.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\it\UIAutomationProvider.resources.dll" SelfReg="false"/>
     <ROW File="UIAutomationTypes.resources.dll_4" Component_="UIAutomationTypes.resources.dll_4" FileName="UIAUTO~4.DLL|UIAutomationTypes.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\it\UIAutomationTypes.resources.dll" SelfReg="false"/>
     <ROW File="WindowsBase.resources.dll_4" Component_="WindowsBase.resources.dll_4" FileName="WINDOW~1.DLL|WindowsBase.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\it\WindowsBase.resources.dll" SelfReg="false"/>
-    <ROW File="WindowsFormsIntegration.resources.dll_4" Component_="WindowsFormsIntegration.resources.dll_4" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\it\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
     <ROW File="PresentationCore.resources.dll_5" Component_="PresentationCore.resources.dll_5" FileName="PRESEN~1.DLL|PresentationCore.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ja\PresentationCore.resources.dll" SelfReg="false"/>
     <ROW File="PresentationFramework.resources.dll_5" Component_="PresentationFramework.resources.dll_5" FileName="PRESEN~2.DLL|PresentationFramework.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ja\PresentationFramework.resources.dll" SelfReg="false"/>
     <ROW File="PresentationUI.resources.dll_5" Component_="PresentationUI.resources.dll_5" FileName="PRESEN~3.DLL|PresentationUI.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ja\PresentationUI.resources.dll" SelfReg="false"/>
@@ -625,7 +631,6 @@
     <ROW File="UIAutomationProvider.resources.dll_5" Component_="UIAutomationProvider.resources.dll_5" FileName="UIAUTO~3.DLL|UIAutomationProvider.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ja\UIAutomationProvider.resources.dll" SelfReg="false"/>
     <ROW File="UIAutomationTypes.resources.dll_5" Component_="UIAutomationTypes.resources.dll_5" FileName="UIAUTO~4.DLL|UIAutomationTypes.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ja\UIAutomationTypes.resources.dll" SelfReg="false"/>
     <ROW File="WindowsBase.resources.dll_5" Component_="WindowsBase.resources.dll_5" FileName="WINDOW~1.DLL|WindowsBase.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ja\WindowsBase.resources.dll" SelfReg="false"/>
-    <ROW File="WindowsFormsIntegration.resources.dll_5" Component_="WindowsFormsIntegration.resources.dll_5" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ja\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
     <ROW File="PresentationCore.resources.dll_6" Component_="PresentationCore.resources.dll_6" FileName="PRESEN~1.DLL|PresentationCore.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ko\PresentationCore.resources.dll" SelfReg="false"/>
     <ROW File="PresentationFramework.resources.dll_6" Component_="PresentationFramework.resources.dll_6" FileName="PRESEN~2.DLL|PresentationFramework.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ko\PresentationFramework.resources.dll" SelfReg="false"/>
     <ROW File="PresentationUI.resources.dll_6" Component_="PresentationUI.resources.dll_6" FileName="PRESEN~3.DLL|PresentationUI.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ko\PresentationUI.resources.dll" SelfReg="false"/>
@@ -637,7 +642,6 @@
     <ROW File="UIAutomationProvider.resources.dll_6" Component_="UIAutomationProvider.resources.dll_6" FileName="UIAUTO~3.DLL|UIAutomationProvider.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ko\UIAutomationProvider.resources.dll" SelfReg="false"/>
     <ROW File="UIAutomationTypes.resources.dll_6" Component_="UIAutomationTypes.resources.dll_6" FileName="UIAUTO~4.DLL|UIAutomationTypes.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ko\UIAutomationTypes.resources.dll" SelfReg="false"/>
     <ROW File="WindowsBase.resources.dll_6" Component_="WindowsBase.resources.dll_6" FileName="WINDOW~1.DLL|WindowsBase.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ko\WindowsBase.resources.dll" SelfReg="false"/>
-    <ROW File="WindowsFormsIntegration.resources.dll_6" Component_="WindowsFormsIntegration.resources.dll_6" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ko\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
     <ROW File="Microsoft.CSharp.dll" Component_="Microsoft.CSharp.dll" FileName="MICRO~17.DLL|Microsoft.CSharp.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\Microsoft.CSharp.dll" SelfReg="false"/>
     <ROW File="Microsoft.DiaSymReader.Native.amd64.dll" Component_="Microsoft.DiaSymReader.Native.amd64.dll" FileName="MICRO~18.DLL|Microsoft.DiaSymReader.Native.amd64.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\Microsoft.DiaSymReader.Native.amd64.dll" SelfReg="false"/>
     <ROW File="Microsoft.VisualBasic.Core.dll" Component_="Microsoft.VisualBasic.Core.dll" FileName="MICRO~19.DLL|Microsoft.VisualBasic.Core.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\Microsoft.VisualBasic.Core.dll" SelfReg="false"/>
@@ -664,7 +668,6 @@
     <ROW File="UIAutomationProvider.resources.dll_7" Component_="UIAutomationProvider.resources.dll_7" FileName="UIAUTO~3.DLL|UIAutomationProvider.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\pl\UIAutomationProvider.resources.dll" SelfReg="false"/>
     <ROW File="UIAutomationTypes.resources.dll_7" Component_="UIAutomationTypes.resources.dll_7" FileName="UIAUTO~4.DLL|UIAutomationTypes.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\pl\UIAutomationTypes.resources.dll" SelfReg="false"/>
     <ROW File="WindowsBase.resources.dll_7" Component_="WindowsBase.resources.dll_7" FileName="WINDOW~1.DLL|WindowsBase.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\pl\WindowsBase.resources.dll" SelfReg="false"/>
-    <ROW File="WindowsFormsIntegration.resources.dll_7" Component_="WindowsFormsIntegration.resources.dll_7" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\pl\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
     <ROW File="PresentationCore.dll" Component_="PresentationCore.dll" FileName="PRESEN~1.DLL|PresentationCore.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\PresentationCore.dll" SelfReg="false"/>
     <ROW File="PresentationFrameworkSystemCore.dll" Component_="PresentationFrameworkSystemCore.dll" FileName="PRESEN~2.DLL|PresentationFramework-SystemCore.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\PresentationFramework-SystemCore.dll" SelfReg="false"/>
     <ROW File="PresentationFrameworkSystemData.dll" Component_="PresentationFrameworkSystemData.dll" FileName="PRESEN~3.DLL|PresentationFramework-SystemData.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\PresentationFramework-SystemData.dll" SelfReg="false"/>
@@ -691,7 +694,6 @@
     <ROW File="UIAutomationProvider.resources.dll_8" Component_="UIAutomationProvider.resources.dll_8" FileName="UIAUTO~3.DLL|UIAutomationProvider.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\pt-BR\UIAutomationProvider.resources.dll" SelfReg="false"/>
     <ROW File="UIAutomationTypes.resources.dll_8" Component_="UIAutomationTypes.resources.dll_8" FileName="UIAUTO~4.DLL|UIAutomationTypes.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\pt-BR\UIAutomationTypes.resources.dll" SelfReg="false"/>
     <ROW File="WindowsBase.resources.dll_8" Component_="WindowsBase.resources.dll_8" FileName="WINDOW~1.DLL|WindowsBase.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\pt-BR\WindowsBase.resources.dll" SelfReg="false"/>
-    <ROW File="WindowsFormsIntegration.resources.dll_8" Component_="WindowsFormsIntegration.resources.dll_8" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\pt-BR\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
     <ROW File="ReachFramework.dll" Component_="ReachFramework.dll" FileName="REACHF~1.DLL|ReachFramework.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ReachFramework.dll" SelfReg="false"/>
     <ROW File="PresentationCore.resources.dll_9" Component_="PresentationCore.resources.dll_9" FileName="PRESEN~1.DLL|PresentationCore.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ru\PresentationCore.resources.dll" SelfReg="false"/>
     <ROW File="PresentationFramework.resources.dll_9" Component_="PresentationFramework.resources.dll_9" FileName="PRESEN~2.DLL|PresentationFramework.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ru\PresentationFramework.resources.dll" SelfReg="false"/>
@@ -704,7 +706,6 @@
     <ROW File="UIAutomationProvider.resources.dll_9" Component_="UIAutomationProvider.resources.dll_9" FileName="UIAUTO~3.DLL|UIAutomationProvider.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ru\UIAutomationProvider.resources.dll" SelfReg="false"/>
     <ROW File="UIAutomationTypes.resources.dll_9" Component_="UIAutomationTypes.resources.dll_9" FileName="UIAUTO~4.DLL|UIAutomationTypes.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ru\UIAutomationTypes.resources.dll" SelfReg="false"/>
     <ROW File="WindowsBase.resources.dll_9" Component_="WindowsBase.resources.dll_9" FileName="WINDOW~1.DLL|WindowsBase.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ru\WindowsBase.resources.dll" SelfReg="false"/>
-    <ROW File="WindowsFormsIntegration.resources.dll_9" Component_="WindowsFormsIntegration.resources.dll_9" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ru\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
     <ROW File="System.AppContext.dll" Component_="System.AppContext.dll" FileName="SYSTEM~1.DLL|System.AppContext.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\System.AppContext.dll" SelfReg="false"/>
     <ROW File="System.Buffers.dll" Component_="System.Buffers.dll" FileName="SYSTEM~2.DLL|System.Buffers.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\System.Buffers.dll" SelfReg="false"/>
     <ROW File="System.CodeDom.dll" Component_="System.CodeDom.dll" FileName="SYSTEM~3.DLL|System.CodeDom.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\System.CodeDom.dll" SelfReg="false"/>
@@ -897,7 +898,6 @@
     <ROW File="UIAutomationProvider.resources.dll_10" Component_="UIAutomationProvider.resources.dll_10" FileName="UIAUTO~3.DLL|UIAutomationProvider.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\tr\UIAutomationProvider.resources.dll" SelfReg="false"/>
     <ROW File="UIAutomationTypes.resources.dll_10" Component_="UIAutomationTypes.resources.dll_10" FileName="UIAUTO~4.DLL|UIAutomationTypes.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\tr\UIAutomationTypes.resources.dll" SelfReg="false"/>
     <ROW File="WindowsBase.resources.dll_10" Component_="WindowsBase.resources.dll_10" FileName="WINDOW~1.DLL|WindowsBase.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\tr\WindowsBase.resources.dll" SelfReg="false"/>
-    <ROW File="WindowsFormsIntegration.resources.dll_10" Component_="WindowsFormsIntegration.resources.dll_10" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\tr\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
     <ROW File="UIAutomationClient.dll" Component_="UIAutomationClient.dll" FileName="UIAUTO~1.DLL|UIAutomationClient.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\UIAutomationClient.dll" SelfReg="false"/>
     <ROW File="UIAutomationClientSideProviders.dll" Component_="UIAutomationClientSideProviders.dll" FileName="UIAUTO~2.DLL|UIAutomationClientSideProviders.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\UIAutomationClientSideProviders.dll" SelfReg="false"/>
     <ROW File="UIAutomationProvider.dll" Component_="UIAutomationProvider.dll" FileName="UIAUTO~3.DLL|UIAutomationProvider.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\UIAutomationProvider.dll" SelfReg="false"/>
@@ -905,7 +905,6 @@
     <ROW File="vcruntime140_cor3.dll" Component_="vcruntime140_cor3.dll" FileName="VCRUNT~1.DLL|vcruntime140_cor3.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\vcruntime140_cor3.dll" SelfReg="false"/>
     <ROW File="WebView2Loader.dll" Component_="WebView2Loader.dll" FileName="WEBVIE~1.DLL|WebView2Loader.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\WebView2Loader.dll" SelfReg="false"/>
     <ROW File="WindowsBase.dll" Component_="WindowsBase.dll" FileName="WINDOW~1.DLL|WindowsBase.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\WindowsBase.dll" SelfReg="false"/>
-    <ROW File="WindowsFormsIntegration.dll" Component_="WindowsFormsIntegration.dll" FileName="WINDOW~2.DLL|WindowsFormsIntegration.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\WindowsFormsIntegration.dll" SelfReg="false"/>
     <ROW File="wpfgfx_cor3.dll" Component_="wpfgfx_cor3.dll" FileName="WPFGFX~1.DLL|wpfgfx_cor3.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\wpfgfx_cor3.dll" SelfReg="false"/>
     <ROW File="PresentationCore.resources.dll_11" Component_="PresentationCore.resources.dll_11" FileName="PRESEN~1.DLL|PresentationCore.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hans\PresentationCore.resources.dll" SelfReg="false"/>
     <ROW File="PresentationFramework.resources.dll_11" Component_="PresentationFramework.resources.dll_11" FileName="PRESEN~2.DLL|PresentationFramework.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hans\PresentationFramework.resources.dll" SelfReg="false"/>
@@ -918,7 +917,6 @@
     <ROW File="UIAutomationProvider.resources.dll_11" Component_="UIAutomationProvider.resources.dll_11" FileName="UIAUTO~3.DLL|UIAutomationProvider.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hans\UIAutomationProvider.resources.dll" SelfReg="false"/>
     <ROW File="UIAutomationTypes.resources.dll_11" Component_="UIAutomationTypes.resources.dll_11" FileName="UIAUTO~4.DLL|UIAutomationTypes.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hans\UIAutomationTypes.resources.dll" SelfReg="false"/>
     <ROW File="WindowsBase.resources.dll_11" Component_="WindowsBase.resources.dll_11" FileName="WINDOW~1.DLL|WindowsBase.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hans\WindowsBase.resources.dll" SelfReg="false"/>
-    <ROW File="WindowsFormsIntegration.resources.dll_11" Component_="WindowsFormsIntegration.resources.dll_11" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hans\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
     <ROW File="PresentationCore.resources.dll_12" Component_="PresentationCore.resources.dll_12" FileName="PRESEN~1.DLL|PresentationCore.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hant\PresentationCore.resources.dll" SelfReg="false"/>
     <ROW File="PresentationFramework.resources.dll_12" Component_="PresentationFramework.resources.dll_12" FileName="PRESEN~2.DLL|PresentationFramework.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hant\PresentationFramework.resources.dll" SelfReg="false"/>
     <ROW File="PresentationUI.resources.dll_12" Component_="PresentationUI.resources.dll_12" FileName="PRESEN~3.DLL|PresentationUI.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hant\PresentationUI.resources.dll" SelfReg="false"/>
@@ -930,14 +928,12 @@
     <ROW File="UIAutomationProvider.resources.dll_12" Component_="UIAutomationProvider.resources.dll_12" FileName="UIAUTO~3.DLL|UIAutomationProvider.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hant\UIAutomationProvider.resources.dll" SelfReg="false"/>
     <ROW File="UIAutomationTypes.resources.dll_12" Component_="UIAutomationTypes.resources.dll_12" FileName="UIAUTO~4.DLL|UIAutomationTypes.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hant\UIAutomationTypes.resources.dll" SelfReg="false"/>
     <ROW File="WindowsBase.resources.dll_12" Component_="WindowsBase.resources.dll_12" FileName="WINDOW~1.DLL|WindowsBase.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hant\WindowsBase.resources.dll" SelfReg="false"/>
-    <ROW File="WindowsFormsIntegration.resources.dll_12" Component_="WindowsFormsIntegration.resources.dll_12" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hant\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
     <ROW File="Microsoft.Windows.SDK.NET.dll" Component_="Microsoft.Windows.SDK.NET.dll" FileName="MICRO~16.DLL|Microsoft.Windows.SDK.NET.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\Microsoft.Windows.SDK.NET.dll" SelfReg="false"/>
     <ROW File="WinRT.Runtime.dll" Component_="WinRT.Runtime.dll" FileName="WINRTR~1.DLL|WinRT.Runtime.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\WinRT.Runtime.dll" SelfReg="false"/>
     <ROW File="clrgcexp.dll" Component_="clrgcexp.dll" FileName="clrgcexp.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\clrgcexp.dll" SelfReg="false"/>
     <ROW File="Microsoft.Web.WebView2.Core.xml" Component_="VpnHoodClient.deps.json" FileName="MICROS~1.XML|Microsoft.Web.WebView2.Core.xml" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\Microsoft.Web.WebView2.Core.xml" SelfReg="false"/>
     <ROW File="Microsoft.Web.WebView2.WinForms.xml" Component_="VpnHoodClient.deps.json" FileName="MICROS~2.XML|Microsoft.Web.WebView2.WinForms.xml" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\Microsoft.Web.WebView2.WinForms.xml" SelfReg="false"/>
     <ROW File="Microsoft.Web.WebView2.Wpf.xml" Component_="VpnHoodClient.deps.json" FileName="MICROS~3.XML|Microsoft.Web.WebView2.Wpf.xml" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\Microsoft.Web.WebView2.Wpf.xml" SelfReg="false"/>
-    <ROW File="mscordaccore_amd64_amd64_9.0.24.52809.dll" Component_="mscordaccore_amd64_amd64_9.0.24.52809.dll" FileName="MSCORD~6.DLL|mscordaccore_amd64_amd64_9.0.24.52809.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\mscordaccore_amd64_amd64_9.0.24.52809.dll" SelfReg="false"/>
     <ROW File="PresentationFramework.Fluent.dll" Component_="PresentationFramework.Fluent.dll" FileName="PRESE~16.DLL|PresentationFramework.Fluent.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\PresentationFramework.Fluent.dll" SelfReg="false"/>
     <ROW File="System.Formats.Nrbf.dll" Component_="System.Formats.Nrbf.dll" FileName="SYST~187.DLL|System.Formats.Nrbf.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\System.Formats.Nrbf.dll" SelfReg="false"/>
     <ROW File="System.IO.Pipelines.dll" Component_="System.IO.Pipelines.dll" FileName="SYST~188.DLL|System.IO.Pipelines.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\System.IO.Pipelines.dll" SelfReg="false"/>
@@ -951,8 +947,6 @@
     <ROW File="VpnHood.AppLib.Abstractions.pdb" Component_="VpnHood.AppLib.Abstractions.dll" FileName="VPNHOO~8.PDB|VpnHood.AppLib.Abstractions.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.Abstractions.pdb" SelfReg="false"/>
     <ROW File="VpnHood.AppLib.App.dll" Component_="VpnHood.AppLib.App.dll" FileName="VPNHO~14.DLL|VpnHood.AppLib.App.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.App.dll" SelfReg="false"/>
     <ROW File="VpnHood.AppLib.App.pdb" Component_="VpnHood.AppLib.App.dll" FileName="VPNHO~14.PDB|VpnHood.AppLib.App.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.App.pdb" SelfReg="false"/>
-    <ROW File="VpnHood.AppLib.Resources.dll" Component_="VpnHood.AppLib.Resources.dll" FileName="VPNHO~15.DLL|VpnHood.AppLib.Resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.Resources.dll" SelfReg="false"/>
-    <ROW File="VpnHood.AppLib.Resources.pdb" Component_="VpnHood.AppLib.Resources.dll" FileName="VPNHO~15.PDB|VpnHood.AppLib.Resources.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.Resources.pdb" SelfReg="false"/>
     <ROW File="VpnHood.AppLib.WebServer.dll" Component_="VpnHood.AppLib.WebServer.dll" FileName="VPNHO~16.DLL|VpnHood.AppLib.WebServer.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.WebServer.dll" SelfReg="false"/>
     <ROW File="VpnHood.AppLib.WebServer.pdb" Component_="VpnHood.AppLib.WebServer.dll" FileName="VPNHO~16.PDB|VpnHood.AppLib.WebServer.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.WebServer.pdb" SelfReg="false"/>
     <ROW File="VpnHood.AppLib.Win.Common.dll" Component_="VpnHood.AppLib.Win.Common.dll" FileName="VPNHO~17.DLL|VpnHood.AppLib.Win.Common.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.Win.Common.dll" SelfReg="false"/>
@@ -961,14 +955,52 @@
     <ROW File="VpnHood.AppLib.Win.Common.WpfSpa.pdb" Component_="VpnHood.AppLib.Win.Common.WpfSpa.dll" FileName="VPNHO~18.PDB|VpnHood.AppLib.Win.Common.WpfSpa.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.Win.Common.WpfSpa.pdb" SelfReg="false"/>
     <ROW File="VpnHood.Core.Client.Device.dll" Component_="VpnHood.Core.Client.Device.dll" FileName="VPNHO~19.DLL|VpnHood.Core.Client.Device.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Device.dll" SelfReg="false"/>
     <ROW File="VpnHood.Core.Client.Device.pdb" Component_="VpnHood.Core.Client.Device.dll" FileName="VPNHO~19.PDB|VpnHood.Core.Client.Device.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Device.pdb" SelfReg="false"/>
-    <ROW File="VpnHood.Core.Client.Device.WinDivert.dll" Component_="VpnHood.Core.Client.Device.WinDivert.dll" FileName="VPNHO~20.DLL|VpnHood.Core.Client.Device.WinDivert.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Device.WinDivert.dll" SelfReg="false"/>
-    <ROW File="VpnHood.Core.Client.Device.WinDivert.pdb" Component_="VpnHood.Core.Client.Device.WinDivert.dll" FileName="VPNHO~20.PDB|VpnHood.Core.Client.Device.WinDivert.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Device.WinDivert.pdb" SelfReg="false"/>
     <ROW File="VpnHood.Core.Client.dll" Component_="VpnHood.Core.Client.dll" FileName="VPNHO~21.DLL|VpnHood.Core.Client.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.dll" SelfReg="false"/>
     <ROW File="VpnHood.Core.Client.pdb" Component_="VpnHood.Core.Client.dll" FileName="VPNHO~21.PDB|VpnHood.Core.Client.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.pdb" SelfReg="false"/>
     <ROW File="VpnHood.Core.Common.dll" Component_="VpnHood.Core.Common.dll" FileName="VPNHO~22.DLL|VpnHood.Core.Common.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Common.dll" SelfReg="false"/>
     <ROW File="VpnHood.Core.Common.pdb" Component_="VpnHood.Core.Common.dll" FileName="VPNHO~22.PDB|VpnHood.Core.Common.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Common.pdb" SelfReg="false"/>
     <ROW File="VpnHood.Core.Tunneling.dll" Component_="VpnHood.Core.Tunneling.dll" FileName="VPNHO~23.DLL|VpnHood.Core.Tunneling.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Tunneling.dll" SelfReg="false"/>
     <ROW File="VpnHood.Core.Tunneling.pdb" Component_="VpnHood.Core.Tunneling.dll" FileName="VPNHO~23.PDB|VpnHood.Core.Tunneling.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Tunneling.pdb" SelfReg="false"/>
+    <ROW File="System.Windows.Input.Manipulations.resources.dll" Component_="System.Windows.Input.Manipulations.resources.dll" FileName="SYSTEM~2.DLL|System.Windows.Input.Manipulations.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\cs\System.Windows.Input.Manipulations.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Input.Manipulations_1_.resources.dll" Component_="System.Windows.Input.Manipulations_1_.resources.dll" FileName="SYSTEM~2.DLL|System.Windows.Input.Manipulations.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\de\System.Windows.Input.Manipulations.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Input.Manipulations_2_.resources.dll" Component_="System.Windows.Input.Manipulations_2_.resources.dll" FileName="SYSTEM~2.DLL|System.Windows.Input.Manipulations.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\es\System.Windows.Input.Manipulations.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Input.Manipulations_3_.resources.dll" Component_="System.Windows.Input.Manipulations_3_.resources.dll" FileName="SYSTEM~2.DLL|System.Windows.Input.Manipulations.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\fr\System.Windows.Input.Manipulations.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Input.Manipulations_4_.resources.dll" Component_="System.Windows.Input.Manipulations_4_.resources.dll" FileName="SYSTEM~2.DLL|System.Windows.Input.Manipulations.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\it\System.Windows.Input.Manipulations.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Input.Manipulations_5_.resources.dll" Component_="System.Windows.Input.Manipulations_5_.resources.dll" FileName="SYSTEM~2.DLL|System.Windows.Input.Manipulations.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ja\System.Windows.Input.Manipulations.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Input.Manipulations_6_.resources.dll" Component_="System.Windows.Input.Manipulations_6_.resources.dll" FileName="SYSTEM~2.DLL|System.Windows.Input.Manipulations.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ko\System.Windows.Input.Manipulations.resources.dll" SelfReg="false"/>
+    <ROW File="mscordaccore_amd64_amd64_9.0.525.21509.dll" Component_="mscordaccore_amd64_amd64_9.0.525.21509.dll" FileName="MSCORD~2.DLL|mscordaccore_amd64_amd64_9.0.525.21509.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\mscordaccore_amd64_amd64_9.0.525.21509.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Input.Manipulations_7_.resources.dll" Component_="System.Windows.Input.Manipulations_7_.resources.dll" FileName="SYSTEM~2.DLL|System.Windows.Input.Manipulations.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\pl\System.Windows.Input.Manipulations.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Input.Manipulations_8_.resources.dll" Component_="System.Windows.Input.Manipulations_8_.resources.dll" FileName="SYSTEM~2.DLL|System.Windows.Input.Manipulations.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\pt-BR\System.Windows.Input.Manipulations.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Input.Manipulations_9_.resources.dll" Component_="System.Windows.Input.Manipulations_9_.resources.dll" FileName="SYSTEM~2.DLL|System.Windows.Input.Manipulations.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\ru\System.Windows.Input.Manipulations.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Input.Manipulations_10_.resources.dll" Component_="System.Windows.Input.Manipulations_10_.resources.dll" FileName="SYSTEM~2.DLL|System.Windows.Input.Manipulations.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\tr\System.Windows.Input.Manipulations.resources.dll" SelfReg="false"/>
+    <ROW File="VpnHood.App.Client.dll" Component_="VpnHood.App.Client.dll" FileName="VPNHOO~1.DLL|VpnHood.App.Client.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.App.Client.dll" SelfReg="false"/>
+    <ROW File="VpnHood.App.Client.pdb" Component_="VpnHood.App.Client.dll" FileName="VPNHOO~1.PDB|VpnHood.App.Client.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.App.Client.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.AppLib.Assets.ClassicSpa.dll" Component_="VpnHood.AppLib.Assets.ClassicSpa.dll" FileName="VPNHOO~2.DLL|VpnHood.AppLib.Assets.ClassicSpa.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.Assets.ClassicSpa.dll" SelfReg="false"/>
+    <ROW File="VpnHood.AppLib.Assets.Ip2LocationLite.dll" Component_="VpnHood.AppLib.Assets.Ip2LocationLite.dll" FileName="VPNHOO~3.DLL|VpnHood.AppLib.Assets.Ip2LocationLite.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.Assets.Ip2LocationLite.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Client.Abstractions.dll" Component_="VpnHood.Core.Client.Abstractions.dll" FileName="VPNHOO~4.DLL|VpnHood.Core.Client.Abstractions.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Abstractions.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Client.Abstractions.pdb" Component_="VpnHood.Core.Client.Abstractions.dll" FileName="VPNHOO~2.PDB|VpnHood.Core.Client.Abstractions.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Abstractions.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Client.Device.Win.dll" Component_="VpnHood.Core.Client.Device.Win.dll" FileName="VPNHOO~5.DLL|VpnHood.Core.Client.Device.Win.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Device.Win.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Client.Device.Win.pdb" Component_="VpnHood.Core.Client.Device.Win.dll" FileName="VPNHOO~3.PDB|VpnHood.Core.Client.Device.Win.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Device.Win.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Client.VpnServices.Abstractions.dll" Component_="VpnHood.Core.Client.VpnServices.Abstractions.dll" FileName="VPNHOO~6.DLL|VpnHood.Core.Client.VpnServices.Abstractions.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.VpnServices.Abstractions.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Client.VpnServices.Abstractions.pdb" Component_="VpnHood.Core.Client.VpnServices.Abstractions.dll" FileName="VPNHOO~4.PDB|VpnHood.Core.Client.VpnServices.Abstractions.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.VpnServices.Abstractions.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Client.VpnServices.Host.dll" Component_="VpnHood.Core.Client.VpnServices.Host.dll" FileName="VPNHOO~7.DLL|VpnHood.Core.Client.VpnServices.Host.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.VpnServices.Host.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Client.VpnServices.Host.pdb" Component_="VpnHood.Core.Client.VpnServices.Host.dll" FileName="VPNHOO~5.PDB|VpnHood.Core.Client.VpnServices.Host.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.VpnServices.Host.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Client.VpnServices.Manager.dll" Component_="VpnHood.Core.Client.VpnServices.Manager.dll" FileName="VPNHOO~9.DLL|VpnHood.Core.Client.VpnServices.Manager.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.VpnServices.Manager.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Client.VpnServices.Manager.pdb" Component_="VpnHood.Core.Client.VpnServices.Manager.dll" FileName="VPNHOO~6.PDB|VpnHood.Core.Client.VpnServices.Manager.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.VpnServices.Manager.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Packets.dll" Component_="VpnHood.Core.Packets.dll" FileName="VPNHO~10.DLL|VpnHood.Core.Packets.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Packets.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Packets.pdb" Component_="VpnHood.Core.Packets.dll" FileName="VPNHOO~7.PDB|VpnHood.Core.Packets.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Packets.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Core.PacketTransports.dll" Component_="VpnHood.Core.PacketTransports.dll" FileName="VPNHO~11.DLL|VpnHood.Core.PacketTransports.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.PacketTransports.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Core.PacketTransports.pdb" Component_="VpnHood.Core.PacketTransports.dll" FileName="VPNHOO~9.PDB|VpnHood.Core.PacketTransports.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.PacketTransports.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Toolkit.dll" Component_="VpnHood.Core.Toolkit.dll" FileName="VPNHO~12.DLL|VpnHood.Core.Toolkit.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Toolkit.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Toolkit.pdb" Component_="VpnHood.Core.Toolkit.dll" FileName="VPNHO~10.PDB|VpnHood.Core.Toolkit.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Toolkit.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Core.VpnAdapters.Abstractions.dll" Component_="VpnHood.Core.VpnAdapters.Abstractions.dll" FileName="VPNHO~24.DLL|VpnHood.Core.VpnAdapters.Abstractions.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.VpnAdapters.Abstractions.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Core.VpnAdapters.Abstractions.pdb" Component_="VpnHood.Core.VpnAdapters.Abstractions.dll" FileName="VPNHO~11.PDB|VpnHood.Core.VpnAdapters.Abstractions.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.VpnAdapters.Abstractions.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Core.VpnAdapters.WinDivert.dll" Component_="VpnHood.Core.VpnAdapters.WinDivert.dll" FileName="VPNHO~25.DLL|VpnHood.Core.VpnAdapters.WinDivert.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.VpnAdapters.WinDivert.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Core.VpnAdapters.WinDivert.pdb" Component_="VpnHood.Core.VpnAdapters.WinDivert.dll" FileName="VPNHO~12.PDB|VpnHood.Core.VpnAdapters.WinDivert.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.VpnAdapters.WinDivert.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Core.VpnAdapters.WinTun.dll" Component_="VpnHood.Core.VpnAdapters.WinTun.dll" FileName="VPNHO~26.DLL|VpnHood.Core.VpnAdapters.WinTun.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.VpnAdapters.WinTun.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Core.VpnAdapters.WinTun.pdb" Component_="VpnHood.Core.VpnAdapters.WinTun.dll" FileName="VPNHO~24.PDB|VpnHood.Core.VpnAdapters.WinTun.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.VpnAdapters.WinTun.pdb" SelfReg="false"/>
+    <ROW File="System.Windows.Input.Manipulations_11_.resources.dll" Component_="System.Windows.Input.Manipulations_11_.resources.dll" FileName="SYSTEM~2.DLL|System.Windows.Input.Manipulations.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hans\System.Windows.Input.Manipulations.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Input.Manipulations_12_.resources.dll" Component_="System.Windows.Input.Manipulations_12_.resources.dll" FileName="SYSTEM~2.DLL|System.Windows.Input.Manipulations.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hant\System.Windows.Input.Manipulations.resources.dll" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.AiRemoveFileComponent">
     <ROW RemoveFile="__1" Options="3"/>
@@ -995,6 +1027,9 @@
   <COMPONENT cid="caphyon.advinst.msicomp.DictionaryComponent">
     <ROW Path="&lt;AI_DICTS&gt;ui.ail"/>
     <ROW Path="&lt;AI_DICTS&gt;ui_en.ail"/>
+  </COMPONENT>
+  <COMPONENT cid="caphyon.advinst.msicomp.DigCertStoreComponent">
+    <ROW TimeStampUrl="http://timestamp.digicert.com" SignerDescription="[|ProductName]" SignOptions="7" SignTool="0" UseSha256="1" Subject="CN=OmegaHood LLC, O=OmegaHood LLC, S=California, C=US, OID.2.5.4.15=Private Organization, OID.1.3.6.1.4.1.311.60.2.1.2=California, OID.1.3.6.1.4.1.311.60.2.1.3=US, SERIALNUMBER=202355114433"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DynamicPropertyComponent">
     <ROW Property="ProductVersion" Type="3" SourcePath="..\..\..\Pub\PubVersion.json" PathInSource="Root\Version"/>
@@ -1078,14 +1113,14 @@
     <ROW Dialog_="PrerequisitesDlg" Control_="PrerequisitesDlgDialogInitializer" Event="[Text_Next]" Argument="[Text_Install]" Condition="AI_INSTALL" Ordering="3" Options="2"/>
     <ROW Dialog_="PrerequisitesDlg" Control_="Back" Event="[ButtonText_Next]" Argument="[AI_ButtonText_Next_Orig]" Condition="AI_INSTALL" Ordering="2" Options="2"/>
     <ROW Dialog_="PrerequisitesDlg" Control_="Back" Event="[Text_Next]" Argument="[AI_Text_Next_Orig]" Condition="AI_INSTALL" Ordering="3" Options="2"/>
-    <ROW Dialog_="FatalError" Control_="Finish" Event="DoAction" Argument="AI_RollbackPrereq" Condition="1" Ordering="102"/>
-    <ROW Dialog_="ExitDialog" Control_="Finish" Event="DoAction" Argument="AI_CleanPrereq" Condition="1" Ordering="301"/>
-    <ROW Dialog_="FatalError" Control_="Finish" Event="DoAction" Argument="AI_CleanPrereq" Condition="1" Ordering="103"/>
-    <ROW Dialog_="UserExit" Control_="Finish" Event="DoAction" Argument="AI_CleanPrereq" Condition="1" Ordering="101"/>
     <ROW Dialog_="FatalError" Control_="Finish" Event="DoAction" Argument="AI_RollbackPrePrereq" Condition="1" Ordering="104"/>
     <ROW Dialog_="ExitDialog" Control_="Finish" Event="DoAction" Argument="AI_CleanPrePrereq" Condition="1" Ordering="302"/>
     <ROW Dialog_="FatalError" Control_="Finish" Event="DoAction" Argument="AI_CleanPrePrereq" Condition="1" Ordering="105"/>
     <ROW Dialog_="UserExit" Control_="Finish" Event="DoAction" Argument="AI_CleanPrePrereq" Condition="1" Ordering="102"/>
+    <ROW Dialog_="FatalError" Control_="Finish" Event="DoAction" Argument="AI_RollbackPrereq" Condition="1" Ordering="106"/>
+    <ROW Dialog_="ExitDialog" Control_="Finish" Event="DoAction" Argument="AI_CleanPrereq" Condition="1" Ordering="303"/>
+    <ROW Dialog_="FatalError" Control_="Finish" Event="DoAction" Argument="AI_CleanPrereq" Condition="1" Ordering="107"/>
+    <ROW Dialog_="UserExit" Control_="Finish" Event="DoAction" Argument="AI_CleanPrereq" Condition="1" Ordering="103"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCreateFolderComponent">
     <ROW Directory_="APPDIR" Component_="APPDIR" ManualDelete="true"/>
@@ -1123,6 +1158,7 @@
     <ROW Action="AI_InstallPrePrerequisite" Type="65" Source="Prereq.dll" Target="InstallPrePrereq"/>
     <ROW Action="AI_InstallPrerequisite" Type="1" Source="Prereq.dll" Target="InstallPrereq"/>
     <ROW Action="AI_LaunchApp" Type="1" Source="aicustact.dll" Target="LaunchApp"/>
+    <ROW Action="AI_MigrateInstallerProps" Type="1" Source="aicustact.dll" Target="MigrateInstallerProps"/>
     <ROW Action="AI_PREPARE_UPGRADE" Type="65" Source="aicustact.dll" Target="PrepareUpgrade"/>
     <ROW Action="AI_PRESERVE_INSTALL_TYPE" Type="65" Source="aicustact.dll" Target="PreserveInstallType"/>
     <ROW Action="AI_PinShortcuts" Type="1" Source="ShortcutFlags.dll" Target="PinShortcuts"/>
@@ -1133,7 +1169,9 @@
     <ROW Action="AI_RESTORE_LOCATION" Type="65" Source="aicustact.dll" Target="RestoreLocation"/>
     <ROW Action="AI_RemoveExternalUIStub" Type="1" Source="ExternalUICleaner.dll" Target="RemoveExternalUIStub"/>
     <ROW Action="AI_ResolveKnownFolders" Type="1" Source="aicustact.dll" Target="AI_ResolveKnownFolders"/>
+    <ROW Action="AI_ResolvePropertyBaseFolder" Type="1" Source="aicustact.dll" Target="ResolvePropertyBaseFolder" WithoutSeq="true"/>
     <ROW Action="AI_RestartElevated" Type="1" Source="aicustact.dll" Target="RestartElevated"/>
+    <ROW Action="AI_RestoreInstallerProps" Type="1" Source="aicustact.dll" Target="RestoreInstallerProps" WithoutSeq="true"/>
     <ROW Action="AI_RollbackPrePrereq" Type="65" Source="Prereq.dll" Target="RollbackPrePrereq" WithoutSeq="true"/>
     <ROW Action="AI_RollbackPrereq" Type="65" Source="Prereq.dll" Target="RollbackPrereq" WithoutSeq="true"/>
     <ROW Action="AI_SHOW_LOG" Type="65" Source="aicustact.dll" Target="LaunchLogFile" WithoutSeq="true"/>
@@ -1197,7 +1235,6 @@
     <ROW Feature_="MainFeature" Component_="UIAutomationProvider.resources.dll"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationTypes.resources.dll"/>
     <ROW Feature_="MainFeature" Component_="WindowsBase.resources.dll"/>
-    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll"/>
     <ROW Feature_="MainFeature" Component_="D3DCompiler_47_cor3.dll"/>
     <ROW Feature_="MainFeature" Component_="PresentationCore.resources.dll_1"/>
     <ROW Feature_="MainFeature" Component_="PresentationFramework.resources.dll_1"/>
@@ -1210,7 +1247,6 @@
     <ROW Feature_="MainFeature" Component_="UIAutomationProvider.resources.dll_1"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationTypes.resources.dll_1"/>
     <ROW Feature_="MainFeature" Component_="WindowsBase.resources.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_1"/>
     <ROW Feature_="MainFeature" Component_="DirectWriteForwarder.dll"/>
     <ROW Feature_="MainFeature" Component_="PresentationCore.resources.dll_2"/>
     <ROW Feature_="MainFeature" Component_="PresentationFramework.resources.dll_2"/>
@@ -1223,7 +1259,6 @@
     <ROW Feature_="MainFeature" Component_="UIAutomationProvider.resources.dll_2"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationTypes.resources.dll_2"/>
     <ROW Feature_="MainFeature" Component_="WindowsBase.resources.dll_2"/>
-    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_2"/>
     <ROW Feature_="MainFeature" Component_="PresentationCore.resources.dll_3"/>
     <ROW Feature_="MainFeature" Component_="PresentationFramework.resources.dll_3"/>
     <ROW Feature_="MainFeature" Component_="PresentationUI.resources.dll_3"/>
@@ -1235,7 +1270,6 @@
     <ROW Feature_="MainFeature" Component_="UIAutomationProvider.resources.dll_3"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationTypes.resources.dll_3"/>
     <ROW Feature_="MainFeature" Component_="WindowsBase.resources.dll_3"/>
-    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_3"/>
     <ROW Feature_="MainFeature" Component_="hostfxr.dll"/>
     <ROW Feature_="MainFeature" Component_="hostpolicy.dll"/>
     <ROW Feature_="MainFeature" Component_="PresentationCore.resources.dll_4"/>
@@ -1249,7 +1283,6 @@
     <ROW Feature_="MainFeature" Component_="UIAutomationProvider.resources.dll_4"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationTypes.resources.dll_4"/>
     <ROW Feature_="MainFeature" Component_="WindowsBase.resources.dll_4"/>
-    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_4"/>
     <ROW Feature_="MainFeature" Component_="PresentationCore.resources.dll_5"/>
     <ROW Feature_="MainFeature" Component_="PresentationFramework.resources.dll_5"/>
     <ROW Feature_="MainFeature" Component_="PresentationUI.resources.dll_5"/>
@@ -1261,7 +1294,6 @@
     <ROW Feature_="MainFeature" Component_="UIAutomationProvider.resources.dll_5"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationTypes.resources.dll_5"/>
     <ROW Feature_="MainFeature" Component_="WindowsBase.resources.dll_5"/>
-    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_5"/>
     <ROW Feature_="MainFeature" Component_="PresentationCore.resources.dll_6"/>
     <ROW Feature_="MainFeature" Component_="PresentationFramework.resources.dll_6"/>
     <ROW Feature_="MainFeature" Component_="PresentationUI.resources.dll_6"/>
@@ -1273,7 +1305,6 @@
     <ROW Feature_="MainFeature" Component_="UIAutomationProvider.resources.dll_6"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationTypes.resources.dll_6"/>
     <ROW Feature_="MainFeature" Component_="WindowsBase.resources.dll_6"/>
-    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_6"/>
     <ROW Feature_="MainFeature" Component_="Microsoft.CSharp.dll"/>
     <ROW Feature_="MainFeature" Component_="Microsoft.DiaSymReader.Native.amd64.dll"/>
     <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Core.dll"/>
@@ -1300,7 +1331,6 @@
     <ROW Feature_="MainFeature" Component_="UIAutomationProvider.resources.dll_7"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationTypes.resources.dll_7"/>
     <ROW Feature_="MainFeature" Component_="WindowsBase.resources.dll_7"/>
-    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_7"/>
     <ROW Feature_="MainFeature" Component_="PresentationCore.dll"/>
     <ROW Feature_="MainFeature" Component_="PresentationFrameworkSystemCore.dll"/>
     <ROW Feature_="MainFeature" Component_="PresentationFrameworkSystemData.dll"/>
@@ -1327,7 +1357,6 @@
     <ROW Feature_="MainFeature" Component_="UIAutomationProvider.resources.dll_8"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationTypes.resources.dll_8"/>
     <ROW Feature_="MainFeature" Component_="WindowsBase.resources.dll_8"/>
-    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_8"/>
     <ROW Feature_="MainFeature" Component_="ReachFramework.dll"/>
     <ROW Feature_="MainFeature" Component_="PresentationCore.resources.dll_9"/>
     <ROW Feature_="MainFeature" Component_="PresentationFramework.resources.dll_9"/>
@@ -1340,7 +1369,6 @@
     <ROW Feature_="MainFeature" Component_="UIAutomationProvider.resources.dll_9"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationTypes.resources.dll_9"/>
     <ROW Feature_="MainFeature" Component_="WindowsBase.resources.dll_9"/>
-    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_9"/>
     <ROW Feature_="MainFeature" Component_="System.AppContext.dll"/>
     <ROW Feature_="MainFeature" Component_="System.Buffers.dll"/>
     <ROW Feature_="MainFeature" Component_="System.CodeDom.dll"/>
@@ -1533,7 +1561,6 @@
     <ROW Feature_="MainFeature" Component_="UIAutomationProvider.resources.dll_10"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationTypes.resources.dll_10"/>
     <ROW Feature_="MainFeature" Component_="WindowsBase.resources.dll_10"/>
-    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_10"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationClient.dll"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationClientSideProviders.dll"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationProvider.dll"/>
@@ -1541,7 +1568,6 @@
     <ROW Feature_="MainFeature" Component_="vcruntime140_cor3.dll"/>
     <ROW Feature_="MainFeature" Component_="WebView2Loader.dll"/>
     <ROW Feature_="MainFeature" Component_="WindowsBase.dll"/>
-    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.dll"/>
     <ROW Feature_="MainFeature" Component_="wpfgfx_cor3.dll"/>
     <ROW Feature_="MainFeature" Component_="PresentationCore.resources.dll_11"/>
     <ROW Feature_="MainFeature" Component_="PresentationFramework.resources.dll_11"/>
@@ -1554,7 +1580,6 @@
     <ROW Feature_="MainFeature" Component_="UIAutomationProvider.resources.dll_11"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationTypes.resources.dll_11"/>
     <ROW Feature_="MainFeature" Component_="WindowsBase.resources.dll_11"/>
-    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_11"/>
     <ROW Feature_="MainFeature" Component_="PresentationCore.resources.dll_12"/>
     <ROW Feature_="MainFeature" Component_="PresentationFramework.resources.dll_12"/>
     <ROW Feature_="MainFeature" Component_="PresentationUI.resources.dll_12"/>
@@ -1566,14 +1591,12 @@
     <ROW Feature_="MainFeature" Component_="UIAutomationProvider.resources.dll_12"/>
     <ROW Feature_="MainFeature" Component_="UIAutomationTypes.resources.dll_12"/>
     <ROW Feature_="MainFeature" Component_="WindowsBase.resources.dll_12"/>
-    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_12"/>
     <ROW Feature_="MainFeature" Component_="AI_CustomARPName"/>
     <ROW Feature_="MainFeature" Component_="AI_DisableModify"/>
     <ROW Feature_="MainFeature" Component_="Microsoft.Windows.SDK.NET.dll"/>
     <ROW Feature_="MainFeature" Component_="WinRT.Runtime.dll"/>
     <ROW Feature_="D09784F374E3A9F5FB0AFDC657291" Component_="D09784F374E3A9F5FB0AFDC657291"/>
     <ROW Feature_="MainFeature" Component_="clrgcexp.dll"/>
-    <ROW Feature_="MainFeature" Component_="mscordaccore_amd64_amd64_9.0.24.52809.dll"/>
     <ROW Feature_="MainFeature" Component_="PresentationFramework.Fluent.dll"/>
     <ROW Feature_="MainFeature" Component_="System.Formats.Nrbf.dll"/>
     <ROW Feature_="MainFeature" Component_="System.IO.Pipelines.dll"/>
@@ -1582,15 +1605,41 @@
     <ROW Feature_="MainFeature" Component_="VpnHoodConnect.exe"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.Abstractions.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.App.dll"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.Resources.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.WebServer.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.Win.Common.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.Win.Common.WpfSpa.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.Device.dll"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.Device.WinDivert.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Common.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Tunneling.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Input.Manipulations.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Input.Manipulations_1_.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Input.Manipulations_2_.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Input.Manipulations_3_.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Input.Manipulations_4_.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Input.Manipulations_5_.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Input.Manipulations_6_.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="mscordaccore_amd64_amd64_9.0.525.21509.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Input.Manipulations_7_.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Input.Manipulations_8_.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Input.Manipulations_9_.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Input.Manipulations_10_.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.App.Client.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.Assets.ClassicSpa.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.Assets.Ip2LocationLite.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.Abstractions.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.Device.Win.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.VpnServices.Abstractions.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.VpnServices.Host.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.VpnServices.Manager.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Core.Packets.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Core.PacketTransports.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Core.Toolkit.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Core.VpnAdapters.Abstractions.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Core.VpnAdapters.WinDivert.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Core.VpnAdapters.WinTun.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Input.Manipulations_11_.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Input.Manipulations_12_.resources.dll"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="SystemFoldermsiexec.exe" SourcePath="&lt;AI_RES&gt;uninstall.ico" Index="0"/>
@@ -1624,8 +1673,9 @@
     <ROW Action="AI_UnpinShortcuts" Condition="(VersionNT &gt; 600) AND (REMOVE = &quot;ALL&quot;)" Sequence="3199"/>
     <ROW Action="AI_GetArpIconPath" Sequence="1401"/>
     <ROW Action="AI_RemoveExternalUIStub" Condition="(REMOVE=&quot;ALL&quot;) AND ((VersionNT &gt; 500) OR((VersionNT = 500) AND (ServicePackLevel &gt;= 4)))" Sequence="1501"/>
-    <ROW Action="AI_VerifyPrereq" Sequence="1101"/>
     <ROW Action="AI_AppSearchEx" Sequence="101"/>
+    <ROW Action="AI_MigrateInstallerProps" Condition="SETUPEXEDIR AND ((UILevel = 2) OR (UILevel = 3))" Sequence="6599"/>
+    <ROW Action="AI_VerifyPrereq" Sequence="1101"/>
     <ROW Action="AI_AiRemoveFilesImmediate" Sequence="3499"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
@@ -1637,14 +1687,14 @@
     <ROW Action="AI_RESTORE_AI_SETUPEXEPATH" Condition="AI_SETUPEXEPATH_ORIGINAL" Sequence="103"/>
     <ROW Action="AI_DetectSoftware" Sequence="102"/>
     <ROW Action="AI_PRESERVE_INSTALL_TYPE" Sequence="199"/>
-    <ROW Action="AI_DownloadPrereq" Sequence="1296"/>
-    <ROW Action="AI_InstallPrePrerequisite" Condition="Installed" Sequence="1299"/>
-    <ROW Action="AI_ExtractPrereq" Sequence="1297"/>
-    <ROW Action="AI_InstallPrerequisite" Sequence="1298"/>
-    <ROW Action="AI_InstallPostPrerequisite" Sequence="1301"/>
-    <ROW Action="AI_CleanPrereq" Sequence="1302"/>
+    <ROW Action="AI_InstallPrePrerequisite" Condition="Installed" Sequence="1296"/>
     <ROW Action="AI_AppSearchEx" Sequence="101"/>
     <ROW Action="AI_RestartElevated" Sequence="51" Builds="DefaultBuild"/>
+    <ROW Action="AI_DownloadPrereq" Sequence="1297"/>
+    <ROW Action="AI_ExtractPrereq" Sequence="1298"/>
+    <ROW Action="AI_InstallPrerequisite" Sequence="1299"/>
+    <ROW Action="AI_InstallPostPrerequisite" Sequence="1301"/>
+    <ROW Action="AI_CleanPrereq" Sequence="1302"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiLaunchConditionsComponent">
     <ROW Condition="( Version9X OR ( NOT VersionNT64 ) OR ( VersionNT64 AND ((VersionNT64 &lt;&gt; 601) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 601) OR (MsiNTProductType = 1)) AND ((VersionNT64 &lt;&gt; 602) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 602) OR (MsiNTProductType = 1)) AND ((VersionNT64 &lt;&gt; 603) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 603) OR (MsiNTProductType = 1)) ) )" Description="[ProductName] cannot be installed on the following Windows versions: [WindowsTypeNT64Display]." DescriptionLocId="AI.LaunchCondition.NoSpecificNT64" IsPredefined="true" Builds="DefaultBuild"/>

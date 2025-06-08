@@ -1,4 +1,4 @@
-# Upcoming
+# v7.1.712
 * Improve: Improve performance and stability
 * Improve: Windows: Digitally sign the installer
 * Update: Remove legacy protocol

@@ -979,6 +979,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             await _connectCts.TryCancelAsync().Vhc();
             _connectCts.Dispose();
 
+            // stop VpnService if it is running
             await _vpnServiceManager.TryStop().Vhc();
 
         }

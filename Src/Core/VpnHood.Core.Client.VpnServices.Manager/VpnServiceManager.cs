@@ -353,7 +353,8 @@ public class VpnServiceManager : IDisposable
             await SendRequest(new ApiDisconnectRequest(), cancellationTokenSource.Token).Vhc();
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogDebug(ex, "Could not send disconnect request.");
+            VhLogger.Instance.LogDebug(ex, "Could not send disconnect request. ClientState: {ClientState}", 
+                ConnectionInfo.ClientState);
         }
 
         // wait for the service to stop

@@ -1029,7 +1029,7 @@
     <ROW Path="&lt;AI_DICTS&gt;ui_en.ail"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DigCertStoreComponent">
-    <ROW TimeStampUrl="http://timestamp.digicert.com" SignerDescription="[|ProductName]" SignOptions="7" SignTool="0" UseSha256="1" Subject="CN=OmegaHood LLC, O=OmegaHood LLC, S=California, C=US, OID.2.5.4.15=Private Organization, OID.1.3.6.1.4.1.311.60.2.1.2=California, OID.1.3.6.1.4.1.311.60.2.1.3=US, SERIALNUMBER=202355114433"/>
+    <ROW TimeStampUrl="http://timestamp.digicert.com" SignerDescription="[|ProductName]" SignOptions="7" SignTool="0" UseSha256="1" Thumbprint="B7D3B87F9BF721AAD3185FA42F0B55A8CDE7D2AD Subject: OmegaHood LLC&#10;Issuer: Sectigo Public Code Signing CA EV R36&#10;Valid from 06/01/2025 to 06/02/2026" Subject="CN=OmegaHood LLC, O=OmegaHood LLC, S=California, C=US, OID.2.5.4.15=Private Organization, OID.1.3.6.1.4.1.311.60.2.1.2=California, OID.1.3.6.1.4.1.311.60.2.1.3=US, SERIALNUMBER=202355114433" Store="User\MY"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DynamicPropertyComponent">
     <ROW Property="ProductVersion" Type="3" SourcePath="..\..\..\Pub\PubVersion.json" PathInSource="Root\Version"/>

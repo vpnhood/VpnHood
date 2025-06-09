@@ -5,7 +5,7 @@ namespace VpnHood.Core.Toolkit.Converters;
 
 public class NullToEmptyArrayConverter<T> : JsonConverter<T[]>
 {
-    public override bool HandleNull { get; } = true;
+    public override bool HandleNull => true;
 
     public override T[] Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

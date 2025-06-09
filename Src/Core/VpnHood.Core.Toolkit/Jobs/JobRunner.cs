@@ -7,7 +7,7 @@ namespace VpnHood.Core.Toolkit.Jobs;
 public class JobRunner
 {
     private SemaphoreSlim _semaphore;
-    private readonly LinkedList<WeakReference<Job>> _jobs = [];
+    private readonly LinkedList<JobItem> _jobs = [];
     private static readonly Lazy<JobRunner> SlowInstanceLazy = new(() => new JobRunner(TimeSpan.FromSeconds(10)));
     private static readonly Lazy<JobRunner> FastInstanceLazy = new(() => new JobRunner(TimeSpan.FromSeconds(2)));
     private int _maxDegreeOfParallelism = 2;
@@ -90,8 +90,9 @@ public class JobRunner
                 var next = node.Next;
 
                 // if the WeakReference is dead, remove it
-                if (!node.Value.TryGetTarget(out _)) {
-                    VhLogger.Instance.LogDebug("Removing a dead job. Ensure proper disposal by the caller.");
+                if (!node.Value.JobReference.TryGetTarget(out _)) {
+                    VhLogger.Instance.LogDebug("Removing a dead job. Ensure proper disposal by the caller. JobName: {JobName}", 
+                        node.Value.Name);
                     _jobs.Remove(node);
                 }
 
@@ -106,7 +107,7 @@ public class JobRunner
         lock (_jobs) {
             jobs = new List<Job>(_jobs.Count);
             foreach (var jobRef in _jobs) {
-                if (jobRef.TryGetTarget(out var target) && target.IsReadyToRun) {
+                if (jobRef.JobReference.TryGetTarget(out var target) && target.IsReadyToRun) {
                     jobs.Add(target);
                 }
             }
@@ -117,15 +118,24 @@ public class JobRunner
     public void Add(Job job)
     {
         lock (_jobs)
-            _jobs.AddLast(new WeakReference<Job>(job));
+            _jobs.AddLast(new JobItem {
+                Name = job.Name,
+                JobReference = new WeakReference<Job>(job)
+            });
     }
 
     public void Remove(Job job)
     {
         lock (_jobs) {
-            var item = _jobs.FirstOrDefault(x => x.TryGetTarget(out var target) && target == job);
+            var item = _jobs.FirstOrDefault(x => x.JobReference.TryGetTarget(out var target) && target == job);
             if (item != null)
                 _jobs.Remove(item);
         }
+    }
+
+    private class JobItem
+    {
+        public required string Name { get; init; }
+        public required WeakReference<Job> JobReference { get; init; }
     }
 }

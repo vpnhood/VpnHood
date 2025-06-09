@@ -6,7 +6,6 @@ namespace VpnHood.Core.Toolkit.Jobs;
 
 public class Job : IDisposable
 {
-    private readonly string _name;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly SemaphoreSlim _jobSemaphore = new(1, 1);
     private readonly Func<CancellationToken, ValueTask> _jobFunc;
@@ -21,6 +20,7 @@ public class Job : IDisposable
     public bool IsStarted => StartedTime != null;
     public DateTime? StartedTime { get; set; }
     public DateTime? LastExecutedTime { get; private set; }
+    public string Name { get; init; }
 
     public Job(Func<CancellationToken, ValueTask> jobFunc, JobOptions options)
     {
@@ -28,7 +28,7 @@ public class Job : IDisposable
         _dueTime = options.DueTime ?? options.Period;
         Period = options.Period;
         _maxRetry = options.MaxRetry;
-        _name = options.Name ?? "NoName";
+        Name = options.Name ?? "NoName";
         if (options.AutoStart)
             Start();
 
@@ -132,7 +132,7 @@ public class Job : IDisposable
             if (_currentFailedCount > _maxRetry) {
                 VhLogger.Instance.LogError(ex,
                     "Job failed too many times and stopped. JobName: {JobName}, FailedCount: {FailedCount}, TotalErrorCount: {TotalFailedCount}",
-                    _name, _currentFailedCount, FailedCount);
+                    Name, _currentFailedCount, FailedCount);
 
                 Stop();
             }

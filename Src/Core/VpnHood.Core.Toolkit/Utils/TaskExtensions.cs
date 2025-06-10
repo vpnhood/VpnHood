@@ -4,7 +4,7 @@ using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Toolkit.Utils;
 
-public static class VhTaskExtensions
+public static class TaskExtensions
 {
     public static bool DefaultContinueOnCapturedContext { get; set; }
 

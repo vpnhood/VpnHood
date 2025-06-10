@@ -14,7 +14,7 @@ public class StreamPacketReader(Stream stream, int bufferSize)
     {
         // read minimum packet header and return null if we reach the end of the stream
         try {
-            await _stream.ReadExactAsync(_minHeader, cancellationToken);
+            await _stream.ReadExactlyAsync(_minHeader, cancellationToken);
         }
         catch (EndOfStreamException) {
             // if we reach the end of the stream, return null
@@ -35,7 +35,7 @@ public class StreamPacketReader(Stream stream, int bufferSize)
             _minHeader.CopyTo(memoryOwner.Memory);
 
             // read the rest of the packet
-            await _stream.ReadExactAsync(memoryOwner.Memory[_minHeader.Length..packetLength], cancellationToken);
+            await _stream.ReadExactlyAsync(memoryOwner.Memory[_minHeader.Length..packetLength], cancellationToken);
 
             // build the packet
             var ipPacket = PacketBuilder.Attach(memoryOwner);

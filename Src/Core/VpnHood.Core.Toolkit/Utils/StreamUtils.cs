@@ -10,7 +10,7 @@ public static class StreamUtils
     {
         // read length
         Span<byte> lengthBuffer = stackalloc byte[4];
-        stream.ReadExact(lengthBuffer);
+        stream.ReadExactly(lengthBuffer);
 
         // check json size
         var jsonSize = BinaryPrimitives.ReadInt32LittleEndian(lengthBuffer);
@@ -23,7 +23,7 @@ public static class StreamUtils
 
         // read json body...
         var buffer = new byte[jsonSize].AsMemory();
-        stream.ReadExact(buffer.Span);
+        stream.ReadExactly(buffer.Span);
 
         // serialize the request
         var ret = JsonSerializer.Deserialize<T>(buffer.Span) ?? throw new Exception("Could not read Message!");
@@ -43,7 +43,7 @@ public static class StreamUtils
     {
         // read length
         var lengthBuffer = new byte[4].AsMemory();
-        await stream.ReadExactAsync(lengthBuffer, cancellationToken);
+        await stream.ReadExactlyAsync(lengthBuffer, cancellationToken);
         
         // check unauthorized exception
         if (lengthBuffer.Span.SequenceEqual("HTTP"u8))
@@ -60,7 +60,7 @@ public static class StreamUtils
 
         // read json body...
         var buffer = new byte[messageSize].AsMemory();
-        await stream.ReadExactAsync(buffer, cancellationToken).Vhc();
+        await stream.ReadExactlyAsync(buffer, cancellationToken).Vhc();
 
         // serialize the request
         var message = Encoding.UTF8.GetString(buffer.Span);

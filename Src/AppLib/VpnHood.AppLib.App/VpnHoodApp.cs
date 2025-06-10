@@ -36,6 +36,7 @@ using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
+using TaskExtensions = VpnHood.Core.Toolkit.Utils.TaskExtensions;
 
 namespace VpnHood.AppLib;
 
@@ -276,7 +277,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
             // set default ContinueOnCapturedContext
-            VhTaskExtensions.DefaultContinueOnCapturedContext = HasDebugCommand(DebugCommands.CaptureContext);
+            TaskExtensions.DefaultContinueOnCapturedContext = HasDebugCommand(DebugCommands.CaptureContext);
 
             // update profile country code if it is not set. Profile country policy always follow VpnServer location service
             ClientProfileService.ClientCountryCode = GetClientCountryCode(true);

@@ -1,8 +1,0 @@
-﻿<linker>
-	<assembly fullname="System.Net.Primitives">
-		<type fullname="System.Net.IPEndPoint" preserve="all" />
-		<type fullname="System.Net.IPAddress" preserve="all" />
-		<type fullname="System.Net.TimeSpan" preserve="all" />
-		<type fullname="System.Net.Version" preserve="all" />
-	</assembly>
-</linker>

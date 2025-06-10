@@ -17,10 +17,6 @@
 		<RuntimeIdentifiers>android-arm64;android-x64;android-x86</RuntimeIdentifiers>
 	</PropertyGroup>
 
-	<ItemGroup>
-		<TrimmerRootDescriptor Include="Linker.xml" />
-	</ItemGroup>
-
 	<PropertyGroup>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>

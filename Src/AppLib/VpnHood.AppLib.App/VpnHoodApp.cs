@@ -586,7 +586,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             throw new UserCanceledException("User has cancelled the connection.");
         }
         catch (Exception ex) {
-            ReportError(ex, "Could not connect.");
+            ReportError(ex, "Could not establish the connection. Reconnecting using the new token...");
             // Reset server location if no server is available
 
             if (ex is SessionException sessionException) {
@@ -758,7 +758,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 !VhUtils.IsNullOrEmpty(token.ServerToken.Urls) &&
                 await ClientProfileService.UpdateServerTokenByUrls(token, cancellationToken).Vhc()) {
                 // reconnect using the new token
-                VhLogger.Instance.LogInformation("Reconnecting using the new token..");
+                ReportError(ex, "Could not establish the connection. Reconnecting using the new token...");
                 token = ClientProfileService.GetToken(token.TokenId);
                 await ConnectInternal(token,
                         serverLocation: serverLocation,

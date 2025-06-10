@@ -30,7 +30,7 @@ public class ClientProfileService
         set {
             if (_clientCountryCode == value)
                 return;
-           
+
             _clientCountryCode = value;
             Reload();
         }
@@ -261,14 +261,14 @@ public class ClientProfileService
     private async Task<bool> UpdateServerTokenByUrl(Token token, string url,
         HttpClient httpClient, CancellationTokenSource cts)
     {
-        if (VhUtils.IsNullOrEmpty(token.ServerToken.Urls) || token.ServerToken.Secret == null)
-            return false;
-
-        // update token
-        VhLogger.Instance.LogInformation("Trying to get a new ServerToken from url. Url: {Url}",
-            VhLogger.FormatHostName(url));
-
         try {
+            if (VhUtils.IsNullOrEmpty(token.ServerToken.Urls) || token.ServerToken.Secret == null)
+                return false;
+
+            // update token
+            VhLogger.Instance.LogInformation("Trying to get a new ServerToken from url. Url: {Url}",
+                VhLogger.FormatHostName(url));
+
             var encryptedServerToken = await VhUtils
                 .RunTask(httpClient.GetStringAsync(url), TimeSpan.FromSeconds(20), cts.Token)
                 .Vhc();

@@ -63,7 +63,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     public IPAddress? GatewayIpV6 { get; private set; }
     public bool IsIpVersionSupported(IpVersion ipVersion) => GetPrimaryAdapterAddress(ipVersion) != null;
     public bool IsStarted { get; private set; }
-    
+
     // ReSharper disable once InconsistentlySynchronizedField
     private bool IsReady => IsStarted && !_isStopping && !IsDisposed && !IsDisposing;
 
@@ -106,7 +106,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     public async Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
-        
+
         if (UseNat && !IsNatSupported)
             throw new NotSupportedException("NAT is not supported by this adapter.");
 
@@ -131,7 +131,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 "PrimaryAdapterIp. {PrimaryAdapterIpV4}: PrimaryAdapterIpV4, PrimaryAdapterIpV6: {PrimaryAdapterIpV6}, " +
                 "AdapterIpNetworkV4: {AdapterIpNetworkV4}, AdapterIpNetworkV6: {AdapterIpNetworkV6}",
                 VhLogger.FormatType(this), UseNat, _mtu,
-                VhLogger.Format(PrimaryAdapterIpV4), VhLogger.Format(AdapterIpNetworkV6), 
+                VhLogger.Format(PrimaryAdapterIpV4), VhLogger.Format(AdapterIpNetworkV6),
                 AdapterIpNetworkV4, AdapterIpNetworkV6);
 
             // create tun adapter
@@ -215,7 +215,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             }
 
             // add app filter
-            if (IsAppFilterSupported) 
+            if (IsAppFilterSupported)
                 await SetAppFilters(options.IncludeApps, options.ExcludeApps, cancellationToken);
 
             // open the adapter
@@ -228,7 +228,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             VhLogger.Instance.LogInformation("TUN adapter started.");
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Failed to start TUN adapter.");
+            VhLogger.Instance.Log(ex is OperationCanceledException ? LogLevel.Trace : LogLevel.Error, ex, 
+                "Failed to start TUN adapter.");
             Stop(false);
             throw;
         }
@@ -253,7 +254,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
 
         // ReSharper disable once PossibleMultipleEnumeration
-        foreach (var network in ipNetworks) 
+        foreach (var network in ipNetworks)
             await AddRoute(network, cancellationToken).Vhc();
     }
 
@@ -291,7 +292,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private void Stop(bool throwException)
     {
         lock (_stopLock) {
-            if (!IsStarted || _isStopping) 
+            if (!IsStarted || _isStopping)
                 return;
 
             try {
@@ -313,7 +314,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 if (throwException)
                     throw;
                 // log exception if it does not throw
-                VhLogger.Instance.LogError(ex, "Failed to stop the TUN adapter. AdapterName: {AdapterName}", 
+                VhLogger.Instance.LogError(ex, "Failed to stop the TUN adapter. AdapterName: {AdapterName}",
                     AdapterName);
             }
             finally {

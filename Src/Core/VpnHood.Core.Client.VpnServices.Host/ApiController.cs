@@ -133,7 +133,8 @@ internal class ApiController : IDisposable
 
             // handle disconnect request
             case nameof(ApiDisconnectRequest):
-                await Disconnect(
+                // don't await and let dispose in the background so we can return the response quickly
+                _ =  Disconnect(
                     await StreamUtils.ReadObjectAsync<ApiDisconnectRequest>(stream, cancellationToken), cancellationToken);
                 return null;
 
@@ -151,11 +152,10 @@ internal class ApiController : IDisposable
             : Task.CompletedTask;
     }
 
-    public Task Disconnect(ApiDisconnectRequest request, CancellationToken cancellationToken)
+    public async Task Disconnect(ApiDisconnectRequest request, CancellationToken cancellationToken)
     {
-        // let dispose in the background
-        _ = VpnHoodClient.DisposeAsync();
-        return Task.Delay(500, cancellationToken); 
+        await Task.Delay(300, cancellationToken);
+        await _vpnHoodService.TryDisconnect();
     }
 
     public Task SetAdResult(ApiSetAdResultRequest request, CancellationToken cancellationToken)

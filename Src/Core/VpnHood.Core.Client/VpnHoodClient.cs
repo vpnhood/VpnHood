@@ -1022,7 +1022,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // because network change events can cause problems
         if (_autoDisposeVpnAdapter) {
             VhLogger.Instance.LogDebug("Stopping the VpnAdapter...");
-            VhUtils.TryInvoke("Stop the VpnAdapter", () => _vpnAdapter.Stop());
+            if (_vpnAdapter.IsStarted)
+                VhUtils.TryInvoke("Stop the VpnAdapter", () => _vpnAdapter.Stop());
         }
     }
 

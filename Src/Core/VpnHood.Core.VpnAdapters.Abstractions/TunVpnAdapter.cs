@@ -105,9 +105,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     public async Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
-        if (IsDisposed)
-            throw new ObjectDisposedException(GetType().Name);
-
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
+        
         if (UseNat && !IsNatSupported)
             throw new NotSupportedException("NAT is not supported by this adapter.");
 
@@ -216,7 +215,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             }
 
             // add app filter
-            if (IsAppFilterSupported)
+            if (IsAppFilterSupported) 
                 await SetAppFilters(options.IncludeApps, options.ExcludeApps, cancellationToken);
 
             // open the adapter
@@ -228,7 +227,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
             VhLogger.Instance.LogInformation("TUN adapter started.");
         }
-        catch (ExternalException ex) {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Failed to start TUN adapter.");
             Stop(false);
             throw;
@@ -254,7 +253,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
 
         // ReSharper disable once PossibleMultipleEnumeration
-        foreach (var network in ipNetworks)
+        foreach (var network in ipNetworks) 
             await AddRoute(network, cancellationToken).Vhc();
     }
 
@@ -284,8 +283,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     public void Stop()
     {
-        if (IsDisposed)
-            throw new ObjectDisposedException(GetType().Name);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         Stop(throwException: true);
     }
@@ -332,8 +330,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     public virtual bool ProtectSocket(Socket socket)
     {
-        if (IsDisposed)
-            throw new ObjectDisposedException(GetType().Name);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         if (socket.LocalEndPoint != null)
             throw new InvalidOperationException("Could not protect an already bound socket.");
@@ -352,8 +349,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     public virtual bool ProtectSocket(Socket socket, IPAddress remoteAddress)
     {
-        if (IsDisposed)
-            throw new ObjectDisposedException(GetType().Name);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         if (socket.LocalEndPoint != null)
             throw new InvalidOperationException("Could not protect an already bound socket.");
@@ -548,9 +544,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private async Task RestartAdapter()
     {
         VhLogger.Instance.LogWarning("Restarting the adapter.");
-
-        if (IsDisposed)
-            throw new ObjectDisposedException(GetType().Name);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         if (!IsStarted)
             throw new InvalidOperationException("Cannot restart the adapter when it is stopped.");

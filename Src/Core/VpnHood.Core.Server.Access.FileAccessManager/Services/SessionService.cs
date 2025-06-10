@@ -38,7 +38,7 @@ public class SessionService : IDisposable
         if (Sessions.Any())
             _lastSessionId = Sessions.Max(x => (long)x.Key);
 
-        _cleanupSessionsJob = new Job(Cleanup, name: nameof(Cleanup));
+        _cleanupSessionsJob = new Job(Cleanup, name: nameof(SessionService));
     }
 
     private static ConcurrentDictionary<ulong, Session> LoadAllSessions(string sessionsFolderPath)

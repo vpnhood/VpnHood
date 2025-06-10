@@ -177,9 +177,10 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
     protected override async Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
     {
-        // remove previous DNS servers
+        // remove previous DNS servers.
+        // Do not log in debug mode because it is common error as the adapter is usually new
         VhLogger.Instance.LogDebug("Removing previous DNS from the adapter...");
-        await VhUtils.TryInvokeAsync("Remove previous DNS",
+        await VhUtils.TryInvokeAsync(VhLogger.MinLogLevel == LogLevel.Trace ? "Remove previous DNS" : "",
             () => OsUtils.ExecuteCommandAsync("netsh", $"netsh interface ipv4 delete dns \"{AdapterName}\" all", cancellationToken));
 
         VhLogger.Instance.LogDebug("Adding new DNS to the adapter...");

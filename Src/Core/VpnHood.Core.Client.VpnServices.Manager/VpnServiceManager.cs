@@ -31,7 +31,7 @@ public class VpnServiceManager : IDisposable
     private readonly string _vpnConfigFilePath;
     private readonly string _vpnStatusFilePath;
     private ConnectionInfo _connectionInfo;
-    private DateTime? _connectionInfoTime;
+    private DateTime? _connectionInfoRefreshedTime;
     private TcpClient? _tcpClient;
     private bool _isInitializing;
     private int _vpnServiceUnreachableCount;
@@ -67,11 +67,11 @@ public class VpnServiceManager : IDisposable
     private static ConnectionInfo BuildConnectionInfo(ClientState clientState, Exception? ex = null)
     {
         return new ConnectionInfo {
+            CreatedTime = null,
             SessionInfo = null,
             SessionStatus = null,
             ApiEndPoint = null,
             ApiKey = null,
-            HasSetByService = false,
             ClientState = clientState,
             Error = ex?.ToApiError()
         };
@@ -215,7 +215,7 @@ public class VpnServiceManager : IDisposable
         using var scopeLock = await _connectionInfoLock.LockAsync(updateCts.Token).ConfigureAwait(false);
 
         // read from cache if not expired
-        if (_isInitializing || (!force && FastDateTime.Now - _connectionInfoTime < _connectionInfoTimeSpan))
+        if (_isInitializing || (!force && FastDateTime.Now - _connectionInfoRefreshedTime < _connectionInfoTimeSpan))
             return _connectionInfo;
 
         // update from file to make sure there is no error
@@ -224,7 +224,7 @@ public class VpnServiceManager : IDisposable
         var connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath) ?? _connectionInfo;
         if (_isInitializing || connectionInfo.Error != null || !connectionInfo.IsStarted()) {
             CheckForEvents(connectionInfo, updateCts.Token);
-            _connectionInfoTime = FastDateTime.Now;
+            _connectionInfoRefreshedTime = FastDateTime.Now;
             _connectionInfo = connectionInfo;
             return connectionInfo;
         }
@@ -251,8 +251,7 @@ public class VpnServiceManager : IDisposable
 
             // update connection info and set error
             if (_vpnServiceUnreachableCount == VpnServiceUnreachableThreshold)
-                _connectionInfo =
-                    SetConnectionInfo(ClientState.Disposed, ex: new Exception("VpnService has stopped.", ex));
+                _connectionInfo = SetConnectionInfo(ClientState.Disposed, ex: new Exception("VpnService has stopped.", ex));
 
             // report it first time
             if (_vpnServiceUnreachableCount == 1)
@@ -264,7 +263,7 @@ public class VpnServiceManager : IDisposable
         }
 
         CheckForEvents(_connectionInfo, updateCts.Token);
-        _connectionInfoTime = FastDateTime.Now;
+        _connectionInfoRefreshedTime = FastDateTime.Now;
         return _connectionInfo;
     }
 
@@ -274,13 +273,8 @@ public class VpnServiceManager : IDisposable
         return SendRequest<object>(request, cancellationToken);
     }
 
-    private readonly AsyncLock _sendLock = new();
-
     private async Task<T?> SendRequest<T>(IApiRequest request, CancellationToken cancellationToken)
     {
-        // for simplicity, we send one request at a time
-        using var scopeLock = await _sendLock.LockAsync(TimeSpan.FromSeconds(5), cancellationToken).Vhc();
-
         if (_connectionInfo.Error != null)
             throw new VpnServiceNotReadyException("VpnService is not ready.");
 
@@ -291,7 +285,7 @@ public class VpnServiceManager : IDisposable
 
         // update the last connection info
         _connectionInfo = ret.ConnectionInfo;
-        _connectionInfoTime = FastDateTime.Now;
+        _connectionInfoRefreshedTime = FastDateTime.Now;
 
         // convert to error. 
         if (ret.ApiError != null)
@@ -316,12 +310,9 @@ public class VpnServiceManager : IDisposable
                 VhLogger.Instance.LogDebug("Connected to VpnService Host.");
             }
 
-            await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request.GetType().Name, cancellationToken)
-                .AsTask().Vhc();
-            await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request, cancellationToken).AsTask()
-                .Vhc();
-            var ret = await StreamUtils.ReadObjectAsync<ApiResponse<T>>(tcpClient.GetStream(), cancellationToken)
-                .Vhc();
+            await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request.GetType().Name, cancellationToken).AsTask().Vhc();
+            await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request, cancellationToken).AsTask().Vhc();
+            var ret = await StreamUtils.ReadObjectAsync<ApiResponse<T>>(tcpClient.GetStream(), cancellationToken).Vhc();
 
             return ret;
         }

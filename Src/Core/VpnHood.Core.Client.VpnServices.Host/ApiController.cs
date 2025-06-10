@@ -36,7 +36,7 @@ internal class ApiController : IDisposable
             ApiEndPoint = (IPEndPoint)_tcpListener.LocalEndpoint;
 
             // write initial connection info after setting ApiEndPoint
-            await _vpnHoodService.Context.TryWriteConnectionInfo(BuildConnectionInfo(ClientState.None, null), cancellationToken);
+            await _vpnHoodService.UpdateConnectionInfo(ClientState.None, null, null, cancellationToken: cancellationToken);
             VhLogger.Instance.LogInformation("VpnService host Listener has started. EndPoint: {EndPoint}", ApiEndPoint);
 
             while (!cancellationToken.IsCancellationRequested) {
@@ -77,10 +77,13 @@ internal class ApiController : IDisposable
         }
     }
 
-    private async Task<ConnectionInfo> GetConnectionInfoOrDefault()
+    private async Task<ConnectionInfo> UpdateConnectionInfo(CancellationToken cancellationToken)
     {
-        return _vpnHoodService.Client?.ToConnectionInfo(this) ??
-               await _vpnHoodService.Context.ReadConnectionInfoOrDefault(ApiKey, ApiEndPoint);
+        var client = _vpnHoodService.Client;
+        if (client != null)
+            await _vpnHoodService.UpdateConnectionInfo(client, cancellationToken: cancellationToken);
+
+        return _vpnHoodService.Context.ConnectionInfo;
     }
 
     private async Task ProcessRequests(Stream stream, CancellationToken cancellationToken)
@@ -91,7 +94,7 @@ internal class ApiController : IDisposable
             // write response
             var response = new ApiResponse<object> {
                 ApiError = null,
-                ConnectionInfo = await GetConnectionInfoOrDefault(),
+                ConnectionInfo = await UpdateConnectionInfo(cancellationToken),
                 Result = result
             };
             await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
@@ -99,7 +102,7 @@ internal class ApiController : IDisposable
         catch (Exception ex) when (_isDisposed == 0) {
             var response = new ApiResponse<object> {
                 ApiError = ex.ToApiError(),
-                ConnectionInfo = await GetConnectionInfoOrDefault(),
+                ConnectionInfo = await UpdateConnectionInfo(cancellationToken),
                 Result = null
             };
             await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
@@ -134,7 +137,7 @@ internal class ApiController : IDisposable
             // handle disconnect request
             case nameof(ApiDisconnectRequest):
                 // don't await and let dispose in the background so we can return the response quickly
-                _ =  Disconnect(
+                _ = Disconnect(
                     await StreamUtils.ReadObjectAsync<ApiDisconnectRequest>(stream, cancellationToken), cancellationToken);
                 return null;
 
@@ -146,10 +149,8 @@ internal class ApiController : IDisposable
 
     public Task GetConnectionInfo(ApiGetConnectionInfoRequest request, CancellationToken cancellationToken)
     {
-        var connectionInfo = _vpnHoodService.Client?.ToConnectionInfo(this);
-        return connectionInfo != null ?
-            _vpnHoodService.Context.TryWriteConnectionInfo(connectionInfo, cancellationToken)
-            : Task.CompletedTask;
+        var connectionInfo = UpdateConnectionInfo(cancellationToken);
+        return connectionInfo;
     }
 
     public async Task Disconnect(ApiDisconnectRequest request, CancellationToken cancellationToken)
@@ -183,22 +184,6 @@ internal class ApiController : IDisposable
 
         return VpnHoodClient.AdService.SendRewardedAdResult(request.AdResult.AdData, cancellationToken);
     }
-
-    public ConnectionInfo BuildConnectionInfo(ClientState clientState, Exception? ex)
-    {
-        var connectionInfo = new ConnectionInfo {
-            SessionInfo = null,
-            SessionStatus = null,
-            ApiEndPoint = ApiEndPoint,
-            ApiKey = ApiKey,
-            ClientState = clientState,
-            Error = ex?.ToApiError(),
-            HasSetByService = true
-        };
-
-        return connectionInfo;
-    }
-
 
     public void Dispose()
     {

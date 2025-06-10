@@ -3,6 +3,7 @@ using System.Diagnostics;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
+using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -52,25 +53,25 @@ public class VpnServiceHost : IDisposable
         // update last sate
         VhLogger.Instance.LogDebug("VpnService update the connection info file. State:{State}, LastError: {LastError}",
             client.State, client.LastException?.Message);
-        _ = Context.TryWriteConnectionInfo(client.ToConnectionInfo(_apiController), _connectCts.Token);
+        _ = UpdateConnectionInfo(client, _connectCts.Token);
 
-        // no client in progress, let's stop the service
-        if (client.State is ClientState.Disposed) {
-            // client is disposed or disconnecting, stop the notification and service
-            VhLogger.Instance.LogDebug("VpnServiceHost requests to stop the notification and service.");
-            _vpnServiceHandler.StopNotification();
-
-            // it may be a red flag for android if we don't stop the service after stopping the notification
-            Task.Delay(_killServiceTimeout).ContinueWith(_ => {
-                if (client != Client) return;
-                VhLogger.Instance.LogDebug("VpnServiceHost requests to StopSelf.");
-                _vpnServiceHandler.StopSelf();
-            });
+        // if client is not disposed, we can show notification
+        if (client.State is not ClientState.Disposed) {
+            // show notification
+            _vpnServiceHandler.ShowNotification(Context.ConnectionInfo);
             return;
         }
 
-        // show notification
-        _vpnServiceHandler.ShowNotification(client.ToConnectionInfo(_apiController));
+        // client is disposed so stop the notification and service
+        VhLogger.Instance.LogDebug("VpnServiceHost requests to stop the notification and service.");
+        _vpnServiceHandler.StopNotification();
+
+        // it may be a red flag for android if we don't stop the service after stopping the notification
+        Task.Delay(_killServiceTimeout).ContinueWith(_ => {
+            if (client != Client) return;
+            VhLogger.Instance.LogDebug("VpnServiceHost requests to StopSelf.");
+            _vpnServiceHandler.StopSelf();
+        });
     }
 
     public async Task<bool> TryConnect(bool forceReconnect = false)
@@ -86,7 +87,7 @@ public class VpnServiceHost : IDisposable
             if (!forceReconnect && client is { State: ClientState.Connected or ClientState.Connecting or ClientState.Waiting }) {
                 // user must disconnect first
                 VhLogger.Instance.LogWarning("VpnService connection is already in progress.");
-                await Context.TryWriteConnectionInfo(client.ToConnectionInfo(_apiController), _connectCts.Token).Vhc();
+                await UpdateConnectionInfo(client, _connectCts.Token).Vhc();
                 return false;
             }
 
@@ -130,19 +131,11 @@ public class VpnServiceHost : IDisposable
             VhLogger.Instance.LogInformation("VpnService is connecting... ProcessId: {ProcessId}", Process.GetCurrentProcess().Id);
 
             // create a connection info for notification
-            var connectInfo = new ConnectionInfo {
-                ClientState = ClientState.Initializing,
-                ApiKey = _apiController.ApiKey,
-                ApiEndPoint = _apiController.ApiEndPoint,
-                SessionInfo = null,
-                SessionStatus = null,
-                Error = null,
-                SessionName = clientOptions.SessionName,
-                HasSetByService = true
-            };
+            await UpdateConnectionInfo(ClientState.Initializing, sessionName: clientOptions.SessionName,
+                exception: null, cancellationToken: cancellationToken).Vhc();
 
             // show notification as soon as possible
-            _vpnServiceHandler.ShowNotification(connectInfo);
+            _vpnServiceHandler.ShowNotification(Context.ConnectionInfo);
 
             // read client options and start log service
             _logService?.Start(clientOptions.LogServiceOptions);
@@ -181,19 +174,54 @@ public class VpnServiceHost : IDisposable
             Client = client;
 
             // show notification.
-            _vpnServiceHandler.ShowNotification(client.ToConnectionInfo(_apiController));
+            await UpdateConnectionInfo(client, cancellationToken).Vhc();
+            _vpnServiceHandler.ShowNotification(Context.ConnectionInfo);
 
             // let connect in the background
             // ignore cancellation because it will be cancelled by disconnect or dispose
-            await client.Connect(cancellationToken);
+            await client.Connect(cancellationToken).Vhc();
         }
         catch (Exception ex) {
-            await Context.TryWriteConnectionInfo(_apiController.BuildConnectionInfo(ClientState.Disposed, ex), _connectCts.Token);
+            await UpdateConnectionInfo(ClientState.Disposed, null, ex, _connectCts.Token).Vhc();
             _vpnServiceHandler.StopNotification();
             _vpnServiceHandler.StopSelf();
             throw;
         }
     }
+
+    public async Task UpdateConnectionInfo(VpnHoodClient client, CancellationToken cancellationToken)
+    {
+        var connectionInfo = new ConnectionInfo {
+            CreatedTime = FastDateTime.Now,
+            SessionName = client.SessionName,
+            SessionInfo = client.SessionInfo,
+            SessionStatus = client.SessionStatus?.ToDto(),
+            ClientState = client.State,
+            Error = client.LastException?.ToApiError(),
+            ApiEndPoint = _apiController.ApiEndPoint,
+            ApiKey = _apiController.ApiKey
+        };
+
+        await Context.TryWriteConnectionInfo(connectionInfo, cancellationToken);
+    }
+
+    public async Task UpdateConnectionInfo(ClientState clientState, string? sessionName, Exception? exception,
+        CancellationToken cancellationToken)
+    {
+        var connectionInfo = new ConnectionInfo {
+            ApiEndPoint = _apiController.ApiEndPoint,
+            ApiKey = _apiController.ApiKey,
+            SessionInfo = null,
+            SessionStatus = null,
+            CreatedTime = DateTime.Now,
+            ClientState = clientState,
+            Error = exception?.ToApiError(),
+            SessionName = sessionName
+        };
+
+        await Context.TryWriteConnectionInfo(connectionInfo, cancellationToken);
+    }
+
 
     private static ITrackerFactory? TryCreateTrackerFactory(string? assemblyQualifiedName)
     {

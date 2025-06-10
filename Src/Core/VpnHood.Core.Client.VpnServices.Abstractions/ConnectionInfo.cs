@@ -9,6 +9,7 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions;
 public class ConnectionInfo
 {
     [JsonConverter(typeof(IPEndPointConverter))]
+    public required DateTime? CreatedTime { get; init; }
     public required IPEndPoint? ApiEndPoint { get; init; }
     public string? SessionName { get; init; }
     public required ClientState ClientState { get; init; }
@@ -16,7 +17,6 @@ public class ConnectionInfo
     public required SessionInfo? SessionInfo { get; init; }
     public required SessionStatus? SessionStatus { get; init; }
     public required byte[]? ApiKey { get; init; }
-    public required bool HasSetByService { get; init; }
     public bool IsStarted() => ClientState is not (
         ClientState.None or ClientState.Disposed or ClientState.Disconnecting);
 }

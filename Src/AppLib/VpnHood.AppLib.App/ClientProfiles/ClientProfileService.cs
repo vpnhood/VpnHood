@@ -280,7 +280,8 @@ public class ClientProfileService
 
                 // return if the token is not new
                 if (!token.ServerToken.IsTokenUpdated(newServerToken)) {
-                    VhLogger.Instance.LogInformation("The remote ServerToken is not new and has not been updated.");
+                    VhLogger.Instance.LogInformation("The remote ServerToken is not new and has not been updated. Url: {Url}",
+                        VhLogger.FormatHostName(url));
                     return false;
                 }
 

@@ -26,6 +26,7 @@ internal class ApiController : IDisposable
         _vpnHoodService = vpnHoodService;
         _tcpListener = new TcpListener(IPAddress.Loopback, 0);
         _ = Start(_cancellationTokenSource.Token);
+        VhLogger.Instance.LogDebug("VpnService ApiController has been started. EndPoint: {EndPoint}", ApiEndPoint);
     }
 
 
@@ -34,10 +35,6 @@ internal class ApiController : IDisposable
         try {
             _tcpListener.Start();
             ApiEndPoint = (IPEndPoint)_tcpListener.LocalEndpoint;
-
-            // write initial connection info after setting ApiEndPoint
-            await _vpnHoodService.UpdateConnectionInfo(ClientState.None, null, null, cancellationToken: cancellationToken);
-            VhLogger.Instance.LogInformation("VpnService host Listener has started. EndPoint: {EndPoint}", ApiEndPoint);
 
             while (!cancellationToken.IsCancellationRequested) {
                 var client = await _tcpListener.AcceptTcpClientAsync(cancellationToken);

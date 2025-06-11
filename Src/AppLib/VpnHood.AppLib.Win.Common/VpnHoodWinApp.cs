@@ -119,7 +119,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
     {
         // auto connect
         if (ConnectAfterStart && VpnHoodApp.Instance.CurrentClientProfileInfo != null)
-            _ = VpnHoodApp.Instance.Connect();
+            _ = VpnHoodApp.Instance.TryConnect();
 
         // create notification icon
         InitNotifyIcon();
@@ -143,7 +143,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
                 (_, _) => OpenMainWindowInBrowser());
         _sysTray.ContextMenu.AddMenuSeparator();
         _connectMenuItemId =
-            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Connect, (_, _) => ConnectClicked());
+            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Connect, (_, _) => _ = ConnectClicked());
         _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Disconnect,
             (_, _) => _ = VpnHoodApp.Instance.Disconnect());
         _sysTray.ContextMenu.AddMenuSeparator();
@@ -206,7 +206,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         ExitRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    private void ConnectClicked()
+    private async Task ConnectClicked()
     {
         // open main window if no profile is selected
         if (VpnHoodApp.Instance.UserSettings.ClientProfileId == null) {
@@ -216,7 +216,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
 
         // connect
         try {
-            _ = VpnHoodApp.Instance.Connect();
+            await VpnHoodApp.Instance.Connect().Vhc();
         }
         catch {
             OpenMainWindow();
@@ -317,7 +317,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
             return null;
         }
     }
-    
+
     protected override void Dispose(bool disposing)
     {
         if (disposing) {

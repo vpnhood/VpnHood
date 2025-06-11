@@ -25,6 +25,17 @@ internal class VpnServiceContext(string configFolder)
         SessionStatus = null
     };
 
+    public ClientOptions? TryReadClientOptions()
+    {
+        try {
+            return ReadClientOptions();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not read client options from file.");
+            return null;
+        }
+    }
+
     public ClientOptions ReadClientOptions()
     {
         // read from config file

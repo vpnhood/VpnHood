@@ -52,8 +52,8 @@ public class VpnServiceManager : IDisposable
         _adService = adService;
         _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath)
                           ?? BuildConnectionInfo(ClientState.None);
-        
-        _updateConnectionInfoJob = new Job(UpdateConnectionInfoJob, 
+
+        _updateConnectionInfoJob = new Job(UpdateConnectionInfoJob,
             eventWatcherInterval ?? TimeSpan.MaxValue, nameof(UpdateConnectionInfoJob));
     }
 
@@ -79,6 +79,10 @@ public class VpnServiceManager : IDisposable
 
     private ConnectionInfo SetConnectionInfo(ClientState clientState, Exception? ex = null)
     {
+        // log stack and client state change
+            VhLogger.Instance.LogDebug("Setting connection info. ClientState: {ClientState}, Stack: {Exception}",
+                clientState, Environment.StackTrace); //todo
+        
         _connectionInfo = BuildConnectionInfo(clientState, ex);
         try {
             File.WriteAllText(_vpnStatusFilePath, JsonSerializer.Serialize(_connectionInfo));
@@ -120,6 +124,7 @@ public class VpnServiceManager : IDisposable
 
             // start vpn service
             VhLogger.Instance.LogInformation("Starting VpnService...");
+            VhUtils.TryDeleteFile(LogFilePath); // remove previous service log
             await _device.StartVpnService(cancellationToken).Vhc();
 
             // wait for vpn service to start
@@ -146,29 +151,36 @@ public class VpnServiceManager : IDisposable
     {
         VhLogger.Instance.LogInformation("Waiting for VpnService to start...");
         using var timeoutCts = new CancellationTokenSource(_startVpnServiceTimeout);
-        using var localCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-        // directly read file because UpdateConnection will set the state to disposed if it could not connect to the service
-        // UpdateConnection will fail due to it cancellation 
-        var connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
+        try {
+            using var localCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-        // wait for vpn service to start
-        while (connectionInfo == null || connectionInfo.ClientState is ClientState.None or ClientState.Initializing) {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (localCts.IsCancellationRequested)
-                throw new TimeoutException(
-                    $"VpnService did not respond within {_startVpnServiceTimeout.TotalSeconds} seconds.");
+            // directly read file because UpdateConnection will set the state to disposed if it could not connect to the service
+            // UpdateConnection will fail due to it cancellation 
+            var connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
 
-            await Task.Delay(1000, localCts.Token);
-            connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
+            // wait for vpn service to start
+            while (connectionInfo == null || connectionInfo.ClientState is ClientState.None or ClientState.Initializing) {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (localCts.IsCancellationRequested)
+                    throw new TimeoutException(
+                        $"VpnService did not respond within {_startVpnServiceTimeout.TotalSeconds} seconds.");
+
+                await Task.Delay(1000, localCts.Token);
+                connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
+            }
+
+            _connectionInfo = connectionInfo;
+            _tcpClient = null; // reset the tcp client to make sure we create a new one
+                               // success
+            VhLogger.Instance.LogInformation(
+                "VpnService has started. EndPoint: {EndPoint}, ConnectionState: {ConnectionState}",
+                connectionInfo.ApiEndPoint, connectionInfo.ClientState);
         }
-
-        _connectionInfo = connectionInfo;
-        _tcpClient = null; // reset the tcp client to make sure we create a new one
-        // success
-        VhLogger.Instance.LogInformation(
-            "VpnService has started. EndPoint: {EndPoint}, ConnectionState: {ConnectionState}",
-            connectionInfo.ApiEndPoint, connectionInfo.ClientState);
+        catch (Exception ex) when (timeoutCts.IsCancellationRequested) {
+            throw new TimeoutException(
+                $"Could not start the VpnService in {_startVpnServiceTimeout.TotalSeconds} seconds.", ex);
+        }
     }
 
     private async Task WaitForConnection(CancellationToken cancellationToken)
@@ -239,6 +251,9 @@ public class VpnServiceManager : IDisposable
             VhLogger.Instance.LogWarning(ex, "Previous UpdateConnection Info has been ignored due to the new service.");
 
         }
+        catch (Exception) when (_isInitializing) {
+            throw; // initializing state, discard any log or setting new connection info
+        }
         catch (VpnServiceNotReadyException ex) {
             if (_connectionInfo.ClientState != ClientState.Disposed) {
                 VhLogger.Instance.LogDebug(ex, "Could not update connection info.");
@@ -284,8 +299,10 @@ public class VpnServiceManager : IDisposable
         var ret = await SendRequestCore<T>(_connectionInfo.ApiEndPoint, request, cancellationToken);
 
         // update the last connection info
-        _connectionInfo = ret.ConnectionInfo;
-        _connectionInfoRefreshedTime = FastDateTime.Now;
+        if (ret.ConnectionInfo.CreatedTime >= _connectionInfo.CreatedTime) {
+            _connectionInfo = ret.ConnectionInfo;
+            _connectionInfoRefreshedTime = FastDateTime.Now;
+        }
 
         // convert to error. 
         if (ret.ApiError != null)
@@ -310,8 +327,8 @@ public class VpnServiceManager : IDisposable
                 VhLogger.Instance.LogDebug("Connected to VpnService Host.");
             }
 
-            await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request.GetType().Name, cancellationToken).AsTask().Vhc();
-            await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request, cancellationToken).AsTask().Vhc();
+            await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request.GetType().Name, cancellationToken).Vhc();
+            await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request, cancellationToken).Vhc();
             var ret = await StreamUtils.ReadObjectAsync<ApiResponse<T>>(tcpClient.GetStream(), cancellationToken).Vhc();
 
             return ret;
@@ -336,24 +353,25 @@ public class VpnServiceManager : IDisposable
         if (!ConnectionInfo.IsStarted())
             return true;
 
-        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var stopTimeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         // send disconnect request
         try {
             VhLogger.Instance.LogDebug("Sending disconnect request...");
-            await SendRequest(new ApiDisconnectRequest(), cancellationTokenSource.Token).Vhc();
+            await SendRequest(new ApiDisconnectRequest(), stopTimeoutCts.Token).Vhc();
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogDebug(ex, "Could not send disconnect request. ClientState: {ClientState}", 
+            VhLogger.Instance.LogDebug(ex, "Could not send disconnect request. ClientState: {ClientState}",
                 ConnectionInfo.ClientState);
         }
 
         // wait for the service to stop
         VhLogger.Instance.LogDebug("Waiting for VpnService to stop.");
+        stopTimeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
         try {
             while (ConnectionInfo.IsStarted()) {
-                await RefreshConnectionInfo(true, cancellationTokenSource.Token);
-                await Task.Delay(200, cancellationTokenSource.Token);
+                await RefreshConnectionInfo(true, stopTimeoutCts.Token).Vhc();
+                await Task.Delay(200, stopTimeoutCts.Token).Vhc();
             }
 
             VhLogger.Instance.LogDebug("VpnService has been stopped.");

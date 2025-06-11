@@ -36,12 +36,19 @@ public class VpnServiceHost : IDisposable
         Context = new VpnServiceContext(configFolder);
         _socketFactory = socketFactory;
         _vpnServiceHandler = vpnServiceHandler;
+
+        // initialize logger
         _logService = withLogger ? new LogService(Context.LogFilePath) : null;
         VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
+        var clientOptions = Context.TryReadClientOptions();
+        if (_logService != null && clientOptions != null) {
+            _logService.Start(clientOptions.LogServiceOptions);
+        }
 
         // start apiController
         _apiController = new ApiController(this);
-        VhLogger.Instance.LogInformation("VpnServiceHost has been initiated...");
+        VhLogger.Instance.LogInformation("VpnServiceHost has been initiated...ApiEndPoint: {_apiController}",
+            _apiController.ApiEndPoint);
     }
 
     private void VpnHoodClient_StateChanged(object? sender, EventArgs e)
@@ -124,8 +131,9 @@ public class VpnServiceHost : IDisposable
     private async Task Connect(CancellationToken cancellationToken)
     {
         try {
+            // read client options and start log service
             var clientOptions = Context.ReadClientOptions();
-            _logService?.Start(clientOptions.LogServiceOptions);
+            _logService?.Start(clientOptions.LogServiceOptions, deleteOldReport: false);
 
             // restart the log service
             VhLogger.Instance.LogInformation("VpnService is connecting... ProcessId: {ProcessId}", Process.GetCurrentProcess().Id);
@@ -136,9 +144,6 @@ public class VpnServiceHost : IDisposable
 
             // show notification as soon as possible
             _vpnServiceHandler.ShowNotification(Context.ConnectionInfo);
-
-            // read client options and start log service
-            _logService?.Start(clientOptions.LogServiceOptions);
 
             // sni is sensitive, must be explicitly enabled
             clientOptions.ForceLogSni |=

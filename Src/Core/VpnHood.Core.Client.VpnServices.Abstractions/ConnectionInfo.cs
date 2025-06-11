@@ -9,8 +9,9 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions;
 public class ConnectionInfo
 {
     [JsonConverter(typeof(IPEndPointConverter))]
-    public required DateTime? CreatedTime { get; init; }
     public required IPEndPoint? ApiEndPoint { get; init; }
+
+    public required DateTime? CreatedTime { get; init; }
     public string? SessionName { get; init; }
     public required ClientState ClientState { get; init; }
     public required ApiError? Error { get; init; }

@@ -32,6 +32,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 
     public AndroidVpnService()
     {
+        Thread.Sleep(20000); //todo
         _vpnServiceHost = new VpnServiceHost(VpnServiceConfigFolder, this, new SocketFactory());
     }
 

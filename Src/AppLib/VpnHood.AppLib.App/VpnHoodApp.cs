@@ -464,6 +464,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return logOptions;
     }
 
+    public async Task<bool> TryConnect(ConnectOptions? connectOptions = null,
+        CancellationToken cancellationToken = default)
+    {
+        try {
+            await Connect(connectOptions, cancellationToken);
+            return true;
+        }
+        catch {
+            return false; // don't throw exception, just return false
+        }
+    }
+
     public async Task Connect(ConnectOptions? connectOptions = null, CancellationToken cancellationToken = default)
     {
         try {
@@ -490,6 +502,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _appPersistState.HasDisconnectedByUser = true;
             VhLogger.Instance.LogInformation("Connection canceled by user.");
             _appPersistState.LastError = ex.ToApiError();
+            throw;
         }
         catch (Exception ex) {
             ReportError(ex, "Could not establish the connection.");
@@ -506,13 +519,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private async Task ConnectInternal(ConnectOptions connectOptions, CancellationToken cancellationToken)
     {
         // set use default clientProfile and serverLocation
-        var orgCancellationToken = cancellationToken;
         var clientProfileId = connectOptions.ClientProfileId ?? UserSettings.ClientProfileId ?? throw new NotExistsException("ClientProfile is not set.");
         var clientProfile = ClientProfileService.Get(clientProfileId);
 
         try {
             var clientProfileInfo = ClientProfileService.GetInfo(clientProfileId);
-            var serverLocation = connectOptions.ServerLocation ?? clientProfileInfo.SelectedLocationInfo?.ServerLocation;
+            var serverLocation =
+                connectOptions.ServerLocation ?? clientProfileInfo.SelectedLocationInfo?.ServerLocation;
 
             // set timeout
             _connectTimeoutCts = new CancellationTokenSource(
@@ -563,7 +576,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
             if (connectOptions.Diagnose) // log country name
                 VhLogger.Instance.LogInformation("CountryCode: {CountryCode}",
-                    VhUtils.TryGetCountryName(await GetClientCountryCodeAsync(allowVpnServer: false, allowCache: true, linkedCts.Token).Vhc()));
+                    VhUtils.TryGetCountryName(
+                        await GetClientCountryCodeAsync(allowVpnServer: false, allowCache: true, linkedCts.Token)
+                            .Vhc()));
 
             // request features for the first time
             VhLogger.Instance.LogDebug("Requesting Features ...");
@@ -587,7 +602,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             throw new UserCanceledException("User has cancelled the connection.");
         }
         catch (Exception ex) {
-            ReportError(ex, "Could not establish the connection. Reconnecting using the new token...");
+            ReportError(ex, "Could not establish the connection.");
             // Reset server location if no server is available
 
             if (ex is SessionException sessionException) {
@@ -618,12 +633,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (_autoDiagnose && ex is not SessionException &&
                 _appPersistState is { HasDisconnectedByUser: false, HasDiagnoseRequested: false }) {
                 VhLogger.Instance.LogDebug("Start checking client network...");
-                await Diagnoser.CheckPureNetwork(orgCancellationToken).Vhc();
+
+                // use original cancellation token to avoid timeout exception consumed by Connect
+                await Diagnoser.CheckPureNetwork(cancellationToken).Vhc();
             }
 
             // throw ConnectionTimeoutException if timeout
             if (_connectTimeoutCts.IsCancellationRequested)
-                throw new ConnectionTimeoutException("Could not establish connection in given time.", ex);
+                throw new ConnectionTimeoutException($"Could not establish connection in {_connectTimeout.TotalSeconds} seconds.", ex);
 
             throw;
         }

@@ -16,7 +16,7 @@ public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership
         base.OnCreate();
 
         //app init
-        if (!VpnHoodApp.IsInit) {
+        if (!VpnHoodApp.IsInit && !AndroidDevice.IsVpnServiceProcess) {
             var options = CreateAppOptions();
             options.UiProvider ??= new AndroidUiProvider();
             options.CultureProvider ??= AndroidAppCultureProvider.CreateIfSupported();
@@ -30,7 +30,8 @@ public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
-            if (VpnHoodApp.IsInit) _ = VpnHoodApp.Instance.DisposeAsync();
+            if (VpnHoodApp.IsInit) 
+                VpnHoodApp.Instance.Dispose();
         }
 
         base.Dispose(disposing);

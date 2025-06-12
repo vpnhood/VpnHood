@@ -1,12 +1,13 @@
 ﻿using System.Diagnostics;
 using System.Net;
 using VpnHood.Core.Toolkit.Converters;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Test;
 
 public class TestConstants
 {
-    public static TimeSpan DefaultHttpTimeout => Debugger.IsAttached ? TimeSpan.FromSeconds(3000) : TimeSpan.FromSeconds(1);
+    public static TimeSpan DefaultHttpTimeout => Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(1);
     public static TimeSpan DefaultUdpTimeout => DefaultHttpTimeout;
     public static TimeSpan DefaultPingTimeout => DefaultUdpTimeout;
 

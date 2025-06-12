@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Sockets;
-using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Toolkit.ApiClients;
@@ -86,27 +85,20 @@ internal class ApiController : IDisposable
     private async Task ProcessRequests(Stream stream, CancellationToken cancellationToken)
     {
         try {
-            var result = await ProcessRequestsInternal(stream, cancellationToken);
-
-            // write response
-            var response = new ApiResponse<object> {
-                ApiError = null,
-                ConnectionInfo = await UpdateConnectionInfo(cancellationToken),
-                Result = result
-            };
-            await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
+            await ProcessRequestsInternal(stream, cancellationToken);
         }
         catch (Exception ex) when (_isDisposed == 0) {
             var response = new ApiResponse<object> {
-                ApiError = ex.ToApiError(),
                 ConnectionInfo = await UpdateConnectionInfo(cancellationToken),
+                ApiError = ex.ToApiError(),
                 Result = null
             };
+
             await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
         }
     }
 
-    private async Task<object?> ProcessRequestsInternal(Stream stream, CancellationToken cancellationToken)
+    private async Task ProcessRequestsInternal(Stream stream, CancellationToken cancellationToken)
     {
         // read request type
         var requestType = await StreamUtils.ReadObjectAsync<string>(stream, cancellationToken);
@@ -117,31 +109,47 @@ internal class ApiController : IDisposable
                 await GetConnectionInfo(
                     await StreamUtils.ReadObjectAsync<ApiGetConnectionInfoRequest>(stream, cancellationToken),
                     cancellationToken);
-                return null;
+                await WriteResponseResult(stream, null, cancellationToken);
+                return;
 
             // handle ad request
             case nameof(ApiSetAdResultRequest):
                 await SetAdResult(
                     await StreamUtils.ReadObjectAsync<ApiSetAdResultRequest>(stream, cancellationToken), cancellationToken);
-                return null;
+                await WriteResponseResult(stream, null, cancellationToken);
+                return;
 
             // handle ad reward request
             case nameof(ApiSendRewardedAdResultRequest):
                 await SendRewardedAdResult(
                     await StreamUtils.ReadObjectAsync<ApiSendRewardedAdResultRequest>(stream, cancellationToken), cancellationToken);
-                return null;
+                await WriteResponseResult(stream, null, cancellationToken);
+                return;
 
             // handle disconnect request
             case nameof(ApiDisconnectRequest):
-                // don't await and let dispose in the background so we can return the response quickly
-                _ = Disconnect(
-                    await StreamUtils.ReadObjectAsync<ApiDisconnectRequest>(stream, cancellationToken), cancellationToken);
-                return null;
+                // write response before disconnecting
+                await WriteResponseResult(stream, null, cancellationToken);
 
+                // don't await and let dispose in the background so we can return the response quickly
+                await Disconnect(
+                    await StreamUtils.ReadObjectAsync<ApiDisconnectRequest>(stream, cancellationToken), cancellationToken);
+                return;
 
             default:
                 throw new InvalidOperationException($"Unknown request type: {requestType}");
         }
+    }
+
+    private async Task WriteResponseResult(Stream stream, object? result, CancellationToken cancellationToken)
+    {
+        var response = new ApiResponse<object> {
+            ConnectionInfo = await UpdateConnectionInfo(cancellationToken),
+            ApiError = null,
+            Result = result
+        };
+
+        await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
     }
 
     public Task GetConnectionInfo(ApiGetConnectionInfoRequest request, CancellationToken cancellationToken)
@@ -152,7 +160,6 @@ internal class ApiController : IDisposable
 
     public async Task Disconnect(ApiDisconnectRequest request, CancellationToken cancellationToken)
     {
-        await Task.Delay(300, cancellationToken);
         await _vpnHoodService.TryDisconnect();
     }
 

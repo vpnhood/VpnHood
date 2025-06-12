@@ -23,7 +23,7 @@ public class AndroidDevice : IDevice
     public bool IsAlwaysOnSupported { get; } = OperatingSystem.IsAndroidVersionAtLeast(24);
     public string OsInfo { get; } = $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
     public string VpnServiceConfigFolder => AndroidVpnService.VpnServiceConfigFolder;
-    public bool IsTv { get; } = 
+    public bool IsTv { get; } =
         ((UiModeManager?)Application.Context.GetSystemService(Context.UiModeService))?
         .CurrentModeType == UiMode.TypeTelevision;
 
@@ -64,7 +64,8 @@ public class AndroidDevice : IDevice
         }
     }
 
-    private async Task PrepareVpnService(IActivityEvent? activityEvent, TimeSpan userIntentTimeout, CancellationToken cancellationToken)
+    private async Task PrepareVpnService(IActivityEvent? activityEvent, TimeSpan userIntentTimeout,
+        CancellationToken cancellationToken)
     {
         // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
         VhLogger.Instance.LogDebug("Preparing VpnService...");
@@ -143,6 +144,22 @@ public class AndroidDevice : IDevice
         }
     }
 
+    private static string CurrentProcessName {
+        get {
+            //if (OperatingSystem.IsAndroidVersionAtLeast(28))
+                //return Application.ProcessName ?? "";
+
+            var activityManager = (ActivityManager)Application.Context.GetSystemService(Context.ActivityService)!;
+            var pid = Process.MyPid();
+            return activityManager
+                .RunningAppProcesses?
+                .SingleOrDefault(x => x.Pid == pid)?
+                .ProcessName ?? "";
+        }
+    }
+
+    public static bool IsVpnServiceProcess => CurrentProcessName.Contains(AndroidVpnService.ProcessName);
+    
     private static IEnumerable<(Network, NetworkCapabilities)> GetNetworkWithCapabilities(ConnectivityManager connectivityManager)
     {
         var networks = connectivityManager.GetAllNetworks();

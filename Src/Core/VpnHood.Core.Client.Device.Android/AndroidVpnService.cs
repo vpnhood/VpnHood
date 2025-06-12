@@ -18,7 +18,7 @@ namespace VpnHood.Core.Client.Device.Droid;
     Permission = Manifest.Permission.BindVpnService,
     Exported = false,
 // #if !DEBUG 
-    Process = ":vpnhood_process",
+    Process = ProcessName,
 //#endif
     ForegroundServiceType = ForegroundService.TypeSystemExempted)]
 [IntentFilter(["android.net.VpnService"])]
@@ -26,14 +26,16 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 {
     private readonly VpnServiceHost _vpnServiceHost;
     private AndroidVpnNotification? _notification;
+    public const string ProcessName = ":vpnhood_process";
 
     public static string VpnServiceConfigFolder { get; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "vpn-service");
 
     public AndroidVpnService()
     {
-        Thread.Sleep(20000); //todo
+        Thread.Sleep(4000); //todo
         _vpnServiceHost = new VpnServiceHost(VpnServiceConfigFolder, this, new SocketFactory());
+
     }
 
     [return: GeneratedEnum]

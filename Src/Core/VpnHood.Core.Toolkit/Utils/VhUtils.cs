@@ -17,6 +17,7 @@ public static class VhUtils
     public const long Gigabytes = 1L << 30; // 1 GB
     public const long Terabytes = 1L << 40; // 1 TB
     public const long Petabytes = 1L << 50; // 1 PB
+    public static TimeSpan DebuggerTimeout { get; set; } = Timeout.InfiniteTimeSpan;
 
     public static bool IsConnectionRefusedException(Exception ex)
     {

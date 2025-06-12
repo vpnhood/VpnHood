@@ -32,7 +32,7 @@ public class TestAppHelper : TestHelper
             AutoDiagnose = false,
             CanExtendByRewardedAdThreshold = TimeSpan.Zero,
             DisconnectOnDispose = true,
-            ConnectTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(5),
+            ConnectTimeout = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(5),
             Resources = new AppResources(),
             AdOptions = new AppAdOptions {
                 ShowAdPostDelay = TimeSpan.Zero,

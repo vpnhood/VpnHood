@@ -4,6 +4,7 @@ using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib;
 
@@ -37,7 +38,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public bool? LogAnonymous { get; set; } =
         isDebugMode ? false : null; // it follows user's settings if it set to null
     public TimeSpan ServerQueryTimeout { get; set; } = ClientOptions.Default.ServerQueryTimeout;
-    public TimeSpan ConnectTimeout { get; set; } = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(60);
+    public TimeSpan ConnectTimeout { get; set; } = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(60);
     public TimeSpan LocationServiceTimeout { get; set; } = TimeSpan.FromSeconds(5); // ignore debugger attach to let check when there is no internet
     public bool AutoDiagnose { get; set; } = true;
     public AppAdOptions AdOptions { get; set; } = new();

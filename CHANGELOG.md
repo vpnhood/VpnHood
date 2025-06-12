@@ -1,3 +1,6 @@
+# Upcoming
+# Fix: Android: Fix a crash on few devices at startup
+
 # v7.1.712
 * Improve: Improve performance and stability
 * Improve: Windows: Digitally sign the installer

@@ -13,6 +13,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using FastDateTime = VpnHood.Core.Toolkit.Utils.FastDateTime;
 
@@ -21,8 +22,8 @@ namespace VpnHood.Core.Client.VpnServices.Manager;
 public class VpnServiceManager : IDisposable
 {
     private const int VpnServiceUnreachableThreshold = 1; // after this count we stop the service
-    private readonly TimeSpan _requestVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(120);
-    private readonly TimeSpan _startVpnServiceTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(20);
+    private readonly TimeSpan _requestVpnServiceTimeout = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(120);
+    private readonly TimeSpan _startVpnServiceTimeout = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(20);
     private bool _disposed;
 
     private readonly TimeSpan _connectionInfoTimeSpan = TimeSpan.FromSeconds(1);
@@ -79,10 +80,6 @@ public class VpnServiceManager : IDisposable
 
     private ConnectionInfo SetConnectionInfo(ClientState clientState, Exception? ex = null)
     {
-        // log stack and client state change
-            VhLogger.Instance.LogDebug("Setting connection info. ClientState: {ClientState}, Stack: {Exception}",
-                clientState, Environment.StackTrace); //todo
-        
         _connectionInfo = BuildConnectionInfo(clientState, ex);
         try {
             File.WriteAllText(_vpnStatusFilePath, JsonSerializer.Serialize(_connectionInfo));
@@ -113,14 +110,14 @@ public class VpnServiceManager : IDisposable
             _connectionInfo = SetConnectionInfo(ClientState.Initializing);
 
             // save vpn config
-            await File.WriteAllTextAsync(_vpnConfigFilePath, JsonSerializer.Serialize(clientOptions), cancellationToken)
-                .Vhc();
+            await File.WriteAllTextAsync(_vpnConfigFilePath, JsonSerializer.Serialize(clientOptions), 
+                    cancellationToken).Vhc();
 
             // prepare vpn service
             VhLogger.Instance.LogInformation("Requesting VpnService...");
             if (!clientOptions.UseNullCapture)
-                await _device.RequestVpnService(AppUiContext.Context, _requestVpnServiceTimeout, cancellationToken)
-                    .Vhc();
+                await _device.RequestVpnService(AppUiContext.Context, _requestVpnServiceTimeout, 
+                    cancellationToken).Vhc();
 
             // start vpn service
             VhLogger.Instance.LogInformation("Starting VpnService...");
@@ -131,8 +128,6 @@ public class VpnServiceManager : IDisposable
             await WaitForVpnService(cancellationToken).Vhc();
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not start VpnService.");
-
             // It looks like the service is not running, set the state to disposed if it is still in initializing state
             var connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
             if (connectionInfo?.ClientState == ClientState.Initializing)
@@ -266,7 +261,7 @@ public class VpnServiceManager : IDisposable
 
             // update connection info and set error
             if (_vpnServiceUnreachableCount == VpnServiceUnreachableThreshold)
-                _connectionInfo = SetConnectionInfo(ClientState.Disposed, ex: new Exception("VpnService has stopped.", ex));
+                _connectionInfo = SetConnectionInfo(ClientState.Disposed, ex);
 
             // report it first time
             if (_vpnServiceUnreachableCount == 1)
@@ -334,9 +329,10 @@ public class VpnServiceManager : IDisposable
             return ret;
         }
         catch (Exception ex) {
+            var remoteEndPoint = tcpClient?.Client.RemoteEndPoint;
             tcpClient?.Dispose();
             tcpClient = null;
-            throw new VpnServiceUnreachableException("VpnService is unreachable.", ex);
+            throw new VpnServiceUnreachableException($"VpnService is unreachable. EndPoint: {remoteEndPoint}", ex);
         }
         finally {
             _tcpClient = tcpClient;

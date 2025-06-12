@@ -591,7 +591,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // initialize the connector
             _connectorService.Init(
                 helloResponse.ProtocolVersion,
-                requestTimeout: Debugger.IsAttached ? Timeout.InfiniteTimeSpan : helloResponse.RequestTimeout,
+                requestTimeout: Debugger.IsAttached ? VhUtils.DebuggerTimeout : helloResponse.RequestTimeout,
                 tcpReuseTimeout: helloResponse.TcpReuseTimeout,
                 serverSecret: helloResponse.ServerSecret);
 
@@ -944,7 +944,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         DisposeInternal();
 
         // dispose async resources
-        var byeTimeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TunnelDefaults.ByeTimeout;
+        var byeTimeout = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TunnelDefaults.ByeTimeout;
 
         // close tracker
         if (_clientUsageTracker != null) {

@@ -50,8 +50,12 @@ internal class VpnServiceContext(string configFolder)
             using var scopeLock = await _connectionInfoLock.LockAsync(cancellationToken);
             ConnectionInfo = connectionInfo;
             var json = JsonSerializer.Serialize(connectionInfo);
-            await FileUtils.WriteAllTextRetryAsync(StatusFilePath, json, timeout: TimeSpan.FromSeconds(2), cancellationToken: cancellationToken);
+            await FileUtils.WriteAllTextRetryAsync(StatusFilePath, json, timeout: TimeSpan.FromSeconds(2),
+                cancellationToken: cancellationToken);
             return true;
+        }
+        catch (OperationCanceledException) {
+            return false; // operation was cancelled
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not save connection info to file. FilePath: {FilePath}", StatusFilePath);

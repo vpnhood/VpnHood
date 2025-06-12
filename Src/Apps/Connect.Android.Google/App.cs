@@ -18,7 +18,7 @@ namespace VpnHood.App.Client.Droid.Google;
     Icon = AndroidAppConstants.Icon,
     Banner = AndroidAppConstants.Banner,
     NetworkSecurityConfig = AndroidAppConstants.NetworkSecurityConfig,
-    SupportsRtl = AndroidAppConstants.SupportsRtl, 
+    SupportsRtl = AndroidAppConstants.SupportsRtl,
     AllowBackup = AndroidAppConstants.AllowBackup)]
 [MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AppConfigs.AdMobApplicationId)]
 [MetaData("com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION", Value = "true")]

@@ -269,6 +269,8 @@ public class ClientAppTest : TestAppBase
     [TestMethod]
     public async Task Connect_fail_ConnectionTimeoutException()
     {
+        VhUtils.DebuggerTimeout = TimeSpan.FromSeconds(5); //todo
+
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 

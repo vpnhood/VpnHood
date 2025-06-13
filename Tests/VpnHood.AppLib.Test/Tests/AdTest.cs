@@ -25,7 +25,7 @@ public class AdTest : TestAppBase
         // create client app
         var appOptions = TestAppHelper.CreateAppOptions();
         var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
-        var adProviderItem = new AppAdProviderItem { AdProvider = adProvider };
+        var adProviderItem = new AppAdProviderItem { AdProvider = adProvider, ProviderName = "UnitTestAd" };
         appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         adProvider.FailLoad = true;
@@ -45,7 +45,10 @@ public class AdTest : TestAppBase
 
         // create client app
         var appOptions = TestAppHelper.CreateAppOptions();
-        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd) };
+        var adProviderItem = new AppAdProviderItem {
+            AdProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd),
+            ProviderName = "UnitTestAd"
+        };
         appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         AppUiContext.Context = null;
@@ -252,7 +255,7 @@ public class AdTest : TestAppBase
 
         // create client app
         var appOptions = TestAppHelper.CreateAppOptions();
-        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
+        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager), ProviderName = "TestAd"};
         appOptions.AdOptions.PreloadAd = false;
         appOptions.AdOptions.LoadAdPostDelay = TimeSpan.FromSeconds(1);
         appOptions.AdProviderItems = [adProviderItem];

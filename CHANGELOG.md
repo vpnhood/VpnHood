@@ -1,4 +1,4 @@
-# Upcoming
+# v7.1.713
 * Fix: Android: Fix a crash on a few devices at startup
 * Fix: Exclude local network on some devices
 * Feature: Windows: Digitally sign the installer

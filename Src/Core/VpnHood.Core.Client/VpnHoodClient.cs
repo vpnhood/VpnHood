@@ -344,9 +344,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         includeIpRanges = includeIpRanges
             .Exclude(IpNetwork.LocalNetworks.ToIpRanges());
 
-        // local networks automatically not routed
-        includeIpRanges = includeIpRanges.Union(IpNetwork.LocalNetworks.ToIpRanges());
-
         // Make sure CatcherAddress is included
         includeIpRanges = includeIpRanges.Union([
             new IpRange(_clientHost.CatcherAddressIpV4),

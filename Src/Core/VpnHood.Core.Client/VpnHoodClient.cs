@@ -336,6 +336,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (!_vpnAdapter.CanProtectSocket)
             includeIpRanges = includeIpRanges.Exclude(hostIpAddress);
 
+        // exclude Multicast networks
+        includeIpRanges = includeIpRanges
+            .Exclude(IpNetwork.MulticastNetworks.ToIpRanges());
+
+        // exclude local networks
+        includeIpRanges = includeIpRanges
+            .Exclude(IpNetwork.LocalNetworks.ToIpRanges());
+
         // local networks automatically not routed
         includeIpRanges = includeIpRanges.Union(IpNetwork.LocalNetworks.ToIpRanges());
 
@@ -366,7 +374,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _vpnAdapter.SendPacketQueued(ipPacket);
     }
 
-    // WARNING: Performance Critical!
+    // WARNING: Performance Critical! Mango Section
     private void VpnAdapter_PacketReceived(object? sender, IpPacket ipPacket)
     {
         // stop traffic if the client has been disposed
@@ -387,9 +395,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (ShouldManagePacketChannels && !_packetChannelLock.IsLocked)
             _ = ManagePacketChannels(_cancellationTokenSource.Token);
 
-        // Multicast packets are not supported
-        if (ipPacket.IsMulticast())
-            throw new PacketDropException("Multicast packet has been dropped.");
+        // Multicast packets are not supported (Already excluded by adapter filter)
+        //if (ipPacket.IsMulticast())
+          //  throw new PacketDropException("Multicast packet has been dropped.");
 
         // TcpHost has to manage its own packets
         if (_clientHost.IsOwnPacket(ipPacket)) {

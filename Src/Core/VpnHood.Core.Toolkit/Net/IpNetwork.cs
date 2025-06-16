@@ -52,9 +52,10 @@ public class IpNetwork
 
     public static IpNetwork MulticastNetworkV4 { get; } = new(IPAddress.Parse("224.0.0.0"), 4);
     public static IpNetwork MulticastNetworkV6 { get; } = new(IPAddress.Parse("ff00::"), 8);
-    public static IpNetwork LoopbackNetworksV4 { get; } = Parse("127.0.0.0/8");
-    public static IpNetwork LoopbackNetworksV6 { get; } = Parse("::1/128");
-    public static IpNetwork[] LoopbackNetworks { get; } = [LoopbackNetworksV4, LoopbackNetworksV6];
+    public static IpNetwork[] MulticastNetworks { get; } = [MulticastNetworkV4, MulticastNetworkV6];
+    public static IpNetwork LoopbackNetworkV4 { get; } = Parse("127.0.0.0/8");
+    public static IpNetwork LoopbackNetworkV6 { get; } = Parse("::1/128");
+    public static IpNetwork[] LoopbackNetworks { get; } = [LoopbackNetworkV4, LoopbackNetworkV6];
     public static IpNetwork AllV6 { get; } = Parse("::/0");
     public static IpNetwork AllGlobalUnicastV6 { get; } = Parse("2000::/3");
     public static IpNetwork[] LocalNetworksV6 { get; } = AllGlobalUnicastV6.Invert().ToArray();

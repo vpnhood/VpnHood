@@ -1,5 +1,6 @@
 # Upcoming
 * Fix: Android: Fix a crash on few devices at startup
+* Fix: Exclude local network on some devices
 * Improve: Logging & Disconnection messages
 
 # v7.1.712

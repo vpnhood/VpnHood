@@ -13,7 +13,6 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using FastDateTime = VpnHood.Core.Toolkit.Utils.FastDateTime;
 
@@ -306,8 +305,12 @@ public class VpnServiceManager : IDisposable
         return ret.Result;
     }
 
+    private readonly AsyncLock _sendRequestLock = new();
     private async Task<ApiResponse<T>> SendRequestCore<T>(IPEndPoint hostEndPoint, IApiRequest request, CancellationToken cancellationToken)
     {
+        // we have only one TcpClient, so we need to lock it
+        using var scopeLock = await _sendRequestLock.LockAsync(cancellationToken);
+
         var tcpClient = _tcpClient;
         try {
             // establish and set the api key
@@ -343,8 +346,12 @@ public class VpnServiceManager : IDisposable
     /// Stop the VPN service and disconnect from the server if running. This method is idempotent.
     /// No exception will be thrown
     /// </summary>
+    private readonly AsyncLock _stopLock = new();
     public async Task<bool> TryStop(TimeSpan? timeout = null)
     {
+        // Initialize cll this method, so it must be finished to make sure the service is not interrupted
+        using var scopeLock = await _stopLock.LockAsync().Vhc();
+
         // stop the service
         if (!ConnectionInfo.IsStarted())
             return true;

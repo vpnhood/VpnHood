@@ -211,7 +211,7 @@ public class ClientProfileService
         return clientProfiles.ToArray();
     }
 
-    public bool UpdateTokenByAccessKey(string tokenId, string accessKey)
+    public bool TryUpdateTokenByAccessKey(string tokenId, string accessKey)
     {
         try {
             var token = GetToken(tokenId);

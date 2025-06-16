@@ -735,7 +735,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // update access token if AccessKey is set
             if (!string.IsNullOrWhiteSpace(connectionInfo.SessionInfo.AccessKey))
-                ClientProfileService.UpdateTokenByAccessKey(token.TokenId, connectionInfo.SessionInfo.AccessKey);
+                ClientProfileService.TryUpdateTokenByAccessKey(token.TokenId, connectionInfo.SessionInfo.AccessKey);
 
             // update client country
             if (connectionInfo.SessionInfo.ClientCountry != null)
@@ -750,12 +750,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             throw new ConnectionTimeoutException($"Could not establish the connection in {_connectTimeout.TotalSeconds} seconds.", ex);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogDebug(ex, "Could not establish the connection.");
-
             if (ex is SessionException sessionException) {
                 // update access token if AccessKey is set
                 if (!string.IsNullOrWhiteSpace(sessionException.SessionResponse.AccessKey)) {
-                    ClientProfileService.UpdateTokenByAccessKey(token.TokenId, sessionException.SessionResponse.AccessKey);
+                    ClientProfileService.TryUpdateTokenByAccessKey(token.TokenId, sessionException.SessionResponse.AccessKey);
                     sessionException.SessionResponse.AccessKey = null;
                 }
 

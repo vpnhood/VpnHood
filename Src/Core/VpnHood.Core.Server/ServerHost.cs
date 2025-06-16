@@ -353,7 +353,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task ProcessClientStream(IClientStream clientStream, 
+    private async Task ProcessClientStream(IClientStream clientStream,
         CancellationTokenSource? timeoutCts, CancellationToken cancellationToken)
     {
         using var scope = VhLogger.Instance.BeginScope($"RemoteEp: {VhLogger.Format(clientStream.IpEndPointPair.RemoteEndPoint)}");
@@ -380,8 +380,14 @@ public class ServerHost : IDisposable, IAsyncDisposable
             // Should not reply anything when user is unknown. ServerUnauthorizedException will be thrown when user is unauthenticated
             await clientStream.DisposeAsync(ex.SessionResponse, cancellationToken).Vhc();
         }
+        catch (EndOfStreamException ex) {
+            VhLogger.Instance.LogDebug(GeneralEventId.Tcp, ex,
+                "The remote has closed the connection. ClientStreamId: {ClientStreamId}.",
+                clientStream.ClientStreamId);
+            clientStream.DisposeWithoutReuse();
+        }
         catch (Exception ex) when (VhLogger.IsSocketCloseException(ex)) {
-            VhLogger.LogError(GeneralEventId.Tcp, ex,
+            VhLogger.Instance.LogDebug(GeneralEventId.Tcp, ex,
                 "Connection has been closed. ClientStreamId: {ClientStreamId}.",
                 clientStream.ClientStreamId);
 
@@ -391,12 +397,13 @@ public class ServerHost : IDisposable, IAsyncDisposable
             if (ex is ISelfLog loggable)
                 loggable.Log();
             else
-                VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex,
+                VhLogger.Instance.LogDebug(GeneralEventId.Tcp, ex,
                     "Could not process the request and return 401. ClientStreamId: {ClientStreamId}",
                     clientStream.ClientStreamId);
 
             // return 401 for ANY non SessionException to keep server's anonymity
-            await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).Vhc();
+            if (clientStream.Connected)
+                await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).Vhc();
             clientStream.DisposeWithoutReuse();
         }
         finally {
@@ -412,19 +419,19 @@ public class ServerHost : IDisposable, IAsyncDisposable
         // read request version. We may wait here for reuse timeout
         var rest = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
         if (rest == 0)
-            throw new Exception("ClientStream has been closed before receiving any request.");
+            throw new EndOfStreamException("ClientStream has been closed before receiving any request.");
 
         // a new request is coming, reset timeout, to reset the reuse timeout if it is a reused stream
         timeoutCts?.CancelAfter(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
 
         var version = buffer[0];
         if (version != 1)
-            throw new NotSupportedException($"The request version is not supported. Version: {version}");
+            throw new EndOfStreamException($"The request version is not supported. Version: {version}");
 
         // read request code
         var res = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
         if (res == 0)
-            throw new Exception("ClientStream has been closed before receiving any request.");
+            throw new Exception("ClientStream has been closed before reading the request code.");
 
         var requestCode = (RequestCode)buffer[0];
         switch (requestCode) {

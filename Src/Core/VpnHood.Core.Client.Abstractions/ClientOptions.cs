@@ -1,9 +1,11 @@
-﻿using System.Net;
+﻿using System.Diagnostics;
+using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Converters;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Abstractions;
 
@@ -54,7 +56,7 @@ public class ClientOptions
     public ConnectPlanId PlanId { get; set; }
     public DomainFilter DomainFilter { get; set; } = new();
     public bool ForceLogSni { get; set; }
-    public TimeSpan ServerQueryTimeout { get; set; } = TimeSpan.FromSeconds(10);
+    public TimeSpan ServerQueryTimeout { get; set; } = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(10);
     public bool AllowRewardedAd { get; set; }
     public TimeSpan CanExtendByRewardedAdThreshold { get; set; } = TimeSpan.FromMinutes(5);
     public string? AccessCode { get; set; }

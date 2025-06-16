@@ -151,8 +151,7 @@ public class ServerFinder(
                 MaxDegreeOfParallelism = maxDegreeOfParallelism
             };
             await Parallel.ForEachAsync(hostStatuses, parallelOptions, async (hostStatus, ct) => {
-                var connector = CreateConnector(hostStatus.TcpEndPoint);
-
+                using var connector = CreateConnector(hostStatus.TcpEndPoint);
                 hostStatus.Available = await VerifyServerStatus(connector, serverQueryTimeout, ct).Vhc();
 
                 // ReSharper disable once AccessToDisposedClosure

@@ -1,5 +1,6 @@
 # Upcoming
-# Fix: Android: Fix a crash on few devices at startup
+* Fix: Android: Fix a crash on few devices at startup
+* Improve: Logging & Disconnection messages
 
 # v7.1.712
 * Improve: Improve performance and stability

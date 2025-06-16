@@ -13,7 +13,8 @@
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
 		<PublishTrimmed>True</PublishTrimmed>
 		<RunAOTCompilation>True</RunAOTCompilation>
-		<RuntimeIdentifiers>android-arm64;android-x64;android-x86</RuntimeIdentifiers>
+		<!--android-arm is required for some android TVs-->
+		<RuntimeIdentifiers>android-arm64;android-x64;android-arm;android-x86;</RuntimeIdentifiers>
 	</PropertyGroup>
 
 	<PropertyGroup>

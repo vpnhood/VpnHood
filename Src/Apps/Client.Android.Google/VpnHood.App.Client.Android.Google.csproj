@@ -11,12 +11,13 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
-		<RuntimeIdentifiers>android-arm64;android-x64;android-x86;</RuntimeIdentifiers>
+		<RuntimeIdentifiers>android-arm64;android-x64;android-arm;android-x86;</RuntimeIdentifiers>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
 		<PublishTrimmed>True</PublishTrimmed>
 		<RunAOTCompilation>True</RunAOTCompilation>
+		<!--android-arm is required for some android TVs-->
 		<RuntimeIdentifiers>android-arm64;android-arm;android-x64;android-x86;</RuntimeIdentifiers>
 	</PropertyGroup>
 

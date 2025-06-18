@@ -394,7 +394,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // Multicast packets are not supported (Already excluded by adapter filter)
         //if (ipPacket.IsMulticast())
-          //  throw new PacketDropException("Multicast packet has been dropped.");
+        //  throw new PacketDropException("Multicast packet has been dropped.");
 
         // TcpHost has to manage its own packets
         if (_clientHost.IsOwnPacket(ipPacket)) {
@@ -585,8 +585,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 IsIpV6Supported = IsIpV6SupportedByClient
             };
 
-            using var requestResult =
-                await SendRequest<HelloResponse>(request, cancellationToken).Vhc();
+            using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).Vhc();
 
             var helloResponse = requestResult.Response;
             if (helloResponse.ClientPublicAddress is null)
@@ -915,9 +914,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private ValueTask Cleanup(CancellationToken cancellationToken)
     {
-        return FastDateTime.UtcNow > _sessionStatus?.SessionExpirationTime
-            ? DisposeAsync(new SessionException(SessionErrorCode.AccessExpired))
-            : default;
+        if (FastDateTime.UtcNow > _sessionStatus?.SessionExpirationTime) {
+            var ex = new SessionException(SessionErrorCode.AccessExpired);
+            VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Session has been expired.");
+            return DisposeAsync(ex);
+        }
+
+        return default;
     }
 
     private async ValueTask DisposeAsync(Exception ex)
@@ -926,7 +929,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (_disposed || _disposeLock.IsLocked) // IsLocked means that DisposeAsync is already running
             return;
 
-        VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Error in connection that caused disposal.");
         LastException = ex;
         await DisposeAsync().Vhc();
     }

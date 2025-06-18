@@ -93,7 +93,6 @@ public class ClientAdService(VpnHoodClient client)
                     SessionKey = client.SessionKey,
                     AdData = adData
                 },
-                cancellationToken)
-            .Vhc();
+                cancellationToken).Vhc();
     }
 }

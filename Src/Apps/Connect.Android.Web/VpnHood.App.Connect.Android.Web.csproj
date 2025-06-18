@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>VpnHood Android Client Connect App with Ads and memebership</Description>
-		<TargetFramework>net9.0-android35.0</TargetFramework>
+		<TargetFramework>net9.0-android36.0</TargetFramework>
 		<RootNamespace>VpnHood.App.Connect.Droid.Web</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android.web.debug</ApplicationId>

@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>VpnHood VpnAdapter for Android</Description>
-		<TargetFramework>net9.0-android35.0</TargetFramework>
-		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+		<TargetFramework>net9.0-android36.0</TargetFramework>
+		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>

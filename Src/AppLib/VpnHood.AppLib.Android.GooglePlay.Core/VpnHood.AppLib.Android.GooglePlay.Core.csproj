@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>VpnHood Android Client App Common Library for Google Core</Description>
-		<TargetFramework>net9.0-android35.0</TargetFramework>
+		<TargetFramework>net9.0-android36.0</TargetFramework>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
 		<RootNamespace>VpnHood.AppLib.Droid.GooglePlay</RootNamespace>
 	</PropertyGroup>

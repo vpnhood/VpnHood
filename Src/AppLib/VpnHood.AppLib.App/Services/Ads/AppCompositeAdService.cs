@@ -57,6 +57,7 @@ internal class AppCompositeAdService
             return;
 
         _loadedAdProviderItem = null;
+        var exceptions = new List<Exception>();
 
         // filter ad services by country code
         var filteredAdProviderItems = _adProviderItems
@@ -81,6 +82,7 @@ internal class AppCompositeAdService
             // do not catch if parent cancel the operation
             catch (Exception ex) {
                 await VerifyActiveUi().Vhc();
+                exceptions.Add(ex);
                 VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.",
                     adProviderItem.Name);
             }
@@ -88,7 +90,8 @@ internal class AppCompositeAdService
 
         throw new LoadAdException(
             $"Could not load any Ad. " +
-            $"CountryCode: {GetCountryName(countryCode)}. Cancelled: {cancellationToken.IsCancellationRequested}");
+            $"CountryCode: {GetCountryName(countryCode)}. Cancelled: {cancellationToken.IsCancellationRequested}. " +
+            $"Message: {string.Join(", ", exceptions.Select(x=>x.Message))}");
     }
 
     private static async Task VerifyActiveUi(bool immediately = true)

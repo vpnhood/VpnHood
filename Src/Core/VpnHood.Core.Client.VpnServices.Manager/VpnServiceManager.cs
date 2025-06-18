@@ -392,7 +392,7 @@ public class VpnServiceManager : IDisposable
         var adRequest = connectionInfo.SessionStatus?.AdRequest;
         if (adRequest != null && _lastAdRequestId != adRequest.RequestId) {
             _lastAdRequestId = adRequest.RequestId;
-            _ = ShowAd(adRequest, cancellationToken);
+            _ = TryShowAd(adRequest, cancellationToken);
         }
 
         // check if the state has changed
@@ -406,7 +406,7 @@ public class VpnServiceManager : IDisposable
         _lastConnectionInfo = connectionInfo;
     }
 
-    private async Task ShowAd(AdRequest adRequest, CancellationToken cancellationToken)
+    private async Task TryShowAd(AdRequest adRequest, CancellationToken cancellationToken)
     {
         try {
             if (_adService == null)

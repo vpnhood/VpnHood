@@ -1,9 +1,14 @@
-﻿using VpnHood.Core.Common.Tokens;
+﻿namespace VpnHood.Core.Client.Abstractions.Exceptions;
 
-namespace VpnHood.Core.Client.Abstractions.Exceptions;
+public class UnreachableServerException : Exception
+{
+    public UnreachableServerException(string message)
+        : base(message)
+    {
+    }
 
-public class UnreachableServerException(string? serverLocation = null)
-    : Exception(
-        ServerLocationInfo.IsAutoLocation(serverLocation)
-            ? "There is no reachable server at this moment. Please try again later."
-            : $"There is no reachable server at this moment. Please try again later. Location: {serverLocation}");
+    public UnreachableServerException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}

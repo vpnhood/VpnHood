@@ -68,7 +68,7 @@ public class ServerFinder(
         _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
             isIpV6Supported: IncludeIpV6, hasRedirected: false));
 
-        throw new UnreachableServerException(serverLocation: ServerLocation);
+        throw new UnreachableServerException(BuildExceptionMessage(ServerLocation));
     }
 
     public async Task<IPEndPoint> FindBestRedirectedServerAsync(IPEndPoint[] hostEndPoints,
@@ -110,7 +110,14 @@ public class ServerFinder(
         _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
             isIpV6Supported: IncludeIpV6, hasRedirected: true));
 
-        throw new UnreachableServerExceptionLocation(serverLocation: ServerLocation);
+        throw new UnreachableServerExceptionLocation(BuildExceptionMessage(ServerLocation));
+    }
+
+    private static string BuildExceptionMessage(string? serverLocation)
+    {
+        return ServerLocationInfo.IsAutoLocation(serverLocation)
+            ? "There is no reachable server at this moment. Please try again later."
+            : $"There is no reachable server at this moment. Please try again later. Location: {serverLocation}";
     }
 
     private Task TryTrackEndPointsAvailability(HostStatus[] oldStatuses, HostStatus[] newStatuses)

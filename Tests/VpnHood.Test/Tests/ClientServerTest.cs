@@ -328,7 +328,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
-    public async Task Disconnect_if_session_expired()
+    public async Task Disconnect_if_session_closed_by_server()
     {
         // create server
         using var accessManager = TestHelper.CreateAccessManager();
@@ -344,9 +344,9 @@ public class ClientServerTest : TestBase
         await server.SessionManager.CloseSession(client.SessionId);
 
         // wait for disposing session in access server
-        await VhTestUtil.AssertEqualsWait(false,
-            () => accessManager.SessionService.Sessions.TryGetValue(client.SessionId, out var session) &&
-                  session.IsAlive,
+        await VhTestUtil.AssertEqualsWait(false, () => 
+                accessManager.SessionService.Sessions.TryGetValue(client.SessionId, out var session) &&
+                session.IsAlive,
             "Session has not been closed in the access server.");
 
         try {

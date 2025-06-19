@@ -493,6 +493,7 @@ public class Session : IDisposable
 
         // it must be ended to let manager know that session is disposed and finish all tasks
         DisposedTime = DateTime.UtcNow;
+        SetSyncRequired();
     }
 
     private class PacketProxyCallbacks(Session session) : IPacketProxyCallbacks

@@ -179,6 +179,13 @@ public class SessionService : IDisposable
 
         // create response
         var ret = BuildSessionResponse(session, accessTokenData, isValidAd);
+
+        // update session status
+        if (session.EndTime == null && ret.ErrorCode != SessionErrorCode.Ok) {
+            session.ErrorCode = ret.ErrorCode;
+            session.EndTime = DateTime.UtcNow;
+        }
+
         return ret;
     }
 

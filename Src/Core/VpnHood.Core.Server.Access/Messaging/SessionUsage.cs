@@ -7,8 +7,12 @@ public class SessionUsage
 {
     public required ulong SessionId { get; set; }
 
+    [Obsolete("Use ErrorCode")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Closed { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public SessionErrorCode ErrorCode { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public long Sent { get; set; }
@@ -18,6 +22,5 @@ public class SessionUsage
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? AdData { get; set; }
-
     public Traffic ToTraffic() => new(Sent, Received);
 }

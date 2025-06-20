@@ -462,7 +462,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
                     SessionId = x.SessionId,
                     Received = traffic.Received,
                     Sent = traffic.Sent,
-                    Closed = x.SessionResponseEx.ErrorCode == SessionErrorCode.SessionClosed
+                    ErrorCode = x.SessionResponseEx.ErrorCode
                 };
             })
             .ToArray();
@@ -473,7 +473,6 @@ public class SessionManager : IAsyncDisposable, IDisposable
             if (pendingUsages.TryGetValue(usage.SessionId, out var pendingUsage)) {
                 usage.Received += pendingUsage.Received;
                 usage.Sent += pendingUsage.Sent;
-                usage.Closed |= pendingUsage.Closed;
             }
         }
 

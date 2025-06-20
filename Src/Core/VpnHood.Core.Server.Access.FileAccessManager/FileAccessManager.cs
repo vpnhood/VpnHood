@@ -337,7 +337,6 @@ public class FileAccessManager : IAccessManager
             SessionId = sessionId,
             Sent = traffic.Sent,
             Received = traffic.Received,
-            Closed = false,
             AdData = adData
         });
     }
@@ -348,7 +347,7 @@ public class FileAccessManager : IAccessManager
             SessionId = sessionId,
             Sent = traffic.Sent,
             Received = traffic.Received,
-            Closed = true
+            ErrorCode = SessionErrorCode.SessionClosed
         });
     }
 
@@ -414,8 +413,8 @@ public class FileAccessManager : IAccessManager
 
         await AccessTokenService.AddUsage(tokenId, sessionUsage.ToTraffic());
 
-        if (sessionUsage.Closed)
-            SessionService.CloseSession(sessionId);
+        if (sessionUsage.ErrorCode != SessionErrorCode.Ok)
+            SessionService.CloseSession(sessionId, sessionUsage.ErrorCode);
 
         // manage adData for simulation
         var isValidAd = string.IsNullOrEmpty(sessionUsage.AdData) ? (bool?)null : IsValidAd(sessionUsage.AdData);

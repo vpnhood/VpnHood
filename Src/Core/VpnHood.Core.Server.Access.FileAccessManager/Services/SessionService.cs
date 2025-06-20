@@ -210,9 +210,6 @@ public class SessionService : IDisposable
         var accessUsage = new AccessUsage {
             ActiveClientCount = 0,
             ExpirationTime = session.ExpirationTime,
-#pragma warning disable CS0618 // Type or member is obsolete
-            MaxClientCount = accessToken.MaxClientCount,
-#pragma warning restore CS0618 // Type or member is obsolete
             MaxTraffic = accessToken.MaxTraffic,
             CycleTraffic = new Traffic(accessTokenData.Usage.Sent, accessTokenData.Usage.Received),
             IsPremium = true // token is always premium in File Access Manager
@@ -321,13 +318,13 @@ public class SessionService : IDisposable
         };
     }
 
-    public void CloseSession(ulong sessionId)
+    public void CloseSession(ulong sessionId, SessionErrorCode errorCode)
     {
         if (!Sessions.TryGetValue(sessionId, out var session))
             return;
 
         if (session.ErrorCode == SessionErrorCode.Ok)
-            session.ErrorCode = SessionErrorCode.SessionClosed;
+            session.ErrorCode = errorCode;
 
         session.Kill();
     }

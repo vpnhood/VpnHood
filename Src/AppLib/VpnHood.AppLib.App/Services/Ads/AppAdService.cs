@@ -92,7 +92,7 @@ public class AppAdService(
         catch (Exception ex) {
             var trackEvent = AppTrackerBuilder.BuildShowAdStatus("all", ex.Message);
             _ = TryRestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
-            
+
             if (ex is UiContextNotAvailableException)
                 throw new ShowAdNoUiException();
 
@@ -103,7 +103,7 @@ public class AppAdService(
     private async Task TryRestoreProcessVpn(TrackEvent trackEvent, TimeSpan delay, CancellationToken cancellationToken)
     {
         await device.TryBindProcessToVpn(true, delay, cancellationToken);
-        if (tracker!=null)
+        if (tracker != null)
             await tracker.TryTrack(trackEvent);
     }
 }

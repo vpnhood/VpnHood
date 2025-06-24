@@ -128,10 +128,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             // report the primary adapter IPs
             VhLogger.Instance.LogInformation(
                 "TunAdapterInfo. AdapterType: {AdapterType}, UseNat: {UseNat}, MTU: {MTU}, " +
-                "PrimaryAdapterIp. {PrimaryAdapterIpV4}: PrimaryAdapterIpV4, PrimaryAdapterIpV6: {PrimaryAdapterIpV6}, " +
+                "PrimaryAdapterIpV4: {PrimaryAdapterIpV4}, PrimaryAdapterIpV6: {PrimaryAdapterIpV6}, " +
                 "AdapterIpNetworkV4: {AdapterIpNetworkV4}, AdapterIpNetworkV6: {AdapterIpNetworkV6}",
                 VhLogger.FormatType(this), UseNat, _mtu,
-                VhLogger.Format(PrimaryAdapterIpV4), VhLogger.Format(AdapterIpNetworkV6),
+                VhLogger.Format(PrimaryAdapterIpV4), VhLogger.Format(PrimaryAdapterIpV6),
                 AdapterIpNetworkV4, AdapterIpNetworkV6);
 
             // create tun adapter

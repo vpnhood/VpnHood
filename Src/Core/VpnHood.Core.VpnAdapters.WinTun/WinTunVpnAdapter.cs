@@ -1,9 +1,11 @@
-﻿using System.ComponentModel;
+﻿using Microsoft.Extensions.Logging;
+using System.ComponentModel;
 using System.IO.Compression;
 using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Exceptions;
@@ -12,6 +14,7 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.WinTun.WinNative;
+using static VpnHood.Core.VpnAdapters.WinTun.WinNative.Win32IpHelper;
 
 namespace VpnHood.Core.VpnAdapters.WinTun;
 
@@ -75,7 +78,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         // close the adapter if it was already exists error 183 (ERROR_ALREADY_EXISTS)
         if (_tunAdapter == IntPtr.Zero && Marshal.GetLastWin32Error() == 183) {
             var prevAdapter = WinTunApi.WintunOpenAdapter(AdapterName);
-            if (prevAdapter != IntPtr.Zero) 
+            if (prevAdapter != IntPtr.Zero)
                 WinTunApi.WintunCloseAdapter(prevAdapter);
 
             // try to create the adapter again
@@ -158,13 +161,41 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
     }
 
-    protected override async Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
+    private async Task AddRouteUsingNetsh(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         var command = ipNetwork.IsV4
             ? $"interface ipv4 add route {ipNetwork} \"{AdapterName}\""
             : $"interface ipv6 add route {ipNetwork} \"{AdapterName}\"";
 
         await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
+    }
+
+    protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
+    {
+        return AddRouteUsingNetsh(ipNetwork, cancellationToken);
+    }
+
+    private uint GetAdapterIndex()
+    {
+        var networkInterface = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(x => x.Name == AdapterName);
+        if (networkInterface == null)
+            throw new InvalidOperationException($"Could not find network adapter with name '{AdapterName}'.");
+
+        // Get the index of the adapter
+        if (networkInterface.Supports(NetworkInterfaceComponent.IPv4)) {
+            var index = (uint)networkInterface.GetIPProperties().GetIPv4Properties().Index;
+            if (index != 0)
+                return index; // Return the index if it is valid (not 0)
+        }
+
+        if (networkInterface.Supports(NetworkInterfaceComponent.IPv6)) {
+            var index = (uint)networkInterface.GetIPProperties().GetIPv6Properties().Index;
+            if (index != 0)
+                return index; // Return the index if it is valid (not 0)
+        }
+
+        // If neither IPv4 nor IPv6 is supported, throw an exception
+        throw new InvalidOperationException($"Adapter '{AdapterName}' does not support IPv4 or IPv6.");
     }
 
     protected override async Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
@@ -216,7 +247,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
             await ExecutePowerShellCommandAsync($"New-NetNat -Name {natName} -InternalIPInterfaceAddressPrefix {ipNetwork}",
                 cancellationToken).Vhc();
         }
-        else {
+
+        if (ipNetwork.IsV6) {
             var natName = $"{AdapterName}NatIpV6";
 
             // ignore exception in ipv6 on windows
@@ -261,7 +293,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     protected override bool ReadPacket(byte[] buffer)
     {
         var tunReceivePacket = WinTunApi.WintunReceivePacket(_tunSession, out var size);
-        
+
         // return if something is written
         if (tunReceivePacket != IntPtr.Zero) {
             try {

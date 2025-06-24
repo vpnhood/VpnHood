@@ -19,6 +19,7 @@ namespace VpnHood.App.Client.Droid.Google;
     Banner = AndroidAppConstants.Banner,
     NetworkSecurityConfig = AndroidAppConstants.NetworkSecurityConfig,
     SupportsRtl = AndroidAppConstants.SupportsRtl,
+    Debuggable = App.IsDebugMode,
     AllowBackup = AndroidAppConstants.AllowBackup)]
 [MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AppConfigs.AdMobApplicationId)]
 [MetaData("com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION", Value = "true")]
@@ -119,4 +120,10 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             return null;
         }
     }
+
+#if DEBUG
+    public const bool IsDebugMode = true;
+#else
+    public const bool IsDebugMode = false;
+#endif
 }

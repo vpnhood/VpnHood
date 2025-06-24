@@ -16,10 +16,13 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
-		<PublishTrimmed>True</PublishTrimmed>
-		<RunAOTCompilation>True</RunAOTCompilation>
 		<!--android-arm is required for some android TVs-->
 		<RuntimeIdentifiers>android-arm64;android-x64;android-arm;android-x86;</RuntimeIdentifiers>
+		<PublishTrimmed>True</PublishTrimmed>
+		<RunAOTCompilation>True</RunAOTCompilation>
+		<AndroidLinkTool>r8</AndroidLinkTool>
+		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
+		<PathMap>$(SolutionDir)=.</PathMap>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -28,10 +31,6 @@
 		<IncludeSymbols>True</IncludeSymbols>
 		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
 		<LangVersion>latest</LangVersion>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)'=='Release'">
-		<PathMap>$(SolutionDir)=.</PathMap>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -44,6 +43,10 @@
 		<Version>7.1.713</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <AndroidEnableMultiDex>True</AndroidEnableMultiDex>
 	</PropertyGroup>
 
 	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.json')">

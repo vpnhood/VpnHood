@@ -1,5 +1,6 @@
-# v7.1.716
+# v7.1.717
 * Improve: Speed and stability
+* Update: Improve session management
 * Update: Move libraries to .NET 8.0
 
 # v7.1.716

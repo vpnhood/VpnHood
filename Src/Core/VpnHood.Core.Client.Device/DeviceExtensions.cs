@@ -9,9 +9,8 @@ public static class DeviceExtensions
     {
 
         try {
-            if (!device.IsBindProcessToVpnSupported) {
+            if (!device.IsBindProcessToVpnSupported)
                 VhLogger.Instance.LogError("BindProcessToVpn is not supported.");
-            }
 
             device.BindProcessToVpn(value);
             return true;

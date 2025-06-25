@@ -308,7 +308,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         var uiContext = AppUiContext.Context;
         if (IsIdle && Services.AdService.IsPreloadAdEnabled && uiContext != null)
-            _ = Services.AdService.LoadInterstitialAdAd(uiContext, CancellationToken.None);
+            _ = VhUtils.TryInvokeAsync("PreloadAd", () => Services.AdService.LoadInterstitialAdAd(uiContext, CancellationToken.None));
     }
 
     public ClientProfileInfo? CurrentClientProfileInfo =>
@@ -746,7 +746,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _ = VersionCheck(delay: Services.AdService.ShowAdPostDelay.Add(TimeSpan.FromSeconds(1)),
                 cancellationToken: cancellationToken);
         }
-        catch (OperationCanceledException ex) when(_connectTimeoutCts.IsCancellationRequested) {
+        catch (OperationCanceledException ex) when (_connectTimeoutCts.IsCancellationRequested) {
             throw new ConnectionTimeoutException($"Could not establish the connection in {_connectTimeout.TotalSeconds} seconds.", ex);
         }
         catch (Exception ex) {

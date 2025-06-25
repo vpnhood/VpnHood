@@ -1,5 +1,6 @@
-# Upcoming
+# v7.1.718
 * Improve: improve performance and stability
+* Fix: Windows: Windows 10 Compatibility
 
 # v7.1.713
 * Fix: Android: Fix a crash on a few devices at startup

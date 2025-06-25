@@ -16,7 +16,6 @@
 		<PublishTrimmed>True</PublishTrimmed>
 		<RunAOTCompilation>True</RunAOTCompilation>
 		<AndroidLinkTool>r8</AndroidLinkTool>
-		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
 		<PathMap>$(SolutionDir)=.</PathMap>
 	</PropertyGroup>
 

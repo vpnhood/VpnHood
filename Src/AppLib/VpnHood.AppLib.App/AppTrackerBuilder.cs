@@ -10,7 +10,7 @@ public static class AppTrackerBuilder
             EventName = "vh_ad_status",
             Parameters = new Dictionary<string, object> {
                 { "ad_network", adNetwork },
-                { "is_show", errorMessage != null },
+                { "is_show", errorMessage is null },
                 { "error", errorMessage ?? string.Empty }
             }
         };

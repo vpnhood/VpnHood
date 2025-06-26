@@ -18,21 +18,21 @@ public class AppAdService(
     ITracker? tracker) :
     IAdService
 {
-    private readonly AppCompositeAdService _compositeInterstitialAdService =
-        new(adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.InterstitialAd)
-            .ToArray());
+    private readonly AppCompositeAdService _compositeInterstitialAdService = new(
+        adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.InterstitialAd).ToArray(), 
+        tracker);
 
-    private readonly AppCompositeAdService _compositeRewardedAdService =
-        new(adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.RewardedAd)
-            .ToArray());
+    private readonly AppCompositeAdService _compositeRewardedAdService = new(
+        adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.RewardedAd).ToArray(), 
+        tracker);
 
-    private readonly AppCompositeAdService _compositeInterstitialAdOverVpnService =
-        new(adProviderItems.Where(x => x is { CanShowOverVpn: true, AdProvider.AdType: AppAdType.InterstitialAd })
-            .ToArray());
+    private readonly AppCompositeAdService _compositeInterstitialAdOverVpnService = new(
+        adProviderItems.Where(x => x is { CanShowOverVpn: true, AdProvider.AdType: AppAdType.InterstitialAd }).ToArray(), 
+        tracker);
 
-    private readonly AppCompositeAdService _compositeRewardedAdOverVpnService =
-        new(adProviderItems.Where(x => x is { CanShowOverVpn: true, AdProvider.AdType: AppAdType.RewardedAd })
-            .ToArray());
+    private readonly AppCompositeAdService _compositeRewardedAdOverVpnService = new(
+        adProviderItems.Where(x => x is { CanShowOverVpn: true, AdProvider.AdType: AppAdType.RewardedAd }).ToArray(), 
+        tracker);
 
     private bool CanShowOverVpn(AppAdType adType) =>
         adProviderItems.Any(x => x.AdProvider.AdType == adType && x.CanShowOverVpn);
@@ -104,7 +104,7 @@ public class AppAdService(
             return result;
         }
         catch (Exception ex) {
-            var trackEvent = AppTrackerBuilder.BuildShowAdStatus("all", ex.Message);
+            var trackEvent = AppTrackerBuilder.BuildShowAdFailed(ex.Message);
             _ = TryRestoreProcessVpn(trackEvent, TimeSpan.Zero, cancellationToken);
             throw;
         }

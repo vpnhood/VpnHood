@@ -1,5 +1,6 @@
-﻿using System.Globalization;
+﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
@@ -12,10 +13,12 @@ internal class AppCompositeAdService
     private AppAdProviderItem? _loadedAdProviderItem;
 
     private readonly AppAdProviderItem[] _adProviderItems;
+    private readonly ITracker? _tracker;
 
-    public AppCompositeAdService(AppAdProviderItem[] adProviderItems)
+    public AppCompositeAdService(AppAdProviderItem[] adProviderItems, ITracker? tracker)
     {
         _adProviderItems = adProviderItems;
+        _tracker = tracker;
 
         // throw exception if an add has both include and exclude country codes
         var appAdProviderItems = _adProviderItems
@@ -70,7 +73,8 @@ internal class AppCompositeAdService
             try {
                 VhLogger.Instance.LogInformation("Trying to load ad. ItemName: {ItemName}", adProviderItem.Name);
                 using var timeoutCts = new CancellationTokenSource(loadAdTimeout);
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+                using var linkedCts =
+                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
                 await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).Vhc();
                 _loadedAdProviderItem = adProviderItem;
                 return;
@@ -78,13 +82,13 @@ internal class AppCompositeAdService
             catch (UiContextNotAvailableException) {
                 throw new ShowAdNoUiException();
             }
-
-            // do not catch if parent cancel the operation
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                throw; // do not report cancellation
+            }
             catch (Exception ex) {
-                await VerifyActiveUi().Vhc();
+                _ = _tracker?.TryTrack(AppTrackerBuilder.BuildShowAdStatus(adProviderItem.Name));
                 providerExceptions.Add((adProviderItem.Name, ex));
-                VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.",
-                    adProviderItem.Name);
+                VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.", adProviderItem.Name);
             }
         }
 

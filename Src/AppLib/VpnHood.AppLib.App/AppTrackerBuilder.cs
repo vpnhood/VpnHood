@@ -4,14 +4,24 @@ namespace VpnHood.AppLib;
 
 public static class AppTrackerBuilder
 {
-    public static TrackEvent BuildShowAdStatus(string adNetwork, string? errorMessage = null)
+    public static TrackEvent BuildShowAdStatus(string providerName, string? errorMessage = null)
     {
         return new TrackEvent {
             EventName = "vh_ad_status",
             Parameters = new Dictionary<string, object> {
-                { "ad_network", adNetwork },
+                { "ad_network", providerName },
                 { "is_show", errorMessage is null },
                 { "error", errorMessage ?? string.Empty }
+            }
+        };
+    }
+
+    public static TrackEvent BuildShowAdFailed(string errorMessage)
+    {
+        return new TrackEvent {
+            EventName = "vh_ad_failed",
+            Parameters = new Dictionary<string, object> {
+                { "error", errorMessage }
             }
         };
     }

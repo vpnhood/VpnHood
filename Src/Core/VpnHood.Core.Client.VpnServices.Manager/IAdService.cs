@@ -7,4 +7,5 @@ public interface IAdService
 {
     Task<AdResult> ShowInterstitial(IUiContext uiContext, string sessionId, CancellationToken cancellationToken);
     Task<AdResult> ShowRewarded(IUiContext uiContext, string sessionId, CancellationToken cancellationToken);
+    bool CanShowOverVpn(AdRequestType adRequestType);
 }

@@ -110,7 +110,8 @@ public class ServerApp : IDisposable
             using var loggerFactory = LoggerFactory.Create(builder => {
                 builder.AddNLog(configFilePath);
             });
-            LogManager.Configuration.Variables["mydir"] = storagePath;
+            if (LogManager.Configuration != null)
+                LogManager.Configuration.Variables["mydir"] = storagePath;
             VhLogger.Instance = loggerFactory.CreateLogger("VpnHood");
         }
         else {
@@ -185,7 +186,7 @@ public class ServerApp : IDisposable
 
         if (e.Arguments[0] == "gc") {
             VhLogger.Instance.LogInformation("I have received the gc command!");
-            VhLogger.Instance.LogInformation("[GC] Before: TotalMemory: {TotalMemory}, TotalAllocatedBytes: {TotalAllocatedBytes}", 
+            VhLogger.Instance.LogInformation("[GC] Before: TotalMemory: {TotalMemory}, TotalAllocatedBytes: {TotalAllocatedBytes}",
                 VhUtils.FormatBytes(GC.GetTotalMemory(forceFullCollection: false)), VhUtils.FormatBytes(GC.GetTotalAllocatedBytes()));
 
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
@@ -247,7 +248,7 @@ public class ServerApp : IDisposable
 
             // initialize logger
             InitFileLogger(StoragePath);
-            
+
             // check FileAccessManager
             if (FileAccessManager != null && await FileAccessManager.AccessTokenService.GetTotalCount() == 0)
                 VhLogger.Instance.LogWarning(
@@ -303,8 +304,8 @@ public class ServerApp : IDisposable
         try {
             var vpnAdapter = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                 ? new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {
-                    AdapterName = "VpnHoodServer", 
-                    Blocking = false, 
+                    AdapterName = "VpnHoodServer",
+                    Blocking = false,
                     AutoDisposePackets = true
                 })
                 : null;

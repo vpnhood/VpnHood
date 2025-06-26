@@ -482,11 +482,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private bool ShouldManagePacketChannels =>
         _tunnel.PacketChannelCount < _tunnel.MaxPacketChannelCount;
 
-    internal void EnablePassthruInProcessPackets(bool value)
-    {
-        _clientHost.EnablePassthruInProcessPackets(value);
-    }
-
     private async ValueTask ManagePacketChannels(CancellationToken cancellationToken)
     {
         // if the lock is not acquired, it means that another thread is already managing packet channels

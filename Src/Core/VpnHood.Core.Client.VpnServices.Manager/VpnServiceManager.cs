@@ -422,7 +422,8 @@ public class VpnServiceManager : IDisposable
             };
             await SendRequest(new ApiSetAdResultRequest {
                 ApiError = null,
-                AdResult = adRequestResult
+                AdResult = adRequestResult,
+                CanShowOverVpn = _adService.CanShowOverVpn(adRequest.AdRequestType)
             }, cancellationToken);
         }
         catch (Exception ex) {
@@ -431,6 +432,7 @@ public class VpnServiceManager : IDisposable
 
             await SendRequest(new ApiSetAdResultRequest {
                 ApiError = ex.ToApiError(),
+                CanShowOverVpn = _adService?.CanShowOverVpn(adRequest.AdRequestType) ?? false,
                 AdResult = null
             }, cancellationToken);
         }

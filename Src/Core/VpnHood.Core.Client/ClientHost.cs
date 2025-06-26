@@ -33,22 +33,12 @@ internal class ClientHost(
     private IPEndPoint? _localEndpointIpV6;
     private int _processingCount;
     private readonly ClientHostStat _stat = new();
-    private int _passthruInProcessPacketsCounter;
     private readonly Nat _nat = new(true);
 
     public IPAddress CatcherAddressIpV4 { get; } = catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 { get; } = catcherAddressIpV6;
-    public bool IsPassthruInProcessPacketsEnabled => _passthruInProcessPacketsCounter > 0;
     public IClientHostStat Stat => _stat;
     public event EventHandler<IpPacket>? PacketReceived;
-
-    public void EnablePassthruInProcessPackets(bool value)
-    {
-        if (value)
-            Interlocked.Increment(ref _passthruInProcessPacketsCounter);
-        else
-            Interlocked.Decrement(ref _passthruInProcessPacketsCounter);
-    }
 
     public bool IsOwnPacket(IpPacket ipPacket)
     {

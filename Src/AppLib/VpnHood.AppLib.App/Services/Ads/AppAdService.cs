@@ -19,10 +19,32 @@ public class AppAdService(
     IAdService
 {
     private readonly AppCompositeAdService _compositeInterstitialAdService =
-        new(adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.InterstitialAd).ToArray());
+        new(adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.InterstitialAd)
+            .ToArray());
 
     private readonly AppCompositeAdService _compositeRewardedAdService =
-        new(adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.RewardedAd).ToArray());
+        new(adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.RewardedAd)
+            .ToArray());
+
+    private readonly AppCompositeAdService _compositeInterstitialAdOverVpnService =
+        new(adProviderItems.Where(x => x is { CanShowOverVpn: true, AdProvider.AdType: AppAdType.InterstitialAd })
+            .ToArray());
+
+    private readonly AppCompositeAdService _compositeRewardedAdOverVpnService =
+        new(adProviderItems.Where(x => x is { CanShowOverVpn: true, AdProvider.AdType: AppAdType.RewardedAd })
+            .ToArray());
+
+    private bool CanShowOverVpn(AppAdType adType) =>
+        adProviderItems.Any(x => x.AdProvider.AdType == adType && x.CanShowOverVpn);
+
+    public bool CanShowOverVpn(AdRequestType adRequestType)
+    {
+        return adRequestType switch {
+            AdRequestType.Interstitial => CanShowOverVpn(AppAdType.InterstitialAd),
+            AdRequestType.Rewarded => CanShowOverVpn(AppAdType.RewardedAd),
+            _ => throw new ArgumentOutOfRangeException(nameof(adRequestType), adRequestType, null)
+        };
+    }
 
     public TimeSpan ShowAdPostDelay => adOptions.ShowAdPostDelay;
     public bool CanShowInterstitial => adProviderItems.Any(x => x.AdProvider.AdType == AppAdType.InterstitialAd);
@@ -31,17 +53,21 @@ public class AppAdService(
 
     public async Task LoadInterstitialAdAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        // don't use VPN for loading ad
-        device.TryBindProcessToVpn(false);
-        using var autoDispose = new AutoDispose(() => _ = device.TryBindProcessToVpn(true, adOptions.ShowAdPostDelay, cancellationToken));
+        try {
+            // don't use VPN for loading ad
+            device.TryBindProcessToVpn(false);
+            await LoadAd(_compositeInterstitialAdService, uiContext, cancellationToken);
+        }
+        finally {
+            device.TryBindProcessToVpn(true);
+        }
 
-        await LoadAd(_compositeInterstitialAdService, uiContext, cancellationToken);
     }
 
     public Task<AdResult> ShowInterstitial(IUiContext uiContext, string sessionId,
         CancellationToken cancellationToken)
     {
-        return ShowAd(_compositeInterstitialAdService, uiContext, sessionId, cancellationToken);
+        return ShowAd(_compositeInterstitialAdService, uiContext, sessionId, allowOverVpn: false, cancellationToken);
     }
 
     public Task<AdResult> ShowRewarded(IUiContext uiContext, string sessionId,
@@ -50,7 +76,7 @@ public class AppAdService(
         if (!CanShowRewarded)
             throw new InvalidOperationException("Rewarded ad is not supported in this app.");
 
-        return ShowAd(_compositeRewardedAdService, uiContext, sessionId, cancellationToken);
+        return ShowAd(_compositeRewardedAdService, uiContext, sessionId, allowOverVpn: false, cancellationToken);
     }
 
     private async Task LoadAd(AppCompositeAdService appCompositeAdService, IUiContext uiContext, CancellationToken cancellationToken)
@@ -66,12 +92,28 @@ public class AppAdService(
     }
 
     private async Task<AdResult> ShowAd(AppCompositeAdService appCompositeAdService,
-        IUiContext uiContext, string sessionId, CancellationToken cancellationToken)
+        IUiContext uiContext, string sessionId, bool allowOverVpn, CancellationToken cancellationToken)
     {
         try {
             // don't use VPN for the ad
-            device.TryBindProcessToVpn(false);
+            device.TryBindProcessToVpn(allowOverVpn);
+            var result =  await ShowAdInternal(appCompositeAdService, uiContext, sessionId, cancellationToken);
+            
+            var trackEvent = AppTrackerBuilder.BuildShowAdStatus(result.NetworkName ?? "UnknownNetwork");
+            _ = TryRestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
+            return result;
+        }
+        catch (Exception ex) {
+            var trackEvent = AppTrackerBuilder.BuildShowAdStatus("all", ex.Message);
+            _ = TryRestoreProcessVpn(trackEvent, TimeSpan.Zero, cancellationToken);
+            throw;
+        }
+    }
 
+    private async Task<AdResult> ShowAdInternal(AppCompositeAdService appCompositeAdService,
+        IUiContext uiContext, string sessionId, CancellationToken cancellationToken)
+    {
+        try {
             // load ad if not loaded
             await LoadAd(appCompositeAdService, uiContext, cancellationToken);
 
@@ -83,20 +125,11 @@ public class AppAdService(
                 NetworkName = networkName
             };
 
-            var trackEvent = AppTrackerBuilder.BuildShowAdStatus(networkName);
-            _ = TryRestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
-
             //wait for finishing trackers
             return showAdResult;
         }
-        catch (Exception ex) {
-            var trackEvent = AppTrackerBuilder.BuildShowAdStatus("all", ex.Message);
-            _ = TryRestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
-
-            if (ex is UiContextNotAvailableException)
-                throw new ShowAdNoUiException();
-
-            throw;
+        catch (UiContextNotAvailableException ex) {
+            throw new ShowAdNoUiException(ex);
         }
     }
 

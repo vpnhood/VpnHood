@@ -2,6 +2,8 @@ using Firebase;
 using Firebase.Analytics;
 using Firebase.Crashlytics;
 using Ga4.Trackers;
+using Microsoft.Extensions.Logging;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.App.Client.Droid.Google.FirebaseUtils;
@@ -21,15 +23,15 @@ public class FirebaseAnalyticsTracker : Singleton<FirebaseAnalyticsTracker>, ITr
             FirebaseApp.InitializeApp(Application.Context);
             _analytics = FirebaseAnalytics.GetInstance(Application.Context);
         }
-        catch {
-            /* ignored*/
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not initialize Firebase Analytics.");
         }
 
         try {
             FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(Java.Lang.Boolean.True);
         }
-        catch {
-            /* ignored */
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not enable Firebase Crashlytics collection.");
         }
     }
 

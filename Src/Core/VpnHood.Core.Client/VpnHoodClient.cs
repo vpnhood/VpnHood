@@ -336,10 +336,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (!_vpnAdapter.CanProtectSocket)
             includeIpRanges = includeIpRanges.Exclude(hostIpAddress);
 
-        // exclude Multicast networks
-        includeIpRanges = includeIpRanges
-            .Exclude(IpNetwork.MulticastNetworks.ToIpRanges());
-
         // exclude local networks
         includeIpRanges = includeIpRanges
             .Exclude(IpNetwork.LocalNetworks.ToIpRanges());
@@ -393,8 +389,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _ = ManagePacketChannels(_cancellationTokenSource.Token);
 
         // Multicast packets are not supported (Already excluded by adapter filter)
-        //if (ipPacket.IsMulticast())
-        //  throw new PacketDropException("Multicast packet has been dropped.");
+        if (ipPacket.IsMulticast()) {
+            PacketLogger.LogPacket(ipPacket, "A multicast packet has been dropped.");
+            ipPacket.Dispose();
+            return;
+        }
 
         // TcpHost has to manage its own packets
         if (_clientHost.IsOwnPacket(ipPacket)) {

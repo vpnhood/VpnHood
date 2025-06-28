@@ -78,7 +78,7 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     public override string ToString()
     {
         var builder = new StringBuilder();
-        builder.Append($"Packet: Src={SourceAddress}, Dst={DestinationAddress}, Proto={Protocol}, ");
+        builder.Append($"Src={SourceAddress}, Dst={DestinationAddress}, Proto={Protocol}, ");
         builder.Append($"TotalLength:{Buffer.Length}, PayloadLen={Payload.Length}");
 
         if (PayloadPacket != null)

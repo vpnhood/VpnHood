@@ -49,7 +49,7 @@ public class Session : IDisposable
     private readonly EventReporter _maxTcpConnectWaitExceptionReporter = new(
         "Maximum TcpConnectWait has been reached.", GeneralEventId.NetProtect);
 
-    private readonly EventReporter _filterReporter = new("Some requests has been blocked.", 
+    private readonly EventReporter _filterReporter = new("Some requests have been blocked.", 
         GeneralEventId.NetProtect);
 
     private Traffic _prevTraffic = new();

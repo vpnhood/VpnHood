@@ -86,7 +86,7 @@ internal class AppCompositeAdService
                 throw; // do not report cancellation
             }
             catch (Exception ex) {
-                _ = _tracker?.TryTrack(AppTrackerBuilder.BuildShowAdStatus(adProviderItem.Name, ex.Message));
+                _ = _tracker?.TryTrack(AppTrackerBuilder.BuildShowAdStatus(adProviderItem.Name, countryCode, ex.Message));
                 providerExceptions.Add((adProviderItem.Name, ex));
                 VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.", adProviderItem.Name);
             }

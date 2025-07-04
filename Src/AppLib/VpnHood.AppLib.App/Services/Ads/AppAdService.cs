@@ -26,13 +26,13 @@ public class AppAdService(
         adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.RewardedAd).ToArray(), 
         tracker);
 
-    private readonly AppCompositeAdService _compositeInterstitialAdOverVpnService = new(
-        adProviderItems.Where(x => x is { CanShowOverVpn: true, AdProvider.AdType: AppAdType.InterstitialAd }).ToArray(), 
-        tracker);
+    //private readonly AppCompositeAdService _compositeInterstitialAdOverVpnService = new(
+    //    adProviderItems.Where(x => x is { CanShowOverVpn: true, AdProvider.AdType: AppAdType.InterstitialAd }).ToArray(), 
+    //    tracker);
 
-    private readonly AppCompositeAdService _compositeRewardedAdOverVpnService = new(
-        adProviderItems.Where(x => x is { CanShowOverVpn: true, AdProvider.AdType: AppAdType.RewardedAd }).ToArray(), 
-        tracker);
+    //private readonly AppCompositeAdService _compositeRewardedAdOverVpnService = new(
+    //    adProviderItems.Where(x => x is { CanShowOverVpn: true, AdProvider.AdType: AppAdType.RewardedAd }).ToArray(), 
+    //    tracker);
 
     private bool CanShowOverVpn(AppAdType adType) =>
         adProviderItems.Any(x => x.AdProvider.AdType == adType && x.CanShowOverVpn);
@@ -56,7 +56,8 @@ public class AppAdService(
         try {
             // don't use VPN for loading ad
             device.TryBindProcessToVpn(false);
-            await LoadAd(_compositeInterstitialAdService, uiContext, cancellationToken);
+            var countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
+            await LoadAd(_compositeInterstitialAdService, uiContext, countryCode,cancellationToken);
         }
         finally {
             device.TryBindProcessToVpn(true);
@@ -79,9 +80,9 @@ public class AppAdService(
         return ShowAd(_compositeRewardedAdService, uiContext, sessionId, allowOverVpn: false, cancellationToken);
     }
 
-    private async Task LoadAd(AppCompositeAdService appCompositeAdService, IUiContext uiContext, CancellationToken cancellationToken)
+    private async Task LoadAd(AppCompositeAdService appCompositeAdService, IUiContext uiContext, 
+        string countryCode, CancellationToken cancellationToken)
     {
-        var countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
         await appCompositeAdService.LoadAd(
                 uiContext, countryCode: countryCode,
                 forceReload: false, loadAdTimeout: adOptions.LoadAdTimeout, cancellationToken)
@@ -97,9 +98,10 @@ public class AppAdService(
         try {
             // don't use VPN for the ad
             device.TryBindProcessToVpn(allowOverVpn);
-            var result =  await ShowAdInternal(appCompositeAdService, uiContext, sessionId, cancellationToken);
+            var countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
+            var result =  await ShowAdInternal(appCompositeAdService, uiContext, sessionId, countryCode, cancellationToken);
             
-            var trackEvent = AppTrackerBuilder.BuildShowAdStatus(result.NetworkName ?? "UnknownNetwork");
+            var trackEvent = AppTrackerBuilder.BuildShowAdStatus(result.NetworkName ?? "UnknownNetwork", countryCode, null);
             _ = TryRestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
             return result;
         }
@@ -111,11 +113,11 @@ public class AppAdService(
     }
 
     private async Task<AdResult> ShowAdInternal(AppCompositeAdService appCompositeAdService,
-        IUiContext uiContext, string sessionId, CancellationToken cancellationToken)
+        IUiContext uiContext, string sessionId, string countryCode, CancellationToken cancellationToken)
     {
         try {
             // load ad if not loaded
-            await LoadAd(appCompositeAdService, uiContext, cancellationToken);
+            await LoadAd(appCompositeAdService, uiContext, countryCode, cancellationToken);
 
             // show ad
             var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";

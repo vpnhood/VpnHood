@@ -101,7 +101,8 @@ public class AppAdService(
             var countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
             var result =  await ShowAdInternal(appCompositeAdService, uiContext, sessionId, countryCode, cancellationToken);
             
-            var trackEvent = AppTrackerBuilder.BuildShowAdStatus(result.NetworkName ?? "UnknownNetwork", countryCode, null);
+            var trackEvent = AppTrackerBuilder.BuildShowAdStatus(result.NetworkName ?? "UnknownNetwork", countryCode, 
+                errorMessage: null);
             _ = TryRestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
             return result;
         }

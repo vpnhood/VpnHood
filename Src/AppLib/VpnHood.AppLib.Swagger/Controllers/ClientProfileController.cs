@@ -15,7 +15,7 @@ public class ClientProfileController : ControllerBase, IClientProfileController
         throw new SwaggerOnlyException();
     }
 
-    [HttpGet("{clientProfileI}")]
+    [HttpGet("{clientProfileId}")]
     public Task<ClientProfileInfo> Get(Guid clientProfileId)
     {
         throw new SwaggerOnlyException();

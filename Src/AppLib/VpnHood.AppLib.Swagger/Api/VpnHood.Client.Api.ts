@@ -1863,6 +1863,9 @@ export class AppSettings implements IAppSettings {
     clientId!: string;
     isQuickLaunchEnabled?: boolean | null;
     isNotificationEnabled?: boolean | null;
+    isStartupTrackerSent!: boolean;
+    clientIpLocation?: IpLocation | null;
+    clientIpLocationByServer?: IpLocation | null;
     configTime!: Date;
     userSettings!: UserSettings;
     appSettingsService?: AppSettingsService | null;
@@ -1885,6 +1888,9 @@ export class AppSettings implements IAppSettings {
             this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
             this.isQuickLaunchEnabled = _data["isQuickLaunchEnabled"] !== undefined ? _data["isQuickLaunchEnabled"] : <any>null;
             this.isNotificationEnabled = _data["isNotificationEnabled"] !== undefined ? _data["isNotificationEnabled"] : <any>null;
+            this.isStartupTrackerSent = _data["isStartupTrackerSent"] !== undefined ? _data["isStartupTrackerSent"] : <any>null;
+            this.clientIpLocation = _data["clientIpLocation"] ? IpLocation.fromJS(_data["clientIpLocation"]) : <any>null;
+            this.clientIpLocationByServer = _data["clientIpLocationByServer"] ? IpLocation.fromJS(_data["clientIpLocationByServer"]) : <any>null;
             this.configTime = _data["configTime"] ? new Date(_data["configTime"].toString()) : <any>null;
             this.userSettings = _data["userSettings"] ? UserSettings.fromJS(_data["userSettings"]) : new UserSettings();
             this.appSettingsService = _data["appSettingsService"] ? AppSettingsService.fromJS(_data["appSettingsService"]) : <any>null;
@@ -1904,6 +1910,9 @@ export class AppSettings implements IAppSettings {
         data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
         data["isQuickLaunchEnabled"] = this.isQuickLaunchEnabled !== undefined ? this.isQuickLaunchEnabled : <any>null;
         data["isNotificationEnabled"] = this.isNotificationEnabled !== undefined ? this.isNotificationEnabled : <any>null;
+        data["isStartupTrackerSent"] = this.isStartupTrackerSent !== undefined ? this.isStartupTrackerSent : <any>null;
+        data["clientIpLocation"] = this.clientIpLocation ? this.clientIpLocation.toJSON() : <any>null;
+        data["clientIpLocationByServer"] = this.clientIpLocationByServer ? this.clientIpLocationByServer.toJSON() : <any>null;
         data["configTime"] = this.configTime ? this.configTime.toISOString() : <any>null;
         data["userSettings"] = this.userSettings ? this.userSettings.toJSON() : <any>null;
         data["appSettingsService"] = this.appSettingsService ? this.appSettingsService.toJSON() : <any>null;
@@ -1916,9 +1925,64 @@ export interface IAppSettings {
     clientId: string;
     isQuickLaunchEnabled?: boolean | null;
     isNotificationEnabled?: boolean | null;
+    isStartupTrackerSent: boolean;
+    clientIpLocation?: IpLocation | null;
+    clientIpLocationByServer?: IpLocation | null;
     configTime: Date;
     userSettings: UserSettings;
     appSettingsService?: AppSettingsService | null;
+}
+
+export class IpLocation implements IIpLocation {
+    ipAddress!: string;
+    countryName!: string;
+    countryCode!: string;
+    regionName?: string | null;
+    cityName?: string | null;
+
+    constructor(data?: IIpLocation) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.ipAddress = _data["ipAddress"] !== undefined ? _data["ipAddress"] : <any>null;
+            this.countryName = _data["countryName"] !== undefined ? _data["countryName"] : <any>null;
+            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
+            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
+            this.cityName = _data["cityName"] !== undefined ? _data["cityName"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): IpLocation {
+        data = typeof data === 'object' ? data : {};
+        let result = new IpLocation();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["ipAddress"] = this.ipAddress !== undefined ? this.ipAddress : <any>null;
+        data["countryName"] = this.countryName !== undefined ? this.countryName : <any>null;
+        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
+        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
+        data["cityName"] = this.cityName !== undefined ? this.cityName : <any>null;
+        return data;
+    }
+}
+
+export interface IIpLocation {
+    ipAddress: string;
+    countryName: string;
+    countryCode: string;
+    regionName?: string | null;
+    cityName?: string | null;
 }
 
 export class UserSettings implements IUserSettings {
@@ -2705,6 +2769,7 @@ export class AppSessionStatus implements IAppSessionStatus {
     connectorStat!: AppConnectorStat;
     speed!: Traffic;
     sessionTraffic!: Traffic;
+    sessionSplitTraffic!: Traffic;
     cycleTraffic!: Traffic;
     totalTraffic!: Traffic;
     tcpTunnelledCount!: number;
@@ -2728,6 +2793,7 @@ export class AppSessionStatus implements IAppSessionStatus {
             this.connectorStat = new AppConnectorStat();
             this.speed = new Traffic();
             this.sessionTraffic = new Traffic();
+            this.sessionSplitTraffic = new Traffic();
             this.cycleTraffic = new Traffic();
             this.totalTraffic = new Traffic();
         }
@@ -2738,6 +2804,7 @@ export class AppSessionStatus implements IAppSessionStatus {
             this.connectorStat = _data["connectorStat"] ? AppConnectorStat.fromJS(_data["connectorStat"]) : new AppConnectorStat();
             this.speed = _data["speed"] ? Traffic.fromJS(_data["speed"]) : new Traffic();
             this.sessionTraffic = _data["sessionTraffic"] ? Traffic.fromJS(_data["sessionTraffic"]) : new Traffic();
+            this.sessionSplitTraffic = _data["sessionSplitTraffic"] ? Traffic.fromJS(_data["sessionSplitTraffic"]) : new Traffic();
             this.cycleTraffic = _data["cycleTraffic"] ? Traffic.fromJS(_data["cycleTraffic"]) : new Traffic();
             this.totalTraffic = _data["totalTraffic"] ? Traffic.fromJS(_data["totalTraffic"]) : new Traffic();
             this.tcpTunnelledCount = _data["tcpTunnelledCount"] !== undefined ? _data["tcpTunnelledCount"] : <any>null;
@@ -2764,6 +2831,7 @@ export class AppSessionStatus implements IAppSessionStatus {
         data["connectorStat"] = this.connectorStat ? this.connectorStat.toJSON() : <any>null;
         data["speed"] = this.speed ? this.speed.toJSON() : <any>null;
         data["sessionTraffic"] = this.sessionTraffic ? this.sessionTraffic.toJSON() : <any>null;
+        data["sessionSplitTraffic"] = this.sessionSplitTraffic ? this.sessionSplitTraffic.toJSON() : <any>null;
         data["cycleTraffic"] = this.cycleTraffic ? this.cycleTraffic.toJSON() : <any>null;
         data["totalTraffic"] = this.totalTraffic ? this.totalTraffic.toJSON() : <any>null;
         data["tcpTunnelledCount"] = this.tcpTunnelledCount !== undefined ? this.tcpTunnelledCount : <any>null;
@@ -2783,6 +2851,7 @@ export interface IAppSessionStatus {
     connectorStat: AppConnectorStat;
     speed: Traffic;
     sessionTraffic: Traffic;
+    sessionSplitTraffic: Traffic;
     cycleTraffic: Traffic;
     totalTraffic: Traffic;
     tcpTunnelledCount: number;
@@ -2849,8 +2918,6 @@ export interface IAppConnectorStat {
 }
 
 export class Traffic implements ITraffic {
-    sentTraffic!: number;
-    receivedTraffic!: number;
     sent!: number;
     received!: number;
 
@@ -2865,8 +2932,6 @@ export class Traffic implements ITraffic {
 
     init(_data?: any) {
         if (_data) {
-            this.sentTraffic = _data["sentTraffic"] !== undefined ? _data["sentTraffic"] : <any>null;
-            this.receivedTraffic = _data["receivedTraffic"] !== undefined ? _data["receivedTraffic"] : <any>null;
             this.sent = _data["sent"] !== undefined ? _data["sent"] : <any>null;
             this.received = _data["received"] !== undefined ? _data["received"] : <any>null;
         }
@@ -2881,8 +2946,6 @@ export class Traffic implements ITraffic {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["sentTraffic"] = this.sentTraffic !== undefined ? this.sentTraffic : <any>null;
-        data["receivedTraffic"] = this.receivedTraffic !== undefined ? this.receivedTraffic : <any>null;
         data["sent"] = this.sent !== undefined ? this.sent : <any>null;
         data["received"] = this.received !== undefined ? this.received : <any>null;
         return data;
@@ -2890,8 +2953,6 @@ export class Traffic implements ITraffic {
 }
 
 export interface ITraffic {
-    sentTraffic: number;
-    receivedTraffic: number;
     sent: number;
     received: number;
 }

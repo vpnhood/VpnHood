@@ -4,6 +4,7 @@ using VpnHood.App.Client.Droid.Google.FirebaseUtils;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Droid.Ads.VhAdMob;
+using VpnHood.AppLib.Droid.Ads.VhInMobi;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
@@ -71,13 +72,13 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             ProviderName = "AdMob"
         });
 
-        //var initializeTimeout = TimeSpan.FromSeconds(5);
-        //if (InMobiAdProvider.IsAndroidVersionSupported)
-        //    items.Add(new AppAdProviderItem {
-        //        AdProvider = InMobiAdProvider.Create(appConfigs.InmobiAccountId, appConfigs.InmobiPlacementId,
-        //            initializeTimeout, appConfigs.InmobiIsDebugMode),
-        //        ProviderName = "InMobi"
-        //    });
+        var initializeTimeout = TimeSpan.FromSeconds(5);
+        if (InMobiAdProvider.IsAndroidVersionSupported)
+            items.Add(new AppAdProviderItem {
+                AdProvider = InMobiAdProvider.Create(appConfigs.InmobiAccountId, appConfigs.InmobiPlacementId,
+                    initializeTimeout, appConfigs.InmobiIsDebugMode),
+                ProviderName = "InMobi"
+            });
 
         //if (ChartboostAdProvider.IsAndroidVersionSupported)
         //    items.Add(new AppAdProviderItem {

@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.App.Client.Droid.Google</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
-		<ApplicationVersion>718</ApplicationVersion>
-		<ApplicationDisplayVersion>7.1.718</ApplicationDisplayVersion>
+		<ApplicationVersion>721</ApplicationVersion>
+		<ApplicationDisplayVersion>7.1.721</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
 		<DebugSymbols>True</DebugSymbols>
 	</PropertyGroup>
@@ -38,7 +38,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>7.1.718</Version>
+		<Version>7.1.721</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
@@ -65,7 +65,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.690" />
+		<PackageReference Include="VpnHood.AppLib.Android.Ads.InMobi" Version="6.0.582" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.691" />
 		<PackageReference Include="Xamarin.Firebase.Analytics" Version="122.4.0" />
 		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="119.4.4" />
 	</ItemGroup>

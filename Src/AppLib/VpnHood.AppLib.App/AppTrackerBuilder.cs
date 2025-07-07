@@ -11,7 +11,7 @@ public static class AppTrackerBuilder
             Parameters = new Dictionary<string, object> {
                 { "ad_network", providerName },
                 { "is_show", errorMessage is null },
-                { "error", errorMessage ?? string.Empty },
+                { "error", errorMessage ?? "ok" },
                 { "country", country ?? "(not set)" },
             }
         };

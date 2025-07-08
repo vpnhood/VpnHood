@@ -33,7 +33,7 @@ public class TestConstants
     public static IPAddress PingV4Address2 => IPAddress.Parse("198.18.20.2");
     public static IPAddress PingV6Address1 => IPAddress.Parse("2001:4860:4866::2200");
     public static Uri InvalidUri => new("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
-    public static IPAddress InvalidIp => IPAddress.Parse("198.18.255.1");
-    public static IPEndPoint InvalidEp => IPEndPointConverter.Parse("198.18.255.2:9999");
+    public static IPAddress InvalidIp => IPAddress.Parse("198.51.100.1");
+    public static IPEndPoint InvalidEp => IPEndPointConverter.Parse("198.51.100.2:9999");
     public static IPAddress BlockedIp => IPAddress.Parse("198.18.255.3");
 }

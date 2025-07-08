@@ -92,12 +92,18 @@ public class AccessTokenService
 
     public async Task<AccessTokenData> Get(string tokenId)
     {
+        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId)).Vhc();
+        return await GetInternal(tokenId);
+    }
+
+
+    private async Task<AccessTokenData> GetInternal(string tokenId)
+    {
         // try get from cache
         if (_items.TryGetValue(tokenId, out var accessTokenData))
             return accessTokenData;
 
         // read access token record
-        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId)).Vhc();
         var tokenFileName = GetAccessTokenFileName(tokenId);
         if (!File.Exists(tokenFileName))
             throw new KeyNotFoundException($"Could not find tokenId. TokenId: {tokenId}");
@@ -130,7 +136,9 @@ public class AccessTokenService
 
     public async Task<AccessTokenData> Update(string tokenId, string tokenName)
     {
-        var accessTokenData = await Get(tokenId);
+        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId)).Vhc();
+
+        var accessTokenData = await GetInternal(tokenId);
         accessTokenData.AccessToken.Name = tokenName;
         await File
             .WriteAllTextAsync(GetAccessTokenUsageFileName(tokenId), JsonSerializer.Serialize(accessTokenData.Usage))
@@ -156,12 +164,11 @@ public class AccessTokenService
     public async Task AddUsage(string tokenId, Traffic traffic)
     {
         //lock tokenId
-
-        // validate is it exists
-        var accessTokenData = await Get(tokenId).Vhc();
+        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId)).Vhc();
 
         // add usage
-        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId)).Vhc();
+        var accessTokenData = await GetInternal(tokenId).Vhc();
+        var sent = accessTokenData.Usage.Sent;
         accessTokenData.Usage.Sent += traffic.Sent;
         accessTokenData.Usage.Received += traffic.Received;
         accessTokenData.Usage.Version = 2;
@@ -179,11 +186,12 @@ public class AccessTokenService
         _ = await Find(tokenId).Vhc()
             ?? throw new KeyNotFoundException("Could not find tokenId");
 
+        // delete files
+        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId)).Vhc();
+        
         // delete from cache
         _items.TryRemove(tokenId, out _);
 
-        // delete files
-        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId)).Vhc();
         if (File.Exists(GetAccessTokenUsageFileName(tokenId)))
             File.Delete(GetAccessTokenUsageFileName(tokenId));
 

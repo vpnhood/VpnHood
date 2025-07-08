@@ -19,10 +19,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{E77D473E-9367-41E8-938E-94B89259C882} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{53A40DDE-8F37-45F7-9346-3DED4C2114CD} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood! CLIENT"/>
-    <ROW Property="ProductVersion" Value="7.1.718" Options="20"/>
+    <ROW Property="ProductVersion" Value="7.1.722" Options="20"/>
     <ROW Property="RUNAPPLICATION" Value="1" Type="4"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND"/>
     <ROW Property="UpgradeCode" Value="{38FCFAB0-A40C-4840-A9F9-B7A06A5BC552}"/>
@@ -72,7 +72,7 @@
     <ROW Directory="zhHant_Dir" Directory_Parent="APPDIR" DefaultDir="zh-Hant" DirectoryOptions="3"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{E6EDE0D7-503D-4620-9F6F-63CB7DAED064}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{DFB9A423-A165-428D-B0AB-78C2EBC29B4E}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{21851DB9-D1F6-4B22-9844-D91CE291D8A3}" Directory_="APPDIR" Attributes="260" KeyPath="NoModify" Options="1"/>
     <ROW Component="APPDIR" ComponentId="{6782C70B-B5DB-4ACB-ACED-FA77FF112859}" Directory_="APPDIR" Attributes="0"/>
     <ROW Component="Accessibility.dll" ComponentId="{6125235F-C8DC-42E0-BC59-0E11D956B841}" Directory_="APPDIR" Attributes="0" KeyPath="Accessibility.dll"/>
@@ -95,6 +95,20 @@
     <ROW Component="Microsoft.Extensions.Options.dll" ComponentId="{34D16024-85C8-46B3-BA7E-7B2694B665FB}" Directory_="APPDIR" Attributes="0" KeyPath="Microsoft.Extensions.Options.dll"/>
     <ROW Component="Microsoft.Extensions.Primitives.dll" ComponentId="{A95D3D91-5CEF-4D51-90D1-2847EEFE0609}" Directory_="APPDIR" Attributes="0" KeyPath="Microsoft.Extensions.Primitives.dll"/>
     <ROW Component="Microsoft.VisualBasic.Core.dll" ComponentId="{638B5DF6-AFE6-4F0B-8C82-89FEDC65E82F}" Directory_="APPDIR" Attributes="256" KeyPath="Microsoft.VisualBasic.Core.dll"/>
+    <ROW Component="Microsoft.VisualBasic.Forms.dll" ComponentId="{E268EA52-74FB-4979-950E-B102DCF756EA}" Directory_="APPDIR" Attributes="256" KeyPath="Microsoft.VisualBasic.Forms.dll"/>
+    <ROW Component="Microsoft.VisualBasic.Forms.resour_10_ces.dll" ComponentId="{395C060B-B6EC-4487-8783-DB656F65B415}" Directory_="tr_Dir" Attributes="0" KeyPath="Microsoft.VisualBasic.Forms.resour_10_ces.dll"/>
+    <ROW Component="Microsoft.VisualBasic.Forms.resour_11_ces.dll" ComponentId="{4340B51A-B0EF-4612-8B7E-474EA92BB7A4}" Directory_="zhHans_Dir" Attributes="0" KeyPath="Microsoft.VisualBasic.Forms.resour_11_ces.dll"/>
+    <ROW Component="Microsoft.VisualBasic.Forms.resour_12_ces.dll" ComponentId="{20315128-29DA-40E5-B68C-579FF670E3A2}" Directory_="zhHant_Dir" Attributes="0" KeyPath="Microsoft.VisualBasic.Forms.resour_12_ces.dll"/>
+    <ROW Component="Microsoft.VisualBasic.Forms.resour_1_ces.dll" ComponentId="{75FE46DD-DFC4-4A82-A64B-7830D4458E96}" Directory_="de_Dir" Attributes="0" KeyPath="Microsoft.VisualBasic.Forms.resour_1_ces.dll"/>
+    <ROW Component="Microsoft.VisualBasic.Forms.resour_2_ces.dll" ComponentId="{0641ADA8-4139-475A-8E7A-6E6862F4EAE0}" Directory_="es_Dir" Attributes="0" KeyPath="Microsoft.VisualBasic.Forms.resour_2_ces.dll"/>
+    <ROW Component="Microsoft.VisualBasic.Forms.resour_3_ces.dll" ComponentId="{BB34E7D4-F257-4496-A4B1-DEFCE92785F1}" Directory_="fr_Dir" Attributes="0" KeyPath="Microsoft.VisualBasic.Forms.resour_3_ces.dll"/>
+    <ROW Component="Microsoft.VisualBasic.Forms.resour_4_ces.dll" ComponentId="{302C9485-4E80-49F4-AED6-7E34FA5D39F0}" Directory_="it_Dir" Attributes="0" KeyPath="Microsoft.VisualBasic.Forms.resour_4_ces.dll"/>
+    <ROW Component="Microsoft.VisualBasic.Forms.resour_5_ces.dll" ComponentId="{546F926E-A89E-4E9F-A56D-6546085D4AFF}" Directory_="ja_Dir" Attributes="0" KeyPath="Microsoft.VisualBasic.Forms.resour_5_ces.dll"/>
+    <ROW Component="Microsoft.VisualBasic.Forms.resour_6_ces.dll" ComponentId="{329F9088-1599-45D8-A826-026482072B37}" Directory_="ko_Dir" Attributes="0" KeyPath="Microsoft.VisualBasic.Forms.resour_6_ces.dll"/>
+    <ROW Component="Microsoft.VisualBasic.Forms.resour_7_ces.dll" ComponentId="{D5FAB152-7BB9-46A6-8EC3-5EFB93A1A8C8}" Directory_="pl_Dir" Attributes="0" KeyPath="Microsoft.VisualBasic.Forms.resour_7_ces.dll"/>
+    <ROW Component="Microsoft.VisualBasic.Forms.resour_8_ces.dll" ComponentId="{E92B4AE0-754F-49F3-8AC4-4880B6DCD4AB}" Directory_="ptBR_Dir" Attributes="0" KeyPath="Microsoft.VisualBasic.Forms.resour_8_ces.dll"/>
+    <ROW Component="Microsoft.VisualBasic.Forms.resour_9_ces.dll" ComponentId="{C6E6FC17-2C24-43E1-935F-BA4129AD8859}" Directory_="ru_Dir" Attributes="0" KeyPath="Microsoft.VisualBasic.Forms.resour_9_ces.dll"/>
+    <ROW Component="Microsoft.VisualBasic.Forms.resources.dll" ComponentId="{ADBD03EE-0251-4D5C-8939-52E58C421D40}" Directory_="cs_Dir" Attributes="0" KeyPath="Microsoft.VisualBasic.Forms.resources.dll"/>
     <ROW Component="Microsoft.VisualBasic.dll" ComponentId="{0801D86F-37D6-4815-89A6-7872CD3057DF}" Directory_="APPDIR" Attributes="0" KeyPath="Microsoft.VisualBasic.dll"/>
     <ROW Component="Microsoft.Web.WebView2.Core.dll_1" ComponentId="{31541584-925E-45E7-AA8C-A5B8564C07DF}" Directory_="APPDIR" Attributes="0" KeyPath="Microsoft.Web.WebView2.Core.dll_1"/>
     <ROW Component="Microsoft.Web.WebView2.WinForms.dll_1" ComponentId="{0E243ACC-0D39-409E-900B-41B7438C0DDC}" Directory_="APPDIR" Attributes="0" KeyPath="Microsoft.Web.WebView2.WinForms.dll_1"/>
@@ -201,6 +215,7 @@
     <ROW Component="System.Data.Common.dll" ComponentId="{19CA650F-76D3-4847-8452-A548AE29DC57}" Directory_="APPDIR" Attributes="256" KeyPath="System.Data.Common.dll"/>
     <ROW Component="System.Data.DataSetExtensions.dll" ComponentId="{F9EB6357-9D30-4B86-AD71-B910032D69B9}" Directory_="APPDIR" Attributes="0" KeyPath="System.Data.DataSetExtensions.dll"/>
     <ROW Component="System.Data.dll" ComponentId="{5E730758-C806-4195-AB90-9DD4E76010C8}" Directory_="APPDIR" Attributes="0" KeyPath="System.Data.dll"/>
+    <ROW Component="System.Design.dll" ComponentId="{B04050CB-E753-47B5-A9F8-BB3D65BC2749}" Directory_="APPDIR" Attributes="0" KeyPath="System.Design.dll"/>
     <ROW Component="System.Diagnostics.Contracts.dll" ComponentId="{860B26B2-57E2-46D0-869B-DDE5D58B7671}" Directory_="APPDIR" Attributes="0" KeyPath="System.Diagnostics.Contracts.dll"/>
     <ROW Component="System.Diagnostics.Debug.dll" ComponentId="{B0DFAB9D-4E1D-4743-9BC9-2839E7D34827}" Directory_="APPDIR" Attributes="0" KeyPath="System.Diagnostics.Debug.dll"/>
     <ROW Component="System.Diagnostics.DiagnosticSource.dll" ComponentId="{0E810480-C1C0-4158-9A18-6527F3E3ACCA}" Directory_="APPDIR" Attributes="256" KeyPath="System.Diagnostics.DiagnosticSource.dll"/>
@@ -216,6 +231,7 @@
     <ROW Component="System.Diagnostics.Tracing.dll" ComponentId="{02C2513E-9148-4024-86BD-F895A515B93D}" Directory_="APPDIR" Attributes="0" KeyPath="System.Diagnostics.Tracing.dll"/>
     <ROW Component="System.DirectoryServices.dll" ComponentId="{1E9ADE6B-FAA1-44C0-A702-EBB05461ADB3}" Directory_="APPDIR" Attributes="256" KeyPath="System.DirectoryServices.dll"/>
     <ROW Component="System.Drawing.Common.dll" ComponentId="{9800E4E5-B48F-40AC-802C-CC9230C5905D}" Directory_="APPDIR" Attributes="256" KeyPath="System.Drawing.Common.dll"/>
+    <ROW Component="System.Drawing.Design.dll" ComponentId="{481B4FFE-A380-44F7-87E3-E47F15DACDAF}" Directory_="APPDIR" Attributes="0" KeyPath="System.Drawing.Design.dll"/>
     <ROW Component="System.Drawing.Primitives.dll" ComponentId="{EA60CF45-CE77-4C2E-9200-91AD8A612558}" Directory_="APPDIR" Attributes="256" KeyPath="System.Drawing.Primitives.dll"/>
     <ROW Component="System.Drawing.dll" ComponentId="{BFAE2439-F110-40A5-BEDF-962DE8C1E5D4}" Directory_="APPDIR" Attributes="0" KeyPath="System.Drawing.dll"/>
     <ROW Component="System.Dynamic.Runtime.dll" ComponentId="{83318566-377D-41A8-806D-4DB721A27B50}" Directory_="APPDIR" Attributes="0" KeyPath="System.Dynamic.Runtime.dll"/>
@@ -363,6 +379,49 @@
     <ROW Component="System.Windows.Controls.Ribbon.resources.dll_8" ComponentId="{1AC54271-761F-4AB9-96C7-CCC7D028F607}" Directory_="ptBR_Dir" Attributes="0" KeyPath="System.Windows.Controls.Ribbon.resources.dll_8"/>
     <ROW Component="System.Windows.Controls.Ribbon.resources.dll_9" ComponentId="{DC2E74C5-7B21-4916-9F6E-F0CE271AD3AA}" Directory_="ru_Dir" Attributes="0" KeyPath="System.Windows.Controls.Ribbon.resources.dll_9"/>
     <ROW Component="System.Windows.Extensions.dll" ComponentId="{226E7AEE-EAD4-4F6D-87DA-72848F8EE390}" Directory_="APPDIR" Attributes="256" KeyPath="System.Windows.Extensions.dll"/>
+    <ROW Component="System.Windows.Forms.Design.Editors.dll" ComponentId="{66B35E62-8133-43CF-9AE2-F492A7C0D046}" Directory_="APPDIR" Attributes="0" KeyPath="System.Windows.Forms.Design.Editors.dll"/>
+    <ROW Component="System.Windows.Forms.Design.dll" ComponentId="{632779EF-00EF-48FF-BC63-7A34D1D72A17}" Directory_="APPDIR" Attributes="256" KeyPath="System.Windows.Forms.Design.dll"/>
+    <ROW Component="System.Windows.Forms.Design.resour_10_ces.dll" ComponentId="{C1D9C021-9112-4E25-8FC6-330BBCA6CCFF}" Directory_="tr_Dir" Attributes="0" KeyPath="System.Windows.Forms.Design.resour_10_ces.dll"/>
+    <ROW Component="System.Windows.Forms.Design.resour_11_ces.dll" ComponentId="{9EA2C0AA-C40F-4543-B2B7-27BD8E7E9B48}" Directory_="zhHans_Dir" Attributes="0" KeyPath="System.Windows.Forms.Design.resour_11_ces.dll"/>
+    <ROW Component="System.Windows.Forms.Design.resour_12_ces.dll" ComponentId="{A605EC77-5381-4D1D-B2F8-EA46FD5C890C}" Directory_="zhHant_Dir" Attributes="0" KeyPath="System.Windows.Forms.Design.resour_12_ces.dll"/>
+    <ROW Component="System.Windows.Forms.Design.resour_1_ces.dll" ComponentId="{0597A587-C6EF-4DD4-A6CE-A0A0C396A413}" Directory_="de_Dir" Attributes="0" KeyPath="System.Windows.Forms.Design.resour_1_ces.dll"/>
+    <ROW Component="System.Windows.Forms.Design.resour_2_ces.dll" ComponentId="{8C86D82B-F79F-4318-83C8-B4E424E25C0C}" Directory_="es_Dir" Attributes="0" KeyPath="System.Windows.Forms.Design.resour_2_ces.dll"/>
+    <ROW Component="System.Windows.Forms.Design.resour_3_ces.dll" ComponentId="{E652A731-DBA3-4906-A405-8111D729F32E}" Directory_="fr_Dir" Attributes="0" KeyPath="System.Windows.Forms.Design.resour_3_ces.dll"/>
+    <ROW Component="System.Windows.Forms.Design.resour_4_ces.dll" ComponentId="{C11AB41B-0452-4A76-A158-E9185F4D40C0}" Directory_="it_Dir" Attributes="0" KeyPath="System.Windows.Forms.Design.resour_4_ces.dll"/>
+    <ROW Component="System.Windows.Forms.Design.resour_5_ces.dll" ComponentId="{75EF1207-BD47-41A0-84B8-F1D691CD2379}" Directory_="ja_Dir" Attributes="0" KeyPath="System.Windows.Forms.Design.resour_5_ces.dll"/>
+    <ROW Component="System.Windows.Forms.Design.resour_6_ces.dll" ComponentId="{BFFEA76D-8CF3-4885-A9CD-F24AC0FCCE60}" Directory_="ko_Dir" Attributes="0" KeyPath="System.Windows.Forms.Design.resour_6_ces.dll"/>
+    <ROW Component="System.Windows.Forms.Design.resour_7_ces.dll" ComponentId="{57C450A4-6EAB-420D-A72B-965A08D07274}" Directory_="pl_Dir" Attributes="0" KeyPath="System.Windows.Forms.Design.resour_7_ces.dll"/>
+    <ROW Component="System.Windows.Forms.Design.resour_8_ces.dll" ComponentId="{6C888CC2-B3C9-4065-97BF-190F488CE8F6}" Directory_="ptBR_Dir" Attributes="0" KeyPath="System.Windows.Forms.Design.resour_8_ces.dll"/>
+    <ROW Component="System.Windows.Forms.Design.resour_9_ces.dll" ComponentId="{26986F99-8AAF-44B3-AD98-9268CBA6BCDA}" Directory_="ru_Dir" Attributes="0" KeyPath="System.Windows.Forms.Design.resour_9_ces.dll"/>
+    <ROW Component="System.Windows.Forms.Design.resources.dll" ComponentId="{61C40C83-0F75-42C8-9DA2-E29D21E6433C}" Directory_="cs_Dir" Attributes="0" KeyPath="System.Windows.Forms.Design.resources.dll"/>
+    <ROW Component="System.Windows.Forms.Primitives.dll" ComponentId="{6A91105A-B1A3-4B7F-9502-7ABBCB7723A7}" Directory_="APPDIR" Attributes="256" KeyPath="System.Windows.Forms.Primitives.dll"/>
+    <ROW Component="System.Windows.Forms.Primitives.re_10_sources.dll" ComponentId="{47EA65DF-6012-4ADC-AA38-64136A33E293}" Directory_="tr_Dir" Attributes="0" KeyPath="System.Windows.Forms.Primitives.re_10_sources.dll"/>
+    <ROW Component="System.Windows.Forms.Primitives.re_11_sources.dll" ComponentId="{B7A44D81-F05C-4E95-9A81-6EFDB5BD5B7B}" Directory_="zhHans_Dir" Attributes="0" KeyPath="System.Windows.Forms.Primitives.re_11_sources.dll"/>
+    <ROW Component="System.Windows.Forms.Primitives.re_12_sources.dll" ComponentId="{5B021E76-8081-40EB-9FE5-50C2D0E96AD7}" Directory_="zhHant_Dir" Attributes="0" KeyPath="System.Windows.Forms.Primitives.re_12_sources.dll"/>
+    <ROW Component="System.Windows.Forms.Primitives.re_1_sources.dll" ComponentId="{D49EB03E-2588-4606-B8CE-C9D3697A1B76}" Directory_="de_Dir" Attributes="0" KeyPath="System.Windows.Forms.Primitives.re_1_sources.dll"/>
+    <ROW Component="System.Windows.Forms.Primitives.re_2_sources.dll" ComponentId="{F2C230DF-B104-4D55-95B4-5399077106F4}" Directory_="es_Dir" Attributes="0" KeyPath="System.Windows.Forms.Primitives.re_2_sources.dll"/>
+    <ROW Component="System.Windows.Forms.Primitives.re_3_sources.dll" ComponentId="{3BD0996F-DA57-4638-A6C5-038DFC43DE18}" Directory_="fr_Dir" Attributes="0" KeyPath="System.Windows.Forms.Primitives.re_3_sources.dll"/>
+    <ROW Component="System.Windows.Forms.Primitives.re_4_sources.dll" ComponentId="{9C69DF09-A2D4-4D52-AA6D-3EBFFC4ACE56}" Directory_="it_Dir" Attributes="0" KeyPath="System.Windows.Forms.Primitives.re_4_sources.dll"/>
+    <ROW Component="System.Windows.Forms.Primitives.re_5_sources.dll" ComponentId="{AD23E75E-5526-4135-B29D-C1D4A95D46C9}" Directory_="ja_Dir" Attributes="0" KeyPath="System.Windows.Forms.Primitives.re_5_sources.dll"/>
+    <ROW Component="System.Windows.Forms.Primitives.re_6_sources.dll" ComponentId="{22274064-2C7A-4D64-99BE-5005D70899C1}" Directory_="ko_Dir" Attributes="0" KeyPath="System.Windows.Forms.Primitives.re_6_sources.dll"/>
+    <ROW Component="System.Windows.Forms.Primitives.re_7_sources.dll" ComponentId="{42667825-A3D0-407E-89F5-8A2DB230089D}" Directory_="pl_Dir" Attributes="0" KeyPath="System.Windows.Forms.Primitives.re_7_sources.dll"/>
+    <ROW Component="System.Windows.Forms.Primitives.re_8_sources.dll" ComponentId="{54143CCE-C9FC-459E-AA4A-B9EA07A300DE}" Directory_="ptBR_Dir" Attributes="0" KeyPath="System.Windows.Forms.Primitives.re_8_sources.dll"/>
+    <ROW Component="System.Windows.Forms.Primitives.re_9_sources.dll" ComponentId="{C9ECD57E-333E-4414-B147-2B3ACECB15A2}" Directory_="ru_Dir" Attributes="0" KeyPath="System.Windows.Forms.Primitives.re_9_sources.dll"/>
+    <ROW Component="System.Windows.Forms.Primitives.resources.dll" ComponentId="{D26D7315-6CDA-4CF8-887C-F113D68CE100}" Directory_="cs_Dir" Attributes="0" KeyPath="System.Windows.Forms.Primitives.resources.dll"/>
+    <ROW Component="System.Windows.Forms.dll" ComponentId="{29004459-8AD2-413B-81C5-CA351E41EE3C}" Directory_="APPDIR" Attributes="256" KeyPath="System.Windows.Forms.dll"/>
+    <ROW Component="System.Windows.Forms.resources.dll" ComponentId="{807577C6-B228-4C8D-B2F5-3ADBB66E8FC3}" Directory_="cs_Dir" Attributes="0" KeyPath="System.Windows.Forms.resources.dll"/>
+    <ROW Component="System.Windows.Forms.resources.dll_1" ComponentId="{F5ADCBB0-3A6D-4A0D-9400-F00DDB5A9879}" Directory_="de_Dir" Attributes="0" KeyPath="System.Windows.Forms.resources.dll_1"/>
+    <ROW Component="System.Windows.Forms.resources.dll_10" ComponentId="{504CF63B-6697-4F16-975A-64EF9BF1799F}" Directory_="tr_Dir" Attributes="0" KeyPath="System.Windows.Forms.resources.dll_10"/>
+    <ROW Component="System.Windows.Forms.resources.dll_11" ComponentId="{4998017C-FD83-4EAD-BC24-831D471039F4}" Directory_="zhHans_Dir" Attributes="0" KeyPath="System.Windows.Forms.resources.dll_11"/>
+    <ROW Component="System.Windows.Forms.resources.dll_12" ComponentId="{9CEF0C15-F18C-4CF2-9891-785C10BFFB72}" Directory_="zhHant_Dir" Attributes="0" KeyPath="System.Windows.Forms.resources.dll_12"/>
+    <ROW Component="System.Windows.Forms.resources.dll_2" ComponentId="{1F4C6DCA-7984-4B7A-8A42-67FF86BA83C1}" Directory_="es_Dir" Attributes="0" KeyPath="System.Windows.Forms.resources.dll_2"/>
+    <ROW Component="System.Windows.Forms.resources.dll_3" ComponentId="{E33A1818-60DA-45C5-808A-00BC71842807}" Directory_="fr_Dir" Attributes="0" KeyPath="System.Windows.Forms.resources.dll_3"/>
+    <ROW Component="System.Windows.Forms.resources.dll_4" ComponentId="{F851A494-72CD-4FC6-8436-E3C8087E65DE}" Directory_="it_Dir" Attributes="0" KeyPath="System.Windows.Forms.resources.dll_4"/>
+    <ROW Component="System.Windows.Forms.resources.dll_5" ComponentId="{ECF47D87-FFD3-4E0A-8989-A92C07F05D94}" Directory_="ja_Dir" Attributes="0" KeyPath="System.Windows.Forms.resources.dll_5"/>
+    <ROW Component="System.Windows.Forms.resources.dll_6" ComponentId="{A12C2736-F813-4368-A557-B53A26274DF4}" Directory_="ko_Dir" Attributes="0" KeyPath="System.Windows.Forms.resources.dll_6"/>
+    <ROW Component="System.Windows.Forms.resources.dll_7" ComponentId="{4A7B2613-B09A-430A-8FD1-29D81EA475E4}" Directory_="pl_Dir" Attributes="0" KeyPath="System.Windows.Forms.resources.dll_7"/>
+    <ROW Component="System.Windows.Forms.resources.dll_8" ComponentId="{BDBAAF0A-EE2E-4EE8-8B73-621E85F8288F}" Directory_="ptBR_Dir" Attributes="0" KeyPath="System.Windows.Forms.resources.dll_8"/>
+    <ROW Component="System.Windows.Forms.resources.dll_9" ComponentId="{FAE72B54-F847-4D88-95C0-48F0C18C2FDC}" Directory_="ru_Dir" Attributes="0" KeyPath="System.Windows.Forms.resources.dll_9"/>
     <ROW Component="System.Windows.Input.Manipulations.dll" ComponentId="{0F14955F-AE8E-4DF3-B85E-EC48A47A711B}" Directory_="APPDIR" Attributes="256" KeyPath="System.Windows.Input.Manipulations.dll"/>
     <ROW Component="System.Windows.Input.Manipulations.resources.dll" ComponentId="{FAD71547-19EF-40F7-8BF2-A3A13642B7C9}" Directory_="cs_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations.resources.dll"/>
     <ROW Component="System.Windows.Input.Manipulations_10_.resources.dll" ComponentId="{E136FA62-0FF8-4E8D-8A10-706DDBBE9499}" Directory_="tr_Dir" Attributes="0" KeyPath="System.Windows.Input.Manipulations_10_.resources.dll"/>
@@ -507,6 +566,20 @@
     <ROW Component="WindowsBase.resources.dll_7" ComponentId="{39973525-A688-4283-B811-CCE68AF812E7}" Directory_="pl_Dir" Attributes="0" KeyPath="WindowsBase.resources.dll_7"/>
     <ROW Component="WindowsBase.resources.dll_8" ComponentId="{1AF23F6D-14E0-469A-B140-EA8153CFF1CC}" Directory_="ptBR_Dir" Attributes="0" KeyPath="WindowsBase.resources.dll_8"/>
     <ROW Component="WindowsBase.resources.dll_9" ComponentId="{619E12B5-FDFB-4961-BB01-1EBCFA5470C2}" Directory_="ru_Dir" Attributes="0" KeyPath="WindowsBase.resources.dll_9"/>
+    <ROW Component="WindowsFormsIntegration.dll" ComponentId="{2D8FB884-8317-42EC-A3BF-383451DCEA99}" Directory_="APPDIR" Attributes="256" KeyPath="WindowsFormsIntegration.dll"/>
+    <ROW Component="WindowsFormsIntegration.resources._100_dll" ComponentId="{A4E6D8D9-93DF-4079-BCE4-9B292650F04C}" Directory_="tr_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_10"/>
+    <ROW Component="WindowsFormsIntegration.resources._101_dll" ComponentId="{63711940-DB00-4109-AF5F-A0A149988953}" Directory_="zhHans_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_11"/>
+    <ROW Component="WindowsFormsIntegration.resources._102_dll" ComponentId="{DBE6E779-7906-4704-95B1-72B05806EED1}" Directory_="zhHant_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_12"/>
+    <ROW Component="WindowsFormsIntegration.resources.dll" ComponentId="{26D5FC34-F6D0-4E33-8536-053A4276DCF7}" Directory_="cs_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll"/>
+    <ROW Component="WindowsFormsIntegration.resources.dll_1" ComponentId="{283BA04A-FFC1-4FB5-8C6E-CCB55336D687}" Directory_="de_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_1"/>
+    <ROW Component="WindowsFormsIntegration.resources.dll_2" ComponentId="{BD1C3B9B-DB83-49BC-8F54-E59A71F342FC}" Directory_="es_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_2"/>
+    <ROW Component="WindowsFormsIntegration.resources.dll_3" ComponentId="{811397BE-42DA-43B9-8588-778695C9D324}" Directory_="fr_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_3"/>
+    <ROW Component="WindowsFormsIntegration.resources.dll_4" ComponentId="{9D3FCADC-15C0-4FAD-B061-F29531A1654D}" Directory_="it_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_4"/>
+    <ROW Component="WindowsFormsIntegration.resources.dll_5" ComponentId="{A4CA51E1-DD52-4352-8643-E4950A80E559}" Directory_="ja_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_5"/>
+    <ROW Component="WindowsFormsIntegration.resources.dll_6" ComponentId="{92F10F75-261B-450F-B120-B3A6CA9E765A}" Directory_="ko_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_6"/>
+    <ROW Component="WindowsFormsIntegration.resources.dll_7" ComponentId="{9B6EC331-7235-46E0-A147-DD2E6499AF4F}" Directory_="pl_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_7"/>
+    <ROW Component="WindowsFormsIntegration.resources.dll_8" ComponentId="{62E4E258-B5E8-421E-9A29-2EF99D6BE49D}" Directory_="ptBR_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_8"/>
+    <ROW Component="WindowsFormsIntegration.resources.dll_9" ComponentId="{C5F34D5C-8FE1-4E19-958C-756627ED0174}" Directory_="ru_Dir" Attributes="0" KeyPath="WindowsFormsIntegration.resources.dll_9"/>
     <ROW Component="clretwrc.dll" ComponentId="{E89F84E6-2C22-402A-AD95-95A3D76BB62C}" Directory_="APPDIR" Attributes="256" KeyPath="clretwrc.dll"/>
     <ROW Component="clrgc.dll" ComponentId="{12F87F35-8601-4808-972F-1C61A9E0801E}" Directory_="APPDIR" Attributes="256" KeyPath="clrgc.dll"/>
     <ROW Component="clrgcexp.dll" ComponentId="{0CF4D212-A418-4A00-A9B4-2AB20AF3CF09}" Directory_="APPDIR" Attributes="256" KeyPath="clrgcexp.dll"/>
@@ -516,6 +589,7 @@
     <ROW Component="hostfxr.dll" ComponentId="{BC0967F4-7DF4-4A37-8C80-3C76828B0F66}" Directory_="APPDIR" Attributes="256" KeyPath="hostfxr.dll"/>
     <ROW Component="hostpolicy.dll" ComponentId="{37A1012B-C8BE-498A-9BD7-2CD78581BB7B}" Directory_="APPDIR" Attributes="256" KeyPath="hostpolicy.dll"/>
     <ROW Component="mscordaccore.dll" ComponentId="{EA8A69E4-1B6B-4AAD-A48D-9EB59FA6AB15}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore.dll"/>
+    <ROW Component="mscordaccore_amd64_amd64_8.0.1725.26602.dll" ComponentId="{374F38F3-23F9-4DAB-ABF7-8D309D8B1EB4}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore_amd64_amd64_8.0.1725.26602.dll"/>
     <ROW Component="mscordaccore_amd64_amd64_9.0.625.26613.dll" ComponentId="{3D611669-5C2B-47BC-81E3-55A54EF9D67B}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore_amd64_amd64_9.0.625.26613.dll"/>
     <ROW Component="mscordbi.dll" ComponentId="{EBA3A2AB-FBCE-495D-8012-0465D47E5B42}" Directory_="APPDIR" Attributes="256" KeyPath="mscordbi.dll"/>
     <ROW Component="mscorlib.dll" ComponentId="{5E6D16B7-22DA-4FCB-AC28-AD3A361BF6C5}" Directory_="APPDIR" Attributes="0" KeyPath="mscorlib.dll"/>
@@ -1001,6 +1075,80 @@
     <ROW File="VpnHood.Core.PacketTransports.dll" Component_="VpnHood.Core.PacketTransports.dll" FileName="VPNHO~15.DLL|VpnHood.Core.PacketTransports.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.Core.PacketTransports.dll" SelfReg="false"/>
     <ROW File="VpnHood.Core.PacketTransports.pdb" Component_="VpnHood.Core.PacketTransports.dll" FileName="VPNHO~15.PDB|VpnHood.Core.PacketTransports.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.Core.PacketTransports.pdb" SelfReg="false"/>
     <ROW File="mscordaccore_amd64_amd64_9.0.625.26613.dll" Component_="mscordaccore_amd64_amd64_9.0.625.26613.dll" FileName="MSCORD~3.DLL|mscordaccore_amd64_amd64_9.0.625.26613.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\mscordaccore_amd64_amd64_9.0.625.26613.dll" SelfReg="false"/>
+    <ROW File="Microsoft.VisualBasic.Forms.resources.dll" Component_="Microsoft.VisualBasic.Forms.resources.dll" FileName="MICROS~1.DLL|Microsoft.VisualBasic.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\cs\Microsoft.VisualBasic.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.resources.dll" Component_="System.Windows.Forms.Design.resources.dll" FileName="SYSTEM~3.DLL|System.Windows.Forms.Design.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\cs\System.Windows.Forms.Design.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Primitives.resources.dll" Component_="System.Windows.Forms.Primitives.resources.dll" FileName="SYSTEM~4.DLL|System.Windows.Forms.Primitives.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\cs\System.Windows.Forms.Primitives.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.resources.dll" Component_="System.Windows.Forms.resources.dll" FileName="SYSTEM~5.DLL|System.Windows.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\cs\System.Windows.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="WindowsFormsIntegration.resources.dll" Component_="WindowsFormsIntegration.resources.dll" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\cs\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
+    <ROW File="Microsoft.VisualBasic.Forms.resour_1_ces.dll" Component_="Microsoft.VisualBasic.Forms.resour_1_ces.dll" FileName="MICROS~1.DLL|Microsoft.VisualBasic.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\de\Microsoft.VisualBasic.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.resour_1_ces.dll" Component_="System.Windows.Forms.Design.resour_1_ces.dll" FileName="SYSTEM~3.DLL|System.Windows.Forms.Design.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\de\System.Windows.Forms.Design.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Primitives.re_1_sources.dll" Component_="System.Windows.Forms.Primitives.re_1_sources.dll" FileName="SYSTEM~4.DLL|System.Windows.Forms.Primitives.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\de\System.Windows.Forms.Primitives.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.resources.dll_1" Component_="System.Windows.Forms.resources.dll_1" FileName="SYSTEM~5.DLL|System.Windows.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\de\System.Windows.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="WindowsFormsIntegration.resources.dll_1" Component_="WindowsFormsIntegration.resources.dll_1" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\de\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
+    <ROW File="Microsoft.VisualBasic.Forms.resour_2_ces.dll" Component_="Microsoft.VisualBasic.Forms.resour_2_ces.dll" FileName="MICROS~1.DLL|Microsoft.VisualBasic.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\es\Microsoft.VisualBasic.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.resour_2_ces.dll" Component_="System.Windows.Forms.Design.resour_2_ces.dll" FileName="SYSTEM~3.DLL|System.Windows.Forms.Design.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\es\System.Windows.Forms.Design.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Primitives.re_2_sources.dll" Component_="System.Windows.Forms.Primitives.re_2_sources.dll" FileName="SYSTEM~4.DLL|System.Windows.Forms.Primitives.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\es\System.Windows.Forms.Primitives.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.resources.dll_2" Component_="System.Windows.Forms.resources.dll_2" FileName="SYSTEM~5.DLL|System.Windows.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\es\System.Windows.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="WindowsFormsIntegration.resources.dll_2" Component_="WindowsFormsIntegration.resources.dll_2" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\es\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
+    <ROW File="Microsoft.VisualBasic.Forms.resour_3_ces.dll" Component_="Microsoft.VisualBasic.Forms.resour_3_ces.dll" FileName="MICROS~1.DLL|Microsoft.VisualBasic.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\fr\Microsoft.VisualBasic.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.resour_3_ces.dll" Component_="System.Windows.Forms.Design.resour_3_ces.dll" FileName="SYSTEM~3.DLL|System.Windows.Forms.Design.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\fr\System.Windows.Forms.Design.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Primitives.re_3_sources.dll" Component_="System.Windows.Forms.Primitives.re_3_sources.dll" FileName="SYSTEM~4.DLL|System.Windows.Forms.Primitives.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\fr\System.Windows.Forms.Primitives.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.resources.dll_3" Component_="System.Windows.Forms.resources.dll_3" FileName="SYSTEM~5.DLL|System.Windows.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\fr\System.Windows.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="WindowsFormsIntegration.resources.dll_3" Component_="WindowsFormsIntegration.resources.dll_3" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\fr\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
+    <ROW File="Microsoft.VisualBasic.Forms.resour_4_ces.dll" Component_="Microsoft.VisualBasic.Forms.resour_4_ces.dll" FileName="MICROS~1.DLL|Microsoft.VisualBasic.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\it\Microsoft.VisualBasic.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.resour_4_ces.dll" Component_="System.Windows.Forms.Design.resour_4_ces.dll" FileName="SYSTEM~3.DLL|System.Windows.Forms.Design.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\it\System.Windows.Forms.Design.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Primitives.re_4_sources.dll" Component_="System.Windows.Forms.Primitives.re_4_sources.dll" FileName="SYSTEM~4.DLL|System.Windows.Forms.Primitives.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\it\System.Windows.Forms.Primitives.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.resources.dll_4" Component_="System.Windows.Forms.resources.dll_4" FileName="SYSTEM~5.DLL|System.Windows.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\it\System.Windows.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="WindowsFormsIntegration.resources.dll_4" Component_="WindowsFormsIntegration.resources.dll_4" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\it\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
+    <ROW File="Microsoft.VisualBasic.Forms.resour_5_ces.dll" Component_="Microsoft.VisualBasic.Forms.resour_5_ces.dll" FileName="MICROS~1.DLL|Microsoft.VisualBasic.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ja\Microsoft.VisualBasic.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.resour_5_ces.dll" Component_="System.Windows.Forms.Design.resour_5_ces.dll" FileName="SYSTEM~3.DLL|System.Windows.Forms.Design.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ja\System.Windows.Forms.Design.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Primitives.re_5_sources.dll" Component_="System.Windows.Forms.Primitives.re_5_sources.dll" FileName="SYSTEM~4.DLL|System.Windows.Forms.Primitives.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ja\System.Windows.Forms.Primitives.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.resources.dll_5" Component_="System.Windows.Forms.resources.dll_5" FileName="SYSTEM~5.DLL|System.Windows.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ja\System.Windows.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="WindowsFormsIntegration.resources.dll_5" Component_="WindowsFormsIntegration.resources.dll_5" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ja\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
+    <ROW File="Microsoft.VisualBasic.Forms.resour_6_ces.dll" Component_="Microsoft.VisualBasic.Forms.resour_6_ces.dll" FileName="MICROS~1.DLL|Microsoft.VisualBasic.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ko\Microsoft.VisualBasic.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.resour_6_ces.dll" Component_="System.Windows.Forms.Design.resour_6_ces.dll" FileName="SYSTEM~3.DLL|System.Windows.Forms.Design.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ko\System.Windows.Forms.Design.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Primitives.re_6_sources.dll" Component_="System.Windows.Forms.Primitives.re_6_sources.dll" FileName="SYSTEM~4.DLL|System.Windows.Forms.Primitives.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ko\System.Windows.Forms.Primitives.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.resources.dll_6" Component_="System.Windows.Forms.resources.dll_6" FileName="SYSTEM~5.DLL|System.Windows.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ko\System.Windows.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="WindowsFormsIntegration.resources.dll_6" Component_="WindowsFormsIntegration.resources.dll_6" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ko\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
+    <ROW File="Microsoft.VisualBasic.Forms.dll" Component_="Microsoft.VisualBasic.Forms.dll" FileName="MICRO~21.DLL|Microsoft.VisualBasic.Forms.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\Microsoft.VisualBasic.Forms.dll" SelfReg="false"/>
+    <ROW File="mscordaccore_amd64_amd64_8.0.1725.26602.dll" Component_="mscordaccore_amd64_amd64_8.0.1725.26602.dll" FileName="MSCORD~2.DLL|mscordaccore_amd64_amd64_8.0.1725.26602.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\mscordaccore_amd64_amd64_8.0.1725.26602.dll" SelfReg="false"/>
+    <ROW File="Microsoft.VisualBasic.Forms.resour_7_ces.dll" Component_="Microsoft.VisualBasic.Forms.resour_7_ces.dll" FileName="MICROS~1.DLL|Microsoft.VisualBasic.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\pl\Microsoft.VisualBasic.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.resour_7_ces.dll" Component_="System.Windows.Forms.Design.resour_7_ces.dll" FileName="SYSTEM~3.DLL|System.Windows.Forms.Design.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\pl\System.Windows.Forms.Design.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Primitives.re_7_sources.dll" Component_="System.Windows.Forms.Primitives.re_7_sources.dll" FileName="SYSTEM~4.DLL|System.Windows.Forms.Primitives.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\pl\System.Windows.Forms.Primitives.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.resources.dll_7" Component_="System.Windows.Forms.resources.dll_7" FileName="SYSTEM~5.DLL|System.Windows.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\pl\System.Windows.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="WindowsFormsIntegration.resources.dll_7" Component_="WindowsFormsIntegration.resources.dll_7" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\pl\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
+    <ROW File="Microsoft.VisualBasic.Forms.resour_8_ces.dll" Component_="Microsoft.VisualBasic.Forms.resour_8_ces.dll" FileName="MICROS~1.DLL|Microsoft.VisualBasic.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\pt-BR\Microsoft.VisualBasic.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.resour_8_ces.dll" Component_="System.Windows.Forms.Design.resour_8_ces.dll" FileName="SYSTEM~3.DLL|System.Windows.Forms.Design.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\pt-BR\System.Windows.Forms.Design.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Primitives.re_8_sources.dll" Component_="System.Windows.Forms.Primitives.re_8_sources.dll" FileName="SYSTEM~4.DLL|System.Windows.Forms.Primitives.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\pt-BR\System.Windows.Forms.Primitives.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.resources.dll_8" Component_="System.Windows.Forms.resources.dll_8" FileName="SYSTEM~5.DLL|System.Windows.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\pt-BR\System.Windows.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="WindowsFormsIntegration.resources.dll_8" Component_="WindowsFormsIntegration.resources.dll_8" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\pt-BR\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
+    <ROW File="Microsoft.VisualBasic.Forms.resour_9_ces.dll" Component_="Microsoft.VisualBasic.Forms.resour_9_ces.dll" FileName="MICROS~1.DLL|Microsoft.VisualBasic.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ru\Microsoft.VisualBasic.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.resour_9_ces.dll" Component_="System.Windows.Forms.Design.resour_9_ces.dll" FileName="SYSTEM~3.DLL|System.Windows.Forms.Design.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ru\System.Windows.Forms.Design.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Primitives.re_9_sources.dll" Component_="System.Windows.Forms.Primitives.re_9_sources.dll" FileName="SYSTEM~4.DLL|System.Windows.Forms.Primitives.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ru\System.Windows.Forms.Primitives.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.resources.dll_9" Component_="System.Windows.Forms.resources.dll_9" FileName="SYSTEM~5.DLL|System.Windows.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ru\System.Windows.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="WindowsFormsIntegration.resources.dll_9" Component_="WindowsFormsIntegration.resources.dll_9" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\ru\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
+    <ROW File="System.Design.dll" Component_="System.Design.dll" FileName="SYSTE~22.DLL|System.Design.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\System.Design.dll" SelfReg="false"/>
+    <ROW File="System.Drawing.Design.dll" Component_="System.Drawing.Design.dll" FileName="SYSTE~38.DLL|System.Drawing.Design.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\System.Drawing.Design.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.dll" Component_="System.Windows.Forms.Design.dll" FileName="SYST~171.DLL|System.Windows.Forms.Design.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\System.Windows.Forms.Design.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.Editors.dll" Component_="System.Windows.Forms.Design.Editors.dll" FileName="SYST~172.DLL|System.Windows.Forms.Design.Editors.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\System.Windows.Forms.Design.Editors.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.dll" Component_="System.Windows.Forms.dll" FileName="SYST~173.DLL|System.Windows.Forms.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\System.Windows.Forms.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Primitives.dll" Component_="System.Windows.Forms.Primitives.dll" FileName="SYST~174.DLL|System.Windows.Forms.Primitives.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\System.Windows.Forms.Primitives.dll" SelfReg="false"/>
+    <ROW File="Microsoft.VisualBasic.Forms.resour_10_ces.dll" Component_="Microsoft.VisualBasic.Forms.resour_10_ces.dll" FileName="MICROS~1.DLL|Microsoft.VisualBasic.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\tr\Microsoft.VisualBasic.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.resour_10_ces.dll" Component_="System.Windows.Forms.Design.resour_10_ces.dll" FileName="SYSTEM~3.DLL|System.Windows.Forms.Design.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\tr\System.Windows.Forms.Design.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Primitives.re_10_sources.dll" Component_="System.Windows.Forms.Primitives.re_10_sources.dll" FileName="SYSTEM~4.DLL|System.Windows.Forms.Primitives.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\tr\System.Windows.Forms.Primitives.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.resources.dll_10" Component_="System.Windows.Forms.resources.dll_10" FileName="SYSTEM~5.DLL|System.Windows.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\tr\System.Windows.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="WindowsFormsIntegration.resources.dll_10" Component_="WindowsFormsIntegration.resources._100_dll" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\tr\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
+    <ROW File="WindowsFormsIntegration.dll" Component_="WindowsFormsIntegration.dll" FileName="WINDOW~2.DLL|WindowsFormsIntegration.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\WindowsFormsIntegration.dll" SelfReg="false"/>
+    <ROW File="Microsoft.VisualBasic.Forms.resour_11_ces.dll" Component_="Microsoft.VisualBasic.Forms.resour_11_ces.dll" FileName="MICROS~1.DLL|Microsoft.VisualBasic.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\zh-Hans\Microsoft.VisualBasic.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.resour_11_ces.dll" Component_="System.Windows.Forms.Design.resour_11_ces.dll" FileName="SYSTEM~3.DLL|System.Windows.Forms.Design.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\zh-Hans\System.Windows.Forms.Design.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Primitives.re_11_sources.dll" Component_="System.Windows.Forms.Primitives.re_11_sources.dll" FileName="SYSTEM~4.DLL|System.Windows.Forms.Primitives.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\zh-Hans\System.Windows.Forms.Primitives.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.resources.dll_11" Component_="System.Windows.Forms.resources.dll_11" FileName="SYSTEM~5.DLL|System.Windows.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\zh-Hans\System.Windows.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="WindowsFormsIntegration.resources.dll_11" Component_="WindowsFormsIntegration.resources._101_dll" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\zh-Hans\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
+    <ROW File="Microsoft.VisualBasic.Forms.resour_12_ces.dll" Component_="Microsoft.VisualBasic.Forms.resour_12_ces.dll" FileName="MICROS~1.DLL|Microsoft.VisualBasic.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\zh-Hant\Microsoft.VisualBasic.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Design.resour_12_ces.dll" Component_="System.Windows.Forms.Design.resour_12_ces.dll" FileName="SYSTEM~3.DLL|System.Windows.Forms.Design.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\zh-Hant\System.Windows.Forms.Design.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.Primitives.re_12_sources.dll" Component_="System.Windows.Forms.Primitives.re_12_sources.dll" FileName="SYSTEM~4.DLL|System.Windows.Forms.Primitives.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\zh-Hant\System.Windows.Forms.Primitives.resources.dll" SelfReg="false"/>
+    <ROW File="System.Windows.Forms.resources.dll_12" Component_="System.Windows.Forms.resources.dll_12" FileName="SYSTEM~5.DLL|System.Windows.Forms.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\zh-Hant\System.Windows.Forms.resources.dll" SelfReg="false"/>
+    <ROW File="WindowsFormsIntegration.resources.dll_12" Component_="WindowsFormsIntegration.resources._102_dll" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\zh-Hant\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.AiRemoveFileComponent">
     <ROW RemoveFile="__1" Options="3"/>
@@ -1638,6 +1786,80 @@
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.PacketTransports.dll"/>
     <ROW Feature_="MainFeature" Component_="mscordaccore_amd64_amd64_9.0.625.26613.dll"/>
     <ROW Feature_="D09784F374E3A9F5FB0AFDC657291" Component_="D09784F374E3A9F5FB0AFDC657291"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Forms.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Primitives.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Forms.resour_1_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.resour_1_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Primitives.re_1_sources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.resources.dll_1"/>
+    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_1"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Forms.resour_2_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.resour_2_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Primitives.re_2_sources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.resources.dll_2"/>
+    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_2"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Forms.resour_3_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.resour_3_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Primitives.re_3_sources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.resources.dll_3"/>
+    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_3"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Forms.resour_4_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.resour_4_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Primitives.re_4_sources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.resources.dll_4"/>
+    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_4"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Forms.resour_5_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.resour_5_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Primitives.re_5_sources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.resources.dll_5"/>
+    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_5"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Forms.resour_6_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.resour_6_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Primitives.re_6_sources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.resources.dll_6"/>
+    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_6"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Forms.dll"/>
+    <ROW Feature_="MainFeature" Component_="mscordaccore_amd64_amd64_8.0.1725.26602.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Forms.resour_7_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.resour_7_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Primitives.re_7_sources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.resources.dll_7"/>
+    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_7"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Forms.resour_8_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.resour_8_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Primitives.re_8_sources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.resources.dll_8"/>
+    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_8"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Forms.resour_9_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.resour_9_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Primitives.re_9_sources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.resources.dll_9"/>
+    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources.dll_9"/>
+    <ROW Feature_="MainFeature" Component_="System.Design.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Drawing.Design.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.Editors.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Primitives.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Forms.resour_10_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.resour_10_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Primitives.re_10_sources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.resources.dll_10"/>
+    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources._100_dll"/>
+    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Forms.resour_11_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.resour_11_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Primitives.re_11_sources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.resources.dll_11"/>
+    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources._101_dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.VisualBasic.Forms.resour_12_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Design.resour_12_ces.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.Primitives.re_12_sources.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Windows.Forms.resources.dll_12"/>
+    <ROW Feature_="MainFeature" Component_="WindowsFormsIntegration.resources._102_dll"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="SystemFoldermsiexec.exe" SourcePath="&lt;AI_RES&gt;uninstall.ico" Index="0"/>

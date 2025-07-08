@@ -104,12 +104,11 @@ public class AccessTest : TestBase
         await using var client1 = await TestHelper.CreateClient(accessToken);
         Assert.AreEqual(50, client1.GetSessionStatus().SessionMaxTraffic);
 
-        VhLogger.Instance.LogDebug("Test: second try should get the AccessTrafficOverflow status.");
+        VhLogger.Instance.LogDebug("Test: Second try should get the AccessTrafficOverflow status.");
         await VhTestUtil.AssertEqualsWait(SessionErrorCode.AccessTrafficOverflow, async () => {
             await TestHelper.Test_Https(timeout: TimeSpan.FromMilliseconds(2000), throwError: false);
             return client1.GetLastSessionErrorCode();
         });
-
 
         // ----------
         // check: client must disconnect at hello on traffic overflow

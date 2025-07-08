@@ -258,16 +258,12 @@ internal class ChannelManager : IDisposable
         // remove all channels and dispose them
         lock (_channelListLock) {
             // dispose proxy channels
-            foreach (var channel in _proxyChannels)
-                channel.Dispose();
-            _proxyChannels.Clear();
+            foreach (var channel in _proxyChannels.ToArray())
+                RemoveChannel(channel);
 
             // dispose packet channels
-            foreach (var channel in _packetChannels) {
-                channel.PacketReceived -= _channelPacketReceived;
-                channel.Dispose();
-            }
-            _packetChannels.Clear();
+            foreach (var channel in _packetChannels.ToArray()) 
+                RemoveChannel(channel);
 
             // dispose all disposing channels
             foreach (var channel in _disposingChannels) {
@@ -275,11 +271,12 @@ internal class ChannelManager : IDisposable
                     packetChannel.PacketReceived -= _channelPacketReceived;
                 channel.Dispose();
             }
+
             _disposingChannels.Clear();
         }
 
         _cleanupJob.Dispose();
-        _disposed = true;
+        _disposed = true; // must be set after disposing channels
     }
 
 }

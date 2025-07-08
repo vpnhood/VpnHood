@@ -53,19 +53,12 @@ public class WebSocketUtils
         return headerLength;
     }
 
-    public class WebSocketHeader
-    {
-        public required int HeaderLength { get; init; }
-        public required long PayloadLength { get; init; }
-        public required byte[] MaskKey { get; init; }
-    }
-
-    public WebSocketHeader ParseWebSocketHeader(byte[] headerBuffer)
+    public static WebSocketHeader ParseWebSocketHeader(byte[] headerBuffer)
     {
         if (headerBuffer.Length < 2)
             throw new ArgumentException("Header buffer too small.");
 
-        var firstByte = headerBuffer[0];
+        //var firstByte = headerBuffer[0];
         var secondByte = headerBuffer[1];
 
         var isMasked = (secondByte & 0x80) != 0;

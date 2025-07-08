@@ -1,4 +1,4 @@
-# v7.1.718
+# v7.1.723
 * Improve: improve performance and stability
 * Fix: Windows: Windows 10 Compatibility
 

@@ -1,18 +1,19 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.Tunneling.WebSockets;
 using VpnHood.Test.Packets;
-using VpnHood.Core.Packets.Extensions;
 
 namespace VpnHood.Test.Tests;
 
@@ -255,4 +256,30 @@ public class TunnelTest : TestBase
         await cts.CancelAsync();
         tcpListener.Stop();
     }
+
+    [TestMethod]
+    public void WebSocketHeader_build_Client()
+    {
+        Span<byte> buffer = new byte[150];
+
+        for (var i = 0; i < 0xFFFF + 100; i++) {
+            WebSocketUtils.BuildWebSocketFrameHeader(buffer[..14], i, new byte[4]);
+            var header = WebSocketUtils.ParseWebSocketHeader(buffer);
+            Assert.AreEqual(i, header.FixedPayloadLength);
+        }
+    }
+
+    [TestMethod]
+    public void WebSocketHeader_build_Server()
+    {
+        Span<byte> buffer = new byte[150];
+
+        for (var i = 0; i < 0xFFFF + 100; i++) {
+            WebSocketUtils.BuildWebSocketFrameHeader(buffer[..14], i);
+            var header = WebSocketUtils.ParseWebSocketHeader(buffer);
+            Assert.AreEqual(i, header.FixedPayloadLength);
+        }
+
+    }
+
 }

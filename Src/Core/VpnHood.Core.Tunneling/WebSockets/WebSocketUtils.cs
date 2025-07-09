@@ -1,36 +1,35 @@
 ﻿// ReSharper disable RedundantCast
 namespace VpnHood.Core.Tunneling.WebSockets;
 
-public class WebSocketUtils
+public static class WebSocketUtils
 {
-    public static int BuildWebSocketFrameHeader(byte[] buffer, long payloadLength, byte[] maskKey)
+    // ------------------------ CLIENT -------------------------
+    public static void BuildWebSocketFrameHeader(Span<byte> buffer, long payloadLength, Span<byte> maskKey)
     {
-        if (buffer.Length < 14)
-            throw new ArgumentException("Buffer must be at least 14 bytes.");
-
+        if (buffer.Length != WebSocketHeader.FixHeaderLength)
+            throw new ArgumentException($"Buffer must be exactly {WebSocketHeader.FixHeaderLength} bytes.");
         if (maskKey.Length != 4)
             throw new ArgumentException("Mask key must be exactly 4 bytes.");
 
-        // Always FIN=1 (single frame), OPCODE=2 (binary)
+        // FIN=1, OPCODE=2 (binary), MASK=1
         buffer[0] = 0x82;
 
-        int headerLength;
-        switch (payloadLength)
-        {
+        int baseHeaderSize;
+        switch (payloadLength) {
             case <= 125:
-                buffer[1] = (byte)(0x80 | (byte)payloadLength); // MASK=1
-                headerLength = 2 + 4; // header + mask
+                buffer[1] = (byte)(0x80 | (byte)payloadLength);
+                baseHeaderSize = 2;
                 break;
 
             case <= 65535:
-                buffer[1] = (byte)(0x80 | 126); // MASK=1 + 126
+                buffer[1] = (byte)(0x80 | 126);
                 buffer[2] = (byte)((payloadLength >> 8) & 0xFF);
                 buffer[3] = (byte)(payloadLength & 0xFF);
-                headerLength = 4 + 4;
+                baseHeaderSize = 4;
                 break;
 
             default:
-                buffer[1] = (byte)(0x80 | 127); // MASK=1 + 127
+                buffer[1] = (byte)(0x80 | 127);
                 buffer[2] = (byte)((payloadLength >> 56) & 0xFF);
                 buffer[3] = (byte)((payloadLength >> 48) & 0xFF);
                 buffer[4] = (byte)((payloadLength >> 40) & 0xFF);
@@ -39,38 +38,73 @@ public class WebSocketUtils
                 buffer[7] = (byte)((payloadLength >> 16) & 0xFF);
                 buffer[8] = (byte)((payloadLength >> 8) & 0xFF);
                 buffer[9] = (byte)(payloadLength & 0xFF);
-                headerLength = 10 + 4;
+                baseHeaderSize = 10;
                 break;
         }
-
-        // Write the mask key after the header length section
-        var maskOffset = headerLength - 4;
-        buffer[maskOffset] = maskKey[0];
-        buffer[maskOffset + 1] = maskKey[1];
-        buffer[maskOffset + 2] = maskKey[2];
-        buffer[maskOffset + 3] = maskKey[3];
-
-        return headerLength;
+        // write mask key (4 bytes)
+        buffer.Slice(baseHeaderSize, 4).CopyTo(maskKey);
+        // fill remaining header up to fixed length with zeros
+        for (var i = baseHeaderSize + 4; i < WebSocketHeader.FixHeaderLength; i++)
+            buffer[i] = 0x00;
     }
 
-    public static WebSocketHeader ParseWebSocketHeader(byte[] headerBuffer)
+    // ------------------------ SERVER -------------------------
+    public static void BuildWebSocketFrameHeader(Span<byte> buffer, long payloadLength)
     {
-        if (headerBuffer.Length < 2)
+        if (buffer.Length != WebSocketHeader.FixHeaderLength)
+            throw new ArgumentException($"Buffer must be exactly {WebSocketHeader.FixHeaderLength} bytes.");
+
+        // FIN=1, OPCODE=2 (binary), MASK=0
+        buffer[0] = 0x82;
+
+        int baseHeaderSize;
+        switch (payloadLength) {
+            case <= 125:
+                buffer[1] = (byte)payloadLength;
+                baseHeaderSize = 2;
+                break;
+
+            case <= 65535:
+                buffer[1] = 126;
+                buffer[2] = (byte)((payloadLength >> 8) & 0xFF);
+                buffer[3] = (byte)(payloadLength & 0xFF);
+                baseHeaderSize = 4;
+                break;
+
+            default:
+                buffer[1] = 127;
+                buffer[2] = (byte)((payloadLength >> 56) & 0xFF);
+                buffer[3] = (byte)((payloadLength >> 48) & 0xFF);
+                buffer[4] = (byte)((payloadLength >> 40) & 0xFF);
+                buffer[5] = (byte)((payloadLength >> 32) & 0xFF);
+                buffer[6] = (byte)((payloadLength >> 24) & 0xFF);
+                buffer[7] = (byte)((payloadLength >> 16) & 0xFF);
+                buffer[8] = (byte)((payloadLength >> 8) & 0xFF);
+                buffer[9] = (byte)(payloadLength & 0xFF);
+                baseHeaderSize = 10;
+                break;
+        }
+        // no mask key for server, zero 4 bytes
+        for (var i = baseHeaderSize; i < baseHeaderSize + 4; i++)
+            buffer[i] = 0x00;
+        // fill remainder to fixed length
+        for (var i = baseHeaderSize + 4; i < WebSocketHeader.FixHeaderLength; i++)
+            buffer[i] = 0x00;
+    }
+
+    // ------------------------ PARSER -------------------------
+    public static WebSocketHeader ParseWebSocketHeader(Span<byte> headerBuffer)
+    {
+        if (headerBuffer.Length < WebSocketHeader.FixHeaderLength)
             throw new ArgumentException("Header buffer too small.");
 
-        //var firstByte = headerBuffer[0];
-        var secondByte = headerBuffer[1];
-
-        var isMasked = (secondByte & 0x80) != 0;
-        if (!isMasked)
-            throw new InvalidOperationException("Client frames must be masked (MASK bit not set).");
+        var second = headerBuffer[1];
+        var isMasked = (second & 0x80) != 0;
+        var lenIndicator = (byte)(second & 0x7F);
 
         long payloadLen;
         int offset;
-        var lenIndicator = (byte)(secondByte & 0x7F);
-
-        switch (lenIndicator)
-        {
+        switch (lenIndicator) {
             case <= 125:
                 payloadLen = lenIndicator;
                 offset = 2;
@@ -81,7 +115,7 @@ public class WebSocketUtils
                 offset = 4;
                 break;
 
-            case 127:
+            default:
                 payloadLen = ((long)headerBuffer[2] << 56) |
                              ((long)headerBuffer[3] << 48) |
                              ((long)headerBuffer[4] << 40) |
@@ -92,18 +126,15 @@ public class WebSocketUtils
                              headerBuffer[9];
                 offset = 10;
                 break;
-
-            default:
-                throw new InvalidOperationException("Invalid payload length indicator.");
         }
 
-        var maskKey = new byte[4];
-        Buffer.BlockCopy(headerBuffer, offset, maskKey, 0, 4);
-
-        return new WebSocketHeader {
-            HeaderLength = offset + 4,
-            PayloadLength = payloadLen,
-            MaskKey = maskKey
+        var header = new WebSocketHeader {
+            HeaderLength = (byte)(isMasked ? offset + 4 : offset),
+            PayloadLength = payloadLen + WebSocketHeader.FixHeaderLength
         };
+        if (isMasked)
+            headerBuffer.Slice(offset, 4).CopyTo(header.MaskKey.AsSpan());
+
+        return header;
     }
 }

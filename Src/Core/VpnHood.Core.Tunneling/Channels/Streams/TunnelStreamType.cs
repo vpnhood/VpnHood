@@ -7,5 +7,6 @@ public enum TunnelStreamType
 {
     Unknown,
     None,
-    Standard
+    Standard,
+    WebSocket
 }

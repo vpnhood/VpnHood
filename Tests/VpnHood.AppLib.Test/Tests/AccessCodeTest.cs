@@ -5,6 +5,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Tunneling.WebSockets;
 
 namespace VpnHood.AppLib.Test.Tests;
 

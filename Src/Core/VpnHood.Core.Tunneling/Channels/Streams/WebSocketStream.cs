@@ -11,7 +11,7 @@ namespace VpnHood.Core.Tunneling.Channels.Streams;
 public class WebSocketStream : ChunkStream, IPreservedChunkStream
 {
     private readonly bool _isServer;
-    private const int ChunkHeaderLength = 15; // maximum websocket frame header length with inline padding length
+    private const int ChunkHeaderLength = 14; // maximum websocket frame header length with inline padding length
     private int _remainingChunkBytes;
     private bool _finished;
     private Exception? _exception;
@@ -70,11 +70,11 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             var header = await ReadChunkHeaderAsync(cancellationToken).Vhc();
 
             // check the payload length
-            if (header.PayloadLength > int.MaxValue)
+            if (header.FixedPayloadLength > int.MaxValue)
                 throw new InvalidOperationException(
-                    $"WebSocket payload length is too big: {header.PayloadLength}. StreamId: {StreamId}");
+                    $"WebSocket payload length is too big: {header.FixedPayloadLength}. StreamId: {StreamId}");
             
-            _remainingChunkBytes = (int)header.PayloadLength;
+            _remainingChunkBytes = (int)header.FixedPayloadLength;
 
             // check if the stream has been closed
             if (_remainingChunkBytes == 0) {
@@ -224,7 +224,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     public override async Task<ChunkStream> CreateReuse()
     {
         // try to close stream if it is not closed yet
-        await DisposeAsync();
+        await DisposeAsync().Vhc();
 
         // check if there is exception in the stream
         if (_exception != null)

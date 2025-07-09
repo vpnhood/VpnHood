@@ -184,7 +184,7 @@ public class TunnelTest : TestBase
         using var client = await tcpListener.AcceptTcpClientAsync(cancellationToken);
 
         // Create a memory stream to store the incoming data
-        ChunkStream binaryStream = new BinaryStreamStandard(client.GetStream(), Guid.NewGuid().ToString(), true);
+        ChunkStream binaryStream = new WebSocketStream(client.GetStream(), Guid.NewGuid().ToString(), true, isServer: true);
         while (true) {
             // echo back the data to the client
             await binaryStream.CopyToAsync(binaryStream, cancellationToken);
@@ -241,7 +241,7 @@ public class TunnelTest : TestBase
         var stream = tcpClient.GetStream();
 
         // send data
-        await using var binaryStream = new BinaryStreamStandard(stream, Guid.NewGuid().ToString(), true);
+        await using var binaryStream = new WebSocketStream(stream, Guid.NewGuid().ToString(), true, isServer: false);
 
         // check stream by echo
         await CheckStreamEcho(binaryStream, cts.Token);

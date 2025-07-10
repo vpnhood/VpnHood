@@ -75,7 +75,7 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
             ? HttpResponseBuilder.Http01(keyAuthorization)
             : HttpResponseBuilder.NotFound();
 
-        await stream.WriteAsync(response, 0, response.Length, cancellationToken).Vhc();
+        await stream.WriteAsync(response, cancellationToken).Vhc();
         await stream.FlushAsync(cancellationToken).Vhc();
     }
 

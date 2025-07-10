@@ -2,41 +2,56 @@
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
+using VpnHood.Core.Tunneling.WebSockets;
 
 namespace VpnHood.Core.Server;
 
 internal static class HttpResponseBuilder
 {
-    public static byte[] Build(HttpResponseMessage httpResponse)
+    public static ReadOnlyMemory<byte> Build(HttpResponseMessage httpResponse)
     {
-        var context = httpResponse.Content.ReadAsStringAsync().Result;
         httpResponse.Headers.Date = DateTimeOffset.Now;
-        httpResponse.Content.Headers.ContentLength = context.Length;
 
-        var response =
-            $"HTTP/{httpResponse.Version.Major}.{httpResponse.Version.Minor} {(int)httpResponse.StatusCode} {httpResponse.ReasonPhrase}\r\n";
-        response = httpResponse.Headers.Aggregate(response,
-            (current, header) => current + $"{header.Key}: {string.Join(", ", header.Value)}\r\n");
-        response = httpResponse.Content.Headers.Aggregate(response,
-            (current, header) => current + $"{header.Key}: {string.Join(", ", header.Value)}\r\n");
-        response += "\r\n" + context;
-        return Encoding.UTF8.GetBytes(response);
+        // add headers
+        var responseBuilder = new StringBuilder();
+        responseBuilder.Append($"HTTP/{httpResponse.Version.Major}.{httpResponse.Version.Minor} {(int)httpResponse.StatusCode} {httpResponse.ReasonPhrase}\r\n");
+        foreach (var header in httpResponse.Headers)
+            responseBuilder.Append($"{header.Key}: {string.Join(", ", header.Value)}\r\n");
+
+        foreach (var header in httpResponse.Content.Headers)
+            responseBuilder.Append($"{header.Key}: {string.Join(", ", header.Value)}\r\n");
+
+        responseBuilder.Append("\r\n");
+
+        // add content if available
+        var context = httpResponse.Content.ReadAsStringAsync().Result;
+        responseBuilder.Append(context);
+
+        return Encoding.UTF8.GetBytes(responseBuilder.ToString());
     }
 
-    public static byte[] Ok()
+    public static ReadOnlyMemory<byte> Ok()
     {
         var response = new HttpResponseMessage(HttpStatusCode.OK);
         return Build(response);
     }
 
-    public static byte[] Unauthorized()
+    public static ReadOnlyMemory<byte> Ok(int contentLength)
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.OK);
+        response.Content.Headers.ContentLength = contentLength;
+        return Build(response);
+    }
+
+
+    public static ReadOnlyMemory<byte> Unauthorized()
     {
         var response = new HttpResponseMessage(HttpStatusCode.Unauthorized);
         response.Headers.WwwAuthenticate.Add(new AuthenticationHeaderValue("Bearer"));
         return Build(response);
     }
 
-    public static byte[] Http01(string keyAuthorization)
+    public static ReadOnlyMemory<byte> Http01(string keyAuthorization)
     {
         var response = new HttpResponseMessage(HttpStatusCode.OK);
         response.Headers.ConnectionClose = true;
@@ -44,17 +59,26 @@ internal static class HttpResponseBuilder
         return Build(response);
     }
 
-    public static byte[] BadRequest()
+    public static ReadOnlyMemory<byte> BadRequest()
     {
         var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
         response.Headers.ConnectionClose = true;
         return Build(response);
     }
 
-    public static byte[] NotFound()
+    public static ReadOnlyMemory<byte> NotFound()
     {
         var response = new HttpResponseMessage(HttpStatusCode.NotFound);
         response.Headers.ConnectionClose = true;
+        return Build(response);
+    }
+
+    public static ReadOnlyMemory<byte> WebSocketUpgrade(string webSocketKey)
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.SwitchingProtocols);
+        response.Headers.Add("Upgrade", "websocket");
+        response.Headers.Connection.Add("Upgrade");
+        response.Headers.Add("Sec-WebSocket-Accept", WebSocketUtils.ComputeWebSocketAccept(webSocketKey));
         return Build(response);
     }
 }

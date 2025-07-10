@@ -1,4 +1,8 @@
 ﻿// ReSharper disable RedundantCast
+
+using System.Security.Cryptography;
+using System.Text;
+
 namespace VpnHood.Core.Tunneling.WebSockets;
 
 public static class WebSocketUtils
@@ -136,5 +140,12 @@ public static class WebSocketUtils
             headerBuffer.Slice(offset, 4).CopyTo(header.MaskKey.AsSpan());
 
         return header;
+    }
+
+    public static string ComputeWebSocketAccept(string secWebSocketKey)
+    {
+        var combined = secWebSocketKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+        var sha1 = SHA1.HashData(Encoding.ASCII.GetBytes(combined));
+        return Convert.ToBase64String(sha1);
     }
 }

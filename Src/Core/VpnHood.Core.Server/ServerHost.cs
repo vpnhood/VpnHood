@@ -31,7 +31,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
     private bool _disposed;
     private readonly Job _cleanupConnectionsJob;
 
-    public const int MaxProtocolVersion = 8;
+    public const int MaxProtocolVersion = 9;
     public const int MinProtocolVersion = 6;
     public int MinClientProtocolVersion { get; set; } = 8;
     public bool IsIpV6Supported { get; set; }
@@ -243,27 +243,50 @@ public class ServerHost : IDisposable, IAsyncDisposable
                 await HttpUtil.ParseHeadersAsync(sslStream, cancellationToken).Vhc()
                 ?? throw new Exception("Connection has been closed before receiving any request.");
 
-            Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var binaryStreamType);
+            Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var streamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
             int.TryParse(headers.GetValueOrDefault("X-ProtocolVersion", "0"), out var protocolVersion);
+            var webSocketKey = headers.GetValueOrDefault("X-BinaryStream", "");
+            var httpMethod = headers.GetValueOrDefault(HttpUtil.HttpRequestKey, "").Split(" ").FirstOrDefault();
 
             // check version; Throw unauthorized to prevent fingerprinting
             if (protocolVersion is < MinProtocolVersion or > MaxProtocolVersion)
                 throw new UnauthorizedAccessException();
 
-            switch (binaryStreamType) {
-                // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+            switch (streamType) {
+                case TunnelStreamType.None:
+                    if (httpMethod != "POST")
+                        throw new Exception("Bad request");
+
+                    return new TcpClientStream(tcpClient, sslStream, streamId) {
+                        RequireHttpResponse = true
+                    };
+
+                case TunnelStreamType.WebSocket:
                 case TunnelStreamType.Standard:
+                    if (httpMethod != "POST")
+                        throw new Exception("Bad request");
+
                     return new TcpClientStream(tcpClient,
                         new BinaryStreamStandard(sslStream, streamId, useBuffer),
                         streamId, ReuseClientStream) {
                         RequireHttpResponse = true
                     };
 
-                case TunnelStreamType.None:
-                    return new TcpClientStream(tcpClient, sslStream, streamId) {
-                        RequireHttpResponse = true
-                    };
+                //case TunnelStreamType.WebSocket:
+                //    if (httpMethod != "GET")
+                //        throw new Exception("Bad request");
+
+                //    // reply HTTP response
+                //    var response = HttpResponseBuilder.WebSocketUpgrade(webSocketKey);
+                //    await sslStream.WriteAsync(response, cancellationToken).Vhc();
+
+                //    // create WebSocket stream
+                //    return new TcpClientStream(tcpClient,
+                //        new WebSocketStream(sslStream, streamId, useBuffer, isServer: true),
+                //        streamId, ReuseClientStream) {
+                //        RequireHttpResponse = true
+                //    };
 
                 case TunnelStreamType.Unknown:
                 default:

@@ -526,8 +526,8 @@ public class ClientServerTest : TestBase
         await Task.Delay(500); // wait for connection to get ready
         VhLogger.Instance.LogDebug("Test: Check the first HTTPS connection.");
         await TestHelper.Test_Https();
-        Assert.AreEqual(lastReusedConnectionSucceededCount + 1, client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
-        Assert.AreEqual(lastCreatedConnectionCount, client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
+        Assert.AreEqual(lastReusedConnectionSucceededCount, client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount);
+        Assert.AreEqual(lastCreatedConnectionCount + 1, client.GetSessionStatus().ConnectorStat.CreatedConnectionCount);
         lastCreatedConnectionCount = client.GetSessionStatus().ConnectorStat.CreatedConnectionCount;
         lastReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStat.ReusedConnectionSucceededCount;
         await VhTestUtil.AssertEqualsWait(1, () => client.GetSessionStatus().ConnectorStat.FreeConnectionCount);

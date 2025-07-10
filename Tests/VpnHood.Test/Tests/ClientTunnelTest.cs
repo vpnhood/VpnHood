@@ -137,10 +137,10 @@ public class ClientTunnelTest : TestBase
 
     private async Task AssertTunnel(ClientServerDom clientServerDom)
     {
-        await AssertInvalidTcpRequest(clientServerDom);
         await AssertValidTcp(clientServerDom);
         await AssertValidUdp(clientServerDom);
         await AssertValidPingV4(clientServerDom);
         await AssertValidPingV6(clientServerDom);
+        await AssertInvalidTcpRequest(clientServerDom); 
     }
 }

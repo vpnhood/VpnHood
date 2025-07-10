@@ -67,7 +67,7 @@ public static class StreamUtils
         return message;
     }
 
-    private static Memory<byte> ObjectToJsonBuffer(object obj)
+    public static Memory<byte> ObjectToJsonBuffer(object obj)
     {
         var jsonBuffer = JsonSerializer.SerializeToUtf8Bytes(obj);
         Memory<byte> buffer = new byte[4 + jsonBuffer.Length];

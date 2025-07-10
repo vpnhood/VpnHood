@@ -1,11 +1,11 @@
-﻿using System.Collections.Concurrent;
+﻿using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -51,14 +51,21 @@ internal class ConnectorServiceBase : IDisposable
     {
         const bool useBuffer = true;
         var streamType = _allowTcpReuse ? TunnelStreamType.Standard : TunnelStreamType.None;
+        var webSocketKey = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
 
         // write HTTP request
-        var header =
-            $"POST /{Guid.NewGuid()} HTTP/1.1\r\n" +
-            $"X-BinaryStream: {streamType}\r\n" +
-            $"X-Buffered: {useBuffer}\r\n" +
-            $"X-ProtocolVersion: {ProtocolVersion}\r\n" +
-            "\r\n";
+            var headerBuilder = new StringBuilder()
+                .Append($"POST /{Guid.NewGuid()} HTTP/1.1\r\n")
+                .Append("Content-Type: application/octet-stream\r\n")
+                .Append($"X-Buffered: {useBuffer}\r\n")
+                .Append($"X-ProtocolVersion: {ProtocolVersion}\r\n")
+                .Append($"X-BinaryStream: {streamType}\r\n")
+                .Append("Connection: Upgrade\r\n")
+                .Append("Sec-WebSocket-Version: 13\r\n")
+                .Append($"Sec-WebSocket-Key: {webSocketKey}\r\n")
+                .Append("\r\n");
+
+        var header = headerBuilder.ToString();
 
         // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();

@@ -580,6 +580,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             };
 
             using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).Vhc();
+            requestResult.ClientStream.PreventReuse(); // lets hello request stream not to be reused
 
             var helloResponse = requestResult.Response;
             if (helloResponse.ClientPublicAddress is null)

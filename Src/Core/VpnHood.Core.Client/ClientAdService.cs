@@ -39,9 +39,12 @@ public class ClientAdService(VpnHoodClient client)
         try {
             return await ShowInterstitial(sessionId, cancellationToken);
         }
+        catch (ShowAdNoUiException) {
+            throw; // No UI exception should be propagated and prevent session start
+        }
         // ignore exception for flexible ad if load failed
-        catch (LoadAdException ex) {
-            VhLogger.Instance.LogInformation(ex, "Could not load any interstitial ad.");
+        catch (Exception ex) {
+            VhLogger.Instance.LogInformation(ex, "Could not show any interstitial ad.");
             return null;
         }
     }

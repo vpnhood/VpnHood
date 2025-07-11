@@ -95,19 +95,20 @@ public class AppAdService(
     private async Task<AdResult> ShowAd(AppCompositeAdService appCompositeAdService,
         IUiContext uiContext, string sessionId, bool allowOverVpn, CancellationToken cancellationToken)
     {
+        string? countryCode =  null;
         try {
             // don't use VPN for the ad
             device.TryBindProcessToVpn(allowOverVpn);
-            var countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
+            countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
             var result =  await ShowAdInternal(appCompositeAdService, uiContext, sessionId, countryCode, cancellationToken);
             
-            var trackEvent = AppTrackerBuilder.BuildShowAdStatus(result.NetworkName ?? "UnknownNetwork", countryCode, 
-                errorMessage: null);
+            var trackEvent = AppTrackerBuilder.BuildShowAdOk(adNetwork: result.NetworkName, countryCode: countryCode);
             _ = TryRestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
             return result;
         }
         catch (Exception ex) {
-            var trackEvent = AppTrackerBuilder.BuildShowAdFailed(ex.Message);
+            var adNetwork = ex is ShowAdException showAdException ? showAdException.AdNetworkName : null;
+            var trackEvent = AppTrackerBuilder.BuildShowAdFailed(adNetwork: adNetwork, errorMessage: ex.Message, countryCode: countryCode);
             _ = TryRestoreProcessVpn(trackEvent, TimeSpan.Zero, cancellationToken);
             throw;
         }

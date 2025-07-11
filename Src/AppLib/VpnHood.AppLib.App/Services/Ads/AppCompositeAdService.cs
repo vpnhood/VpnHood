@@ -86,7 +86,8 @@ internal class AppCompositeAdService
                 throw; // do not report cancellation
             }
             catch (Exception ex) {
-                _ = _tracker?.TryTrack(AppTrackerBuilder.BuildShowAdStatus(adProviderItem.Name, countryCode, ex.Message));
+                _ = _tracker?.TryTrack(AppTrackerBuilder.BuildLoadAdFailed(
+                    adNetwork: adProviderItem.Name, errorMessage: ex.Message, countryCode: countryCode));
                 providerExceptions.Add((adProviderItem.Name, ex));
                 VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.", adProviderItem.Name);
             }
@@ -142,9 +143,7 @@ internal class AppCompositeAdService
         }
         catch (Exception ex) {
             await VerifyActiveUi();
-
-            // let's treat unknown error same as LoadException in this version
-            throw new LoadAdException("Could not show any ad.", ex);
+            throw new ShowAdException("Could not show any ad.", ex) { AdNetworkName = _loadedAdProviderItem.Name };
         }
         finally {
             _loadedAdProviderItem = null;

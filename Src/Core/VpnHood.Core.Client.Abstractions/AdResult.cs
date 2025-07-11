@@ -3,5 +3,5 @@
 public class AdResult
 {
     public required string? AdData { get; init; }
-    public required string? NetworkName { get; init; }
+    public required string NetworkName { get; init; }
 }

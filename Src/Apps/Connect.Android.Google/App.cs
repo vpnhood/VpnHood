@@ -66,15 +66,16 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         items.Add(new AppAdProviderItem {
             AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialAdUnitId),
-            ExcludeCountryCodes = ["CN"],
+            ExcludeCountryCodes = ["CN", "RU"],
             ProviderName = "AdMob"
         });
 
         var initializeTimeout = TimeSpan.FromSeconds(5);
         if (InMobiAdProvider.IsAndroidVersionSupported)
             items.Add(new AppAdProviderItem {
-                AdProvider = InMobiAdProvider.Create(appConfigs.InmobiAccountId, appConfigs.InmobiPlacementId,
-                    initializeTimeout, appConfigs.InmobiIsDebugMode),
+                AdProvider = InMobiAdProvider.Create(
+                    appConfigs.InmobiAccountId, appConfigs.InmobiPlacementId, initializeTimeout, appConfigs.InmobiIsDebugMode),
+                ExcludeCountryCodes = ["CN", "RU"],
                 ProviderName = "InMobi"
             });
 
@@ -88,13 +89,13 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         items.Add(new AppAdProviderItem {
             AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialNoVideoAdUnitId),
-            ExcludeCountryCodes = ["CN"],
+            ExcludeCountryCodes = ["CN", "RU"],
             ProviderName = "AdMob-NoVideo"
         });
 
         items.Add(new AppAdProviderItem {
             AdProvider = AdMobRewardedAdProvider.Create(appConfigs.AdMobRewardedAdUnitId),
-            ExcludeCountryCodes = ["CN"],
+            ExcludeCountryCodes = ["CN", "RU"],
             ProviderName = "AdMob-Rewarded"
         });
 

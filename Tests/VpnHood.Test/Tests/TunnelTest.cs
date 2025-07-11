@@ -227,7 +227,7 @@ public class TunnelTest : TestBase
 
 
     [TestMethod]
-    public async Task ChunkStream_Binary()
+    public async Task ChunkStream_WebSocket()
     {
         // create server
         var tcpListener = new TcpListener(IPAddress.Loopback, 0);

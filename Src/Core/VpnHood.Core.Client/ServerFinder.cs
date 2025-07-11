@@ -230,7 +230,8 @@ public class ServerFinder(
         connector.Init(
             protocolVersion: connector.ProtocolVersion, serverSecret: null,
             requestTimeout: serverQueryTimeout,
-            tcpReuseTimeout: TimeSpan.Zero);
+            tcpReuseTimeout: TimeSpan.Zero,
+            useWebSocket: false);
         return connector;
     }
 }

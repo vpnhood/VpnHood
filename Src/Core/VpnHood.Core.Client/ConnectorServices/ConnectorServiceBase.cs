@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -13,17 +14,20 @@ using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client.ConnectorServices;
 
 internal class ConnectorServiceBase : IDisposable
 {
+    private const bool UseBuffer = true;
     private readonly ISocketFactory _socketFactory;
     private readonly ConcurrentQueue<ClientStreamItem> _freeClientStreams = new();
     private readonly HashSet<IClientStream> _sharedClientStream = new(50); // for preventing reuse
     private readonly Job _cleanupJob;
     private int _isDisposed;
     private bool _allowTcpReuse;
+    private bool _useWebSocket;
 
     public ConnectorEndPointInfo EndPointInfo { get; }
     public ClientConnectorStat Stat { get; }
@@ -40,46 +44,115 @@ internal class ConnectorServiceBase : IDisposable
         _cleanupJob = new Job(Cleanup, "ConnectorCleanup");
     }
 
-    protected void Init(int protocolVersion, byte[]? serverSecret, TimeSpan tcpReuseTimeout)
+    protected void Init(int protocolVersion, byte[]? serverSecret, TimeSpan tcpReuseTimeout, bool useWebSocket)
     {
         ProtocolVersion = protocolVersion;
         TcpReuseTimeout = tcpReuseTimeout;
+        _useWebSocket = useWebSocket;
     }
+
+    private static string BuildPostRequest(TunnelStreamType streamType, int protocolVersion)
+    {
+        // write HTTP request
+        var headerBuilder = new StringBuilder()
+            .Append($"POST /{Guid.NewGuid()} HTTP/1.1\r\n")
+            .Append("Content-Type: application/octet-stream\r\n")
+            .Append($"X-Buffered: {UseBuffer}\r\n")
+            .Append($"X-ProtocolVersion: {protocolVersion}\r\n")
+            .Append($"X-BinaryStream: {streamType}\r\n") //todo
+            .Append("\r\n");
+
+        var header = headerBuilder.ToString();
+        return header;
+    }
+
+    private async Task<IClientStream> CreateWebSocketClientStream(TcpClient tcpClient, Stream sslStream,
+        string streamId, CancellationToken cancellationToken)
+    {
+        var webSocketKey = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+
+        // write HTTP request
+        var headerBuilder = new StringBuilder()
+            .Append($"GET /{Guid.NewGuid()} HTTP/1.1\r\n")
+            .Append("Content-Type: application/octet-stream\r\n")
+            .Append($"X-Buffered: {UseBuffer}\r\n")
+            .Append($"X-ProtocolVersion: {ProtocolVersion}\r\n")
+            .Append($"X-BinaryStream: {TunnelStreamType.WebSocket}\r\n")
+            .Append("Upgrade: websocket\r\n")
+            .Append("Connection: Upgrade\r\n")
+            .Append("Sec-WebSocket-Version: 13\r\n")
+            .Append($"Sec-WebSocket-Key: {webSocketKey}\r\n")
+            .Append("\r\n");
+
+        // Send header and wait for its response
+        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(headerBuilder.ToString()), cancellationToken).Vhc();
+
+        // wait for response and websocket upgrade if needed before sending any data because GET can not have body
+        var responseMessage = await HttpUtil.ReadResponse(sslStream, cancellationToken).Vhc();
+        if (responseMessage.StatusCode != HttpStatusCode.SwitchingProtocols)
+            throw new Exception("Unexpected response.");
+
+        // create a client stream
+        var webSocketStream = new WebSocketStream(sslStream, streamId, UseBuffer, isServer: false);
+        var clientStream = new TcpClientStream(tcpClient, webSocketStream, streamId,
+            _allowTcpReuse ? ClientStreamReuseCallback : null);
+        clientStream.RequireHttpResponse = false;
+
+        // If reuse is allowed, add the client stream to the shared collection
+        if (_allowTcpReuse) {
+            lock (_sharedClientStream)
+                _sharedClientStream.Add(clientStream);
+        }
+
+        return clientStream;
+    }
+
+    private async Task<IClientStream> CreateSimpleClientStream(TcpClient tcpClient, Stream sslStream,
+        string streamId, CancellationToken cancellationToken)
+    {
+        // write HTTP request
+        var header = BuildPostRequest(TunnelStreamType.None, ProtocolVersion);
+
+        // Send header and wait for its response
+        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
+
+        // create a client stream
+        var clientStream = new TcpClientStream(tcpClient, sslStream, streamId);
+        clientStream.RequireHttpResponse = true;
+        return clientStream;
+    }
+
+    private async Task<IClientStream> CreateStandardClientStream(TcpClient tcpClient, Stream sslStream,
+        string streamId, CancellationToken cancellationToken)
+    {
+        // write HTTP request
+        var header = BuildPostRequest(TunnelStreamType.Standard, ProtocolVersion);
+
+        // Send header and wait for its response
+        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
+
+        // create a client stream
+        var standardStream = new BinaryStreamStandard(sslStream, streamId, UseBuffer);
+        var clientStream = new TcpClientStream(tcpClient, standardStream, streamId, ClientStreamReuseCallback);
+        clientStream.RequireHttpResponse = true;
+        return clientStream;
+    }
+
+
 
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream,
         string streamId, CancellationToken cancellationToken)
     {
-        const bool useBuffer = true;
-        var streamType = _allowTcpReuse ? TunnelStreamType.Standard : TunnelStreamType.None;
-        var webSocketKey = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        // WebSocket
+        if (_useWebSocket)
+            return await CreateWebSocketClientStream(tcpClient, sslStream, streamId, cancellationToken);
 
-        // write HTTP request
-            var headerBuilder = new StringBuilder()
-                .Append($"POST /{Guid.NewGuid()} HTTP/1.1\r\n")
-                .Append("Content-Type: application/octet-stream\r\n")
-                .Append($"X-Buffered: {useBuffer}\r\n")
-                .Append($"X-ProtocolVersion: {ProtocolVersion}\r\n")
-                .Append($"X-BinaryStream: {streamType}\r\n")
-                .Append("Connection: Upgrade\r\n")
-                .Append("Sec-WebSocket-Version: 13\r\n")
-                .Append($"Sec-WebSocket-Key: {webSocketKey}\r\n")
-                .Append("\r\n");
+        // Standard
+        if (_allowTcpReuse)
+            return await CreateStandardClientStream(tcpClient, sslStream, streamId, cancellationToken);
 
-        var header = headerBuilder.ToString();
-
-        // Send header and wait for its response
-        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
-        var clientStream = streamType == TunnelStreamType.None
-            ? new TcpClientStream(tcpClient, sslStream, streamId)
-            : new TcpClientStream(tcpClient, new BinaryStreamStandard(sslStream, streamId, useBuffer), streamId, ClientStreamReuseCallback);
-
-        // add to sharable client stream for disposal
-        if (clientStream.Stream is BinaryStreamStandard)
-            lock (_sharedClientStream)
-                _sharedClientStream.Add(clientStream);
-
-        clientStream.RequireHttpResponse = true;
-        return clientStream;
+        // Simple
+        return await CreateSimpleClientStream(tcpClient, sslStream, streamId, cancellationToken);
     }
 
     protected async Task<IClientStream> GetTlsConnectionToServer(string streamId, CancellationToken cancellationToken)

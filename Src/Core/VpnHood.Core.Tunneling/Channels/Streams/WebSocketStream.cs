@@ -42,7 +42,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         CancellationToken cancellationToken = default)
     {
         if (IsDisposed)
-            throw new ObjectDisposedException(nameof(BinaryStreamStandard));
+            throw new ObjectDisposedException(nameof(WebSocketStream));
 
         try {
             // support zero length buffer. It should just call the base stream write
@@ -104,7 +104,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         CancellationToken cancellationToken = default)
     {
         if (IsDisposed)
-            throw new ObjectDisposedException(nameof(BinaryStreamStandard));
+            throw new ObjectDisposedException(nameof(WebSocketStream));
 
         try {
             // support zero length buffer. It should just call the base stream write
@@ -124,7 +124,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     public async ValueTask WritePreservedAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (IsDisposed)
-            throw new ObjectDisposedException(nameof(BinaryStreamStandard));
+            throw new ObjectDisposedException(nameof(WebSocketStream));
 
         try {
             // should not write a zero chunk if caller data is zero
@@ -147,7 +147,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             throw new ArgumentException("Buffer length is less than required preserved header length.", nameof(buffer));
 
         // create the chunk header
-        BuildHeader(buffer.Span[..ChunkHeaderLength], buffer.Length, GenerateNewMaskKey(stackalloc byte[4]));
+        BuildHeader(buffer.Span[..ChunkHeaderLength], buffer.Length - PreserveWriteBufferLength, GenerateNewMaskKey(stackalloc byte[4]));
 
         // write the buffer
         await SourceStream.WriteAsync(buffer, cancellationToken).Vhc();
@@ -239,7 +239,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         if (!CanReuse)
             throw new InvalidOperationException("Can not reuse the stream.");
 
-        // create a new BinaryStreamStandard with the same source stream and stream id
+        // create a new WebSocketStream with the same source stream and stream id
         return new WebSocketStream(SourceStream, StreamId, ReusedCount + 1, isServer: _isServer);
     }
 

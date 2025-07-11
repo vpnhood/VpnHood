@@ -262,7 +262,6 @@ public class ServerHost : IDisposable, IAsyncDisposable
                         RequireHttpResponse = true
                     };
 
-                case TunnelStreamType.WebSocket:
                 case TunnelStreamType.Standard:
                     if (httpMethod != "POST")
                         throw new Exception("Bad request");
@@ -273,20 +272,20 @@ public class ServerHost : IDisposable, IAsyncDisposable
                         RequireHttpResponse = true
                     };
 
-                //case TunnelStreamType.WebSocket:
-                //    if (httpMethod != "GET")
-                //        throw new Exception("Bad request");
+                case TunnelStreamType.WebSocket:
+                    if (httpMethod != "GET")
+                        throw new Exception("Bad request");
 
-                //    // reply HTTP response
-                //    var response = HttpResponseBuilder.WebSocketUpgrade(webSocketKey);
-                //    await sslStream.WriteAsync(response, cancellationToken).Vhc();
+                    // reply HTTP response
+                    var response = HttpResponseBuilder.WebSocketUpgrade(webSocketKey);
+                    await sslStream.WriteAsync(response, cancellationToken).Vhc();
 
-                //    // create WebSocket stream
-                //    return new TcpClientStream(tcpClient,
-                //        new WebSocketStream(sslStream, streamId, useBuffer, isServer: true),
-                //        streamId, ReuseClientStream) {
-                //        RequireHttpResponse = true
-                //    };
+                    // create WebSocket stream
+                    return new TcpClientStream(tcpClient,
+                        new WebSocketStream(sslStream, streamId, useBuffer, isServer: true),
+                        streamId, ReuseClientStream) {
+                        RequireHttpResponse = false // Upgrade response has been already sent
+                    };
 
                 case TunnelStreamType.Unknown:
                 default:

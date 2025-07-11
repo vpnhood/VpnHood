@@ -25,10 +25,10 @@ internal class ConnectorService(
 
     public TimeSpan RequestTimeout { get; private set; } = requestTimeout;
 
-    public void Init(int protocolVersion, byte[]? serverSecret, TimeSpan requestTimeout, TimeSpan tcpReuseTimeout)
+    public void Init(int protocolVersion, byte[]? serverSecret, TimeSpan requestTimeout, TimeSpan tcpReuseTimeout, bool useWebSocket)
     {
         RequestTimeout = requestTimeout;
-        base.Init(protocolVersion, serverSecret, tcpReuseTimeout);
+        base.Init(protocolVersion, serverSecret, tcpReuseTimeout, useWebSocket && protocolVersion >= 9);
     }
 
     public async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request, CancellationToken cancellationToken)

@@ -31,7 +31,7 @@ namespace VpnHood.Core.Client;
 
 public class VpnHoodClient : IDisposable, IAsyncDisposable
 {
-    private const int MaxProtocolVersion = 8;
+    private const int MaxProtocolVersion = 9;
     private const int MinProtocolVersion = 4;
     private bool _disposedInternal;
     private bool _disposed;
@@ -592,7 +592,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 helloResponse.ProtocolVersion,
                 requestTimeout: Debugger.IsAttached ? VhUtils.DebuggerTimeout : helloResponse.RequestTimeout,
                 tcpReuseTimeout: helloResponse.TcpReuseTimeout,
-                serverSecret: helloResponse.ServerSecret);
+                serverSecret: helloResponse.ServerSecret,
+                useWebSocket: true);
 
             // log response
             VhLogger.Instance.LogInformation(GeneralEventId.Session,

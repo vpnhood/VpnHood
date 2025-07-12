@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Net;
+using System.Net.Security;
 using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -17,7 +18,7 @@ internal class ConnectorService(
     ConnectorEndPointInfo endPointInfo,
     ISocketFactory socketFactory,
     TimeSpan requestTimeout,
-    bool allowTcpReuse = true)
+    bool allowTcpReuse)
     : ConnectorServiceBase(endPointInfo, socketFactory, allowTcpReuse)
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -57,7 +58,7 @@ internal class ConnectorService(
         return ret;
     }
 
-    private async Task<ConnectorRequestResult<T>> SendRequest<T>(byte[] request, string requestId,
+    private async Task<ConnectorRequestResult<T>> SendRequest<T>(ReadOnlyMemory<byte> request, string requestId,
         CancellationToken cancellationToken)
         where T : SessionResponse
     {
@@ -94,12 +95,13 @@ internal class ConnectorService(
         }
 
         // create a new connection
-        clientStream = await GetTlsConnectionToServer(requestId + ":tunnel", cancellationToken).Vhc();
+        clientStream = await GetTlsConnectionToServer(requestId + ":tunnel", request.Length, cancellationToken).Vhc();
 
         // send request
         try {
             // send the request
             await clientStream.Stream.WriteAsync(request, cancellationToken).Vhc();
+            await clientStream.Stream.FlushAsync(cancellationToken);
 
             // parse the HTTP request
             if (clientStream.RequireHttpResponse) {

@@ -556,7 +556,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 },
                 socketFactory: SocketFactory,
                 requestTimeout: _tcpConnectTimeout,
-                allowTcpReuse: AllowTcpReuse);
+                allowTcpReuse: false);
 
             // send hello request
             var clientInfo = new ClientInfo {
@@ -581,6 +581,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).Vhc();
             requestResult.ClientStream.PreventReuse(); // lets hello request stream not to be reused
+            _connectorService.AllowTcpReuse = AllowTcpReuse; // after hello, we can reuse, as the other connections can use websocket
 
             var helloResponse = requestResult.Response;
             if (helloResponse.ClientPublicAddress is null)

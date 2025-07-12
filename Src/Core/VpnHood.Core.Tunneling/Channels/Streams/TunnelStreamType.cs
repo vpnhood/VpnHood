@@ -8,5 +8,6 @@ public enum TunnelStreamType
     Unknown,
     None,
     Standard,
-    WebSocket
+    WebSocket,
+    WebSocketNoHandshake
 }

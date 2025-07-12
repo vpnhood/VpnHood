@@ -51,15 +51,19 @@ internal class ConnectorServiceBase : IDisposable
         _useWebSocket = useWebSocket;
     }
 
-    private static string BuildPostRequest(TunnelStreamType streamType, int protocolVersion)
+    private static string BuildPostRequest(
+        string hostName, TunnelStreamType streamType, int protocolVersion, int contentLength)
     {
         // write HTTP request
         var headerBuilder = new StringBuilder()
             .Append($"POST /{Guid.NewGuid()} HTTP/1.1\r\n")
+            .Append($"Host: {hostName}\r\n")
+            .Append($"Content-Length: {contentLength}\r\n")
             .Append("Content-Type: application/octet-stream\r\n")
+            .Append("User-Agent: Hood\r\n")
             .Append($"X-Buffered: {UseBuffer}\r\n")
             .Append($"X-ProtocolVersion: {protocolVersion}\r\n")
-            .Append($"X-BinaryStream: {streamType}\r\n") //todo
+            .Append($"X-BinaryStream: {streamType}\r\n") 
             .Append("\r\n");
 
         var header = headerBuilder.ToString();
@@ -74,10 +78,9 @@ internal class ConnectorServiceBase : IDisposable
         // write HTTP request
         var headerBuilder = new StringBuilder()
             .Append($"GET /{Guid.NewGuid()} HTTP/1.1\r\n")
-            .Append("Content-Type: application/octet-stream\r\n")
+            .Append($"Host: {EndPointInfo.HostName}\r\n")
             .Append($"X-Buffered: {UseBuffer}\r\n")
             .Append($"X-ProtocolVersion: {ProtocolVersion}\r\n")
-            .Append($"X-BinaryStream: {TunnelStreamType.WebSocket}\r\n")
             .Append("Upgrade: websocket\r\n")
             .Append("Connection: Upgrade\r\n")
             .Append("Sec-WebSocket-Version: 13\r\n")
@@ -108,10 +111,10 @@ internal class ConnectorServiceBase : IDisposable
     }
 
     private async Task<IClientStream> CreateSimpleClientStream(TcpClient tcpClient, Stream sslStream,
-        string streamId, CancellationToken cancellationToken)
+        int contentLength, string streamId, CancellationToken cancellationToken)
     {
         // write HTTP request
-        var header = BuildPostRequest(TunnelStreamType.None, ProtocolVersion);
+        var header = BuildPostRequest(EndPointInfo.HostName, TunnelStreamType.None, ProtocolVersion, contentLength);
 
         // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
@@ -123,10 +126,10 @@ internal class ConnectorServiceBase : IDisposable
     }
 
     private async Task<IClientStream> CreateStandardClientStream(TcpClient tcpClient, Stream sslStream,
-        string streamId, CancellationToken cancellationToken)
+        int contentLength, string streamId, CancellationToken cancellationToken)
     {
         // write HTTP request
-        var header = BuildPostRequest(TunnelStreamType.Standard, ProtocolVersion);
+        var header = BuildPostRequest(EndPointInfo.HostName, TunnelStreamType.Standard, ProtocolVersion, contentLength: contentLength);
 
         // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
@@ -140,22 +143,21 @@ internal class ConnectorServiceBase : IDisposable
 
 
 
-    private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream,
-        string streamId, CancellationToken cancellationToken)
+    private async Task<IClientStream> CreateClientStream(string streamId, TcpClient tcpClient, Stream sslStream,
+        int contentLength, CancellationToken cancellationToken)
     {
         // WebSocket
         if (_useWebSocket)
             return await CreateWebSocketClientStream(tcpClient, sslStream, streamId, cancellationToken);
 
-        // Standard
         if (_allowTcpReuse)
-            return await CreateStandardClientStream(tcpClient, sslStream, streamId, cancellationToken);
+            return await CreateStandardClientStream(tcpClient, sslStream, contentLength, streamId, cancellationToken);
 
         // Simple
-        return await CreateSimpleClientStream(tcpClient, sslStream, streamId, cancellationToken);
+        return await CreateSimpleClientStream(tcpClient, sslStream, contentLength, streamId, cancellationToken);
     }
 
-    protected async Task<IClientStream> GetTlsConnectionToServer(string streamId, CancellationToken cancellationToken)
+    protected async Task<IClientStream> GetTlsConnectionToServer(string streamId, int contentLength, CancellationToken cancellationToken)
     {
         var tcpEndPoint = EndPointInfo.TcpEndPoint;
 
@@ -166,7 +168,7 @@ internal class ConnectorServiceBase : IDisposable
             VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "Establishing a new TCP to the Server... EndPoint: {EndPoint}",
                 VhLogger.Format(tcpEndPoint));
             await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();
-            return await GetTlsConnectionToServer(streamId, tcpClient, cancellationToken).Vhc();
+            return await GetTlsConnectionToServer(streamId,  tcpClient, contentLength, cancellationToken).Vhc();
         }
         catch {
             tcpClient.Dispose();
@@ -174,7 +176,8 @@ internal class ConnectorServiceBase : IDisposable
         }
     }
 
-    private async Task<IClientStream> GetTlsConnectionToServer(string streamId, TcpClient tcpClient, CancellationToken cancellationToken)
+    private async Task<IClientStream> GetTlsConnectionToServer(string streamId, TcpClient tcpClient, 
+        int contentLength, CancellationToken cancellationToken)
     {
         // Establish a TLS connection
         var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
@@ -189,7 +192,7 @@ internal class ConnectorServiceBase : IDisposable
             }, cancellationToken)
                 .Vhc();
 
-            var clientStream = await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken).Vhc();
+            var clientStream = await CreateClientStream(streamId, tcpClient, sslStream, contentLength, cancellationToken).Vhc();
             lock (Stat) Stat.CreatedConnectionCount++;
             return clientStream;
         }
@@ -290,7 +293,7 @@ internal class ConnectorServiceBase : IDisposable
         SslPolicyErrors sslPolicyErrors)
     {
         try {
-            if (certificate == null)
+            if (certificate == null || sslPolicyErrors == SslPolicyErrors.None)
                 return true;
 
             // just try to fix this unknown nasty issue on Android Parameter 'ctx' must be a valid pointer

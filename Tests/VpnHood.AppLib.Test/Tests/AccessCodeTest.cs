@@ -1,12 +1,13 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Net.Security;
+using System.Net.Sockets;
+using System.Security.Authentication;
 using System.Text;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Core.Tunneling.WebSockets;
-
 namespace VpnHood.AppLib.Test.Tests;
 
 
@@ -14,6 +15,7 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class AccessCodeTest : TestAppBase
 {
+
     [TestMethod]
     public async Task AaFoo()
     {

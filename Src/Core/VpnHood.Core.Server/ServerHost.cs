@@ -246,8 +246,11 @@ public class ServerHost : IDisposable, IAsyncDisposable
             Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var streamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
             int.TryParse(headers.GetValueOrDefault("X-ProtocolVersion", "0"), out var protocolVersion);
-            var webSocketKey = headers.GetValueOrDefault("X-BinaryStream", "");
+            var webSocketKey = headers.GetValueOrDefault("Sec-WebSocket-Key", "");
             var httpMethod = headers.GetValueOrDefault(HttpUtil.HttpRequestKey, "").Split(" ").FirstOrDefault();
+            var upgrade = headers.GetValueOrDefault("Upgrade", "");
+            if (upgrade.Equals("websocket", StringComparison.OrdinalIgnoreCase))
+                streamType = TunnelStreamType.WebSocket;
 
             // check version; Throw unauthorized to prevent fingerprinting
             if (protocolVersion is < MinProtocolVersion or > MaxProtocolVersion)
@@ -262,6 +265,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                         RequireHttpResponse = true
                     };
 
+                // obsoleted
                 case TunnelStreamType.Standard:
                     if (httpMethod != "POST")
                         throw new Exception("Bad request");
@@ -270,6 +274,17 @@ public class ServerHost : IDisposable, IAsyncDisposable
                         new BinaryStreamStandard(sslStream, streamId, useBuffer),
                         streamId, ReuseClientStream) {
                         RequireHttpResponse = true
+                    };
+
+                case TunnelStreamType.WebSocketNoHandshake:
+                    if (httpMethod != "POST")
+                        throw new Exception("Bad request");
+
+                    // create WebSocket stream without handshake
+                    return new TcpClientStream(tcpClient,
+                        new WebSocketStream(sslStream, streamId, useBuffer, isServer: true),
+                        streamId, ReuseClientStream) {
+                        RequireHttpResponse = false // Upgrade response has been already sent
                     };
 
                 case TunnelStreamType.WebSocket:
@@ -454,6 +469,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         var res = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
         if (res == 0)
             throw new Exception("ClientStream has been closed before reading the request code.");
+
 
         var requestCode = (RequestCode)buffer[0];
         switch (requestCode) {

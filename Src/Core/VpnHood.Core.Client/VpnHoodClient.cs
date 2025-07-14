@@ -327,7 +327,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private IpNetwork[] BuildVpnAdapterIncludeNetworks(IPAddress hostIpAddress)
+    private IpRangeOrderedList BuildVpnAdapterIncludeIpRanges(IPAddress hostIpAddress)
     {
         // Start with user VpnAdapterIncludeIpRanges
         var includeIpRanges = VpnAdapterIncludeIpRanges;
@@ -346,7 +346,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             new IpRange(_clientHost.CatcherAddressIpV6)
         ]);
 
-        return includeIpRanges.ToIpNetworks().ToArray(); //sort and unify
+        return includeIpRanges; //sort and unify
     }
 
     // WARNING: Performance Critical!
@@ -719,10 +719,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 }
             }
 
-            // disable IncludeIpRanges if it contains all networks
-            if (IncludeIpRanges.IsAll())
-                IncludeIpRanges = [];
-
             // Preparing tunnel
             VhLogger.Instance.LogInformation("Configuring Packet Channels...");
             _tunnel.RemoteMtu = helloResponse.Mtu;
@@ -743,13 +739,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 "Starting VpnAdapter... DnsServers: {DnsServers}, IncludeNetworks: {longIncludeNetworks}",
                 SessionInfo.DnsServers, longIncludeNetworks);
 
+            // Build the IncludeIpRanges for the VpnAdapter
+            var adapterIncludeRanges = BuildVpnAdapterIncludeIpRanges(_connectorService.EndPointInfo.TcpEndPoint.Address);
+
+            // sometimes packet goes directly to the adapter especially on windows, so we need to filter them
+            IncludeIpRanges = IncludeIpRanges.Intersect(adapterIncludeRanges);
+
             // Start the VpnAdapter
             var adapterOptions = new VpnAdapterOptions {
                 DnsServers = SessionInfo.DnsServers,
                 VirtualIpNetworkV4 = networkV4,
                 VirtualIpNetworkV6 = networkV6,
                 Mtu = helloResponse.Mtu - TunnelDefaults.MtuOverhead,
-                IncludeNetworks = BuildVpnAdapterIncludeNetworks(_connectorService.EndPointInfo.TcpEndPoint.Address),
+                IncludeNetworks = adapterIncludeRanges.ToIpNetworks().ToArray(),
                 SessionName = SessionName,
                 ExcludeApps = _excludeApps,
                 IncludeApps = _includeApps

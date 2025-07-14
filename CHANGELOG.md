@@ -1,6 +1,6 @@
 # v7.1.725
 * Feature: Support reserve proxies like Cloudflare
-* Improve: improve performance and stability
+* Improve: Performance and stability
 * Fix: Windows: Windows 10 Compatibility
 
 # v7.1.713

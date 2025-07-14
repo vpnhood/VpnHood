@@ -361,6 +361,10 @@ public class VpnHoodServer : IAsyncDisposable
         // exclude listening ip
         if (!netFilterOptions.IncludeLocalNetworkValue)
             netFilter.BlockedIpRanges = netFilter.BlockedIpRanges.Union(privateAddresses.Select(x => new IpRange(x)));
+
+        // log blocked ranges
+        VhLogger.Instance.LogDebug("BlockedIpRanges: {BlockedIpRanges}",
+            string.Join(",", netFilter.BlockedIpRanges));
     }
 
     private static int GetBestTcpBufferSize(long? totalMemory, int? configValue)

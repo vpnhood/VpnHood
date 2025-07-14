@@ -245,7 +245,7 @@ public class Session : IDisposable
             var ipeEndPointPair = ipPacket.GetEndPoints();
             LogTrack(ipPacket.Protocol, null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
             _filterReporter.Raise();
-            throw new NetFilterException("Invalid tunnel packet source ip.");
+            throw new NetFilterException($"Invalid tunnel packet source ip. SourceIp: {VhLogger.Format(ipPacket.SourceAddress)}");
         }
 
         // filter
@@ -254,7 +254,7 @@ public class Session : IDisposable
             var ipeEndPointPair = ipPacket.GetEndPoints();
             LogTrack(ipPacket.Protocol, null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
             _filterReporter.Raise();
-            throw new NetFilterException("Packet discarded due to the NetFilter's policies.");
+            throw new NetFilterException($"Packet discarded due to the NetFilter's policies. DestinationIp: {VhLogger.Format(ipPacket.DestinationAddress)}");
         }
 
         // send using tunnel or proxy
@@ -432,7 +432,7 @@ public class Session : IDisposable
         if (newEndPoint == null) {
             LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint, false, true, "NetFilter");
             _filterReporter.Raise();
-            throw new RequestBlockedException(clientStream.IpEndPointPair.RemoteEndPoint, this, request.RequestId);
+            throw new RequestBlockedException(request.DestinationEndPoint, this, request.RequestId);
         }
 
         request.DestinationEndPoint = newEndPoint;

@@ -168,7 +168,6 @@ public class AccessTokenService
 
         // add usage
         var accessTokenData = await GetInternal(tokenId).Vhc();
-        var sent = accessTokenData.Usage.Sent;
         accessTokenData.Usage.Sent += traffic.Sent;
         accessTokenData.Usage.Received += traffic.Received;
         accessTokenData.Usage.Version = 2;

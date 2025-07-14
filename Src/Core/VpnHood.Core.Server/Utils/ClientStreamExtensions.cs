@@ -1,5 +1,4 @@
-﻿using System.IO;
-using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.ClientStreams;
 

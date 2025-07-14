@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Core.Tunneling.WebSockets;
 
-public readonly struct WebSocketHeader()
+public readonly struct WebSocketHeader
 {
     public bool IsBinary { get; init; } 
     public bool IsText { get; init; } 

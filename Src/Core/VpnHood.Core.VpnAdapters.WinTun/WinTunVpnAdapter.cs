@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.IO.Compression;
 using System.Net;
 using System.Net.NetworkInformation;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using VpnHood.Core.Packets;
@@ -14,7 +13,6 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.WinTun.WinNative;
-using static VpnHood.Core.VpnAdapters.WinTun.WinNative.Win32IpHelper;
 
 namespace VpnHood.Core.VpnAdapters.WinTun;
 
@@ -175,6 +173,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         return AddRouteUsingNetsh(ipNetwork, cancellationToken);
     }
 
+    // ReSharper disable once UnusedMember.Local
     private uint GetAdapterIndex()
     {
         var networkInterface = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(x => x.Name == AdapterName);

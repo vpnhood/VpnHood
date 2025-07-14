@@ -110,25 +110,25 @@ public static class Win32IpHelper
         const int errorObjectAlreadyExists = 5010;
 
         if (ipNetwork.IsV4) {
-            var destinationPrefix = new Win32IpHelper.SOCKADDR_INET {
-                Ipv4 = new Win32IpHelper.SOCKADDR_IN {
+            var destinationPrefix = new SOCKADDR_INET {
+                Ipv4 = new SOCKADDR_IN {
                     sin_addr = BitConverter.ToUInt32(ipNetwork.Prefix.GetAddressBytes(), 0),
                     sin_family = (ushort)AddressFamily.InterNetwork
                 },
                 si_family = (ushort)AddressFamily.InterNetwork
             };
 
-            var nextHop = new Win32IpHelper.SOCKADDR_INET {
-                Ipv4 = new Win32IpHelper.SOCKADDR_IN {
+            var nextHop = new SOCKADDR_INET {
+                Ipv4 = new SOCKADDR_IN {
                     sin_addr = 0,
                     sin_family = (ushort)AddressFamily.InterNetwork
                 },
                 si_family = (ushort)AddressFamily.InterNetwork
             };
 
-            var row = new Win32IpHelper.MIB_IPFORWARD_ROW2 {
+            var row = new MIB_IPFORWARD_ROW2 {
                 InterfaceIndex = interfaceIndex,
-                DestinationPrefix = new Win32IpHelper.IP_ADDRESS_PREFIX {
+                DestinationPrefix = new IP_ADDRESS_PREFIX {
                     Prefix = destinationPrefix,
                     PrefixLength = (byte)Math.Clamp(ipNetwork.PrefixLength, 0, 32)
                 },
@@ -144,31 +144,31 @@ public static class Win32IpHelper
                 Immortal = true
             };
 
-            var result = Win32IpHelper.CreateIpForwardEntry2(ref row);
+            var result = CreateIpForwardEntry2(ref row);
             if (result != noError && result != errorObjectAlreadyExists)
                 throw new Win32Exception(result, $"Failed to add IPv4 route for {ipNetwork}");
         }
 
         if (ipNetwork.IsV6) {
-            var destinationPrefix = new Win32IpHelper.SOCKADDR_INET {
-                Ipv6 = new Win32IpHelper.SOCKADDR_IN6 {
+            var destinationPrefix = new SOCKADDR_INET {
+                Ipv6 = new SOCKADDR_IN6 {
                     sin6_addr = ToIN6_ADDR(ipNetwork.Prefix),
                     sin6_family = (ushort)AddressFamily.InterNetworkV6
                 },
                 si_family = (ushort)AddressFamily.InterNetworkV6
             };
 
-            var nextHop = new Win32IpHelper.SOCKADDR_INET {
-                Ipv6 = new Win32IpHelper.SOCKADDR_IN6 {
-                    sin6_addr = new Win32IpHelper.IN6_ADDR { lower = 0, upper = 0 },
+            var nextHop = new SOCKADDR_INET {
+                Ipv6 = new SOCKADDR_IN6 {
+                    sin6_addr = new IN6_ADDR { lower = 0, upper = 0 },
                     sin6_family = (ushort)AddressFamily.InterNetworkV6
                 },
                 si_family = (ushort)AddressFamily.InterNetworkV6
             };
 
-            var row = new Win32IpHelper.MIB_IPFORWARD_ROW2 {
+            var row = new MIB_IPFORWARD_ROW2 {
                 InterfaceIndex = interfaceIndex,
-                DestinationPrefix = new Win32IpHelper.IP_ADDRESS_PREFIX {
+                DestinationPrefix = new IP_ADDRESS_PREFIX {
                     Prefix = destinationPrefix,
                     PrefixLength = (byte)Math.Clamp(ipNetwork.PrefixLength, 0, 128)
                 },
@@ -184,7 +184,7 @@ public static class Win32IpHelper
                 Immortal = true
             };
 
-            var result = Win32IpHelper.CreateIpForwardEntry2(ref row);
+            var result = CreateIpForwardEntry2(ref row);
             if (result != noError && result != errorObjectAlreadyExists)
                 throw new Win32Exception(result, $"Failed to add IPv6 route for {ipNetwork}");
         }

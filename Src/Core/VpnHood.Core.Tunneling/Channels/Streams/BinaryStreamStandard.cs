@@ -7,6 +7,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels.Streams;
 
+[Obsolete("Use WebSocketStream")]
 public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
 {
     private const int ChunkHeaderLength = 4;

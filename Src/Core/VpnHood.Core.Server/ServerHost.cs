@@ -266,6 +266,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                     };
 
                 // obsoleted
+#pragma warning disable CS0618 // Type or member is obsolete
                 case TunnelStreamType.Standard:
                     if (httpMethod != "POST")
                         throw new Exception("Bad request");
@@ -275,6 +276,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                         streamId, ReuseClientStream) {
                         RequireHttpResponse = true
                     };
+#pragma warning restore CS0618 // Type or member is obsolete
 
                 case TunnelStreamType.WebSocketNoHandshake:
                     if (httpMethod != "POST")

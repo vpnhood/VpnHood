@@ -19,8 +19,10 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     private ValueTask _writeTask;
     private bool _isConnectionClosed;
     private readonly Memory<byte> _readChunkHeaderBuffer = new byte[ChunkHeaderLength];
+    private readonly Memory<byte> _writeChunkHeaderBuffer = new byte[ChunkHeaderLength];
     private Task? _closeStreamTask;
     private readonly object _closeStreamLock = new();
+    private int _isDisposed;
     public override bool CanReuse => !_isConnectionClosed && _exception == null && AllowReuse;
     public int PreserveWriteBufferLength => ChunkHeaderLength;
 
@@ -41,8 +43,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer,
         CancellationToken cancellationToken = default)
     {
-        if (IsDisposed)
-            throw new ObjectDisposedException(nameof(WebSocketStream));
+        ObjectDisposedException.ThrowIf(IsDisposed || _isDisposed == 1, this);
 
         try {
             // support zero length buffer. It should just call the base stream write
@@ -70,11 +71,11 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             var header = await ReadChunkHeaderAsync(cancellationToken).Vhc();
 
             // check the payload length
-            if (header.FixedPayloadLength > int.MaxValue)
+            if (header.PayloadLength > int.MaxValue)
                 throw new InvalidOperationException(
-                    $"WebSocket payload length is too big: {header.FixedPayloadLength}. StreamId: {StreamId}");
-            
-            _remainingChunkBytes = (int)header.FixedPayloadLength;
+                    $"WebSocket payload length is too big: {header.PayloadLength}. StreamId: {StreamId}");
+
+            _remainingChunkBytes = (int)header.PayloadLength;
 
             // check if the stream has been closed
             if (_remainingChunkBytes == 0) {
@@ -85,8 +86,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
         // Determine the number of bytes to read based on the remaining chunk size and buffer length
         var bytesToRead = Math.Min(_remainingChunkBytes, buffer.Length);
-        var bytesRead = await SourceStream.ReadAsync(buffer[..bytesToRead], cancellationToken)
-            .Vhc();
+        var bytesRead = await SourceStream.ReadAsync(buffer[..bytesToRead], cancellationToken).Vhc();
 
         // if bytesRead is 0 and _remainingChunkBytes is not 0, it means the stream has been closed unexpectedly
         if (bytesRead == 0)
@@ -103,8 +103,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer,
         CancellationToken cancellationToken = default)
     {
-        if (IsDisposed)
-            throw new ObjectDisposedException(nameof(WebSocketStream));
+        ObjectDisposedException.ThrowIf(IsDisposed || _isDisposed == 1, this);
 
         try {
             // support zero length buffer. It should just call the base stream write
@@ -123,8 +122,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
     public async ValueTask WritePreservedAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        if (IsDisposed)
-            throw new ObjectDisposedException(nameof(WebSocketStream));
+        ObjectDisposedException.ThrowIf(IsDisposed || _isDisposed == 1, this);
 
         try {
             // should not write a zero chunk if caller data is zero
@@ -147,10 +145,17 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             throw new ArgumentException("Buffer length is less than required preserved header length.", nameof(buffer));
 
         // create the chunk header
-        BuildHeader(buffer.Span[..ChunkHeaderLength], buffer.Length - PreserveWriteBufferLength, GenerateNewMaskKey(stackalloc byte[4]));
+        var header = BuildHeader(_writeChunkHeaderBuffer.Span,
+            buffer.Length - PreserveWriteBufferLength, GenerateNewMaskKey(stackalloc byte[4]));
+
+        // change start if buffer to skip the unused header length
+        var finalBuffer = buffer[(PreserveWriteBufferLength - header.Length)..];
+
+        // Copy the header to the start of the buffer
+        header.CopyTo(finalBuffer.Span);
 
         // write the buffer
-        await SourceStream.WriteAsync(buffer, cancellationToken).Vhc();
+        await SourceStream.WriteAsync(finalBuffer, cancellationToken).Vhc();
         WroteChunkCount++;
     }
 
@@ -159,35 +164,33 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         var bufferLength = ChunkHeaderLength + buffer.Length;
         using var memoryOwner = MemoryPool<byte>.Shared.Rent(bufferLength);
         var fullBuffer = memoryOwner.Memory[..bufferLength];
+        buffer.CopyTo(fullBuffer[ChunkHeaderLength..]);
+        // await required to prevent releasing of the memory owner
+        await WriteInternalPreserverAsync(fullBuffer, cancellationToken);
 
         // create the chunk header
-        BuildHeader(fullBuffer.Span[..ChunkHeaderLength], buffer.Length, GenerateNewMaskKey(stackalloc byte[4]));
-
-        // prepend the buffer to chunk
-        buffer.CopyTo(fullBuffer[ChunkHeaderLength..]);
-
-        // Copy write buffer to output
-        await SourceStream.WriteAsync(fullBuffer, cancellationToken).Vhc();
-        WroteChunkCount++;
+        // var header = BuildHeader(_writeChunkHeaderBuffer.Span, buffer.Length, GenerateNewMaskKey(stackalloc byte[4]));
+        // await SourceStream.WriteAsync(_writeChunkHeaderBuffer[..header.Length], cancellationToken).Vhc();
+        // await SourceStream.WriteAsync(buffer, cancellationToken).Vhc();
+        //WroteChunkCount++;
     }
 
-    private void BuildHeader(Span<byte> header, int payloadLength, Span<byte> maskKey)
+    private Span<byte> BuildHeader(Span<byte> header, int payloadLength, ReadOnlySpan<byte> maskKey)
     {
         // Build the WebSocket frame header
-        if (_isServer)
-            WebSocketUtils.BuildWebSocketFrameHeader(header, payloadLength);
-        else
-            WebSocketUtils.BuildWebSocketFrameHeader(header, payloadLength, maskKey);
+        return _isServer
+            ? WebSocketUtils.BuildWebSocketFrameHeader(header, payloadLength)
+            : WebSocketUtils.BuildWebSocketFrameHeader(header, payloadLength, maskKey);
     }
 
     private static Span<byte> GenerateNewMaskKey(Span<byte> buffer)
     {
         if (buffer.Length < 4)
             throw new ArgumentException("Buffer must be at least 4 bytes long.", nameof(buffer));
-        
+
         // Generate a new mask key
         var random = Random.Shared;
-        for (var i = 0; i < 4; i++) 
+        for (var i = 0; i < 4; i++)
             buffer[i] = (byte)random.Next(0, 256);
 
         return buffer;
@@ -204,21 +207,66 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     {
         // read chunk header by cryptor
         try {
-            await SourceStream.ReadExactlyAsync(_readChunkHeaderBuffer, cancellationToken).Vhc();
+            while (true) {
+                // get chunk header
+                var webSocketHeader = await WebSocketUtils.ReadWebSocketHeader(SourceStream, _readChunkHeaderBuffer);
+
+                // skip close connection payload
+                if (webSocketHeader.IsCloseConnection) {
+                    VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+                        "BinaryStream has been closed by WebSocket close frame. StreamId: {StreamId}", StreamId);
+
+                    // discard the frame payload
+                    await DiscardWebSocketFrame(webSocketHeader, cancellationToken).Vhc();
+
+                    _isConnectionClosed = true;
+                    return new WebSocketHeader {
+                        IsCloseConnection = true,
+                        IsBinary = true,
+                        PayloadLength = 0
+                    };
+                }
+
+                // read another chunk header if it is not data chunk
+                if (webSocketHeader.IsPing || webSocketHeader.IsPing || !webSocketHeader.IsBinary) {
+                    VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+                        "BinaryStream has received a WebSocket frame that is not binary. StreamId: {StreamId}", StreamId);
+
+                    // discard the frame payload if it is ping or pong
+                    await DiscardWebSocketFrame(webSocketHeader, cancellationToken).Vhc();
+                    continue;
+                }
+
+                return webSocketHeader;
+            }
         }
         catch (EndOfStreamException) {
             VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "BinaryStream has been closed without terminator. StreamId: {StreamId}", StreamId);
             _isConnectionClosed = true;
             return new WebSocketHeader {
-                PayloadLength = 0,
-                HeaderLength = 6,
+                IsCloseConnection = true,
+                IsBinary = true,
+                PayloadLength = 0
             };
         }
+    }
 
-        // get chunk size
-        var webSocketHeader = WebSocketUtils.ParseWebSocketHeader(_readChunkHeaderBuffer.Span);
-        return webSocketHeader;
+    private async Task DiscardWebSocketFrame(WebSocketHeader webSocketHeader, CancellationToken cancellationToken)
+    {
+        if (webSocketHeader.PayloadLength > int.MaxValue)
+            throw new InvalidOperationException($"WebSocket close frame payload length is too big: {webSocketHeader.PayloadLength}. StreamId: {StreamId}");
+
+        using var memoryOwner = MemoryPool<byte>.Shared.Rent(1024 * 8);
+        var memory = memoryOwner.Memory;
+        var read = 0;
+        while (read < webSocketHeader.PayloadLength) {
+            var bytesToRead = (int)Math.Min(webSocketHeader.PayloadLength - read, memory.Length);
+            var bytesRead = await SourceStream.ReadAsync(memory[..bytesToRead], cancellationToken).Vhc();
+            if (bytesRead == 0)
+                break; // end of stream
+            read += bytesRead;
+        }
     }
 
     public override async Task<ChunkStream> CreateReuse()
@@ -231,7 +279,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             throw _exception;
 
         // could not reuse the underlying stream has been closed
-        if (_isConnectionClosed) 
+        if (_isConnectionClosed)
             throw new EndOfStreamException(
                 $"Could not reuse a BinaryStream that its underling stream has been closed . StreamId: {StreamId}");
 
@@ -263,7 +311,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
             // wait for the current read task to finish
             await _readTask.AsTask().WaitAsync(timeoutCts.Token).Vhc();
-            
+
             // wait for end of stream
             await DiscardRemainingStreamData(timeoutCts.Token).Vhc();
         }
@@ -299,6 +347,8 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
     protected override void Dispose(bool disposing)
     {
+        _isDisposed = 1; // don't return if already disposed. DisposeAsync may call set this
+
         if (disposing) {
             if (CanReuse) {
                 // let it run in the background, the stream owner will close it
@@ -315,6 +365,8 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
     public override async ValueTask DisposeAsync()
     {
+        _isDisposed = 1;
+
         // just ignore exceptions during close stream as close stream already handles logging
         if (CanReuse)
             await VhUtils.TryInvokeAsync(null, CloseStreamAsync).Vhc();

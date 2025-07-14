@@ -184,18 +184,18 @@ public class TunnelTest : TestBase
         using var client = await tcpListener.AcceptTcpClientAsync(cancellationToken);
 
         // Create a memory stream to store the incoming data
-        ChunkStream binaryStream = new WebSocketStream(client.GetStream(), Guid.NewGuid().ToString(), true, isServer: true);
+        ChunkStream chunkStream = new WebSocketStream(client.GetStream(), "Server", true, isServer: true);
         while (true) {
             // echo back the data to the client
-            await binaryStream.CopyToAsync(binaryStream, cancellationToken);
-            await binaryStream.DisposeAsync();
-            if (!binaryStream.CanReuse)
+            await chunkStream.CopyToAsync(chunkStream, cancellationToken);
+            await chunkStream.DisposeAsync();
+            if (!chunkStream.CanReuse)
                 break;
 
-            binaryStream = await binaryStream.CreateReuse();
+            chunkStream = await chunkStream.CreateReuse();
         }
 
-        Assert.IsFalse(binaryStream.CanReuse);
+        Assert.IsFalse(chunkStream.CanReuse);
     }
 
     private static async Task CheckStreamEcho(Stream stream, CancellationToken cancellationToken)
@@ -241,7 +241,7 @@ public class TunnelTest : TestBase
         var stream = tcpClient.GetStream();
 
         // send data
-        await using var binaryStream = new WebSocketStream(stream, Guid.NewGuid().ToString(), true, isServer: false);
+        await using var binaryStream = new WebSocketStream(stream, "client", true, isServer: false);
 
         // check stream by echo
         await CheckStreamEcho(binaryStream, cts.Token);
@@ -257,29 +257,52 @@ public class TunnelTest : TestBase
         tcpListener.Stop();
     }
 
+
     [TestMethod]
-    public void WebSocketHeader_build_Client()
+    public async Task WebSocketHeader_build_Client()
     {
-        Span<byte> buffer = new byte[150];
+        Memory<byte> writeBuffer = new byte[150];
+        Memory<byte> readBuffer = new byte[150];
 
         for (var i = 0; i < 0xFFFF + 100; i++) {
-            WebSocketUtils.BuildWebSocketFrameHeader(buffer[..14], i, new byte[4]);
-            var header = WebSocketUtils.ParseWebSocketHeader(buffer);
-            Assert.AreEqual(i, header.FixedPayloadLength);
+            WebSocketUtils.BuildWebSocketFrameHeader(writeBuffer.Span[..14], i, new byte[4], false);
+            using var memStream = new MemoryStream(writeBuffer[..14].ToArray());
+            var header = await WebSocketUtils.ReadWebSocketHeader(memStream, readBuffer);
+            Assert.AreEqual(i, header.PayloadLength);
+            Assert.IsTrue(header.IsBinary);
+
+            // Assert the stream position based on WebSocket payload length
+            if (i <= 125)
+                Assert.AreEqual(2 + 4, memStream.Position, "Stream position mismatch for payload length <= 125");
+            else if (i <= 0xFFFF)
+                Assert.AreEqual(4 + 4, memStream.Position, "Stream position mismatch for payload length <= 0xFFFF");
+            else
+                Assert.AreEqual(10 + 4, memStream.Position, "Stream position mismatch for payload length > 0xFFFF");
+           
         }
     }
 
     [TestMethod]
-    public void WebSocketHeader_build_Server()
+    public async Task WebSocketHeader_build_Server()
     {
-        Span<byte> buffer = new byte[150];
+        Memory<byte> writeBuffer = new byte[150];
+        Memory<byte> readBuffer = new byte[150];
 
         for (var i = 0; i < 0xFFFF + 100; i++) {
-            WebSocketUtils.BuildWebSocketFrameHeader(buffer[..14], i);
-            var header = WebSocketUtils.ParseWebSocketHeader(buffer);
-            Assert.AreEqual(i, header.FixedPayloadLength);
+            WebSocketUtils.BuildWebSocketFrameHeader(writeBuffer.Span[..14], i, false);
+            using var memStream = new MemoryStream(writeBuffer[..14].ToArray());
+            var header = await WebSocketUtils.ReadWebSocketHeader(memStream, readBuffer);
+            Assert.AreEqual(i, header.PayloadLength);
+            Assert.IsTrue(header.IsBinary);
+            
+            // Assert the stream position based on WebSocket payload length
+            if (i <= 125)
+                Assert.AreEqual(2, memStream.Position, "Stream position mismatch for payload length <= 125");
+            else if (i <= 0xFFFF)
+                Assert.AreEqual(4, memStream.Position, "Stream position mismatch for payload length <= 0xFFFF");
+            else
+                Assert.AreEqual(10, memStream.Position, "Stream position mismatch for payload length > 0xFFFF");
         }
-
     }
 
 }

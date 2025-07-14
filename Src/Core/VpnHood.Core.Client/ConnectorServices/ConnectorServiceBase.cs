@@ -125,6 +125,7 @@ internal class ConnectorServiceBase : IDisposable
         return clientStream;
     }
 
+    [Obsolete("Obsolete")]
     private async Task<IClientStream> CreateStandardClientStream(TcpClient tcpClient, Stream sslStream,
         int contentLength, string streamId, CancellationToken cancellationToken)
     {
@@ -150,8 +151,10 @@ internal class ConnectorServiceBase : IDisposable
         if (_useWebSocket)
             return await CreateWebSocketClientStream(tcpClient, sslStream, streamId, cancellationToken);
 
+#pragma warning disable CS0618 // Type or member is obsolete
         if (_allowTcpReuse)
             return await CreateStandardClientStream(tcpClient, sslStream, contentLength, streamId, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
 
         // Simple
         return await CreateSimpleClientStream(tcpClient, sslStream, contentLength, streamId, cancellationToken);

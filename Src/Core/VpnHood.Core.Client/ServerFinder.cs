@@ -115,10 +115,13 @@ public class ServerFinder(
 
     private static string BuildExceptionMessage(string? serverLocation)
     {
-        return ServerLocationInfo.IsAutoLocation(serverLocation)
-            ? "There is no reachable server at this moment. Please try again later."
-            : $"There is no reachable server at this moment. Please try again later. Location: {serverLocation}";
+        var location = serverLocation is null || !ServerLocationInfo.IsAutoLocation(serverLocation)
+            ? "Auto"
+            : serverLocation;
+
+        return $"There is no reachable server at this moment. Please try again later. Location: {location}";
     }
+
 
     private Task TryTrackEndPointsAvailability(HostStatus[] oldStatuses, HostStatus[] newStatuses)
     {

@@ -138,7 +138,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
 
-        // add default test public server if not added yet
+        // add a default test public server if not added yet
         var builtInProfileIds = ClientProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
 
         // remove default client profile if not exists
@@ -149,7 +149,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // set first built in profile as default if default is not set
         UserSettings.ClientProfileId ??= builtInProfileIds.FirstOrDefault()?.ClientProfileId;
 
-        // set default server location if not set
+        // set the default server location if not set
         var uiProvider = options.UiProvider ?? new AppNotSupportedUiProvider();
 
         // initialize features
@@ -209,13 +209,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _vpnServiceManager = new VpnServiceManager(device, appAdService, options.EventWatcherInterval);
         _vpnServiceManager.StateChanged += VpnService_StateChanged;
 
-        // Clear last update status if version has changed
+        // Clear the last update status if a version has changed
         if (_versionCheckResult != null && _versionCheckResult.LocalVersion != Features.Version) {
             _versionCheckResult = null;
             File.Delete(VersionCheckFilePath);
         }
 
-        // Apply settings but no error on start up
+        // Apply settings but no error on startup
         ApplySettings();
 
         // schedule job
@@ -279,7 +279,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // set default ContinueOnCapturedContext
             TaskExtensions.DefaultContinueOnCapturedContext = HasDebugCommand(DebugCommands.CaptureContext);
 
-            // update profile country code if it is not set. Profile country policy always follow VpnServer location service
+            // Update the profile country code if it is not set. Profile country policy always follows VpnServer location service
             ClientProfileService.ClientCountryCode = GetClientCountryCode(true);
 
             // Enable trackers
@@ -316,11 +316,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public ApiError? LastError {
         get {
-            // don't show error if it is not idle
+            // don't show an error if it is not idle
             if (!IsIdle)
                 return null;
 
-            // Show error if diagnose has been requested and there is no error
+            // Show error if a diagnose has been requested and there is no error
             if (_appPersistState is { HasDiagnoseRequested: true })
                 return new NoErrorFoundException().ToApiError();
 
@@ -384,11 +384,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         get {
             var clientState = ConnectionInfo.ClientState;
 
-            // in diagnose mode, we need either cancel it or wait for it
+            // in diagnose mode, we need to either cancel it or wait for it
             if (Diagnoser.IsWorking)
                 return AppConnectionState.Diagnosing;
 
-            // let's service disconnect on background and let user connect again if it is disconnecting
+            // let's service disconnect in the background and let the user connect again if it is disconnecting
             if (_isDisconnecting)
                 return AppConnectionState.None;
 
@@ -408,7 +408,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 return AppConnectionState.Connecting;
 
             if (clientState == ClientState.Disconnecting)
-                return AppConnectionState.None; // treat as none. let's service disconnect on background
+                return AppConnectionState.None; // treat as none. let's service disconnect in the background
 
             return AppConnectionState.None;
         }
@@ -425,7 +425,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public static VpnHoodApp Init(IDevice device, AppOptions options)
     {
-        Directory.CreateDirectory(options.StorageFolderPath); //make sure directory exists
+        Directory.CreateDirectory(options.StorageFolderPath); //make sure the directory exists
         var settingsService = new AppSettingsService(options.StorageFolderPath);
         var logService = new LogService(Path.Combine(options.StorageFolderPath, FileNameLog));
         logService.Start(GetLogOptions(settingsService.AppSettings.UserSettings, options.LogServiceOptions, options.IsDebugMode),
@@ -491,7 +491,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 await TryDisconnect().Vhc();
             }
 
-            // create connect cancellation token
+            // Create a connect cancellation token
             _connectCts = new CancellationTokenSource();
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectCts.Token);
             _isConnecting = true; //must be after checking IsIdle
@@ -558,7 +558,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogDebug("Starting the log service...");
             _logService.Start(GetLogOptions());
 
-            // set current profile only if it has been updated to avoid unnecessary new config time
+            // set the current profile only if it has been updated to avoid unnecessary new config time
             if (clientProfile.ClientProfileId != UserSettings.ClientProfileId ||
                 serverLocation != clientProfileInfo.SelectedLocationInfo?.ServerLocation) {
                 clientProfile = ClientProfileService.Update(clientProfileId,
@@ -616,7 +616,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                             new ClientProfileUpdateParams { AccessCode = new Patch<string?>(null) });
                         break;
 
-                    // remove client profile if access expired
+                    // remove the client profile if access expired
                     case SessionErrorCode.AccessExpired when clientProfile.IsForAccount:
                         ClientProfileService.Delete(clientProfile.ClientProfileId);
                         _ = Services.AccountService?.Refresh(true);
@@ -627,12 +627,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // stop client on any error
             _ = _vpnServiceManager.TryStop();
 
-            // check no internet connection, use original cancellation token to avoid timeout exception
+            // check no internet connection, use the original cancellation token to avoid timeout exception
             if (_autoDiagnose && ex is not SessionException &&
                 _appPersistState is { HasDisconnectedByUser: false, HasDiagnoseRequested: false }) {
                 VhLogger.Instance.LogDebug("Start checking client network...");
 
-                // use original cancellation token to avoid timeout exception consumed by Connect
+                // use the original cancellation token to avoid the timeout exception consumed by Connect
                 await Diagnoser.CheckPureNetwork(cancellationToken).Vhc();
             }
 
@@ -650,7 +650,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (string.IsNullOrEmpty(userSettings.DebugData1))
             return false;
 
-        // check if debug command is enabled
+        // check if the debug command is enabled
         return userSettings.DebugData1?.Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Contains(command, StringComparer.OrdinalIgnoreCase) == true;
     }
@@ -716,7 +716,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 "Launching VpnService ... DiagnoseMode: {DiagnoseMode}, AutoDiagnose: {AutoDiagnose}",
                 _appPersistState.HasDiagnoseRequested, _autoDiagnose);
 
-            // start diagnose if requested
+            // start to diagnose if requested
             if (_appPersistState.HasDiagnoseRequested) {
                 var hostEndPoints = await token.ServerToken.ResolveHostEndPoints(cancellationToken).Vhc();
                 await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).Vhc();
@@ -733,7 +733,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (connectionInfo.SessionInfo == null)
                 throw new InvalidOperationException("Client is connected but there is no session.");
 
-            // update access token if AccessKey is set
+            // update the access token if AccessKey is set
             if (!string.IsNullOrWhiteSpace(connectionInfo.SessionInfo.AccessKey))
                 ClientProfileService.TryUpdateTokenByAccessKey(token.TokenId, connectionInfo.SessionInfo.AccessKey);
 
@@ -742,7 +742,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UpdateClientIpLocationFromServer(connectionInfo.SessionInfo.ClientPublicIpAddress,
                     connectionInfo.SessionInfo.ClientCountry);
 
-            // check version after first connection
+            // check the version after the first connection
             _ = VersionCheck(delay: Services.AdService.ShowAdPostDelay.Add(TimeSpan.FromSeconds(1)),
                 cancellationToken: cancellationToken);
         }
@@ -751,7 +751,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception ex) {
             if (ex is SessionException sessionException) {
-                // update access token if AccessKey is set
+                // update the access token if AccessKey is set
                 if (!string.IsNullOrWhiteSpace(sessionException.SessionResponse.AccessKey)) {
                     ClientProfileService.TryUpdateTokenByAccessKey(token.TokenId, sessionException.SessionResponse.AccessKey);
                     sessionException.SessionResponse.AccessKey = null;
@@ -762,7 +762,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     UpdateClientIpLocationFromServer(sessionException.SessionResponse.ClientPublicAddress, sessionException.SessionResponse.ClientCountry);
             }
 
-            // try to update token from url after connection or error if ResponseAccessKey is not set
+            // try to update the token from url after connection or error if ResponseAccessKey is not set
             if (ex is not NoInternetException && // diagnoser
                 allowUpdateToken &&
                 !VhUtils.IsNullOrEmpty(token.ServerToken.Urls) &&
@@ -845,7 +845,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void InitCulture()
     {
-        // find the first available culture that match with the system culture
+        // find the first available culture that matches with the system culture
         _systemUiCulture = Services.CultureProvider.GetBestCultureInfo();
 
         // set default culture
@@ -898,7 +898,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 return SettingsService.AppSettings.ClientIpLocation;
         }
 
-        // try to get current ip location by local service
+        // try to get the current ip location by local service
         var ipLocation = await TryGetCurrentIpLocationByLocal(cancellationToken).Vhc();
         if (ipLocation != null)
             return ipLocation;
@@ -952,11 +952,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void VpnService_StateChanged(object? sender, EventArgs e)
     {
-        // clear last error when get out of idle state, because it indicates a new connection has started
+        // clear the last error when get out of idle state, because it indicates a new connection has started
         if (!IsIdle)
             _appPersistState.LastClearedError = null;
 
-        // cancel connect timeout if client reached to waiting ad state
+        // cancel connect timeout if the client reached to waiting ad state
         if (ConnectionInfo.ClientState == ClientState.WaitingForAd)
             _connectTimeoutCts.CancelAfter(Timeout.InfiniteTimeSpan);
 
@@ -1001,12 +1001,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public void VersionCheckPostpone()
     {
-        // version status is unknown when app container can do it
+        // version status is unknown when the app container can do it
         _versionCheckResult = null;
         if (File.Exists(VersionCheckFilePath))
             File.Delete(VersionCheckFilePath);
 
-        // set latest ignore time
+        // set the latest ignored time
         _appPersistState.UpdateIgnoreTime = DateTime.Now;
     }
 
@@ -1023,11 +1023,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (!force && _appPersistState.UpdateIgnoreTime + _versionCheckInterval > DateTime.Now)
             return;
 
-        // wait for delay. Useful for waiting for ad to send its tracker
+        // Wait for delay. Useful for waiting for an ad to send its tracker
         if (delay != null)
             await Task.Delay(delay.Value, cancellationToken).Vhc();
 
-        // check version by app container
+        // check the version by app container
         try {
             if (AppUiContext.Context != null && Services.UpdaterProvider != null &&
                 await Services.UpdaterProvider.Update(AppUiContext.RequiredContext).Vhc()) {
@@ -1039,7 +1039,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ReportWarning(ex, "Could not check version by VersionCheck.");
         }
 
-        // check version by UpdateInfoUrl
+        // check the version by UpdateInfoUrl
         _versionCheckResult = await VersionCheckByUpdateInfo().Vhc();
 
         // save the result
@@ -1065,7 +1065,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var latestPublishInfo = JsonUtils.Deserialize<PublishInfo>(publishInfoJson);
             VersionStatus versionStatus;
 
-            // Check version
+            // Check the version
             if (latestPublishInfo.Version == null)
                 throw new Exception("Version is not available in publish info.");
 
@@ -1179,7 +1179,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
         }
 
-        // update current profile if the current profile is not exists
+        // update the current profile if the current profile does not exist
         if (ClientProfileService.FindById(UserSettings.ClientProfileId ?? Guid.Empty) == null) {
             var clientProfiles = ClientProfileService.List();
             UserSettings.ClientProfileId = clientProfiles.Length == 1 ? clientProfiles.First().ClientProfileId : null;
@@ -1248,7 +1248,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var purchaseUrlMode = CurrentClientProfileInfo?.PurchaseUrlMode;
         var purchaseUrl = CurrentClientProfileInfo?.PurchaseUrl;
 
-        // get subscription plans from store
+        // get subscription plans from the store
         var subscriptionPlans = Array.Empty<SubscriptionPlan>();
         string? storeName = null;
         ApiError? apiError = null;

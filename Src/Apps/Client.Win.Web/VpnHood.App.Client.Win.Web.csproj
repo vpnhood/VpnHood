@@ -3,7 +3,7 @@
 		<Product>VpnHood! CLIENT</Product>
 		<Description>VpnHood Windows Client App</Description>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+		<TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
 		<UseWPF>true</UseWPF>
 		<UseWindowsForms>False</UseWindowsForms>
 		<AssemblyName>VpnHoodClient</AssemblyName>
@@ -48,7 +48,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3351.48" />
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.691" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.692" />
 	</ItemGroup>
 
 	<ItemGroup>

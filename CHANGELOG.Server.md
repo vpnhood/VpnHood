@@ -1,3 +1,6 @@
+# Upcoming
+* Feature: Support reserve proxies like Cloudflare
+
 # v7.1.724
 * Improve: Speed and stability
 * Update: Improve session management

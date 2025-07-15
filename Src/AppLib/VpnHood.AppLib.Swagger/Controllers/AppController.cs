@@ -122,4 +122,10 @@ public class AppController : ControllerBase, IAppController
     {
         throw new SwaggerOnlyException();
     }
+
+    [HttpGet("exception-types")]
+    public Task<ExceptionType[]> GetExceptionTypes()
+    {
+        throw new SwaggerOnlyException();
+    }
 }

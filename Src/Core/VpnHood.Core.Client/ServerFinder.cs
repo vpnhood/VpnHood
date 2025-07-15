@@ -110,7 +110,7 @@ public class ServerFinder(
         _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
             isIpV6Supported: IncludeIpV6, hasRedirected: true));
 
-        throw new UnreachableServerExceptionLocation(BuildExceptionMessage(ServerLocation));
+        throw new UnreachableServerLocationException(BuildExceptionMessage(ServerLocation));
     }
 
     private static string BuildExceptionMessage(string? serverLocation)

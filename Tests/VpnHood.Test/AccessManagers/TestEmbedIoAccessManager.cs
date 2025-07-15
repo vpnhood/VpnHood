@@ -65,7 +65,7 @@ public class TestEmbedIoAccessManager : IDisposable
     public void Stop()
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Test,
-            $"{VhLogger.FormatType(this)} has stopped listening to {BaseUri}");
+            "TestEmbedIoAccessManager has stopped listening to {Uri}", BaseUri);
         _webServer.Dispose();
     }
 

@@ -42,8 +42,8 @@ public static class ClientExceptionConverter
         if (apiError.Is<UnreachableServerException>())
             exception = new UnreachableServerException(apiError.Message);
 
-        if (apiError.Is<UnreachableServerExceptionLocation>())
-            exception = new UnreachableServerExceptionLocation(apiError.Message);
+        if (apiError.Is<UnreachableServerLocationException>())
+            exception = new UnreachableServerLocationException(apiError.Message);
 
         if (exception != null)
             apiError.ExportData(exception.Data);

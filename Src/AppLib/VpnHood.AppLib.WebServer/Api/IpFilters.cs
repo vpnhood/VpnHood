@@ -1,5 +1,4 @@
-﻿
-namespace VpnHood.AppLib.WebServer.Api;
+﻿namespace VpnHood.AppLib.WebServer.Api;
 
 public class IpFilters
 {

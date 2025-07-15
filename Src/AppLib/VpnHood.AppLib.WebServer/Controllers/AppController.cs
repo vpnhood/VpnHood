@@ -1,6 +1,7 @@
 ﻿using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.WebServer.Api;
@@ -173,5 +174,11 @@ internal class AppController : WebApiController, IAppController
     public Task RequestNotification()
     {
         return App.Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
+    }
+
+    [Route(HttpVerbs.Get, "/exception-types")]
+    public Task<ExceptionType[]> GetExceptionTypes()
+    {
+        return Task.FromResult(Enum.GetValues<ExceptionType>());
     }
 }

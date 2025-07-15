@@ -24,4 +24,5 @@ public interface IAppController
     Task RequestQuickLaunch();
     Task RequestNotification();
     Task ExtendByRewardedAd();
+    Task<ExceptionType[]> GetExceptionTypes();
 }

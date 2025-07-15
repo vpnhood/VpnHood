@@ -9,8 +9,8 @@ public static class AppTrackerBuilder
         return new TrackEvent {
             EventName = "vh_ad_load_failed",
             Parameters = new Dictionary<string, object> {
-                { "error", errorMessage },
                 { "ad_network", adNetwork },
+                { "error", errorMessage },
                 { "country", countryCode ?? "(vh_unknown)" }
             }
         };

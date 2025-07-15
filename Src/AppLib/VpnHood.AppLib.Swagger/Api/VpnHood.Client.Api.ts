@@ -1176,6 +1176,61 @@ export class AppClient {
         }
         return Promise.resolve<void>(null as any);
     }
+
+    getExceptionTypes( cancelToken?: CancelToken): Promise<ExceptionType[]> {
+        let url_ = this.baseUrl + "/api/app/exception-types";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetExceptionTypes(_response);
+        });
+    }
+
+    protected processGetExceptionTypes(response: AxiosResponse): Promise<ExceptionType[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(item);
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<ExceptionType[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ExceptionType[]>(null as any);
+    }
 }
 
 export class BillingClient {
@@ -3723,6 +3778,20 @@ export interface IDeviceAppInfo {
     appId: string;
     appName: string;
     iconPng: string;
+}
+
+export enum ExceptionType {
+    MaintenanceException = "MaintenanceException",
+    SessionException = "SessionException",
+    UiContextNotAvailableException = "UiContextNotAvailableException",
+    AdException = "AdException",
+    ShowAdException = "ShowAdException",
+    ShowAdNoUiException = "ShowAdNoUiException",
+    LoadAdException = "LoadAdException",
+    NoInternetException = "NoInternetException",
+    NoStableVpnException = "NoStableVpnException",
+    UnreachableServerException = "UnreachableServerException",
+    UnreachableServerLocationException = "UnreachableServerLocationException",
 }
 
 export class SubscriptionPlan implements ISubscriptionPlan {

@@ -42,7 +42,7 @@
 	<!--Xamarin.GooglePlayServices.Auth 6.1.0.2 so uspport GoogleSignIn-->
 	<ItemGroup>
 		<PackageReference Include="Xamarin.AndroidX.Credentials" Version="1.5.0.2" />
-		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="7.1.1.4" />
+		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="8.0.0" />
 		<PackageReference Include="Xamarin.AndroidX.Credentials.PlayServicesAuth" Version="1.5.0.2" />
 		<PackageReference Include="Xamarin.GoogleAndroid.Libraries.Identity.GoogleId" Version="1.1.0.10" />
 	</ItemGroup>

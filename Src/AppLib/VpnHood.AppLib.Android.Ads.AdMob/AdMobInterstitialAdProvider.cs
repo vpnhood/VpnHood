@@ -94,12 +94,13 @@ public class AdMobInterstitialAdProvider(string adUnitId) : IAppAdProvider
             _loadedCompletionSource.TrySetResult(interstitialAd);
         }
 
-        public override void OnAdFailedToLoad(LoadAdError addError)
+        public override void OnAdFailedToLoad(LoadAdError adError)
         {
+            var message = string.IsNullOrWhiteSpace(adError.Message) ? "AdMob load empty message." : adError.Message;
             _loadedCompletionSource.TrySetException(
-                addError.Message.Contains("No fill.", StringComparison.OrdinalIgnoreCase)
-                    ? new NoFillAdException(addError.Message)
-                    : new LoadAdException(addError.Message));
+                adError.Message.Contains("No fill.", StringComparison.OrdinalIgnoreCase)
+                    ? new NoFillAdException(message)
+                    : new LoadAdException(message));
         }
     }
 
@@ -115,7 +116,8 @@ public class AdMobInterstitialAdProvider(string adUnitId) : IAppAdProvider
 
         public override void OnAdFailedToShowFullScreenContent(AdError adError)
         {
-            _dismissedCompletionSource.TrySetException(new ShowAdException(adError.Message));
+            var message = string.IsNullOrWhiteSpace(adError.Message) ? "AdMob fullscreen empty message." : adError.Message;
+            _dismissedCompletionSource.TrySetException(new ShowAdException(message));
         }
     }
 

@@ -34,7 +34,7 @@ public class ServerFinder(
     public bool IncludeIpV6 { get; set; } = true;
     public string? ServerLocation => serverLocation;
 
-    // There are much work to be done here
+    // There is much work to be done here
     public async Task<IPEndPoint> FindReachableServerAsync(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Session, "Finding a reachable server... QueryTimeout: {QueryTimeout}", 
@@ -152,7 +152,7 @@ public class ServerFinder(
             .Select(x => new HostStatus { TcpEndPoint = x })
             .ToArray();
 
-        using var searchingCts = new CancellationTokenSource(); // this will be cancelled when a server is found
+        using var searchingCts = new CancellationTokenSource(); // this will be canceled when a server is found
         using var parallelCts = CancellationTokenSource.CreateLinkedTokenSource(searchingCts.Token, cancellationToken);
         try {
             // check all servers
@@ -209,7 +209,7 @@ public class ServerFinder(
             return true;
         }
         catch (UnauthorizedAccessException) {
-            return true; // server is available but not authorized
+            return true; // the server is available but not authorized
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             throw; // query cancelled due to discovery cancellationToken

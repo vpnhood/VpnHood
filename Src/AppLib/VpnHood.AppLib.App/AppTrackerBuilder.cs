@@ -30,6 +30,9 @@ public static class AppTrackerBuilder
 
     public static TrackEvent BuildShowAdOk(string adNetwork, string? countryCode)
     {
+        if (countryCode?.Trim() == string.Empty)
+            countryCode = "empty";
+        
         return new TrackEvent {
             EventName = "vh_ad_show_ok",
             Parameters = new Dictionary<string, object> {

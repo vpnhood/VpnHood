@@ -139,7 +139,8 @@ public class AppAdService(
 
     private async Task TryRestoreProcessVpn(TrackEvent trackEvent, TimeSpan delay, CancellationToken cancellationToken)
     {
-        await device.TryBindProcessToVpn(true, delay, cancellationToken);
+        //TODO: temporary disabled for check analytics 
+        //await device.TryBindProcessToVpn(true, delay, cancellationToken);
         if (tracker != null)
             await tracker.TryTrack(trackEvent);
     }

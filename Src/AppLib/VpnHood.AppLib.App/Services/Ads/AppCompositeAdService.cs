@@ -49,6 +49,7 @@ internal class AppCompositeAdService
     }
 
     private readonly AsyncLock _loadAdLock = new();
+
     public async Task LoadAd(IUiContext uiContext, string? countryCode, bool forceReload,
         TimeSpan loadAdTimeout, CancellationToken cancellationToken)
     {
@@ -64,7 +65,8 @@ internal class AppCompositeAdService
 
         // filter ad services by country code
         var filteredAdProviderItems = _adProviderItems
-            .Where(x => countryCode is null || IsCountrySupported(x, countryCode));
+            .Where(x => countryCode is null || IsCountrySupported(x, countryCode))
+            .ToArray();
 
         foreach (var adProviderItem in filteredAdProviderItems) {
             cancellationToken.ThrowIfCancellationRequested();
@@ -86,14 +88,21 @@ internal class AppCompositeAdService
                 throw; // do not report cancellation
             }
             catch (Exception ex) {
+                var message = string.IsNullOrWhiteSpace(ex.Message)
+                    ? $"Empty message. Provider: {adProviderItem.Name}"
+                    : ex.Message;
                 _ = _tracker?.TryTrack(AppTrackerBuilder.BuildLoadAdFailed(
-                    adNetwork: adProviderItem.Name, errorMessage: ex.Message, countryCode: countryCode));
+                    adNetwork: adProviderItem.Name, errorMessage: message, countryCode: countryCode));
                 providerExceptions.Add((adProviderItem.Name, ex));
-                VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.", adProviderItem.Name);
+                VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.",
+                    adProviderItem.Name);
             }
         }
 
-        var providerMessages = string.Join(", ", providerExceptions.Select(x => $"{x.Item1}:{x.Item2}"));
+        var providerMessages = filteredAdProviderItems.Any()
+            ? string.Join(", ", providerExceptions.Select(x => $"{x.Item1}:{x.Item2.Message}"))
+            : "There is no provider for this country";
+        
         throw new LoadAdException(
             $"Could not load any Ad. " +
             $"CountryCode: {GetCountryName(countryCode)}. Cancelled: {cancellationToken.IsCancellationRequested}. " +

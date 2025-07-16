@@ -1,6 +1,6 @@
 {
-  "Version": "7.2.726",
-  "BumpTime": "2025-07-16T00:54:30.5960546Z",
-  "Prerelease": true,
+  "Version": "7.2.727",
+  "BumpTime": "2025-07-16T02:03:26.1305708Z",
+  "Prerelease": false,
   "DeprecatedVersion": "6.0.0"
 }

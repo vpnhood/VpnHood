@@ -75,8 +75,7 @@ internal class AppCompositeAdService
             try {
                 VhLogger.Instance.LogInformation("Trying to load ad. ItemName: {ItemName}", adProviderItem.Name);
                 using var timeoutCts = new CancellationTokenSource(loadAdTimeout);
-                using var linkedCts =
-                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
                 await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).Vhc();
                 _loadedAdProviderItem = adProviderItem;
                 return;
@@ -119,8 +118,8 @@ internal class AppCompositeAdService
             throw new ShowAdNoUiException();
 
         // wait for the UI to be active
-        for (var i = 0; i < 3; i++) {
-            await Task.Delay(250).Vhc();
+        for (var i = 0; i < 10; i++) {
+            await Task.Delay(200).Vhc();
             if (AppUiContext.Context?.IsActive == true)
                 return;
         }
@@ -145,9 +144,12 @@ internal class AppCompositeAdService
             return _loadedAdProviderItem.Name;
         }
         catch (UiContextNotAvailableException) {
-            throw new ShowAdNoUiException();
+            throw new ShowAdNoUiException {
+                AdNetworkName = _loadedAdProviderItem.Name
+            };
         }
-        catch (ShowAdNoUiException) {
+        catch (ShowAdNoUiException ex) {
+            ex.AdNetworkName ??= _loadedAdProviderItem.Name;
             throw;
         }
         catch (Exception ex) {

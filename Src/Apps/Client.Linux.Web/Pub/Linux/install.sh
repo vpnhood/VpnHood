@@ -94,7 +94,6 @@ After=network.target
 [Service]
 Type=simple
 ExecStart="$destinationPath/vhclient"
-ExecStop="$destinationPath/vhclient" stop
 TimeoutStartSec=0
 Restart=always
 RestartSec=10

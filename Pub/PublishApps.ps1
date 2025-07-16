@@ -71,8 +71,8 @@ if ($connectWin) {
 
 # publish win client
 if ($clientWinLinux) {
-	# & "$solutionDir/Src/Apps/Client.Win.Web/_publish.ps1";
-	# & "$solutionDir/Src/Apps/Client.Linux.Web/_publish.ps1";
+	& "$solutionDir/Src/Apps/Client.Win.Web/_publish.ps1";
+	& "$solutionDir/Src/Apps/Client.Linux.Web/_publish.ps1";
 }
 
 # publish android

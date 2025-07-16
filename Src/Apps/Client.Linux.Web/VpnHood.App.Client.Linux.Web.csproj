@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
+	<PropertyGroup>
+		<Product>VpnHood! CLIENT</Product>
+		<Description>VpnHood Linux Client App</Description>
+		<RootNamespace>VpnHood.App.Client.Linux.Web</RootNamespace>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net9.0</TargetFramework>
+		<AssemblyName>VpnHoodClient</AssemblyName>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<PublishTrimmed>False</PublishTrimmed>
+		<RunAOTCompilation>False</RunAOTCompilation>
+		<!--<PathMap>$(SolutionDir)=.</PathMap>-->
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<Version>7.2.728</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+		<AssemblyVersion></AssemblyVersion>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<PlatformTarget>AnyCPU</PlatformTarget>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<PlatformTarget>AnyCPU</PlatformTarget>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="VpnHood.AppLib.App" Version="7.2.727" />
+		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="6.0.708" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.692" />
+		<PackageReference Include="VpnHood.AppLib.WebServer" Version="7.2.727" />
+		<PackageReference Include="VpnHood.Core.Client.Device.Linux" Version="7.2.727" />
+		<PackageReference Include="VpnHood.Core.Client.VpnServices.Host" Version="7.2.727" />
+		<PackageReference Include="VpnHood.Core.VpnAdapters.LinuxTun" Version="7.2.727" />
+	</ItemGroup>
+
+</Project>

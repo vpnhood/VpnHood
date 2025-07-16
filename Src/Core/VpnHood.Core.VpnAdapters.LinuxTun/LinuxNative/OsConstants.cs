@@ -13,5 +13,7 @@ internal static class OsConstants
     public const int FSetfl = 4; // F_SETFL
     public const short Pollin = 0x001; // POLLIN
     public const short Pollout = 0x004; // POLLOUT
-    public const int Tunsetiff = 0x400454ca; // TUNSETIFF. ioctl request code for TUN device
+    public const int Tunsetiff = 0x400454ca; // TUNSETIFF. ioctl request code for TUN device,
+    public const int SolSocket = 1; // SOL_SOCKET. Socket level for socket options
+    public const int SoBindtodevice = 25; // SO_BINDTODEVICE. Socket option to bind to a specific device
 }

@@ -1,7 +1,9 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using Microsoft.Extensions.Logging;
+using System.Text;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Exceptions;
@@ -22,6 +24,8 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     private StructPollfd[]? _pollFdWrites;
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
     protected override bool IsSocketProtectedByBind => true;
+    public override bool CanProtectSocket => !string.IsNullOrEmpty(_primaryAdapterName);
+
     public override bool IsNatSupported => true;
     public override bool IsAppFilterSupported => false;
     protected override string? AppPackageId => null;
@@ -39,6 +43,23 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
             throw new InvalidOperationException("No active network interface found.");
 
         return mainInterface;
+    }
+
+    public static string? FindInterfaceNameForIp(IPAddress ip)
+    {
+        var interfaces = NetworkInterface.GetAllNetworkInterfaces();
+        
+        // ReSharper disable once LoopCanBeConvertedToQuery
+        foreach (var networkInterface in interfaces) {
+            var props = networkInterface.GetIPProperties();
+            var addresses = props.UnicastAddresses;
+
+            if (addresses.Any(ua => ua.Address.Equals(ip))) {
+                return networkInterface.Name; // on Linux, this will be "eth0", "tun0", etc.
+            }
+        }
+
+        return null; // not found
     }
 
     protected override async Task AdapterAdd(CancellationToken cancellationToken)
@@ -300,6 +321,20 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         }
 
         return tunDeviceFd;
+    }
+
+    protected override void BindSocketToIp(Socket socket, IPAddress ipAddress)
+    {
+        var adapterName = FindInterfaceNameForIp(ipAddress);
+        if (string.IsNullOrEmpty(adapterName))
+            throw new InvalidOperationException($"No network interface found for IP address {ipAddress}.");
+        
+        var optVal = Encoding.ASCII.GetBytes(adapterName + "\0");
+        var result = LinuxAPI.setsockopt((int)socket.Handle, level: OsConstants.SolSocket,
+            OsConstants.SoBindtodevice, optVal, (uint)optVal.Length);
+
+        if (result < 0)
+            throw new PInvokeException($"Failed to bind socket to device {adapterName}.");
     }
 
     private static string ExecuteCommand(string command)

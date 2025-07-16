@@ -27,5 +27,7 @@ internal static class LinuxAPI
 
     [DllImport("libc", SetLastError = true)]
     public static extern int write(int fd, byte[] buffer, int count);
-    
+
+    [DllImport("libc", SetLastError = true)]
+    public static extern int setsockopt(int sockfd, int level, int optname, byte[] optval, uint optlen);
 }

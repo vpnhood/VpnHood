@@ -52,6 +52,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// <returns></returns>
     protected abstract bool ReadPacket(byte[] buffer);
     protected abstract bool WritePacket(IpPacket ipPacket);
+    protected virtual void OnPrimaryAdapterIpChanged()
+    {
+    }
 
     public event EventHandler? Disposed;
     public string AdapterName { get; }
@@ -84,8 +87,15 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         if (_isStopping || IsDisposed || IsDisposing)
             return;
 
-        PrimaryAdapterIpV4 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetwork);
-        PrimaryAdapterIpV6 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
+        var primaryAdapterIpV4 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetwork);
+        var primaryAdapterIpV6 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
+
+        // If the primary adapter IPs are changed, update them and notify subscribers
+        if (!Equals(primaryAdapterIpV4, PrimaryAdapterIpV4) || !Equals(primaryAdapterIpV6, PrimaryAdapterIpV6)) {
+            PrimaryAdapterIpV4 = primaryAdapterIpV4;
+            PrimaryAdapterIpV6 = primaryAdapterIpV6;
+            OnPrimaryAdapterIpChanged();
+        }
     }
 
     public IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion)
@@ -329,6 +339,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         socket.Bind(new IPEndPoint(ipAddress, 0));
     }
 
+    protected virtual void BindSocketToIp(Socket socket, IPAddress address)
+    {
+        socket.Bind(new IPEndPoint(address, 0));
+    }
+
     public virtual bool ProtectSocket(Socket socket)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
@@ -344,7 +359,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
 
         // bind the socket to the primary adapter IP
-        socket.Bind(new IPEndPoint(primaryAdapterIp, 0));
+        BindSocketToIp(socket, primaryAdapterIp);
         return true;
     }
 
@@ -369,7 +384,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
 
         // bind the socket to the primary adapter IP and connect to the remote endpoint
-        socket.Bind(new IPEndPoint(primaryAdapterIp, 0));
+        BindSocketToIp(socket, primaryAdapterIp);
         return true;
     }
 

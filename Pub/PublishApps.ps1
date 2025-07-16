@@ -78,6 +78,7 @@ if ($clientWinLinux) {
 # publish android
 if ($clientAndroid) {	
 	& "$solutionDir/Src/Apps/Client.Android.Google/_publish.ps1";
+	& "$solutionDir/Src/Apps/Client.Android.Web/_publish.ps1";
 }
 
 # publish android

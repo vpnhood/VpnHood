@@ -28,6 +28,7 @@ It is available for Windows and Android. The iOS client still needs to be ready!
 * Built-In User Management 
 * Built-in NAT with zero configuration
 * NetScan Protector
+* Reserve Poxy Compatible (Cloudflare, Cloud, and ...)
 * Windows (x64) 10, 11, or Windows Server
 * Linux
 

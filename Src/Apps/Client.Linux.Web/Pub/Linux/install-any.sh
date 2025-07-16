@@ -14,4 +14,10 @@ fi
 
 # Pass all arguments to the downloaded script
 echo "Executing VpnHood! $arch_raw installer ...";
-bash <( wget -qO- "$script_url" ) "$@"
+bash <( wget -qO- "$script_url" ) "$@" || {
+    echo "Error: Installation script failed." >&2
+    exit 1
+}
+
+echo "VpnHood! CLIENT Linux (Beta) should be installed. There is no command-line at the moment.";
+echo "You need to open your browser and navigate to http://127.0.0.1:9090/";

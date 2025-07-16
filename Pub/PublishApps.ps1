@@ -1,7 +1,7 @@
 param( 
 	[Parameter(Mandatory=$true)][object]$bump,
 	[Parameter(Mandatory=$true)][object]$nugets,
-	[Parameter(Mandatory=$true)][object]$clientWin,
+	[Parameter(Mandatory=$true)][object]$clientWinLinux,
 	[Parameter(Mandatory=$true)][object]$clientAndroid,
 	[Parameter(Mandatory=$true)][object]$connectWin,
 	[Parameter(Mandatory=$true)][object]$connectAndroid,
@@ -12,7 +12,7 @@ param(
 $nugets = $nugets -eq "1";
 $connectWin = $connectWin -eq "1";
 $connectAndroid = $connectAndroid -eq "1";
-$clientWin = $clientWin -eq "1";
+$clientWinLinux = $clientWinLinux -eq "1";
 $clientAndroid = $clientAndroid -eq "1";
 $distribute = $distribute -eq "1";
 $samples = $samples -eq "1";
@@ -70,9 +70,9 @@ if ($connectWin) {
 }
 
 # publish win client
-if ($clientWin) {
-	& "$solutionDir/Src/Apps/Client.Win.Web/_publish.ps1";
-	& "$solutionDir/Src/Apps/Client.Linux.Web/_publish.ps1";
+if ($clientWinLinux) {
+	# & "$solutionDir/Src/Apps/Client.Win.Web/_publish.ps1";
+	# & "$solutionDir/Src/Apps/Client.Linux.Web/_publish.ps1";
 }
 
 # publish android
@@ -90,7 +90,7 @@ if ($connectAndroid) {
 # distribute
 if ($distribute) {
     & "$PSScriptRoot/PublishToGitHub.ps1" `
-		-mainRepo ($clientWin -or $clientAndroid) `
+		-mainRepo ($clientWinLinux -or $clientAndroid) `
 		-connectRepo ($connectWin -or $connectAndroid);
 }
 

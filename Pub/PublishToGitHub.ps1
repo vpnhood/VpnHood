@@ -55,7 +55,7 @@ if ($mainRepo) {
 		$releaseRootDir/$packageClientDirName/Linux-x64/VpnHoodClient-linux-x64.tar.gz `
 		$releaseRootDir/$packageClientDirName/Linux-arm64/VpnHoodClient-linux-arm64.sh `
 		$releaseRootDir/$packageClientDirName/Linux-arm64/VpnHoodClient-linux-arm64.json `
-		$releaseRootDir/$packageClientDirName/Linux-arm64/VpnHoodClient-linux-arm64.tar.gz;
+		$releaseRootDir/$packageClientDirName/Linux-arm64/VpnHoodClient-linux-arm64.tar.gz `
 		$androidGoogleLatestDir/VpnHoodClient-android.apk `
 		$androidGoogleLatestDir/VpnHoodClient-android.json `
 		$releaseRootDir/$packageClientDirName/android-web/VpnHoodClient-android-web.apk `

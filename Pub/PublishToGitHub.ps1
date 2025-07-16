@@ -48,7 +48,7 @@ if ($mainRepo) {
 		--title "$versionTag" `
 		(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `
 		-F $releaseRootDir/ReleaseNote.txt `
-		$releaseRootDir/$packageClientDirName/Linux-x64/VpnHoodClient-linux.sh `
+		$releaseRootDir/$packageClientDirName/Linux-any/VpnHoodClient-linux.sh `
 		$releaseRootDir/$packageClientDirName/Linux-x64/VpnHoodClient-linux-x64.sh `
 		$releaseRootDir/$packageClientDirName/Linux-x64/VpnHoodClient-linux-x64.json `
 		$releaseRootDir/$packageClientDirName/Linux-x64/VpnHoodClient-linux-x64.tar.gz `

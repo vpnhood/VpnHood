@@ -27,5 +27,5 @@ exeFileR=$(json_extract ExeFile "$publishInfoJson");
 exeFile="$curDir/$exeFileR";
 chmod +x "$exeFile";
 
-# Executing VpnHoodServer
+# Executing Module
 "$exeFile" "$@";

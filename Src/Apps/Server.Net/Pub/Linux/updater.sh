@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "Updating VpnHood Server for linux...";
+echo "Updating VpnHood Module for linux...";
 curDir="$(dirname "$0")";
 localPublishInfoFile="$curDir/publish.json";
 

@@ -48,13 +48,19 @@ if ($mainRepo) {
 		--title "$versionTag" `
 		(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `
 		-F $releaseRootDir/ReleaseNote.txt `
-		$androidGoogleLatestDir/VpnHoodClient-android.apk `
-		$androidGoogleLatestDir/VpnHoodClient-android.json `
-		$releaseRootDir/$packageClientDirName/android-web/VpnHoodClient-android-web.apk `
-		$releaseRootDir/$packageClientDirName/android-web/VpnHoodClient-android-web.json `
-		$releaseRootDir/$packageClientDirName/windows-web/VpnHoodClient-win-x64.msi  `
-		$releaseRootDir/$packageClientDirName/windows-web/VpnHoodClient-win-x64.txt  `
-		$releaseRootDir/$packageClientDirName/windows-web/VpnHoodClient-win-x64.json;
+		$releaseRootDir/$packageClientDirName/Linux-x64/VpnHoodClient-linux-x64.sh `
+		$releaseRootDir/$packageClientDirName/Linux-x64/VpnHoodClient-linux-x64.json `
+		$releaseRootDir/$packageClientDirName/Linux-x64/VpnHoodClient-linux-x64.tar.gz `
+		$releaseRootDir/$packageClientDirName/Linux-arm64/VpnHoodClient-linux-arm64.sh `
+		$releaseRootDir/$packageClientDirName/Linux-arm64/VpnHoodClient-linux-arm64.json `
+		$releaseRootDir/$packageClientDirName/Linux-arm64/VpnHoodClient-linux-arm64.tar.gz;
+#		$androidGoogleLatestDir/VpnHoodClient-android.apk `
+#		$androidGoogleLatestDir/VpnHoodClient-android.json `
+#		$releaseRootDir/$packageClientDirName/android-web/VpnHoodClient-android-web.apk `
+#		$releaseRootDir/$packageClientDirName/android-web/VpnHoodClient-android-web.json `
+#		$releaseRootDir/$packageClientDirName/windows-web/VpnHoodClient-win-x64.msi  `
+#		$releaseRootDir/$packageClientDirName/windows-web/VpnHoodClient-win-x64.txt  `
+#		$releaseRootDir/$packageClientDirName/windows-web/VpnHoodClient-win-x64.json;
 
 	Pop-Location
 }

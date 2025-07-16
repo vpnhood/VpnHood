@@ -1,3 +1,7 @@
+# v7.2.728
+* Feature: Linux Client
+
+
 # v7.1.725
 * Feature: Support reserve proxies like Cloudflare
 * Improve: Performance and stability

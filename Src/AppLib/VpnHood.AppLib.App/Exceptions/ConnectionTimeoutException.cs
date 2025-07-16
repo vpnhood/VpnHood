@@ -1,8 +1,7 @@
-using VpnHood.Core.Common.Exceptions;
 
 namespace VpnHood.AppLib.Exceptions;
 
-public class ConnectionTimeoutException : LoadAdException
+public class ConnectionTimeoutException : Exception
 {
     public ConnectionTimeoutException(string message) : base(message)
     {

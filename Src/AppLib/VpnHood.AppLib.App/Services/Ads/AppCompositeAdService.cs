@@ -101,7 +101,7 @@ internal class AppCompositeAdService
         var providerMessages = filteredAdProviderItems.Any()
             ? string.Join(", ", providerExceptions.Select(x => $"{x.Item1}:{x.Item2.Message}"))
             : "There is no provider for this country";
-        
+
         throw new LoadAdException(
             $"Could not load any Ad. " +
             $"CountryCode: {GetCountryName(countryCode)}. Cancelled: {cancellationToken.IsCancellationRequested}. " +
@@ -149,7 +149,7 @@ internal class AppCompositeAdService
             };
         }
         catch (ShowAdNoUiException ex) {
-            ex.AdNetworkName ??= _loadedAdProviderItem.Name;
+            ex.AdNetworkName = _loadedAdProviderItem.Name;
             throw;
         }
         catch (Exception ex) {

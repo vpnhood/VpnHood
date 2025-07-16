@@ -62,7 +62,7 @@ public class SessionException : Exception
             SessionErrorCode.NoServerAvailable => "No server is available.",
             SessionErrorCode.PremiumLocation => "The location is only available for premium accounts.",
             SessionErrorCode.AdError => "An advertisement error occurred.",
-            SessionErrorCode.RewardedAdRejected => "The rewarded advertisement was rejected.",
+            SessionErrorCode.RewardedAdRejected => "The rewarded ad was rejected.",
             SessionErrorCode.Maintenance => "The system is under maintenance.",
             SessionErrorCode.RedirectHost => "The host is being redirected.",
             SessionErrorCode.UnsupportedClient => "The client is unsupported.",

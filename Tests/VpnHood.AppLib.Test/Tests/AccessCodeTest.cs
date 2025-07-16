@@ -14,6 +14,12 @@ public class AccessCodeTest : TestAppBase
     [TestMethod]
     public async Task AaFoo()
     {
+        try {
+            await Task.Delay(5000).WaitAsync(TimeSpan.FromMilliseconds(2000));
+        }
+        catch (TimeoutException e) {
+            Console.WriteLine(e);
+        }
         await Task.CompletedTask;
     }
 

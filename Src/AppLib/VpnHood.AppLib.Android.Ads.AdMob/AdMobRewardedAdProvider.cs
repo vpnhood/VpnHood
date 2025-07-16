@@ -16,6 +16,7 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
     public AppAdType AdType => AppAdType.RewardedAd;
     public DateTime? AdLoadedTime { get; private set; }
     public TimeSpan AdLifeSpan => AdMobUtil.DefaultAdTimeSpan;
+    public TimeSpan AdEarnedTimeout { get; set; } = TimeSpan.FromSeconds(3);
 
     public static AdMobRewardedAdProvider Create(string adUnitId)
     {
@@ -82,12 +83,22 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
             await fullScreenContentCallback.DismissedTask
                 .WaitAsync(cancellationToken)
                 .ConfigureAwait(false);
+
+            // if user reward not received in given time, throw exception
+            try {
+                await userEarnedRewardListener.UserEarnedRewardTask.WaitAsync(AdEarnedTimeout, cancellationToken);
+            }
+            catch (TimeoutException) {
+                throw new ShowAdException(
+                    $"Could not receive user reward in {AdEarnedTimeout.TotalSeconds} seconds after closing the ad.");
+            }
         }
         finally {
             _loadedAd = null;
             AdLoadedTime = null;
         }
     }
+
 
     private class MyRewardedAdLoadCallback : AdNetworkCallBackFix.RewardedAdLoadCallback
     {

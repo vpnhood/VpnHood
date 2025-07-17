@@ -89,7 +89,7 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
                 await userEarnedRewardListener.UserEarnedRewardTask.WaitAsync(AdEarnedTimeout, cancellationToken);
             }
             catch (TimeoutException) {
-                throw new ShowAdException(
+                throw new RewardNotEarnedException(
                     $"Could not receive user reward in {AdEarnedTimeout.TotalSeconds} seconds after closing the ad.");
             }
         }

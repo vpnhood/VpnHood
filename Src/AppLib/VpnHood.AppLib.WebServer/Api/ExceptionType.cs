@@ -37,5 +37,8 @@ public enum ExceptionType
     UnreachableServerException,
     
     [EnumMember(Value = nameof(UnreachableServerLocationException))]
-    UnreachableServerLocationException
+    UnreachableServerLocationException,
+
+    [EnumMember(Value = nameof(RewardNotEarnedException))]
+    RewardNotEarnedException
 }

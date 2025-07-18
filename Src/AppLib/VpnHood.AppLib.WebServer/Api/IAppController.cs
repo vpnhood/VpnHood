@@ -1,11 +1,13 @@
 ﻿using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Device;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.AppLib.WebServer.Api;
 
 public interface IAppController
 {
+    Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode);
     Task<AppData> Configure(ConfigParams configParams);
     Task<AppData> GetConfig();
     Task<IpFilters> GetIpFilters();
@@ -24,5 +26,4 @@ public interface IAppController
     Task RequestQuickLaunch();
     Task RequestNotification();
     Task ExtendByRewardedAd();
-    Task<ExceptionType[]> GetExceptionTypes();
 }

@@ -1177,15 +1177,22 @@ export class AppClient {
         return Promise.resolve<void>(null as any);
     }
 
-    getExceptionTypes( cancelToken?: CancelToken): Promise<ExceptionType[]> {
-        let url_ = this.baseUrl + "/api/app/exception-types";
+    processTypes(exceptionType: ExceptionType, errorCode: SessionErrorCode, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/process-types?";
+        if (exceptionType === undefined || exceptionType === null)
+            throw new Error("The parameter 'exceptionType' must be defined and cannot be null.");
+        else
+            url_ += "exceptionType=" + encodeURIComponent("" + exceptionType) + "&";
+        if (errorCode === undefined || errorCode === null)
+            throw new Error("The parameter 'errorCode' must be defined and cannot be null.");
+        else
+            url_ += "errorCode=" + encodeURIComponent("" + errorCode) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
-            method: "GET",
+            method: "POST",
             url: url_,
             headers: {
-                "Accept": "application/json"
             },
             cancelToken
         };
@@ -1197,11 +1204,11 @@ export class AppClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processGetExceptionTypes(_response);
+            return this.processProcessTypes(_response);
         });
     }
 
-    protected processGetExceptionTypes(response: AxiosResponse): Promise<ExceptionType[]> {
+    protected processProcessTypes(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1213,23 +1220,13 @@ export class AppClient {
         }
         if (status === 200) {
             const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(item);
-            }
-            else {
-                result200 = <any>null;
-            }
-            return Promise.resolve<ExceptionType[]>(result200);
+            return Promise.resolve<void>(null as any);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<ExceptionType[]>(null as any);
+        return Promise.resolve<void>(null as any);
     }
 }
 
@@ -3781,17 +3778,47 @@ export interface IDeviceAppInfo {
 }
 
 export enum ExceptionType {
-    MaintenanceException = "MaintenanceException",
-    SessionException = "SessionException",
-    UiContextNotAvailableException = "UiContextNotAvailableException",
-    AdException = "AdException",
-    ShowAdException = "ShowAdException",
-    ShowAdNoUiException = "ShowAdNoUiException",
-    LoadAdException = "LoadAdException",
-    NoInternetException = "NoInternetException",
-    NoStableVpnException = "NoStableVpnException",
-    UnreachableServerException = "UnreachableServerException",
-    UnreachableServerLocationException = "UnreachableServerLocationException",
+    NoErrorFound = "NoErrorFoundException",
+    Maintenance = "MaintenanceException",
+    Session = "SessionException",
+    UiContextNotAvailable = "UiContextNotAvailableException",
+    Ad = "AdException",
+    ShowAd = "ShowAdException",
+    ShowAdNoUi = "ShowAdNoUiException",
+    LoadAd = "LoadAdException",
+    NoInternet = "NoInternetException",
+    NoStableVpn = "NoStableVpnException",
+    UnreachableServer = "UnreachableServerException",
+    UnreachableServerLocation = "UnreachableServerLocationException",
+    RewardNotEarned = "RewardNotEarnedException",
+    VpnServiceUnreachable = "VpnServiceUnreachableException",
+    VpnServiceTimeout = "VpnServiceTimeoutException",
+    VpnServiceNotReady = "VpnServiceNotReadyException",
+    VpnService = "VpnServiceNotReadyException",
+}
+
+export enum SessionErrorCode {
+    Ok = "Ok",
+    AccessError = "AccessError",
+    PlanRejected = "PlanRejected",
+    GeneralError = "GeneralError",
+    SessionClosed = "SessionClosed",
+    SessionSuppressedBy = "SessionSuppressedBy",
+    SessionError = "SessionError",
+    SessionExpired = "SessionExpired",
+    AccessExpired = "AccessExpired",
+    AccessCodeRejected = "AccessCodeRejected",
+    AccessLocked = "AccessLocked",
+    AccessTrafficOverflow = "AccessTrafficOverflow",
+    DailyLimitExceeded = "DailyLimitExceeded",
+    NoServerAvailable = "NoServerAvailable",
+    PremiumLocation = "PremiumLocation",
+    AdError = "AdError",
+    RewardedAdRejected = "RewardedAdRejected",
+    Maintenance = "Maintenance",
+    RedirectHost = "RedirectHost",
+    UnsupportedClient = "UnsupportedClient",
+    UnsupportedServer = "UnsupportedServer",
 }
 
 export class SubscriptionPlan implements ISubscriptionPlan {

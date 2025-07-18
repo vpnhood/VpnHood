@@ -4,6 +4,7 @@ using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Swagger.Exceptions;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.Core.Client.Device;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.AppLib.Swagger.Controllers;
@@ -123,8 +124,8 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
-    [HttpGet("exception-types")]
-    public Task<ExceptionType[]> GetExceptionTypes()
+    [HttpPost("process-types")]
+    public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode )
     {
         throw new SwaggerOnlyException();
     }

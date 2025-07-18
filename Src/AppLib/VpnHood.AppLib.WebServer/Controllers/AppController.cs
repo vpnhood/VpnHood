@@ -1,12 +1,12 @@
 ﻿using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
-using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -15,7 +15,6 @@ namespace VpnHood.AppLib.WebServer.Controllers;
 internal class AppController : WebApiController, IAppController
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
-
 
     [Route(HttpVerbs.Patch, "/configure")]
     public async Task<AppData> Configure(ConfigParams configParams)
@@ -176,9 +175,9 @@ internal class AppController : WebApiController, IAppController
         return App.Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
     }
 
-    [Route(HttpVerbs.Get, "/exception-types")]
-    public Task<ExceptionType[]> GetExceptionTypes()
+    [Route(HttpVerbs.Post, "/process-types")]
+    public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode)
     {
-        return Task.FromResult(Enum.GetValues<ExceptionType>());
+        throw new NotSupportedException("This method exists just to let swagger generate types.");
     }
 }

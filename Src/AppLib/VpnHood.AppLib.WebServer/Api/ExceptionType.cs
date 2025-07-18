@@ -1,11 +1,14 @@
 ﻿using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
-
+    
 namespace VpnHood.AppLib.WebServer.Api;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ExceptionType
 {
+    [EnumMember(Value = nameof(NoErrorFoundException))]
+    NoErrorFoundException,
+
     [EnumMember(Value = nameof(MaintenanceException))]
     MaintenanceException,
 
@@ -40,5 +43,8 @@ public enum ExceptionType
     UnreachableServerLocationException,
 
     [EnumMember(Value = nameof(RewardNotEarnedException))]
-    RewardNotEarnedException
+    RewardNotEarnedException,
+
+    [EnumMember(Value = nameof(VpnServiceUnreachableException))]
+    VpnServiceUnreachableException
 }

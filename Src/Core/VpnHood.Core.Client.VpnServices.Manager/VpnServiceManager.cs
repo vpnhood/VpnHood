@@ -172,8 +172,12 @@ public class VpnServiceManager : IDisposable
                 connectionInfo.ApiEndPoint, connectionInfo.ClientState);
         }
         catch (Exception ex) when (timeoutCts.IsCancellationRequested) {
-            throw new TimeoutException(
-                $"Could not start the VpnService in {_startVpnServiceTimeout.TotalSeconds} seconds.", ex);
+            var serviceTimeoutException = new VpnServiceTimeoutException(
+                $"Could not start the VpnService in {_startVpnServiceTimeout.TotalSeconds} seconds.", ex)
+                {
+                    TimeoutDuration = _startVpnServiceTimeout
+                };
+            throw serviceTimeoutException;
         }
     }
 

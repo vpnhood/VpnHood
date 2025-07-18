@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Core.Client.VpnServices.Manager.Exceptions;
 
-public class VpnServiceNotReadyException : Exception
+public class VpnServiceNotReadyException : VpnServiceException
 {
     public VpnServiceNotReadyException(string message) :
         base(message)

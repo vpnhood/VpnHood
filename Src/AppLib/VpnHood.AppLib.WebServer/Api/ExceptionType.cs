@@ -1,50 +1,64 @@
 ﻿using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
-    
+using VpnHood.AppLib.Exceptions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Client.VpnServices.Manager.Exceptions;
+using VpnHood.Core.Common.Exceptions;
+
 namespace VpnHood.AppLib.WebServer.Api;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ExceptionType
 {
     [EnumMember(Value = nameof(NoErrorFoundException))]
-    NoErrorFoundException,
+    NoErrorFound,
 
     [EnumMember(Value = nameof(MaintenanceException))]
-    MaintenanceException,
+    Maintenance,
 
     [EnumMember(Value = nameof(SessionException))]
-    SessionException,
+    Session,
 
     [EnumMember(Value = nameof(UiContextNotAvailableException))]
-    UiContextNotAvailableException,
+    UiContextNotAvailable,
 
     [EnumMember(Value = nameof(AdException))]
-    AdException,    
+    Ad,    
     
     [EnumMember(Value = nameof(ShowAdException))]
-    ShowAdException,
+    ShowAd,
     
     [EnumMember(Value = nameof(ShowAdNoUiException))]
-    ShowAdNoUiException,
+    ShowAdNoUi,
     
     [EnumMember(Value = nameof(LoadAdException))]
-    LoadAdException,
+    LoadAd,
     
     [EnumMember(Value = nameof(NoInternetException))]
-    NoInternetException,
+    NoInternet,
     
     [EnumMember(Value = nameof(NoStableVpnException))]
-    NoStableVpnException,
+    NoStableVpn,
     
     [EnumMember(Value = nameof(UnreachableServerException))]
-    UnreachableServerException,
+    UnreachableServer,
     
     [EnumMember(Value = nameof(UnreachableServerLocationException))]
-    UnreachableServerLocationException,
+    UnreachableServerLocation,
 
     [EnumMember(Value = nameof(RewardNotEarnedException))]
-    RewardNotEarnedException,
+    RewardNotEarned,
 
     [EnumMember(Value = nameof(VpnServiceUnreachableException))]
-    VpnServiceUnreachableException
+    VpnServiceUnreachable,
+
+    [EnumMember(Value = nameof(VpnServiceTimeoutException))]
+    VpnServiceTimeout,
+
+    [EnumMember(Value = nameof(VpnServiceNotReadyException))]
+    VpnServiceNotReady,
+    
+    [EnumMember(Value = nameof(VpnServiceNotReadyException))]
+    VpnService
+
 }

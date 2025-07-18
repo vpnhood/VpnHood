@@ -155,18 +155,12 @@ public class VpnServiceManager : IDisposable
 
             // wait for vpn service to start
             while (connectionInfo == null || connectionInfo.ClientState is ClientState.None or ClientState.Initializing) {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (localCts.IsCancellationRequested)
-                    throw new TimeoutException(
-                        $"VpnService did not respond within {_startVpnServiceTimeout.TotalSeconds} seconds.");
-
                 await Task.Delay(1000, localCts.Token);
                 connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
             }
 
             _connectionInfo = connectionInfo;
-            _tcpClient = null; // reset the tcp client to make sure we create a new one
-                               // success
+            _tcpClient = null; // reset the tcp client to make sure we create a new one 
             VhLogger.Instance.LogInformation(
                 "VpnService has started. EndPoint: {EndPoint}, ConnectionState: {ConnectionState}",
                 connectionInfo.ApiEndPoint, connectionInfo.ClientState);

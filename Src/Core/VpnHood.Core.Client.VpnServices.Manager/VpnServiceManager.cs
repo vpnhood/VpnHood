@@ -330,7 +330,6 @@ public class VpnServiceManager : IDisposable
             return ret;
         }
         catch (Exception ex) {
-            var remoteEndPoint = tcpClient?.Client.RemoteEndPoint;
             tcpClient?.Dispose();
             tcpClient = null;
             throw new VpnServiceUnreachableException($"VpnService is unreachable. EndPoint: {remoteEndPoint}", ex);

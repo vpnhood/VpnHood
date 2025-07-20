@@ -404,7 +404,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         VhLogger.Instance.LogDebug(GeneralEventId.Session, "Disposing {ExpiredSessions} expired sessions...", expiredSessions.Length);
         foreach (var session in expiredSessions) {
             session.SessionResponseEx = new SessionResponse {
-                ErrorCode = SessionErrorCode.AccessExpired
+                ErrorCode = SessionErrorCode.SessionExpired
             };
             session.Dispose();
         }

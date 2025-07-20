@@ -12,7 +12,7 @@ public enum SessionErrorCode
     SessionClosed,
     SessionSuppressedBy,
     SessionError,
-    SessionExpired, // not used yet
+    SessionExpired,
     AccessExpired,
     AccessCodeRejected,
     AccessLocked,

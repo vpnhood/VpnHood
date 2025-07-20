@@ -914,7 +914,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private ValueTask Cleanup(CancellationToken cancellationToken)
     {
         if (FastDateTime.UtcNow > _sessionStatus?.SessionExpirationTime) {
-            var ex = new SessionException(SessionErrorCode.AccessExpired);
+            var ex = new SessionException(SessionErrorCode.SessionExpired);
             VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Session has been expired.");
             return DisposeAsync(ex);
         }

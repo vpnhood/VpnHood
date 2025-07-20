@@ -237,7 +237,7 @@ public class SessionService : IDisposable
             // session expiration
             if (session.ExpirationTime != null && session.ExpirationTime < DateTime.UtcNow)
                 return new SessionResponseEx {
-                    ErrorCode = SessionErrorCode.AccessExpired,
+                    ErrorCode = SessionErrorCode.SessionExpired,
                     AccessUsage = accessUsage,
                     ErrorMessage = "Session Expired!"
                 };

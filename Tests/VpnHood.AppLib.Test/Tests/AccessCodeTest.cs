@@ -14,8 +14,6 @@ public class AccessCodeTest : TestAppBase
     [TestMethod]
     public async Task AaFoo()
     {
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-        await Task.Delay(10000, timeoutCts.Token);
         await Task.CompletedTask;
     }
 

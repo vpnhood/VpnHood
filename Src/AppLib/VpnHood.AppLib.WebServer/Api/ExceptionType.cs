@@ -19,9 +19,6 @@ public enum ExceptionType
     [EnumMember(Value = nameof(SessionException))]
     Session,
 
-    [EnumMember(Value = nameof(UiContextNotAvailableException))]
-    UiContextNotAvailable,
-
     [EnumMember(Value = nameof(AdException))]
     Ad,    
     
@@ -49,6 +46,9 @@ public enum ExceptionType
     [EnumMember(Value = nameof(RewardNotEarnedException))]
     RewardNotEarned,
 
+    [EnumMember(Value = nameof(VpnServiceNotReadyException))]
+    VpnServiceNotReady,
+
     [EnumMember(Value = nameof(VpnServiceUnreachableException))]
     VpnServiceUnreachable,
 
@@ -56,9 +56,12 @@ public enum ExceptionType
     VpnServiceTimeout,
 
     [EnumMember(Value = nameof(VpnServiceNotReadyException))]
-    VpnServiceNotReady,
-    
-    [EnumMember(Value = nameof(VpnServiceNotReadyException))]
-    VpnService
+    VpnService,
+
+    [EnumMember(Value = nameof(UserCanceledException))]
+    UserCanceled,
+
+    [EnumMember(Value = nameof(ConnectionTimeoutException))]
+    ConnectionTimeout,
 
 }

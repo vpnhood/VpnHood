@@ -65,7 +65,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         Certificates = configuration.Certificates.Select(x => new CertificateHostName(x)).ToArray();
 
         ConfigureTcpListeners(configuration.TcpEndPoints);
-        ConfigureUdpListeners(configuration.UdpEndPoints, configuration.UdpSendBufferSize, configuration.UdpReceiveBufferSize);
+        ConfigureUdpListeners(configuration.UdpEndPoints, configuration.UdpChannelSendBufferSize, configuration.UdpChannelReceiveBufferSize);
         _tcpListenerTasks.RemoveAll(x => x.IsCompleted);
     }
 
@@ -107,8 +107,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
         // reconfigure all transmitters
         foreach (var udpChannelTransmitter in _udpChannelTransmitters) {
-            udpChannelTransmitter.SendBufferSize = sendBufferSize;
-            udpChannelTransmitter.ReceiveBufferSize = receiveBufferSize;
+            udpChannelTransmitter.SendBufferSize = sendBufferSize ?? TunnelDefaults.ServerUdpChannelSendBufferSize;
+            udpChannelTransmitter.ReceiveBufferSize = receiveBufferSize ?? TunnelDefaults.ServerUdpChannelReceiveBufferSize;
         }
     }
 

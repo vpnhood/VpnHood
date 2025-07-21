@@ -709,7 +709,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 TrackerFactoryAssemblyQualifiedName = _trackerFactory.GetType().AssemblyQualifiedName,
                 UserAgent = userAgent ?? ClientOptions.Default.UserAgent,
                 DebugData1 = UserSettings.DebugData1,
-                DebugData2 = UserSettings.DebugData2,
+                DebugData2 = UserSettings.DebugData2
             };
 
             VhLogger.Instance.LogDebug(

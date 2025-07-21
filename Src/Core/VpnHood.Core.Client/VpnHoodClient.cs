@@ -66,8 +66,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly string[]? _excludeApps;
     private ClientSessionStatus? _sessionStatus;
     private IPAddress[] _dnsServers;
-    private readonly int _udpSendBufferSize;
-    private readonly int _udpReceiveBufferSize;
     private int _sessionPacketChannelCount;
     private readonly AsyncLock _packetChannelLock = new();
     private readonly Job _cleanupJob;
@@ -139,8 +137,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _excludeApps = options.ExcludeApps;
         _includeApps = options.IncludeApps;
         _allowRewardedAd = options.AllowRewardedAd;
-        _udpReceiveBufferSize = options.UdpReceiveBufferSize ?? TunnelDefaults.ClientUdpReceiveBufferSize;
-        _udpSendBufferSize = options.UdpSendBufferSize ?? TunnelDefaults.ClientUdpSendBufferSize;
         _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
         _serverFinder = new ServerFinder(socketFactory, token.ServerToken,
             serverLocation: options.ServerLocation,
@@ -154,8 +150,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             MaxPingClientCount = TunnelDefaults.MaxPingClientCount,
             PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
             IcmpTimeout = TunnelDefaults.IcmpTimeout,
-            UdpReceiveBufferSize = TunnelDefaults.ClientUdpReceiveBufferSize,
-            UdpSendBufferSize = TunnelDefaults.ClientUdpSendBufferSize,
+            UdpReceiveBufferSize = options.UdpProxyReceiveBufferSize,
+            UdpSendBufferSize = options.UdpProxyReceiveBufferSize,
             LogScope = null,
             UseUdpProxy2 = true,
             AutoDisposePackets = true,
@@ -194,7 +190,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _tunnel.PacketReceived += Tunnel_PacketReceived;
 
         // create proxy host
-        _clientHost = new ClientHost(this, _tunnel, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
+        _clientHost = new ClientHost(
+            this, _tunnel,
+            catcherAddressIpV4: options.TcpProxyCatcherAddressIpV4, catcherAddressIpV6: options.TcpProxyCatcherAddressIpV6,
+            proxySendBufferSize: options.StreamProxySendBufferSize, proxyReceiveBufferSize: options.StreamProxyReceiveBufferSize);
+
         _clientHost.PacketReceived += ClientHost_PacketReceived;
 
         // init vpnAdapter events
@@ -254,7 +254,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // create and add the channel
         var channel = new ProxyChannel(channelId, orgTcpClientStream,
-            new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"));
+            new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"),
+            orgStreamBufferSize: _clientHost.ProxySendBufferSize,
+            tunnelStreamBufferSize: _clientHost.ProxyReceiveBufferSize);
 
         // flush initBuffer
         await tcpClient.GetStream().WriteAsync(initBuffer, connectCts.Token);
@@ -527,8 +529,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 Blocking = true,
                 ChannelId = Guid.NewGuid().ToString(),
                 Lifespan = null,
-                UdpReceiveBufferSize = _udpReceiveBufferSize,
-                UdpSendBufferSize = _udpSendBufferSize
+                UdpReceiveBufferSize = TunnelDefaults.ClientUdpChannelReceiveBufferSize,
+                UdpSendBufferSize = TunnelDefaults.ClientUdpChannelUdpSendBufferSize
             });
 
         try {

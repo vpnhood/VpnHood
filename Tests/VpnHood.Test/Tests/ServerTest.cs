@@ -137,8 +137,8 @@ public class ServerTest : TestBase
         serverConfig.SessionOptions.TcpBufferSize = 2076;
         serverConfig.SessionOptions.UdpProxyReceiveBufferSize = 4001;
         serverConfig.SessionOptions.UdpProxySendBufferSize = 4002;
-        serverConfig.SessionOptions.UdpReceiveBufferSize = 5001;
-        serverConfig.SessionOptions.UdpSendBufferSize = 5002;
+        serverConfig.SessionOptions.UdpChannelReceiveBufferSize = 5001;
+        serverConfig.SessionOptions.UdpChannelSendBufferSize = 5002;
         serverConfig.ServerSecret = VhUtils.GenerateKey();
 
         var dateTime = DateTime.Now;
@@ -166,8 +166,8 @@ public class ServerTest : TestBase
         Assert.AreEqual(serverConfig.SessionOptions.TcpBufferSize, server.SessionManager.SessionOptions.TcpBufferSize);
         Assert.AreEqual(serverConfig.SessionOptions.UdpProxySendBufferSize, server.SessionManager.SessionOptions.UdpProxySendBufferSize);
         Assert.AreEqual(serverConfig.SessionOptions.UdpProxyReceiveBufferSize, server.SessionManager.SessionOptions.UdpProxyReceiveBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpSendBufferSize, server.SessionManager.SessionOptions.UdpSendBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpReceiveBufferSize, server.SessionManager.SessionOptions.UdpReceiveBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpChannelSendBufferSize, server.SessionManager.SessionOptions.UdpChannelSendBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpChannelReceiveBufferSize, server.SessionManager.SessionOptions.UdpChannelReceiveBufferSize);
         Assert.IsFalse(accessManager.LastServerInfo?.IsRestarted);
     }
 

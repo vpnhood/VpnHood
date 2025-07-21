@@ -246,8 +246,8 @@ public class VpnHoodServer : IAsyncDisposable
                 TcpEndPoints = serverConfig.TcpEndPointsValue,
                 UdpEndPoints = serverConfig.UdpEndPointsValue,
                 Certificates = serverConfig.Certificates.Select(x => new X509Certificate2(x.RawData)).ToArray(),
-                UdpReceiveBufferSize = serverConfig.SessionOptions.UdpReceiveBufferSizeValue,
-                UdpSendBufferSize = serverConfig.SessionOptions.UdpSendBufferSizeValue,
+                UdpChannelReceiveBufferSize = serverConfig.SessionOptions.UdpChannelReceiveBufferSizeValue,
+                UdpChannelSendBufferSize = serverConfig.SessionOptions.UdpChannelSendBufferSizeValue,
             }).Vhc();
 
             // Reconfigure dns challenge

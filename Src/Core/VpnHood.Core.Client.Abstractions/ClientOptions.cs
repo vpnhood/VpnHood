@@ -65,12 +65,30 @@ public class ClientOptions
     public string[]? IncludeApps { get; set; }
     public bool UseNullCapture { get; set; }
     public LogServiceOptions LogServiceOptions { get; set; } = new();
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Ga4MeasurementId { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? TrackerFactoryAssemblyQualifiedName { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? DebugData1 { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? DebugData2 { get; set; }
-    public int? UdpReceiveBufferSize { get; set; }
-    public int? UdpSendBufferSize { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int? UdpProxyReceiveBufferSize { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int? UdpProxySendBufferSize { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int? StreamProxySendBufferSize { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int? StreamProxyReceiveBufferSize { get; set; }
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

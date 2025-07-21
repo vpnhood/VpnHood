@@ -21,6 +21,7 @@ public class ServerUdpChannelTransmitter(UdpClient udpClient, SessionManager ses
     public static ServerUdpChannelTransmitter Create(IPEndPoint ipEndPoint, SessionManager sessionManager)
     {
         var udpClient = new UdpClient(ipEndPoint);
+
         try {
             return new ServerUdpChannelTransmitter(udpClient, sessionManager);
         }

@@ -11,16 +11,21 @@ public static class TunnelDefaults
     public const int MaxPacketSize = 1500;
     public const string HttpPassCheck = "VpnHoodPassCheck";
     public const int StreamProxyBufferSize = 0x1000 * 2; // 8KB
-    public const int ClientUdpReceiveBufferSize = 1024 * 1024 * 1; // 1MB
-    public const int ClientUdpSendBufferSize = 1024 * 1024 * 1; // 1MB
+    public const int ClientUdpChannelReceiveBufferSize = 1024 * 1024 * 1; // 1MB
+    public const int ClientUdpChannelUdpSendBufferSize = 1024 * 1024 * 1; // 1MB
+    public const int ClientUdpProxyReceiveBufferSize = 1024 * 1024 * 1; // 1MB
+    public const int ClientUdpProxySendBufferSize = 1024 * 1024 * 1; // 1MB
     public const int ProxyPacketQueueCapacity = 200;
     public const int TunnelPacketQueueCapacity = 200;
     public const int MaxUdpClientCount = 500;
     public const int MaxPingClientCount = 10;
     public const int StreamPacketReaderBufferSize = 1500 * 50; // 50KB about 50 packets
 
-    public static int? ServerUdpReceiveBufferSize { get; set; } = null; // system default
-    public static int? ServerUdpSendBufferSize { get; set; } = null; // system default
+    public static int? ServerUdpProxyReceiveBufferSize { get; set; } = null; // system default
+    public static int? ServerUdpProxySendBufferSize { get; set; } = null; // system default
+    public static int? ServerUdpChannelReceiveBufferSize { get; set; } = null; // system default
+    public static int? ServerUdpChannelSendBufferSize { get; set; } = null; // system default
+
     public static TimeSpan PingTimeout { get; set; } = TimeSpan.FromSeconds(5);
     public static TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(2);
     public static TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromMinutes(1); // it is for worker timeout

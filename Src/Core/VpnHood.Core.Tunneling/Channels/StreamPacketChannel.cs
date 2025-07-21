@@ -6,7 +6,8 @@ using VpnHood.Core.Tunneling.ClientStreams;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class StreamPacketChannel(StreamPacketChannelOptions options) : PacketChannel(options)
+public class StreamPacketChannel(StreamPacketChannelOptions options) 
+    : PacketChannel(options)
 {
     private readonly Memory<byte> _buffer = new byte[0xFFFF * 4];
     private readonly IClientStream _clientStream = options.ClientStream;

@@ -22,7 +22,9 @@ internal class ClientHost(
     VpnHoodClient vpnHoodClient,
     Tunnel tunnel,
     IPAddress catcherAddressIpV4,
-    IPAddress catcherAddressIpV6)
+    IPAddress catcherAddressIpV6,
+    int? proxySendBufferSize = null,
+    int? proxyReceiveBufferSize = null)
     : IDisposable
 {
     private bool _disposed;
@@ -35,8 +37,10 @@ internal class ClientHost(
     private readonly ClientHostStat _stat = new();
     private readonly Nat _nat = new(true);
 
-    public IPAddress CatcherAddressIpV4 { get; } = catcherAddressIpV4;
-    public IPAddress CatcherAddressIpV6 { get; } = catcherAddressIpV6;
+    public IPAddress CatcherAddressIpV4 => catcherAddressIpV4;
+    public IPAddress CatcherAddressIpV6 => catcherAddressIpV6;
+    public int? ProxySendBufferSize => proxySendBufferSize;
+    public int? ProxyReceiveBufferSize => proxyReceiveBufferSize;
     public IClientHostStat Stat => _stat;
     public event EventHandler<IpPacket>? PacketReceived;
 
@@ -74,6 +78,9 @@ internal class ClientHost(
             VhLogger.Instance.LogError(ex,
                 "Could not create a listener. EndPoint: {EndPoint}", VhLogger.Format(new IPEndPoint(IPAddress.IPv6Any, 0)));
         }
+
+        // check available memory
+
     }
 
     private async Task AcceptTcpClientLoop(TcpListener tcpListener)
@@ -273,7 +280,8 @@ internal class ClientHost(
             await proxyClientStream.Stream.WriteAsync(filterResult.ReadData, cancellationToken);
 
             // add stream proxy
-            channel = new ProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
+            channel = new ProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream, 
+                orgStreamBufferSize: proxySendBufferSize, tunnelStreamBufferSize: proxyReceiveBufferSize);
             tunnel.AddChannel(channel);
             _stat.TcpTunnelledCount++;
         }

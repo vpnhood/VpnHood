@@ -43,6 +43,11 @@ public static class IPAddressExtensions
             (ipAddress.IsV6() && ipAddress.IsIPv6Multicast);
     }
 
+    public static bool IsBroadcast(this IPAddress ipAddress)
+    {
+        return ipAddress.Equals(IPAddress.Broadcast);
+    }
+
     public static bool IsLoopback(this IPAddress ipAddress)
     {
         // IPv4 loopback address is 127.x.x.x

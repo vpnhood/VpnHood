@@ -88,8 +88,13 @@ public static class IpPacketExtensions
         // only UDP and ICMPv6 packets can use multicast
         return ipPacket.Protocol is IpProtocol.Udp or IpProtocol.IcmpV4 or IpProtocol.IcmpV6 &&
                ipPacket.DestinationAddress.IsMulticast();
-
     }
+
+    public static bool IsBroadcast(this IpPacket ipPacket)
+    {
+        return IPAddress.Broadcast.SpanEquals(ipPacket.DestinationAddressSpan);
+    }
+
 
     public static IPEndPointPair GetEndPoints(this IpPacket ipPacket)
     {

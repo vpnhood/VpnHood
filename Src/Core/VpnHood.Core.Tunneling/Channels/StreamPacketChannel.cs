@@ -54,7 +54,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
     {
         var cancellationToken = CancellationToken;
 
-        var streamPacketReader =
+        using var streamPacketReader = 
             new StreamPacketReader(_clientStream.Stream, TunnelDefaults.StreamPacketReaderBufferSize);
 
         // stop reading if State is not Connected (Such as getting the close request)

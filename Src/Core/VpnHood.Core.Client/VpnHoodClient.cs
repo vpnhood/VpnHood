@@ -340,7 +340,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // exclude local networks
         includeIpRanges = includeIpRanges
-            .Exclude(IpNetwork.LocalNetworks.ToIpRanges());
+            .Exclude(IpNetwork.LocalNetworks.ToIpRanges())
+            .Exclude(IpNetwork.MulticastNetworks.ToIpRanges())
+            .Exclude(IPAddress.Broadcast);
 
         // Make sure CatcherAddress is included
         includeIpRanges = includeIpRanges.Union([
@@ -393,6 +395,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // Multicast packets are not supported (Already excluded by adapter filter)
         if (ipPacket.IsMulticast()) {
             PacketLogger.LogPacket(ipPacket, "A multicast packet has been dropped.");
+            ipPacket.Dispose();
+            return;
+        }
+
+        // Broadcast packets are not supported (Already excluded by adapter filter)
+        if (ipPacket.IsBroadcast()) {
+            PacketLogger.LogPacket(ipPacket, "A broad packet has been dropped.");
             ipPacket.Dispose();
             return;
         }

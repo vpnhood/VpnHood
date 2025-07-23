@@ -4,7 +4,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
-public class StreamPacketReader(Stream stream, int bufferSize)
+public class StreamPacketReader(Stream stream, int bufferSize) : IDisposable
 {
     private readonly ReadCacheStream _stream = new(stream, true, bufferSize);
     private readonly Memory<byte> _minHeader = new byte[20];
@@ -46,5 +46,10 @@ public class StreamPacketReader(Stream stream, int bufferSize)
             throw;
         }
 
+    }
+
+    public void Dispose()
+    {
+        _stream.Dispose();
     }
 }

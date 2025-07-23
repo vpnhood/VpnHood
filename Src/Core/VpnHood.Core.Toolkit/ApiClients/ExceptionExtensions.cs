@@ -9,12 +9,17 @@ public static class ExceptionExtensions
     {
         var exceptionType = GetExceptionType(ex);
 
+        // set best message
+        var message = ex.Message;
+        if (string.IsNullOrWhiteSpace(message)) message = ex.InnerException?.Message;
+        if (string.IsNullOrWhiteSpace(message)) message = exceptionType.FullName;
+
         // common properties
         var apiError = new ApiError {
             TypeName = exceptionType.Name,
             TypeFullName = exceptionType.FullName,
-            Message = ex.Message,
-            InnerMessage = ex.InnerException?.Message,
+            Message = message ?? "",
+            InnerMessage = string.IsNullOrWhiteSpace(ex.Message) ? null : ex.InnerException?.Message,
         };
 
         // add some exception data

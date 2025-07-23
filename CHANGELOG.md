@@ -1,6 +1,10 @@
+# Upcoming
+* Fix: Many error messages
+* Fix: Drop brodcast packets
+* Improve: Windows: Faster connection
+
 # v7.2.728
 * Feature: Linux Client
-
 
 # v7.1.725
 * Feature: Support reserve proxies like Cloudflare

@@ -264,8 +264,14 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
 
         // ReSharper disable once PossibleMultipleEnumeration
-        foreach (var network in ipNetworks)
-            await AddRoute(network, cancellationToken).Vhc();
+        foreach (var network in ipNetworks) {
+            try {
+                await AddRoute(network, cancellationToken).Vhc();
+            }
+            catch (Exception ex) {
+                throw new Exception($"Could not add {network} to route. {ex.Message}");
+            }
+        }
     }
 
     private async Task SetAppFilters(string[]? includeApps, string[]? excludeApps, CancellationToken cancellationToken)

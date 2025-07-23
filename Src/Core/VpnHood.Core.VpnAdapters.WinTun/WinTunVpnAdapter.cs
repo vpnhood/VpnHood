@@ -19,6 +19,7 @@ namespace VpnHood.Core.VpnAdapters.WinTun;
 public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     : TunVpnAdapter(adapterSettings)
 {
+    private uint _adapterIndex;
     private readonly int _ringCapacity = adapterSettings.RingCapacity;
     private IntPtr _tunAdapter;
     private IntPtr _tunSession;
@@ -86,6 +87,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         if (_tunAdapter == IntPtr.Zero)
             throw new PInvokeException("Failed to create WinTun adapter. Make sure the app is running with admin privilege.");
 
+        _adapterIndex = GetAdapterIndex(AdapterName);
         return Task.CompletedTask;
     }
 
@@ -106,6 +108,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
             if (AdapterIpNetworkV6 != null)
                 TryRemoveNat(AdapterIpNetworkV6);
         }
+
+        _adapterIndex = 0;
     }
 
     protected override Task AdapterOpen(CancellationToken cancellationToken)
@@ -159,6 +163,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
     }
 
+    // ReSharper disable once UnusedMember.Local
     private async Task AddRouteUsingNetsh(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         var command = ipNetwork.IsV4
@@ -170,15 +175,20 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
     protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        return AddRouteUsingNetsh(ipNetwork, cancellationToken);
+        if (_adapterIndex == 0)
+            throw new InvalidOperationException("Adapter index is not set. Call AdapterOpen() first.");
+
+        Console.WriteLine($"Adding {ipNetwork}");
+        Win32IpHelper.AddRoute(_adapterIndex, ipNetwork, cancellationToken);
+        return Task.CompletedTask;
     }
 
     // ReSharper disable once UnusedMember.Local
-    private uint GetAdapterIndex()
+    private static uint GetAdapterIndex(string adapterName)
     {
-        var networkInterface = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(x => x.Name == AdapterName);
+        var networkInterface = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(x => x.Name == adapterName);
         if (networkInterface == null)
-            throw new InvalidOperationException($"Could not find network adapter with name '{AdapterName}'.");
+            throw new InvalidOperationException($"Could not find network adapter with name '{adapterName}'.");
 
         // Get the index of the adapter
         if (networkInterface.Supports(NetworkInterfaceComponent.IPv4)) {
@@ -194,7 +204,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         }
 
         // If neither IPv4 nor IPv6 is supported, throw an exception
-        throw new InvalidOperationException($"Adapter '{AdapterName}' does not support IPv4 or IPv6.");
+        throw new InvalidOperationException($"Adapter '{adapterName}' does not support IPv4 or IPv6.");
     }
 
     protected override async Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)

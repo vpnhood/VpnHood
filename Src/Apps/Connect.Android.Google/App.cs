@@ -53,7 +53,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AdjustForSystemBars = false,
             TrackerFactory = new FirebaseAnalyticsTrackerFactory(),
             AdOptions = new AppAdOptions {
-                PreloadAd = false
+                PreloadAd = true
             }
         };
     }

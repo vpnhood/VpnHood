@@ -320,7 +320,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (!IsIdle)
                 return null;
 
-            // Show error if a diagnose has been requested and there is no error
+            // Show error if a diagnosis has been requested and there is no error
             if (_appPersistState is { HasDiagnoseRequested: true })
                 return new NoErrorFoundException().ToApiError();
 
@@ -496,7 +496,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectCts.Token);
             _isConnecting = true; //must be after checking IsIdle
 
-            await ConnectInternal(connectOptions, linkedCts.Token);
+            await ConnectInternal1(connectOptions, linkedCts.Token);
         }
         catch (UserCanceledException ex) {
             _appPersistState.HasDisconnectedByUser = true;
@@ -516,7 +516,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
 
-    private async Task ConnectInternal(ConnectOptions connectOptions, CancellationToken cancellationToken)
+    private async Task ConnectInternal1(ConnectOptions connectOptions, CancellationToken cancellationToken)
     {
         // set use default clientProfile and serverLocation
         var clientProfileId = connectOptions.ClientProfileId ?? UserSettings.ClientProfileId ?? throw new NotExistsException("ClientProfile is not set.");
@@ -587,7 +587,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // connect
             VhLogger.Instance.LogInformation("Client is Connecting ...");
-            await ConnectInternal(clientProfile.Token,
+            await ConnectInternal2(clientProfile.Token,
                     serverLocation: serverLocation,
                     userAgent: connectOptions.UserAgent,
                     planId: connectOptions.PlanId,
@@ -640,22 +640,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public bool HasDebugCommand(string command)
-    {
-        return HasDebugCommand(UserSettings, command);
-    }
-
-    private static bool HasDebugCommand(UserSettings userSettings, string command)
-    {
-        if (string.IsNullOrEmpty(userSettings.DebugData1))
-            return false;
-
-        // check if the debug command is enabled
-        return userSettings.DebugData1?.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Contains(command, StringComparer.OrdinalIgnoreCase) == true;
-    }
-
-    private async Task ConnectInternal(Token token, string? serverLocation, string? userAgent, ConnectPlanId planId,
+    private async Task ConnectInternal2(Token token, string? serverLocation, string? userAgent, ConnectPlanId planId,
         string? accessCode, bool allowUpdateToken, CancellationToken cancellationToken)
     {
         try {
@@ -770,7 +755,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 // reconnect using the new token
                 ReportError(ex, "Could not establish the connection. Reconnecting using the new token...");
                 token = ClientProfileService.GetToken(token.TokenId);
-                await ConnectInternal(token,
+                await ConnectInternal2(token,
                         serverLocation: serverLocation,
                         userAgent: userAgent,
                         planId: planId,
@@ -783,6 +768,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             throw;
         }
+    }
+
+    public bool HasDebugCommand(string command)
+    {
+        return HasDebugCommand(UserSettings, command);
+    }
+
+    private static bool HasDebugCommand(UserSettings userSettings, string command)
+    {
+        if (string.IsNullOrEmpty(userSettings.DebugData1))
+            return false;
+
+        // check if the debug command is enabled
+        return userSettings.DebugData1?.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Contains(command, StringComparer.OrdinalIgnoreCase) == true;
     }
 
     private void UpdateClientIpLocationFromServer(IPAddress publicIpAddress, string countryCode)

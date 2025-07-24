@@ -616,11 +616,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                             new ClientProfileUpdateParams { AccessCode = new Patch<string?>(null) });
                         break;
 
+                    // Remove it, so let user get prompted to restore free version
                     // remove the client profile if access expired
-                    case SessionErrorCode.AccessExpired when clientProfile.IsForAccount:
-                        ClientProfileService.Delete(clientProfile.ClientProfileId);
-                        _ = Services.AccountService?.Refresh(true);
-                        break;
+                    //case SessionErrorCode.AccessExpired when clientProfile.IsForAccount:
+                    //    ClientProfileService.Delete(clientProfile.ClientProfileId);
+                    //    _ = Services.AccountService?.Refresh(true);
+                    //    break;
                 }
             }
 

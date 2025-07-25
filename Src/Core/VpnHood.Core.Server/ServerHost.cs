@@ -370,14 +370,14 @@ public class ServerHost : IDisposable, IAsyncDisposable
                 throw new ObjectDisposedException("ServerHost has been stopped.");
 
             // add client stream to reuse list and take the ownership
-            using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
-            using var reusedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
+            using var timeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
+            using var reusedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, _cancellationTokenSource.Token);
 
             VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "ServerHost.ReuseClientStream: A shared ClientStream is pending for reuse. ClientStreamId: {ClientStreamId}",
                 clientStream.ClientStreamId);
 
-            await ProcessClientStream(clientStream, timeoutCt, reusedCts.Token).Vhc();
+            await ProcessClientStream(clientStream, timeoutCts, reusedCts.Token).Vhc();
 
             VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "ServerHost.ReuseClientStream: A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}",
@@ -442,7 +442,9 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
             // return 401 for ANY non SessionException to keep server's anonymity
             if (clientStream.Connected)
-                await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).Vhc();
+                await VhUtils.TryInvokeAsync("Write unauthorized response.",
+                    () => clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken)).Vhc();
+
             clientStream.DisposeWithoutReuse();
         }
         finally {

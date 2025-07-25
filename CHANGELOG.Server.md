@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: Memory Leak!
+
 # v7.1.725
 * Feature: Support reserve proxies like Cloudflare
 

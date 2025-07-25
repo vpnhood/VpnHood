@@ -98,13 +98,14 @@ public static class WebSocketUtils
         return buffer[..offset];
     }
 
-    public static async Task<WebSocketHeader> ReadWebSocketHeader(Stream stream, Memory<byte> buffer)
+    public static async Task<WebSocketHeader> ReadWebSocketHeader(Stream stream, Memory<byte> buffer,
+        CancellationToken cancellationToken)
     {
         if (buffer.Length < 14)
             throw new ArgumentException("Buffer must be at least 14 bytes.", nameof(buffer));
 
         // Always read first 2 bytes
-        await stream.ReadExactlyAsync(buffer[..2]);
+        await stream.ReadExactlyAsync(buffer[..2], cancellationToken);
 
         var firstByte = buffer.Span[0];
         var secondByte = buffer.Span[1];
@@ -124,7 +125,7 @@ public static class WebSocketUtils
                 break;
 
             case 126:
-                await stream.ReadExactlyAsync(buffer.Slice(2, 2));
+                await stream.ReadExactlyAsync(buffer.Slice(2, 2), cancellationToken);
                 span = buffer.Span;
                 payloadLength = (span[2] << 8) | span[3];
                 headerLength += 2;
@@ -132,7 +133,7 @@ public static class WebSocketUtils
 
             // 127
             default:
-                await stream.ReadExactlyAsync(buffer.Slice(2, 8));
+                await stream.ReadExactlyAsync(buffer.Slice(2, 8), cancellationToken);
                 span = buffer.Span;
                 payloadLength = ((long)span[2] << 56) |
                                 ((long)span[3] << 48) |
@@ -149,7 +150,7 @@ public static class WebSocketUtils
         var maskKey = Memory<byte>.Empty;
         if (isMasked) {
             maskKey = buffer.Slice(headerLength, 4);
-            await stream.ReadExactlyAsync(maskKey);
+            await stream.ReadExactlyAsync(maskKey, cancellationToken);
             // ReSharper disable once RedundantAssignment
             headerLength += 4;
         }

@@ -1,5 +1,8 @@
-﻿using VpnHood.Core.Common.Messaging;
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.ClientStreams;
 
 namespace VpnHood.Core.Server.Utils;
@@ -24,7 +27,14 @@ public static class ClientStreamExtensions
     public static async Task DisposeAsync(this IClientStream clientStream, SessionResponse sessionResponse, CancellationToken cancellationToken)
     {
         // Write the session response to the client stream
-        await clientStream.WriteResponseAsync(sessionResponse, cancellationToken).Vhc();
-        clientStream.Dispose();
+        try {
+            await clientStream.WriteResponseAsync(sessionResponse, cancellationToken).Vhc();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife, ex,
+                "Could not dispose a ClientStream gracefully. ClientStreamId: {ClientStreamId}", clientStream.ClientStreamId);
+
+            clientStream.Dispose();
+        }
     }
 }

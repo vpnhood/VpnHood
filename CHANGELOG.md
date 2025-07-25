@@ -1,7 +1,8 @@
 # Upcoming
-* Fix: Many error messages
 * Fix: Drop brodcast packets
+* Fix: Memory Leak!
 * Improve: Windows: Faster connection
+* Improve: Some error messages
 
 # v7.2.728
 * Feature: Linux Client

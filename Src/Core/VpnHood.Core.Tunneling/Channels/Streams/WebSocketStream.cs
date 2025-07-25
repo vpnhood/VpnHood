@@ -209,7 +209,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         try {
             while (true) {
                 // get chunk header
-                var webSocketHeader = await WebSocketUtils.ReadWebSocketHeader(SourceStream, _readChunkHeaderBuffer);
+                var webSocketHeader = await WebSocketUtils.ReadWebSocketHeader(SourceStream, _readChunkHeaderBuffer, cancellationToken);
 
                 // skip close connection payload
                 if (webSocketHeader.IsCloseConnection) {

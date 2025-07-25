@@ -1,5 +1,5 @@
-﻿using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using System.Net.Sockets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
@@ -11,7 +11,7 @@ public class TcpClientStream : IClientStream
 {
     private bool _disposed;
     private readonly object _reuseLock = new();
-    private readonly ReuseCallback? _reuseCallback;
+    private ReuseCallback? _reuseCallback;
     private string _clientStreamId;
     private readonly TcpClient _tcpClient;
     private bool _allowReuse = true;
@@ -104,6 +104,7 @@ public class TcpClientStream : IClientStream
             var newTcpClientStream = new TcpClientStream(_tcpClient, newStream, _clientStreamId, reuseCallback);
             Task.Run(() => reuseCallback(newTcpClientStream));
 
+            _reuseCallback = null;
             _disposed = true;
         }
     }
@@ -133,6 +134,7 @@ public class TcpClientStream : IClientStream
             PreventReuse();
 
             // close stream and let cancel reuse if it is in progress
+            _reuseCallback = null;
             Stream.Dispose();
             _tcpClient.Dispose();
             _disposed = true;

@@ -167,7 +167,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                     _sessionManager.SessionOptions.TcpKernelReceiveBufferSize);
 
                 // config tcpClient
-                _ = ProcessTcpClient(tcpClient, _cancellationTokenSource.Token);
+                _ = TryProcessTcpClient(tcpClient, _cancellationTokenSource.Token);
                 errorCounter = 0;
             }
             catch (Exception) when (!tcpListener.Server.IsBound) {
@@ -202,26 +202,6 @@ public class ServerHost : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogInformation("TCP Listener has been stopped. LocalEp: {LocalEp}", VhLogger.Format(localEp));
     }
 
-    private async Task<SslStream> AuthenticateAsServerAsync(Stream stream, CancellationToken cancellationToken)
-    {
-        try {
-            VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "TLS Authenticating...");
-            var sslStream = new SslStream(stream, true);
-            await sslStream.AuthenticateAsServerAsync(
-                    new SslServerAuthenticationOptions {
-                        ClientCertificateRequired = false,
-                        CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
-                        ServerCertificateSelectionCallback = ServerCertificateSelectionCallback
-                    },
-                    cancellationToken)
-                .Vhc();
-            return sslStream;
-        }
-        catch (Exception ex) {
-            throw new TlsAuthenticateException("TLS Authentication error.", ex);
-        }
-    }
-
     private X509Certificate ServerCertificateSelectionCallback(object sender, string? hostname)
     {
         var certificate =
@@ -234,11 +214,10 @@ public class ServerHost : IDisposable, IAsyncDisposable
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream,
         CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "Waiting for request...");
-        var streamId = UniqueIdFactory.Create() + ":server:tunnel:incoming";
-
-        // Version 2 is HTTP and starts with POST
         try {
+            VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "Waiting for ClientStream request...");
+            var streamId = UniqueIdFactory.Create() + ":server:tunnel:incoming";
+
             var headers =
                 await HttpUtil.ParseHeadersAsync(sslStream, cancellationToken).Vhc()
                 ?? throw new Exception("Connection has been closed before receiving any request.");
@@ -266,7 +245,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                     };
 
                 // obsoleted
-#pragma warning disable CS0618 // Type or member is obsolete
+#pragma warning disable CS0618 // Type or member is obsolete version >= 725
                 case TunnelStreamType.Standard:
                     if (httpMethod != "POST")
                         throw new Exception("Bad request");
@@ -309,9 +288,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
                     throw new UnauthorizedAccessException(); //Unknown BinaryStreamType
             }
         }
-        catch (Exception ex) {
+        catch (Exception ex) when (VhUtils.IsTcpClientHealthy(tcpClient)) {
             //always return BadRequest 
-            if (!VhUtils.IsTcpClientHealthy(tcpClient)) throw;
             var response = ex is UnauthorizedAccessException
                 ? HttpResponseBuilder.Unauthorized()
                 : HttpResponseBuilder.BadRequest();
@@ -320,82 +298,114 @@ public class ServerHost : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task ProcessTcpClient(TcpClient tcpClient, CancellationToken cancellationToken)
+    private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, CancellationToken cancellationToken)
     {
-        IClientStream? clientStream = null;
-        SslStream? sslStream = null;
+        VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "TLS Authenticating...");
+        var sslStream = new SslStream(tcpClient.GetStream(), true);
+
         try {
             // establish SSL
-            using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
-            using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
-            sslStream = await AuthenticateAsServerAsync(tcpClient.GetStream(), connectCts.Token).Vhc();
+            await sslStream.AuthenticateAsServerAsync(
+                    new SslServerAuthenticationOptions {
+                        ClientCertificateRequired = false,
+                        CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
+                        ServerCertificateSelectionCallback = ServerCertificateSelectionCallback
+                    },
+                    cancellationToken).Vhc();
 
             // create client stream
-            clientStream = await CreateClientStream(tcpClient, sslStream, connectCts.Token).Vhc();
-
-            await ProcessClientStream(clientStream, timeoutCts: null, connectCts.Token).Vhc();
+            var clientStream = await CreateClientStream(tcpClient, sslStream, cancellationToken).Vhc();
+            return clientStream;
         }
-        catch (TlsAuthenticateException ex) {
-            VhLogger.Instance.LogInformation(GeneralEventId.Tls, ex, "Error in Client TLS authentication.");
-            clientStream?.DisposeWithoutReuse();
-            if (sslStream != null)
-                await sslStream.SafeDisposeAsync();
-            tcpClient.Dispose();
+        catch (Exception) {
+            await sslStream.SafeDisposeAsync();
+            throw;
+        }
+    }
+
+    private async Task TryProcessTcpClient(TcpClient tcpClient, CancellationToken cancellationToken)
+    {
+        try {
+            await ProcessTcpClient(tcpClient, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             if (ex is ISelfLog loggable) loggable.Log();
             else
-                VhLogger.LogError(GeneralEventId.Request, ex,
-                    "ServerHost could not process this request. ClientStreamId: {ClientStreamId}",
-                    clientStream?.ClientStreamId);
+                VhLogger.Instance.LogDebug(GeneralEventId.Request, ex,
+                    "ServerHost could not process this request. ClientStreamId: {ClientStreamId}, RemoteEp: {RemoteEp}",
+                    ex.Data["ClientStreamId"], tcpClient.Client.RemoteEndPoint);
 
-            clientStream?.DisposeWithoutReuse();
-            if (sslStream != null)
-                await sslStream.SafeDisposeAsync();
             tcpClient.Dispose();
+        }
+    }
+
+    private async Task ProcessTcpClient(TcpClient tcpClient, CancellationToken cancellationToken)
+    {
+        using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
+        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
+        var clientStream = await CreateClientStream(tcpClient, connectCts.Token).Vhc();
+        try {
+            await ProcessClientStream(clientStream, timeoutCts: null, connectCts.Token).Vhc();
+        }
+        catch (Exception ex) {
+            // try to write unauthorized response for any unknown error if client steam is not ChunkStream
+            // ReSharper disable once AccessToDisposedClosure
+            if (clientStream is { Connected: true, RequireHttpResponse: true } && !VhUtils.IsSocketClosedException(ex)) {
+                VhLogger.Instance.LogDebug(GeneralEventId.Request,
+                    "ServerHost is writing unauthorized response. ClientStreamId: {ClientStreamId}, RemoteEp: {RemoteEp}",
+                    clientStream.ClientStreamId, clientStream.IpEndPointPair.RemoteEndPoint);
+
+                await VhUtils.TryInvokeAsync("Write unauthorized response.",
+                    () => clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), connectCts.Token)).Vhc();
+            }
+
+            // dispose the stream
+            clientStream.DisposeWithoutReuse();
+            ex.Data["ClientStreamId"] = clientStream.ClientStreamId;
+            throw;
         }
     }
 
     private void ReuseClientStream(IClientStream clientStream)
     {
         // it handles the exception and dispose the stream
-        _ = ReuseClientStreamAsync(clientStream);
+        _ = TryReuseClientStreamAsync(clientStream);
     }
 
-    private async Task ReuseClientStreamAsync(IClientStream clientStream)
+    private async Task TryReuseClientStreamAsync(IClientStream clientStream)
     {
-        // process incoming client
         try {
-            if (_disposed)
-                throw new ObjectDisposedException("ServerHost has been stopped.");
+            ObjectDisposedException.ThrowIf(_disposed, this);
 
             // add client stream to reuse list and take the ownership
             using var timeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
             using var reusedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, _cancellationTokenSource.Token);
 
             VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
-                "ServerHost.ReuseClientStream: A shared ClientStream is pending for reuse. ClientStreamId: {ClientStreamId}",
+                "ServerHost is pending a shared ClientStream for reuse. ClientStreamId: {ClientStreamId}",
                 clientStream.ClientStreamId);
 
             await ProcessClientStream(clientStream, timeoutCts, reusedCts.Token).Vhc();
 
             VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
-                "ServerHost.ReuseClientStream: A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}",
-                clientStream.ClientStreamId);
+                "ServerHost has reused a shared ClientStream. ClientStreamId: {ClientStreamId}",
+                    clientStream.ClientStreamId);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(GeneralEventId.TcpLife, ex,
-                "ServerHost.ReuseClientStream: Could not reuse a ClientStream. ClientStreamId: {ClientStreamId}",
-                clientStream.ClientStreamId);
-
             clientStream.DisposeWithoutReuse();
+            if (ex is ISelfLog loggable) loggable.Log();
+            else
+                VhLogger.Instance.LogDebug(GeneralEventId.Request, ex,
+                    "ServerHost could not process this request on reused stream. ClientStreamId: {ClientStreamId}",
+                    clientStream.ClientStreamId);
         }
     }
 
     private async Task ProcessClientStream(IClientStream clientStream,
         CancellationTokenSource? timeoutCts, CancellationToken cancellationToken)
     {
-        using var scope = VhLogger.Instance.BeginScope($"RemoteEp: {VhLogger.Format(clientStream.IpEndPointPair.RemoteEndPoint)}");
+        using var scope = VhLogger.Instance.BeginScope(
+            $"RemoteEp: {VhLogger.Format(clientStream.IpEndPointPair.RemoteEndPoint)}");
 
         try {
             // Take ownership: stream is added here and removed in finally
@@ -408,44 +418,13 @@ public class ServerHost : IDisposable, IAsyncDisposable
             if (ex is ISelfLog loggable)
                 loggable.Log();
             else
-                VhLogger.Instance.LogInformation(
-                    ex.SessionResponse.ErrorCode == SessionErrorCode.GeneralError
-                        ? GeneralEventId.Tcp
-                        : GeneralEventId.Session, ex,
-                    "Could not process the request. SessionErrorCode: {SessionErrorCode}",
-                    ex.SessionResponse.ErrorCode);
+                VhLogger.Instance.LogDebug(GeneralEventId.Session, ex,
+                    "Could not process this request. SessionErrorCode: {SessionErrorCode}, ClientStreamId: {ClientStreamId}",
+                    ex.SessionResponse.ErrorCode, clientStream.ClientStreamId);
 
             // reply the error to caller if it is SessionException
             // Should not reply anything when user is unknown. ServerUnauthorizedException will be thrown when user is unauthenticated
             await clientStream.DisposeAsync(ex.SessionResponse, cancellationToken).Vhc();
-        }
-        catch (EndOfStreamException ex) {
-            VhLogger.Instance.LogDebug(GeneralEventId.Tcp, ex,
-                "The remote has closed the connection. ClientStreamId: {ClientStreamId}.",
-                clientStream.ClientStreamId);
-            clientStream.DisposeWithoutReuse();
-        }
-        catch (Exception ex) when (VhLogger.IsSocketCloseException(ex)) {
-            VhLogger.Instance.LogDebug(GeneralEventId.Tcp, ex,
-                "Connection has been closed. ClientStreamId: {ClientStreamId}.",
-                clientStream.ClientStreamId);
-
-            clientStream.DisposeWithoutReuse();
-        }
-        catch (Exception ex) {
-            if (ex is ISelfLog loggable)
-                loggable.Log();
-            else
-                VhLogger.Instance.LogDebug(GeneralEventId.Tcp, ex,
-                    "Could not process the request and return 401. ClientStreamId: {ClientStreamId}",
-                    clientStream.ClientStreamId);
-
-            // return 401 for ANY non SessionException to keep server's anonymity
-            if (clientStream.Connected)
-                await VhUtils.TryInvokeAsync("Write unauthorized response.",
-                    () => clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken)).Vhc();
-
-            clientStream.DisposeWithoutReuse();
         }
         finally {
             lock (_clientStreams)
@@ -473,7 +452,6 @@ public class ServerHost : IDisposable, IAsyncDisposable
         var res = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
         if (res == 0)
             throw new Exception("ClientStream has been closed before reading the request code.");
-
 
         var requestCode = (RequestCode)buffer[0];
         switch (requestCode) {
@@ -718,7 +696,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
     private async Task ProcessStreamProxyChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.ProxyChannel, "Reading the StreamProxyChannelRequest...");
+        VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Reading the StreamProxyChannelRequest...");
         var request = await ReadRequest<StreamProxyChannelRequest>(clientStream, cancellationToken).Vhc();
 
         // find session

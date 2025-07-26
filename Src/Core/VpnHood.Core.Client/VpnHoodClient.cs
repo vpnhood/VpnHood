@@ -826,6 +826,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // add the new channel
             channel = new StreamPacketChannel(new StreamPacketChannelOptions {
                 ClientStream = requestResult.ClientStream,
+                ReadBufferSize = TunnelDefaults.ClientStreamBufferSize,
                 ChannelId = request.RequestId,
                 Blocking = true,
                 AutoDisposePackets = true,

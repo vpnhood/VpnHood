@@ -87,9 +87,9 @@ internal class ConnectorService(
                 // dispose the connection and retry with new connection
                 lock (Stat) Stat.ReusedConnectionFailedCount++;
                 clientStream.DisposeWithoutReuse();
-                VhLogger.LogError(GeneralEventId.TcpLife, ex,
-                    "Error in reusing the ClientStream. Try a new connection. ClientStreamId: {ClientStreamId}",
-                    clientStream.ClientStreamId);
+                VhLogger.Instance.LogError(GeneralEventId.TcpLife, ex,
+                    "Error in reusing the ClientStream. Try a new connection. ClientStreamId: {ClientStreamId}, RequestId: {requestId}",
+                    clientStream.ClientStreamId, requestId);
             }
         }
 
@@ -124,7 +124,11 @@ internal class ConnectorService(
             clientStream.Dispose();
             throw;
         }
-        catch {
+        catch (Exception ex){
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife, ex,
+                "Error in sending fresh request. ClientStreamId: {ClientStreamId}, RequestId: {requestId}",
+                clientStream.ClientStreamId, requestId);
+
             clientStream.DisposeWithoutReuse();
             throw;
         }

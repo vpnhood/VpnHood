@@ -25,7 +25,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
 
     public BinaryStreamStandard(Stream sourceStream, string streamId, bool useBuffer)
         : base(useBuffer
-            ? new ReadCacheStream(sourceStream, leaveOpen: false, TunnelDefaults.StreamProxyBufferSize)
+            ? new ReadCacheStream(sourceStream, leaveOpen: false, cacheSize: TunnelDefaults.StreamSmallReadCacheSize)
             : sourceStream, streamId)
     {
     }

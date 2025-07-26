@@ -223,7 +223,7 @@ internal class ConnectorServiceBase : IDisposable
     {
         // Check if the connector service is disposed
         if (_isDisposed != 0 || !_allowTcpReuse) {
-            VhLogger.Instance.LogDebug(GeneralEventId.Tcp,
+            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
                 "Disposing the reused client stream because the connector service is either disposed or reuse is no longer allowed. " +
                 "ClientStreamId: {ClientStreamId}", clientStream.ClientStreamId);
             clientStream.DisposeWithoutReuse();

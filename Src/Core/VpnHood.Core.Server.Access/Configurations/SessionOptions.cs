@@ -25,9 +25,8 @@ public class SessionOptions
     public int? MaxPacketChannelCount { get; set; }
     public int? MaxUdpClientCount { get; set; }
     public int? MaxIcmpClientCount { get; set; }
+    public TransferBufferSize? TcpKernelBufferSize { get; set; }
     public TransferBufferSize? StreamProxyBufferSize { get; set; }
-    public int? TcpKernelSendBufferSize { get; set; }
-    public int? TcpKernelReceiveBufferSize { get; set; }
     public TransferBufferSize? UdpProxyBufferSize { get; set; }
     public TransferBufferSize? UdpChannelBufferSize { get; set; }
     public TimeSpan? TcpConnectTimeout { get; set; }
@@ -53,7 +52,7 @@ public class SessionOptions
     [JsonIgnore] public TimeSpan TcpReuseTimeoutValue => TcpReuseTimeout ?? TimeSpan.FromSeconds(40);
     [JsonIgnore] public int MaxTcpConnectWaitCountValue => MaxTcpConnectWaitCount ?? 500;
     [JsonIgnore] public int MaxTcpChannelCountValue => MaxTcpChannelCount ?? 1000;
-    [JsonIgnore] public bool UseUdpProxy2Value => UseUdpProxy2 ?? false; //todo: remove
+    [JsonIgnore] public bool UseUdpProxy2Value => UseUdpProxy2 ?? true;
 
     public void Merge(SessionOptions obj)
     {
@@ -67,8 +66,7 @@ public class SessionOptions
         if (obj.MaxUdpClientCount != null) MaxUdpClientCount = obj.MaxUdpClientCount;
         if (obj.MaxIcmpClientCount != null) MaxIcmpClientCount = obj.MaxIcmpClientCount;
         if (obj.StreamProxyBufferSize != null) StreamProxyBufferSize = obj.StreamProxyBufferSize;
-        if (obj.TcpKernelSendBufferSize != null) TcpKernelSendBufferSize = obj.TcpKernelSendBufferSize;
-        if (obj.TcpKernelReceiveBufferSize != null) TcpKernelReceiveBufferSize = obj.TcpKernelReceiveBufferSize;
+        if (obj.TcpKernelBufferSize != null) TcpKernelBufferSize = obj.TcpKernelBufferSize;
         if (obj.UdpProxyBufferSize != null) UdpProxyBufferSize = obj.UdpProxyBufferSize;
         if (obj.UdpChannelBufferSize != null) UdpChannelBufferSize = obj.UdpChannelBufferSize;
         if (obj.TcpConnectTimeout != null) TcpConnectTimeout = obj.TcpConnectTimeout;
@@ -92,8 +90,7 @@ public class SessionOptions
         MaxUdpClientCount = MaxUdpClientCountValue;
         MaxIcmpClientCount = MaxIcmpClientCountValue;
         StreamProxyBufferSize = StreamProxyBufferSize; //no default
-        TcpKernelSendBufferSize = TcpKernelSendBufferSize; //no default
-        TcpKernelReceiveBufferSize = TcpKernelReceiveBufferSize; //no default
+        TcpKernelBufferSize = TcpKernelBufferSize; //no default
         UdpProxyBufferSize = UdpProxyBufferSizeValue;
         UdpChannelBufferSize = UdpChannelBufferSizeValue;
         TcpConnectTimeout = TcpConnectTimeoutValue;

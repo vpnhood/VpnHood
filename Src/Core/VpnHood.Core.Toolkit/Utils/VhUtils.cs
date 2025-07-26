@@ -51,7 +51,7 @@ public static class VhUtils
         try {
             // check recommended port
             using var udpClient = new UdpClient(new IPEndPoint(ipAddress, defaultPort));
-            var localEndPoint = (IPEndPoint?)udpClient.Client.LocalEndPoint ?? 
+            var localEndPoint = (IPEndPoint?)udpClient.Client.LocalEndPoint ??
                                 throw new InvalidOperationException("Failed to get local endpoint for UDP client.");
             return new IPEndPoint(ipAddress, localEndPoint.Port);
         }
@@ -328,8 +328,8 @@ public static class VhUtils
         bool? reuseAddress = null)
     {
         tcpClient.NoDelay = true;
-        if (sendBufferSize != null) tcpClient.SendBufferSize = sendBufferSize.Value;
-        if (receiveBufferSize != null) tcpClient.ReceiveBufferSize = receiveBufferSize.Value;
+        if (sendBufferSize > 0) tcpClient.SendBufferSize = sendBufferSize.Value;
+        if (receiveBufferSize > 0) tcpClient.ReceiveBufferSize = receiveBufferSize.Value;
         if (reuseAddress != null)
             tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress,
                 reuseAddress.Value);

@@ -161,9 +161,10 @@ public class ServerHost : IDisposable, IAsyncDisposable
                 if (!Started)
                     throw new ObjectDisposedException("ServerHost has been stopped.");
 
+                var tcpKernelBufferSize = _sessionManager.SessionOptions.TcpKernelBufferSize ?? TunnelDefaults.ServerTcpKernelBufferSize;
                 VhUtils.ConfigTcpClient(tcpClient,
-                    _sessionManager.SessionOptions.TcpKernelSendBufferSize,
-                    _sessionManager.SessionOptions.TcpKernelReceiveBufferSize);
+                    sendBufferSize: tcpKernelBufferSize?.Send,
+                    receiveBufferSize: tcpKernelBufferSize?.Receive);
 
                 // config tcpClient
                 _ = TryProcessTcpClient(tcpClient, _cancellationTokenSource.Token);

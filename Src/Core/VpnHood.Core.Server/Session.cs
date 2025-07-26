@@ -35,8 +35,7 @@ public class Session : IDisposable
     private readonly int _maxTcpConnectWaitCount;
     private readonly int _maxTcpChannelCount;
     private readonly TransferBufferSize _streamProxyBufferSize;
-    private readonly int? _tcpKernelSendBufferSize;
-    private readonly int? _tcpKernelReceiveBufferSize;
+    private readonly TransferBufferSize? _tcpKernelBufferSize;
     private readonly TrackingOptions _trackingOptions;
     private UdpChannel? _udpChannel;
 
@@ -105,8 +104,7 @@ public class Session : IDisposable
         _maxTcpConnectWaitCount = options.MaxTcpConnectWaitCountValue;
         _maxTcpChannelCount = options.MaxTcpChannelCountValue;
         _streamProxyBufferSize = options.StreamProxyBufferSize ?? TunnelDefaults.ServerStreamProxyBufferSize;
-        _tcpKernelSendBufferSize = options.TcpKernelSendBufferSize;
-        _tcpKernelReceiveBufferSize = options.TcpKernelReceiveBufferSize;
+        _tcpKernelBufferSize = options.TcpKernelBufferSize;
         _netFilter = netFilter;
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
@@ -381,7 +379,9 @@ public class Session : IDisposable
 
             //set reuseAddress to  true to prevent error only one usage of each socket address is normally permitted
             tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint);
-            VhUtils.ConfigTcpClient(tcpClientHost, _tcpKernelSendBufferSize, _tcpKernelReceiveBufferSize);
+            VhUtils.ConfigTcpClient(tcpClientHost, 
+                sendBufferSize: _tcpKernelBufferSize?.Send, 
+                receiveBufferSize: _tcpKernelBufferSize?.Receive);
 
             // connect to requested destination
             isRequestedEpException = true;

@@ -50,8 +50,7 @@ public class TunnelTest : TestBase
             ChannelId = Guid.CreateVersion7().ToString(),
             SocketFactory = new SocketFactory(),
             ServerKey = serverKey,
-            UdpReceiveBufferSize = null,
-            UdpSendBufferSize = null
+            BufferSize = null
         });
 
         return clientUdpChannel;

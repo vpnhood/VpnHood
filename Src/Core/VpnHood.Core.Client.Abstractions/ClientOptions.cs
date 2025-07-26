@@ -80,10 +80,7 @@ public class ClientOptions
     public string? DebugData2 { get; set; }
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public int? UdpProxyReceiveBufferSize { get; set; }
-    
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public int? UdpProxySendBufferSize { get; set; }
+    public TransferBufferSize? UdpProxyBufferSize { get; set; }
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TransferBufferSize? StreamProxySendBufferSize { get; set; }

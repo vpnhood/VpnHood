@@ -48,8 +48,7 @@ public class ProxyManager : PassthroughPacketTransport
             MaxClientCount = options.MaxUdpClientCount,
             LogScope = options.LogScope,
             PacketQueueCapacity = options.PacketQueueCapacity,
-            SendBufferSize = options.UdpSendBufferSize,
-            ReceiveBufferSize = options.UdpReceiveBufferSize,
+            BufferSize = options.UdpBufferSize,
             AutoDisposePackets = options.AutoDisposePackets
         };
 

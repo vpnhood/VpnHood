@@ -30,8 +30,7 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
             UdpTimeout = TunnelDefaults.UdpTimeout,
             MaxClientCount = TunnelDefaults.MaxUdpClientCount,
             PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
-            SendBufferSize = null,
-            ReceiveBufferSize = null,
+            BufferSize = null,
             AutoDisposePackets = true,
             LogScope = null
         });

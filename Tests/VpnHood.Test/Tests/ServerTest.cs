@@ -135,10 +135,8 @@ public class ServerTest : TestBase
         serverConfig.SessionOptions.MaxPacketChannelCount = 2074;
         serverConfig.SessionOptions.SyncCacheSize = 2075;
         serverConfig.SessionOptions.StreamProxyBufferSize = new TransferBufferSize(2076, 2077);
-        serverConfig.SessionOptions.UdpProxyReceiveBufferSize = 4001;
-        serverConfig.SessionOptions.UdpProxySendBufferSize = 4002;
-        serverConfig.SessionOptions.UdpChannelReceiveBufferSize = 5001;
-        serverConfig.SessionOptions.UdpChannelSendBufferSize = 5002;
+        serverConfig.SessionOptions.UdpProxyBufferSize = new TransferBufferSize(4001, 4002);
+        serverConfig.SessionOptions.UdpChannelBufferSize = new TransferBufferSize(5001, 5002);
         serverConfig.ServerSecret = VhUtils.GenerateKey();
 
         var dateTime = DateTime.Now;
@@ -164,10 +162,8 @@ public class ServerTest : TestBase
         Assert.AreEqual(serverConfig.SessionOptions.MaxPacketChannelCount, server.SessionManager.SessionOptions.MaxPacketChannelCount);
         Assert.AreEqual(serverConfig.SessionOptions.SyncCacheSize, server.SessionManager.SessionOptions.SyncCacheSize);
         Assert.AreEqual(serverConfig.SessionOptions.StreamProxyBufferSize, server.SessionManager.SessionOptions.StreamProxyBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpProxySendBufferSize, server.SessionManager.SessionOptions.UdpProxySendBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpProxyReceiveBufferSize, server.SessionManager.SessionOptions.UdpProxyReceiveBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpChannelSendBufferSize, server.SessionManager.SessionOptions.UdpChannelSendBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpChannelReceiveBufferSize, server.SessionManager.SessionOptions.UdpChannelReceiveBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpProxyBufferSize, server.SessionManager.SessionOptions.UdpProxyBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpChannelBufferSize, server.SessionManager.SessionOptions.UdpChannelBufferSize);
         Assert.IsFalse(accessManager.LastServerInfo?.IsRestarted);
     }
 

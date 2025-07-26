@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Toolkit.Logging;
+﻿using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
@@ -10,8 +11,7 @@ public class ProxyManagerOptions
     public required int MaxPingClientCount { get; init; }
     public required int PacketQueueCapacity { get; init; }
     public required bool UseUdpProxy2 { get; init; }
-    public required int? UdpSendBufferSize { get; init; }
-    public required int? UdpReceiveBufferSize { get; init; }
+    public required TransferBufferSize? UdpBufferSize { get; init; }
     public required bool IsPingSupported { get; init; }
     public required IPacketProxyCallbacks? PacketProxyCallbacks { get; init; }
     public required bool AutoDisposePackets { get; init; }

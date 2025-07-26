@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
@@ -22,14 +23,13 @@ public abstract class UdpChannelTransmitter : IDisposable
     public const int HeaderLength = 32; //IV (8) + Sign (2) + Reserved (6) + SessionId (8) + SessionPos (8)
     public const int SendHeaderLength = HeaderLength - 8; //IV will not be encrypted
     
-    public int? ReceiveBufferSize {
-        get => _udpClient.Client.ReceiveBufferSize;
-        set => _udpClient.Client.ReceiveBufferSize = value ?? new UdpClient().Client.ReceiveBufferSize;
-    }
-
-    public int? SendBufferSize {
-        get => _udpClient.Client.SendBufferSize;
-        set => _udpClient.Client.SendBufferSize = value ?? new UdpClient().Client.SendBufferSize;
+    public TransferBufferSize? BufferSize {
+        get => new (_udpClient.Client.SendBufferSize, _udpClient.Client.ReceiveBufferSize);
+        set {
+            using var udpClient = new UdpClient();
+            _udpClient.Client.SendBufferSize = value?.Send ?? udpClient.Client.SendBufferSize;
+            _udpClient.Client.ReceiveTimeout = value?.Receive ?? udpClient.Client.ReceiveTimeout;
+        }
     }
 
     protected UdpChannelTransmitter(UdpClient udpClient, byte[] serverKey)

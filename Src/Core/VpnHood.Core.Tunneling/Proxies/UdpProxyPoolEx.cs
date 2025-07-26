@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.PacketTransports;
@@ -17,8 +18,7 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
 {
     private readonly IPacketProxyCallbacks? _packetProxyCallbacks;
     private readonly ISocketFactory _socketFactory;
-    private readonly int? _sendBufferSize;
-    private readonly int? _receiveBufferSize;
+    private readonly TransferBufferSize? _bufferSize;
     private readonly TimeoutDictionary<string, UdpProxyEx> _connectionMap;
     private readonly List<UdpProxyEx> _udpProxies = [];
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
@@ -45,8 +45,7 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
         _packetQueueCapacity = options.PacketQueueCapacity;
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(options.UdpTimeout);
         _maxClientCount = options.MaxClientCount;
-        _sendBufferSize = options.SendBufferSize;
-        _receiveBufferSize = options.ReceiveBufferSize;
+        _bufferSize = options.BufferSize;
         _maxWorkerEventReporter = new EventReporter("Session has reached to Maximum local UDP ports.", GeneralEventId.NetProtect, logScope: options.LogScope);
 
         _connectionMap = new TimeoutDictionary<string, UdpProxyEx>(options.UdpTimeout);
@@ -127,11 +126,12 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
         OnPacketReceived(ipPacket);
     }
 
+
     private UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
         var udpClient = _socketFactory.CreateUdpClient(addressFamily);
-        if (_sendBufferSize.HasValue) udpClient.Client.SendBufferSize = _sendBufferSize.Value;
-        if (_receiveBufferSize.HasValue) udpClient.Client.ReceiveBufferSize = _receiveBufferSize.Value;
+        if (_bufferSize?.Send > 0) udpClient.Client.SendBufferSize = _bufferSize.Value.Send;
+        if (_bufferSize?.Receive > 0) udpClient.Client.ReceiveBufferSize = _bufferSize.Value.Receive;
         return udpClient;
     }
 

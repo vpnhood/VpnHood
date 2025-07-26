@@ -65,13 +65,13 @@ public class ServerHost : IDisposable, IAsyncDisposable
         Certificates = configuration.Certificates.Select(x => new CertificateHostName(x)).ToArray();
 
         ConfigureTcpListeners(configuration.TcpEndPoints);
-        ConfigureUdpListeners(configuration.UdpEndPoints, configuration.UdpChannelSendBufferSize, configuration.UdpChannelReceiveBufferSize);
+        ConfigureUdpListeners(configuration.UdpEndPoints, configuration.UdpChannelBufferSize);
         _tcpListenerTasks.RemoveAll(x => x.IsCompleted);
     }
 
     private readonly AsyncLock _configureLock = new();
 
-    private void ConfigureUdpListeners(IPEndPoint[] udpEndPoints, int? sendBufferSize, int? receiveBufferSize)
+    private void ConfigureUdpListeners(IPEndPoint[] udpEndPoints, TransferBufferSize? bufferSize)
     {
         // UDP port zero must be specified in preparation
         if (udpEndPoints.Any(x => x.Port == 0))
@@ -107,8 +107,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
         // reconfigure all transmitters
         foreach (var udpChannelTransmitter in _udpChannelTransmitters) {
-            udpChannelTransmitter.SendBufferSize = sendBufferSize ?? TunnelDefaults.ServerUdpChannelSendBufferSize;
-            udpChannelTransmitter.ReceiveBufferSize = receiveBufferSize ?? TunnelDefaults.ServerUdpChannelReceiveBufferSize;
+            udpChannelTransmitter.BufferSize = bufferSize ?? TunnelDefaults.ServerUdpChannelBufferSize;
         }
     }
 

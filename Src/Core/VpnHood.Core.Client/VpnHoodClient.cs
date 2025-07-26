@@ -150,8 +150,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             MaxPingClientCount = TunnelDefaults.MaxPingClientCount,
             PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
             IcmpTimeout = TunnelDefaults.IcmpTimeout,
-            UdpReceiveBufferSize = options.UdpProxyReceiveBufferSize,
-            UdpSendBufferSize = options.UdpProxyReceiveBufferSize,
+            UdpBufferSize = options.UdpProxyBufferSize ?? TunnelDefaults.ClientUdpProxyBufferSize,
             LogScope = null,
             UseUdpProxy2 = true,
             AutoDisposePackets = true,
@@ -537,8 +536,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 Blocking = true,
                 ChannelId = Guid.NewGuid().ToString(),
                 Lifespan = null,
-                UdpReceiveBufferSize = TunnelDefaults.ClientUdpChannelReceiveBufferSize,
-                UdpSendBufferSize = TunnelDefaults.ClientUdpChannelUdpSendBufferSize
+                BufferSize = TunnelDefaults.ClientUdpChannelBufferSize
             });
 
         try {

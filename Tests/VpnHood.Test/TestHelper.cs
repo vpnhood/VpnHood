@@ -416,8 +416,7 @@ public class TestHelper : IDisposable
             UdpTimeout = TunnelDefaults.UdpTimeout,
             MaxClientCount = 10,
             PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
-            SendBufferSize = TunnelDefaults.ClientUdpProxySendBufferSize,
-            ReceiveBufferSize = TunnelDefaults.ClientUdpProxyReceiveBufferSize,
+            BufferSize = null,
             LogScope = null
         };
 

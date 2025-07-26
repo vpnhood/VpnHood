@@ -9,7 +9,8 @@ namespace VpnHood.Core.Tunneling.Channels;
 public class StreamPacketChannel(StreamPacketChannelOptions options) 
     : PacketChannel(options)
 {
-    private readonly Memory<byte> _buffer = new byte[0xFFFF * 4];
+    private readonly int _receiveBufferSize = options.BufferSize.Receive;
+    private readonly Memory<byte> _sendBuffer = new byte[options.BufferSize.Send];
     private readonly IClientStream _clientStream = options.ClientStream;
     public override int OverheadLength => 0;
 
@@ -19,7 +20,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
         var cancellationToken = CancellationToken;
 
         // copy packets to buffer
-        var buffer = _buffer;
+        var buffer = _sendBuffer;
         var bufferIndex = 0;
 
         // ReSharper disable once ForCanBeConvertedToForeach
@@ -55,7 +56,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
         var cancellationToken = CancellationToken;
 
         using var streamPacketReader = 
-            new StreamPacketReader(_clientStream.Stream, TunnelDefaults.StreamPacketReaderBufferSize);
+            new StreamPacketReader(_clientStream.Stream, _receiveBufferSize);
 
         // stop reading if State is not Connected (Such as getting the close request)
         while (!cancellationToken.IsCancellationRequested) {

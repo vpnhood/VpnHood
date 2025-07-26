@@ -322,7 +322,7 @@ public class Session : IDisposable
             "Creating a TcpPacketChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
         var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
-            ReadBufferSize = TunnelDefaults.ServerStreamBufferSize,
+            BufferSize = TunnelDefaults.ServerStreamPacketBufferSize,
             Blocking = false,
             AutoDisposePackets = true,
             ClientStream = clientStream,

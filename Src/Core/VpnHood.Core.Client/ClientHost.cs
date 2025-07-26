@@ -23,8 +23,7 @@ internal class ClientHost(
     Tunnel tunnel,
     IPAddress catcherAddressIpV4,
     IPAddress catcherAddressIpV6,
-    int? proxySendBufferSize = null,
-    int? proxyReceiveBufferSize = null)
+    TransferBufferSize streamProxyBufferSize)
     : IDisposable
 {
     private bool _disposed;
@@ -39,8 +38,7 @@ internal class ClientHost(
 
     public IPAddress CatcherAddressIpV4 => catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 => catcherAddressIpV6;
-    public int? ProxySendBufferSize => proxySendBufferSize;
-    public int? ProxyReceiveBufferSize => proxyReceiveBufferSize;
+    public TransferBufferSize StreamProxyBufferSize => streamProxyBufferSize;
     public IClientHostStat Stat => _stat;
     public event EventHandler<IpPacket>? PacketReceived;
 
@@ -209,7 +207,7 @@ internal class ClientHost(
             VhUtils.ConfigTcpClient(orgTcpClient, null, null);
 
             // get original remote from NAT
-            var orgRemoteEndPoint = (IPEndPoint?)orgTcpClient.Client.RemoteEndPoint ?? 
+            var orgRemoteEndPoint = (IPEndPoint?)orgTcpClient.Client.RemoteEndPoint ??
                                     throw new Exception("Could not get original remote endpoint from TcpClient.");
 
             ipVersion = orgRemoteEndPoint.IpVersion();
@@ -280,8 +278,7 @@ internal class ClientHost(
             await proxyClientStream.Stream.WriteAsync(filterResult.ReadData, cancellationToken);
 
             // add stream proxy
-            channel = new ProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream, 
-                orgStreamBufferSize: proxySendBufferSize, tunnelStreamBufferSize: proxyReceiveBufferSize);
+            channel = new ProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream, streamProxyBufferSize);
             tunnel.AddChannel(channel);
             _stat.TcpTunnelledCount++;
         }

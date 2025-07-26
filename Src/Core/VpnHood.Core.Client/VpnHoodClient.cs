@@ -193,7 +193,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _clientHost = new ClientHost(
             this, _tunnel,
             catcherAddressIpV4: options.TcpProxyCatcherAddressIpV4, catcherAddressIpV6: options.TcpProxyCatcherAddressIpV6,
-            proxySendBufferSize: options.StreamProxySendBufferSize, proxyReceiveBufferSize: options.StreamProxyReceiveBufferSize);
+            streamProxyBufferSize: options.StreamProxySendBufferSize ?? TunnelDefaults.ClientStreamProxyBufferSize);
 
         _clientHost.PacketReceived += ClientHost_PacketReceived;
 
@@ -255,8 +255,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // create and add the channel
         var channel = new ProxyChannel(channelId, orgTcpClientStream,
             new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"),
-            orgStreamBufferSize: _clientHost.ProxySendBufferSize,
-            tunnelStreamBufferSize: _clientHost.ProxyReceiveBufferSize);
+            _clientHost.StreamProxyBufferSize);
 
         // flush initBuffer
         await tcpClient.GetStream().WriteAsync(initBuffer, connectCts.Token);

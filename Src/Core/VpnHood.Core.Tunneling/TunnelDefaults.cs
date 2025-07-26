@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Tunneling;
@@ -11,7 +12,6 @@ public static class TunnelDefaults
     public const int MaxPacketSize = 1500;
     public const string HttpPassCheck = "VpnHoodPassCheck";
     public const int StreamSmallReadCacheSize = 512;
-    public const int StreamProxyBufferSize = 0x1000 * 2; // 8KB
     public const int ClientUdpChannelReceiveBufferSize = 1024 * 1024 * 1; // 1MB
     public const int ClientUdpChannelUdpSendBufferSize = 1024 * 1024 * 1; // 1MB
     public const int ClientUdpProxyReceiveBufferSize = 1024 * 1024 * 1; // 1MB
@@ -20,6 +20,8 @@ public static class TunnelDefaults
     public const int TunnelPacketQueueCapacity = 200;
     public const int MaxUdpClientCount = 500;
     public const int MaxPingClientCount = 10;
+    public static TransferBufferSize ServerStreamProxyBufferSize { get; } = new(0xFFFF / 8, 0xFFFF / 8); // 8KB send, 8KB receive
+    public static TransferBufferSize ClientStreamProxyBufferSize { get; } = new(0xFFFF / 8, 0xFFFF / 8); // 8KB send, 8KB receive
     public static TransferBufferSize ServerStreamPacketBufferSize { get; } = new(0xFFFF / 4, 0xFFFF / 4); // 16KB send, 16KB receive
     public static TransferBufferSize ClientStreamPacketBufferSize { get; } = new(0xFFFF * 4, 0xFFFF * 4); // 256KB send, 256KB receive
     public static int? ServerUdpProxyReceiveBufferSize { get; set; } = null; // system default

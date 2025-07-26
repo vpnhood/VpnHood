@@ -34,7 +34,7 @@ public class Session : IDisposable
     private readonly object _verifyRequestLock = new();
     private readonly int _maxTcpConnectWaitCount;
     private readonly int _maxTcpChannelCount;
-    private readonly int? _tcpBufferSize;
+    private readonly TransferBufferSize _streamProxyBufferSize;
     private readonly int? _tcpKernelSendBufferSize;
     private readonly int? _tcpKernelReceiveBufferSize;
     private readonly TrackingOptions _trackingOptions;
@@ -105,7 +105,7 @@ public class Session : IDisposable
         _trackingOptions = trackingOptions;
         _maxTcpConnectWaitCount = options.MaxTcpConnectWaitCountValue;
         _maxTcpChannelCount = options.MaxTcpChannelCountValue;
-        _tcpBufferSize = options.TcpBufferSize;
+        _streamProxyBufferSize = options.StreamProxyBufferSize ?? TunnelDefaults.ServerStreamProxyBufferSize;
         _tcpKernelSendBufferSize = options.TcpKernelSendBufferSize;
         _tcpKernelReceiveBufferSize = options.TcpKernelReceiveBufferSize;
         _netFilter = netFilter;
@@ -405,8 +405,7 @@ public class Session : IDisposable
 
             tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), 
                 request.RequestId + ":host");
-            proxyChannel = new ProxyChannel(request.RequestId, tcpClientStreamHost, clientStream,
-                _tcpBufferSize, _tcpBufferSize);
+            proxyChannel = new ProxyChannel(request.RequestId, tcpClientStreamHost, clientStream, _streamProxyBufferSize);
 
             Tunnel.AddChannel(proxyChannel);
         }

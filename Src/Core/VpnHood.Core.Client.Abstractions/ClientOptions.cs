@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Net;
 using System.Text.Json.Serialization;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Converters;
 using VpnHood.Core.Toolkit.Logging;
@@ -85,10 +86,7 @@ public class ClientOptions
     public int? UdpProxySendBufferSize { get; set; }
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public int? StreamProxySendBufferSize { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public int? StreamProxyReceiveBufferSize { get; set; }
+    public TransferBufferSize? StreamProxySendBufferSize { get; set; }
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

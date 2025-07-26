@@ -11,11 +11,9 @@ namespace VpnHood.Core.Tunneling.Channels;
 public class ProxyChannel : IProxyChannel
 {
     private int _isDisposed;
-    private readonly int _orgStreamBufferSize;
     private readonly IClientStream _hostClientStream;
-    private readonly int _tunnelStreamBufferSize;
     private readonly IClientStream _tunnelClientStream;
-    private const int BufferSizeDefault = TunnelDefaults.StreamProxyBufferSize;
+    private readonly TransferBufferSize _tunnelBufferSize;
     private const int BufferSizeMax = 0x14000;
     private const int BufferSizeMin = 2048;
     private bool _started;
@@ -23,30 +21,25 @@ public class ProxyChannel : IProxyChannel
     private readonly object _trafficLock = new();
     private bool _isTunnelReadTaskFinished;
     private readonly Job _checkAliveJob;
-    private bool IsDisposed =>_isDisposed == 1;
+    private bool IsDisposed => _isDisposed == 1;
 
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public string ChannelId { get; }
 
     public ProxyChannel(string channelId, IClientStream orgClientStream, IClientStream tunnelClientStream,
-        int? orgStreamBufferSize = BufferSizeDefault, int? tunnelStreamBufferSize = BufferSizeDefault)
+        TransferBufferSize tunnelBufferSize)
     {
         _hostClientStream = orgClientStream ?? throw new ArgumentNullException(nameof(orgClientStream));
         _tunnelClientStream = tunnelClientStream ?? throw new ArgumentNullException(nameof(tunnelClientStream));
+        _tunnelBufferSize = tunnelBufferSize;
 
-        // validate buffer sizes
-        if (orgStreamBufferSize is 0 or null) orgStreamBufferSize = BufferSizeDefault;
-        if (tunnelStreamBufferSize is 0 or null) tunnelStreamBufferSize = BufferSizeDefault;
+        if (_tunnelBufferSize.Receive is < BufferSizeMin or > BufferSizeMax)
+            throw new ArgumentOutOfRangeException(
+                $"Proxy receive buffer size must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}. It was {_tunnelBufferSize.Receive}");
 
-        _orgStreamBufferSize = orgStreamBufferSize is >= BufferSizeMin and <= BufferSizeMax
-            ? orgStreamBufferSize.Value
-            : throw new ArgumentOutOfRangeException(nameof(orgStreamBufferSize), orgStreamBufferSize,
-                $"Value must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}.");
-
-        _tunnelStreamBufferSize = tunnelStreamBufferSize is >= BufferSizeMin and <= BufferSizeMax
-            ? tunnelStreamBufferSize.Value
-            : throw new ArgumentOutOfRangeException(nameof(tunnelStreamBufferSize), tunnelStreamBufferSize,
-                $"Value must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}");
+        if (_tunnelBufferSize.Send is < BufferSizeMin or > BufferSizeMax)
+            throw new ArgumentOutOfRangeException(
+                $"Proxy send buffer size must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}. It was {_tunnelBufferSize.Send}");
 
         ChannelId = channelId;
         _checkAliveJob = new Job(CheckAlive, TunnelDefaults.TcpCheckInterval, nameof(ProxyChannel));
@@ -88,11 +81,11 @@ public class ProxyChannel : IProxyChannel
             _started = true;
 
             var tunnelReadTask = CopyFromTunnelAsync(
-                _tunnelClientStream.Stream, _hostClientStream.Stream, _tunnelStreamBufferSize,
+                _tunnelClientStream.Stream, _hostClientStream.Stream, _tunnelBufferSize.Receive,
                 CancellationToken.None, CancellationToken.None); // tunnel => host
 
             var tunnelWriteTask = CopyToTunnelAsync(
-                _hostClientStream.Stream, _tunnelClientStream.Stream, _orgStreamBufferSize,
+                _hostClientStream.Stream, _tunnelClientStream.Stream, _tunnelBufferSize.Send,
                 CancellationToken.None, CancellationToken.None); // host => tunnel
 
             var completedTask = await Task.WhenAny(tunnelReadTask, tunnelWriteTask).Vhc();
@@ -228,7 +221,7 @@ public class ProxyChannel : IProxyChannel
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 1) 
+        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
             return;
 
         _checkAliveJob.Dispose();

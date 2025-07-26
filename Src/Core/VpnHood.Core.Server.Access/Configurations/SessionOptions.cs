@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Converters;
 
 namespace VpnHood.Core.Server.Access.Configurations;
@@ -24,7 +25,7 @@ public class SessionOptions
     public int? MaxPacketChannelCount { get; set; }
     public int? MaxUdpClientCount { get; set; }
     public int? MaxIcmpClientCount { get; set; }
-    public int? TcpBufferSize { get; set; }
+    public TransferBufferSize? StreamProxyBufferSize { get; set; }
     public int? TcpKernelSendBufferSize { get; set; }
     public int? TcpKernelReceiveBufferSize { get; set; }
     public int? UdpProxySendBufferSize { get; set; }
@@ -69,7 +70,7 @@ public class SessionOptions
         if (obj.MaxPacketChannelCount != null) MaxPacketChannelCount = obj.MaxPacketChannelCount;
         if (obj.MaxUdpClientCount != null) MaxUdpClientCount = obj.MaxUdpClientCount;
         if (obj.MaxIcmpClientCount != null) MaxIcmpClientCount = obj.MaxIcmpClientCount;
-        if (obj.TcpBufferSize != null) TcpBufferSize = obj.TcpBufferSize;
+        if (obj.StreamProxyBufferSize != null) StreamProxyBufferSize = obj.StreamProxyBufferSize;
         if (obj.TcpKernelSendBufferSize != null) TcpKernelSendBufferSize = obj.TcpKernelSendBufferSize;
         if (obj.TcpKernelReceiveBufferSize != null) TcpKernelReceiveBufferSize = obj.TcpKernelReceiveBufferSize;
         if (obj.UdpProxySendBufferSize != null) UdpProxySendBufferSize = obj.UdpProxySendBufferSize;
@@ -96,7 +97,7 @@ public class SessionOptions
         MaxPacketChannelCount = MaxPacketChannelCountValue;
         MaxUdpClientCount = MaxUdpClientCountValue;
         MaxIcmpClientCount = MaxIcmpClientCountValue;
-        TcpBufferSize = TcpBufferSize; //no default
+        StreamProxyBufferSize = StreamProxyBufferSize; //no default
         TcpKernelSendBufferSize = TcpKernelSendBufferSize; //no default
         TcpKernelReceiveBufferSize = TcpKernelReceiveBufferSize; //no default
         UdpProxySendBufferSize = UdpProxySendBufferSizeValue; //no default

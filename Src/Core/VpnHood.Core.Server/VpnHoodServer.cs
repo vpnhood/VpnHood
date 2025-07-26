@@ -367,25 +367,24 @@ public class VpnHoodServer : IAsyncDisposable
             string.Join(",", netFilter.BlockedIpRanges));
     }
 
-    private static int GetBestTcpBufferSize(long? totalMemory, int? configValue)
+    private static TransferBufferSize GetBestStreamBufferSize(long? totalMemory, TransferBufferSize? configValue)
     {
-        if (configValue > 0)
+        if (configValue != null)
             return configValue.Value;
 
         if (totalMemory == null)
-            return 8192;
+            return TunnelDefaults.ServerStreamProxyBufferSize;
 
         var bufferSize = (long)Math.Round((double)totalMemory / 0x80000000) * 4096;
         bufferSize = Math.Max(bufferSize, 8192);
         bufferSize = Math.Min(bufferSize, 8192); //81920, it looks it doesn't have effect
-        return (int)bufferSize;
+        return new TransferBufferSize((int)bufferSize, (int)bufferSize);
     }
 
     private async Task<ServerConfig> ReadConfig(ServerInfo serverInfo)
     {
         var serverConfig = await ReadConfigImpl(serverInfo).Vhc();
-        serverConfig.SessionOptions.TcpBufferSize =
-            GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
+        serverConfig.SessionOptions.StreamProxyBufferSize = GetBestStreamBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.StreamProxyBufferSize);
         serverConfig.ApplyDefaults();
         VhLogger.Instance.LogInformation("RemoteConfig: {RemoteConfig}", GetServerConfigReport(serverConfig));
 

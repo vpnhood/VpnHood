@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Tunneling.ClientStreams;
+﻿using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Tunneling.ClientStreams;
 
 namespace VpnHood.Core.Tunneling.Channels;
 

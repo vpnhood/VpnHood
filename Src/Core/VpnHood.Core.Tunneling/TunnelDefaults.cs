@@ -19,15 +19,17 @@ public static class TunnelDefaults
     public static TransferBufferSize ClientStreamProxyBufferSize { get; } = new(0xFFFF / 8, 0xFFFF / 8); // 8KB send, 8KB receive
     public static TransferBufferSize ServerStreamProxyBufferSize { get; } = new(0xFFFF / 8, 0xFFFF / 8); // 8KB send, 8KB receive
     
-    public static TransferBufferSize ClientStreamPacketBufferSize { get; } = new(0xFFFF * 4, 0xFFFF * 4); // 256KB send, 256KB receive
-    public static TransferBufferSize ServerStreamPacketBufferSize { get; } = new(0xFFFF / 4, 0xFFFF / 4); // 16KB send, 16KB receive
-    
     public static TransferBufferSize? ClientUdpProxyBufferSize { get; set; } = new(1024 * 1024 * 1, 1024 * 1024 * 1); // 1MB send, 1MB receive
     public static TransferBufferSize? ServerUdpProxyBufferSize { get; set; } = null; // system default
+
+    public static TransferBufferSize ClientStreamPacketBufferSize { get; } = new(0xFFFF * 4, 0xFFFF * 4); // 256KB send, 256KB receive
+    public static TransferBufferSize ServerStreamPacketBufferSize { get; } = new(0xFFFF / 4, 0xFFFF / 4); // 16KB send, 16KB receive
     
     public static TransferBufferSize? ClientUdpChannelBufferSize { get; set; } = new(1024 * 1024 * 1, 1024 * 1024 * 1); // 1MB send, 1MB receive
     public static TransferBufferSize? ServerUdpChannelBufferSize { get; set; } = null; // system default
 
+    public static TransferBufferSize? ServerTcpKernelBufferSize { get; set; } = null; // system default
+    
     public static TimeSpan PingTimeout { get; set; } = TimeSpan.FromSeconds(5);
     public static TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(2);
     public static TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromMinutes(1); // it is for worker timeout

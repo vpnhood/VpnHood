@@ -7,11 +7,14 @@ namespace VpnHood.Core.Server.Access.Configurations;
 
 public class ServerConfig
 {
-    [JsonPropertyName("Tracking")] public TrackingOptions TrackingOptions { get; set; } = new();
+    [JsonPropertyName("Tracking")] 
+    public TrackingOptions TrackingOptions { get; set; } = new();
 
-    [JsonPropertyName("Session")] public SessionOptions SessionOptions { get; set; } = new();
+    [JsonPropertyName("Session")] 
+    public SessionOptions SessionOptions { get; set; } = new();
 
-    [JsonPropertyName("NetFilter")] public NetFilterOptions NetFilterOptions { get; set; } = new();
+    [JsonPropertyName("NetFilter")] 
+    public NetFilterOptions NetFilterOptions { get; set; } = new();
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[]? TcpEndPoints { get; set; }

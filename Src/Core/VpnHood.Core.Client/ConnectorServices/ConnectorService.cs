@@ -126,7 +126,7 @@ internal class ConnectorService(
         }
         catch (Exception ex){
             VhLogger.Instance.LogDebug(GeneralEventId.TcpLife, ex,
-                "Error in sending fresh request. ClientStreamId: {ClientStreamId}, RequestId: {requestId}",
+                "Error in sending a request. ClientStreamId: {ClientStreamId}, RequestId: {requestId}",
                 clientStream.ClientStreamId, requestId);
 
             clientStream.DisposeWithoutReuse();

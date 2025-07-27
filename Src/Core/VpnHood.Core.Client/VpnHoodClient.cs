@@ -157,7 +157,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         });
         _proxyManager.PacketReceived += Proxy_PacketReceived;
 
-
         SessionName = options.SessionName;
         AllowTcpReuse = options.AllowTcpReuse;
         ReconnectTimeout = options.ReconnectTimeout;

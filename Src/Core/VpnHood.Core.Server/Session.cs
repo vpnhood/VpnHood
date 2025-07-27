@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Sockets;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
@@ -399,8 +400,7 @@ public class Session : IDisposable
             await clientStream.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
 
             // add the connection
-            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
-                "Adding a ProxyChannel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
+            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Adding a ProxyChannel.");
 
             tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), 
                 request.RequestId + ":host");
@@ -413,9 +413,15 @@ public class Session : IDisposable
             tcpClientStreamHost?.Dispose();
             proxyChannel?.Dispose();
 
-            if (isRequestedEpException)
-                throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint,
-                    this, SessionErrorCode.GeneralError, request.RequestId, ex.Message);
+            // throw session exception if there is a problem with connection to requested endpoint
+            if (isRequestedEpException) {
+                var message = cancellationToken.IsCancellationRequested
+                    ? "Could not connect to the requested destination in given time."
+                    : ex.Message;
+                message += $" RemoteEndPoint: {clientStream.IpEndPointPair.RemoteEndPoint}, RequestId: {request.RequestId}";
+                throw new SessionException(SessionErrorCode.GeneralError, message);
+            }
+
             throw;
         }
         finally {

@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: Reconnecting especially when using torrent clients
+* 
 # v7.2.729
 * Fix: Memory Leak!
 

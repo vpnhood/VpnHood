@@ -31,7 +31,7 @@ public static class ClientStreamExtensions
             await clientStream.WriteResponseAsync(sessionResponse, cancellationToken).Vhc();
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife, ex,
+            VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
                 "Could not dispose a ClientStream gracefully. ClientStreamId: {ClientStreamId}", clientStream.ClientStreamId);
 
             clientStream.Dispose();

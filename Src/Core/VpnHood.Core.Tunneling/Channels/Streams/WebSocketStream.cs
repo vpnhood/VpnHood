@@ -213,7 +213,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
                 // skip close connection payload
                 if (webSocketHeader.IsCloseConnection) {
-                    VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+                    VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                         "BinaryStream has been closed by WebSocket close frame. StreamId: {StreamId}", StreamId);
 
                     // discard the frame payload
@@ -229,7 +229,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
                 // read another chunk header if it is not data chunk
                 if (webSocketHeader.IsPing || webSocketHeader.IsPing || !webSocketHeader.IsBinary) {
-                    VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+                    VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                         "BinaryStream has received a WebSocket frame that is not binary. StreamId: {StreamId}", StreamId);
 
                     // discard the frame payload if it is ping or pong
@@ -241,7 +241,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             }
         }
         catch (EndOfStreamException) {
-            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "BinaryStream has been closed without terminator. StreamId: {StreamId}", StreamId);
             _isConnectionClosed = true;
             return new WebSocketHeader {
@@ -317,7 +317,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         }
         catch (Exception ex) {
             _exception = ex; // indicate that the stream can not be reused
-            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife, ex,
+            VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
                 "Could not close the stream gracefully. StreamId: {StreamId}", StreamId);
             await SourceStream.DisposeAsync().Vhc();
             throw;
@@ -339,7 +339,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
         // Log if the stream has not been closed gracefully
         if (trashedLength > 0) {
-            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "Trashing unexpected binary stream data. StreamId: {StreamId}, TrashedLength: {TrashedLength}",
                 StreamId, trashedLength);
         }

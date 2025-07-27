@@ -402,8 +402,7 @@ public class Session : IDisposable
             // add the connection
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Adding a ProxyChannel.");
 
-            tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), 
-                request.RequestId + ":host");
+            tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
             proxyChannel = new ProxyChannel(request.RequestId, tcpClientStreamHost, clientStream, _streamProxyBufferSize);
 
             Tunnel.AddChannel(proxyChannel);

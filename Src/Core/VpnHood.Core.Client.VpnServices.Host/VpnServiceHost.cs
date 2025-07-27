@@ -39,7 +39,7 @@ public class VpnServiceHost : IDisposable
 
         // initialize logger
         _logService = withLogger ? new LogService(Context.LogFilePath) : null;
-        VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
+        VhLogger.TcpCloseEventId = GeneralEventId.Stream;
         var clientOptions = Context.TryReadClientOptions();
         if (_logService != null && clientOptions != null) {
             _logService.Start(clientOptions.LogServiceOptions);

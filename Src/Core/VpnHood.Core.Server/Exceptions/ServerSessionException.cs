@@ -68,11 +68,8 @@ public class ServerSessionException : SessionException, ISelfLog
         RequestId = requestBase.RequestId;
     }
 
+    protected virtual EventId EventId => GeneralEventId.Request;
     protected virtual LogLevel LogLevel => LogLevel.Debug;
-
-    protected virtual EventId EventId => SessionResponse.ErrorCode is SessionErrorCode.GeneralError
-        ? GeneralEventId.Tcp
-        : GeneralEventId.Session;
 
     public virtual void Log()
     {

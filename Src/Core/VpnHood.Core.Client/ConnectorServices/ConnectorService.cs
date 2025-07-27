@@ -65,7 +65,7 @@ internal class ConnectorService(
         var clientStream = GetFreeClientStream();
         if (clientStream != null) {
             try {
-                VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+                VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                     "A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}, LocalEp: {LocalEp}",
                     clientStream.ClientStreamId, clientStream.IpEndPointPair.LocalEndPoint);
 
@@ -87,7 +87,7 @@ internal class ConnectorService(
                 // dispose the connection and retry with new connection
                 lock (Stat) Stat.ReusedConnectionFailedCount++;
                 clientStream.DisposeWithoutReuse();
-                VhLogger.Instance.LogError(GeneralEventId.TcpLife, ex,
+                VhLogger.Instance.LogError(GeneralEventId.Stream, ex,
                     "Error in reusing the ClientStream. Try a new connection. ClientStreamId: {ClientStreamId}, RequestId: {requestId}",
                     clientStream.ClientStreamId, requestId);
             }
@@ -125,7 +125,7 @@ internal class ConnectorService(
             throw;
         }
         catch (Exception ex){
-            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife, ex,
+            VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
                 "Error in sending a request. ClientStreamId: {ClientStreamId}, RequestId: {requestId}",
                 clientStream.ClientStreamId, requestId);
 
@@ -174,7 +174,7 @@ internal class ConnectorService(
             RequestCode.Bye => GeneralEventId.Session,
             RequestCode.TcpPacketChannel => GeneralEventId.PacketChannel,
             RequestCode.ProxyChannel => GeneralEventId.ProxyChannel,
-            _ => GeneralEventId.Tcp
+            _ => GeneralEventId.Request
         };
     }
 

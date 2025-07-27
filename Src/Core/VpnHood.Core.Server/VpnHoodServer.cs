@@ -82,7 +82,7 @@ public class VpnHoodServer : IAsyncDisposable
         _config = options.Config;
         ServerHost = new ServerHost(SessionManager);
 
-        VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
+        VhLogger.TcpCloseEventId = GeneralEventId.Stream;
         _configureAndSendStatusJob = new Job(ConfigureAndSendStatus, options.ConfigureInterval, nameof(VpnHoodServer));
     }
 

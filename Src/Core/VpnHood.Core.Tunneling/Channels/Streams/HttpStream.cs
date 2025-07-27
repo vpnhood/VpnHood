@@ -119,7 +119,7 @@ public class HttpStream : ChunkStream
         if (_hasError) return;
         _hasError = true;
 
-        VhLogger.LogError(GeneralEventId.TcpLife, ex, "Disposing HttpStream. StreamId: {StreamId}", StreamId);
+        VhLogger.LogError(GeneralEventId.Stream, ex, "Disposing HttpStream. StreamId: {StreamId}", StreamId);
         _ = DisposeAsync();
     }
 
@@ -270,7 +270,7 @@ public class HttpStream : ChunkStream
             await WriteInternalAsync(Memory<byte>.Empty,  cancellationToken).Vhc();
         }
         catch (Exception ex) {
-            VhLogger.LogError(GeneralEventId.TcpLife, ex,
+            VhLogger.LogError(GeneralEventId.Stream, ex,
                 "Could not write the HTTP chunk terminator. StreamId: {StreamId}",
                 StreamId);
         }
@@ -299,7 +299,7 @@ public class HttpStream : ChunkStream
             }
         }
         catch (Exception ex) {
-            VhLogger.LogError(GeneralEventId.TcpLife, ex,
+            VhLogger.LogError(GeneralEventId.Stream, ex,
                 "HttpStream has not been closed gracefully. StreamId: {StreamId}",
                 StreamId);
         }

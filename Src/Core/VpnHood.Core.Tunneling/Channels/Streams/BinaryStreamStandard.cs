@@ -173,7 +173,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
             await SourceStream.ReadExactlyAsync(_readChunkHeaderBuffer, cancellationToken).Vhc();
         }
         catch (EndOfStreamException) {
-            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "BinaryStream has been closed without terminator. StreamId: {StreamId}", StreamId);
             _isConnectionClosed = true;
             return 0;
@@ -232,7 +232,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
         }
         catch (Exception ex) {
             _exception = ex; // indicate that the stream can not be reused
-            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife, ex,
+            VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
                 "Could not close the stream gracefully. StreamId: {StreamId}", StreamId);
             await SourceStream.DisposeAsync().Vhc();
             throw;
@@ -254,7 +254,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
 
         // Log if the stream has not been closed gracefully
         if (trashedLength > 0) {
-            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "Trashing unexpected binary stream data. StreamId: {StreamId}, TrashedLength: {TrashedLength}",
                 StreamId, trashedLength);
         }

@@ -33,7 +33,7 @@ public static class SniExtractor
             return GetSniFromStreamInternal(payloadData);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(GeneralEventId.Tcp, ex, "Could not extract sni");
+            VhLogger.Instance.LogDebug(GeneralEventId.Sni, ex, "Could not extract sni.");
             return null;
         }
     }

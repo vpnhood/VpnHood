@@ -26,7 +26,7 @@ public class TcpClientStream : IClientStream
         get => _clientStreamId;
         set {
             if (_clientStreamId != value)
-                VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+                VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                     "ClientStreamId has been changed. ClientStreamId: {ClientStreamId}, NewClientStreamId: {NewClientStreamId}",
                     _clientStreamId, value);
 
@@ -45,7 +45,7 @@ public class TcpClientStream : IClientStream
         IpEndPointPair = new IPEndPointPair(
             _tcpClient.Client.GetLocalEndPoint(), _tcpClient.Client.GetRemoteEndPoint());
 
-        VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+        VhLogger.Instance.LogDebug(GeneralEventId.Stream,
             "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}, StreamType: {StreamType}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
             ClientStreamId, stream.GetType().Name, VhLogger.Format(IpEndPointPair.LocalEndPoint), VhLogger.Format(IpEndPointPair.RemoteEndPoint));
     }
@@ -70,7 +70,7 @@ public class TcpClientStream : IClientStream
     {
         try {
             _reusing = true;
-            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "Reusing a TcpClientStream. ClientStreamId: {ClientStreamId}", ClientStreamId);
 
             // verify if we can reuse the stream
@@ -80,7 +80,7 @@ public class TcpClientStream : IClientStream
             await Reuse(chunkStream, _reuseCallback).Vhc();
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife, ex,
+            VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
                 "Could not reuse the TcpClientStream. ClientStreamId: {ClientStreamId}", ClientStreamId);
 
             // dispose and we should not try to reuse the stream

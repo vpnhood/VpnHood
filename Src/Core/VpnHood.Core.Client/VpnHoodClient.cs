@@ -986,7 +986,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 VhLogger.Instance.LogInformation("Session has been closed on the server successfully.");
             }
             catch (Exception ex) {
-                VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Could not send the bye to the server..");
+                VhLogger.Instance.LogDebug(GeneralEventId.Request, ex, "Could not send the bye to the server..");
             }
 
         }

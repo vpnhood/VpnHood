@@ -93,7 +93,7 @@ internal class ClientHost(
         }
         catch (Exception ex) {
             if (!_disposed)
-                VhLogger.LogError(GeneralEventId.Tcp, ex, "");
+                VhLogger.LogError(GeneralEventId.Request, ex, "");
         }
         finally {
             VhLogger.Instance.LogInformation("ClientHost Listener has been closed. LocalEp: {localEp}", localEp);

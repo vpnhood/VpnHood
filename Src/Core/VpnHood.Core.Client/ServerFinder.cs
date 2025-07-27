@@ -37,7 +37,7 @@ public class ServerFinder(
     // There is much work to be done here
     public async Task<IPEndPoint> FindReachableServerAsync(CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.Session, "Finding a reachable server... QueryTimeout: {QueryTimeout}", 
+        VhLogger.Instance.LogInformation(GeneralEventId.Request, "Finding a reachable server... QueryTimeout: {QueryTimeout}", 
             serverQueryTimeout);
 
         // get all endpoints from serverToken
@@ -55,7 +55,7 @@ public class ServerFinder(
         _hostEndPointStatuses = await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
         var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
-        VhLogger.Instance.LogInformation(GeneralEventId.Session,
+        VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}",
             _hostEndPointStatuses.Count(x => x.Available == true),
             _hostEndPointStatuses.Count(x => x.Available == false),
@@ -74,7 +74,7 @@ public class ServerFinder(
     public async Task<IPEndPoint> FindBestRedirectedServerAsync(IPEndPoint[] hostEndPoints,
         CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.Session, "Finding best server from redirected endpoints...");
+        VhLogger.Instance.LogInformation(GeneralEventId.Request, "Finding best server from redirected endpoints...");
 
         if (!hostEndPoints.Any())
             throw new Exception("There is no server endpoint. Please check server configuration.");
@@ -140,7 +140,7 @@ public class ServerFinder(
         // report endpoints
         var endPointReport = string.Join(", ",
             changesStatus.Select(x => $"{VhLogger.Format(x.TcpEndPoint)} => {x.Available}"));
-        VhLogger.Instance.LogInformation(GeneralEventId.Session, "HostEndPoints: {EndPoints}", endPointReport);
+        VhLogger.Instance.LogInformation(GeneralEventId.Request, "HostEndPoints: {EndPoints}", endPointReport);
 
         return tracker?.TryTrack(trackEvents) ?? Task.CompletedTask;
     }

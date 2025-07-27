@@ -168,7 +168,7 @@ internal class ConnectorServiceBase : IDisposable
         var tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint);
         try {
             // Client.SessionTimeout does not affect in ConnectAsync
-            VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "Establishing a new TCP to the Server... EndPoint: {EndPoint}",
+            VhLogger.Instance.LogDebug(GeneralEventId.Request, "Establishing a new TCP to the Server... EndPoint: {EndPoint}",
                 VhLogger.Format(tcpEndPoint));
             await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();
             return await GetTlsConnectionToServer(streamId,  tcpClient, contentLength, cancellationToken).Vhc();
@@ -186,7 +186,7 @@ internal class ConnectorServiceBase : IDisposable
         var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
         try {
             var hostName = EndPointInfo.HostName;
-            VhLogger.Instance.LogDebug(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}",
+            VhLogger.Instance.LogDebug(GeneralEventId.Request, "TLS Authenticating... HostName: {HostName}",
                 VhLogger.FormatHostName(hostName));
 
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
@@ -223,7 +223,7 @@ internal class ConnectorServiceBase : IDisposable
     {
         // Check if the connector service is disposed
         if (_isDisposed != 0 || !_allowTcpReuse) {
-            VhLogger.Instance.LogDebug(GeneralEventId.TcpLife,
+            VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "Disposing the reused client stream because the connector service is either disposed or reuse is no longer allowed. " +
                 "ClientStreamId: {ClientStreamId}", clientStream.ClientStreamId);
             clientStream.DisposeWithoutReuse();
@@ -302,7 +302,7 @@ internal class ConnectorServiceBase : IDisposable
             // just try to fix this unknown nasty issue on Android Parameter 'ctx' must be a valid pointer
             using var cert2 = new X509Certificate2(certificate);
             if (cert2.Handle == IntPtr.Zero) {
-                VhLogger.Instance.LogDebug(GeneralEventId.Tls, "Cert handle zero.");
+                VhLogger.Instance.LogDebug(GeneralEventId.Request, "Cert handle zero.");
                 return false;
             }
 
@@ -310,7 +310,7 @@ internal class ConnectorServiceBase : IDisposable
             return ret;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogDebug(GeneralEventId.Tls, "Failed to validate cert: {ex}", ex);
+            VhLogger.Instance.LogDebug(GeneralEventId.Request, "Failed to validate cert: {ex}", ex);
             return false;
         }
     }

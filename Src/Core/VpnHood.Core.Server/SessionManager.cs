@@ -238,7 +238,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
             return session;
 
         // Get session from the access server
-        VhLogger.Instance.LogDebug(GeneralEventId.Session,
+        VhLogger.Instance.LogDebug(GeneralEventId.Request,
             "Trying to recover a session from the access server. SessionId: {SessionId}",
             VhLogger.FormatSessionId(sessionRequest.SessionId));
 

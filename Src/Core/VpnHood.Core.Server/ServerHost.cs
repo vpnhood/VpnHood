@@ -214,14 +214,18 @@ public class ServerHost : IDisposable, IAsyncDisposable
         return certificate.Certificate;
     }
 
-    private static async Task<byte> ReadRequestVersion(IClientStream clientStream, CancellationToken cancellationToken)
+    private static async Task<int> ReadRequestVersion(IClientStream clientStream, CancellationToken cancellationToken)
     {
         var buffer = new byte[1];
 
         // read request version. We may wait here for reuse timeout
         var rest = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
-        if (rest == 0)
-            throw new EndOfStreamException("ClientStream has been closed before receiving any request.");
+        if (rest == 0) {
+            VhLogger.Instance.LogDebug(GeneralEventId.Request, "ClientStream has been closed. ClientStreamId: {ClientStreamId}, RemoteEp: {RemoteEp}",
+                clientStream.ClientStreamId, clientStream.IpEndPointPair.RemoteEndPoint);
+            clientStream.DisposeWithoutReuse();
+            return -1;
+        }
 
         var version = buffer[0];
         return version;
@@ -362,6 +366,9 @@ public class ServerHost : IDisposable, IAsyncDisposable
         var clientStream = await CreateClientStream(tcpClient, connectCts.Token).Vhc();
         try {
             var requestVersion = await ReadRequestVersion(clientStream, connectCts.Token).Vhc();
+            if (requestVersion <= 0)
+                return; // client stream has been closed
+
             await ProcessClientStream(clientStream, requestVersion, connectCts.Token).Vhc();
         }
         catch (Exception ex) {
@@ -375,7 +382,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
                 // create a new CancellationTokenSource for close timeout
                 using var closeTimeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
-                using var closeCts = CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token, _cancellationTokenSource.Token); 
+                using var closeCts = CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token, _cancellationTokenSource.Token);
                 await VhUtils.TryInvokeAsync("Write unauthorized response.",
                     () => clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), closeCts.Token)).Vhc();
             }
@@ -408,6 +415,9 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
             // wait for reuse timeout by reading the request version
             var requestVersion = await ReadRequestVersion(clientStream, reusedCts.Token).Vhc();
+            if (requestVersion <= 0)
+                return; // client stream has been closed
+
             timeoutCts.CancelAfter(_sessionManager.SessionOptions.TcpReuseTimeoutValue); // reset timeout for new request
             await ProcessClientStream(clientStream, requestVersion, reusedCts.Token).Vhc();
 
@@ -425,7 +435,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task ProcessClientStream(IClientStream clientStream, byte requestVersion, CancellationToken cancellationToken)
+    private async Task ProcessClientStream(IClientStream clientStream, int requestVersion, CancellationToken cancellationToken)
     {
         using var scope = VhLogger.Instance.BeginScope(
             $"RemoteEp: {VhLogger.Format(clientStream.IpEndPointPair.RemoteEndPoint)}");

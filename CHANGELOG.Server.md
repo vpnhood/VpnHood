@@ -1,4 +1,4 @@
-# Upcoming
+# v7.2.731
 * Fix: Reconnecting especially when using torrent clients
 * Update: Tune memory usage
 

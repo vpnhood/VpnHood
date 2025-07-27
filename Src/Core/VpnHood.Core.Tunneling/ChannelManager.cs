@@ -179,6 +179,9 @@ internal class ChannelManager : IDisposable
             _disposingChannels.Remove(channel);
             channels.Remove(channel);
 
+            // update traffic usage
+            _trafficUsage += channel.Traffic;
+
             // log the removal of the channel
             VhLogger.Instance.LogDebug(eventId,
                 "A channel has been removed. Channel: {Channel}, ChannelId: {ChannelId}, " +
@@ -187,7 +190,6 @@ internal class ChannelManager : IDisposable
         }
 
         // clean up channel
-        _trafficUsage += channel.Traffic;
         channel.Dispose();
     }
 

@@ -142,6 +142,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _serverFinder = new ServerFinder(socketFactory, token.ServerToken,
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
+            endPointStrategy: options.EndPointStrategy,
             tracker: options.AllowEndPointTracker ? tracker : null);
         _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions {
             IsPingSupported = false,

@@ -64,4 +64,6 @@ public enum ExceptionType
     [EnumMember(Value = nameof(ConnectionTimeoutException))]
     ConnectionTimeout,
 
+    [EnumMember(Value = nameof(EndPointDiscoveryException))]
+    EndPointDiscovery
 }

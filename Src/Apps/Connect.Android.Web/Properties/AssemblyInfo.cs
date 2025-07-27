@@ -5,5 +5,3 @@
 
 [assembly: UsesFeature("android.software.leanback", Required = false)]
 [assembly: UsesFeature("android.hardware.touchscreen", Required = false)]
-[assembly: UsesPermission(Name = "android.permission.INTERNET")]
-[assembly: UsesPermission(Name = "android.permission.ACCESS_NETWORK_STATE")]

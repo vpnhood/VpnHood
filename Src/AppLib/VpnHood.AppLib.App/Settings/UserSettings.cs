@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.AppLib.Settings;
 
@@ -24,4 +25,5 @@ public class UserSettings
     public bool IncludeLocalNetwork { get; set; } = ClientOptions.Default.IncludeLocalNetwork;
     public bool UseAppIpFilter { get; set; }
     public bool UseVpnAdapterIpFilter { get; set; }
+    public EndPointStrategy EndPointStrategy { get; set; }
 }

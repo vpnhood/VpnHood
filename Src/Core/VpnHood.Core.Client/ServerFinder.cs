@@ -21,6 +21,7 @@ public class ServerFinder(
     ServerToken serverToken,
     string? serverLocation,
     TimeSpan serverQueryTimeout,
+    EndPointStrategy endPointStrategy,
     ITracker? tracker,
     int maxDegreeOfParallelism = 10)
 {
@@ -41,7 +42,7 @@ public class ServerFinder(
             serverQueryTimeout);
 
         // get all endpoints from serverToken
-        var hostEndPoints = await serverToken.ResolveHostEndPoints(cancellationToken);
+        var hostEndPoints = await EndPointResolver.ResolveHostEndPoints(serverToken, endPointStrategy, cancellationToken);
 
         // exclude ip v6 if not supported
         if (!IncludeIpV6)

@@ -694,6 +694,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 Version = Features.Version,
                 TrackerFactoryAssemblyQualifiedName = _trackerFactory.GetType().AssemblyQualifiedName,
                 UserAgent = userAgent ?? ClientOptions.Default.UserAgent,
+                EndPointStrategy = UserSettings.EndPointStrategy,
                 DebugData1 = UserSettings.DebugData1,
                 DebugData2 = UserSettings.DebugData2
             };
@@ -704,7 +705,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // start to diagnose if requested
             if (_appPersistState.HasDiagnoseRequested) {
-                var hostEndPoints = await token.ServerToken.ResolveHostEndPoints(cancellationToken).Vhc();
+                var hostEndPoints = await EndPointResolver.ResolveHostEndPoints(token.ServerToken, UserSettings.EndPointStrategy, cancellationToken).Vhc();
                 await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).Vhc();
                 await Diagnoser.CheckPureNetwork(cancellationToken).Vhc();
                 await _vpnServiceManager.Start(clientOptions, cancellationToken).Vhc();

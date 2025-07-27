@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Net;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Client.Exceptions;
@@ -764,6 +765,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 IncludeApps = _includeApps
             };
             await _vpnAdapter.Start(adapterOptions, cancellationToken);
+        }
+        catch (TimeoutException) {
+            // if the connection is timed out, throw connection timeout exception in this case
+            throw new ConnectionTimeoutException("Could not connect to the server in the given time.");
         }
         catch (RedirectHostException ex) {
             if (!allowRedirect) {

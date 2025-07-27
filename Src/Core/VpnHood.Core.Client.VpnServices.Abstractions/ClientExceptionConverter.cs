@@ -39,6 +39,9 @@ public static class ClientExceptionConverter
         if (apiError.Is<NoStableVpnException>())
             exception = new NoStableVpnException();
 
+        if (apiError.Is<ConnectionTimeoutException>())
+            exception = new ConnectionTimeoutException(apiError.Message);
+
         if (apiError.Is<UnreachableServerException>())
             exception = new UnreachableServerException(apiError.Message);
 

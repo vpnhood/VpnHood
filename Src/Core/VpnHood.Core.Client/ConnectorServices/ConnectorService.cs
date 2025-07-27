@@ -38,23 +38,28 @@ internal class ConnectorService(
         using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(
             timeoutCts.Token, cancellationToken, _cancellationTokenSource.Token);
 
-        var eventId = GetRequestEventId(request);
-        request.RequestId += ":client";
-        VhLogger.Instance.LogDebug(eventId,
-            "Sending a request. RequestCode: {RequestCode}, RequestId: {RequestId}",
-            (RequestCode)request.RequestCode, request.RequestId);
+        try {
+            var eventId = GetRequestEventId(request);
+            request.RequestId += ":client";
+            VhLogger.Instance.LogDebug(eventId,
+                "Sending a request. RequestCode: {RequestCode}, RequestId: {RequestId}",
+                (RequestCode)request.RequestCode, request.RequestId);
 
-        await using var mem = new MemoryStream();
-        mem.WriteByte(1);
-        mem.WriteByte(request.RequestCode);
-        await StreamUtils.WriteObjectAsync(mem, request, requestCts.Token).Vhc();
-        var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, requestCts.Token).Vhc();
+            await using var mem = new MemoryStream();
+            mem.WriteByte(1);
+            mem.WriteByte(request.RequestCode);
+            await StreamUtils.WriteObjectAsync(mem, request, requestCts.Token).Vhc();
+            var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, requestCts.Token).Vhc();
 
-        // log the response
-        VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.", ret.Response.ErrorCode);
+            // log the response
+            VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.", ret.Response.ErrorCode);
 
-        lock (Stat) Stat.RequestCount++;
-        return ret;
+            lock (Stat) Stat.RequestCount++;
+            return ret;
+        }
+        catch (Exception) when (timeoutCts.IsCancellationRequested) {
+            throw new TimeoutException($"Could not send the {(RequestCode)request.RequestCode} request in the given time.");
+        }
     }
 
     private async Task<ConnectorRequestResult<T>> SendRequest<T>(ReadOnlyMemory<byte> request, string requestId,
@@ -124,7 +129,7 @@ internal class ConnectorService(
             clientStream.Dispose();
             throw;
         }
-        catch (Exception ex){
+        catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
                 "Error in sending a request. ClientStreamId: {ClientStreamId}, RequestId: {requestId}",
                 clientStream.ClientStreamId, requestId);

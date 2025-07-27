@@ -1,7 +1,7 @@
 
-namespace VpnHood.AppLib.Exceptions;
+namespace VpnHood.Core.Client.Abstractions.Exceptions;
 
-public class ConnectionTimeoutException : Exception
+public class ConnectionTimeoutException : TimeoutException
 {
     public ConnectionTimeoutException(string message) : base(message)
     {

@@ -4,22 +4,10 @@ namespace VpnHood.AppLib;
 
 public static class AppTrackerBuilder
 {
-    public static TrackEvent BuildLoadAdFailed(string adNetwork, string errorMessage, string? countryCode)
+    private static TrackEvent BuildAdFailed(string eventName, string? adNetwork, string errorMessage, string? countryCode)
     {
         return new TrackEvent {
-            EventName = "vh_ad_load_failed",
-            Parameters = new Dictionary<string, object> {
-                { "ad_network", adNetwork },
-                { "error", errorMessage },
-                { "country", countryCode ?? "(vh_unknown)" }
-            }
-        };
-    }
-
-    public static TrackEvent BuildShowAdFailed(string? adNetwork, string errorMessage, string? countryCode)
-    {
-        return new TrackEvent {
-            EventName = "vh_ad_show_failed",
+            EventName = eventName,
             Parameters = new Dictionary<string, object> {
                 { "ad_network", adNetwork ?? "(vh_unknown)" },
                 { "error", errorMessage },
@@ -27,12 +15,26 @@ public static class AppTrackerBuilder
             }
         };
     }
+    public static TrackEvent BuildAdFailed(string? adNetwork, string errorMessage, string? countryCode)
+    {
+        return BuildAdFailed(eventName: "vh_ad_failed", adNetwork: adNetwork, errorMessage: errorMessage, countryCode: countryCode);
+    }
+
+    public static TrackEvent BuildLoadAdFailed(string adNetwork, string errorMessage, string? countryCode)
+    {
+        return BuildAdFailed(eventName: "vh_ad_load_failed", adNetwork: adNetwork, errorMessage: errorMessage, countryCode: countryCode);
+    }
+
+    public static TrackEvent BuildShowAdFailed(string? adNetwork, string errorMessage, string? countryCode)
+    {
+        return BuildAdFailed(eventName: "vh_ad_show_failed", adNetwork: adNetwork, errorMessage: errorMessage, countryCode: countryCode);
+    }
 
     public static TrackEvent BuildShowAdOk(string adNetwork, string? countryCode)
     {
         if (countryCode?.Trim() == string.Empty)
             countryCode = "empty";
-        
+
         return new TrackEvent {
             EventName = "vh_ad_show_ok",
             Parameters = new Dictionary<string, object> {

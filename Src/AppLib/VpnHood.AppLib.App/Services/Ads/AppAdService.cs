@@ -19,11 +19,11 @@ public class AppAdService(
     IAdService
 {
     private readonly AppCompositeAdService _compositeInterstitialAdService = new(
-        adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.InterstitialAd).ToArray(), 
+        adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.InterstitialAd).ToArray(),
         tracker);
 
     private readonly AppCompositeAdService _compositeRewardedAdService = new(
-        adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.RewardedAd).ToArray(), 
+        adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.RewardedAd).ToArray(),
         tracker);
 
     //private readonly AppCompositeAdService _compositeInterstitialAdOverVpnService = new(
@@ -57,7 +57,7 @@ public class AppAdService(
             // don't use VPN for loading ad
             device.TryBindProcessToVpn(false);
             var countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
-            await LoadAd(_compositeInterstitialAdService, uiContext, countryCode,cancellationToken);
+            await LoadAd(_compositeInterstitialAdService, uiContext, countryCode, cancellationToken);
         }
         finally {
             device.TryBindProcessToVpn(true);
@@ -80,13 +80,11 @@ public class AppAdService(
         return ShowAd(_compositeRewardedAdService, uiContext, sessionId, allowOverVpn: false, cancellationToken);
     }
 
-    private async Task LoadAd(AppCompositeAdService appCompositeAdService, IUiContext uiContext, 
+    private async Task LoadAd(AppCompositeAdService appCompositeAdService, IUiContext uiContext,
         string countryCode, CancellationToken cancellationToken)
     {
-        await appCompositeAdService.LoadAd(
-                uiContext, countryCode: countryCode,
-                forceReload: false, loadAdTimeout: adOptions.LoadAdTimeout, cancellationToken)
-            .Vhc();
+        await appCompositeAdService.LoadAd(uiContext, countryCode: countryCode,
+            forceReload: false, loadAdTimeout: adOptions.LoadAdTimeout, cancellationToken).Vhc();
 
         // apply delay to prevent showing ads immediately after loading
         await Task.Delay(adOptions.LoadAdPostDelay, cancellationToken).Vhc();
@@ -95,20 +93,31 @@ public class AppAdService(
     private async Task<AdResult> ShowAd(AppCompositeAdService appCompositeAdService,
         IUiContext uiContext, string sessionId, bool allowOverVpn, CancellationToken cancellationToken)
     {
-        string? countryCode =  null;
+        string? countryCode = null;
         try {
             // don't use VPN for the ad
-            device.TryBindProcessToVpn(allowOverVpn);
+            // todo: temporarily disabled for check analytics
+            if (VpnHoodApp.Instance.ConnectionState == AppConnectionState.Connected)
+                device.TryBindProcessToVpn(allowOverVpn);
+
             countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
-            var result =  await ShowAdInternal(appCompositeAdService, uiContext, sessionId, countryCode, cancellationToken);
-            
+            var result = await ShowAdInternal(appCompositeAdService, uiContext, sessionId, countryCode,
+                cancellationToken);
+
             var trackEvent = AppTrackerBuilder.BuildShowAdOk(adNetwork: result.NetworkName, countryCode: countryCode);
-            _ = TryRestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
+            //_ = TryRestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
+
+            //todo: {temporary to see the result, make sure tacker send before connection
+            if (tracker != null) await tracker.TryTrack(trackEvent);
+            await Task.Delay(ShowAdPostDelay, cancellationToken);
+            // todo }
+
             return result;
         }
         catch (Exception ex) {
             var adNetwork = ex is ShowAdException showAdException ? showAdException.AdNetworkName : null;
-            var trackEvent = AppTrackerBuilder.BuildShowAdFailed(adNetwork: adNetwork, errorMessage: ex.Message, countryCode: countryCode);
+            var trackEvent = AppTrackerBuilder.BuildAdFailed(adNetwork: adNetwork, errorMessage: ex.Message,
+                countryCode: countryCode);
             _ = TryRestoreProcessVpn(trackEvent, TimeSpan.Zero, cancellationToken);
             throw;
         }
@@ -117,23 +126,27 @@ public class AppAdService(
     private async Task<AdResult> ShowAdInternal(AppCompositeAdService appCompositeAdService,
         IUiContext uiContext, string sessionId, string countryCode, CancellationToken cancellationToken)
     {
-        try {
-            // load ad if not loaded
-            await LoadAd(appCompositeAdService, uiContext, countryCode, cancellationToken);
 
-            // show ad
+        // load ad if not loaded
+        await LoadAd(appCompositeAdService, uiContext, countryCode, cancellationToken);
+
+        // show ad
+        try {
             var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
             var networkName = await appCompositeAdService.ShowLoadedAd(uiContext, adData, cancellationToken);
             var showAdResult = new AdResult {
                 AdData = adData,
                 NetworkName = networkName
             };
-
-            //wait for finishing trackers
             return showAdResult;
         }
-        catch (UiContextNotAvailableException ex) {
-            throw new ShowAdNoUiException(ex);
+        catch (Exception ex) {
+            // track failed ad show
+            var adNetwork = ex is ShowAdException showAdException ? showAdException.AdNetworkName : null;
+            var trackEvent = AppTrackerBuilder.BuildShowAdFailed(adNetwork: adNetwork, errorMessage: ex.Message, countryCode: countryCode);
+            if (tracker != null)
+                await tracker.TryTrack(trackEvent);
+            throw;
         }
     }
 

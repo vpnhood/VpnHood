@@ -1,6 +1,5 @@
 ﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
-using System.Globalization;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
@@ -104,8 +103,8 @@ internal class AppCompositeAdService
 
         throw new LoadAdException(
             $"Could not load any Ad. " +
-            $"CountryCode: {GetCountryName(countryCode)}. Cancelled: {cancellationToken.IsCancellationRequested}. " +
-            $"Message: {providerMessages}");
+            $"Message: {providerMessages}. " +
+            $"Cancelled: {cancellationToken.IsCancellationRequested}.");
     }
 
     private static async Task VerifyActiveUi(bool immediately = true)
@@ -158,17 +157,6 @@ internal class AppCompositeAdService
         }
         finally {
             _loadedAdProviderItem = null;
-        }
-    }
-
-    private static string GetCountryName(string? countryCode)
-    {
-        if (string.IsNullOrEmpty(countryCode)) return "n/a";
-        try {
-            return new RegionInfo(countryCode).Name;
-        }
-        catch {
-            return countryCode;
         }
     }
 }

@@ -224,12 +224,14 @@ public class ClientProfileTest : TestAppBase
             CustomData = Guid.NewGuid().ToString(),
             IsPremiumLocationSelected = true,
             SelectedLocation = "us/california",
-            AccessCode = TestAppHelper.BuildAccessCode()
+            AccessCode = TestAppHelper.BuildAccessCode(),
+            ForcedServerEndPoints = new Patch<IPEndPoint[]?>([IPEndPoint.Parse("1.1.1.1:200"), IPEndPoint.Parse("1.1.1.2:200")])
         };
         app.ClientProfileService.Update(clientProfile.ClientProfileId, updateParams);
         clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
         Assert.AreEqual(updateParams.ClientProfileName.Value, clientProfile.ClientProfileName);
         Assert.AreEqual(updateParams.IsFavorite.Value, clientProfile.IsFavorite);
+        CollectionAssert.AreEqual(updateParams.ForcedServerEndPoints?.Value, clientProfile.ForcedServerEndPoints);
         Assert.AreEqual(updateParams.CustomData.Value, clientProfile.CustomData);
         Assert.AreEqual(updateParams.IsPremiumLocationSelected.Value, clientProfile.IsPremiumLocationSelected);
         Assert.AreEqual(updateParams.SelectedLocation.Value, clientProfile.SelectedLocation);

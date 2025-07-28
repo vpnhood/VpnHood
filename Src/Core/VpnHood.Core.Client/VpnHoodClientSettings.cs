@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Common.Tokens;
+﻿using System.Net;
+using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.Core.Client;
 

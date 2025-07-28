@@ -1,6 +1,6 @@
-﻿using System.Net;
-using Ga4.Trackers;
+﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
+using System.Net;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Exceptions;
@@ -22,6 +22,7 @@ public class ServerFinder(
     string? serverLocation,
     TimeSpan serverQueryTimeout,
     EndPointStrategy endPointStrategy,
+    IPEndPoint[] forcedServerEndPoints,
     ITracker? tracker,
     int maxDegreeOfParallelism = 10)
 {
@@ -35,15 +36,23 @@ public class ServerFinder(
     public bool IncludeIpV6 { get; set; } = true;
     public string? ServerLocation => serverLocation;
     public EndPointStrategy EndPointStrategy => endPointStrategy;
+    public IPEndPoint[] ForcedServerEndPoints => forcedServerEndPoints;
 
     // There is much work to be done here
     public async Task<IPEndPoint> FindReachableServerAsync(CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.Request, "Finding a reachable server... QueryTimeout: {QueryTimeout}", 
+        VhLogger.Instance.LogInformation(GeneralEventId.Request, "Finding a reachable server... QueryTimeout: {QueryTimeout}",
             serverQueryTimeout);
 
         // get all endpoints from serverToken
-        var hostEndPoints = await EndPointResolver.ResolveHostEndPoints(serverToken, endPointStrategy, cancellationToken);
+        var hostEndPoints = forcedServerEndPoints.Any()
+            ? forcedServerEndPoints
+            : await EndPointResolver.ResolveHostEndPoints(serverToken, endPointStrategy, cancellationToken);
+
+        // log warning if there are some forced endpoints
+        if (forcedServerEndPoints.Any())
+            VhLogger.Instance.LogWarning("There are forced endpoints in the configuration. EndPoints: {EndPoints}",
+                string.Join(", ", forcedServerEndPoints.Select(VhLogger.Format)));
 
         // exclude ip v6 if not supported
         if (!IncludeIpV6)

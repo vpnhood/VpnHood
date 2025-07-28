@@ -119,7 +119,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             IncludeLocalNetwork = options.IncludeLocalNetwork,
             DropUdp = options.DropUdp,
             DropQuic = options.DropQuic,
-            UseTcpOverTun = options.UseTcpOverTun,
+            UseTcpOverTun = options.UseTcpOverTun
         };
 
         Token = Token.FromAccessKey(options.AccessKey);
@@ -133,7 +133,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
             endPointStrategy: options.EndPointStrategy,
+            forcedServerEndPoints: options.ForcedServerEndPoints ?? [],
             tracker: options.AllowEndPointTracker ? tracker : null);
+
         _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions {
             IsPingSupported = false,
             PacketProxyCallbacks = null,
@@ -147,8 +149,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             UseUdpProxy2 = true,
             AutoDisposePackets = true,
         });
-        _proxyManager.PacketReceived += Proxy_PacketReceived;
 
+        _proxyManager.PacketReceived += Proxy_PacketReceived;
+        
         var dnsRange = options.DnsServers?.Select(x => new IpRange(x)).ToArray() ?? [];
         VpnAdapterIncludeIpRanges = options.VpnAdapterIncludeIpRanges.ToOrderedList().Union(dnsRange);
         IncludeIpRanges = options.IncludeIpRanges.ToOrderedList().Union(dnsRange);
@@ -288,10 +291,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 "ClientId: {ClientId}",
                 Settings.Version, Settings.MinProtocolVersion, Settings.MaxProtocolVersion, VhLogger.FormatId(Settings.ClientId));
 
-
             // Establish first connection and create a session
             var hostEndPoint = await _serverFinder.FindReachableServerAsync(linkedCts.Token).Vhc();
-            await ConnectInternal(hostEndPoint, true, linkedCts.Token).Vhc();
+            var allowRedirect = !_serverFinder.ForcedServerEndPoints.Any();
+            await ConnectInternal(hostEndPoint, allowRedirect: allowRedirect, linkedCts.Token).Vhc();
 
             // Create Tcp Proxy Host
             _clientHost.Start();

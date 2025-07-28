@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Toolkit.Utils;
+﻿using System.Net;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.ClientProfiles;
 
@@ -10,4 +11,5 @@ public class ClientProfileUpdateParams
     public Patch<string?>? CustomData { get; set; }
     public Patch<bool>? IsPremiumLocationSelected { get; set; }
     public Patch<string?>? AccessCode { get; set; }
+    public Patch<IPEndPoint[]?>? ForcedServerEndPoints { get; set; }
 }

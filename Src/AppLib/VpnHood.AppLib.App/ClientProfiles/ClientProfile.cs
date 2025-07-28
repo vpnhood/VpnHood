@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Common.Tokens;
+﻿using System.Net;
+using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.AppLib.ClientProfiles;
 
@@ -13,6 +14,7 @@ public class ClientProfile
     public string? SelectedLocation { get; set; }
     public bool IsForAccount { get; set; }
     public bool IsBuiltIn { get; set; }
+    public IPEndPoint[]? ForcedServerEndPoints { get; set; }
     public bool IsPremium => !Token.IsPublic || AccessCode != null;
     public string? AccessCode { get; set; }
 }

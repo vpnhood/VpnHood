@@ -34,6 +34,7 @@ public class ServerFinder(
     private HostStatus[] _hostEndPointStatuses = [];
     public bool IncludeIpV6 { get; set; } = true;
     public string? ServerLocation => serverLocation;
+    public EndPointStrategy EndPointStrategy => endPointStrategy;
 
     // There is much work to be done here
     public async Task<IPEndPoint> FindReachableServerAsync(CancellationToken cancellationToken)

@@ -115,14 +115,23 @@ internal class ApiController : IDisposable
             // handle ad request
             case nameof(ApiSetAdResultRequest):
                 await SetAdResult(
-                    await StreamUtils.ReadObjectAsync<ApiSetAdResultRequest>(stream, cancellationToken), cancellationToken);
+                    await StreamUtils.ReadObjectAsync<ApiSetAdResultRequest>(stream, cancellationToken), 
+                    cancellationToken);
                 await WriteResponseResult(stream, null, cancellationToken);
                 return;
 
             // handle ad reward request
             case nameof(ApiSendRewardedAdResultRequest):
                 await SendRewardedAdResult(
-                    await StreamUtils.ReadObjectAsync<ApiSendRewardedAdResultRequest>(stream, cancellationToken), cancellationToken);
+                    await StreamUtils.ReadObjectAsync<ApiSendRewardedAdResultRequest>(stream, cancellationToken), 
+                    cancellationToken);
+                await WriteResponseResult(stream, null, cancellationToken);
+                return;
+
+            case nameof(ApiReconfigureRequest):
+                await Reconfigure(
+                    await StreamUtils.ReadObjectAsync<ApiReconfigureRequest>(stream, cancellationToken), 
+                    cancellationToken);
                 await WriteResponseResult(stream, null, cancellationToken);
                 return;
 
@@ -152,19 +161,37 @@ internal class ApiController : IDisposable
         await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
     }
 
-    public Task GetConnectionInfo(ApiGetConnectionInfoRequest request, CancellationToken cancellationToken)
+    private Task GetConnectionInfo(ApiGetConnectionInfoRequest request, CancellationToken cancellationToken)
     {
+        _ = request;
         var connectionInfo = UpdateConnectionInfo(cancellationToken);
         return connectionInfo;
     }
 
-    public async Task Disconnect(ApiDisconnectRequest request, CancellationToken cancellationToken)
+    private Task Disconnect(ApiDisconnectRequest request, CancellationToken cancellationToken)
     {
-        await _vpnHoodService.TryDisconnect();
+        _ = cancellationToken;
+        _ = request;
+        return _vpnHoodService.TryDisconnect();
     }
 
-    public Task SetAdResult(ApiSetAdResultRequest request, CancellationToken cancellationToken)
+    private Task Reconfigure(ApiReconfigureRequest request, CancellationToken cancellationToken)
     {
+        _ = cancellationToken;
+
+        VpnHoodClient.DropUdp = request.Params.DropUdp;
+        VpnHoodClient.DropQuic = request.Params.DropQuic;
+        VpnHoodClient.UseTcpOverTun = request.Params.UseTcpOverTun;
+        VpnHoodClient.UseUdpChannel = request.Params.UseUdpChannel;
+   
+        return Task.CompletedTask;
+    }
+
+
+    private Task SetAdResult(ApiSetAdResultRequest request, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+
         if (request.AdResult != null) {
             VpnHoodClient.AdService.AdRequestTaskCompletionSource?.TrySetResult(request.AdResult);
             return Task.CompletedTask;
@@ -181,7 +208,7 @@ internal class ApiController : IDisposable
         return Task.CompletedTask;
     }
 
-    public Task SendRewardedAdResult(ApiSendRewardedAdResultRequest request, CancellationToken cancellationToken)
+    private Task SendRewardedAdResult(ApiSendRewardedAdResultRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(request.AdResult.AdData))
             throw new InvalidOperationException("There is no AdData in ad reward.");

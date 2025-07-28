@@ -34,18 +34,28 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 {
     private const int MaxProtocolVersion = 9;
     private const int MinProtocolVersion = 4;
-    private bool _disposedInternal;
-    private bool _disposed;
     private readonly bool _autoDisposeVpnAdapter;
-    private readonly CancellationTokenSource _cancellationTokenSource;
-    private readonly ProxyManager _proxyManager;
-    private readonly Dictionary<IPAddress, bool> _includeIps = new();
     private readonly int _maxPacketChannelCount;
-    private readonly IVpnAdapter _vpnAdapter;
-    private readonly ClientHost _clientHost;
     private readonly TimeSpan _minPacketChannelLifespan;
     private readonly TimeSpan _maxPacketChannelLifespan;
     private readonly bool _allowAnonymousTracker;
+    private readonly TimeSpan _tcpConnectTimeout;
+    private readonly ConnectPlanId _planId;
+    private readonly string? _accessCode;
+    private readonly TimeSpan _canExtendByRewardedAdThreshold;
+    private readonly string[]? _includeApps;
+    private readonly string[]? _excludeApps;
+    public TimeSpan SessionTimeout { get; }
+    public TimeSpan AutoWaitTimeout { get; }
+    public TimeSpan ReconnectTimeout { get; }
+
+    private bool _disposedInternal;
+    private bool _disposed;
+    private readonly CancellationTokenSource _cancellationTokenSource;
+    private readonly ProxyManager _proxyManager;
+    private readonly Dictionary<IPAddress, bool> _includeIps = new();
+    private readonly IVpnAdapter _vpnAdapter;
+    private readonly ClientHost _clientHost;
     private ClientUsageTracker? _clientUsageTracker;
     private DateTime? _initConnectedTime;
     private DateTime? _lastConnectionErrorTime;
@@ -53,51 +63,42 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private bool _useUdpChannel;
     private ClientState _state = ClientState.None;
     private ConnectorService? _connectorService;
-    private readonly TimeSpan _tcpConnectTimeout;
     private DateTime? _autoWaitTime;
     private readonly ServerFinder _serverFinder;
-    private readonly ConnectPlanId _planId;
-    private readonly string? _accessCode;
-    private readonly TimeSpan _canExtendByRewardedAdThreshold;
     private bool _isTunProviderSupported;
     private bool _isDnsServersAccepted;
     private readonly bool _allowRewardedAd;
     private ulong? _sessionId;
-    private readonly string[]? _includeApps;
-    private readonly string[]? _excludeApps;
     private ClientSessionStatus? _sessionStatus;
     private IPAddress[] _dnsServers;
     private int _sessionPacketChannelCount;
     private readonly AsyncLock _packetChannelLock = new();
     private readonly Job _cleanupJob;
     private readonly Tunnel _tunnel;
+    public Token Token { get; }
+    public string ClientId { get; }
+    public Version Version { get; }
+    public bool IncludeLocalNetwork { get; }
+    public string? SessionName { get; }
+    public string UserAgent { get; }
+    public bool AllowTcpReuse { get; }
+    public bool DropUdp { get; set; }
+    public bool DropQuic { get; set; }
+    public bool UseTcpOverTun { get; set; }
 
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
     public ISocketFactory SocketFactory { get; }
     public event EventHandler? StateChanged;
     public bool IsIpV6SupportedByServer { get; private set; }
     public bool IsIpV6SupportedByClient { get; internal set; }
-    public TimeSpan SessionTimeout { get; set; }
-    public TimeSpan AutoWaitTimeout { get; set; }
-    public TimeSpan ReconnectTimeout { get; set; }
-    public Token Token { get; }
-    public string ClientId { get; }
-    public Version Version { get; }
-    public bool IncludeLocalNetwork { get; }
     public IpRangeOrderedList IncludeIpRanges { get; private set; }
     public IpRangeOrderedList VpnAdapterIncludeIpRanges { get; private set; }
-    public string UserAgent { get; }
     public IPEndPoint? HostTcpEndPoint => _connectorService?.EndPointInfo.TcpEndPoint;
     public IPEndPoint? HostUdpEndPoint { get; private set; }
-    public bool DropUdp { get; set; }
-    public bool DropQuic { get; set; }
-    public bool UseTcpOverTun { get; set; }
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public byte[]? ServerSecret { get; private set; }
     public DomainFilterService DomainFilterService { get; }
-    public bool AllowTcpReuse { get; }
     public ClientAdService AdService { get; init; }
-    public string? SessionName { get; }
     public ulong SessionId => _sessionId ?? throw new InvalidOperationException("SessionId has not been initialized.");
     public ISessionStatus? SessionStatus => _sessionStatus;
     public SessionInfo? SessionInfo { get; private set; }
@@ -297,11 +298,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _serverFinder.IncludeIpV6 = IsIpV6SupportedByClient;
             ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             VhLogger.Instance.LogInformation(
-                "UseUdpChannel: {UseUdpChannel}, DropUdp: {DropUdp}, DropQuic: {DropQuic}, UseTcpOverTun: {UseTcpOverTun}, " +
+                "UseUdpChannel: {UseUdpChannel}, DropUdp: {DropUdp}, DropQuic: {DropQuic}, " +
+                "UseTcpOverTun: {UseTcpOverTun}, EndPointStrategy: {EndPointStrategy}" +
                 "IncludeLocalNetwork: {IncludeLocalNetwork}, MinWorkerThreads: {WorkerThreads}, " +
                 "CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}, ProcessId: {ProcessId}",
-                UseUdpChannel, DropUdp, DropQuic, UseTcpOverTun, IncludeLocalNetwork, workerThreads,
-                completionPortThreads, IsIpV6SupportedByClient, Process.GetCurrentProcess().Id);
+                UseUdpChannel, DropUdp, DropQuic, UseTcpOverTun, _serverFinder.EndPointStrategy, 
+                IncludeLocalNetwork, workerThreads, completionPortThreads, IsIpV6SupportedByClient, Process.GetCurrentProcess().Id);
 
             // report version
             VhLogger.Instance.LogInformation(

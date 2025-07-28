@@ -45,7 +45,7 @@ internal class ClientServerDom : IAsyncDisposable
         Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x => x.Equals(session?.HostEndPoint)));
 
         // check UserAgent in server
-        Assert.AreEqual(client.UserAgent, session?.ClientInfo.UserAgent);
+        Assert.AreEqual(client.Settings.UserAgent, session?.ClientInfo.UserAgent);
 
         // check ClientPublicAddress in server
         Assert.AreEqual(fileAccessManagerOptions.TcpEndPointsValue.First().Address, client.SessionInfo?.ClientPublicIpAddress);

@@ -34,22 +34,15 @@
 		<AssemblyVersion></AssemblyVersion>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-		<PlatformTarget>AnyCPU</PlatformTarget>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<PlatformTarget>AnyCPU</PlatformTarget>
-	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.693" />
+	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.AppLib.App" Version="7.2.727" />
-		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="6.0.710" />
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.693" />
-		<PackageReference Include="VpnHood.AppLib.WebServer" Version="7.2.727" />
-		<PackageReference Include="VpnHood.Core.Client.Device.Linux" Version="7.2.727" />
-		<PackageReference Include="VpnHood.Core.Client.VpnServices.Host" Version="7.2.727" />
-		<PackageReference Include="VpnHood.Core.VpnAdapters.LinuxTun" Version="7.2.727" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Device.Linux\VpnHood.Core.Client.Device.Linux.csproj" />
+		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 	</ItemGroup>
 
 </Project>

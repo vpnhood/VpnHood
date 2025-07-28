@@ -26,7 +26,7 @@ public class AppFeatures
     public required string[] DebugCommands { get; init; }
     public required bool IsLocalNetworkSupported { get; init; }
     public required bool AdjustForSystemBars { get; init; }
-
+    public required bool AllowEndPointStrategy { get; init; }
 
     [JsonConverter(typeof(VersionConverter))]
     public required Version Version { get; init; }

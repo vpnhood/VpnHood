@@ -45,6 +45,7 @@ internal class Program
                 IsAddAccessKeySupported = true,
                 IsLocalNetworkSupported = true,
                 LocalSpaHostName = "my-vpnhood",
+                AllowEndPointStrategy = true,
                 LogServiceOptions = {
                     SingleLineConsole = false
                 }

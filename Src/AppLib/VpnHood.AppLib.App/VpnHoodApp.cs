@@ -160,6 +160,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
             IsPremiumFlagSupported = !options.IsAddAccessKeySupported,
             IsPremiumFeaturesForced = options.IsAddAccessKeySupported,
+            AllowEndPointStrategy = options.AllowEndPointStrategy,
             IsTv = device.IsTv,
             AdjustForSystemBars = options.AdjustForSystemBars,
             UpdateInfoUrl = options.UpdateInfoUrl != null ? new Uri(options.UpdateInfoUrl) : null,
@@ -616,12 +617,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                             new ClientProfileUpdateParams { AccessCode = new Patch<string?>(null) });
                         break;
 
-                    // Remove it, so let user get prompted to restore free version
-                    // remove the client profile if access expired
-                    //case SessionErrorCode.AccessExpired when clientProfile.IsForAccount:
-                    //    ClientProfileService.Delete(clientProfile.ClientProfileId);
-                    //    _ = Services.AccountService?.Refresh(true);
-                    //    break;
+                        // Remove it, so let user get prompted to restore free version
+                        // remove the client profile if access expired
+                        //case SessionErrorCode.AccessExpired when clientProfile.IsForAccount:
+                        //    ClientProfileService.Delete(clientProfile.ClientProfileId);
+                        //    _ = Services.AccountService?.Refresh(true);
+                        //    break;
                 }
             }
 
@@ -694,7 +695,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 Version = Features.Version,
                 TrackerFactoryAssemblyQualifiedName = _trackerFactory.GetType().AssemblyQualifiedName,
                 UserAgent = userAgent ?? ClientOptions.Default.UserAgent,
-                EndPointStrategy = UserSettings.EndPointStrategy,
+                EndPointStrategy = Features.AllowEndPointStrategy ? UserSettings.EndPointStrategy : EndPointStrategy.Auto,
                 DebugData1 = UserSettings.DebugData1,
                 DebugData2 = UserSettings.DebugData2
             };

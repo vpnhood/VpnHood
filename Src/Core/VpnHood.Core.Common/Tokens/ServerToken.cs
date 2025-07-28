@@ -47,6 +47,10 @@ public class ServerToken
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[]? HostEndPoints { get; set; }
 
+    [JsonPropertyName("ep_st")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public EndPointStrategy EndPointsStrategy { get; set; }
+
     [JsonPropertyName("loc")]
     [Obsolete]
     public string[]? ServerLocationsLegacy {

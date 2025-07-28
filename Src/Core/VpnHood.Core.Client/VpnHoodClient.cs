@@ -132,7 +132,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _serverFinder = new ServerFinder(socketFactory, Token.ServerToken,
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
-            endPointStrategy: options.EndPointStrategy,
+            endPointStrategy: options.EndPointStrategy != EndPointStrategy.Auto 
+                ? options.EndPointStrategy : Token.ServerToken.EndPointsStrategy,
             customServerEndpoints: options.CustomServerEndpoints ?? [],
             tracker: options.AllowEndPointTracker ? tracker : null);
 

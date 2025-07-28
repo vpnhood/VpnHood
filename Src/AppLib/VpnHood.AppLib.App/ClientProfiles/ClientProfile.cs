@@ -1,5 +1,7 @@
 ﻿using System.Net;
+using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Toolkit.Converters;
 
 namespace VpnHood.AppLib.ClientProfiles;
 
@@ -14,7 +16,10 @@ public class ClientProfile
     public string? SelectedLocation { get; set; }
     public bool IsForAccount { get; set; }
     public bool IsBuiltIn { get; set; }
-    public IPEndPoint[]? ForcedServerEndPoints { get; set; }
     public bool IsPremium => !Token.IsPublic || AccessCode != null;
     public string? AccessCode { get; set; }
+
+    [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
+    public IPEndPoint[]? CustomServerEndpoints { get; set; }
+
 }

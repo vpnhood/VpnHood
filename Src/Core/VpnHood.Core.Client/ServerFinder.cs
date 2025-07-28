@@ -22,7 +22,7 @@ public class ServerFinder(
     string? serverLocation,
     TimeSpan serverQueryTimeout,
     EndPointStrategy endPointStrategy,
-    IPEndPoint[] forcedServerEndPoints,
+    IPEndPoint[] customServerEndpoints,
     ITracker? tracker,
     int maxDegreeOfParallelism = 10)
 {
@@ -36,7 +36,7 @@ public class ServerFinder(
     public bool IncludeIpV6 { get; set; } = true;
     public string? ServerLocation => serverLocation;
     public EndPointStrategy EndPointStrategy => endPointStrategy;
-    public IPEndPoint[] ForcedServerEndPoints => forcedServerEndPoints;
+    public IPEndPoint[] CustomServerEndpoints => customServerEndpoints;
 
     // There is much work to be done here
     public async Task<IPEndPoint> FindReachableServerAsync(CancellationToken cancellationToken)
@@ -45,14 +45,14 @@ public class ServerFinder(
             serverQueryTimeout);
 
         // get all endpoints from serverToken
-        var hostEndPoints = forcedServerEndPoints.Any()
-            ? forcedServerEndPoints
+        var hostEndPoints = customServerEndpoints.Any()
+            ? customServerEndpoints
             : await EndPointResolver.ResolveHostEndPoints(serverToken, endPointStrategy, cancellationToken);
 
         // log warning if there are some forced endpoints
-        if (forcedServerEndPoints.Any())
+        if (customServerEndpoints.Any())
             VhLogger.Instance.LogWarning("There are forced endpoints in the configuration. EndPoints: {EndPoints}",
-                string.Join(", ", forcedServerEndPoints.Select(VhLogger.Format)));
+                string.Join(", ", customServerEndpoints.Select(VhLogger.Format)));
 
         // exclude ip v6 if not supported
         if (!IncludeIpV6)

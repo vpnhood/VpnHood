@@ -89,7 +89,7 @@ public class ClientOptions
     public EndPointStrategy EndPointStrategy { get; set; }
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public IPEndPoint[]? ForcedServerEndPoints { get; set; }  // Override server endpoint
+    public IPEndPoint[]? CustomServerEndpoints { get; set; }  // Override server endpoint
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

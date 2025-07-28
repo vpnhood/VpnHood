@@ -133,7 +133,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
             endPointStrategy: options.EndPointStrategy,
-            forcedServerEndPoints: options.ForcedServerEndPoints ?? [],
+            customServerEndpoints: options.CustomServerEndpoints ?? [],
             tracker: options.AllowEndPointTracker ? tracker : null);
 
         _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions {
@@ -293,7 +293,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // Establish first connection and create a session
             var hostEndPoint = await _serverFinder.FindReachableServerAsync(linkedCts.Token).Vhc();
-            var allowRedirect = !_serverFinder.ForcedServerEndPoints.Any();
+            var allowRedirect = !_serverFinder.CustomServerEndpoints.Any();
             await ConnectInternal(hostEndPoint, allowRedirect: allowRedirect, linkedCts.Token).Vhc();
 
             // Create Tcp Proxy Host

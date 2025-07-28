@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Tokens;
@@ -121,8 +122,8 @@ public class ClientProfileService
         if (updateParams.IsFavorite != null)
             item.IsFavorite = updateParams.IsFavorite.Value;
 
-        if (updateParams.ForcedServerEndPoints != null)
-            item.ForcedServerEndPoints = updateParams.ForcedServerEndPoints.Value;
+        if (updateParams.CustomServerEndpoints != null)
+            item.CustomServerEndpoints = updateParams.CustomServerEndpoints.Value?.Select(IPEndPoint.Parse).ToArray();
 
         if (updateParams.CustomData != null)
             item.CustomData = updateParams.CustomData.Value;

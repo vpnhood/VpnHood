@@ -26,6 +26,7 @@ public class VpnServiceHost : IDisposable
     internal VpnHoodClient? Client { get; private set; }
     internal VpnHoodClient RequiredClient => Client ?? throw new InvalidOperationException("Client is not initialized.");
     internal VpnServiceContext Context { get; }
+    public static ConnectionInfo DefaultConnectionInfo => VpnServiceContext.DefaultConnectionInfo;
 
     public VpnServiceHost(
         string configFolder,

@@ -1,4 +1,5 @@
-﻿using Android;
+﻿using System.Diagnostics;
+using Android;
 using Android.Content;
 using Android.Content.PM;
 using Android.Net;
@@ -17,14 +18,14 @@ namespace VpnHood.Core.Client.Device.Droid;
 [Service(
     Permission = Manifest.Permission.BindVpnService,
     Exported = false,
-#if !DEBUG  //todo
+//#if !DEBUG  //todo
     Process = ProcessName,
-#endif
+//#endif
     ForegroundServiceType = ForegroundService.TypeSystemExempted)]
 [IntentFilter(["android.net.VpnService"])]
 public class AndroidVpnService : VpnService, IVpnServiceHandler
 {
-    private readonly VpnServiceHost _vpnServiceHost;
+    private VpnServiceHost? _vpnServiceHost;
     private AndroidVpnNotification? _notification;
     public const string ProcessName = ":vpnhood_process";
 
@@ -33,8 +34,8 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 
     public AndroidVpnService()
     {
-        _vpnServiceHost = new VpnServiceHost(VpnServiceConfigFolder, this, new SocketFactory());
-
+        VhLogger.Instance.LogInformation(
+            "AndroidVpnService has bee constructed. ProcessId: {ProcessId}", Process.GetCurrentProcess().Id);
     }
 
     [return: GeneratedEnum]
@@ -42,28 +43,52 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         [GeneratedEnum] StartCommandFlags flags, int startId)
     {
         var action = intent?.Action;
-        VhLogger.Instance.LogInformation("AndroidVpnService OnStartCommand. Action: {Action}", action);
+        VhLogger.Instance.LogInformation(
+            "AndroidVpnService OnStartCommand. Action: {Action}, ProcessId: {ProcessId}",
+            action, Process.GetCurrentProcess().Id);
 
         // get "manual" in 
         switch (action) {
             // signal start command
             case null or "android.net.VpnService" or "connect":
-                _ = _vpnServiceHost.TryConnect(forceReconnect: action == "connect");
-                return StartCommandResult.Sticky;
+                return ProcessConnectAction(action == "connect");
 
             case "disconnect":
-                _ = _vpnServiceHost.TryDisconnect();
-                return StartCommandResult.NotSticky;
+                return ProcessDisconnectAction();
 
             default:
                 return StartCommandResult.NotSticky;
         }
     }
 
+    private StartCommandResult ProcessConnectAction(bool forceReconnect)
+    {
+        // Create StartForeground and show notification as soon as possible
+        if (_vpnServiceHost == null)
+            ShowNotification(VpnServiceHost.DefaultConnectionInfo);
+
+        // start the VPN service host and connect to the VPN
+        Task.Run(() => {
+            _vpnServiceHost ??= new VpnServiceHost(VpnServiceConfigFolder, this, new SocketFactory());
+            return _vpnServiceHost.TryConnect(forceReconnect: forceReconnect);
+        });
+
+        return StartCommandResult.Sticky;
+    }
+
+    private StartCommandResult ProcessDisconnectAction()
+    {
+        if (_vpnServiceHost != null)
+            _ = _vpnServiceHost.TryDisconnect();
+        else
+            StopSelf();
+        return StartCommandResult.NotSticky;
+    }
+
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
         return new AndroidVpnAdapter(this, new AndroidVpnAdapterSettings {
-            AdapterName = adapterSettings.AdapterName, 
+            AdapterName = adapterSettings.AdapterName,
             Blocking = adapterSettings.Blocking,
             AutoDisposePackets = adapterSettings.AutoDisposePackets,
             AutoRestart = adapterSettings.AutoRestart,
@@ -101,8 +126,9 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         VhLogger.Instance.LogDebug("VpnService is destroying.");
 
         StopNotification();
-        
-        _vpnServiceHost.Dispose();
+
+        _vpnServiceHost?.Dispose();
+        _vpnServiceHost = null;
         base.OnDestroy();
     }
 }

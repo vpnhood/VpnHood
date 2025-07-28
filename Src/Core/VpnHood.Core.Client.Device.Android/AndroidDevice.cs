@@ -105,7 +105,6 @@ public class AndroidDevice : IDevice
     public Task StartVpnService(CancellationToken cancellationToken)
     {
         // do not call RequestVpnService for NullCapture. It will close other VPN connections.
-
         // start service
         var intent = new Intent(Application.Context, typeof(AndroidVpnService));
         intent.PutExtra("manual", true);

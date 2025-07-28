@@ -13,8 +13,7 @@ internal class VpnServiceContext(string configFolder)
     public string StatusFilePath => Path.Combine(configFolder, ClientOptions.VpnStatusFileName);
     public string LogFilePath => Path.Combine(configFolder, ClientOptions.VpnLogFileName);
     public string ConfigFolder => configFolder;
-
-    public ConnectionInfo ConnectionInfo { get; private set; } = new() {
+    public static ConnectionInfo DefaultConnectionInfo { get; } = new() {
         ApiEndPoint = null,
         ApiKey = null,
         ClientState = ClientState.Initializing,
@@ -24,6 +23,8 @@ internal class VpnServiceContext(string configFolder)
         SessionName = null,
         SessionStatus = null
     };
+
+    public ConnectionInfo ConnectionInfo { get; private set; } = DefaultConnectionInfo;
 
     public ClientOptions? TryReadClientOptions()
     {

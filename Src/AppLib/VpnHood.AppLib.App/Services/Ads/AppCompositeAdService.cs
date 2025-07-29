@@ -111,19 +111,23 @@ internal class AppCompositeAdService
             $"Cancelled: {cancellationToken.IsCancellationRequested}.");
     }
 
-    private static async Task VerifyActiveUi(bool immediately = true)
+    private static async Task VerifyActiveUi(IUiContext uiContext, bool immediately = true)
     {
-        if (AppUiContext.Context?.IsActive == true)
+        if (uiContext.IsActive)
             return;
 
         // throw exception if the UI is not available
         if (immediately)
             throw new ShowAdNoUiException();
 
+        // throw exception if the UI is destroyed, there is no point in waiting for it
+        if (uiContext.IsDestroyed)
+            throw new ShowAdNoUiException();
+
         // wait for the UI to be active
         for (var i = 0; i < 10; i++) {
             await Task.Delay(200).Vhc();
-            if (AppUiContext.Context?.IsActive == true)
+            if (uiContext.IsActive)
                 return;
         }
 
@@ -133,7 +137,7 @@ internal class AppCompositeAdService
     public async Task<string> ShowLoadedAd(IUiContext uiContext, string? customData,
         CancellationToken cancellationToken)
     {
-        await VerifyActiveUi();
+        await VerifyActiveUi(uiContext);
 
         if (_loadedAdProviderItem == null)
             throw new LoadAdException("There is no loaded ad.");
@@ -143,7 +147,7 @@ internal class AppCompositeAdService
             VhLogger.Instance.LogInformation("Trying to show ad. ItemName: {ItemName}", _loadedAdProviderItem.Name);
             await _loadedAdProviderItem.AdProvider.ShowAd(uiContext, customData, cancellationToken).Vhc();
             VhLogger.Instance.LogDebug("Showing ad has been completed. {ItemName}", _loadedAdProviderItem.Name);
-            await VerifyActiveUi(false); // some ad provider may not raise exception on minimize
+            await VerifyActiveUi(uiContext, false); // some ad provider may not raise exception on minimize
             return _loadedAdProviderItem.Name;
         }
         catch (UiContextNotAvailableException) {
@@ -156,7 +160,7 @@ internal class AppCompositeAdService
             throw;
         }
         catch (Exception ex) {
-            await VerifyActiveUi();
+            await VerifyActiveUi(uiContext);
             throw new ShowAdException("Could not show any ad.", ex) { AdNetworkName = _loadedAdProviderItem.Name };
         }
         finally {

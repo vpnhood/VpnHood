@@ -129,7 +129,7 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Post, "/extend-by-rewarded-ad")]
     public Task ExtendByRewardedAd()
     {
-        return App.ExtendByRewardedAd(HttpContext.CancellationToken);
+        return App.AdManager.ExtendByRewardedAd(HttpContext.CancellationToken);
     }
 
     [Route(HttpVerbs.Put, "/user-settings")]

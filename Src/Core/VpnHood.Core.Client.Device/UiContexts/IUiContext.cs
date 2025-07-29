@@ -2,5 +2,6 @@
 
 public interface IUiContext
 {
+    bool IsDestroyed { get; }
     bool IsActive { get; }
 };

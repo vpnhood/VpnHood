@@ -78,7 +78,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _isConnecting;
     private readonly Job _versionCheckJob;
     private readonly LogService _logService;
-
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -98,6 +97,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public DeviceAppInfo[] InstalledApps => _device.InstalledApps;
     public LocalIpRangeLocationProvider IpRangeLocationProvider =>
         _ipRangeLocationProvider ?? throw new NotSupportedException("IpRangeLocationProvider is not supported.");
+    public AppAdManager AdManager { get; }
 
     private VpnHoodApp(IDevice device, AppSettingsService settingsService, LogService logService, AppOptions options)
     {
@@ -187,17 +187,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             UserAgent = null //not set yet
         });
 
-        // create ad service
-        var appAdService = new AppAdService(regionProvider: this,
-            adProviderItems: options.AdProviderItems,
-            adOptions: options.AdOptions,
-            device: _device,
-            tracker: tracker);
-
         // initialize services
         Services = new AppServices {
             CultureProvider = options.CultureProvider ?? new AppCultureProvider(this),
-            AdService = appAdService,
             AccountService = options.AccountProvider != null
                 ? new AppAccountService(this, options.AccountProvider)
                 : null,
@@ -209,6 +201,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // initialize client manager
         _vpnServiceManager = new VpnServiceManager(device, options.EventWatcherInterval);
         _vpnServiceManager.StateChanged += VpnService_StateChanged;
+
+        // create ad service
+        var adService = new AppAdService(regionProvider: this,
+            adProviderItems: options.AdProviderItems,
+            adOptions: options.AdOptions,
+            device: _device,
+            tracker: tracker);
+        AdManager = new AppAdManager(adService, _vpnServiceManager);
 
         // Clear the last update status if a version has changed
         if (_versionCheckResult != null && _versionCheckResult.LocalVersion != Features.Version) {
@@ -308,8 +308,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private void ActiveUiContext_OnChanged(object? sender, EventArgs e)
     {
         var uiContext = AppUiContext.Context;
-        if (IsIdle && Services.AdService.IsPreloadAdEnabled && uiContext != null)
-            _ = VhUtils.TryInvokeAsync("PreloadAd", () => Services.AdService.LoadInterstitialAdAd(uiContext, CancellationToken.None));
+        if (IsIdle && AdManager.AdService.IsPreloadAdEnabled && uiContext != null)
+            _ = VhUtils.TryInvokeAsync("PreloadAd", () => AdManager.AdService.LoadInterstitialAd(uiContext, CancellationToken.None));
     }
 
     public ClientProfileInfo? CurrentClientProfileInfo =>
@@ -401,8 +401,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 return AppConnectionState.Waiting;
 
             if (clientState == ClientState.Connected)
-                return connectionInfo.SessionStatus?.IsWaitingForAd == true 
-                    ? AppConnectionState.WaitingForAd 
+                return connectionInfo.SessionStatus?.IsWaitingForAd == true
+                    ? AppConnectionState.WaitingForAd
                     : AppConnectionState.Connected;
 
             if (clientState == ClientState.Connecting || _isConnecting)
@@ -500,8 +500,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             await ConnectInternal1(connectOptions, linkedCts.Token);
 
             // show ad
-            if (ConnectionInfo.SessionInfo != null)
-                await ShowAd(ConnectionInfo.SessionInfo.SessionId, ConnectionInfo.SessionInfo.AdRequirement, linkedCts.Token);
+            try {
+                if (ConnectionInfo.SessionInfo != null)
+                    await AdManager.ShowAd(ConnectionInfo.SessionInfo.SessionId, ConnectionInfo.SessionInfo.AdRequirement,
+                        linkedCts.Token);
+            }
+            catch {
+                _ = TryDisconnect();
+                throw;
+            }
 
             // check the version after the first connection
             _ = VersionCheck(delay: TimeSpan.Zero, force: false, cancellationToken: CancellationToken.None);
@@ -692,7 +699,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
                 AllowTcpReuse = !HasDebugCommand(DebugCommands.NoTcpReuse),
                 CanExtendByRewardedAdThreshold = _canExtendByRewardedAdThreshold,
-                AllowRewardedAd = Services.AdService.CanShowRewarded,
+                AllowRewardedAd = AdManager.AdService.CanShowRewarded, //todo remove to admanager
                 ExcludeApps = UserSettings.AppFiltersMode == FilterMode.Exclude ? UserSettings.AppFilters : null,
                 IncludeApps = UserSettings.AppFiltersMode == FilterMode.Include ? UserSettings.AppFilters : null,
                 SessionName = CurrentClientProfileInfo?.ClientProfileName,
@@ -1147,60 +1154,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     //todo remove ISwaiting on start ui
     //todo manage extended ads
-    private async Task ShowAd(string sessionId, AdRequirement adRequirement, CancellationToken cancellationToken)
-    {
-        if (adRequirement == AdRequirement.None)
-            return;
 
-        VhLogger.Instance.LogDebug("Showing ad. Session: {SessionId}, AdRequirement: {AdRequirement}", sessionId, adRequirement);
-
-        // let's throw an exception if context is not set
-        var uiContext = AppUiContext.RequiredContext;
-
-        // set wait for ad state
-        await _vpnServiceManager.SetWaitForAd(cancellationToken);
-
-        try {
-
-            // flexible ad
-            var adResult = adRequirement switch {
-                AdRequirement.Flexible => await Services.AdService.ShowInterstitial(uiContext, sessionId, cancellationToken).Vhc(),
-                AdRequirement.Rewarded => await Services.AdService.ShowRewarded(uiContext, sessionId, cancellationToken).Vhc(),
-                _ => throw new AdException("Unsupported ad requirement.")
-            };
-
-            // rewarded ad
-            VhLogger.Instance.LogDebug("Successfully loaded ad. AdResult: {NetworkName}", adResult.NetworkName);
-            await _vpnServiceManager.SetAdResult(adResult, adRequirement == AdRequirement.Rewarded, cancellationToken);
-        }
-        catch (LoadAdException ex) when (adRequirement == AdRequirement.Flexible) {
-            await _vpnServiceManager.SetAdResult(ex, cancellationToken);
-            VhLogger.Instance.LogDebug("Could not load any flexible ad.");
-        }
-        catch (Exception ex) {
-            await _vpnServiceManager.SetAdResult(ex, cancellationToken);
-            throw;
-        }
-    }
-
-    public async Task ExtendByRewardedAd(CancellationToken cancellationToken)
-    {
-        // save variable to prevent null reference exception
-        var connectionInfo = _vpnServiceManager.ConnectionInfo;
-
-        if (Services.AdService.CanShowRewarded != true)
-            throw new InvalidOperationException("Rewarded ad is not supported in this app.");
-
-        if (connectionInfo.SessionInfo == null ||
-            connectionInfo is not { ClientState: ClientState.Connected })
-            throw new InvalidOperationException("Could not show ad. The VPN is not connected.");
-
-        if (connectionInfo.SessionStatus?.CanExtendByRewardedAd != true)
-            throw new InvalidOperationException("Could not extend this session by a rewarded ad at this time.");
-
-        // set wait for ad state
-        await ShowAd(connectionInfo.SessionInfo.SessionId, AdRequirement.Rewarded, cancellationToken);
-    }
 
     // make sure the active profile is valid and exist
     internal void ValidateAccountClientProfiles(bool updateCurrentClientProfile)

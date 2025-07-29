@@ -51,7 +51,7 @@ public class AppAdService(
     public bool CanShowRewarded => adProviderItems.Any(x => x.AdProvider.AdType == AppAdType.RewardedAd);
     public bool IsPreloadAdEnabled => adOptions.PreloadAd;
 
-    public async Task LoadInterstitialAdAd(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task LoadInterstitialAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
         try {
             // don't use VPN for loading ad

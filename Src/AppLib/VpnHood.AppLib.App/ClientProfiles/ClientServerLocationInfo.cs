@@ -60,7 +60,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
         }
 
         var isBillingSupported = VpnHoodApp.Instance.Features.IsBillingSupported;
-        var isRewardedAdSupported = VpnHoodApp.Instance.Services.AdService.CanShowRewarded;
+        var isRewardedAdSupported = VpnHoodApp.Instance.AdManager.AdService.CanShowRewarded;
         Options.Normal = Options.HasFree ? policy.Normal : null;
         Options.PremiumByTrial = Options.HasPremium ? policy.PremiumByTrial : null;
         Options.PremiumByRewardedAd = Options.HasPremium && isRewardedAdSupported ? policy.PremiumByRewardedAd : null;

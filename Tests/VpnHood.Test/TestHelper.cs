@@ -34,6 +34,7 @@ public class TestHelper : IDisposable
     public class TestAppUiContext : IUiContext
     {
         public bool IsActive => true;
+        public bool IsDestroyed => false;
     }
 
     public string WorkingPath { get; } = Path.Combine(AssemblyWorkingPath, Guid.CreateVersion7().ToString());

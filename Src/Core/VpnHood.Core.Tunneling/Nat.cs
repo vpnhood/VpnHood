@@ -71,7 +71,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
             _map.Remove((natItem.IpVersion, natItem.Protocol, natItem.NatId), out _);
         }
 
-        if (natItem2 != null && VhLogger.MinLogLevel <= LogLevel.Trace)
+        if (natItem2 != null && VhLogger.MinLogLevel == LogLevel.Trace)
             VhLogger.Instance.LogTrace(GeneralEventId.Nat, "NatItem has been removed. {NatItem}", natItem2);
     }
 
@@ -187,13 +187,8 @@ public class Nat(bool isDestinationSensitive) : IDisposable
         }
     }
 
-    public void Dispose()
+    public void RemoveAll()
     {
-        lock (_lockObject) {
-            if (_disposed) return;
-            _disposed = true;
-        }
-
         // remove all
         NatItem[] items;
         lock (_lockObject)
@@ -201,5 +196,15 @@ public class Nat(bool isDestinationSensitive) : IDisposable
 
         foreach (var item in items)
             Remove(item);
+    }
+
+    public void Dispose()
+    {
+        lock (_lockObject) {
+            if (_disposed) return;
+            _disposed = true;
+        }
+
+        RemoveAll();
     }
 }

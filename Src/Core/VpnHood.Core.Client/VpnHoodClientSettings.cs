@@ -30,5 +30,4 @@ public class VpnHoodClientSettings
     public required bool DropUdp { get; set; }
     public required bool DropQuic { get; set; }
     public required bool UseTcpOverTun { get; set; }
-    public required bool IsWaitingForAd { get; set; }
 }

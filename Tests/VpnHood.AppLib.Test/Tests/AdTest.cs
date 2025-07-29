@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Net;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
@@ -6,7 +7,10 @@ using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Test;
+using VpnHood.Test.Device;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -53,7 +57,6 @@ public class AdTest : TestAppBase
         appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         AppUiContext.Context = null;
-        //adProviderItem.FailShow = true;
 
         // connect
         var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
@@ -222,11 +225,12 @@ public class AdTest : TestAppBase
 
         // create access item
         var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+        var token = accessManager.GetToken(accessToken);
 
         // configure client app for ad
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.AdOptions.PreloadAd = false;
-        appOptions.AdOptions.LoadAdPostDelay = TimeSpan.FromSeconds(20);
+        appOptions.AdOptions.LoadAdPostDelay = TimeSpan.FromSeconds(60);
         var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
         var adProviderItem = new AppAdProviderItem { AdProvider = adProvider };
         appOptions.AdProviderItems = [adProviderItem];
@@ -234,7 +238,7 @@ public class AdTest : TestAppBase
         // create client app
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         
-        var clientProfile = app.ClientProfileService.ImportAccessKey(accessManager.GetToken(accessToken).ToAccessKey());
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         var isAdLoadingStatusMet = false;
         app.ConnectionStateChanged += (_, _) => {
             // ReSharper disable once AccessToDisposedClosure
@@ -249,38 +253,52 @@ public class AdTest : TestAppBase
     }
 
     [TestMethod]
-    public async Task RewardedAd_should_call_BindProcessToVpn()
+    public async Task SplitAll_must_on_while_playing_ad()
     {
+        var device = TestHelper.CreateDevice(new TestVpnAdapterOptions {
+            SimulateDns = false
+        });
+
+        // create manager and server
         using var accessManager = TestHelper.CreateAccessManager();
-        await using var server = await TestHelper.CreateServer(accessManager);
-        accessManager.CanExtendPremiumByAd = true;
+        await using var server = await TestHelper.CreateServer(accessManager, socketFactory: device.SocketFactory);
 
-        // create client app
+        // create access token after server
+        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+        var token = accessManager.GetToken(accessToken);
+
+        // add url2 and endpoint 2 to include list
+        var httpsExternalUriIps = await Dns.GetHostAddressesAsync(TestConstants.HttpsExternalUri1.Host);
+        var customIps = httpsExternalUriIps.Select(x => new IpRange(x)).ToList();
+        customIps.Add(new IpRange(TestConstants.NsEndPoint1.Address));
+
+        // add provider
+        var showAdCompletionSource = new TaskCompletionSource();
+        var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
+        adProvider.ShowAdCompletionSource = showAdCompletionSource;
+        var adProviderItem = new AppAdProviderItem { AdProvider = adProvider };
+
+        // configure client app for ad
         var appOptions = TestAppHelper.CreateAppOptions();
-        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager), ProviderName = "TestAd"};
         appOptions.AdOptions.PreloadAd = false;
-        appOptions.AdOptions.LoadAdPostDelay = TimeSpan.FromSeconds(1);
         appOptions.AdProviderItems = [adProviderItem];
-        var device = TestHelper.CreateNullDevice();
+
+        // create app
         await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
-
-        // create token
-        var token = accessManager.CreateToken();
-        token.IsPublic = true;
-
-        Assert.AreEqual(0, device.BindProcessToVpnFalseCount);
-        Assert.AreEqual(0, device.BindProcessToVpnTrueCount);
-        Assert.AreEqual(false, device.LastBindProcessToVpnValue);
-
-        // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd);
+        // we add to exclude but all ip should be split by ad
+        app.SettingsService.IpFilterSettings.AppIpFilterIncludes = customIps.ToText();
+        _ = app.Connect(clientProfile.ClientProfileId);
+        await app.WaitForState(AppConnectionState.WaitingForAd);
 
-        // asserts
-        await Task.Delay(1000);
-        Assert.AreEqual(1, device.BindProcessToVpnTrueCount);
-        Assert.AreEqual(1, device.BindProcessToVpnFalseCount);
-        Assert.AreEqual(true, device.LastBindProcessToVpnValue);
+        // all included ips should be split now
+        await ClientAppTest.IpFilters_AssertExclude(TestHelper, app, TestConstants.NsEndPoint1, TestConstants.HttpsExternalUri1);
+
+        // finish showing ad
+        showAdCompletionSource.SetResult();
+        await app.WaitForState(AppConnectionState.Connected);
+
+        // all included ips should be split now
+        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint1, TestConstants.HttpsExternalUri1);
     }
-
 }

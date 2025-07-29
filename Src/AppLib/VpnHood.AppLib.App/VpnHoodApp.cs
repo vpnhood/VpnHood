@@ -655,8 +655,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private async Task ConnectInternal2(Token token, string? serverLocation, string? userAgent, ConnectPlanId planId,
-        string? accessCode, bool allowUpdateToken, CancellationToken cancellationToken)
+    private async Task ConnectInternal2(Token token, string? serverLocation, string? userAgent, 
+        ConnectPlanId planId, string? accessCode, bool allowUpdateToken, CancellationToken cancellationToken)
     {
         try {
             // show token info
@@ -702,7 +702,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 AllowRewardedAd = AdManager.AdService.CanShowRewarded, //todo remove to admanager
                 ExcludeApps = UserSettings.AppFiltersMode == FilterMode.Exclude ? UserSettings.AppFilters : null,
                 IncludeApps = UserSettings.AppFiltersMode == FilterMode.Include ? UserSettings.AppFilters : null,
-                SessionName = CurrentClientProfileInfo?.ClientProfileName,
                 LogServiceOptions = GetLogOptions(),
                 Ga4MeasurementId = _ga4MeasurementId,
                 Version = Features.Version,
@@ -710,7 +709,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UserAgent = userAgent ?? ClientOptions.Default.UserAgent,
                 EndPointStrategy = Features.AllowEndPointStrategy ? UserSettings.EndPointStrategy : EndPointStrategy.Auto,
                 DebugData1 = UserSettings.DebugData1,
-                DebugData2 = UserSettings.DebugData2
+                DebugData2 = UserSettings.DebugData2,
+                SessionName = CurrentClientProfileInfo?.ClientProfileName,
+                CustomServerEndpoints = CurrentClientProfileInfo?.CustomServerEndpoints
             };
 
             VhLogger.Instance.LogDebug(

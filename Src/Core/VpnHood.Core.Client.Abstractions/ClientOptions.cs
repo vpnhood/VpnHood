@@ -90,7 +90,6 @@ public class ClientOptions
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IPEndPoint[]? CustomServerEndpoints { get; set; }  // Override server endpoint
-    public bool IsWaitingForAd { get; set; }
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

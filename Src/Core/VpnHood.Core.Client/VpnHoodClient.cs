@@ -57,6 +57,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly AsyncLock _packetChannelLock = new();
     private readonly Job _cleanupJob;
     private readonly Tunnel _tunnel;
+    private bool _isWaitingForAd;
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
     
     public event EventHandler? StateChanged;
@@ -77,7 +78,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public ulong SessionId => _sessionId ?? throw new InvalidOperationException("SessionId has not been initialized.");
     public SessionInfo? SessionInfo { get; private set; }
     public Exception? LastException { get; private set; }
-    public bool IsWaitingForAd { get; set; }
 
     public VpnHoodClient(
         IVpnAdapter vpnAdapter,
@@ -119,8 +119,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             IncludeLocalNetwork = options.IncludeLocalNetwork,
             DropUdp = options.DropUdp,
             DropQuic = options.DropQuic,
-            UseTcpOverTun = options.UseTcpOverTun,
-            IsWaitingForAd = options.IsWaitingForAd
+            UseTcpOverTun = options.UseTcpOverTun
         };
 
         Token = Token.FromAccessKey(options.AccessKey);
@@ -198,6 +197,18 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 if (value == ClientState.Disposed)
                     StateChanged = null; //no more event will be raised after disposed
             }, CancellationToken.None);
+        }
+    }
+
+    public bool IsWaitingForAd {
+        get => _isWaitingForAd;
+        set {
+            if (value == _isWaitingForAd)
+                return;
+
+            _isWaitingForAd = value;
+            if (!value)
+                _clientHost.DropCurrentConnections();
         }
     }
 
@@ -1001,7 +1012,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         _cleanupJob.Dispose();
         State = ClientState.Disconnecting;
-        Settings.IsWaitingForAd = false;
+        _isWaitingForAd = false;
 
         // stop reusing tcp connections for faster disposal
         if (_connectorService != null)

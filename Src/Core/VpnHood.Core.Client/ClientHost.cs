@@ -42,6 +42,11 @@ internal class ClientHost(
     public IClientHostStat Stat => _stat;
     public event EventHandler<IpPacket>? PacketReceived;
 
+    public void DropCurrentConnections()
+    {
+        _nat.RemoveAll();
+    }
+
     public bool IsOwnPacket(IpPacket ipPacket)
     {
         if (ipPacket.Protocol != IpProtocol.Tcp)

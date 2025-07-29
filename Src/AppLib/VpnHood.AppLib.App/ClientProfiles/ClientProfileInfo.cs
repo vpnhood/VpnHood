@@ -1,4 +1,7 @@
-﻿using VpnHood.Core.Common.Tokens;
+﻿using System.Net;
+using System.Text.Json.Serialization;
+using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Toolkit.Converters;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.ClientProfiles;
@@ -20,6 +23,9 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile);
     public Uri? PurchaseUrl => ClientPolicy?.PurchaseUrl;
     public PurchaseUrlMode PurchaseUrlMode => ClientPolicy?.PurchaseUrlMode ?? PurchaseUrlMode.WhenNoStore;
+    
+    [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
+    public IPEndPoint[]? CustomServerEndpoints => clientProfile.CustomServerEndpoints;
 
     public ClientServerLocationInfo? SelectedLocationInfo {
         get {

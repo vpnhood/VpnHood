@@ -13,6 +13,7 @@ public class TestAdProvider(TestAccessManager accessManager, AppAdType adType = 
     public AppAdType AdType => adType;
     public DateTime? AdLoadedTime { get; private set; }
     public TimeSpan AdLifeSpan { get; } = TimeSpan.FromMinutes(60);
+    public TaskCompletionSource? ShowAdCompletionSource { get; set; }
 
     public Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
@@ -36,7 +37,7 @@ public class TestAdProvider(TestAccessManager accessManager, AppAdType adType = 
             if (!string.IsNullOrEmpty(customData))
                 accessManager.AddAdData(customData);
 
-            return Task.CompletedTask;
+            return ShowAdCompletionSource?.Task ?? Task.CompletedTask;
         }
         finally {
             AdLoadedTime = null;

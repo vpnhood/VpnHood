@@ -6,6 +6,7 @@ using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -225,7 +226,7 @@ public class AdTest : TestAppBase
         // configure client app for ad
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.AdOptions.PreloadAd = false;
-        appOptions.AdOptions.LoadAdPostDelay = TimeSpan.FromSeconds(1);
+        appOptions.AdOptions.LoadAdPostDelay = TimeSpan.FromSeconds(20);
         var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
         var adProviderItem = new AppAdProviderItem { AdProvider = adProvider };
         appOptions.AdProviderItems = [adProviderItem];
@@ -242,8 +243,9 @@ public class AdTest : TestAppBase
         };
 
         // connect
-        await app.Connect(clientProfile.ClientProfileId);
-        Assert.IsTrue(isAdLoadingStatusMet);
+        _ = app.Connect(clientProfile.ClientProfileId); // don't await as it will wait for ad to load
+        await app.WaitForState(AppConnectionState.WaitingForAd);
+        await VhTestUtil.AssertEqualsWait(true, () => isAdLoadingStatusMet);
     }
 
     [TestMethod]

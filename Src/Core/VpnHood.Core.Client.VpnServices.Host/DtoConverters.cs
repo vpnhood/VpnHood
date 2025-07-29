@@ -22,7 +22,7 @@ internal static class DtoConverters
             Speed = sessionStatus.Speed,
             TcpPassthruCount = sessionStatus.TcpPassthruCount,
             TcpTunnelledCount = sessionStatus.TcpTunnelledCount,
-            AdRequest = sessionStatus.AdRequest
+            IsWaitingForAd = sessionStatus.IsWaitingForAd
         };
 
         return ret;

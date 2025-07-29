@@ -207,7 +207,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         };
 
         // initialize client manager
-        _vpnServiceManager = new VpnServiceManager(device, appAdService, options.EventWatcherInterval);
+        _vpnServiceManager = new VpnServiceManager(device, options.EventWatcherInterval);
         _vpnServiceManager.StateChanged += VpnService_StateChanged;
 
         // Clear the last update status if a version has changed
@@ -383,7 +383,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public AppConnectionState ConnectionState {
         get {
-            var clientState = ConnectionInfo.ClientState;
+            var connectionInfo = ConnectionInfo;
+            var clientState = connectionInfo.ClientState;
 
             // in diagnose mode, we need to either cancel it or wait for it
             if (Diagnoser.IsWorking)
@@ -399,11 +400,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (clientState == ClientState.Waiting)
                 return AppConnectionState.Waiting;
 
-            if (clientState == ClientState.WaitingForAd)
-                return AppConnectionState.WaitingForAd;
-
             if (clientState == ClientState.Connected)
-                return AppConnectionState.Connected;
+                return connectionInfo.SessionStatus?.IsWaitingForAd == true 
+                    ? AppConnectionState.WaitingForAd 
+                    : AppConnectionState.Connected;
 
             if (clientState == ClientState.Connecting || _isConnecting)
                 return AppConnectionState.Connecting;
@@ -498,6 +498,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _isConnecting = true; //must be after checking IsIdle
 
             await ConnectInternal1(connectOptions, linkedCts.Token);
+
+            // show ad
+            if (ConnectionInfo.SessionInfo != null)
+                await ShowAd(ConnectionInfo.SessionInfo.SessionId, ConnectionInfo.SessionInfo.AdRequirement, linkedCts.Token);
+
+            // check the version after the first connection
+            _ = VersionCheck(delay: TimeSpan.Zero, force: false, cancellationToken: CancellationToken.None);
+
         }
         catch (UserCanceledException ex) {
             _appPersistState.HasDisconnectedByUser = true;
@@ -525,8 +533,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         try {
             var clientProfileInfo = ClientProfileService.GetInfo(clientProfileId);
-            var serverLocation =
-                connectOptions.ServerLocation ?? clientProfileInfo.SelectedLocationInfo?.ServerLocation;
+            var serverLocation = connectOptions.ServerLocation ?? clientProfileInfo.SelectedLocationInfo?.ServerLocation;
 
             // set timeout
             var timeout = Debugger.IsAttached ? VhUtils.DebuggerTimeout : _connectTimeout;
@@ -537,8 +544,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ClearLastError();
 
             // create cancellationToken after disconnecting previous connection
-            using var linkedCts =
-                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectTimeoutCts.Token);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectTimeoutCts.Token);
 
             // reset connection state
             _appPersistState.LastClearedError = null; // it is a new connection
@@ -729,10 +735,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (connectionInfo.SessionInfo.ClientCountry != null)
                 UpdateClientIpLocationFromServer(connectionInfo.SessionInfo.ClientPublicIpAddress,
                     connectionInfo.SessionInfo.ClientCountry);
-
-            // check the version after the first connection
-            _ = VersionCheck(delay: Services.AdService.ShowAdPostDelay.Add(TimeSpan.FromSeconds(1)),
-                cancellationToken: cancellationToken);
         }
         catch (OperationCanceledException ex) when (_connectTimeoutCts.IsCancellationRequested) {
             throw new ConnectionTimeoutException($"Could not establish the connection in {_connectTimeout.TotalSeconds} seconds.", ex);
@@ -959,10 +961,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (!IsIdle)
             _appPersistState.LastClearedError = null;
 
-        // cancel connect timeout if the client reached to waiting ad state
-        if (ConnectionInfo.ClientState == ClientState.WaitingForAd)
-            _connectTimeoutCts.CancelAfter(Timeout.InfiniteTimeSpan);
-
         // fire connection state changed
         FireConnectionStateChanged();
     }
@@ -1017,23 +1015,27 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async ValueTask VersionCheckJob(CancellationToken cancellationToken)
     {
-        await VersionCheck(cancellationToken: cancellationToken);
+        await VersionCheck(force: false, delay: TimeSpan.Zero, cancellationToken: cancellationToken);
     }
 
-    public async Task VersionCheck(bool force = false, TimeSpan? delay = null, CancellationToken cancellationToken = default)
+    public async Task VersionCheck(bool force, TimeSpan delay, CancellationToken cancellationToken)
     {
         using var lockAsync = await _versionCheckLock.LockAsync(cancellationToken).Vhc();
         if (!force && _appPersistState.UpdateIgnoreTime + _versionCheckInterval > DateTime.Now)
             return;
 
         // Wait for delay. Useful for waiting for an ad to send its tracker
-        if (delay != null)
-            await Task.Delay(delay.Value, cancellationToken).Vhc();
+        await Task.Delay(delay, cancellationToken).Vhc();
+
+        // set timeout
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
 
         // check the version by app container
         try {
             if (AppUiContext.Context != null && Services.UpdaterProvider != null &&
-                await Services.UpdaterProvider.Update(AppUiContext.RequiredContext).Vhc()) {
+                await Services.UpdaterProvider.Update(AppUiContext.RequiredContext, linkedCts.Token).Vhc()) {
                 VersionCheckPostpone();
                 return;
             }
@@ -1043,19 +1045,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // check the version by UpdateInfoUrl
-        _versionCheckResult = await VersionCheckByUpdateInfo().Vhc();
+        _versionCheckResult = await VersionCheckByUpdateInfo(linkedCts.Token).Vhc();
 
         // save the result
         if (_versionCheckResult != null)
             await File.WriteAllTextAsync(VersionCheckFilePath,
-                    JsonSerializer.Serialize(_versionCheckResult), cancellationToken)
-                .Vhc();
+                JsonSerializer.Serialize(_versionCheckResult), linkedCts.Token).Vhc();
 
         else if (File.Exists(VersionCheckFilePath))
             File.Delete(VersionCheckFilePath);
     }
 
-    private async Task<VersionCheckResult?> VersionCheckByUpdateInfo()
+    private async Task<VersionCheckResult?> VersionCheckByUpdateInfo(CancellationToken cancellationToken)
     {
         try {
             if (Features.UpdateInfoUrl == null)
@@ -1064,7 +1065,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogDebug("Retrieving the latest publish info...");
 
             using var httpClient = new HttpClient();
-            var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl).Vhc();
+            var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl, cancellationToken).Vhc();
             var latestPublishInfo = JsonUtils.Deserialize<PublishInfo>(publishInfoJson);
             VersionStatus versionStatus;
 
@@ -1144,6 +1145,44 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return ipRanges;
     }
 
+    //todo remove ISwaiting on start ui
+    //todo manage extended ads
+    private async Task ShowAd(string sessionId, AdRequirement adRequirement, CancellationToken cancellationToken)
+    {
+        if (adRequirement == AdRequirement.None)
+            return;
+
+        VhLogger.Instance.LogDebug("Showing ad. Session: {SessionId}, AdRequirement: {AdRequirement}", sessionId, adRequirement);
+
+        // let's throw an exception if context is not set
+        var uiContext = AppUiContext.RequiredContext;
+
+        // set wait for ad state
+        await _vpnServiceManager.SetWaitForAd(cancellationToken);
+
+        try {
+
+            // flexible ad
+            var adResult = adRequirement switch {
+                AdRequirement.Flexible => await Services.AdService.ShowInterstitial(uiContext, sessionId, cancellationToken).Vhc(),
+                AdRequirement.Rewarded => await Services.AdService.ShowRewarded(uiContext, sessionId, cancellationToken).Vhc(),
+                _ => throw new AdException("Unsupported ad requirement.")
+            };
+
+            // rewarded ad
+            VhLogger.Instance.LogDebug("Successfully loaded ad. AdResult: {NetworkName}", adResult.NetworkName);
+            await _vpnServiceManager.SetAdResult(adResult, adRequirement == AdRequirement.Rewarded, cancellationToken);
+        }
+        catch (LoadAdException ex) when (adRequirement == AdRequirement.Flexible) {
+            await _vpnServiceManager.SetAdResult(ex, cancellationToken);
+            VhLogger.Instance.LogDebug("Could not load any flexible ad.");
+        }
+        catch (Exception ex) {
+            await _vpnServiceManager.SetAdResult(ex, cancellationToken);
+            throw;
+        }
+    }
+
     public async Task ExtendByRewardedAd(CancellationToken cancellationToken)
     {
         // save variable to prevent null reference exception
@@ -1159,11 +1198,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (connectionInfo.SessionStatus?.CanExtendByRewardedAd != true)
             throw new InvalidOperationException("Could not extend this session by a rewarded ad at this time.");
 
-        // use client manager so it can exclude ad data from the session
-        var adResult = await Services.AdService.ShowRewarded(AppUiContext.RequiredContext,
-            connectionInfo.SessionInfo.SessionId, cancellationToken);
-
-        await _vpnServiceManager.SendRewardedAdResult(adResult, cancellationToken);
+        // set wait for ad state
+        await ShowAd(connectionInfo.SessionInfo.SessionId, AdRequirement.Rewarded, cancellationToken);
     }
 
     // make sure the active profile is valid and exist

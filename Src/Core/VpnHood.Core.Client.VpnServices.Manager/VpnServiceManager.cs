@@ -9,12 +9,10 @@ using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Client.VpnServices.Manager.Exceptions;
-using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
-using FastDateTime = VpnHood.Core.Toolkit.Utils.FastDateTime;
 
 namespace VpnHood.Core.Client.VpnServices.Manager;
 
@@ -27,7 +25,6 @@ public class VpnServiceManager : IDisposable
 
     private readonly TimeSpan _connectionInfoTimeSpan = TimeSpan.FromSeconds(1);
     private readonly IDevice _device;
-    private readonly IAdService? _adService;
     private readonly string _vpnConfigFilePath;
     private readonly string _vpnStatusFilePath;
     private ConnectionInfo _connectionInfo;
@@ -37,19 +34,17 @@ public class VpnServiceManager : IDisposable
     private int _vpnServiceUnreachableCount;
     private CancellationTokenSource _updateConnectionInfoCts = new();
     private ConnectionInfo? _lastConnectionInfo;
-    private Guid? _lastAdRequestId;
     private readonly Job _updateConnectionInfoJob;
 
     public event EventHandler? StateChanged;
     public string LogFilePath => Path.Combine(_device.VpnServiceConfigFolder, ClientOptions.VpnLogFileName);
 
-    public VpnServiceManager(IDevice device, IAdService? adService, TimeSpan? eventWatcherInterval)
+    public VpnServiceManager(IDevice device, TimeSpan? eventWatcherInterval)
     {
         Directory.CreateDirectory(device.VpnServiceConfigFolder);
         _vpnConfigFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnConfigFileName);
         _vpnStatusFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
         _device = device;
-        _adService = adService;
         _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath)
                           ?? BuildConnectionInfo(ClientState.None);
 
@@ -109,13 +104,13 @@ public class VpnServiceManager : IDisposable
             _connectionInfo = SetConnectionInfo(ClientState.Initializing);
 
             // save vpn config
-            await File.WriteAllTextAsync(_vpnConfigFilePath, JsonSerializer.Serialize(clientOptions), 
+            await File.WriteAllTextAsync(_vpnConfigFilePath, JsonSerializer.Serialize(clientOptions),
                     cancellationToken).Vhc();
 
             // prepare vpn service
             VhLogger.Instance.LogInformation("Requesting VpnService...");
             if (!clientOptions.UseNullCapture)
-                await _device.RequestVpnService(AppUiContext.Context, _requestVpnServiceTimeout, 
+                await _device.RequestVpnService(AppUiContext.Context, _requestVpnServiceTimeout,
                     cancellationToken).Vhc();
 
             // start vpn service
@@ -167,10 +162,9 @@ public class VpnServiceManager : IDisposable
         }
         catch (Exception ex) when (timeoutCts.IsCancellationRequested) {
             var serviceTimeoutException = new VpnServiceTimeoutException(
-                $"Could not start the VpnService in {_startVpnServiceTimeout.TotalSeconds} seconds.", ex)
-                {
-                    TimeoutDuration = _startVpnServiceTimeout
-                };
+                $"Could not start the VpnService in {_startVpnServiceTimeout.TotalSeconds} seconds.", ex) {
+                TimeoutDuration = _startVpnServiceTimeout
+            };
             throw serviceTimeoutException;
         }
     }
@@ -227,7 +221,7 @@ public class VpnServiceManager : IDisposable
         // Should send request if service is in initializing state, because SendRequest will set the state to disposed if failed
         var connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath) ?? _connectionInfo;
         if (_isInitializing || connectionInfo.Error != null || !connectionInfo.IsStarted()) {
-            CheckForEvents(connectionInfo, updateCts.Token);
+            CheckForEvents(connectionInfo);
             _connectionInfoRefreshedTime = FastDateTime.Now;
             _connectionInfo = connectionInfo;
             return connectionInfo;
@@ -269,7 +263,7 @@ public class VpnServiceManager : IDisposable
             VhLogger.Instance.LogError(ex, "Could not update connection info.");
         }
 
-        CheckForEvents(_connectionInfo, updateCts.Token);
+        CheckForEvents(_connectionInfo);
         _connectionInfoRefreshedTime = FastDateTime.Now;
         return _connectionInfo;
     }
@@ -383,15 +377,8 @@ public class VpnServiceManager : IDisposable
         }
     }
 
-    private void CheckForEvents(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
+    private void CheckForEvents(ConnectionInfo connectionInfo)
     {
-        // show ad if needed (Protect double show by RequestId)
-        var adRequest = connectionInfo.SessionStatus?.AdRequest;
-        if (adRequest != null && _lastAdRequestId != adRequest.RequestId) {
-            _lastAdRequestId = adRequest.RequestId;
-            _ = TryShowAd(adRequest, cancellationToken);
-        }
-
         // check if the state has changed
         if (_lastConnectionInfo?.ClientState != connectionInfo.ClientState) {
             VhLogger.Instance.LogDebug("The VpnService state has been changed. {OldSate} => {NewState}",
@@ -403,38 +390,6 @@ public class VpnServiceManager : IDisposable
         _lastConnectionInfo = connectionInfo;
     }
 
-    private async Task TryShowAd(AdRequest adRequest, CancellationToken cancellationToken)
-    {
-        try {
-            if (_adService == null)
-                throw new NotSupportedException("There is no AdService available in this app.");
-
-            var adRequestResult = adRequest.AdRequestType switch {
-                AdRequestType.Rewarded => await _adService.ShowRewarded(AppUiContext.RequiredContext,
-                    adRequest.SessionId, cancellationToken),
-                AdRequestType.Interstitial => await _adService.ShowInterstitial(AppUiContext.RequiredContext,
-                    adRequest.SessionId, cancellationToken),
-                _ => throw new NotSupportedException(
-                    $"The requested ad is not supported. AdRequestType={adRequest.AdRequestType}")
-            };
-            await SendRequest(new ApiSetAdResultRequest {
-                ApiError = null,
-                AdResult = adRequestResult,
-                CanShowOverVpn = _adService.CanShowOverVpn(adRequest.AdRequestType)
-            }, cancellationToken);
-        }
-        catch (Exception ex) {
-            if (ex is UiContextNotAvailableException)
-                ex = new ShowAdNoUiException();
-
-            await SendRequest(new ApiSetAdResultRequest {
-                ApiError = ex.ToApiError(),
-                CanShowOverVpn = _adService?.CanShowOverVpn(adRequest.AdRequestType) ?? false,
-                AdResult = null
-            }, cancellationToken);
-        }
-    }
-
     public Task Reconfigure(ClientReconfigureParams reconfigureParams, CancellationToken cancellationToken)
     {
         return IsStarted
@@ -442,9 +397,25 @@ public class VpnServiceManager : IDisposable
             : Task.CompletedTask;
     }
 
-    public Task SendRewardedAdResult(AdResult adResult, CancellationToken cancellationToken)
+    public Task SetWaitForAd(CancellationToken cancellationToken)
     {
-        return SendRequest(new ApiSendRewardedAdResultRequest { AdResult = adResult }, cancellationToken);
+        return SendRequest(new ApiSetWaitForAdRequest(), cancellationToken);
+    }
+
+    public Task SetAdResult(AdResult adResult, bool isRewarded, CancellationToken cancellationToken)
+    {
+        return SendRequest(
+            new ApiSetAdResultRequest { AdResult = adResult, ApiError = null, IsRewarded = isRewarded },
+            cancellationToken);
+    }
+
+    public Task SetAdResult(Exception ex, CancellationToken cancellationToken)
+    {
+        return SendRequest(new ApiSetAdResultRequest {
+            AdResult = null,
+            IsRewarded = false,
+            ApiError = ex.ToApiError()
+        }, cancellationToken);
     }
 
     private async ValueTask UpdateConnectionInfoJob(CancellationToken cancellationToken)

@@ -63,7 +63,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public Token Token { get; }
     public VpnHoodClientSettings Settings { get; }
     public DomainFilterService DomainFilterService { get; }
-    public ClientAdService AdService { get; init; }
     public ISocketFactory SocketFactory { get; }
     public ISessionStatus? SessionStatus => _sessionStatus;
     public ITracker? Tracker { get; }
@@ -78,6 +77,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public ulong SessionId => _sessionId ?? throw new InvalidOperationException("SessionId has not been initialized.");
     public SessionInfo? SessionInfo { get; private set; }
     public Exception? LastException { get; private set; }
+    public bool IsWaitingForAd { get; set; }
 
     public VpnHoodClient(
         IVpnAdapter vpnAdapter,
@@ -119,7 +119,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             IncludeLocalNetwork = options.IncludeLocalNetwork,
             DropUdp = options.DropUdp,
             DropQuic = options.DropQuic,
-            UseTcpOverTun = options.UseTcpOverTun
+            UseTcpOverTun = options.UseTcpOverTun,
+            IsWaitingForAd = options.IsWaitingForAd
         };
 
         Token = Token.FromAccessKey(options.AccessKey);
@@ -156,7 +157,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         var dnsRange = options.DnsServers?.Select(x => new IpRange(x)).ToArray() ?? [];
         VpnAdapterIncludeIpRanges = options.VpnAdapterIncludeIpRanges.ToOrderedList().Union(dnsRange);
         IncludeIpRanges = options.IncludeIpRanges.ToOrderedList().Union(dnsRange);
-        AdService = new ClientAdService(this);
 
         // SNI is sensitive, must be explicitly enabled
         DomainFilterService = new DomainFilterService(options.DomainFilter, forceLogSni: options.ForceLogSni);
@@ -296,9 +296,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             var hostEndPoint = await _serverFinder.FindReachableServerAsync(linkedCts.Token).Vhc();
             var allowRedirect = !_serverFinder.CustomServerEndpoints.Any();
             await ConnectInternal(hostEndPoint, allowRedirect: allowRedirect, linkedCts.Token).Vhc();
-
-            // Create Tcp Proxy Host
-            _clientHost.Start();
 
             State = ClientState.Connected;
             _initConnectedTime = DateTime.UtcNow;
@@ -443,6 +440,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public bool IsInIpRange(IPAddress ipAddress)
     {
+        // only dns servers are tunneled if IsWaitingForAd is set
+        if (IsWaitingForAd) 
+            return _dnsServers.Contains(ipAddress);
+
         // all IPs are included if there is no filter
         if (IncludeIpRanges.Count == 0)
             return true;
@@ -670,6 +671,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 AccessKey = helloResponse.AccessKey,
                 ServerVersion = Version.Parse(helloResponse.ServerVersion),
                 SuppressedTo = helloResponse.SuppressedTo,
+                AdRequirement = helloResponse.AdRequirement,
                 ServerLocationInfo = helloResponse.ServerLocation != null
                     ? ServerLocationInfo.Parse(helloResponse.ServerLocation)
                     : null
@@ -677,9 +679,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // set session status
             _sessionStatus = new ClientSessionStatus(this, helloResponse.AccessUsage ?? new AccessUsage());
-
-            // show ad
-            var adResult = await ShowAd(helloResponse.AdRequirement, helloResponse.SessionId, cancellationToken);
 
             // usage trackers
             if (Settings.AllowAnonymousTracker) {
@@ -699,12 +698,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
                 // Anonymous app usage tracker
                 if (Tracker != null) {
-                    _ = Tracker.TryTrack(ClientTrackerBuilder.BuildConnectionSucceeded(
-                        _serverFinder.ServerLocation,
-                        isIpV6Supported: IsIpV6SupportedByClient,
-                        hasRedirected: !allowRedirect,
-                        endPoint: _connectorService.EndPointInfo.TcpEndPoint,
-                        adNetworkName: adResult?.NetworkName));
+                    _ = Tracker.TryTrack(
+                        ClientTrackerBuilder.BuildConnectionSucceeded(
+                            _serverFinder.ServerLocation,
+                            isIpV6Supported: IsIpV6SupportedByClient,
+                            hasRedirected: !allowRedirect,
+                            endPoint: _connectorService.EndPointInfo.TcpEndPoint,
+                            adNetworkName: null));
 
                     _clientUsageTracker = new ClientUsageTracker(_sessionStatus, Tracker);
                 }
@@ -747,6 +747,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 ExcludeApps = Settings.ExcludeApps,
                 IncludeApps = Settings.IncludeApps
             };
+
+            // Create Tcp Proxy Host
+            _clientHost.Start();
+
+            // start the VpnAdapter
             await _vpnAdapter.Start(adapterOptions, cancellationToken);
         }
         catch (TimeoutException) {
@@ -767,22 +772,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task<AdResult?> ShowAd(AdRequirement adRequirement, ulong sessionId, CancellationToken cancellationToken)
+    public void WaitForAd(bool value)
     {
-        if (adRequirement == AdRequirement.None)
-            return null;
-
-        var prevState = State;
-        using var autoDispose = new AutoDispose(() => State = prevState);
-        State = ClientState.WaitingForAd;
-
-        var adResult = adRequirement switch {
-            AdRequirement.Flexible => await AdService.TryShowInterstitial(sessionId.ToString(), cancellationToken).Vhc(),
-            AdRequirement.Rewarded => await AdService.ShowRewarded(sessionId.ToString(), cancellationToken).Vhc(),
-            _ => null
-        };
-
-        return adResult;
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 
     private async Task AddTcpPacketChannel(CancellationToken cancellationToken)
@@ -907,6 +899,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             .Vhc();
     }
 
+    public async Task SendRewardedAdResult(string adData, CancellationToken cancellationToken)
+    {
+        // request reward from server
+        using var requestResult = await SendRequest<SessionResponse>(
+            new RewardedAdRequest {
+                RequestId = UniqueIdFactory.Create(),
+                SessionId = SessionId,
+                SessionKey = SessionKey,
+                AdData = adData
+            },
+            cancellationToken).Vhc();
+    }
+
     private ValueTask Cleanup(CancellationToken cancellationToken)
     {
         if (FastDateTime.UtcNow > _sessionStatus?.SessionExpirationTime) {
@@ -996,6 +1001,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         _cleanupJob.Dispose();
         State = ClientState.Disconnecting;
+        Settings.IsWaitingForAd = false;
 
         // stop reusing tcp connections for faster disposal
         if (_connectorService != null)
@@ -1072,10 +1078,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public int ActivePacketChannelCount => client._tunnel.PacketChannelCount;
         public bool IsUdpMode => client.UseUdpChannel;
         public bool CanExtendByRewardedAd => client.CanExtendByRewardedAd(_accessUsage);
+        public bool IsWaitingForAd => client.IsWaitingForAd;
         public long SessionMaxTraffic => _accessUsage.MaxTraffic;
         public DateTime? SessionExpirationTime => _accessUsage.ExpirationTime;
         public int? ActiveClientCount => _accessUsage.ActiveClientCount;
-        public AdRequest? AdRequest => client.AdService.AdRequest;
     }
 
 }

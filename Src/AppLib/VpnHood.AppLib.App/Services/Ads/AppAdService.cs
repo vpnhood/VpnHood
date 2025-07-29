@@ -68,7 +68,7 @@ public class AppAdService(
     public Task<AdResult> ShowInterstitial(IUiContext uiContext, string sessionId,
         CancellationToken cancellationToken)
     {
-        return ShowAd(_compositeInterstitialAdService, uiContext, sessionId, allowOverVpn: false, cancellationToken);
+        return ShowAd(_compositeInterstitialAdService, uiContext, sessionId, cancellationToken);
     }
 
     public Task<AdResult> ShowRewarded(IUiContext uiContext, string sessionId,
@@ -77,7 +77,7 @@ public class AppAdService(
         if (!CanShowRewarded)
             throw new InvalidOperationException("Rewarded ad is not supported in this app.");
 
-        return ShowAd(_compositeRewardedAdService, uiContext, sessionId, allowOverVpn: false, cancellationToken);
+        return ShowAd(_compositeRewardedAdService, uiContext, sessionId, cancellationToken);
     }
 
     private async Task LoadAd(AppCompositeAdService appCompositeAdService, IUiContext uiContext,
@@ -91,49 +91,45 @@ public class AppAdService(
     }
 
     private async Task<AdResult> ShowAd(AppCompositeAdService appCompositeAdService,
-        IUiContext uiContext, string sessionId, bool allowOverVpn, CancellationToken cancellationToken)
+        IUiContext uiContext, string sessionId, CancellationToken cancellationToken)
     {
         string? countryCode = null;
         try {
-            // don't use VPN for the ad
-            // todo: temporarily disabled for check analytics
-            if (VpnHoodApp.Instance.ConnectionState == AppConnectionState.Connected)
-                device.TryBindProcessToVpn(allowOverVpn);
-
             countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
-            var result = await ShowAdInternal(appCompositeAdService, uiContext, sessionId, countryCode,
-                cancellationToken);
 
+            // Load and sw ad
+            var result = await LoadAndShowAd(appCompositeAdService, uiContext, sessionId, countryCode,
+                cancellationToken).Vhc();
+
+            // track successful ad show
             var trackEvent = AppTrackerBuilder.BuildShowAdOk(adNetwork: result.NetworkName, countryCode: countryCode);
-            //_ = TryRestoreProcessVpn(trackEvent, adOptions.ShowAdPostDelay, cancellationToken);
+            if (tracker != null) 
+                await tracker.TryTrackWithCancellation(trackEvent, cancellationToken).Vhc();
 
-            //todo: {temporary to see the result, make sure tacker send before connection
-            if (tracker != null) await tracker.TryTrack(trackEvent);
-            await Task.Delay(ShowAdPostDelay, cancellationToken);
-            // todo }
-
+            // apply post delay
+            await Task.Delay(ShowAdPostDelay, cancellationToken).Vhc();
             return result;
         }
         catch (Exception ex) {
             var adNetwork = ex is ShowAdException showAdException ? showAdException.AdNetworkName : null;
-            var trackEvent = AppTrackerBuilder.BuildAdFailed(adNetwork: adNetwork, errorMessage: ex.Message,
-                countryCode: countryCode);
-            _ = TryRestoreProcessVpn(trackEvent, TimeSpan.Zero, cancellationToken);
+            var trackEvent = AppTrackerBuilder.BuildAdFailed(adNetwork: adNetwork, errorMessage: ex.Message, countryCode: countryCode);
+            if (tracker != null)
+                await tracker.TryTrackWithCancellation(trackEvent, cancellationToken).Vhc();
             throw;
         }
     }
 
-    private async Task<AdResult> ShowAdInternal(AppCompositeAdService appCompositeAdService,
+    private async Task<AdResult> LoadAndShowAd(AppCompositeAdService appCompositeAdService,
         IUiContext uiContext, string sessionId, string countryCode, CancellationToken cancellationToken)
     {
 
         // load ad if not loaded
-        await LoadAd(appCompositeAdService, uiContext, countryCode, cancellationToken);
+        await LoadAd(appCompositeAdService, uiContext, countryCode, cancellationToken).Vhc();
 
         // show ad
         try {
             var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
-            var networkName = await appCompositeAdService.ShowLoadedAd(uiContext, adData, cancellationToken);
+            var networkName = await appCompositeAdService.ShowLoadedAd(uiContext, adData, cancellationToken).Vhc();
             var showAdResult = new AdResult {
                 AdData = adData,
                 NetworkName = networkName
@@ -143,20 +139,12 @@ public class AppAdService(
         catch (Exception ex) {
             // track failed ad show
             var adNetwork = ex is ShowAdException showAdException ? showAdException.AdNetworkName : null;
-            var trackEvent = AppTrackerBuilder.BuildShowAdFailed(adNetwork: adNetwork, errorMessage: ex.Message, countryCode: countryCode);
+            var trackEvent = AppTrackerBuilder.BuildShowAdFailed(adNetwork: adNetwork, 
+                errorMessage: ex.Message, countryCode: countryCode);
+
             if (tracker != null)
-                await tracker.TryTrack(trackEvent);
+                await tracker.TryTrackWithCancellation(trackEvent, cancellationToken).Vhc();
             throw;
         }
-    }
-
-    private async Task TryRestoreProcessVpn(TrackEvent trackEvent, TimeSpan delay, CancellationToken cancellationToken)
-    {
-        //TODO: temporary disabled for check analytics 
-        _ = delay;
-        _ = cancellationToken;
-        //await device.TryBindProcessToVpn(true, delay, cancellationToken);
-        if (tracker != null)
-            await tracker.TryTrack(trackEvent);
     }
 }

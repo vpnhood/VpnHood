@@ -4,5 +4,5 @@ namespace VpnHood.AppLib.Abstractions;
 
 public interface IAppUpdaterProvider
 {
-    Task<bool> Update(IUiContext uiContext);
+    Task<bool> Update(IUiContext uiContext, CancellationToken cancellationToken);
 }

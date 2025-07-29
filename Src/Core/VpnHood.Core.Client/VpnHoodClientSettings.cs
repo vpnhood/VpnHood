@@ -1,5 +1,4 @@
-﻿using System.Net;
-using VpnHood.Core.Common.Tokens;
+﻿using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.Core.Client;
 
@@ -31,4 +30,5 @@ public class VpnHoodClientSettings
     public required bool DropUdp { get; set; }
     public required bool DropQuic { get; set; }
     public required bool UseTcpOverTun { get; set; }
+    public required bool IsWaitingForAd { get; set; }
 }

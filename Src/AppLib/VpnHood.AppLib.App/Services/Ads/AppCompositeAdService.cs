@@ -89,8 +89,12 @@ internal class AppCompositeAdService
                 var message = string.IsNullOrWhiteSpace(ex.Message)
                     ? $"Empty message. Provider: {adProviderItem.Name}"
                     : ex.Message;
-                _ = _tracker?.TryTrack(AppTrackerBuilder.BuildLoadAdFailed(
-                    adNetwork: adProviderItem.Name, errorMessage: message, countryCode: countryCode));
+
+                // track the error
+                if (_tracker != null)
+                    await _tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildLoadAdFailed(
+                        adNetwork: adProviderItem.Name, errorMessage: message, countryCode: countryCode), cancellationToken);
+
                 providerExceptions.Add((adProviderItem.Name, ex));
                 VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.",
                     adProviderItem.Name);

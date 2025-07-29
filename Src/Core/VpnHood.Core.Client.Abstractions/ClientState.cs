@@ -9,7 +9,6 @@ public enum ClientState
     Connecting,
     Connected,
     Waiting,
-    WaitingForAd,
     Disconnecting,
     Disposed
 }

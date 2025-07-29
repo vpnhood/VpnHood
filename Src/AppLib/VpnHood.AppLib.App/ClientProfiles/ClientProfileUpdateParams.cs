@@ -1,5 +1,4 @@
-﻿using System.Net;
-using VpnHood.Core.Toolkit.Utils;
+﻿using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.ClientProfiles;
 

@@ -115,22 +115,22 @@ internal class ApiController : IDisposable
             // handle ad request
             case nameof(ApiSetAdResultRequest):
                 await SetAdResult(
-                    await StreamUtils.ReadObjectAsync<ApiSetAdResultRequest>(stream, cancellationToken), 
+                    await StreamUtils.ReadObjectAsync<ApiSetAdResultRequest>(stream, cancellationToken),
                     cancellationToken);
                 await WriteResponseResult(stream, null, cancellationToken);
                 return;
 
             // handle ad reward request
-            case nameof(ApiSendRewardedAdResultRequest):
-                await SendRewardedAdResult(
-                    await StreamUtils.ReadObjectAsync<ApiSendRewardedAdResultRequest>(stream, cancellationToken), 
+            case nameof(ApiSetWaitForAdRequest):
+                await SetWaitForAd(
+                    await StreamUtils.ReadObjectAsync<ApiSetWaitForAdRequest>(stream, cancellationToken),
                     cancellationToken);
                 await WriteResponseResult(stream, null, cancellationToken);
                 return;
 
             case nameof(ApiReconfigureRequest):
                 await Reconfigure(
-                    await StreamUtils.ReadObjectAsync<ApiReconfigureRequest>(stream, cancellationToken), 
+                    await StreamUtils.ReadObjectAsync<ApiReconfigureRequest>(stream, cancellationToken),
                     cancellationToken);
                 await WriteResponseResult(stream, null, cancellationToken);
                 return;
@@ -183,37 +183,27 @@ internal class ApiController : IDisposable
         VpnHoodClient.Settings.DropQuic = request.Params.DropQuic;
         VpnHoodClient.Settings.UseTcpOverTun = request.Params.UseTcpOverTun;
         VpnHoodClient.UseUdpChannel = request.Params.UseUdpChannel;
-   
+
         return Task.CompletedTask;
     }
 
-
-    private Task SetAdResult(ApiSetAdResultRequest request, CancellationToken cancellationToken)
+    private ValueTask SetWaitForAd(ApiSetWaitForAdRequest request, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-
-        if (request.AdResult != null) {
-            VpnHoodClient.AdService.AdRequestTaskCompletionSource?.TrySetResult(request.AdResult);
-            return Task.CompletedTask;
-        }
-
-        // handle error
-        if (request.ApiError is null)
-            throw new InvalidOperationException("Invalid ApiAdResultRequest. There is no ApiError nor AdResult");
-
-
-        VpnHoodClient.AdService.AdRequestTaskCompletionSource?
-            .TrySetException(ClientExceptionConverter.ApiErrorToException(request.ApiError));
-
-        return Task.CompletedTask;
+        _ = request;
+        VpnHoodClient.IsWaitingForAd = true;
+        return ValueTask.CompletedTask;
     }
 
-    private Task SendRewardedAdResult(ApiSendRewardedAdResultRequest request, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrEmpty(request.AdResult.AdData))
-            throw new InvalidOperationException("There is no AdData in ad reward.");
 
-        return VpnHoodClient.AdService.SendRewardedAdResult(request.AdResult.AdData, cancellationToken);
+    private async Task SetAdResult(ApiSetAdResultRequest request, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        VpnHoodClient.IsWaitingForAd = false;
+
+        // Send rewarded ad result if it exists
+        if (request is { IsRewarded: true, AdResult.AdData: not null })
+            await VpnHoodClient.SendRewardedAdResult(request.AdResult.AdData, cancellationToken);
     }
 
     public void Dispose()

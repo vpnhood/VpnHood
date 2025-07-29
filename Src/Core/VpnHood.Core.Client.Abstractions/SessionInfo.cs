@@ -15,6 +15,7 @@ public class SessionInfo
     public required ServerLocationInfo? ServerLocationInfo { get; init; }
     public required bool IsPremiumSession { get; init; }
     public required SessionSuppressType SuppressedTo { get; init; }
+    public required AdRequirement AdRequirement { get; init; }
     public required string? AccessKey { get; set; } // allow set to let clear
     public required string? ClientCountry { get; init; }
 

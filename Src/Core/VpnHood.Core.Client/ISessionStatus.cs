@@ -1,5 +1,4 @@
-﻿using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.ConnectorServices;
+﻿using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.Core.Client;
@@ -21,5 +20,5 @@ public interface ISessionStatus
     long SessionMaxTraffic { get; }
     DateTime? SessionExpirationTime { get; }
     int? ActiveClientCount { get; }
-    AdRequest? AdRequest { get; }
+    bool IsWaitingForAd { get; }
 }

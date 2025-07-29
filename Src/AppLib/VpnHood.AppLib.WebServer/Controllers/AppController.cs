@@ -109,7 +109,7 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Post, "/version-check")]
     public Task VersionCheck()
     {
-        return App.VersionCheck(true);
+        return App.VersionCheck(true, TimeSpan.Zero, HttpContext.CancellationToken);
     }
 
     [Route(HttpVerbs.Post, "/version-check-postpone")]

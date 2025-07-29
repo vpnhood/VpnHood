@@ -12,7 +12,7 @@ namespace VpnHood.AppLib.Droid.GooglePlay;
 
 public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
 {
-    public async Task<bool> Update(IUiContext uiContext)
+    public async Task<bool> Update(IUiContext uiContext, CancellationToken cancellationToken)
     {
         try {
             var appUiContext = (AndroidUiContext)uiContext;
@@ -32,7 +32,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
             using var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
                 AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
             if (updateFlowPlayTask != null)
-                await updateFlowPlayTask.AsTask().ConfigureAwait(false);
+                await updateFlowPlayTask.AsTask().WaitAsync(cancellationToken).ConfigureAwait(false);
 
             return true;
         }

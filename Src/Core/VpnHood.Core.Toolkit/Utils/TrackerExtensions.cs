@@ -6,10 +6,16 @@ namespace VpnHood.Core.Toolkit.Utils;
 
 public static class TrackerExtensions
 {
-    public static async Task<bool> TryTrack(this ITracker tracker, TrackEvent trackEvent)
+    public static Task<bool> TryTrack(this ITracker tracker, TrackEvent trackEvent)
+    {
+        return TryTrackWithCancellation(tracker, trackEvent, CancellationToken.None);
+    }
+
+    public static async Task<bool> TryTrackWithCancellation(this ITracker tracker, TrackEvent trackEvent, 
+        CancellationToken cancellationToken)
     {
         try {
-            await tracker.Track(trackEvent).Vhc();
+            await tracker.Track(trackEvent, cancellationToken).Vhc();
             return true;
         }
         catch (Exception ex) {

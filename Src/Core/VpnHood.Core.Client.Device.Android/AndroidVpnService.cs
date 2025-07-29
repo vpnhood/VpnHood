@@ -64,13 +64,21 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     private StartCommandResult ProcessConnectAction(bool forceReconnect)
     {
         // Create StartForeground and show notification as soon as possible
-        if (_vpnServiceHost == null)
+        if (_notification is null)
             ShowNotification(VpnServiceHost.DefaultConnectionInfo);
 
         // start the VPN service host and connect to the VPN
-        Task.Run(() => {
-            _vpnServiceHost ??= new VpnServiceHost(VpnServiceConfigFolder, this, new SocketFactory());
-            return _vpnServiceHost.TryConnect(forceReconnect: forceReconnect);
+        Task.Run(async () => {
+            try {
+                VhLogger.Instance.LogDebug("Starting VPN service host.");
+                _vpnServiceHost ??= new VpnServiceHost(VpnServiceConfigFolder, this, new SocketFactory());
+                if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect))
+                    StopSelf();
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "Could not start VPN service host.");
+                StopSelf();
+            }
         });
 
         return StartCommandResult.Sticky;
@@ -101,6 +109,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     public void ShowNotification(ConnectionInfo connectionInfo)
     {
         if (_notification == null) {
+            VhLogger.Instance.LogDebug("Create and show the notification for the VPN service.");
             _notification = new AndroidVpnNotification(this, new VpnServiceLocalization(), connectionInfo.SessionName ?? "VPN");
             StartForeground(AndroidVpnNotification.NotificationId, _notification.Build());
         }

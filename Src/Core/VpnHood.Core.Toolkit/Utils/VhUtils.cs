@@ -160,6 +160,13 @@ public static class VhUtils
         return array == null || array.Length == 0;
     }
 
+    public static bool SequenceEquals<T>(IEnumerable<T>? first, IEnumerable<T>? second)
+    {
+        first ??= [];
+        second ??= [];
+        return first.SequenceEqual(second);
+    }
+
     public static IEnumerable<string> ParseArguments(string commandLine)
     {
         if (string.IsNullOrWhiteSpace(commandLine))

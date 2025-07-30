@@ -281,7 +281,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     UserSettings.ClientProfileId != _oldUserSettings.ClientProfileId ||
                     UserSettings.IncludeLocalNetwork != _oldUserSettings.IncludeLocalNetwork ||
                     UserSettings.AppFiltersMode != _oldUserSettings.AppFiltersMode ||
-                    !UserSettings.AppFilters.SequenceEqual(_oldUserSettings.AppFilters);
+                    !UserSettings.AppFilters.SequenceEqual(_oldUserSettings.AppFilters) ||
+                    !VhUtils.SequenceEquals(UserSettings.DnsServers, _oldUserSettings.DnsServers);
             }
 
             // set default ContinueOnCapturedContext
@@ -679,6 +680,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                         IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.AdapterIpFilterExcludes));
             }
 
+            var profileInfo = CurrentClientProfileInfo ?? throw new NotExistsException("ClientProfile is not set.");
+
+            // use default DNS servers if not premium account
+            var dnsServers = UserSettings.DnsServers;
+            if (!VhUtils.IsNullOrEmpty(dnsServers) && !profileInfo.IsPremiumAccount && !Features.IsPremiumFeaturesForced) {
+                VhLogger.Instance.LogWarning("DNS servers are not supported for non-premium accounts. Using default DNS servers.");
+                dnsServers = null;
+            }
+
             // create clientOptions
             var clientOptions = new ClientOptions {
                 AppName = Resources.Strings.AppName,
@@ -709,6 +719,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 AllowRewardedAd = AdManager.AdService.CanShowRewarded, //todo remove to admanager
                 ExcludeApps = UserSettings.AppFiltersMode == FilterMode.Exclude ? UserSettings.AppFilters : null,
                 IncludeApps = UserSettings.AppFiltersMode == FilterMode.Include ? UserSettings.AppFilters : null,
+                DnsServers = dnsServers,
                 LogServiceOptions = GetLogOptions(),
                 Ga4MeasurementId = _ga4MeasurementId,
                 Version = Features.Version,
@@ -717,8 +728,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 EndPointStrategy = Features.AllowEndPointStrategy ? UserSettings.EndPointStrategy : EndPointStrategy.Auto,
                 DebugData1 = UserSettings.DebugData1,
                 DebugData2 = UserSettings.DebugData2,
-                SessionName = CurrentClientProfileInfo?.ClientProfileName,
-                CustomServerEndpoints = CurrentClientProfileInfo?.CustomServerEndpoints
+                SessionName = profileInfo.ClientProfileName,
+                CustomServerEndpoints = profileInfo.CustomServerEndpoints
             };
 
             VhLogger.Instance.LogDebug(
@@ -1246,8 +1257,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async Task<AppPurchaseOptions> GetPurchaseOptions()
     {
-        var purchaseUrlMode = CurrentClientProfileInfo?.PurchaseUrlMode;
-        var purchaseUrl = CurrentClientProfileInfo?.PurchaseUrl;
+        var profileInfo = CurrentClientProfileInfo;
+        var purchaseUrlMode = profileInfo?.PurchaseUrlMode;
+        var purchaseUrl = profileInfo?.PurchaseUrl;
 
         // get subscription plans from the store
         var subscriptionPlans = Array.Empty<SubscriptionPlan>();

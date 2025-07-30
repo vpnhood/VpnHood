@@ -1,6 +1,8 @@
 ﻿using System.Net;
+using System.Text.Json.Serialization;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Toolkit.Converters;
 
 namespace VpnHood.AppLib.Settings;
 
@@ -17,7 +19,6 @@ public class UserSettings
     public bool DropUdp { get; set; } = ClientOptions.Default.DropUdp;
     public bool DropQuic { get; set; } = ClientOptions.Default.DropQuic;
     public bool AllowAnonymousTracker { get; set; } = ClientOptions.Default.AllowAnonymousTracker;
-    public IPAddress[]? DnsServers { get; set; }
     public DomainFilter DomainFilter { get; set; } = new();
     public string? DebugData1 { get; set; }
     public string? DebugData2 { get; set; }
@@ -26,4 +27,8 @@ public class UserSettings
     public bool UseAppIpFilter { get; set; }
     public bool UseVpnAdapterIpFilter { get; set; }
     public EndPointStrategy EndPointStrategy { get; set; }
+    
+    [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
+    public IPAddress[]? DnsServers { get; set; }
+
 }

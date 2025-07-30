@@ -42,8 +42,14 @@ public static class AdMobUtil
                 return;
             }
 
+            // create an aggregation error from each adapter status
+            var errors = initializationStatus.AdapterStatusMap
+                .Where(pair => pair.Value.InitializationState != AdapterStatusState.Ready)
+                .Select(pair => new AdException($"{pair.Key}: {pair.Value.Description}"))
+                .ToList();
+
             // not success
-            _loadedCompletionSource.TrySetException(new AdException("Could not initialize any ad adapter."));
+            _loadedCompletionSource.TrySetException(new AdException($"Could not initialize any ad adapter. {errors}"));
         }
     }
 }

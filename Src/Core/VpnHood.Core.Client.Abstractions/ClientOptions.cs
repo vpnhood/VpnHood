@@ -89,7 +89,12 @@ public class ClientOptions
     public EndPointStrategy EndPointStrategy { get; set; }
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))] 
     public IPEndPoint[]? CustomServerEndpoints { get; set; }  // Override server endpoint
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool WaitForAd { get; set; }  // Override server endpoint
+
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

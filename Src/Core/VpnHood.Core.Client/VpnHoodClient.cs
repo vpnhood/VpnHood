@@ -59,7 +59,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly Tunnel _tunnel;
     private bool _isWaitingForAd;
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
-    
+
     public event EventHandler? StateChanged;
     public Token Token { get; }
     public VpnHoodClientSettings Settings { get; }
@@ -125,14 +125,15 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         Token = Token.FromAccessKey(options.AccessKey);
         socketFactory = new AdapterSocketFactory(vpnAdapter, socketFactory);
         SocketFactory = socketFactory;
+        Tracker = tracker;
         _dnsServers = options.DnsServers ?? [];
         _vpnAdapter = vpnAdapter;
-        Tracker = tracker;
+        _isWaitingForAd = options.WaitForAd;
         _useUdpChannel = options.UseUdpChannel;
         _serverFinder = new ServerFinder(socketFactory, Token.ServerToken,
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
-            endPointStrategy: options.EndPointStrategy != EndPointStrategy.Auto 
+            endPointStrategy: options.EndPointStrategy != EndPointStrategy.Auto
                 ? options.EndPointStrategy : Token.ServerToken.EndPointsStrategy,
             customServerEndpoints: options.CustomServerEndpoints ?? [],
             tracker: options.AllowEndPointTracker ? tracker : null);
@@ -152,7 +153,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         });
 
         _proxyManager.PacketReceived += Proxy_PacketReceived;
-        
+
         var dnsRange = options.DnsServers?.Select(x => new IpRange(x)).ToArray() ?? [];
         VpnAdapterIncludeIpRanges = options.VpnAdapterIncludeIpRanges.ToOrderedList().Union(dnsRange);
         IncludeIpRanges = options.IncludeIpRanges.ToOrderedList().Union(dnsRange);
@@ -217,7 +218,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         return
             accessUsage is { CanExtendByRewardedAd: true, ExpirationTime: not null } &&
             accessUsage.ExpirationTime > FastDateTime.UtcNow + Settings.CanExtendByRewardedAdThreshold &&
-            Settings.AllowRewardedAd && 
+            Settings.AllowRewardedAd &&
             Token.IsPublic;
     }
 
@@ -452,7 +453,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public bool IsInIpRange(IPAddress ipAddress)
     {
         // only dns servers are tunneled if IsWaitingForAd is set
-        if (IsWaitingForAd) 
+        if (IsWaitingForAd)
             return _dnsServers.Contains(ipAddress);
 
         // all IPs are included if there is no filter
@@ -747,6 +748,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // sometimes packet goes directly to the adapter especially on windows, so we need to filter them
             IncludeIpRanges = IncludeIpRanges.Intersect(adapterIncludeRanges);
 
+            // set waiting for ad if the server requires it
+            _isWaitingForAd |= helloResponse.AdRequirement != AdRequirement.None;
+
+            // Create Tcp Proxy Host
+            _clientHost.Start();
+
             // Start the VpnAdapter
             var adapterOptions = new VpnAdapterOptions {
                 DnsServers = SessionInfo.DnsServers,
@@ -758,9 +765,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 ExcludeApps = Settings.ExcludeApps,
                 IncludeApps = Settings.IncludeApps
             };
-
-            // Create Tcp Proxy Host
-            _clientHost.Start();
 
             // start the VpnAdapter
             await _vpnAdapter.Start(adapterOptions, cancellationToken);

@@ -245,6 +245,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 SettingsService.AppSettings.IsStartupTrackerSent = true;
                 SettingsService.AppSettings.Save();
             }
+
+            // disconnect if old connection is waiting for ad
+            if (ConnectionState == AppConnectionState.WaitingForAd && !AdManager.IsShowing && LastError == null) {
+                VhLogger.Instance.LogInformation("Disconnecting due to the waiting for ad state on startup...");
+                _ = TryDisconnect().Vhc();
+                _appPersistState.LastError = new ShowAdNoUiException().ToApiError();
+            }
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not sent first launch tracker.");
@@ -1153,8 +1160,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return ipRanges;
     }
 
-    //todo remove ISwaiting on start ui
-    //todo manage extended ads
+    //todo: remove ISwaiting on start ui
+    //todo: manage extended ads
 
 
     // make sure the active profile is valid and exist

@@ -45,11 +45,11 @@ public static class AdMobUtil
             // create an aggregation error from each adapter status
             var errors = initializationStatus.AdapterStatusMap
                 .Where(pair => pair.Value.InitializationState != AdapterStatusState.Ready)
-                .Select(pair => new AdException($"{pair.Key}: {pair.Value.Description}"))
-                .ToList();
+                .Select(pair => $"{pair.Key}: {pair.Value.Description}");
 
             // not success
-            _loadedCompletionSource.TrySetException(new AdException($"Could not initialize any ad adapter. {errors}"));
+            var errorMessage = string.Join(",", errors);
+            _loadedCompletionSource.TrySetException(new AdException($"Could not initialize any ad adapter. {errorMessage}"));
         }
     }
 }

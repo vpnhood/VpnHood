@@ -13,10 +13,12 @@ namespace VpnHood.AppLib;
 public class AppAdManager(
     AppAdService adService,
     VpnServiceManager vpnServiceManager,
-    TimeSpan extendByRewardedAdThreshold)
+    TimeSpan extendByRewardedAdThreshold,
+    TimeSpan showAdPostDelay)
 {
     public bool IsShowing { get; private set; }
     public AppAdService AdService => adService;
+    public bool IsWaitingForPostDelay { get; private set; }
 
     public async Task ShowAd(
         string sessionId,
@@ -53,6 +55,19 @@ public class AppAdManager(
 
             // rewarded ad
             VhLogger.Instance.LogDebug("Successfully loaded ad. AdResult: {NetworkName}", adResult.NetworkName);
+
+            // wait for ad post delay
+            var ignoreTimeSpan = TimeSpan.FromSeconds(2);
+            if (showAdPostDelay > ignoreTimeSpan) {
+                await Task.Delay(showAdPostDelay.Subtract(ignoreTimeSpan), cancellationToken).Vhc();
+                IsWaitingForPostDelay = true;
+                await Task.Delay(ignoreTimeSpan, cancellationToken).Vhc();
+            }
+            else {
+                await Task.Delay(showAdPostDelay, cancellationToken).Vhc();
+            }
+
+            // track tell the VpnService to disable ad mode
             await vpnServiceManager.SetAdResult(adResult, adRequirement == AdRequirement.Rewarded, cancellationToken);
         }
         catch (LoadAdException ex) when (adRequirement == AdRequirement.Flexible) {
@@ -64,6 +79,7 @@ public class AppAdManager(
             throw;
         }
         finally {
+            IsWaitingForPostDelay = false;
             IsShowing = false;
         }
     }

@@ -206,7 +206,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             adOptions: options.AdOptions,
             device: _device,
             tracker: tracker);
-        AdManager = new AppAdManager(adService, _vpnServiceManager, options.AdOptions.ExtendByRewardedAdThreshold);
+        
+        AdManager = new AppAdManager(adService, 
+            _vpnServiceManager,
+            extendByRewardedAdThreshold: options.AdOptions.ExtendByRewardedAdThreshold, 
+            showAdPostDelay: options.AdOptions.ShowAdPostDelay);
 
         // Clear the last update status if a version has changed
         if (_versionCheckResult != null && _versionCheckResult.LocalVersion != Features.Version) {
@@ -407,7 +411,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 return AppConnectionState.Waiting;
 
             if (clientState == ClientState.Connected)
-                return connectionInfo.SessionStatus?.IsWaitingForAd == true
+                return connectionInfo.SessionStatus?.IsWaitingForAd == true && !AdManager.IsWaitingForPostDelay
                     ? AppConnectionState.WaitingForAd
                     : AppConnectionState.Connected;
 

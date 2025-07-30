@@ -3,7 +3,6 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
-using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.IpLocations;
 using VpnHood.Core.Toolkit.Utils;
@@ -15,8 +14,7 @@ public class AppAdService(
     IDevice device,
     AppAdProviderItem[] adProviderItems,
     AppAdOptions adOptions,
-    ITracker? tracker) :
-    IAdService
+    ITracker? tracker) 
 {
     private readonly AppCompositeAdService _compositeInterstitialAdService = new(
         adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.InterstitialAd).ToArray(),
@@ -106,8 +104,8 @@ public class AppAdService(
             if (tracker != null) 
                 await tracker.TryTrackWithCancellation(trackEvent, cancellationToken).Vhc();
 
-            // apply post delay
-            await Task.Delay(ShowAdPostDelay, cancellationToken).Vhc();
+            // apply post delay (now manage in AdManager)
+            // await Task.Delay(ShowAdPostDelay, cancellationToken).Vhc();
             return result;
         }
         catch (Exception ex) {

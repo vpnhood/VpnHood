@@ -30,13 +30,13 @@ public class TestAppHelper : TestHelper
             AllowEndPointTracker = true,
             ServerQueryTimeout = TimeSpan.FromSeconds(2),
             AutoDiagnose = false,
-            CanExtendByRewardedAdThreshold = TimeSpan.Zero,
             DisconnectOnDispose = true,
             ConnectTimeout = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(5),
             Resources = new AppResources(),
             AdOptions = new AppAdOptions {
                 ShowAdPostDelay = TimeSpan.Zero,
-                LoadAdPostDelay = TimeSpan.Zero
+                LoadAdPostDelay = TimeSpan.Zero,
+                ExtendByRewardedAdThreshold = TimeSpan.Zero
             },
             LogServiceOptions = {
                 MinLogLevel = VhLogger.MinLogLevel,

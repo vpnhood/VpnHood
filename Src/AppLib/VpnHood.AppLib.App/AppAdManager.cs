@@ -12,7 +12,8 @@ namespace VpnHood.AppLib;
 
 public class AppAdManager(
     AppAdService adService,
-    VpnServiceManager vpnServiceManager)
+    VpnServiceManager vpnServiceManager,
+    TimeSpan extendByRewardedAdThreshold)
 {
     public bool IsShowing { get; private set; }
     public AppAdService AdService => adService;
@@ -67,6 +68,17 @@ public class AppAdManager(
         }
     }
 
+    public bool CanExtendByRewardedAd {
+        get {
+            var connectionInfo = vpnServiceManager.ConnectionInfo;
+
+            return
+                connectionInfo.SessionStatus is { CanExtendByRewardedAd: true } &&
+                connectionInfo.SessionStatus.SessionExpirationTime > FastDateTime.UtcNow + extendByRewardedAdThreshold &&
+                AdService.CanShowRewarded;
+        }
+    }
+
     public async Task ExtendByRewardedAd(CancellationToken cancellationToken)
     {
         // save variable to prevent null reference exception
@@ -75,11 +87,10 @@ public class AppAdManager(
         if (AdService.CanShowRewarded != true)
             throw new InvalidOperationException("Rewarded ad is not supported in this app.");
 
-        if (connectionInfo.SessionInfo == null ||
-            connectionInfo is not { ClientState: ClientState.Connected })
+        if (connectionInfo.SessionInfo == null || connectionInfo is not { ClientState: ClientState.Connected })
             throw new InvalidOperationException("Could not show ad. The VPN is not connected.");
 
-        if (connectionInfo.SessionStatus?.CanExtendByRewardedAd != true)
+        if (!CanExtendByRewardedAd)
             throw new InvalidOperationException("Could not extend this session by a rewarded ad at this time.");
 
         // set wait for ad state

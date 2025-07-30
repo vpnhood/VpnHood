@@ -58,8 +58,6 @@ public class ClientOptions
     public DomainFilter DomainFilter { get; set; } = new();
     public bool ForceLogSni { get; set; }
     public TimeSpan ServerQueryTimeout { get; set; } = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(10);
-    public bool AllowRewardedAd { get; set; }
-    public TimeSpan CanExtendByRewardedAdThreshold { get; set; } = TimeSpan.FromMinutes(5);
     public string? AccessCode { get; set; }
     public string? SessionName { get; set; }
     public string[]? ExcludeApps { get; set; }

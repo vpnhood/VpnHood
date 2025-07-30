@@ -15,8 +15,6 @@ public class VpnHoodClientSettings
     public required TimeSpan TcpConnectTimeout { get; init; }
     public required ConnectPlanId PlanId { get; init; }
     public required string? AccessCode { get; init; }
-    public required bool AllowRewardedAd { get; init; }
-    public required TimeSpan CanExtendByRewardedAdThreshold { get; init; }
     public required string[]? IncludeApps { get; init; }
     public required string[]? ExcludeApps { get; init; }
     public required TimeSpan SessionTimeout { get; init; }

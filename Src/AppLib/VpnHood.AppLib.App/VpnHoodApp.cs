@@ -58,7 +58,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly TimeSpan _autoWaitTimeout;
     private readonly TimeSpan _serverQueryTimeout;
     private readonly TimeSpan _connectTimeout;
-    private readonly TimeSpan _canExtendByRewardedAdThreshold;
     private readonly TimeSpan _sessionTimeout;
     private readonly LogServiceOptions _logServiceOptions;
     private readonly AppPersistState _appPersistState;
@@ -120,7 +119,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _serverQueryTimeout = options.ServerQueryTimeout;
         _connectTimeout = options.ConnectTimeout;
         _allowEndPointTracker = options.AllowEndPointTracker;
-        _canExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold;
         _disconnectOnDispose = options.DisconnectOnDispose;
         _logServiceOptions = options.LogServiceOptions;
         _logService = logService;
@@ -208,7 +206,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             adOptions: options.AdOptions,
             device: _device,
             tracker: tracker);
-        AdManager = new AppAdManager(adService, _vpnServiceManager);
+        AdManager = new AppAdManager(adService, _vpnServiceManager, options.AdOptions.ExtendByRewardedAdThreshold);
 
         // Clear the last update status if a version has changed
         if (_versionCheckResult != null && _versionCheckResult.LocalVersion != Features.Version) {
@@ -354,7 +352,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var uiContext = AppUiContext.Context;
             var appState = new AppState {
                 ConfigTime = Settings.ConfigTime,
-                SessionStatus = connectionInfo.SessionStatus?.ToAppDto(),
+                SessionStatus = connectionInfo.SessionStatus?.ToAppDto(AdManager.CanExtendByRewardedAd),
                 SessionInfo = connectionInfo.SessionInfo?.ToAppDto(),
                 ConnectionState = connectionState,
                 CanConnect = connectionState.CanConnect(),
@@ -513,7 +511,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     await AdManager.ShowAd(ConnectionInfo.SessionInfo.SessionId, ConnectionInfo.SessionInfo.AdRequirement,
                         linkedCts.Token);
             }
-            catch {
+            catch (Exception){
                 _ = TryDisconnect();
                 throw;
             }
@@ -715,8 +713,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
                 AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
                 AllowTcpReuse = !HasDebugCommand(DebugCommands.NoTcpReuse),
-                CanExtendByRewardedAdThreshold = _canExtendByRewardedAdThreshold,
-                AllowRewardedAd = AdManager.AdService.CanShowRewarded, //todo remove to admanager
                 ExcludeApps = UserSettings.AppFiltersMode == FilterMode.Exclude ? UserSettings.AppFilters : null,
                 IncludeApps = UserSettings.AppFiltersMode == FilterMode.Include ? UserSettings.AppFilters : null,
                 DnsServers = dnsServers,
@@ -1170,10 +1166,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         return ipRanges;
     }
-
-    //todo: remove ISwaiting on start ui
-    //todo: manage extended ads
-
 
     // make sure the active profile is valid and exist
     internal void ValidateAccountClientProfiles(bool updateCurrentClientProfile)

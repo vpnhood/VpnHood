@@ -14,7 +14,7 @@ public class SessionStatus
     public required int TcpPassthruCount { get; init; }
     public required int PacketChannelCount { get; init; }
     public required bool IsUdpMode { get; init; }
-    public required bool CanExtendByRewardedAd { get; init; } //todo
+    public required bool CanExtendByRewardedAd { get; init; }
     public required bool IsWaitingForAd { get; init; }
     public required long SessionMaxTraffic { get; init; }
     public required DateTime? SessionExpirationTime { get; init; }

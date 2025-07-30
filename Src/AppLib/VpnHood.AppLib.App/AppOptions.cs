@@ -45,7 +45,6 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public bool AllowEndPointTracker { get; set; }
     public string? DeviceId { get; set; }
     public string? LocalSpaHostName { get; set; }
-    public TimeSpan CanExtendByRewardedAdThreshold { get; set; } = TimeSpan.FromMinutes(5);
     public TimeSpan? EventWatcherInterval { get; set; } // set if you don't call State periodically
     public bool DisconnectOnDispose { get; set; }
     public LogServiceOptions LogServiceOptions { get; set; } = new();

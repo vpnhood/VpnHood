@@ -106,8 +106,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             AccessCode = options.AccessCode,
             ExcludeApps = options.ExcludeApps,
             IncludeApps = options.IncludeApps,
-            AllowRewardedAd = options.AllowRewardedAd,
-            CanExtendByRewardedAdThreshold = options.CanExtendByRewardedAdThreshold,
             SessionName = options.SessionName,
             AllowTcpReuse = options.AllowTcpReuse,
             ReconnectTimeout = options.ReconnectTimeout,
@@ -212,16 +210,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 _clientHost.DropCurrentConnections();
         }
     }
-
-    private bool CanExtendByRewardedAd(AccessUsage? accessUsage)
-    {
-        return
-            accessUsage is { CanExtendByRewardedAd: true, ExpirationTime: not null } &&
-            accessUsage.ExpirationTime > FastDateTime.UtcNow + Settings.CanExtendByRewardedAdThreshold &&
-            Settings.AllowRewardedAd &&
-            Token.IsPublic;
-    }
-
 
     public bool UseUdpChannel {
         get => _useUdpChannel;
@@ -1092,7 +1080,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public int TcpPassthruCount => client._clientHost.Stat.TcpPassthruCount;
         public int ActivePacketChannelCount => client._tunnel.PacketChannelCount;
         public bool IsUdpMode => client.UseUdpChannel;
-        public bool CanExtendByRewardedAd => client.CanExtendByRewardedAd(_accessUsage);
+        public bool CanExtendByRewardedAd => _accessUsage.CanExtendByRewardedAd;
         public bool IsWaitingForAd => client.IsWaitingForAd;
         public long SessionMaxTraffic => _accessUsage.MaxTraffic;
         public DateTime? SessionExpirationTime => _accessUsage.ExpirationTime;

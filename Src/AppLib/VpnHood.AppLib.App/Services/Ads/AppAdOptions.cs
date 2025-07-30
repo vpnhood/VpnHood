@@ -7,7 +7,7 @@ public class AppAdOptions
 {
     public TimeSpan ShowAdPostDelay { get; set; } = TimeSpan.FromSeconds(3);
     public TimeSpan LoadAdPostDelay { get; set; } = TimeSpan.Zero;
-    public TimeSpan LoadAdTimeout { get; set; } = Debugger.IsAttached 
-        ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(90);
+    public TimeSpan LoadAdTimeout { get; set; } = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(90);
+    public TimeSpan ExtendByRewardedAdThreshold { get; set; } = TimeSpan.FromMinutes(5);
     public bool PreloadAd { get; set; }
 }

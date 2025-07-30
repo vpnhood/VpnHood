@@ -34,7 +34,7 @@ public static class AppDtoConverterExtensions
         };
     }
 
-    public static AppSessionStatus ToAppDto(this SessionStatus sessionStatus)
+    public static AppSessionStatus ToAppDto(this SessionStatus sessionStatus, bool canExtendByRewardedAd)
     {
         return new AppSessionStatus {
             ConnectorStat = sessionStatus.ConnectorStat.ToAppDto(),
@@ -48,7 +48,7 @@ public static class AppDtoConverterExtensions
             PacketChannelCount = sessionStatus.PacketChannelCount,
             IsUdpMode = sessionStatus.IsUdpMode,
             IsWaitingForAd = sessionStatus.IsWaitingForAd,
-            CanExtendByRewardedAd = sessionStatus.CanExtendByRewardedAd,
+            CanExtendByRewardedAd = canExtendByRewardedAd,
             SessionMaxTraffic = sessionStatus.SessionMaxTraffic,
             SessionExpirationTime = sessionStatus.SessionExpirationTime,
             ActiveClientCount = sessionStatus.ActiveClientCount

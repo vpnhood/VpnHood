@@ -201,16 +201,20 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _vpnServiceManager.StateChanged += VpnService_StateChanged;
 
         // create ad service
-        var adService = new AppAdService(regionProvider: this,
+        var adService = new AppAdService(
+            regionProvider: this,
             adProviderItems: options.AdProviderItems,
-            adOptions: options.AdOptions,
+            loadAdTimeout: options.AdOptions.LoadAdTimeout,
+            loadAdPostDelay: options.AdOptions.LoadAdPostDelay,
             device: _device,
             tracker: tracker);
         
-        AdManager = new AppAdManager(adService, 
+        AdManager = new AppAdManager(
+            adService, 
             _vpnServiceManager,
             extendByRewardedAdThreshold: options.AdOptions.ExtendByRewardedAdThreshold, 
-            showAdPostDelay: options.AdOptions.ShowAdPostDelay);
+            showAdPostDelay: options.AdOptions.ShowAdPostDelay,
+            isPreloadAdEnabled: options.AdOptions.PreloadAd);
 
         // Clear the last update status if a version has changed
         if (_versionCheckResult != null && _versionCheckResult.LocalVersion != Features.Version) {
@@ -318,7 +322,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private void ActiveUiContext_OnChanged(object? sender, EventArgs e)
     {
         var uiContext = AppUiContext.Context;
-        if (IsIdle && AdManager.AdService.IsPreloadAdEnabled && uiContext != null)
+        if (IsIdle && AdManager.IsPreloadAdEnabled && uiContext != null)
             _ = VhUtils.TryInvokeAsync("PreloadAd", () => AdManager.AdService.LoadInterstitialAd(uiContext, CancellationToken.None));
     }
 

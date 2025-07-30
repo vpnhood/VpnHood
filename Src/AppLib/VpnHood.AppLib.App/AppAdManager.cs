@@ -14,11 +14,13 @@ public class AppAdManager(
     AppAdService adService,
     VpnServiceManager vpnServiceManager,
     TimeSpan extendByRewardedAdThreshold,
-    TimeSpan showAdPostDelay)
+    TimeSpan showAdPostDelay,
+    bool isPreloadAdEnabled)
 {
     public bool IsShowing { get; private set; }
     public AppAdService AdService => adService;
     public bool IsWaitingForPostDelay { get; private set; }
+    public bool IsPreloadAdEnabled => isPreloadAdEnabled;
 
     public async Task ShowAd(
         string sessionId,

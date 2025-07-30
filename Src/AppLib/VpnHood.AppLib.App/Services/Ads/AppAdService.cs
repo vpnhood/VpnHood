@@ -13,7 +13,8 @@ public class AppAdService(
     IRegionProvider regionProvider,
     IDevice device,
     AppAdProviderItem[] adProviderItems,
-    AppAdOptions adOptions,
+    TimeSpan loadAdTimeout,
+    TimeSpan loadAdPostDelay,
     ITracker? tracker) 
 {
     private readonly AppCompositeAdService _compositeInterstitialAdService = new(
@@ -44,10 +45,8 @@ public class AppAdService(
         };
     }
 
-    public TimeSpan ShowAdPostDelay => adOptions.ShowAdPostDelay;
     public bool CanShowInterstitial => adProviderItems.Any(x => x.AdProvider.AdType == AppAdType.InterstitialAd);
     public bool CanShowRewarded => adProviderItems.Any(x => x.AdProvider.AdType == AppAdType.RewardedAd);
-    public bool IsPreloadAdEnabled => adOptions.PreloadAd;
 
     public async Task LoadInterstitialAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
@@ -82,10 +81,10 @@ public class AppAdService(
         string countryCode, CancellationToken cancellationToken)
     {
         await appCompositeAdService.LoadAd(uiContext, countryCode: countryCode,
-            forceReload: false, loadAdTimeout: adOptions.LoadAdTimeout, cancellationToken).Vhc();
+            forceReload: false, loadAdTimeout: loadAdTimeout, cancellationToken).Vhc();
 
         // apply delay to prevent showing ads immediately after loading
-        await Task.Delay(adOptions.LoadAdPostDelay, cancellationToken).Vhc();
+        await Task.Delay(loadAdPostDelay, cancellationToken).Vhc();
     }
 
     private async Task<AdResult> ShowAd(AppCompositeAdService appCompositeAdService,

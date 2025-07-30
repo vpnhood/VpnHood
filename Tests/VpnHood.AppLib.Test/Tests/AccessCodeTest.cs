@@ -94,7 +94,7 @@ public class AccessCodeTest : TestAppBase
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // ReSharper disable once AccessToDisposedClosure
-        Assert.ThrowsException<ArgumentException>(() => app.ClientProfileService.Update(
+        Assert.ThrowsExactly<ArgumentException>(() => app.ClientProfileService.Update(
             clientProfile.ClientProfileId, new ClientProfileUpdateParams { AccessCode = accessCode }));
     }
 

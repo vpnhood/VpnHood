@@ -53,7 +53,7 @@ public class ClientProfileTest : TestAppBase
 
         // BuiltIn token should not be removed
         foreach (var clientProfile in clientProfiles) {
-            Assert.ThrowsException<UnauthorizedAccessException>(() => {
+            Assert.ThrowsExactly<UnauthorizedAccessException>(() => {
                 // ReSharper disable once AccessToDisposedClosure
                 app1.ClientProfileService.Delete(clientProfile.ClientProfileId);
             });
@@ -208,7 +208,7 @@ public class ClientProfileTest : TestAppBase
 
         // ************
         // *** TEST ***: Update throw NotExistsException exception if tokenId does not exist
-        Assert.ThrowsException<NotExistsException>(() => {
+        Assert.ThrowsExactly<NotExistsException>(() => {
             // ReSharper disable once AccessToDisposedClosure
             app.ClientProfileService.Update(Guid.NewGuid(), new ClientProfileUpdateParams {
                 ClientProfileName = "Hi"

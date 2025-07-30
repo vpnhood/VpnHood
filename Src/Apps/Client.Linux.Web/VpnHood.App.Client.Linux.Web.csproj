@@ -35,10 +35,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.694" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Device.Linux\VpnHood.Core.Client.Device.Linux.csproj" />

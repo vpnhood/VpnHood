@@ -1,8 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.AppLib;
-using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Assets.ClassicSpa;
-using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Device.Linux;
 using VpnHood.Core.Toolkit.Logging;
@@ -27,12 +24,7 @@ internal class Program
                 ExecuteCommandAsync($"ip link delete {AppConfigs.AppName}", CancellationToken.None));
 
             // ReSharper disable once UseObjectOrCollectionInitializer
-            var resources = new AppResources();
-            resources.SpaZipData = ClassicSpaResources.SpaZipData;
-            resources.IpLocationZipData = Ip2LocationLiteDb.ZipData;
-            resources.Colors.NavigationBarColor = ClassicSpaResources.NavigationBarColor;
-            resources.Colors.WindowBackgroundColor = ClassicSpaResources.WindowBackgroundColor;
-            resources.Colors.ProgressBarColor = ClassicSpaResources.ProgressBarColor;
+            var resources = ClientAppResources.Resources;
             resources.Strings.AppName = AppConfigs.AppName;
 
             // check command line
@@ -74,6 +66,4 @@ internal class Program
     {
         return OsUtils.ExecuteCommandAsync("/bin/bash", $"-c \"{command}\"", cancellationToken);
     }
-
-
 }

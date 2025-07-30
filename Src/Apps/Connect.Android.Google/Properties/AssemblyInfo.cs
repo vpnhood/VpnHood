@@ -6,6 +6,6 @@
 [assembly: UsesFeature("android.software.leanback", Required = false)]
 [assembly: UsesFeature("android.hardware.touchscreen", Required = false)]
 
-[assembly: UsesPermission(Name = "android.permission.ACCESS_WIFI_STATE")] // InMobi
-[assembly: UsesPermission(Name = "android.permission.CHANGE_WIFI_STATE")] // InMobi
-[assembly: UsesPermission(Name = "com.google.android.gms.permission.AD_ID")] // InMobi
+// [assembly: UsesPermission(Name = "android.permission.ACCESS_WIFI_STATE")] // InMobi
+// [assembly: UsesPermission(Name = "android.permission.CHANGE_WIFI_STATE")] // InMobi
+// [assembly: UsesPermission(Name = "com.google.android.gms.permission.AD_ID")] // InMobi

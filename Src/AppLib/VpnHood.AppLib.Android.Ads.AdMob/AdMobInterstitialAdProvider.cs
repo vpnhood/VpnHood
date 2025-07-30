@@ -31,7 +31,7 @@ public class AdMobInterstitialAdProvider(string adUnitId) : IAppAdProvider
             throw new LoadAdException("MainActivity has been destroyed before loading the ad.");
 
         // initialize (AdMob do it for first time, so its will throw better exception)
-        // await AdMobUtil.Initialize(activity, cancellationToken).ConfigureAwait(false);
+        await AdMobUtil.Initialize(activity, cancellationToken).ConfigureAwait(false);
 
         // reset the last loaded ad
         AdLoadedTime = null;
@@ -45,6 +45,7 @@ public class AdMobInterstitialAdProvider(string adUnitId) : IAppAdProvider
                 () => InterstitialAd.Load(activity, adUnitId, adRequest, adLoadCallback))
             .WaitAsync(cancellationToken)
             .ConfigureAwait(false);
+
 
         _loadedAd = await adLoadCallback.Task
             .WaitAsync(cancellationToken)

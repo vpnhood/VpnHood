@@ -1,8 +1,10 @@
 # Upcoming
 * Fix: Drop brodcast packets
 * Fix: Memory Leak!
+* Fix: Could not start VpnService
 * Improve: Windows: Faster connection
 * Improve: Some error messages
+* Improve: Ad management
 
 # v7.2.728
 * Feature: Linux Client

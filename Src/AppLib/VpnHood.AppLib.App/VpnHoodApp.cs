@@ -303,7 +303,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // disconnect
             if (state.CanDisconnect && disconnectRequired) {
                 VhLogger.Instance.LogInformation("Disconnecting due to the settings change...");
-                _ = Disconnect();
+                _ = TryDisconnect();
             }
         }
         catch (Exception ex) {
@@ -512,7 +512,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                         linkedCts.Token);
             }
             catch (Exception){
-                _ = TryDisconnect();
+                _ = TryDisconnect(false);
                 throw;
             }
 
@@ -987,10 +987,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         FireConnectionStateChanged();
     }
 
-    public async Task TryDisconnect()
+    public async Task TryDisconnect(bool byUser = true)
     {
         try {
-            await Disconnect().Vhc();
+            await Disconnect(byUser).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not disconnect gracefully.");
@@ -998,7 +998,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private readonly AsyncLock _disconnectLock = new();
-    public async Task Disconnect()
+    public async Task Disconnect(bool byUser = true)
     {
         using var scopeLock = await _disconnectLock.LockAsync();
         if (_isDisconnecting)
@@ -1006,8 +1006,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         try {
             _isDisconnecting = true;
-            VhLogger.Instance.LogInformation("User requested to disconnect.");
-            _appPersistState.HasDisconnectedByUser = true;
+            VhLogger.Instance.LogInformation("Disconnect has been requested. Actor: {actor}.", 
+                byUser ? "User" : "System");
+            _appPersistState.HasDisconnectedByUser = byUser;
 
             await _connectCts.TryCancelAsync().Vhc();
             _connectCts.Dispose();

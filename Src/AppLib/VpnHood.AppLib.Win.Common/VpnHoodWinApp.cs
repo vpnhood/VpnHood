@@ -145,7 +145,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
         _connectMenuItemId =
             _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Connect, (_, _) => _ = ConnectClicked());
         _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Disconnect,
-            (_, _) => _ = VpnHoodApp.Instance.Disconnect());
+            (_, _) => _ = VpnHoodApp.Instance.TryDisconnect());
         _sysTray.ContextMenu.AddMenuSeparator();
         _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Exit, (_, _) => Exit());
 

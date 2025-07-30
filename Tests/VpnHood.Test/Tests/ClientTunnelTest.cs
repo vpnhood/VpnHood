@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;

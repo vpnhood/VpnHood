@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagement;

@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Test;
+﻿using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test;
 

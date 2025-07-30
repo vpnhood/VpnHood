@@ -1,6 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-
-namespace VpnHood.Test.Tests;
+﻿namespace VpnHood.Test.Tests;
 
 [TestClass]
 public class NetProtectTest : TestBase

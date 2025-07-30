@@ -3,7 +3,6 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using EmbedIO;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
@@ -384,7 +383,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
         await using var client =
             await TestHelper.CreateClient(token, autoConnect: false, vpnAdapter: new TestNullVpnAdapter());
-        await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client.Connect());
+        await Assert.ThrowsExactlyAsync<MaintenanceException>(() => client.Connect());
 
         Assert.AreEqual(SessionErrorCode.Maintenance, client.GetLastSessionErrorCode());
         Assert.AreEqual(ClientState.Disposed, client.State);
@@ -402,7 +401,7 @@ public class ClientServerTest : TestBase
         accessManager.EmbedIoAccessManager.Stop();
         await using var client3 =
             await TestHelper.CreateClient(token, autoConnect: false, vpnAdapter: new TestNullVpnAdapter());
-        await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client3.Connect());
+        await Assert.ThrowsExactlyAsync<MaintenanceException>(() => client3.Connect());
 
         await client3.WaitForState(ClientState.Disposed);
         Assert.AreEqual(SessionErrorCode.Maintenance, client3.GetLastSessionErrorCode());
@@ -420,7 +419,7 @@ public class ClientServerTest : TestBase
         accessManager.EmbedIoAccessManager.HttpException = HttpException.Forbidden();
         await using var client5 =
             await TestHelper.CreateClient(token, autoConnect: false, vpnAdapter: new TestNullVpnAdapter());
-        await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client5.Connect());
+        await Assert.ThrowsExactlyAsync<MaintenanceException>(() => client5.Connect());
 
         await client5.WaitForState(ClientState.Disposed);
         Assert.AreEqual(SessionErrorCode.Maintenance, client5.GetLastSessionErrorCode());
@@ -445,7 +444,7 @@ public class ClientServerTest : TestBase
         // create client
         await using var client = await TestHelper.CreateClient(token, autoConnect: false);
 
-        await Assert.ThrowsExceptionAsync<SessionException>(() => client.Connect());
+        await Assert.ThrowsExactlyAsync<SessionException>(() => client.Connect());
         Assert.AreEqual(SessionErrorCode.UnsupportedClient, client.GetLastSessionErrorCode());
     }
 

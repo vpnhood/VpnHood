@@ -1,6 +1,5 @@
 ﻿using EmbedIO;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -127,7 +126,7 @@ public class ClientAppTest : TestAppBase
         // create app
         await using var app = TestAppHelper.CreateClientApp();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await Assert.ThrowsExceptionAsync<UnreachableServerException>(() => app.Connect(clientProfile.ClientProfileId));
+        await Assert.ThrowsExactlyAsync<UnreachableServerException>(() => app.Connect(clientProfile.ClientProfileId));
 
         await app.WaitForState(AppConnectionState.None);
         Assert.IsTrue(app.State.LogExists);
@@ -282,7 +281,7 @@ public class ClientAppTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(appOptions, testDevice);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
-        await Assert.ThrowsExceptionAsync<ConnectionTimeoutException>(() => app.Connect(clientProfile.ClientProfileId));
+        await Assert.ThrowsExactlyAsync<ConnectionTimeoutException>(() => app.Connect(clientProfile.ClientProfileId));
         await app.WaitForState(AppConnectionState.None);
         Assert.AreEqual(nameof(ConnectionTimeoutException), app.State.LastError?.TypeName);
     }
@@ -364,7 +363,7 @@ public class ClientAppTest : TestAppBase
         var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // wait for connect error
-        var ex = await Assert.ThrowsExceptionAsync<SessionException>(() => app.Connect(clientProfile1.ClientProfileId));
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => app.Connect(clientProfile1.ClientProfileId));
         Assert.AreEqual(SessionErrorCode.AccessExpired, ex.SessionResponse.ErrorCode);
 
         // token name must be updated

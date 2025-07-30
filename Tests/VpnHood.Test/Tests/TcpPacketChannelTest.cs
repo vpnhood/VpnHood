@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;

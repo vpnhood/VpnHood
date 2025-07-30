@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Core.Client.Abstractions.Exceptions;
+﻿using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test.Tests;
@@ -27,7 +26,7 @@ public class DiagnoserTest : TestAppBase
         clientApp.Diagnoser.TestHttpUris = [TestConstants.InvalidUri];
         clientApp.Diagnoser.TestNsIpEndPoints = [TestConstants.InvalidEp];
         clientApp.Diagnoser.TestPingIpAddresses = [TestConstants.InvalidIp];
-        await Assert.ThrowsExceptionAsync<NoInternetException>(() =>
+        await Assert.ThrowsExactlyAsync<NoInternetException>(() =>
             clientApp.Connect(clientProfile.ClientProfileId));
     }
 }

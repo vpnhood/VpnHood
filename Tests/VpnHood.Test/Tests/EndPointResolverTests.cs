@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Net;
+﻿using System.Net;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Tokens;
 

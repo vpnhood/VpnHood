@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -53,7 +52,7 @@ public class AccessTest : TestBase
 
         // create client and connect
         await using var client = await TestHelper.CreateClient(token, autoConnect: false);
-        await Assert.ThrowsExceptionAsync<SessionException>(() => client.Connect());
+        await Assert.ThrowsExactlyAsync<SessionException>(() => client.Connect());
         Assert.AreEqual(SessionErrorCode.AccessExpired, client.GetLastSessionErrorCode());
     }
 
@@ -114,7 +113,7 @@ public class AccessTest : TestBase
         // check: client must disconnect at hello on traffic overflow
         // ----------
         await using var client2 = await TestHelper.CreateClient(accessToken, autoConnect: false);
-        var ex = await Assert.ThrowsExceptionAsync<SessionException>(() => client2.Connect());
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => client2.Connect());
         Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, client1.GetLastSessionErrorCode());
         Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, ex.SessionResponse.ErrorCode);
     }

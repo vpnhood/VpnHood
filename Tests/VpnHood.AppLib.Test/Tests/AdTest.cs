@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Net;
+﻿using System.Net;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
@@ -61,7 +60,7 @@ public class AdTest : TestAppBase
         // connect
         var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() => app.Connect(clientProfile.ClientProfileId));
+        await Assert.ThrowsExactlyAsync<ShowAdNoUiException>(() => app.Connect(clientProfile.ClientProfileId));
         await app.WaitForState(AppConnectionState.None);
     }
 
@@ -103,7 +102,7 @@ public class AdTest : TestAppBase
         // connect
         var token = accessManager.CreateToken();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() => app.Connect(new ConnectOptions {
+        await Assert.ThrowsExactlyAsync<ShowAdNoUiException>(() => app.Connect(new ConnectOptions {
             ClientProfileId = clientProfile.ClientProfileId,
             PlanId = ConnectPlanId.PremiumByRewardedAd
         }));
@@ -138,7 +137,7 @@ public class AdTest : TestAppBase
             Assert.IsNull(app.State.SessionStatus?.SessionExpirationTime);
         }
         else {
-            var ex = await Assert.ThrowsExceptionAsync<SessionException>(() =>
+            var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
                 app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
         }
@@ -179,7 +178,7 @@ public class AdTest : TestAppBase
             Assert.IsNull(app.State.SessionStatus?.SessionExpirationTime);
         }
         else {
-            var ex = await Assert.ThrowsExceptionAsync<SessionException>(() =>
+            var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
                 app.AdManager.ExtendByRewardedAd(CancellationToken.None));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
             await Task.Delay(500);

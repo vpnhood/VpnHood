@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.Access.Configurations;
@@ -257,7 +256,7 @@ public class ServerTest : TestBase
         var client = new HttpClient(handler);
         var url = $"https://{token.ServerToken.HostEndPoints!.First()}";
 
-        var ex = await Assert.ThrowsExceptionAsync<HttpRequestException>(() => client.GetStringAsync(url));
+        var ex = await Assert.ThrowsExactlyAsync<HttpRequestException>(() => client.GetStringAsync(url));
         Assert.AreEqual(ex.StatusCode, HttpStatusCode.Unauthorized);
     }
 
@@ -379,7 +378,7 @@ public class ServerTest : TestBase
         await VhTestUtil.AssertEqualsWait(accessManager.ServerConfig.ConfigCode,
             () => accessManager.LastServerStatus!.ConfigCode);
 
-        await Assert.ThrowsExceptionAsync<HttpRequestException>(() => httpClient.GetAsync(url));
+        await Assert.ThrowsExactlyAsync<HttpRequestException>(() => httpClient.GetAsync(url));
     }
 
     [TestMethod]

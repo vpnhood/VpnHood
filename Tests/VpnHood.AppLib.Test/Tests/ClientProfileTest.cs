@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;

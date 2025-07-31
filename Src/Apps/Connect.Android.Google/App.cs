@@ -110,13 +110,24 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 new Uri(appConfigs.StoreBaseUri),
                 appConfigs.StoreAppId, authenticationExternalProvider,
                 ignoreSslVerification: appConfigs.StoreIgnoreSslVerification);
-            var googlePlayBillingProvider = new GooglePlayBillingProvider(authenticationProvider);
+            var googlePlayBillingProvider = TryCreateBillingClient(authenticationProvider);
             var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider,
                 appConfigs.StoreAppId);
             return accountProvider;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not create AppAccountService.");
+            return null;
+        }
+    }
+
+    private static IAppBillingProvider? TryCreateBillingClient(IAppAuthenticationProvider authenticationProvider)
+    {
+        try {
+            return new GooglePlayBillingProvider(authenticationProvider);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not create GooglePlayBillingProvider.");
             return null;
         }
     }

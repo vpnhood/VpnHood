@@ -174,7 +174,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AppId = options.AppId,
             DebugCommands = DebugCommands.All,
             IsLocalNetworkSupported = options.IsLocalNetworkSupported,
-            IsDebugMode = options.IsDebugMode
+            IsDebugMode = options.IsDebugMode,
+            CustomData = options.CustomData
         };
 
         // create tracker

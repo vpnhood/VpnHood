@@ -25,6 +25,7 @@ public class App : VpnHoodWpfSpaApp
         resources.Strings.AppName = AppConfigs.AppName;
 
         return new AppOptions(appConfigs.AppId, appConfigs.StorageFolderName, AppConfigs.IsDebugMode) {
+            CustomData = appConfigs.CustomData,
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             Resources = resources,
             AccessKeys = AppConfigs.IsDebug ? [appConfigs.DefaultAccessKey] : [],

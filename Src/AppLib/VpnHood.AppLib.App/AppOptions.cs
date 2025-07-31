@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text.Json;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
@@ -50,4 +51,5 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public LogServiceOptions LogServiceOptions { get; set; } = new();
     public bool AdjustForSystemBars { get; set; } = true;
     public bool AllowEndPointStrategy { get; set; }
+    public object? CustomData { get; set; }
 }

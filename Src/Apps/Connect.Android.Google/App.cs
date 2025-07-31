@@ -40,6 +40,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         resources.Strings.AppName = AppConfigs.AppName;
 
         return new AppOptions(appId: PackageName!, "VpnHoodConnect", AppConfigs.IsDebugMode) {
+            CustomData = appConfigs.CustomData,
             StorageFolderPath = storageFolderPath,
             AccessKeys = [appConfigs.DefaultAccessKey],
             Resources = resources,

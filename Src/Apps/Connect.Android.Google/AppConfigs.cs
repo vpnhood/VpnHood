@@ -1,3 +1,4 @@
+using System.Text.Json;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 
@@ -53,6 +54,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
     public string InmobiAccountId { get; set; } = "000000000000000000000000"; //YOUR_INMMOBI_ACCOUNT_ID
     public string InmobiPlacementId { get; set; } = "000000000000"; //YOUR_INMOBI_PLACEMENT_ID
     public bool InmobiIsDebugMode { get; set; } = IsDebugMode;
+    public JsonElement? CustomData { get; set; }
 
     public static AppConfigs Load()
     {

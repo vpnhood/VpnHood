@@ -23,6 +23,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         resources.Strings.AppName = AppConfigs.AppName;
 
         return new AppOptions(PackageName!, "VpnHood", AppConfigs.IsDebugMode) {
+            CustomData = appConfigs.CustomData,
             Resources = resources,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 
@@ -22,6 +23,8 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
     public bool AllowEndPointTracker { get; set; } = true;
     public string? Ga4MeasurementId { get; set; }
 
+    public JsonElement? CustomData { get; set; }
+
     public static AppConfigs Load()
     {
         var appConfigs = new AppConfigs();
@@ -29,6 +32,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
         appConfigs.Merge("AppSettings_Environment");
         return appConfigs;
     }
+
 
 #if DEBUG
     public const bool IsDebugMode = true;

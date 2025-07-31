@@ -1,3 +1,4 @@
+using System.Text.Json;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 
@@ -22,6 +23,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
     // SampleAccessKey is a test access key, you should replace it with your own access key.
     // It is limited and can not be used in production.
     public string DefaultAccessKey { get; set; } = ClientOptions.SampleAccessKey;
+    public JsonElement? CustomData { get; set; }
 
     public static AppConfigs Load()
     {

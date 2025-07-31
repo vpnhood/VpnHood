@@ -26,6 +26,7 @@ public class App : VpnHoodWpfSpaApp
         resources.Strings.AppName = AppConfigs.AppName;
 
         return new AppOptions("com.vpnhood.connect.windows", "VpnHoodConnect", AppConfigs.IsDebugMode) {
+            CustomData = appConfigs.CustomData,
             UiName = "VpnHoodConnect",
             Resources = resources,
             AccessKeys = [appConfigs.DefaultAccessKey],

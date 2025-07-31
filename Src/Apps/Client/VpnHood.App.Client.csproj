@@ -32,7 +32,7 @@
 		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.694" />
 	</ItemGroup>
 	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==false">
-		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="6.0.712" />
+		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="6.0.713" />
 	</ItemGroup>
 	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==true">
 		<Reference Include="VpnHood.AppLib.Assets.ClassicSpa">
@@ -41,9 +41,6 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
-	</ItemGroup>
-	<ItemGroup>
-	  
 	</ItemGroup>
 
 

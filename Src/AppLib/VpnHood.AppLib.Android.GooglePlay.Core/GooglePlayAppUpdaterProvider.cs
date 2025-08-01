@@ -2,6 +2,7 @@
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Droid.GooglePlay.Utils;
 using VpnHood.Core.Client.Device.Droid;
+using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -29,10 +30,12 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
                 return false;
 
             // Show Google Play update dialog
-            using var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
-                AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
-            if (updateFlowPlayTask != null)
-                await updateFlowPlayTask.AsTask().WaitAsync(cancellationToken).ConfigureAwait(false);
+            await AndroidUtil.RunOnUiThread(appUiContext.Activity, async () => {
+                using var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
+                    AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
+                if (updateFlowPlayTask != null)
+                    await updateFlowPlayTask.AsTask().WaitAsync(cancellationToken).ConfigureAwait(false);
+            });
 
             return true;
         }

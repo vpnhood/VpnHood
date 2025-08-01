@@ -34,9 +34,7 @@ public class FileLogger(
 
     public void Dispose()
     {
-        lock (_lock) {
-            _streamWriter.Flush();
-            _streamWriter.Dispose();
-        }
+        lock (_lock)
+            _streamWriter.Dispose(); //it will handle flush and close the stream
     }
 }

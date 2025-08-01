@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Client.Device.Droid.Utils;
+using VpnHood.Core.Client.Device.Exceptions;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -108,12 +109,12 @@ public class AndroidDevice : IDevice
         // start service
         var intent = new Intent(Application.Context, typeof(AndroidVpnService));
         intent.PutExtra("manual", true);
-        if (OperatingSystem.IsAndroidVersionAtLeast(26)) {
-            Application.Context.StartForegroundService(intent.SetAction("connect"));
-        }
-        else {
-            Application.Context.StartService(intent.SetAction("connect"));
-        }
+        var res = OperatingSystem.IsAndroidVersionAtLeast(26)
+            ? Application.Context.StartForegroundService(intent.SetAction("connect"))
+            : Application.Context.StartService(intent.SetAction("connect"));
+
+        if (res == null) 
+            throw new VpnServiceException("Could not start AndroidVpnService");
 
         return Task.CompletedTask;
     }
@@ -146,7 +147,7 @@ public class AndroidDevice : IDevice
     private static string CurrentProcessName {
         get {
             //if (OperatingSystem.IsAndroidVersionAtLeast(28))
-                //return Application.ProcessName ?? "";
+            //return Application.ProcessName ?? "";
 
             var activityManager = (ActivityManager)Application.Context.GetSystemService(Context.ActivityService)!;
             var pid = Process.MyPid();
@@ -158,7 +159,7 @@ public class AndroidDevice : IDevice
     }
 
     public static bool IsVpnServiceProcess => CurrentProcessName.Contains(AndroidVpnService.ProcessName);
-    
+
     private static IEnumerable<(Network, NetworkCapabilities)> GetNetworkWithCapabilities(ConnectivityManager connectivityManager)
     {
         var networks = connectivityManager.GetAllNetworks();

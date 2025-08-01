@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: Internal crash in logger when closing the service
+
 # v7.3.734
 * Fix: Drop brodcast packets
 * Fix: Memory Leak!

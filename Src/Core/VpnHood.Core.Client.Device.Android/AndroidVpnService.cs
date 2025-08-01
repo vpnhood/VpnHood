@@ -18,10 +18,9 @@ namespace VpnHood.Core.Client.Device.Droid;
 [Service(
     Permission = Manifest.Permission.BindVpnService,
     Exported = false,
-#if !DEBUG  
-    Process = ProcessName,
-#endif
-    ForegroundServiceType = ForegroundService.TypeSystemExempted)]
+    // VPN requires TypeSystemExempted:  https://developer.android.com/about/versions/14/changes/fgs-types-required#system-exempted
+    ForegroundServiceType = ForegroundService.TypeSystemExempted 
+    )]
 [IntentFilter(["android.net.VpnService"])]
 public class AndroidVpnService : VpnService, IVpnServiceHandler
 {
@@ -57,6 +56,8 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
                 return ProcessDisconnectAction();
 
             default:
+                if (_vpnServiceHost == null)
+                    StopSelf(); // unknow command
                 return StartCommandResult.NotSticky;
         }
     }
@@ -128,6 +129,17 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         // clear notification
         _notification?.Dispose();
         _notification = null;
+    }
+
+    public override void OnRevoke()
+    {
+        if (_vpnServiceHost != null) {
+            VhLogger.Instance.LogDebug("VpnService is revoked, disconnecting.");
+            _ = _vpnServiceHost.TryDisconnect();
+            return;
+        }
+
+        base.OnRevoke();
     }
 
     public override void OnDestroy()

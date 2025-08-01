@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Core.Client.VpnServices.Manager.Exceptions;
+﻿using VpnHood.Core.Client.Device.Exceptions;
+
+namespace VpnHood.Core.Client.VpnServices.Manager.Exceptions;
 
 public class VpnServiceUnreachableException : VpnServiceException
 {

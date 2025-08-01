@@ -45,6 +45,7 @@ dotnet publish $projectDir `
 	/p:SolutionDir=$solutionDir `
 	/p:Configuration=Release `
 	/p:Version=$versionParam `
+	/p:RestoreDisableParallel=true ` # not-sure yet
 	/nodeReuse:false `
 	--output $publishDir `
 	--framework $targetFramework `

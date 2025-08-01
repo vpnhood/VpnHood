@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Net.Sockets;
+using System.Text;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -14,6 +15,10 @@ public class AccessCodeTest : TestAppBase
     [TestMethod]
     public async Task AaFoo()
     {
+        var tcpClient = new TcpClient();
+        Console.WriteLine(tcpClient.ReceiveBufferSize);
+        Console.WriteLine(tcpClient.SendBufferSize);
+
         await Task.CompletedTask;
     }
 

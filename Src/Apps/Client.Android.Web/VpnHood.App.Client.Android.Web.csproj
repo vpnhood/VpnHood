@@ -7,7 +7,7 @@
 		<ApplicationId>com.vpnhood.connect.android.web.debug</ApplicationId>
 		<ApplicationVersion>734</ApplicationVersion>
 		<ApplicationDisplayVersion>7.3.734</ApplicationDisplayVersion>
-		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">

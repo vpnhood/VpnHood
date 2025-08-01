@@ -7,8 +7,8 @@ public class FirebaseAnalyticsTrackerFactory : ITrackerFactory
 {
     public ITracker CreateTracker(TrackerCreateParams createParams)
     {
-        return FirebaseAnalyticsTracker.IsInit
-            ? FirebaseAnalyticsTracker.Instance :
-            new FirebaseAnalyticsTracker();
+        return FirebaseAnalyticsTracker.IsInit 
+            ? FirebaseAnalyticsTracker.Instance 
+            : new FirebaseAnalyticsTracker();
     }
 }

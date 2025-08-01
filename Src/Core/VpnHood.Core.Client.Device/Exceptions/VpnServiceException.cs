@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Client.VpnServices.Manager.Exceptions;
+﻿namespace VpnHood.Core.Client.Device.Exceptions;
 
 public class VpnServiceException : Exception
 {

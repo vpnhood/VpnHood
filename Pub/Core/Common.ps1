@@ -76,7 +76,7 @@ function PushMainRepo()
 	# swtich to main branch
 	if (!$prerelease) {
 		Write-Host "Pushing to main branch..." -ForegroundColor Magenta;
-		git --git-dir=$gitDir --work-tree=$solutionDir push origin development:main;
+		git --git-dir=$gitDir --work-tree=$solutionDir push origin development:main --force;
 	}
 
 	Pop-Location	

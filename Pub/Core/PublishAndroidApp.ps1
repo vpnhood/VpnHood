@@ -57,6 +57,7 @@ if ($apk)
 		/p:AndroidPackageFormat="apk" `
 		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
+		/p:RestoreDisableParallel=true ` # not-sure yet
 		/nodeReuse:false;
 	
 	if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
@@ -97,6 +98,7 @@ if ($aab)
 		/p:ArchiveOnBuild=true `
 		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
+		/p:RestoreDisableParallel=true ` # not-sure yet
 		/nodeReuse:false;
 
 	if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }

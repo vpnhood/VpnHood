@@ -8,12 +8,30 @@ namespace VpnHood.AppLib.Droid.Common.Activities;
 
 internal static class WebViewUpdaterPage
 {
-    public static void InitPage(Activity activity, Exception ex)
+    public static void ShowServerExceptionPage(Activity activity, Exception ex)
+    {
+        ShowExceptionPage(activity,
+            message: "Internal WebServer initialization failed. Try restarting the app. Sorry for this inconvenience.",
+            buttonText: null,
+            buttonUrl: null,
+            ex);
+    }
+
+    public static void ShowWebViewExceptionPage(Activity activity, Exception ex)
+    {
+        ShowExceptionPage(activity, 
+            message: "WebView initialization failed. Please update your Android System WebView and Chrome Browser.",
+            buttonText: "Update Android System WebView",
+            buttonUrl: "https://github.com/vpnhood/VpnHood/wiki/Update-Android-System-WebView-for-VpnHood-Android-App",
+            ex);
+    }
+
+    public static void ShowExceptionPage(Activity activity, string message, string? buttonText, string? buttonUrl, Exception ex)
     {
         // get all current cpu architecture in a string
         var cpuArch = string.Join(", ", Build.SupportedAbis ?? []);
         var text =
-            $"WebView initialization failed. Please update your Android System WebView and Chrome Browser. \r\n\r\n" +
+            $"{message} \r\n\r\n" +
             $"Error: {ex.Message} \r\n" +
             $"CPU Architecture: {cpuArch}";
 
@@ -24,7 +42,7 @@ internal static class WebViewUpdaterPage
                 ViewGroup.LayoutParams.MatchParent,
                 ViewGroup.LayoutParams.MatchParent)
         };
-        layout.SetPadding(32, 32, 32, 32);
+        layout.SetPadding(32, 100, 32, 32);
         layout.SetBackgroundColor(Color.White);
 
         // Create a TextView for the exception message
@@ -37,35 +55,36 @@ internal static class WebViewUpdaterPage
                 ViewGroup.LayoutParams.WrapContent)
         };
         messageTextView.SetTextColor(Color.Black);
-
-        // Create a Button to open a URL
-        var button = new Button(activity) {
-            Text = "Update Android System WebView"
-        };
-        // Center-align the button
-        var buttonLayoutParams = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WrapContent,
-            ViewGroup.LayoutParams.WrapContent) {
-            Gravity = GravityFlags.Center
-        };
-        buttonLayoutParams.SetMargins(16, 32, 16, 0); // Add margins for spacing
-        button.LayoutParameters = buttonLayoutParams;
-
-        // Add border and background color
-        button.SetTextColor(Color.ParseColor("#6200EE"));
-        button.SetPadding(32, 16, 32, 16); // Padding inside the button
-        button.Background = GetBorderDrawable(Color.ParseColor("#6200EE"));
-
-        // Set button click event to open a URL
-        button.Click += (_, _) => {
-            var url = "https://github.com/vpnhood/VpnHood/wiki/Update-Android-System-WebView-for-VpnHood-Android-App";
-            var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(url));
-            activity.StartActivity(intent);
-        };
-
-        // Add views to the layout
         layout.AddView(messageTextView);
-        layout.AddView(button);
+
+        if (!string.IsNullOrEmpty(buttonText)) {
+            // Create a Button to open a URL
+            var button = new Button(activity) {
+                Text = "Update Android System WebView"
+            };
+            // Center-align the button
+            var buttonLayoutParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WrapContent,
+                ViewGroup.LayoutParams.WrapContent) {
+                Gravity = GravityFlags.Center
+            };
+            buttonLayoutParams.SetMargins(16, 32, 16, 0); // Add margins for spacing
+            button.LayoutParameters = buttonLayoutParams;
+
+            // Add border and background color
+            button.SetTextColor(Color.ParseColor("#6200EE"));
+            button.SetPadding(32, 16, 32, 16); // Padding inside the button
+            button.Background = GetBorderDrawable(Color.ParseColor("#6200EE"));
+
+            // Set button click event to open a URL
+            button.Click += (_, _) => {
+                var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(buttonUrl));
+                activity.StartActivity(intent);
+            };
+
+            // Add views to the layout
+            layout.AddView(button);
+        }
 
         // Set the content view to the layout
         activity.SetContentView(layout);

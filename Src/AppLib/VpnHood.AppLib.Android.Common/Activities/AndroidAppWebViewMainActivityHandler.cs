@@ -3,11 +3,13 @@ using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;
@@ -29,40 +31,33 @@ public class AndroidAppWebViewMainActivityHandler(
         InitLoadingPage();
 
         // Initialize UI
-        if (!VpnHoodAppWebServer.IsInit) {
-            ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
-            using var spaZipStream = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
-            VpnHoodAppWebServer.Init(new WebServerOptions {
-                SpaZipStream = spaZipStream,
-                DefaultPort = options.SpaDefaultPort,
-                ListenOnAllIps = options.SpaListenToAllIps
-            });
+        Task.Run(InitTask);
+    }
+
+    private Task InitTask()
+    {
+        try {
+            if (!VpnHoodAppWebServer.IsInit) {
+                ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
+                using var spaZipStream = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
+                VpnHoodAppWebServer.Init(new WebServerOptions {
+                    SpaZipStream = spaZipStream,
+                    DefaultPort = options.SpaDefaultPort,
+                    ListenOnAllIps = options.SpaListenToAllIps
+                });
+            }
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Failed to initialize web server.");
+            WebViewCreateException = ex;
+            AndroidUtil.RunOnUiThread(ActivityEvent.Activity, 
+                () => WebViewUpdaterPage.ShowWebViewExceptionPage(ActivityEvent.Activity, ex));
+            return Task.CompletedTask;
         }
 
-        InitWebUi();
+        AndroidUtil.RunOnUiThread(ActivityEvent.Activity, InitWebUi);
+        return Task.CompletedTask;
     }
-
-    protected override void OnPause()
-    {
-        base.OnPause();
-
-        if (!AppUiContext.IsPartialIntentRunning)
-            WebView?.OnPause();
-
-        // temporarily stop the server to find is the crash belong to embed-io
-        if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.KillSpaServer) && VpnHoodAppWebServer.IsInit)
-            VpnHoodAppWebServer.Instance.Stop();
-    }
-
-    protected override void OnResume()
-    {
-        if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.KillSpaServer) && VpnHoodAppWebServer.IsInit)
-            VpnHoodAppWebServer.Instance.Start();
-
-        WebView?.OnResume();
-        base.OnResume();
-    }
-
     private void InitLoadingPage()
     {
         ActivityEvent.Activity.SetContentView(_Microsoft.Android.Resource.Designer.Resource.Layout.progressbar);
@@ -80,8 +75,8 @@ public class AndroidAppWebViewMainActivityHandler(
         var progressBarColor = VpnHoodApp.Instance.Resources.Colors.ProgressBarColor?.ToAndroidColor();
         var progressBar = ActivityEvent.Activity.FindViewById<ProgressBar>(
                 _Microsoft.Android.Resource.Designer.Resource.Id.progressBar);
-        
-        if (progressBar != null && progressBarColor != null) 
+
+        if (progressBar != null && progressBarColor != null)
             VhUtils.TryInvoke("progressBar.IndeterminateTintList", () =>
                 progressBar.IndeterminateTintList = ColorStateList.ValueOf(progressBarColor.Value));
     }
@@ -160,7 +155,7 @@ public class AndroidAppWebViewMainActivityHandler(
         }
         catch (Exception ex) {
             WebViewCreateException = ex;
-            WebViewUpdaterPage.InitPage(ActivityEvent.Activity, ex);
+            WebViewUpdaterPage.ShowWebViewExceptionPage(ActivityEvent.Activity, ex);
         }
     }
 
@@ -185,4 +180,26 @@ public class AndroidAppWebViewMainActivityHandler(
 
         return base.OnKeyDown(keyCode, e);
     }
+
+    protected override void OnPause()
+    {
+        base.OnPause();
+
+        if (!AppUiContext.IsPartialIntentRunning)
+            WebView?.OnPause();
+
+        // temporarily stop the server to find is the crash belong to embed-io
+        if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.KillSpaServer) && VpnHoodAppWebServer.IsInit)
+            VpnHoodAppWebServer.Instance.Stop();
+    }
+
+    protected override void OnResume()
+    {
+        if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.KillSpaServer) && VpnHoodAppWebServer.IsInit)
+            VpnHoodAppWebServer.Instance.Start();
+
+        WebView?.OnResume();
+        base.OnResume();
+    }
+
 }

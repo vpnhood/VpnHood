@@ -13,7 +13,7 @@ namespace VpnHood.AppLib.Droid.GooglePlay;
 
 public class GooglePlayBillingProvider : IAppBillingProvider
 {
-    private readonly BillingClient _billingClient;
+    private readonly Lazy<BillingClient> _billingClient;
     private readonly IAppAuthenticationProvider _authenticationProvider;
     private ProductDetails? _productDetails;
     private IList<ProductDetails.SubscriptionOfferDetails>? _subscriptionOfferDetails;
@@ -23,14 +23,17 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
     public GooglePlayBillingProvider(IAppAuthenticationProvider authenticationProvider)
     {
-        var builder = BillingClient.NewBuilder(Application.Context);
-        builder.SetListener(PurchasesUpdatedListener);
+        _billingClient = new Lazy<BillingClient>(() =>
+        {
+            var builder = BillingClient.NewBuilder(Application.Context);
+            builder.SetListener(PurchasesUpdatedListener);
 
-        // We don't have the On-Time Purchase in this app, but if EnablePendingPurchases is not implemented,
-        // we get the error "Pending purchases for one-time products must be supported."
-        _billingClient = builder.EnablePendingPurchases(
-            PendingPurchasesParams.NewBuilder().EnableOneTimeProducts().Build()
-        ).Build();
+            // We don't have the On-Time Purchase in this app, but if EnablePendingPurchases is not implemented,
+            // we get the error "Pending purchases for one-time products must be supported."
+            return builder.EnablePendingPurchases(
+                PendingPurchasesParams.NewBuilder().EnableOneTimeProducts().Build()
+            ).Build();
+        });
 
         _authenticationProvider = authenticationProvider;
     }
@@ -68,7 +71,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         // Check if the purchase subscription is supported on the user's device
         try {
             var isDeviceSupportSubscription =
-                _billingClient.IsFeatureSupported(BillingClient.FeatureType.Subscriptions);
+                _billingClient.Value.IsFeatureSupported(BillingClient.FeatureType.Subscriptions);
             if (isDeviceSupportSubscription.ResponseCode == BillingResponseCode.FeatureNotSupported)
                 throw GoogleBillingException.Create(isDeviceSupportSubscription);
         }
@@ -89,7 +92,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
         // Get products list from GooglePlay.
         try {
-            var response = await _billingClient.QueryProductDetailsAsync(productDetailsParams).ConfigureAwait(false);
+            var response = await _billingClient.Value.QueryProductDetailsAsync(productDetailsParams).ConfigureAwait(false);
             if (response.Result.ResponseCode != BillingResponseCode.Ok)
                 throw GoogleBillingException.Create(response.Result);
 
@@ -143,7 +146,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         try {
             PurchaseState = BillingPurchaseState.Started;
             _taskCompletionSource = new TaskCompletionSource<string>();
-            var billingResult = _billingClient.LaunchBillingFlow(appUiContext.Activity, billingFlowParams);
+            var billingResult = _billingClient.Value.LaunchBillingFlow(appUiContext.Activity, billingFlowParams);
 
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw GoogleBillingException.Create(billingResult);
@@ -166,7 +169,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
     private async Task EnsureConnected()
     {
-        if (_billingClient.IsReady)
+        if (_billingClient.Value.IsReady)
             return;
 
         try {
@@ -175,7 +178,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             if (result != ConnectionResult.Success)
                 throw new GooglePlayUnavailableException();
 
-            var billingResult = await _billingClient.StartConnectionAsync().ConfigureAwait(false);
+            var billingResult = await _billingClient.Value.StartConnectionAsync().ConfigureAwait(false);
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw GoogleBillingException.Create(billingResult);
         }
@@ -187,6 +190,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
     public void Dispose()
     {
-        _billingClient.Dispose();
+        if (_billingClient.IsValueCreated)
+            _billingClient.Value.Dispose();
     }
 }

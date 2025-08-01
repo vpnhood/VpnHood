@@ -15,11 +15,14 @@ using Environment = System.Environment;
 
 namespace VpnHood.Core.Client.Device.Droid;
 
+// VPN requires TypeSystemExempted:  https://developer.android.com/about/versions/14/changes/fgs-types-required#system-exempted
 [Service(
+#if !DEBUG
+    Process = ProcessName,
+#endif
     Permission = Manifest.Permission.BindVpnService,
     Exported = false,
-    // VPN requires TypeSystemExempted:  https://developer.android.com/about/versions/14/changes/fgs-types-required#system-exempted
-    ForegroundServiceType = ForegroundService.TypeSystemExempted 
+    ForegroundServiceType = ForegroundService.TypeSystemExempted
     )]
 [IntentFilter(["android.net.VpnService"])]
 public class AndroidVpnService : VpnService, IVpnServiceHandler
@@ -46,28 +49,21 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
             "AndroidVpnService OnStartCommand. Action: {Action}, ProcessId: {ProcessId}",
             action, Process.GetCurrentProcess().Id);
 
+        // Create StartForeground and show notification as soon as possible. It is mandatory
+        if (_notification is null)
+            ShowNotification(VpnServiceHost.DefaultConnectionInfo);
+
         // get "manual" in 
-        switch (action) {
+        return action switch {
             // signal start command
-            case null or "android.net.VpnService" or "connect":
-                return ProcessConnectAction(action == "connect");
-
-            case "disconnect":
-                return ProcessDisconnectAction();
-
-            default:
-                if (_vpnServiceHost == null)
-                    StopSelf(); // unknow command
-                return StartCommandResult.NotSticky;
-        }
+            null or "android.net.VpnService" or "connect" => ProcessConnectAction(action == "connect"),
+            "disconnect" => ProcessDisconnectAction(),
+            _ => ProcessUnknownAction(action)
+        };
     }
 
     private StartCommandResult ProcessConnectAction(bool forceReconnect)
     {
-        // Create StartForeground and show notification as soon as possible
-        if (_notification is null)
-            ShowNotification(VpnServiceHost.DefaultConnectionInfo);
-
         // start the VPN service host and connect to the VPN
         Task.Run(async () => {
             try {
@@ -93,6 +89,17 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
             StopSelf();
         return StartCommandResult.NotSticky;
     }
+
+    private StartCommandResult ProcessUnknownAction(string action)
+    {
+        VhLogger.Instance.LogWarning("VpnService received an unknown action: {Action}", action);
+        if (_vpnServiceHost != null)
+            return StartCommandResult.Sticky;
+
+        StopSelf(); // unknow command
+        return StartCommandResult.NotSticky;
+    }
+
 
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {

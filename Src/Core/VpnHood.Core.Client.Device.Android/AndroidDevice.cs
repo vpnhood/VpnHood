@@ -114,7 +114,7 @@ public class AndroidDevice : IDevice
             : Application.Context.StartService(intent.SetAction("connect"));
 
         if (res == null) 
-            throw new VpnServiceException("Could not start AndroidVpnService");
+            throw new VpnServiceException("Could not start AndroidVpnService.");
 
         return Task.CompletedTask;
     }

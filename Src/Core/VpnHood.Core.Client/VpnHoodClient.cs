@@ -186,17 +186,22 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     }
 
     public ClientState State {
-        get => _state;
+        get => _state == ClientState.Connected && IsWaitingForAd ? ClientState.WaitingForAd : _state;
         private set {
             if (_state == value) return;
             _state = value; //must set before raising the event; 
-            VhLogger.Instance.LogInformation("Client state is changed. NewState: {NewState}", State);
-            Task.Run(() => {
-                StateChanged?.Invoke(this, EventArgs.Empty);
-                if (value == ClientState.Disposed)
-                    StateChanged = null; //no more event will be raised after disposed
-            }, CancellationToken.None);
+            FireStateChanged();
         }
+    }
+
+    private void FireStateChanged()
+    {
+        VhLogger.Instance.LogInformation("Client state is changed. NewState: {NewState}", State);
+        Task.Run(() => {
+            StateChanged?.Invoke(this, EventArgs.Empty);
+            if (State == ClientState.Disposed)
+                StateChanged = null; //no more event will be raised after disposed
+        }, CancellationToken.None);
     }
 
     public bool IsWaitingForAd {
@@ -208,6 +213,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _isWaitingForAd = value;
             if (!value)
                 _clientHost.DropCurrentConnections();
+            FireStateChanged();
         }
     }
 

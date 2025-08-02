@@ -93,13 +93,11 @@ public class ClientAppTest : TestAppBase
         await app.WaitForState(AppConnectionState.None);
         Assert.IsTrue(app.State.LogExists);
         Assert.IsTrue(app.State.HasDiagnoseRequested);
-        Assert.IsTrue(app.State.HasDisconnectedByUser);
         Assert.IsTrue(app.State.IsIdle);
         Assert.AreEqual(nameof(NoErrorFoundException), app.State.LastError?.TypeName);
 
         app.ClearLastError();
         Assert.IsFalse(app.State.HasDiagnoseRequested);
-        Assert.IsFalse(app.State.HasDisconnectedByUser);
         Assert.IsNull(app.State.LastError);
 
         // ************
@@ -111,7 +109,6 @@ public class ClientAppTest : TestAppBase
 
         Assert.IsTrue(app.State.IsIdle);
         Assert.IsFalse(app.State.HasDiagnoseRequested);
-        Assert.IsTrue(app.State.HasDisconnectedByUser);
         Assert.IsTrue(app.State.LogExists);
     }
 
@@ -283,7 +280,8 @@ public class ClientAppTest : TestAppBase
 
         await Assert.ThrowsExactlyAsync<ConnectionTimeoutException>(() => app.Connect(clientProfile.ClientProfileId));
         await app.WaitForState(AppConnectionState.None);
-        Assert.AreEqual(nameof(ConnectionTimeoutException), app.State.LastError?.TypeName);
+        Assert.AreEqual(nameof(ConnectionTimeoutException), app.State.LastError?.TypeName, 
+            $"Message: {app.State.LastError?.Message}");
     }
 
 

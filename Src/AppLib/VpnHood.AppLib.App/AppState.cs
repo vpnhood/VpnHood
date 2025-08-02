@@ -18,7 +18,6 @@ public class AppState
     public required bool PromptForLog { get; init; }
     public required bool LogExists { get; init; }
     public required bool HasDiagnoseRequested { get; init; }
-    public required bool HasDisconnectedByUser { get; init; }
     public required string? ClientCountryCode { get; init; }
     public required string? ClientCountryName { get; init; }
     public required VersionStatus VersionStatus { get; init; }

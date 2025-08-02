@@ -15,7 +15,6 @@ internal class AppPersistState(string filePath)
         public ApiError? LastError { get; set; }
         public ApiError? LastClearedError { get; set; }
         public DateTime UpdateIgnoreTime { get; set; } = DateTime.MinValue;
-        public bool HasDisconnectedByUser { get; set; }
         public DateTime? ConnectRequestTime { get; set; }
         public bool HasDiagnoseRequested { get; set; }
     }
@@ -59,19 +58,6 @@ internal class AppPersistState(string filePath)
                 return;
 
             _data.UpdateIgnoreTime = value;
-            Save();
-        }
-    }
-
-    public bool HasDisconnectedByUser
-    {
-        get => _data.HasDisconnectedByUser;
-        set
-        {
-            if (_data.HasDisconnectedByUser == value)
-                return;
-
-            _data.HasDisconnectedByUser = value;
             Save();
         }
     }

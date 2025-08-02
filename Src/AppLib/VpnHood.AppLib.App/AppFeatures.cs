@@ -27,6 +27,8 @@ public class AppFeatures
     public required bool IsLocalNetworkSupported { get; init; }
     public required bool AdjustForSystemBars { get; init; }
     public required bool AllowEndPointStrategy { get; init; }
+    public required bool AutoRemovePremium { get; set; } 
+
     public required object? CustomData { get; init; }
 
     [JsonConverter(typeof(VersionConverter))]

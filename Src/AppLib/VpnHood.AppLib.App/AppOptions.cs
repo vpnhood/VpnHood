@@ -52,4 +52,5 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public bool AdjustForSystemBars { get; set; } = true;
     public bool AllowEndPointStrategy { get; set; }
     public object? CustomData { get; set; }
+    public bool AutoRemovePremium { get; set; } // auto remove premium on access code reject
 }

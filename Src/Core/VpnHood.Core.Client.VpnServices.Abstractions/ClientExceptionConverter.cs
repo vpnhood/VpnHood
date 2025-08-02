@@ -20,6 +20,7 @@ public static class ClientExceptionConverter
         if (apiError.Is<UiContextNotAvailableException>())
             exception = new UiContextNotAvailableException();
 
+        // ad
         if (apiError.Is<AdException>())
             exception = new AdException(apiError.Message);
         
@@ -31,6 +32,10 @@ public static class ClientExceptionConverter
 
         if (apiError.Is<LoadAdException>())
             exception = new LoadAdException(apiError.Message);
+
+        // service
+        if (apiError.Is<AutoStartNotSupportedException>())
+            exception = new AutoStartNotSupportedException(apiError.Message);
 
         // client
         if (apiError.Is<NoInternetException>())

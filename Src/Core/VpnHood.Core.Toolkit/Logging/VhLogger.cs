@@ -92,7 +92,7 @@ public static class VhLogger
     public static string FormatHostName(string? dnsName)
     {
         if (dnsName == null) return "<null>";
-        if (IPEndPointConverter.TryParse(dnsName, out var ipEndPoint))
+        if (IPEndPoint.TryParse(dnsName, out var ipEndPoint))
             return Format(ipEndPoint);
 
         return IsAnonymousMode ? VhUtils.RedactHostName(dnsName) : dnsName;

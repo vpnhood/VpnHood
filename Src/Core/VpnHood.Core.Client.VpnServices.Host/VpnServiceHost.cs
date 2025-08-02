@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.ApiClients;
@@ -82,7 +83,7 @@ public class VpnServiceHost : IDisposable
         });
     }
 
-    public async Task<bool> TryConnect(bool forceReconnect = false)
+    public async Task<bool> TryConnect(bool forceReconnect = false, bool isAutoStart = false)
     {
         if (_isDisposed == 1)
             return false;
@@ -118,7 +119,7 @@ public class VpnServiceHost : IDisposable
 
             // start connecting 
             _connectCts = new CancellationTokenSource();
-            await Connect(_connectCts.Token);
+            await Connect(isAutoStart, _connectCts.Token);
             return true;
         }
         catch (Exception ex) {
@@ -129,12 +130,16 @@ public class VpnServiceHost : IDisposable
         }
     }
 
-    private async Task Connect(CancellationToken cancellationToken)
+    private async Task Connect(bool isAutoStart, CancellationToken cancellationToken)
     {
         try {
             // read client options and start log service
             var clientOptions = Context.ReadClientOptions();
             _logService?.Start(clientOptions.LogServiceOptions, deleteOldReport: false);
+
+            // check if auto start is allowed
+            if (isAutoStart && !clientOptions.AllowAutoStart) 
+                throw new AutoStartNotSupportedException("Auto start is only available for premium accounts.");
 
             // restart the log service
             VhLogger.Instance.LogInformation("VpnService is connecting... ProcessId: {ProcessId}", Process.GetCurrentProcess().Id);

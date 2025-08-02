@@ -34,6 +34,20 @@
 		<AssemblyVersion></AssemblyVersion>
 	</PropertyGroup>
 
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodClient\appsettings.json')">
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>AppSettings</_Parameter1>
+			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodClient\appsettings.json"))</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
+
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodClient\appsettings.$(Configuration).json')">
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>AppSettings_Environment</_Parameter1>
+			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodClient\appsettings.$(Configuration).json"))</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
+
 	<ItemGroup>
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />

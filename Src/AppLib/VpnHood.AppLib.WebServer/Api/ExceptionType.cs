@@ -65,5 +65,8 @@ public enum ExceptionType
     ConnectionTimeout,
 
     [EnumMember(Value = nameof(EndPointDiscoveryException))]
-    EndPointDiscovery
+    EndPointDiscovery,
+
+    [EnumMember(Value = nameof(AutoStartNotSupportedException))]
+    AutoStartNotSupported
 }

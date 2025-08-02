@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO.Compression;
 using System.Net;
@@ -70,6 +69,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _isFindingCountryCode;
     private AppConnectionState? _lastConnectionState;
     private CancellationTokenSource _connectCts = new();
+    private CancellationTokenSource _showAdCts = new();
     private CancellationTokenSource _connectTimeoutCts = new();
     private VersionCheckResult? _versionCheckResult;
     private CultureInfo? _systemUiCulture;
@@ -158,6 +158,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
             IsPremiumFlagSupported = !options.IsAddAccessKeySupported,
             IsPremiumFeaturesForced = options.IsAddAccessKeySupported,
+            AutoRemovePremium = options.AutoRemovePremium,
             AllowEndPointStrategy = options.AllowEndPointStrategy,
             IsTv = device.IsTv,
             AdjustForSystemBars = options.AdjustForSystemBars,
@@ -209,11 +210,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             loadAdPostDelay: options.AdOptions.LoadAdPostDelay,
             device: _device,
             tracker: tracker);
-        
+
         AdManager = new AppAdManager(
-            adService, 
+            adService,
             _vpnServiceManager,
-            extendByRewardedAdThreshold: options.AdOptions.ExtendByRewardedAdThreshold, 
+            extendByRewardedAdThreshold: options.AdOptions.ExtendByRewardedAdThreshold,
             showAdPostDelay: options.AdOptions.ShowAdPostDelay,
             isPreloadAdEnabled: options.AdOptions.PreloadAd);
 
@@ -251,13 +252,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 await Services.Tracker.Track(AppTrackerBuilder.BuildFirstLaunch(Features.ClientId, countryCode));
                 SettingsService.AppSettings.IsStartupTrackerSent = true;
                 SettingsService.AppSettings.Save();
-            }
-
-            // disconnect if old connection is waiting for ad
-            if (ConnectionState == AppConnectionState.WaitingForAd && !AdManager.IsShowing && LastError == null) {
-                VhLogger.Instance.LogInformation("Disconnecting due to the waiting for ad state on startup...");
-                _ = TryDisconnect().Vhc();
-                _appPersistState.LastError = new ShowAdNoUiException().ToApiError();
             }
         }
         catch (Exception ex) {
@@ -337,12 +331,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 return null;
 
             // Show error if a diagnosis has been requested and there is no error
-            if (_appPersistState is { HasDiagnoseRequested: true })
+            if (_appPersistState is { HasDiagnoseRequested: true } &&
+                _appPersistState.LastError?.TypeName != nameof(UserCanceledException))
                 return new NoErrorFoundException().ToApiError();
-
-            // don't show error if user has disconnected by user
-            if (_appPersistState.HasDisconnectedByUser)
-                return null;
 
             // show last error
             if (_appPersistState.LastError != null)
@@ -371,7 +362,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 PromptForLog = IsIdle && _appPersistState.HasDiagnoseRequested && _logService.Exists,
                 LogExists = _logService.Exists,
                 HasDiagnoseRequested = _appPersistState.HasDiagnoseRequested,
-                HasDisconnectedByUser = _appPersistState.HasDisconnectedByUser,
                 ClientCountryCode = GetClientCountryCode(false), // split country don't follow server location
                 ClientCountryName = VhUtils.TryGetCountryName(GetClientCountryCode(false)), // split country don't follow server location
                 ConnectRequestTime = _appPersistState.ConnectRequestTime,
@@ -415,10 +405,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (clientState == ClientState.Waiting)
                 return AppConnectionState.Waiting;
 
+            if (clientState == ClientState.WaitingForAd)
+                return AppConnectionState.WaitingForAd;
+
             if (clientState == ClientState.Connected)
-                return connectionInfo.SessionStatus?.IsWaitingForAd == true && !AdManager.IsWaitingForPostDelay
-                    ? AppConnectionState.WaitingForAd
-                    : AppConnectionState.Connected;
+                return AppConnectionState.Connected;
 
             if (clientState == ClientState.Connecting || _isConnecting)
                 return AppConnectionState.Connecting;
@@ -453,7 +444,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         _appPersistState.LastError = null;
         _appPersistState.LastClearedError = ConnectionInfo.Error;
-        _appPersistState.HasDisconnectedByUser = false;
         _appPersistState.HasDiagnoseRequested = false;
     }
 
@@ -511,33 +501,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _connectCts = new CancellationTokenSource();
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectCts.Token);
             _isConnecting = true; //must be after checking IsIdle
-
+            ClearLastError();
             await ConnectInternal1(connectOptions, linkedCts.Token);
-
-            // show ad
-            try {
-                if (ConnectionInfo.SessionInfo != null)
-                    await AdManager.ShowAd(ConnectionInfo.SessionInfo.SessionId, ConnectionInfo.SessionInfo.AdRequirement,
-                        linkedCts.Token);
-            }
-            catch (Exception){
-                _ = TryDisconnect(false);
-                throw;
-            }
-
-            // check the version after the first connection
-            _ = VersionCheck(delay: TimeSpan.Zero, force: false, cancellationToken: CancellationToken.None);
-
-        }
-        catch (UserCanceledException ex) {
-            _appPersistState.HasDisconnectedByUser = true;
-            VhLogger.Instance.LogInformation("Connection canceled by user.");
-            _appPersistState.LastError = ex.ToApiError();
-            throw;
         }
         catch (Exception ex) {
             ReportError(ex, "Could not establish the connection.");
             _appPersistState.LastError = ex.ToApiError();
+            _ = _vpnServiceManager.TryStop();
             throw;
         }
         finally {
@@ -555,18 +525,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         try {
             var clientProfileInfo = ClientProfileService.GetInfo(clientProfileId);
-            var serverLocation = connectOptions.ServerLocation ?? clientProfileInfo.SelectedLocationInfo?.ServerLocation;
+            var serverLocation =
+                connectOptions.ServerLocation ?? clientProfileInfo.SelectedLocationInfo?.ServerLocation;
 
             // set timeout
-            var timeout = Debugger.IsAttached ? VhUtils.DebuggerTimeout : _connectTimeout;
-            if (connectOptions.Diagnose) timeout = _connectTimeout * 3;
-            _connectTimeoutCts = new CancellationTokenSource(timeout);
-
-            // Reset everything
-            ClearLastError();
+            _connectTimeoutCts = new CancellationTokenSource(
+                connectOptions.Diagnose ? _connectTimeout * 3 : _connectTimeout);
 
             // create cancellationToken after disconnecting previous connection
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectTimeoutCts.Token);
+            using var linkedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectTimeoutCts.Token);
 
             // reset connection state
             _appPersistState.LastClearedError = null; // it is a new connection
@@ -625,43 +593,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     cancellationToken: linkedCts.Token)
                 .Vhc();
         }
-        catch (ObjectDisposedException) when (_appPersistState.HasDisconnectedByUser) {
+        catch (Exception) when (_appPersistState.LastError != null) {
+            throw ClientExceptionConverter.ApiErrorToException(_appPersistState.LastError);
+        }
+        catch (Exception) when (_connectCts.IsCancellationRequested) {
             throw new UserCanceledException("User has cancelled the connection.");
         }
-        catch (OperationCanceledException) when (_appPersistState.HasDisconnectedByUser) {
-            throw new UserCanceledException("User has cancelled the connection.");
-        }
-        catch (Exception ex) {
-            if (ex is SessionException sessionException) {
-                switch (sessionException.SessionResponse.ErrorCode) {
-                    case SessionErrorCode.NoServerAvailable:
-                    case SessionErrorCode.PremiumLocation:
-                        ClientProfileService.Update(clientProfileId,
-                            new ClientProfileUpdateParams { SelectedLocation = new Patch<string?>(null) });
-                        break;
-
-                    case SessionErrorCode.AccessCodeRejected:
-                        ClientProfileService.Update(clientProfileId,
-                            new ClientProfileUpdateParams { AccessCode = new Patch<string?>(null) });
-                        break;
-
-                        // Remove it, so let user get prompted to restore free version
-                        // remove the client profile if access expired
-                        //case SessionErrorCode.AccessExpired when clientProfile.IsForAccount:
-                        //    ClientProfileService.Delete(clientProfile.ClientProfileId);
-                        //    _ = Services.AccountService?.Refresh(true);
-                        //    break;
-                }
-            }
-
-            // stop client on any error
-            _ = _vpnServiceManager.TryStop();
-
+        catch (Exception ex)  {
             // check no internet connection, use the original cancellation token to avoid timeout exception
-            if (_autoDiagnose && ex is not SessionException &&
-                _appPersistState is { HasDisconnectedByUser: false, HasDiagnoseRequested: false }) {
+            if (_autoDiagnose && !_appPersistState.HasDiagnoseRequested &&
+                ex is not UserCanceledException && ex is not SessionException) {
                 VhLogger.Instance.LogDebug("Start checking client network...");
-
+                
                 // use the original cancellation token to avoid the timeout exception consumed by Connect
                 await Diagnoser.CheckPureNetwork(cancellationToken).Vhc();
             }
@@ -670,9 +613,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private async Task ConnectInternal2(Token token, string? serverLocation, string? userAgent, 
+    private async Task ConnectInternal2(Token token, string? serverLocation, string? userAgent,
         ConnectPlanId planId, string? accessCode, bool allowUpdateToken, CancellationToken cancellationToken)
     {
+        var profileInfo = CurrentClientProfileInfo ?? throw new NotExistsException("ClientProfile is not set.");
+
         try {
             // show token info
             VhLogger.Instance.LogInformation("TokenId: {TokenId}, SupportId: {SupportId}",
@@ -686,8 +631,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Exclude(
                         IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.AdapterIpFilterExcludes));
             }
-
-            var profileInfo = CurrentClientProfileInfo ?? throw new NotExistsException("ClientProfile is not set.");
 
             // use default DNS servers if not premium account
             var dnsServers = UserSettings.DnsServers;
@@ -734,7 +677,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 DebugData1 = UserSettings.DebugData1,
                 DebugData2 = UserSettings.DebugData2,
                 SessionName = profileInfo.ClientProfileName,
-                CustomServerEndpoints = profileInfo.CustomServerEndpoints
+                CustomServerEndpoints = profileInfo.CustomServerEndpoints,
+                AllowAutoStart = Features.IsPremiumFeaturesForced || profileInfo.IsPremiumAccount,
             };
 
             VhLogger.Instance.LogDebug(
@@ -771,17 +715,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             throw new ConnectionTimeoutException($"Could not establish the connection in {_connectTimeout.TotalSeconds} seconds.", ex);
         }
         catch (Exception ex) {
-            if (ex is SessionException sessionException) {
-                // update the access token if AccessKey is set
-                if (!string.IsNullOrWhiteSpace(sessionException.SessionResponse.AccessKey)) {
-                    ClientProfileService.TryUpdateTokenByAccessKey(token.TokenId, sessionException.SessionResponse.AccessKey);
-                    sessionException.SessionResponse.AccessKey = null;
-                }
-
-                // update client country by server
-                if (sessionException.SessionResponse is { ClientCountry: not null, ClientPublicAddress: not null })
-                    UpdateClientIpLocationFromServer(sessionException.SessionResponse.ClientPublicAddress, sessionException.SessionResponse.ClientCountry);
-            }
+            if (ex is SessionException sessionException)
+                ProcessSessionException(sessionException, profileInfo);
 
             // try to update the token from url after connection or error if ResponseAccessKey is not set
             if (ex is not NoInternetException && // diagnoser
@@ -803,6 +738,44 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
             throw;
+        }
+    }
+
+    private void ProcessSessionException(SessionException sessionException, ClientProfileInfo profileInfo)
+    {
+        // update the access token if AccessKey is set
+        if (!string.IsNullOrWhiteSpace(sessionException.SessionResponse.AccessKey)) {
+            ClientProfileService.TryUpdateTokenByAccessKey(profileInfo.TokenId, sessionException.SessionResponse.AccessKey);
+            sessionException.SessionResponse.AccessKey = null;
+        }
+
+        // update client country by server
+        if (sessionException.SessionResponse is { ClientCountry: not null, ClientPublicAddress: not null })
+            UpdateClientIpLocationFromServer(sessionException.SessionResponse.ClientPublicAddress, sessionException.SessionResponse.ClientCountry);
+
+        // process session error codes
+        switch (sessionException.SessionResponse.ErrorCode) {
+
+            // reset the selected location if no server available or premium location required
+            case SessionErrorCode.NoServerAvailable or SessionErrorCode.PremiumLocation:
+                VhLogger.Instance.LogWarning("No server available or premium location required. Resetting selected location.");
+                ClientProfileService.Update(profileInfo.ClientProfileId,
+                    new ClientProfileUpdateParams { SelectedLocation = new Patch<string?>(null) });
+                break;
+
+            // remove the access code if it is rejected
+            case SessionErrorCode.AccessCodeRejected when Features.AutoRemovePremium:
+                VhLogger.Instance.LogWarning("Access code rejected. Removing the access code from profile.");
+                ClientProfileService.Update(profileInfo.ClientProfileId,
+                    new ClientProfileUpdateParams { AccessCode = new Patch<string?>(null) });
+                break;
+
+            // remove the client profile if access expired
+            case SessionErrorCode.AccessExpired when Features.AutoRemovePremium && profileInfo.IsForAccount:
+                VhLogger.Instance.LogWarning("Access expired. Removing the premium profile.");
+                ClientProfileService.Delete(profileInfo.ClientProfileId);
+                _ = Services.AccountService?.Refresh(true);
+                break;
         }
     }
 
@@ -989,17 +962,53 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private void VpnService_StateChanged(object? sender, EventArgs e)
     {
         // clear the last error when get out of idle state, because it indicates a new connection has started
+        // do not call ClearLastError, it will clear diagnose request state. it must be called by the user
         if (!IsIdle)
-            _appPersistState.LastClearedError = null;
+            _appPersistState.LastError = null;
+
+        // Show ad if it is waiting for ad
+        if (ConnectionState is AppConnectionState.WaitingForAd)
+            _ = TryShowAd();
+
+        // check the version after the first connection
+        if (ConnectionState is AppConnectionState.Connected)
+            _ = VhUtils.TryInvokeAsync("VersionCheck", () => VersionCheck(delay: TimeSpan.Zero, force: false,
+                cancellationToken: CancellationToken.None));
 
         // fire connection state changed
         FireConnectionStateChanged();
     }
 
-    public async Task TryDisconnect(bool byUser = true)
+    private readonly AsyncLock _showAdLock = new();
+    private async Task TryShowAd()
+    {
+        // lock session
+        using var scopeLock = await _showAdLock.LockAsync(timeout: TimeSpan.Zero);
+        if (!scopeLock.Succeeded || AdManager.IsShowing)
+            return; // already showing ad
+
+        ArgumentNullException.ThrowIfNull(ConnectionInfo.SessionInfo);
+
+        try {
+            await _showAdCts.TryCancelAsync().Vhc();
+            _showAdCts.Dispose();
+            _showAdCts = new CancellationTokenSource();
+
+            await AdManager.ShowAd(ConnectionInfo.SessionInfo.SessionId, ConnectionInfo.SessionInfo.AdRequirement, _showAdCts.Token);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not show ad.");
+            if (!_showAdCts.IsCancellationRequested) {
+                _appPersistState.LastError = ex.ToApiError();
+                _ = TryDisconnect();
+            }
+        }
+    }
+
+    public async Task TryDisconnect()
     {
         try {
-            await Disconnect(byUser).Vhc();
+            await Disconnect().Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not disconnect gracefully.");
@@ -1007,7 +1016,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private readonly AsyncLock _disconnectLock = new();
-    public async Task Disconnect(bool byUser = true)
+    public async Task Disconnect()
     {
         using var scopeLock = await _disconnectLock.LockAsync();
         if (_isDisconnecting)
@@ -1015,12 +1024,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         try {
             _isDisconnecting = true;
-            VhLogger.Instance.LogInformation("Disconnect has been requested. Actor: {actor}.", 
-                byUser ? "User" : "System");
-            _appPersistState.HasDisconnectedByUser = byUser;
+            VhLogger.Instance.LogInformation("Disconnect has been requested.");
 
             await _connectCts.TryCancelAsync().Vhc();
             _connectCts.Dispose();
+
+            await _showAdCts.TryCancelAsync().Vhc();
+            _showAdCts.Dispose();
 
             // stop VpnService if it is running
             await _vpnServiceManager.TryStop().Vhc();

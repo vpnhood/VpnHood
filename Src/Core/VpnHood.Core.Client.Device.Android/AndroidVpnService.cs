@@ -1,17 +1,16 @@
-﻿using System.Diagnostics;
-using Android;
+﻿using Android;
 using Android.Content;
 using Android.Content.PM;
 using Android.Net;
 using Android.Runtime;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.AndroidTun;
-using Environment = System.Environment;
 
 namespace VpnHood.Core.Client.Device.Droid;
 
@@ -49,6 +48,8 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
             "AndroidVpnService OnStartCommand. Action: {Action}, ProcessId: {ProcessId}",
             action, Process.GetCurrentProcess().Id);
 
+        //todo: check what we get for disable/enable always-on
+
         // Create StartForeground and show notification as soon as possible. It is mandatory
         if (_notification is null)
             ShowNotification(VpnServiceHost.DefaultConnectionInfo);
@@ -56,20 +57,24 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         // get "manual" in 
         return action switch {
             // signal start command
-            null or "android.net.VpnService" or "connect" => ProcessConnectAction(action == "connect"),
+            null or "android.net.VpnService" => ProcessConnectAction(forceReconnect: false, alwaysOn: true),
+            "connect" => ProcessConnectAction(action == "connect", false),
             "disconnect" => ProcessDisconnectAction(),
             _ => ProcessUnknownAction(action)
         };
     }
 
-    private StartCommandResult ProcessConnectAction(bool forceReconnect)
+    private StartCommandResult ProcessConnectAction(bool forceReconnect, bool alwaysOn)
     {
+        if (OperatingSystem.IsAndroidVersionAtLeast(29))
+            alwaysOn |= IsAlwaysOn;
+
         // start the VPN service host and connect to the VPN
         Task.Run(async () => {
             try {
-                VhLogger.Instance.LogDebug("Starting VPN service host.");
+                VhLogger.Instance.LogDebug("Starting VPN service host. AlwaysOn: {AlwaysOn}", alwaysOn);
                 _vpnServiceHost ??= new VpnServiceHost(VpnServiceConfigFolder, this, new SocketFactory());
-                if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect))
+                if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect, isAutoStart: alwaysOn))
                     StopSelf();
             }
             catch (Exception ex) {

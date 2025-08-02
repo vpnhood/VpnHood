@@ -11,13 +11,13 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class AccessCodeTest : TestAppBase
 {
-
     [TestMethod]
     public async Task AaFoo()
     {
         var tcpClient = new TcpClient();
         Console.WriteLine(tcpClient.ReceiveBufferSize);
         Console.WriteLine(tcpClient.SendBufferSize);
+        
 
         await Task.CompletedTask;
     }
@@ -62,7 +62,10 @@ public class AccessCodeTest : TestAppBase
         var accessCode = TestAppHelper.BuildAccessCode();
 
         // create access code
-        await using var app = TestAppHelper.CreateClientApp();
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AutoRemovePremium = true; // auto remove premium on access code reject
+
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
         app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
             AccessCode = accessCode

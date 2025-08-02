@@ -20,5 +20,4 @@ public interface ISessionStatus
     long SessionMaxTraffic { get; }
     DateTime? SessionExpirationTime { get; }
     int? ActiveClientCount { get; }
-    bool IsWaitingForAd { get; }
 }

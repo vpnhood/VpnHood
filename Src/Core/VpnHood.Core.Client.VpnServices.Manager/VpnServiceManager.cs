@@ -397,11 +397,9 @@ public class VpnServiceManager : IDisposable
     {
         var connectionInfo = _connectionInfo;
         // check if the state has changed
-        if (_lastConnectionInfo?.ClientState != connectionInfo.ClientState ||
-            _lastConnectionInfo.SessionStatus?.IsWaitingForAd != connectionInfo.SessionStatus?.IsWaitingForAd) {
-            VhLogger.Instance.LogDebug(
-                "The VpnService state has been changed. {OldSate} => {NewState}, IsWaitingForAd: {IsWaitingForAd}",
-                _lastConnectionInfo?.ClientState, connectionInfo.ClientState, connectionInfo.SessionStatus?.IsWaitingForAd);
+        if (_lastConnectionInfo?.ClientState != connectionInfo.ClientState) {
+            VhLogger.Instance.LogDebug("The VpnService state has been changed. {OldSate} => {NewState}",
+                _lastConnectionInfo?.ClientState, connectionInfo.ClientState);
 
             Task.Run(() => StateChanged?.Invoke(this, EventArgs.Empty), CancellationToken.None);
         }

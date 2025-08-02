@@ -846,8 +846,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             }
 
             _lastConnectionErrorTime = null;
-            if (SessionInfo != null && _vpnAdapter.IsStarted)
-                State = ClientState.Connected;
+            if (SessionInfo != null && _vpnAdapter.IsStarted) {
+                State = ClientState.Connected; // stable state
+            }
             return requestResult;
         }
         catch (SessionException ex) {
@@ -888,8 +889,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             }
 
             // set connecting state if it could not establish any connection
-            else if (State == ClientState.Connected)
-                State = ClientState.Connecting;
+            else if (State == ClientState.Connected) {
+                State = ClientState.Connecting; //unstable
+            }
 
             throw;
         }
@@ -943,7 +945,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     }
 
     private readonly AsyncLock _disposeLock = new();
-
     public async ValueTask DisposeAsync()
     {
         using var lockScope = await _disposeLock.LockAsync();
@@ -1087,7 +1088,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public int ActivePacketChannelCount => client._tunnel.PacketChannelCount;
         public bool IsUdpMode => client.UseUdpChannel;
         public bool CanExtendByRewardedAd => _accessUsage.CanExtendByRewardedAd;
-        public bool IsWaitingForAd => client.IsWaitingForAd;
         public long SessionMaxTraffic => _accessUsage.MaxTraffic;
         public DateTime? SessionExpirationTime => _accessUsage.ExpirationTime;
         public int? ActiveClientCount => _accessUsage.ActiveClientCount;

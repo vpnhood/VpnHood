@@ -138,6 +138,7 @@ public class AdTest : TestAppBase
             Assert.IsNull(app.State.SessionStatus?.SessionExpirationTime);
         }
         else {
+            await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd);
             var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
                 app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);

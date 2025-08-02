@@ -1,3 +1,4 @@
+using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Assets.ClassicSpa;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
@@ -22,4 +23,12 @@ public static class ConnectAppResources
     });
 
     public static AppResources Resources => LazyResource.Value;
+
+    public static AppFeature[] PremiumFeatures = [
+        AppFeature.CustomDns,
+        AppFeature.AlwaysOn,
+        AppFeature.QuickLaunch,
+        AppFeature.AppIpFilter,
+        AppFeature.AdapterIpFilter
+    ];
 }

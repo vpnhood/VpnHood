@@ -7,5 +7,7 @@ public enum AppFeature
 {
     QuickLaunch,
     AlwaysOn,
-    CustomDns
+    CustomDns,
+    AppIpFilter,
+    AdapterIpFilter
 }

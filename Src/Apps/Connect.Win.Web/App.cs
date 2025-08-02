@@ -36,11 +36,7 @@ public class App : VpnHoodWpfSpaApp
             LocalSpaHostName = "my-vpnhood-connect",
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
-            PremiumFeatures = [
-                AppFeature.CustomDns,
-                AppFeature.AlwaysOn,
-                AppFeature.QuickLaunch
-            ],
+            PremiumFeatures = ConnectAppResources.PremiumFeatures,
             LogServiceOptions = {
                 SingleLineConsole = false
             }

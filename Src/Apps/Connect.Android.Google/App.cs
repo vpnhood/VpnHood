@@ -53,11 +53,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             AdjustForSystemBars = false,
             TrackerFactory = new FirebaseAnalyticsTrackerFactory(),
-            PremiumFeatures = [
-                AppFeature.CustomDns, 
-                AppFeature.AlwaysOn, 
-                AppFeature.QuickLaunch 
-            ],
+            PremiumFeatures = ConnectAppResources.PremiumFeatures,
             AdOptions = new AppAdOptions {
                 PreloadAd = false
             }

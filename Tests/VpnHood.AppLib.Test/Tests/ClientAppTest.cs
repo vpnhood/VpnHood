@@ -280,8 +280,7 @@ public class ClientAppTest : TestAppBase
 
         await Assert.ThrowsExactlyAsync<ConnectionTimeoutException>(() => app.Connect(clientProfile.ClientProfileId));
         await app.WaitForState(AppConnectionState.None);
-        Assert.AreEqual(nameof(ConnectionTimeoutException), app.State.LastError?.TypeName, 
-            $"Message: {app.State.LastError?.Message}");
+        Assert.AreEqual(nameof(ConnectionTimeoutException), app.State.LastError?.TypeName);
     }
 
 

@@ -507,7 +507,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         catch (Exception ex) {
             ReportError(ex, "Could not establish the connection.");
             _appPersistState.LastError = ex.ToApiError();
-            _ = _vpnServiceManager.TryStop();
+            await TryDisconnect();
+            _appPersistState.LastError = ex.ToApiError(); // make sure it is not overwritten by the disconnect
             throw;
         }
         finally {
@@ -963,7 +964,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // clear the last error when get out of idle state, because it indicates a new connection has started
         // do not call ClearLastError, it will clear diagnose request state. it must be called by the user
-        if (!IsIdle)
+        if (!IsIdle) 
             _appPersistState.LastError = null;
 
         // Show ad if it is waiting for ad

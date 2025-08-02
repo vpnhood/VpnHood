@@ -43,12 +43,10 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     public override StartCommandResult OnStartCommand(Intent? intent,
         [GeneratedEnum] StartCommandFlags flags, int startId)
     {
-        var action = intent?.Action;
-        VhLogger.Instance.LogInformation(
+        var action = intent?.Action; 
+        VhLogger.Instance.LogInformation( // logger may not be initialized yet
             "AndroidVpnService OnStartCommand. Action: {Action}, ProcessId: {ProcessId}",
             action, Process.GetCurrentProcess().Id);
-
-        //todo: check what we get for disable/enable always-on
 
         // Create StartForeground and show notification as soon as possible. It is mandatory
         if (_notification is null)

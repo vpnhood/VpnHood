@@ -508,8 +508,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         catch (Exception ex) {
             ReportError(ex, "Could not establish the connection.");
             _appPersistState.LastError = ex.ToApiError();
-            await TryDisconnect();
-            _appPersistState.LastError = ex.ToApiError(); // make sure it is not overwritten by the disconnect
+            await TryDisconnect(); // await, to prevent VpnService_StateChanged clear the LastError
             throw;
         }
         finally {
@@ -821,21 +820,22 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private async Task RequestFeatures(CancellationToken cancellationToken)
     {
         // QuickLaunch
-        if (AppUiContext.Context != null &&
-            Services.UiProvider.IsQuickLaunchSupported &&
-            Settings.IsQuickLaunchEnabled is null) {
-            try {
-                VhLogger.Instance.LogInformation("Prompting for Quick Launch...");
-                Settings.IsQuickLaunchEnabled =
-                    await Services.UiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, cancellationToken)
-                        .Vhc();
-            }
-            catch (Exception ex) {
-                ReportError(ex, "Could not add QuickLaunch.");
-            }
+        //todo: add it after few connections
+        //if (AppUiContext.Context != null &&
+        //    Services.UiProvider.IsQuickLaunchSupported &&
+        //    Settings.IsQuickLaunchEnabled is null) {
+        //    try {
+        //        VhLogger.Instance.LogInformation("Prompting for Quick Launch...");
+        //        Settings.IsQuickLaunchEnabled =
+        //            await Services.UiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, cancellationToken)
+        //                .Vhc();
+        //    }
+        //    catch (Exception ex) {
+        //        ReportError(ex, "Could not add QuickLaunch.");
+        //    }
 
-            Settings.Save();
-        }
+        //    Settings.Save();
+        //}
 
         // Notification
         if (AppUiContext.Context != null &&
@@ -971,7 +971,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // clear the last error when get out of idle state, because it indicates a new connection has started
         // do not call ClearLastError, it will clear diagnose request state. it must be called by the user
-        if (!IsIdle) 
+        if (!IsIdle && _isConnecting) // don't clear if it is initiated by connect
             _appPersistState.LastError = null;
 
         // Show ad if it is waiting for ad

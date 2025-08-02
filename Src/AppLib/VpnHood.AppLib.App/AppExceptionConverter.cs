@@ -1,5 +1,6 @@
 ﻿using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Exceptions;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib;
@@ -33,6 +34,6 @@ public static class AppExceptionConverter
         if (exception != null)
             apiError.ExportData(exception.Data);
 
-        return exception;
+        return exception ?? ClientExceptionConverter.ApiErrorToException(apiError);
     }
 }

@@ -55,7 +55,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             TrackerFactory = new FirebaseAnalyticsTrackerFactory(),
             PremiumFeatures = ConnectAppResources.PremiumFeatures,
             AdOptions = new AppAdOptions {
-                PreloadAd = false
+                PreloadAd = true
             }
         };
     }

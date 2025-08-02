@@ -35,6 +35,7 @@ using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
+using PremiumOnlyException = VpnHood.AppLib.Exceptions.PremiumOnlyException;
 using TaskExtensions = VpnHood.Core.Toolkit.Utils.TaskExtensions;
 
 namespace VpnHood.AppLib;
@@ -157,7 +158,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsIncludeAppsSupported = _device.IsIncludeAppsSupported,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
             IsPremiumFlagSupported = !options.IsAddAccessKeySupported,
-            IsPremiumFeaturesForced = options.IsAddAccessKeySupported,
             AutoRemovePremium = options.AutoRemovePremium,
             AllowEndPointStrategy = options.AllowEndPointStrategy,
             IsTv = device.IsTv,
@@ -167,16 +167,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId,
             IsAccountSupported = options.AccountProvider != null,
             IsBillingSupported = options.AccountProvider?.BillingProvider != null,
+            IsAlwaysOnSupported = uiProvider.IsAlwaysOnSupported,
             IsQuickLaunchSupported = uiProvider.IsQuickLaunchSupported,
             IsNotificationSupported = uiProvider.IsNotificationSupported,
-            IsAlwaysOnSupported = device.IsAlwaysOnSupported,
             GaMeasurementId = options.Ga4MeasurementId,
             ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId),
             AppId = options.AppId,
             DebugCommands = DebugCommands.All,
             IsLocalNetworkSupported = options.IsLocalNetworkSupported,
             IsDebugMode = options.IsDebugMode,
-            CustomData = options.CustomData
+            CustomData = options.CustomData,
+            PremiumFeatures = options.PremiumFeatures
         };
 
         // create tracker
@@ -595,7 +596,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 .Vhc();
         }
         catch (Exception) when (_appPersistState.LastError != null) {
-            throw ClientExceptionConverter.ApiErrorToException(_appPersistState.LastError);
+            throw AppExceptionConverter.ApiErrorToException(_appPersistState.LastError) ?? _appPersistState.LastError.ToException();
         }
         catch (Exception) when (_connectCts.IsCancellationRequested) {
             throw new UserCanceledException("User has cancelled the connection.");
@@ -622,21 +623,23 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         try {
             // show token info
             VhLogger.Instance.LogInformation("TokenId: {TokenId}, SupportId: {SupportId}",
-            VhLogger.FormatId(token.TokenId), VhLogger.FormatId(token.SupportId));
+                VhLogger.FormatId(token.TokenId), VhLogger.FormatId(token.SupportId));
 
             // calculate vpnAdapterIpRanges
             var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
             if (UserSettings.UseVpnAdapterIpFilter) {
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Intersect(
-                        IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.AdapterIpFilterIncludes));
+                    IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.AdapterIpFilterIncludes));
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Exclude(
-                        IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.AdapterIpFilterExcludes));
+                    IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.AdapterIpFilterExcludes));
             }
 
             // use default DNS servers if not premium account
             var dnsServers = UserSettings.DnsServers;
-            if (!VhUtils.IsNullOrEmpty(dnsServers) && !profileInfo.IsPremiumAccount && !Features.IsPremiumFeaturesForced) {
-                VhLogger.Instance.LogWarning("DNS servers are not supported for non-premium accounts. Using default DNS servers.");
+            if (!VhUtils.IsNullOrEmpty(dnsServers) && !profileInfo.IsPremiumAccount &&
+                !Features.PremiumFeatures.Contains(AppFeature.CustomDns)) {
+                VhLogger.Instance.LogWarning(
+                    "Custom DNS servers are not supported for non-premium accounts. Using default DNS servers.");
                 dnsServers = null;
             }
 
@@ -674,12 +677,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 Version = Features.Version,
                 TrackerFactoryAssemblyQualifiedName = _trackerFactory.GetType().AssemblyQualifiedName,
                 UserAgent = userAgent ?? ClientOptions.Default.UserAgent,
-                EndPointStrategy = Features.AllowEndPointStrategy ? UserSettings.EndPointStrategy : EndPointStrategy.Auto,
+                EndPointStrategy = Features.AllowEndPointStrategy
+                    ? UserSettings.EndPointStrategy
+                    : EndPointStrategy.Auto,
                 DebugData1 = UserSettings.DebugData1,
                 DebugData2 = UserSettings.DebugData2,
                 SessionName = profileInfo.ClientProfileName,
                 CustomServerEndpoints = profileInfo.CustomServerEndpoints,
-                AllowAutoStart = Features.IsPremiumFeaturesForced || profileInfo.IsPremiumAccount,
+                AllowAlwaysOn = profileInfo.IsPremiumAccount || Features.PremiumFeatures.Contains(AppFeature.AlwaysOn),
             };
 
             VhLogger.Instance.LogDebug(
@@ -688,7 +693,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // start to diagnose if requested
             if (_appPersistState.HasDiagnoseRequested) {
-                var hostEndPoints = await EndPointResolver.ResolveHostEndPoints(token.ServerToken, UserSettings.EndPointStrategy, cancellationToken).Vhc();
+                var hostEndPoints = await EndPointResolver
+                    .ResolveHostEndPoints(token.ServerToken, UserSettings.EndPointStrategy, cancellationToken).Vhc();
                 await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).Vhc();
                 await Diagnoser.CheckPureNetwork(cancellationToken).Vhc();
                 await _vpnServiceManager.Start(clientOptions, cancellationToken).Vhc();
@@ -713,7 +719,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     connectionInfo.SessionInfo.ClientCountry);
         }
         catch (OperationCanceledException ex) when (_connectTimeoutCts.IsCancellationRequested) {
-            throw new ConnectionTimeoutException($"Could not establish the connection in {_connectTimeout.TotalSeconds} seconds.", ex);
+            throw new ConnectionTimeoutException(
+                $"Could not establish the connection in {_connectTimeout.TotalSeconds} seconds.", ex);
+        }
+        catch (AlwaysOnNotAllowedException) {
+            throw PremiumOnlyException.Create(AppFeature.AlwaysOn);
         }
         catch (Exception ex) {
             if (ex is SessionException sessionException)
@@ -1324,6 +1334,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // convert to Guid for compatibility
         var guid = new Guid(hashBytes);
         return guid.ToString();
+    }
+
+    public void VerifyPremiumFeature(AppFeature feature)
+    {
+        if (!Features.PremiumFeatures.Contains(feature))
+            return;
+
+        var profileInfo = CurrentClientProfileInfo;
+        if (profileInfo?.IsPremiumAccount != true)
+            throw PremiumOnlyException.Create(feature);
     }
 
     public void UpdateUi()

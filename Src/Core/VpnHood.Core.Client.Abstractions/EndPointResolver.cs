@@ -1,10 +1,11 @@
 using System.Net;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Client.Abstractions.Exceptions;
+namespace VpnHood.Core.Client.Abstractions;
 
 public static class EndPointResolver
 {

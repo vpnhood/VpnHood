@@ -53,7 +53,10 @@ public class QuickLaunchTileService : TileService
     private async Task TryClick()
     {
         try {
-            if (VpnHoodApp.Instance.ConnectionState == AppConnectionState.None) {
+            if (VpnHoodApp.Instance.ConnectionState.CanConnect()) {
+                // Check if the user has premium feature enabled
+                VpnHoodApp.Instance.VerifyPremiumFeature(AppFeature.QuickLaunch);
+
                 _isConnectByClick = true;
                 await VpnHoodApp.Instance.Connect().Vhc();
             }

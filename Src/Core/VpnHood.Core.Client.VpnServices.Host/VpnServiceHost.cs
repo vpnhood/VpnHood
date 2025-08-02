@@ -83,7 +83,7 @@ public class VpnServiceHost : IDisposable
         });
     }
 
-    public async Task<bool> TryConnect(bool forceReconnect = false, bool isAutoStart = false)
+    public async Task<bool> TryConnect(bool forceReconnect = false, bool isAlwaysOn = false)
     {
         if (_isDisposed == 1)
             return false;
@@ -119,7 +119,7 @@ public class VpnServiceHost : IDisposable
 
             // start connecting 
             _connectCts = new CancellationTokenSource();
-            await Connect(isAutoStart, _connectCts.Token);
+            await Connect(isAlwaysOn, _connectCts.Token);
             return true;
         }
         catch (Exception ex) {
@@ -130,7 +130,7 @@ public class VpnServiceHost : IDisposable
         }
     }
 
-    private async Task Connect(bool isAutoStart, CancellationToken cancellationToken)
+    private async Task Connect(bool isAlwaysOn, CancellationToken cancellationToken)
     {
         try {
             // read client options and start log service
@@ -138,8 +138,8 @@ public class VpnServiceHost : IDisposable
             _logService?.Start(clientOptions.LogServiceOptions, deleteOldReport: false);
 
             // check if auto start is allowed
-            if (isAutoStart && !clientOptions.AllowAutoStart) 
-                throw new AutoStartNotSupportedException("Auto start is only available for premium accounts.");
+            if (isAlwaysOn && !clientOptions.AllowAlwaysOn) 
+                throw new AlwaysOnNotAllowedException("Auto start is only available for premium accounts.");
 
             // restart the log service
             VhLogger.Instance.LogInformation("VpnService is connecting... ProcessId: {ProcessId}", Process.GetCurrentProcess().Id);

@@ -1,6 +1,4 @@
-using VpnHood.Core.Common.Exceptions;
-
-namespace VpnHood.AppLib.Exceptions;
+namespace VpnHood.AppLib.Abstractions.AdExceptions;
 
 public class NoFillAdException : LoadAdException
 {

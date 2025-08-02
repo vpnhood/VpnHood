@@ -11,7 +11,6 @@ public class AppFeatures
     public required Uri? UpdateInfoUrl { get; init; }
     public required string? UiName { get; init; }
     public required bool IsPremiumFlagSupported { get; init; }
-    public required bool IsPremiumFeaturesForced { get; init; }
     public required bool IsAddAccessKeySupported { get; init; }
     public required Guid? BuiltInClientProfileId { get; init; }
     public required bool IsAccountSupported { get; init; }
@@ -27,7 +26,8 @@ public class AppFeatures
     public required bool IsLocalNetworkSupported { get; init; }
     public required bool AdjustForSystemBars { get; init; }
     public required bool AllowEndPointStrategy { get; init; }
-    public required bool AutoRemovePremium { get; set; } 
+    public required bool AutoRemovePremium { get; set; }
+    public required AppFeature[] PremiumFeatures { get; init; }
 
     public required object? CustomData { get; init; }
 

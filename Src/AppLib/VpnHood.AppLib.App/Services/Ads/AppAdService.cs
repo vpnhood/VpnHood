@@ -1,9 +1,9 @@
 ﻿using Ga4.Trackers;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
-using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.IpLocations;
 using VpnHood.Core.Toolkit.Utils;
 

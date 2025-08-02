@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Client.Abstractions.Exceptions;
+﻿using VpnHood.AppLib.Exceptions;
 using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test.Tests;

@@ -1,5 +1,6 @@
 ﻿using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
+using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Manager.Exceptions;
@@ -67,6 +68,6 @@ public enum ExceptionType
     [EnumMember(Value = nameof(EndPointDiscoveryException))]
     EndPointDiscovery,
 
-    [EnumMember(Value = nameof(AutoStartNotSupportedException))]
-    AutoStartNotSupported
+    [EnumMember(Value = nameof(PremiumOnlyException))]
+    PremiumOnly
 }

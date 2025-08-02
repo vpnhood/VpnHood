@@ -177,7 +177,7 @@ public class VpnServiceManager : IDisposable
 
             // check for error
             if (connectionInfo.Error != null)
-                throw ClientExceptionConverter.ApiErrorToException(connectionInfo.Error);
+                throw ClientExceptionConverter.ApiErrorToException(connectionInfo.Error) ?? connectionInfo.Error.ToException();
 
             // make sure it is not disposed
             if (connectionInfo.ClientState is ClientState.Disposed or ClientState.Disconnecting)
@@ -285,7 +285,7 @@ public class VpnServiceManager : IDisposable
 
         // convert to error. 
         if (response.ApiError != null)
-            throw ClientExceptionConverter.ApiErrorToException(response.ApiError);
+            throw ClientExceptionConverter.ApiErrorToException(response.ApiError) ?? response.ApiError.ToException();
 
         return response.Result;
     }

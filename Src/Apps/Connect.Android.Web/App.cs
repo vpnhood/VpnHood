@@ -45,7 +45,12 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
-            AdjustForSystemBars = false
+            AdjustForSystemBars = false,
+            PremiumFeatures = [
+                AppFeature.CustomDns,
+                AppFeature.AlwaysOn,
+                AppFeature.QuickLaunch
+            ]
         };
     }
 

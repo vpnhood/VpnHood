@@ -18,6 +18,6 @@ internal class AppNotSupportedUiProvider
     public Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
-    public bool IsOpenAlwaysOnPageSupported => false;
-    public void OpenAlwaysOnPage(IUiContext uiContext) => throw new NotSupportedException();
+    public bool IsAlwaysOnSupported => false;
+    public void RequestAlwaysOn(IUiContext uiContext) => throw new NotSupportedException();
 }

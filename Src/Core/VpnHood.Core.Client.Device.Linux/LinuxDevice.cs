@@ -9,7 +9,6 @@ public class LinuxDevice(string storageFolder) : IDevice
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public string VpnServiceConfigFolder { get; } = Path.Combine(storageFolder, "vpn-service");
     public bool IsExcludeAppsSupported => false;
-    public bool IsAlwaysOnSupported => false;
     public bool IsIncludeAppsSupported => false;
     public bool IsTv => false;
 

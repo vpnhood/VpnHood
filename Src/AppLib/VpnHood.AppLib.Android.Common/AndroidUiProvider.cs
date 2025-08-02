@@ -68,11 +68,11 @@ public class AndroidUiProvider : IAppUiProvider
         }
     }
 
-    public bool IsOpenAlwaysOnPageSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
+    public bool IsAlwaysOnSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
 
-    public void OpenAlwaysOnPage(IUiContext context)
+    public void RequestAlwaysOn(IUiContext context)
     {
-        if (!IsOpenAlwaysOnPageSupported)
+        if (!IsAlwaysOnSupported)
             throw new NotSupportedException("AlwaysOn is not supported on this device.");
 
         var appUiContext = (AndroidUiContext)context;

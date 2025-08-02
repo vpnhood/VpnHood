@@ -282,7 +282,7 @@ internal class ConnectorServiceBase : IDisposable
 
     //private bool UserCertificateValidationCallback2(object sender, X509Certificate? certificate, X509Chain? chain,
     //    SslPolicyErrors sslPolicyErrors)
-    //{
+    // {
     //    var ret = sslPolicyErrors == SslPolicyErrors.None ||
     //              EndPointInfo.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
 
@@ -293,8 +293,11 @@ internal class ConnectorServiceBase : IDisposable
         SslPolicyErrors sslPolicyErrors)
     {
         try {
-            if (certificate == null || sslPolicyErrors == SslPolicyErrors.None)
+            if (sslPolicyErrors == SslPolicyErrors.None)
                 return true;
+
+            if (certificate == null)
+                return false;
 
             // just try to fix this unknown nasty issue on Android Parameter 'ctx' must be a valid pointer
             using var cert2 = new X509Certificate2(certificate);

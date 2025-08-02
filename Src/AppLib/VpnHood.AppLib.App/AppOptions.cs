@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Text.Json;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
@@ -53,4 +52,6 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public bool AllowEndPointStrategy { get; set; }
     public object? CustomData { get; set; }
     public bool AutoRemovePremium { get; set; } // auto remove premium on access code reject
+    public AppFeature[] PremiumFeatures { get; init; } = [];
+
 }

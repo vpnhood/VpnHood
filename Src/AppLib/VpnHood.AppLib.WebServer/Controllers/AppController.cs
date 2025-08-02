@@ -159,7 +159,7 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Post, "/settings/open-always-on-page")]
     public Task OpenAlwaysOnPage()
     {
-        App.Services.UiProvider.OpenAlwaysOnPage(AppUiContext.RequiredContext);
+        App.Services.UiProvider.RequestAlwaysOn(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 

@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Device.UiContexts;

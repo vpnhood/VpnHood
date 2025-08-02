@@ -10,8 +10,8 @@ public interface IAppUiProvider
     bool IsNotificationSupported { get; }
     Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken);
 
-    bool IsOpenAlwaysOnPageSupported { get; }
-    void OpenAlwaysOnPage(IUiContext uiContext);
+    bool IsAlwaysOnSupported { get; }
+    void RequestAlwaysOn(IUiContext uiContext);
     
     SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext);
 }

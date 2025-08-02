@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.Test.Tests;

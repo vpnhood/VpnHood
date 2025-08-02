@@ -9,7 +9,6 @@ public class WinDevice(string storageFolder, bool isDebugMode) : IDevice
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public string VpnServiceConfigFolder { get; } = Path.Combine(storageFolder, "vpn-service");
     public bool IsExcludeAppsSupported => isDebugMode;
-    public bool IsAlwaysOnSupported => false;
     public bool IsIncludeAppsSupported => isDebugMode;
     public bool IsTv => false;
 

@@ -8,7 +8,6 @@ public interface IDevice : IDisposable
     bool IsTv { get; }
     bool IsExcludeAppsSupported { get; }
     bool IsIncludeAppsSupported { get; }
-    bool IsAlwaysOnSupported { get; }
     bool IsBindProcessToVpnSupported { get; }
     string OsInfo { get; }
     DeviceMemInfo? MemInfo { get; }

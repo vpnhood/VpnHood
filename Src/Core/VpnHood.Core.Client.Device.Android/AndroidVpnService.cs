@@ -72,7 +72,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
             try {
                 VhLogger.Instance.LogDebug("Starting VPN service host. AlwaysOn: {AlwaysOn}", alwaysOn);
                 _vpnServiceHost ??= new VpnServiceHost(VpnServiceConfigFolder, this, new SocketFactory());
-                if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect, isAutoStart: alwaysOn))
+                if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect, isAlwaysOn: alwaysOn))
                     StopSelf();
             }
             catch (Exception ex) {

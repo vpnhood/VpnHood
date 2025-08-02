@@ -94,7 +94,7 @@ public class ClientOptions
     public bool WaitForAd { get; set; }  // Override server endpoint
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public bool AllowAutoStart { get; set; }
+    public bool AllowAlwaysOn { get; set; }
 
 
     // ReSharper disable StringLiteralTypo

@@ -1,5 +1,6 @@
 ﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Logging;

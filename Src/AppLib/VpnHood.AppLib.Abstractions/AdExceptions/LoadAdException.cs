@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Common.Exceptions;
+﻿namespace VpnHood.AppLib.Abstractions.AdExceptions;
 
 public class LoadAdException : AdException
 {

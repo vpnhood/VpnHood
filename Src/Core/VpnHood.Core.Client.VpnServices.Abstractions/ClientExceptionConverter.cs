@@ -6,7 +6,7 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions;
 
 public static class ClientExceptionConverter
 {
-    public static Exception ApiErrorToException(ApiError apiError)
+    public static Exception? ApiErrorToException(ApiError apiError)
     {
         Exception? exception = null;
 
@@ -20,30 +20,11 @@ public static class ClientExceptionConverter
         if (apiError.Is<UiContextNotAvailableException>())
             exception = new UiContextNotAvailableException();
 
-        // ad
-        if (apiError.Is<AdException>())
-            exception = new AdException(apiError.Message);
-        
-        if (apiError.Is<ShowAdException>())
-            exception = new ShowAdException(apiError.Message);
-
-        if (apiError.Is<ShowAdNoUiException>())
-            exception = new ShowAdNoUiException(apiError.Message);
-
-        if (apiError.Is<LoadAdException>())
-            exception = new LoadAdException(apiError.Message);
-
         // service
-        if (apiError.Is<AutoStartNotSupportedException>())
-            exception = new AutoStartNotSupportedException(apiError.Message);
+        if (apiError.Is<AlwaysOnNotAllowedException>())
+            exception = new AlwaysOnNotAllowedException(apiError.Message);
 
         // client
-        if (apiError.Is<NoInternetException>())
-            exception = new NoInternetException();
-
-        if (apiError.Is<NoStableVpnException>())
-            exception = new NoStableVpnException();
-
         if (apiError.Is<ConnectionTimeoutException>())
             exception = new ConnectionTimeoutException(apiError.Message);
 
@@ -56,6 +37,6 @@ public static class ClientExceptionConverter
         if (exception != null)
             apiError.ExportData(exception.Data);
 
-        return exception ?? apiError.ToException();
+        return exception;
     }
 }

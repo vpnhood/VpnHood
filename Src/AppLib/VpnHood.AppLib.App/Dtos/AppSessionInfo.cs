@@ -23,4 +23,5 @@ public class AppSessionInfo
 
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress ClientPublicIpAddress { get; init; }
+    public required DateTime CreatedTime { get; init; }
 }

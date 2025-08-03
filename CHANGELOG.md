@@ -3,6 +3,7 @@
 * Fix: VpnService is unreachable
 * Fix: Android: Always-on VPN
 * Feature: Custom Server Address for each access token
+* Update: Android: Postpone asking for QuickLaunch
 
 # v7.3.734
 * Fix: Drop brodcast packets

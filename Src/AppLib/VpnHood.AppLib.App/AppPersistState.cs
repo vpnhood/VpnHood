@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.ComponentModel;
+using System.Text;
 using System.Text.Json;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Utils;
@@ -17,6 +18,17 @@ internal class AppPersistState(string filePath)
         public DateTime UpdateIgnoreTime { get; set; } = DateTime.MinValue;
         public DateTime? ConnectRequestTime { get; set; }
         public bool HasDiagnoseRequested { get; set; }
+        public int SuccessfulConnectionsCount { get; set; }
+    }
+
+    public int SuccessfulConnectionsCount {
+        get => _data.SuccessfulConnectionsCount;
+        set {
+            if (_data.SuccessfulConnectionsCount == value)
+                return;
+            _data.SuccessfulConnectionsCount = value;
+            Save();
+        }
     }
 
     public ApiError? LastError {

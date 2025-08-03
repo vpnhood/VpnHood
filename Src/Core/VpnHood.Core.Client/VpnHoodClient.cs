@@ -678,6 +678,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 ServerVersion = Version.Parse(helloResponse.ServerVersion),
                 SuppressedTo = helloResponse.SuppressedTo,
                 AdRequirement = helloResponse.AdRequirement,
+                CreatedTime = DateTime.UtcNow,
                 ServerLocationInfo = helloResponse.ServerLocation != null
                     ? ServerLocationInfo.Parse(helloResponse.ServerLocation)
                     : null

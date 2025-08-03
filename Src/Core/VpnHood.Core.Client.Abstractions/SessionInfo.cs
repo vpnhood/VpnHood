@@ -10,6 +10,7 @@ public class SessionInfo
 {
     public required string SessionId { get; init; }
     public required AccessInfo? AccessInfo { get; init; }
+    public required DateTime CreatedTime { get; set; }
     public required bool IsUdpChannelSupported { get; init; }
     public required bool IsDnsServersAccepted { get; init; }
     public required ServerLocationInfo? ServerLocationInfo { get; init; }
@@ -27,4 +28,5 @@ public class SessionInfo
 
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress ClientPublicIpAddress { get; init; }
+   
 }

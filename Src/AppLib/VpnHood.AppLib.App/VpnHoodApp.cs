@@ -600,12 +600,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         catch (Exception) when (_connectCts.IsCancellationRequested) {
             throw new UserCanceledException("User has cancelled the connection.");
         }
-        catch (Exception ex)  {
+        catch (Exception ex) {
             // check no internet connection, use the original cancellation token to avoid timeout exception
             if (_autoDiagnose && !_appPersistState.HasDiagnoseRequested &&
                 ex is not UserCanceledException && ex is not SessionException) {
                 VhLogger.Instance.LogDebug("Start checking client network...");
-                
+
                 // use the original cancellation token to avoid the timeout exception consumed by Connect
                 await Diagnoser.CheckPureNetwork(cancellationToken).Vhc();
             }
@@ -819,33 +819,35 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async Task RequestFeatures(CancellationToken cancellationToken)
     {
-        // QuickLaunch
-        //todo: add it after few connections
-        //if (AppUiContext.Context != null &&
-        //    Services.UiProvider.IsQuickLaunchSupported &&
-        //    Settings.IsQuickLaunchEnabled is null) {
-        //    try {
-        //        VhLogger.Instance.LogInformation("Prompting for Quick Launch...");
-        //        Settings.IsQuickLaunchEnabled =
-        //            await Services.UiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, cancellationToken)
-        //                .Vhc();
-        //    }
-        //    catch (Exception ex) {
-        //        ReportError(ex, "Could not add QuickLaunch.");
-        //    }
+        if (AppUiContext.Context?.IsActive != true)
+            return;
 
-        //    Settings.Save();
-        //}
+        // QuickLaunch
+        if (Services.UiProvider.IsQuickLaunchSupported &&
+            IsPremiumFeatureAllowed(AppFeature.QuickLaunch) &&
+            Settings.IsQuickLaunchEnabled is null &&
+            _appPersistState.SuccessfulConnectionsCount > 3) {
+            try {
+                VhLogger.Instance.LogInformation("Prompting for Quick Launch...");
+                Settings.IsQuickLaunchEnabled =
+                    await Services.UiProvider
+                        .RequestQuickLaunch(AppUiContext.RequiredContext, cancellationToken).Vhc();
+            }
+            catch (Exception ex) {
+                ReportError(ex, "Could not add QuickLaunch.");
+            }
+
+            Settings.Save();
+        }
 
         // Notification
-        if (AppUiContext.Context != null &&
-            Services.UiProvider.IsNotificationSupported &&
+        if (Services.UiProvider.IsNotificationSupported &&
             Settings.IsNotificationEnabled is null) {
             try {
                 VhLogger.Instance.LogInformation("Prompting for notifications...");
                 Settings.IsNotificationEnabled =
-                    await Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, cancellationToken)
-                        .Vhc();
+                    await Services.UiProvider
+                        .RequestNotification(AppUiContext.RequiredContext, cancellationToken).Vhc();
             }
             catch (Exception ex) {
                 ReportError(ex, "Could not enable Notification.");
@@ -1034,6 +1036,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _isDisconnecting = true;
             VhLogger.Instance.LogInformation("Disconnect has been requested.");
 
+            // save SuccessfulConnectionsCount
+            var state = State;
+            if (FastDateTime.UtcNow > state.SessionInfo?.CreatedTime.AddMinutes(15) && // 15 minutes
+                state.SessionStatus?.SessionTraffic.Total > 5_000_000) // 5MB
+                _appPersistState.SuccessfulConnectionsCount++;
+
             await _connectCts.TryCancelAsync().Vhc();
             _connectCts.Dispose();
 
@@ -1163,7 +1171,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VerifyPremiumFeature(AppFeature.AppIpFilter);
             ipRanges = ipRanges.Intersect(
                 IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.AppIpFilterIncludes));
-            
+
             ipRanges = ipRanges.Exclude(
                 IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.AppIpFilterExcludes));
         }

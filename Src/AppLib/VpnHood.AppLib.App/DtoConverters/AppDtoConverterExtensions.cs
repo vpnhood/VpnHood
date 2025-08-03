@@ -30,7 +30,8 @@ public static class AppDtoConverterExtensions
             IsPremiumSession = sessionInfo.IsPremiumSession,
             SuppressedTo = sessionInfo.SuppressedTo,
             DnsServers = sessionInfo.DnsServers,
-            ClientPublicIpAddress = sessionInfo.ClientPublicIpAddress
+            ClientPublicIpAddress = sessionInfo.ClientPublicIpAddress,
+            CreatedTime = sessionInfo.CreatedTime
         };
     }
 

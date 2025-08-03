@@ -26,4 +26,5 @@ public interface IAppController
     Task RequestQuickLaunch();
     Task RequestNotification();
     Task ExtendByRewardedAd();
+    Task SetUserReviewRate(int value);
 }

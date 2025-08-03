@@ -21,7 +21,8 @@ internal static class DtoConverters
             TotalTraffic = sessionStatus.TotalTraffic,
             Speed = sessionStatus.Speed,
             TcpPassthruCount = sessionStatus.TcpPassthruCount,
-            TcpTunnelledCount = sessionStatus.TcpTunnelledCount
+            TcpTunnelledCount = sessionStatus.TcpTunnelledCount,
+            IsUserReviewRecommended = sessionStatus.IsUserReviewRecommended
         };
 
         return ret;

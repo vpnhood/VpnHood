@@ -18,4 +18,5 @@ public class SessionStatus
     public required long SessionMaxTraffic { get; init; }
     public required DateTime? SessionExpirationTime { get; init; }
     public required int? ActiveClientCount { get; init; }
+    public required bool IsUserReviewRecommended { get; init; }
 }

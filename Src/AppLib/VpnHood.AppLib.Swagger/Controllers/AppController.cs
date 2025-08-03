@@ -129,4 +129,10 @@ public class AppController : ControllerBase, IAppController
     {
         throw new SwaggerOnlyException();
     }
+    
+    [HttpPost("user-review-rate")]
+    public Task SetUserReviewRate(int value)
+    {
+        throw new SwaggerOnlyException();
+    }
 }

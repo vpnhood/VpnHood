@@ -14,4 +14,6 @@ public class HelloRequest()
     public bool AllowRedirect { get; init; } = true;
     public bool? IsIpV6Supported { get; init; }
     public string? AccessCode { get; set; }
+    public int? UserReviewRate { get; init; }
+    public DateTime? UserReviewTime { get; init; }
 }

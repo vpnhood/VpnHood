@@ -31,6 +31,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public IAppCultureProvider? CultureProvider { get; set; }
     public IAppUpdaterProvider? UpdaterProvider { get; set; }
     public IAppAccountProvider? AccountProvider { get; set; }
+    public IAppReviewProvider? ReviewProvider { get; set; }
     public AppAdProviderItem[] AdProviderItems { get; set; } = [];
     public ITrackerFactory? TrackerFactory { get; set; }
     public TimeSpan ReconnectTimeout { get; set; } = ClientOptions.Default.ReconnectTimeout;
@@ -51,7 +52,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public bool AdjustForSystemBars { get; set; } = true;
     public bool AllowEndPointStrategy { get; set; }
     public object? CustomData { get; set; }
-    public bool AutoRemovePremium { get; set; } // auto remove premium on access code reject
+    public bool AutoRemoveExpiredPremium { get; set; } // auto remove premium on access code reject
     public AppFeature[] PremiumFeatures { get; init; } = [];
 
 }

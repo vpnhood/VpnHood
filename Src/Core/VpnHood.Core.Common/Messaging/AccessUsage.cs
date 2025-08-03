@@ -6,6 +6,9 @@ public class AccessUsage
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool CanExtendByRewardedAd { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsUserReviewRecommended { get; set; }
 
     public bool IsPremium { get; set; } // session premium
     public Traffic CycleTraffic { get; set; } = new(); // total traffic

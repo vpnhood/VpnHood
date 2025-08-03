@@ -96,6 +96,11 @@ public class ClientOptions
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool AllowAlwaysOn { get; set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int? UserReviewRate { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public DateTime? UserReviewTime { get; set; }
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

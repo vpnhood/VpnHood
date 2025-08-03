@@ -17,6 +17,7 @@ public interface ISessionStatus
     int ActivePacketChannelCount { get; }
     bool IsUdpMode { get; }
     bool CanExtendByRewardedAd { get; }
+    bool IsUserReviewRecommended { get; }
     long SessionMaxTraffic { get; }
     DateTime? SessionExpirationTime { get; }
     int? ActiveClientCount { get; }

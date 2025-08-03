@@ -78,6 +78,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _isConnecting;
     private readonly Job _versionCheckJob;
     private readonly LogService _logService;
+    private bool _isUserReviewRecommended;
+
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -158,7 +160,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsIncludeAppsSupported = _device.IsIncludeAppsSupported,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
             IsPremiumFlagSupported = !options.IsAddAccessKeySupported,
-            AutoRemovePremium = options.AutoRemovePremium,
+            AutoRemoveExpiredPremium = options.AutoRemoveExpiredPremium,
             AllowEndPointStrategy = options.AllowEndPointStrategy,
             IsTv = device.IsTv,
             AdjustForSystemBars = options.AdjustForSystemBars,
@@ -170,6 +172,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsAlwaysOnSupported = uiProvider.IsAlwaysOnSupported,
             IsQuickLaunchSupported = uiProvider.IsQuickLaunchSupported,
             IsNotificationSupported = uiProvider.IsNotificationSupported,
+            IsUserReviewSupported = options.ReviewProvider != null,
             GaMeasurementId = options.Ga4MeasurementId,
             ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId),
             AppId = options.AppId,
@@ -191,12 +194,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // initialize services
         Services = new AppServices {
             CultureProvider = options.CultureProvider ?? new AppCultureProvider(this),
+            ReviewProvider = options.ReviewProvider,
+            UpdaterProvider = options.UpdaterProvider,
+            UiProvider = uiProvider,
+            Tracker = tracker,
             AccountService = options.AccountProvider != null
                 ? new AppAccountService(this, options.AccountProvider)
                 : null,
-            UpdaterProvider = options.UpdaterProvider,
-            UiProvider = uiProvider,
-            Tracker = tracker
         };
 
         // initialize client manager
@@ -359,6 +363,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CanConnect = connectionState.CanConnect(),
                 CanDiagnose = connectionState.CanDiagnose(_appPersistState.HasDiagnoseRequested),
                 CanDisconnect = connectionState.CanDisconnect(),
+                IsUserReviewRecommended = _isUserReviewRecommended,
                 IsIdle = IsIdle,
                 PromptForLog = IsIdle && _appPersistState.HasDiagnoseRequested && _logService.Exists,
                 LogExists = _logService.Exists,
@@ -446,6 +451,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _appPersistState.LastError = null;
         _appPersistState.LastClearedError = ConnectionInfo.Error;
         _appPersistState.HasDiagnoseRequested = false;
+        _isUserReviewRecommended = false;
     }
 
     private LogServiceOptions GetLogOptions()
@@ -681,6 +687,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 SessionName = profileInfo.ClientProfileName,
                 CustomServerEndpoints = profileInfo.CustomServerEndpoints,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
+                UserReviewRate = Settings.UserReviewRate,
+                UserReviewTime = Settings.UserReviewTime
             };
 
             VhLogger.Instance.LogDebug(
@@ -771,14 +779,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 break;
 
             // remove the access code if it is rejected
-            case SessionErrorCode.AccessCodeRejected when Features.AutoRemovePremium:
+            case SessionErrorCode.AccessCodeRejected when Features.AutoRemoveExpiredPremium:
                 VhLogger.Instance.LogWarning("Access code rejected. Removing the access code from profile.");
                 ClientProfileService.Update(profileInfo.ClientProfileId,
                     new ClientProfileUpdateParams { AccessCode = new Patch<string?>(null) });
                 break;
 
             // remove the client profile if access expired
-            case SessionErrorCode.AccessExpired when Features.AutoRemovePremium && profileInfo.IsForAccount:
+            case SessionErrorCode.AccessExpired when Features.AutoRemoveExpiredPremium && profileInfo.IsForAccount:
                 VhLogger.Instance.LogWarning("Access expired. Removing the premium profile.");
                 ClientProfileService.Delete(profileInfo.ClientProfileId);
                 _ = Services.AccountService?.Refresh(true);
@@ -969,6 +977,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
+    public void SetUserReviewRate(int value)
+    {
+        _isUserReviewRecommended = false;
+        Settings.UserReviewRate = value;
+        Settings.UserReviewTime = DateTime.UtcNow;
+    }
+
     private void VpnService_StateChanged(object? sender, EventArgs e)
     {
         // clear the last error when get out of idle state, because it indicates a new connection has started
@@ -1033,14 +1048,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             return; // already disconnecting
 
         try {
+            var state = State;
             _isDisconnecting = true;
             VhLogger.Instance.LogInformation("Disconnect has been requested.");
 
             // save SuccessfulConnectionsCount
-            var state = State;
             if (FastDateTime.UtcNow > state.SessionInfo?.CreatedTime.AddMinutes(15) && // 15 minutes
                 state.SessionStatus?.SessionTraffic.Total > 5_000_000) // 5MB
                 _appPersistState.SuccessfulConnectionsCount++;
+
+            // set review needed after disconnecting. It must be in connected state
+            _isUserReviewRecommended = 
+                ConnectionState is AppConnectionState.Connected &&
+                _appPersistState.LastError is null && 
+                Services.ReviewProvider != null &&
+                ConnectionInfo.SessionStatus?.IsUserReviewRecommended == true;
 
             await _connectCts.TryCancelAsync().Vhc();
             _connectCts.Dispose();
@@ -1069,13 +1091,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _appPersistState.UpdateIgnoreTime = DateTime.Now;
     }
 
-    private readonly AsyncLock _versionCheckLock = new();
-
     private async ValueTask VersionCheckJob(CancellationToken cancellationToken)
     {
         await VersionCheck(force: false, delay: TimeSpan.Zero, cancellationToken: cancellationToken);
     }
 
+    private readonly AsyncLock _versionCheckLock = new();
     public async Task VersionCheck(bool force, TimeSpan delay, CancellationToken cancellationToken)
     {
         using var lockAsync = await _versionCheckLock.LockAsync(cancellationToken).Vhc();

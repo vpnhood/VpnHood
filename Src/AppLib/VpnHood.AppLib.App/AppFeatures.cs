@@ -17,6 +17,7 @@ public class AppFeatures
     public required bool IsBillingSupported { get; init; }
     public required bool IsQuickLaunchSupported { get; init; }
     public required bool IsNotificationSupported { get; init; }
+    public required bool IsUserReviewSupported { get; init; }
     public required bool IsAlwaysOnSupported { get; init; }
     public required bool IsTv { get; init; }
     public required string? GaMeasurementId { get; init; }
@@ -26,7 +27,7 @@ public class AppFeatures
     public required bool IsLocalNetworkSupported { get; init; }
     public required bool AdjustForSystemBars { get; init; }
     public required bool AllowEndPointStrategy { get; init; }
-    public required bool AutoRemovePremium { get; set; }
+    public required bool AutoRemoveExpiredPremium { get; set; }
     public required AppFeature[] PremiumFeatures { get; init; }
 
     public required object? CustomData { get; init; }

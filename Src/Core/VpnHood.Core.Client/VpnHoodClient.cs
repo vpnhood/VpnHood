@@ -117,7 +117,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             IncludeLocalNetwork = options.IncludeLocalNetwork,
             DropUdp = options.DropUdp,
             DropQuic = options.DropQuic,
-            UseTcpOverTun = options.UseTcpOverTun
+            UseTcpOverTun = options.UseTcpOverTun,
+            UserReviewTime = options.UserReviewTime,
+            UserReviewRate = options.UserReviewRate
         };
 
         Token = Token.FromAccessKey(options.AccessKey);
@@ -574,7 +576,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 PlanId = Settings.PlanId,
                 AccessCode = Settings.AccessCode,
                 AllowRedirect = allowRedirect,
-                IsIpV6Supported = IsIpV6SupportedByClient
+                IsIpV6Supported = IsIpV6SupportedByClient,
+                UserReviewRate = Settings.UserReviewRate,
+                UserReviewTime = Settings.UserReviewTime,
             };
 
             using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).Vhc();
@@ -1089,6 +1093,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public int ActivePacketChannelCount => client._tunnel.PacketChannelCount;
         public bool IsUdpMode => client.UseUdpChannel;
         public bool CanExtendByRewardedAd => _accessUsage.CanExtendByRewardedAd;
+        public bool IsUserReviewRecommended => _accessUsage.IsUserReviewRecommended;
         public long SessionMaxTraffic => _accessUsage.MaxTraffic;
         public DateTime? SessionExpirationTime => _accessUsage.ExpirationTime;
         public int? ActiveClientCount => _accessUsage.ActiveClientCount;

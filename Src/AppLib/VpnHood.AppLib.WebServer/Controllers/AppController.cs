@@ -1,4 +1,5 @@
-﻿using EmbedIO;
+﻿using System.Globalization;
+using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using VpnHood.AppLib.ClientProfiles;
@@ -186,5 +187,22 @@ internal class AppController : WebApiController, IAppController
     {
         value = await HttpContext.GetRequestDataAsync<int>().Vhc();
         App.SetUserReview(value);
+    }
+
+    [Route(HttpVerbs.Get, "/countries")]
+    public Task<CountryInfo[]> GetCountries()
+    {
+        var countryInfos = CultureInfo.GetCultures(CultureTypes.SpecificCultures)
+            .Select(culture => new RegionInfo(culture.Name))
+            .Where(region => !string.IsNullOrEmpty(region.Name))
+            .DistinctBy(region => region.Name)
+            .OrderBy(region => region.EnglishName)
+            .Select(region => new CountryInfo {
+                CountryCode = region.Name,
+                EnglishName = region.EnglishName,
+            })
+            .ToArray();
+
+        return Task.FromResult(countryInfos);
     }
 }

@@ -27,4 +27,5 @@ public interface IAppController
     Task RequestNotification();
     Task ExtendByRewardedAd();
     Task SetUserReview(int value);
+    Task<CountryInfo[]> GetCountries();
 }

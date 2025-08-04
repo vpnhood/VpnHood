@@ -135,4 +135,10 @@ public class AppController : ControllerBase, IAppController
     {
         throw new SwaggerOnlyException();
     }
+
+    [HttpGet("countries")]
+    public Task<CountryInfo[]> GetCountries()
+    {
+        throw new SwaggerOnlyException();
+    }
 }

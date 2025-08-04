@@ -38,6 +38,7 @@ internal class Program
                 IsLocalNetworkSupported = true,
                 LocalSpaHostName = "my-vpnhood",
                 AllowEndPointStrategy = true,
+                AllowRecommendUserReviewByServer = false,
                 LogServiceOptions = {
                     SingleLineConsole = false
                 }

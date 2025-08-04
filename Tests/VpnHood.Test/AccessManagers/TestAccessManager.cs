@@ -25,6 +25,9 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public bool RejectAllAds { get; set; }
     public bool CanExtendPremiumByAd { get; set; }
     public Dictionary<string, string> AccessCodes { get; set; } = new();
+    public bool IsUserReviewRecommended { get; set; }
+    public DateTime? UserReviewTime { get; set; }
+    public int? UserReviewRate { get; set; }
 
     public void AddAdData(string adData)
     {
@@ -58,19 +61,20 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         lock (_lockObject)
             SessionGetCounter++;
 
-        var session = await base.Session_Get(sessionId, hostEndPoint, clientIp);
-
-        if (session.AccessUsage != null)
-            session.AccessUsage.CanExtendByRewardedAd = CanExtendPremiumByAd;
-
-        return session;
+        var sessionResponseEx = await base.Session_Get(sessionId, hostEndPoint, clientIp);
+        UpdateSessionResponse(sessionResponseEx);
+        return sessionResponseEx;
     }
 
     public override async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
         var ret = await base.Session_Create(sessionRequestEx);
-        if (ret.AccessUsage != null)
-            ret.AccessUsage.CanExtendByRewardedAd = CanExtendPremiumByAd;
+        // update by test provider
+        UpdateSessionResponse(ret);
+
+        // update test provider
+        UserReviewRate = sessionRequestEx.UserReviewRate;
+        UserReviewTime = sessionRequestEx.UserReviewTime;
 
         if (!sessionRequestEx.AllowRedirect)
             return ret;
@@ -109,6 +113,25 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         }
 
         return ret;
+    }
+
+    private void UpdateSessionResponse(SessionResponse sessionResponse)
+    {
+        if (sessionResponse.AccessUsage != null) {
+            sessionResponse.AccessUsage.CanExtendByRewardedAd = CanExtendPremiumByAd;
+            sessionResponse.AccessUsage.IsUserReviewRecommended = IsUserReviewRecommended;
+        }
+
+    }
+
+    protected override async Task<SessionResponse> Session_AddUsage(SessionUsage sessionUsage)
+    {
+        // update test provider
+        var sessionResponse = await base.Session_AddUsage(sessionUsage);
+
+        // update by test provider
+        UpdateSessionResponse(sessionResponse);
+        return sessionResponse;
     }
 
     protected override string? GetAccessTokenIdFromAccessCode(string accessCode)

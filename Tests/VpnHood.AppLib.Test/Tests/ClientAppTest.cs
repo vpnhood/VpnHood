@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Exceptions;
+using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.IpLocations.Providers.Offlines;
@@ -220,7 +221,8 @@ public class ClientAppTest : TestAppBase
         }
     }
 
-    public static async Task IpFilters_AssertInclude(TestHelper testHelper, VpnHoodApp app, IPEndPoint nameserver, Uri url, int delta = 200)
+    public static async Task IpFilters_AssertInclude(TestHelper testHelper, VpnHoodApp app, IPEndPoint nameserver,
+        Uri url, int delta = 200)
     {
         // NameServer
         var oldSessionTraffic = app.GetSessionStatus().SessionTraffic;
@@ -239,7 +241,8 @@ public class ClientAppTest : TestAppBase
         Assert.AreEqual(oldSplitTraffic.Sent, app.GetSessionStatus().SessionSplitTraffic.Sent, delta: delta);
     }
 
-    public static async Task IpFilters_AssertExclude(TestHelper testHelper, VpnHoodApp app, IPEndPoint nameserver, Uri url, int delta = 200)
+    public static async Task IpFilters_AssertExclude(TestHelper testHelper, VpnHoodApp app, IPEndPoint nameserver,
+        Uri url, int delta = 200)
     {
         // NameServer
         var oldSessionTraffic = app.GetSessionStatus().SessionTraffic;
@@ -418,7 +421,8 @@ public class ClientAppTest : TestAppBase
 
         Assert.IsTrue(isTokenRetrieved);
         Assert.AreNotEqual(token1.ServerToken.CreatedTime, token2.ServerToken.CreatedTime);
-        Assert.AreEqual(token2.ServerToken.CreatedTime, app.ClientProfileService.GetToken(token1.TokenId).ServerToken.CreatedTime);
+        Assert.AreEqual(token2.ServerToken.CreatedTime,
+            app.ClientProfileService.GetToken(token1.TokenId).ServerToken.CreatedTime);
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
     }
 
@@ -561,5 +565,57 @@ public class ClientAppTest : TestAppBase
         // reload clientProfile
         clientProfile = clientApp.ClientProfileService.Get(clientProfile.ClientProfileId);
         Assert.IsTrue(clientProfile.ToInfo().SelectedLocationInfo?.IsAuto);
+    }
+
+    [TestMethod]
+    public async Task User_review_flow()
+    {
+        // create manager
+        var accessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        accessManagerOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200); 
+        using var accessManager = TestHelper.CreateAccessManager(accessManagerOptions);
+
+        // create server
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // create app
+        var testUserReviewProvider = new TestUserReviewProvider();
+        var token = accessManager.CreateToken();
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.UserReviewProvider = testUserReviewProvider;
+        appOptions.AllowRecommendUserReviewByServer = true;
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestHelper.CreateDevice());
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfile.ClientProfileId);
+
+        // access manager set UserReviewRecommended
+        Assert.IsFalse(testUserReviewProvider.IsReviewRequested);
+        accessManager.IsUserReviewRecommended = true;
+
+        await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
+        await VhTestUtil.AssertEqualsWait(1, () => server.SessionManager.Sync(true));
+        await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
+        await VhTestUtil.AssertEqualsWait(1, () => server.SessionManager.Sync(true));
+        await app.ForceUpdateState();
+
+        // after client disconnect it should see rating recommended
+        await app.Disconnect();
+
+        // client set rating
+            Assert.IsTrue(app.State.IsUserReviewRecommended);
+
+        // UserReviewRecommended must be reset
+        var beforeSetRateTime = FastDateTime.UtcNow;
+        app.SetUserReviewRate(3);
+        Assert.IsFalse(app.State.IsUserReviewRecommended, "It must be reset after rating.");
+        Assert.IsTrue(app.Settings.UserReviewTime >= beforeSetRateTime);
+        Assert.AreEqual(3, app.Settings.UserReviewRate);
+
+        // Connect again then access manager should receive result
+        Assert.IsNull(accessManager.UserReviewTime);
+        Assert.IsNull(accessManager.UserReviewRate);
+        await app.Connect(clientProfile.ClientProfileId);
+        Assert.AreEqual(3, accessManager.UserReviewRate);
+        Assert.IsTrue(accessManager.UserReviewTime >= beforeSetRateTime);
     }
 }

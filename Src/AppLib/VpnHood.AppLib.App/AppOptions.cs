@@ -31,7 +31,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public IAppCultureProvider? CultureProvider { get; set; }
     public IAppUpdaterProvider? UpdaterProvider { get; set; }
     public IAppAccountProvider? AccountProvider { get; set; }
-    public IAppReviewProvider? ReviewProvider { get; set; }
+    public IAppReviewProvider? UserReviewProvider { get; set; }
     public AppAdProviderItem[] AdProviderItems { get; set; } = [];
     public ITrackerFactory? TrackerFactory { get; set; }
     public TimeSpan ReconnectTimeout { get; set; } = ClientOptions.Default.ReconnectTimeout;
@@ -40,6 +40,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
         isDebugMode ? false : null; // it follows user's settings if it set to null
     public TimeSpan ServerQueryTimeout { get; set; } = ClientOptions.Default.ServerQueryTimeout;
     public TimeSpan ConnectTimeout { get; set; } = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(60);
+    public TimeSpan TcpTimeout { get; set; } = ClientOptions.Default.ConnectTimeout;
     public TimeSpan LocationServiceTimeout { get; set; } = TimeSpan.FromSeconds(5); // ignore debugger attach to let check when there is no internet
     public bool AutoDiagnose { get; set; } = true;
     public AppAdOptions AdOptions { get; set; } = new();
@@ -54,5 +55,5 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public object? CustomData { get; set; }
     public bool AutoRemoveExpiredPremium { get; set; } // auto remove premium on access code reject
     public AppFeature[] PremiumFeatures { get; init; } = [];
-
+    public bool AllowRecommendUserReviewByServer { get; set; }
 }

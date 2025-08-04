@@ -2,6 +2,7 @@
 using Android.Content.PM;
 using Android.OS;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.Device.Droid.Utils;
@@ -74,5 +75,15 @@ public static class AndroidUtil
                 VhLogger.Instance.LogError(ex, "Error showing a toast");
             }
         });
+    }
+
+    public static ApiException JavaExceptionToApiException(Java.Lang.Object error)
+    {
+        return new ApiException(
+            new ApiError {
+                TypeFullName = error.Class.TypeName,
+                TypeName = error.Class.SimpleName,
+                Message = error.ToString()
+            });
     }
 }

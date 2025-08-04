@@ -30,7 +30,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             IsAddAccessKeySupported = true,
             IsLocalNetworkSupported = true,
             AdjustForSystemBars = false,
-            AllowEndPointStrategy = true
+            AllowEndPointStrategy = true,
+            AllowRecommendUserReviewByServer = false
         };
     }
 }

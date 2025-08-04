@@ -32,8 +32,9 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             IsLocalNetworkSupported = true,
             AdjustForSystemBars = false,
             UpdaterProvider = new GooglePlayAppUpdaterProvider(),
-            ReviewProvider = new GooglePlayInAppReviewProvider(AppConfigs.IsDebugMode),
-            AllowEndPointStrategy = true
+            UserReviewProvider = new GooglePlayInAppReviewProvider(AppConfigs.IsDebugMode),
+            AllowEndPointStrategy = true,
+            AllowRecommendUserReviewByServer = false
         };
     }
 }

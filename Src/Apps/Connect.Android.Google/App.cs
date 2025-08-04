@@ -48,13 +48,14 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
             UpdaterProvider = new GooglePlayAppUpdaterProvider(),
-            ReviewProvider = new GooglePlayInAppReviewProvider(AppConfigs.IsDebugMode),
+            UserReviewProvider = new GooglePlayInAppReviewProvider(AppConfigs.IsDebugMode),
             AccountProvider = CreateAppAccountProvider(appConfigs, storageFolderPath),
             AdProviderItems = CreateAppAdProviderItems(appConfigs),
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             AdjustForSystemBars = false,
             TrackerFactory = new FirebaseAnalyticsTrackerFactory(),
             PremiumFeatures = ConnectAppResources.PremiumFeatures,
+            AllowRecommendUserReviewByServer = true,
             AdOptions = new AppAdOptions {
                 PreloadAd = true
             }

@@ -208,6 +208,9 @@ public class VpnServiceManager : IDisposable
     private readonly AsyncLock _connectionInfoLock = new();
     private async Task<ConnectionInfo> RefreshConnectionInfo(bool force, CancellationToken cancellationToken)
     {
+        if (_disposed)
+            return _connectionInfo;
+
         // build a new token source to cancel the previous request
         using var updateCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _updateConnectionInfoCts.Token);
         using var scopeLock = await _connectionInfoLock.LockAsync(updateCts.Token).Vhc();

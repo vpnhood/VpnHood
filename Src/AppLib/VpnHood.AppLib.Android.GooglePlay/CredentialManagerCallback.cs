@@ -1,4 +1,5 @@
 ﻿using AndroidX.Credentials;
+using VpnHood.Core.Toolkit.ApiClients;
 using GetCredentialResponse = AndroidX.Credentials.GetCredentialResponse;
 
 namespace VpnHood.AppLib.Droid.GooglePlay;
@@ -12,7 +13,12 @@ public class CredentialManagerCallback : Java.Lang.Object, ICredentialManagerCal
         if (e.Class.TypeName.Contains("CancellationException"))
             _taskCompletionSource.TrySetCanceled();
         else
-            _taskCompletionSource.TrySetException(new Exception(e.ToString()));
+            _taskCompletionSource.TrySetException(new ApiException(
+                new ApiError {
+                    TypeFullName = e.Class.TypeName,
+                    TypeName = e.Class.SimpleName,
+                    Message = e.ToString()
+                    }));
     }
 
     public void OnResult(Java.Lang.Object? result)

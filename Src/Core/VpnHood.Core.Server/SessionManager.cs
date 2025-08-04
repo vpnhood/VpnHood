@@ -150,7 +150,9 @@ public class SessionManager : IAsyncDisposable, IDisposable
             AllowRedirect = helloRequest.AllowRedirect,
             IsIpV6Supported = helloRequest.IsIpV6Supported,
             AccessCode = helloRequest.AccessCode,
-            ProtocolVersion = protocolVersion
+            ProtocolVersion = protocolVersion,
+            UserReviewTime = helloRequest.UserReviewTime,
+            UserReviewRate = helloRequest.UserReviewRate
         }).Vhc();
 
         // Access Error should not pass to the client in create session
@@ -371,7 +373,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
         // 
         var notSyncedIdleSessions = idleSessions.Where(x => x.Traffic.Total > 0).ToArray();
-        if (notSyncedIdleSessions.Length >0 )
+        if (notSyncedIdleSessions.Length > 0)
             VhLogger.Instance.LogDebug(GeneralEventId.Session, "Syncing {IdleSessions} idle sessions...", notSyncedIdleSessions.Length);
 
         var syncedIdleSessions = idleSessions.Where(x => x.Traffic.Total == 0).ToArray();
@@ -483,23 +485,16 @@ public class SessionManager : IAsyncDisposable, IDisposable
     public void ApplySessionResponses(Dictionary<ulong, SessionResponse> sessionResponses)
     {
         // update sessions from the result of access manager
-        var failedSessionResponsePairs = sessionResponses
-            .Where(x => x.Value.ErrorCode != SessionErrorCode.Ok)
-            .ToArray();
+        foreach (var responsePair in sessionResponses) {
+            if (Sessions.TryGetValue(responsePair.Key, out var session)) {
 
-        if (failedSessionResponsePairs.Length > 0) {
-            VhLogger.Instance.LogInformation(GeneralEventId.Session, 
-                "Set error responses from Access Manager to {FailedSessions} sessions.", 
-                failedSessionResponsePairs.Length);
-
-            foreach (var responsePair in failedSessionResponsePairs) {
-                if (Sessions.TryGetValue(responsePair.Key, out var session)) {
+                // log for debugging
+                if (responsePair.Value.ErrorCode != SessionErrorCode.Ok)
                     VhLogger.Instance.LogDebug(GeneralEventId.Session,
                         "Set Access Manager error response to a session. SessionId: {SessionId}, ErrorCode: {ErrorCode}",
                         responsePair.Key, responsePair.Value.ErrorCode);
 
-                    session.SessionResponseEx = responsePair.Value;
-                }
+                session.SessionResponseEx = responsePair.Value;
             }
         }
 
@@ -519,15 +514,16 @@ public class SessionManager : IAsyncDisposable, IDisposable
     }
 
     private readonly AsyncLock _syncLock = new();
-    public async Task Sync(bool force = false)
+    public async Task<int> Sync(bool force = false)
     {
         using var lockResult = await _syncLock.LockAsync(TimeSpan.Zero).Vhc();
-        if (!lockResult.Succeeded) 
-            return;
+        if (!lockResult.Succeeded)
+            return 0;
 
         var sessionUsages = CollectSessionUsages(force);
         var sessionResponses = await _accessManager.Session_AddUsages(sessionUsages).Vhc();
         ApplySessionResponses(sessionResponses);
+        return sessionResponses.Count;
     }
 
     public async Task CloseSession(ulong sessionId)

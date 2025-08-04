@@ -32,6 +32,7 @@ public class TestAppHelper : TestHelper
             AutoDiagnose = false,
             DisconnectOnDispose = true,
             ConnectTimeout = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(5),
+            TcpTimeout = TimeSpan.FromSeconds(2),
             Resources = new AppResources(),
             AdOptions = new AppAdOptions {
                 ShowAdPostDelay = TimeSpan.Zero,
@@ -62,7 +63,6 @@ public class TestAppHelper : TestHelper
         clientApp.SettingsService.IpFilterSettings.AdapterIpFilterIncludes =
             TestIpAddresses.Select(x => new IpRange(x)).ToText();
         clientApp.UserSettings.LogAnonymous = false;
-        clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
         AppUiContext.Context = new TestAppUiContext();
 
         return clientApp;

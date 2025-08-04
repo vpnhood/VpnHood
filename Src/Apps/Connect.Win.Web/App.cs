@@ -37,6 +37,7 @@ public class App : VpnHoodWpfSpaApp
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
             PremiumFeatures = ConnectAppResources.PremiumFeatures,
+            AllowRecommendUserReviewByServer = true,
             LogServiceOptions = {
                 SingleLineConsole = false
             }

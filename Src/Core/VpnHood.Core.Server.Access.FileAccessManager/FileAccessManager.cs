@@ -331,7 +331,7 @@ public class FileAccessManager : IAccessManager
     }
 
 
-    public virtual Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
+    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
     {
         return Session_AddUsage(new SessionUsage {
             SessionId = sessionId,
@@ -391,7 +391,7 @@ public class FileAccessManager : IAccessManager
         return ret;
     }
 
-    private async Task<SessionResponse> Session_AddUsage(SessionUsage sessionUsage)
+    protected virtual async Task<SessionResponse> Session_AddUsage(SessionUsage sessionUsage)
     {
         var sessionId = sessionUsage.SessionId;
 

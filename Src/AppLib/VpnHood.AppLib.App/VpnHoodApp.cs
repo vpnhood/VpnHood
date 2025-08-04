@@ -52,6 +52,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly bool _disconnectOnDispose;
     private readonly bool _autoDiagnose;
     private readonly bool _allowEndPointTracker;
+    private readonly bool _allowRecommendUserReviewByServer;
     private readonly string? _ga4MeasurementId;
     private readonly TimeSpan _versionCheckInterval;
     private readonly TimeSpan _reconnectTimeout;
@@ -59,6 +60,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly TimeSpan _serverQueryTimeout;
     private readonly TimeSpan _connectTimeout;
     private readonly TimeSpan _sessionTimeout;
+    private readonly TimeSpan _tcpTimeout;
+
     private readonly LogServiceOptions _logServiceOptions;
     private readonly AppPersistState _appPersistState;
     private readonly VpnServiceManager _vpnServiceManager;
@@ -92,7 +95,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppFeatures Features { get; }
     public ClientProfileService ClientProfileService { get; }
     public Diagnoser Diagnoser { get; } = new();
-    public TimeSpan TcpTimeout { get; set; } = ClientOptions.Default.ConnectTimeout;
     public AppResources Resources { get; }
     public AppServices Services { get; }
     public AppSettingsService SettingsService { get; }
@@ -117,6 +119,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _versionCheckInterval = options.VersionCheckInterval;
         _reconnectTimeout = options.ReconnectTimeout;
         _autoWaitTimeout = options.AutoWaitTimeout;
+        _tcpTimeout = options.TcpTimeout;
         _versionCheckResult = JsonUtils.TryDeserializeFile<VersionCheckResult>(VersionCheckFilePath);
         _autoDiagnose = options.AutoDiagnose;
         _serverQueryTimeout = options.ServerQueryTimeout;
@@ -127,6 +130,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _logService = logService;
         _trackerFactory = options.TrackerFactory ?? new BuiltInTrackerFactory();
         _sessionTimeout = options.SessionTimeout;
+        _allowRecommendUserReviewByServer = options.AllowRecommendUserReviewByServer;
 
         // IpRangeLocationProvider
         if (options.UseInternalLocationService) {
@@ -172,7 +176,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsAlwaysOnSupported = uiProvider.IsAlwaysOnSupported,
             IsQuickLaunchSupported = uiProvider.IsQuickLaunchSupported,
             IsNotificationSupported = uiProvider.IsNotificationSupported,
-            IsUserReviewSupported = options.ReviewProvider != null,
+            IsUserReviewSupported = options.UserReviewProvider != null,
             GaMeasurementId = options.Ga4MeasurementId,
             ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId),
             AppId = options.AppId,
@@ -194,7 +198,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // initialize services
         Services = new AppServices {
             CultureProvider = options.CultureProvider ?? new AppCultureProvider(this),
-            ReviewProvider = options.ReviewProvider,
+            UserReviewProvider = options.UserReviewProvider,
             UpdaterProvider = options.UpdaterProvider,
             UiProvider = uiProvider,
             Tracker = tracker,
@@ -377,7 +381,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 PurchaseState = Services.AccountService?.BillingService?.PurchaseState,
                 LastPublishInfo = _versionCheckResult?.GetNewerPublishInfo(),
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
-                LastError = IsIdle ? LastError?.ToAppDto() : null,
+                LastError = LastError?.ToAppDto(),
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
                     ? Services.UiProvider.GetSystemBarsInfo(uiContext)
                     : SystemBarsInfo.Default
@@ -657,7 +661,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 IncludeIpRanges = (await GetIncludeIpRanges(cancellationToken)).ToArray(),
                 VpnAdapterIncludeIpRanges = vpnAdapterIpRanges.ToArray(),
                 MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,
-                ConnectTimeout = TcpTimeout,
+                ConnectTimeout = _tcpTimeout,
                 ServerQueryTimeout = _serverQueryTimeout,
                 UseNullCapture = HasDebugCommand(DebugCommands.NullCapture),
                 DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
@@ -988,7 +992,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // clear the last error when get out of idle state, because it indicates a new connection has started
         // do not call ClearLastError, it will clear diagnose request state. it must be called by the user
-        if (!IsIdle && _isConnecting) // don't clear if it is initiated by connect
+        if (!IsIdle && !_isConnecting) // don't clear if it is initiated by connect
             _appPersistState.LastError = null;
 
         // Show ad if it is waiting for ad
@@ -1048,9 +1052,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             return; // already disconnecting
 
         try {
-            var state = State;
-            _isDisconnecting = true;
+            // set _isDisconnecting
             VhLogger.Instance.LogInformation("Disconnect has been requested.");
+
+            // store states before setting _isDisconnecting
+            var state = State; 
 
             // save SuccessfulConnectionsCount
             if (FastDateTime.UtcNow > state.SessionInfo?.CreatedTime.AddMinutes(15) && // 15 minutes
@@ -1058,12 +1064,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 _appPersistState.SuccessfulConnectionsCount++;
 
             // set review needed after disconnecting. It must be in connected state
-            _isUserReviewRecommended = 
-                ConnectionState is AppConnectionState.Connected &&
+            _isUserReviewRecommended =
+                state.ConnectionState is AppConnectionState.Connected &&
                 _appPersistState.LastError is null && 
-                Services.ReviewProvider != null &&
+                _allowRecommendUserReviewByServer &&
+                Features.IsUserReviewSupported &&
                 ConnectionInfo.SessionStatus?.IsUserReviewRecommended == true;
 
+            // set after performing on disconnect task, because it will change the state
+            _isDisconnecting = true;
+            
             await _connectCts.TryCancelAsync().Vhc();
             _connectCts.Dispose();
 

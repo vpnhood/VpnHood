@@ -34,6 +34,7 @@ public class App : VpnHoodWpfSpaApp
             IsAddAccessKeySupported = true,
             IsLocalNetworkSupported = true,
             LocalSpaHostName = "my-vpnhood",
+            AllowRecommendUserReviewByServer = true,
             LogServiceOptions = {
                 SingleLineConsole = false
             }

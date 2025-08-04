@@ -118,8 +118,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             DropUdp = options.DropUdp,
             DropQuic = options.DropQuic,
             UseTcpOverTun = options.UseTcpOverTun,
-            UserReviewTime = options.UserReviewTime,
-            UserReviewRate = options.UserReviewRate
+            UserReview = options.UserReview
         };
 
         Token = Token.FromAccessKey(options.AccessKey);
@@ -577,8 +576,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 AccessCode = Settings.AccessCode,
                 AllowRedirect = allowRedirect,
                 IsIpV6Supported = IsIpV6SupportedByClient,
-                UserReviewRate = Settings.UserReviewRate,
-                UserReviewTime = Settings.UserReviewTime,
+                UserReview = Settings.UserReview
             };
 
             using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).Vhc();

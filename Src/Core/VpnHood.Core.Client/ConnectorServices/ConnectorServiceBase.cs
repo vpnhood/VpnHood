@@ -280,14 +280,16 @@ internal class ConnectorServiceBase : IDisposable
         }
     }
 
-    //private bool UserCertificateValidationCallback2(object sender, X509Certificate? certificate, X509Chain? chain,
-    //    SslPolicyErrors sslPolicyErrors)
-    // {
-    //    var ret = sslPolicyErrors == SslPolicyErrors.None ||
-    //              EndPointInfo.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
+    /*
+    private bool UserCertificateValidationCallback2(object sender, X509Certificate? certificate, X509Chain? chain,
+        SslPolicyErrors sslPolicyErrors)
+    {
+        var ret = sslPolicyErrors == SslPolicyErrors.None ||
+                  EndPointInfo.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
 
-    //    return ret;
-    //}
+        return ret;
+    }
+    */
 
     private bool UserCertificateValidationCallback(object sender, X509Certificate? certificate, X509Chain? chain,
         SslPolicyErrors sslPolicyErrors)

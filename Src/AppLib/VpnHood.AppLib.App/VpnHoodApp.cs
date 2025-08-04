@@ -691,8 +691,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 SessionName = profileInfo.ClientProfileName,
                 CustomServerEndpoints = profileInfo.CustomServerEndpoints,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
-                UserReviewRate = Settings.UserReviewRate,
-                UserReviewTime = Settings.UserReviewTime
+                UserReview = Settings.UserReview
             };
 
             VhLogger.Instance.LogDebug(
@@ -981,11 +980,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public void SetUserReviewRate(int value)
+    public void SetUserReview(int rate)
     {
         _isUserReviewRecommended = false;
-        Settings.UserReviewRate = value;
-        Settings.UserReviewTime = DateTime.UtcNow;
+        Settings.UserReview = new UserReview {
+            AppVersion = Features.Version,
+            Rate = rate,
+            Time = DateTime.UtcNow
+        };
     }
 
     private void VpnService_StateChanged(object? sender, EventArgs e)

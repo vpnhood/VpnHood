@@ -606,16 +606,18 @@ public class ClientAppTest : TestAppBase
 
         // UserReviewRecommended must be reset
         var beforeSetRateTime = FastDateTime.UtcNow;
-        app.SetUserReviewRate(3);
+        app.SetUserReview(3);
         Assert.IsFalse(app.State.IsUserReviewRecommended, "It must be reset after rating.");
-        Assert.IsTrue(app.Settings.UserReviewTime >= beforeSetRateTime);
-        Assert.AreEqual(3, app.Settings.UserReviewRate);
+        Assert.IsTrue(app.Settings.UserReview?.Time >= beforeSetRateTime);
+        Assert.AreEqual(3, app.Settings.UserReview.Rate);
+        Assert.AreEqual(app.Features.Version, app.Settings.UserReview.AppVersion);
 
         // Connect again then access manager should receive result
-        Assert.IsNull(accessManager.UserReviewTime);
-        Assert.IsNull(accessManager.UserReviewRate);
+        Assert.IsNull(accessManager.UserReview);
         await app.Connect(clientProfile.ClientProfileId);
-        Assert.AreEqual(3, accessManager.UserReviewRate);
-        Assert.IsTrue(accessManager.UserReviewTime >= beforeSetRateTime);
+        Assert.IsNotNull(accessManager.UserReview);
+        Assert.AreEqual(3, accessManager.UserReview.Rate);
+        Assert.AreEqual(app.Features.Version, accessManager.UserReview.AppVersion);
+        Assert.IsTrue(accessManager.UserReview.Time >= beforeSetRateTime);
     }
 }

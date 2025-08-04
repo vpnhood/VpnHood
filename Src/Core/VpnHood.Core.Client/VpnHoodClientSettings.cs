@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Common.Tokens;
+﻿using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.Core.Client;
 
@@ -25,8 +26,7 @@ public class VpnHoodClientSettings
     public required string? SessionName { get; init; }
     public required string UserAgent { get; init; }
     public required bool AllowTcpReuse { get; init; }
-    public required int? UserReviewRate { get; init; }
-    public required DateTime? UserReviewTime { get; init; }
+    public required UserReview? UserReview { get; init; }
     public required bool DropUdp { get; set; }
     public required bool DropQuic { get; set; }
     public required bool UseTcpOverTun { get; set; }

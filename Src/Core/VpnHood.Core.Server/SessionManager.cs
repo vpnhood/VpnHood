@@ -151,8 +151,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
             IsIpV6Supported = helloRequest.IsIpV6Supported,
             AccessCode = helloRequest.AccessCode,
             ProtocolVersion = protocolVersion,
-            UserReviewTime = helloRequest.UserReviewTime,
-            UserReviewRate = helloRequest.UserReviewRate
+            UserReview = helloRequest.UserReview
         }).Vhc();
 
         // Access Error should not pass to the client in create session

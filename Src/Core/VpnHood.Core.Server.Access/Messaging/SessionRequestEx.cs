@@ -19,8 +19,7 @@ public class SessionRequestEx
     public bool? IsIpV6Supported { get; set; }
     public int ProtocolVersion { get; set; }
     public string? AccessCode { get; set; }
-    public int? UserReviewRate { get; set; }
-    public DateTime? UserReviewTime { get; set; }
+    public UserReview? UserReview { get; set; }
 
     [JsonConverter(typeof(IPEndPointConverter))]
     public required IPEndPoint HostEndPoint { get; set; }

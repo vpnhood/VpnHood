@@ -26,8 +26,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public bool CanExtendPremiumByAd { get; set; }
     public Dictionary<string, string> AccessCodes { get; set; } = new();
     public bool IsUserReviewRecommended { get; set; }
-    public DateTime? UserReviewTime { get; set; }
-    public int? UserReviewRate { get; set; }
+    public UserReview? UserReview { get; set; }
 
     public void AddAdData(string adData)
     {
@@ -73,8 +72,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         UpdateSessionResponse(ret);
 
         // update test provider
-        UserReviewRate = sessionRequestEx.UserReviewRate;
-        UserReviewTime = sessionRequestEx.UserReviewTime;
+        UserReview = sessionRequestEx.UserReview;
 
         if (!sessionRequestEx.AllowRedirect)
             return ret;

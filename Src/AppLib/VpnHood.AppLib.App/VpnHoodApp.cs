@@ -35,7 +35,6 @@ using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
-using PremiumOnlyException = VpnHood.AppLib.Exceptions.PremiumOnlyException;
 using TaskExtensions = VpnHood.Core.Toolkit.Utils.TaskExtensions;
 
 namespace VpnHood.AppLib;
@@ -420,6 +419,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             if (clientState == ClientState.Connected)
                 return AppConnectionState.Connected;
+
+            if (clientState == ClientState.Unstable)
+                return AppConnectionState.Unstable;
 
             if (clientState == ClientState.Connecting || _isConnecting)
                 return AppConnectionState.Connecting;

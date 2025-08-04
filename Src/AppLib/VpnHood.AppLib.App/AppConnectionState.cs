@@ -12,5 +12,6 @@ public enum AppConnectionState
     Diagnosing,
     Connecting,
     Connected,
+    Unstable,
     Disconnecting
 }

@@ -370,7 +370,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // resume connection if the client is paused and AutoWaitTimeout is not set
             _autoWaitTime = null;
-            State = ClientState.Connecting;
+            State = ClientState.Unstable;
         }
 
         // Manage datagram channels if needed
@@ -887,13 +887,15 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // pause after retry limit
             else if (now - _lastConnectionErrorTime.Value > Settings.ReconnectTimeout) {
                 _autoWaitTime = now;
+                if (_sessionStatus != null) _sessionStatus.WaitingCount++;
                 State = ClientState.Waiting;
                 VhLogger.Instance.LogWarning(ex, "Client is paused because of too many connection errors.");
             }
 
-            // set connecting state if it could not establish any connection
+            // set unstable state if it could not establish any connection
             else if (State == ClientState.Connected) {
-                State = ClientState.Connecting; //unstable
+                if (_sessionStatus!=null) _sessionStatus.UnstableCount++;
+                State = ClientState.Unstable; //unstable
             }
 
             throw;
@@ -1088,6 +1090,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public int SessionPacketChannelCount => client._sessionPacketChannelCount;
         public int TcpTunnelledCount => client._clientHost.Stat.TcpTunnelledCount;
         public int TcpPassthruCount => client._clientHost.Stat.TcpPassthruCount;
+        public int UnstableCount { get; set; }
+        public int WaitingCount { get; set; }
         public int ActivePacketChannelCount => client._tunnel.PacketChannelCount;
         public bool IsUdpMode => client.UseUdpChannel;
         public bool CanExtendByRewardedAd => _accessUsage.CanExtendByRewardedAd;

@@ -18,20 +18,16 @@ public static class AppConnectionStateExtensions
         if (hasDiagnoseStarted)
             return false;
 
-        return connectionState is 
-            AppConnectionState.Connected or 
-            AppConnectionState.Connecting or 
+        return connectionState is
+            AppConnectionState.Connected or
+            AppConnectionState.Connecting or
+            AppConnectionState.Unstable or
             AppConnectionState.None;
     }
 
     public static bool CanDisconnect(this AppConnectionState connectionState)
     {
-        return connectionState is 
-            AppConnectionState.Initializing or
-            AppConnectionState.Connected or 
-            AppConnectionState.Connecting or 
-            AppConnectionState.Diagnosing or 
-            AppConnectionState.Waiting or 
-            AppConnectionState.WaitingForAd;
+        return connectionState != AppConnectionState.None &&
+               connectionState != AppConnectionState.Disconnecting;
     }
 }

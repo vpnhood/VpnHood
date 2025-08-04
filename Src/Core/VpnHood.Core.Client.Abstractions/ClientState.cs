@@ -8,6 +8,7 @@ public enum ClientState
     Initializing,
     Connecting,
     Connected,
+    Unstable,
     Waiting,
     WaitingForAd,
     Disconnecting,

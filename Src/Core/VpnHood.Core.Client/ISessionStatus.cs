@@ -13,6 +13,8 @@ public interface ISessionStatus
     Traffic TotalTraffic { get; }
     int TcpTunnelledCount { get; }
     int TcpPassthruCount { get; }
+    int UnstableCount { get; }
+    int WaitingCount { get; }
     int SessionPacketChannelCount { get; }
     int ActivePacketChannelCount { get; }
     bool IsUdpMode { get; }

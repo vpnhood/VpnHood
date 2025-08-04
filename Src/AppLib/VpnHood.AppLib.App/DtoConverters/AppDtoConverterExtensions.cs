@@ -47,6 +47,8 @@ public static class AppDtoConverterExtensions
             TcpTunnelledCount = sessionStatus.TcpTunnelledCount,
             TcpPassthruCount = sessionStatus.TcpPassthruCount,
             PacketChannelCount = sessionStatus.PacketChannelCount,
+            UnstableCount = sessionStatus.UnstableCount,
+            WaitingCount = sessionStatus.WaitingCount,
             IsUdpMode = sessionStatus.IsUdpMode,
             CanExtendByRewardedAd = canExtendByRewardedAd,
             SessionMaxTraffic = sessionStatus.SessionMaxTraffic,

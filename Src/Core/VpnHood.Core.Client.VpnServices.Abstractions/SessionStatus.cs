@@ -12,6 +12,8 @@ public class SessionStatus
     public required Traffic TotalTraffic { get; init; }
     public required int TcpTunnelledCount { get; init; }
     public required int TcpPassthruCount { get; init; }
+    public required int UnstableCount { get; init; }
+    public required int WaitingCount { get; init; }
     public required int PacketChannelCount { get; init; }
     public required bool IsUdpMode { get; init; }
     public required bool CanExtendByRewardedAd { get; init; }

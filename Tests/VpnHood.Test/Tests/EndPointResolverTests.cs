@@ -7,7 +7,7 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class EndPointResolverTests
 {
-    private static ServerToken CreateServerToken()
+    private static ServerToken CreateServerToken(bool isValidDomain)
     {
         var randomId = Guid.NewGuid();
         var serverToken = new ServerToken {
@@ -20,7 +20,7 @@ public class EndPointResolverTests
             HostPort = 443,
             Secret = randomId.ToByteArray(),
             CreatedTime = DateTime.UtcNow,
-            IsValidHostName = false
+            IsValidHostName = isValidDomain
         };
         return serverToken;
     }
@@ -28,7 +28,7 @@ public class EndPointResolverTests
     [TestMethod]
     public async Task DnsOnly_ShouldResolveDnsEntries()
     {
-        var serverToken = CreateServerToken();
+        var serverToken = CreateServerToken(true);
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.DnsOnly,
             CancellationToken.None);
@@ -39,7 +39,7 @@ public class EndPointResolverTests
     [TestMethod]
     public async Task TokenOnly_ShouldUseTokenEndpoints()
     {
-        var serverToken = CreateServerToken();
+        var serverToken = CreateServerToken(true);
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.TokenOnly,
             CancellationToken.None);
@@ -50,7 +50,7 @@ public class EndPointResolverTests
     [TestMethod]
     public async Task DnsFirst_ShouldPrioritizeDnsEntries()
     {
-        var serverToken = CreateServerToken();
+        var serverToken = CreateServerToken(true);
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
 
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.DnsFirst,
@@ -65,7 +65,7 @@ public class EndPointResolverTests
     [TestMethod]
     public async Task TokenFirst_ShouldPrioritizeTokenEndpoints()
     {
-        var serverToken = CreateServerToken();
+        var serverToken = CreateServerToken(true);
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
 
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.TokenFirst,
@@ -74,5 +74,19 @@ public class EndPointResolverTests
         Assert.AreEqual(tokenEndPoints[0], results[0]);
         Assert.AreEqual(tokenEndPoints[1], results[1]);
         Assert.IsTrue(tokenEndPoints.Length < results.Length, "Resolved endpoints should not be empty.");
+    }
+
+    [TestMethod]
+    public async Task Auto_ShouldNotReturnDomainEndPoints_with_invalid_hostname()
+    {
+        var serverToken = CreateServerToken(false);
+        var tokenEndPoints = serverToken.HostEndPoints ?? [];
+
+        var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.Auto,
+            CancellationToken.None);
+
+        Assert.AreEqual(tokenEndPoints[0], results[0]);
+        Assert.AreEqual(tokenEndPoints[1], results[1]);
+        Assert.AreEqual(tokenEndPoints.Length, results.Length);
     }
 }

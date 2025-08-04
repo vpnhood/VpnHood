@@ -51,8 +51,9 @@ public static class EndPointResolver
         }
 
         // if token has host name, try to resolve it
-        var dnsEndPoints = await TryGetEndPointFromDns(serverToken, cancellationToken).Vhc();
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
+        var dnsEndPoints = serverToken.IsValidHostName
+            ? await TryGetEndPointFromDns(serverToken, cancellationToken).Vhc() : [];
 
         // follow the end point strategy to combine the endpoints
         var ipEndPoints = strategy switch {

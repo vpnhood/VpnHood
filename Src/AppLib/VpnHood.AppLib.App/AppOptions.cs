@@ -41,7 +41,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public TimeSpan ServerQueryTimeout { get; set; } = ClientOptions.Default.ServerQueryTimeout;
     public TimeSpan ConnectTimeout { get; set; } = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(60);
     public TimeSpan TcpTimeout { get; set; } = ClientOptions.Default.ConnectTimeout;
-    public TimeSpan LocationServiceTimeout { get; set; } = TimeSpan.FromSeconds(5); // ignore debugger attach to let check when there is no internet
+    public TimeSpan LocationServiceTimeout { get; set; } = TimeSpan.FromSeconds(3); // ignore debugger attach to let check when there is no internet
     public bool AutoDiagnose { get; set; } = true;
     public AppAdOptions AdOptions { get; set; } = new();
     public bool AllowEndPointTracker { get; set; }

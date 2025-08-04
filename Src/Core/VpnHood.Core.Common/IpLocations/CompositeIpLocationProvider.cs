@@ -33,10 +33,8 @@ public class CompositeIpLocationProvider(
     {
         foreach (var provider in providers)
             try {
-                using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                if (providerTimeout.HasValue)
-                    linkedToken.CancelAfter(providerTimeout.Value);
-
+                using var providerTimeoutCts = new CancellationTokenSource(providerTimeout ?? TimeSpan.FromSeconds(5));
+                using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, providerTimeoutCts.Token);
                 return await provider.GetCurrentLocation(linkedToken.Token);
             }
             catch (NotSupportedException) {

@@ -122,8 +122,13 @@ public class ClientProfileService
         if (updateParams.IsFavorite != null)
             item.IsFavorite = updateParams.IsFavorite.Value;
 
-        if (updateParams.CustomServerEndpoints != null)
+        if (updateParams.CustomServerEndpoints != null) {
+            var customEndpoints = updateParams.CustomServerEndpoints.Value?.Select(IPEndPoint.Parse).ToArray();
+            if (customEndpoints?.Any(x=>x.Port==0) == true)
+                throw new ArgumentException("Custom server endpoints cannot have port 0.", nameof(updateParams.CustomServerEndpoints));
+
             item.CustomServerEndpoints = updateParams.CustomServerEndpoints.Value?.Select(IPEndPoint.Parse).ToArray();
+        }
 
         if (updateParams.CustomData != null)
             item.CustomData = updateParams.CustomData.Value;

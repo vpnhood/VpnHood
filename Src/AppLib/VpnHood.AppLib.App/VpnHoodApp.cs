@@ -1027,6 +1027,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _showAdCts.Dispose();
             _showAdCts = new CancellationTokenSource();
 
+            _connectTimeoutCts.CancelAfter(TimeSpan.FromMinutes(15));
             await AdManager.ShowAd(ConnectionInfo.SessionInfo.SessionId, ConnectionInfo.SessionInfo.AdRequirement, _showAdCts.Token);
         }
         catch (Exception ex) {

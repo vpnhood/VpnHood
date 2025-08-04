@@ -237,7 +237,7 @@ public class AdTest : TestAppBase
 
         // create client app
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        
+
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         var isAdLoadingStatusMet = false;
         app.ConnectionStateChanged += (_, _) => {
@@ -280,6 +280,7 @@ public class AdTest : TestAppBase
 
         // configure client app for ad
         var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdOptions.ShowAdPostDelay = TimeSpan.FromSeconds(1);
         appOptions.AdOptions.PreloadAd = false;
         appOptions.AdProviderItems = [adProviderItem];
 
@@ -297,6 +298,8 @@ public class AdTest : TestAppBase
         // finish showing ad
         showAdCompletionSource.SetResult();
         await app.WaitForState(AppConnectionState.Connected);
+        await Task.Delay(appOptions.AdOptions.ShowAdPostDelay); // make sure ad post delay is finished
+        await Task.Delay(200);// make sure ad post delay is finished
 
         // all included ips should be split now
         await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint1, TestConstants.HttpsExternalUri1);

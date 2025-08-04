@@ -894,7 +894,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // set unstable state if it could not establish any connection
             else if (State == ClientState.Connected) {
-                if (_sessionStatus!=null) _sessionStatus.UnstableCount++;
+                if (_sessionStatus != null) _sessionStatus.UnstableCount++;
                 State = ClientState.Unstable; //unstable
             }
 

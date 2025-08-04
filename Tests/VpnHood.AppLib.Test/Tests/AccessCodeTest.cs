@@ -17,7 +17,6 @@ public class AccessCodeTest : TestAppBase
         var tcpClient = new TcpClient();
         Console.WriteLine(tcpClient.ReceiveBufferSize);
         Console.WriteLine(tcpClient.SendBufferSize);
-
         await Task.CompletedTask;
     }
 

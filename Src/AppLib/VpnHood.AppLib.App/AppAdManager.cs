@@ -59,15 +59,13 @@ public class AppAdManager(
             VhLogger.Instance.LogDebug("Successfully loaded ad. AdResult: {NetworkName}", adResult.NetworkName);
 
             // wait for ad post delay
-            var ignoreTimeSpan = TimeSpan.FromSeconds(2);
-            if (showAdPostDelay > ignoreTimeSpan) {
-                await Task.Delay(showAdPostDelay.Subtract(ignoreTimeSpan), cancellationToken).Vhc();
-                IsWaitingForPostDelay = true;
-                await Task.Delay(ignoreTimeSpan, cancellationToken).Vhc();
-            }
-            else {
-                await Task.Delay(showAdPostDelay, cancellationToken).Vhc();
-            }
+            var ignoreTimeSpan = TimeSpan.FromSeconds(3);
+            var delay1 = showAdPostDelay.Subtract(ignoreTimeSpan);
+            if (delay1 < TimeSpan.Zero) delay1 = TimeSpan.Zero;
+            await Task.Delay(delay1, cancellationToken).Vhc();
+
+            IsWaitingForPostDelay = true;
+            await Task.Delay(showAdPostDelay - delay1, cancellationToken).Vhc();
 
             // track tell the VpnService to disable ad mode
             await vpnServiceManager.SetAdResult(adResult, adRequirement == AdRequirement.Rewarded, cancellationToken);

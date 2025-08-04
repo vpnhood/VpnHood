@@ -415,7 +415,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 return AppConnectionState.Waiting;
 
             if (clientState == ClientState.WaitingForAd)
-                return AppConnectionState.WaitingForAd;
+                return AdManager.IsWaitingForPostDelay ? AppConnectionState.Connected : AppConnectionState.WaitingForAd;
 
             if (clientState == ClientState.Connected)
                 return AppConnectionState.Connected;
@@ -1027,7 +1027,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _showAdCts.Dispose();
             _showAdCts = new CancellationTokenSource();
 
-            _connectTimeoutCts.CancelAfter( TimeSpan.FromMinutes(15));
+            _connectTimeoutCts.CancelAfter(TimeSpan.FromMinutes(15));
             await AdManager.ShowAd(ConnectionInfo.SessionInfo.SessionId, ConnectionInfo.SessionInfo.AdRequirement, _showAdCts.Token);
         }
         catch (Exception ex) {
@@ -1061,7 +1061,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogInformation("Disconnect has been requested.");
 
             // store states before setting _isDisconnecting
-            var state = State; 
+            var state = State;
 
             // save SuccessfulConnectionsCount
             if (FastDateTime.UtcNow > state.SessionInfo?.CreatedTime.AddMinutes(15) && // 15 minutes
@@ -1071,14 +1071,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // set review needed after disconnecting. It must be in connected state
             _isUserReviewRecommended =
                 state.ConnectionState is AppConnectionState.Connected &&
-                _appPersistState.LastError is null && 
+                _appPersistState.LastError is null &&
                 _allowRecommendUserReviewByServer &&
                 Features.IsUserReviewSupported &&
                 ConnectionInfo.SessionStatus?.IsUserReviewRecommended == true;
 
             // set after performing on disconnect task, because it will change the state
             _isDisconnecting = true;
-            
+
             await _connectCts.TryCancelAsync().Vhc();
             _connectCts.Dispose();
 

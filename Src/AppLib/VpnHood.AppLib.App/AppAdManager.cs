@@ -49,9 +49,10 @@ public class AppAdManager(
 
             // flexible ad
             var adResult = adRequirement switch {
-                AdRequirement.Flexible => await adService
-                    .ShowInterstitial(uiContext, sessionId, cancellationToken).Vhc(),
-                AdRequirement.Rewarded => await adService.ShowRewarded(uiContext, sessionId, cancellationToken).Vhc(),
+                AdRequirement.Flexible => 
+                    await adService.ShowInterstitial(uiContext, sessionId, cancellationToken).Vhc(),
+                AdRequirement.Rewarded => 
+                    await adService.ShowRewarded(uiContext, sessionId, cancellationToken).Vhc(),
                 _ => throw new AdException("Unsupported ad requirement.")
             };
 

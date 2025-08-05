@@ -421,7 +421,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 return AppConnectionState.Connected;
 
             if (clientState == ClientState.Unstable)
-                return AppConnectionState.Unstable;
+                return AppConnectionState.Connected;
 
             if (clientState == ClientState.Connecting || _isConnecting)
                 return AppConnectionState.Connecting;

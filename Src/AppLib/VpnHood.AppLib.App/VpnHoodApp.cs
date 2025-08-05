@@ -832,7 +832,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async Task RequestFeatures(CancellationToken cancellationToken)
     {
-        if (AppUiContext.Context?.IsActive != true)
+        var uiContext = AppUiContext.Context;
+        if (uiContext == null || !await uiContext.IsActive())
             return;
 
         // QuickLaunch
@@ -844,7 +845,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 VhLogger.Instance.LogInformation("Prompting for Quick Launch...");
                 Settings.IsQuickLaunchEnabled =
                     await Services.UiProvider
-                        .RequestQuickLaunch(AppUiContext.RequiredContext, cancellationToken).Vhc();
+                        .RequestQuickLaunch(uiContext, cancellationToken).Vhc();
             }
             catch (Exception ex) {
                 ReportError(ex, "Could not add QuickLaunch.");
@@ -860,7 +861,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 VhLogger.Instance.LogInformation("Prompting for notifications...");
                 Settings.IsNotificationEnabled =
                     await Services.UiProvider
-                        .RequestNotification(AppUiContext.RequiredContext, cancellationToken).Vhc();
+                        .RequestNotification(uiContext, cancellationToken).Vhc();
             }
             catch (Exception ex) {
                 ReportError(ex, "Could not enable Notification.");
@@ -870,10 +871,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public CultureInfo SystemUiCulture =>
-        _systemUiCulture ??
-        new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ??
-                        CultureInfo.InstalledUICulture.Name);
+    public CultureInfo SystemUiCulture => 
+        _systemUiCulture ?? 
+        new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ?? CultureInfo.InstalledUICulture.Name);
 
     private void InitCulture()
     {

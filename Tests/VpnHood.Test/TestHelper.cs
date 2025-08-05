@@ -32,8 +32,8 @@ public class TestHelper : IDisposable
     private static readonly string AssemblyWorkingPath = Path.Combine(Path.GetTempPath(), "VpnHood.Test");
     public class TestAppUiContext : IUiContext
     {
-        public bool IsActive => true;
-        public bool IsDestroyed => false;
+        public Task<bool> IsActive() => Task.FromResult(true);
+        public Task<bool> IsDestroyed() => Task.FromResult(false);
     }
 
     public string WorkingPath { get; } = Path.Combine(AssemblyWorkingPath, Guid.CreateVersion7().ToString());

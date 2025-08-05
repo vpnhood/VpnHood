@@ -114,7 +114,7 @@ internal class AppCompositeAdService
 
     private static async Task VerifyActiveUi(IUiContext uiContext, bool immediately = true)
     {
-        if (uiContext.IsActive)
+        if (await uiContext.IsActive())
             return;
 
         // throw exception if the UI is not available
@@ -122,13 +122,13 @@ internal class AppCompositeAdService
             throw new ShowAdNoUiException();
 
         // throw exception if the UI is destroyed, there is no point in waiting for it
-        if (uiContext.IsDestroyed)
+        if (await uiContext.IsDestroyed())
             throw new ShowAdNoUiException();
 
         // wait for the UI to be active
         for (var i = 0; i < 10; i++) {
             await Task.Delay(200).Vhc();
-            if (uiContext.IsActive)
+            if (await uiContext.IsActive())
                 return;
         }
 

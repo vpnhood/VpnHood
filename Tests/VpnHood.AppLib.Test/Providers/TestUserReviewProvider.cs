@@ -7,12 +7,11 @@ internal class TestUserReviewProvider : IAppReviewProvider
 {
     public bool IsReviewRequested { get; set; }
 
-    public Task RequestReview(IUiContext uiContext)
+    public async Task RequestReview(IUiContext uiContext)
     {
-        if (!uiContext.IsActive)
+        if (!await uiContext.IsActive())
             throw new InvalidOperationException("UiContext is not active.");
 
         IsReviewRequested = true;
-        return Task.CompletedTask;
     }
 }

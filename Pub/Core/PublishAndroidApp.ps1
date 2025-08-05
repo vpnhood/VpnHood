@@ -58,8 +58,7 @@ if ($apk)
 		/p:AndroidPackageFormat="apk" `
 		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
-		/p:RestoreDisableParallel=true `
-		/p:nodeReuse=false;
+		;
 	
 	if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
 	 
@@ -90,17 +89,16 @@ if ($aab)
 	$module_packageFile = "$moduleDir/$packageFileTitle-android.aab";
 	$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
-	dotnet build $projectFile /t:Clean /t:SignAndroidPackage /verbosity:$msverbosity `
-		/p:SolutionDir=$solutionDir `
-		/p:Configuration=Release `
-		/p:ApplicationId=$packageId `
-		/p:Version=$versionParam `
-		/p:OutputPath=$outputPath `
-		/p:ArchiveOnBuild=true `
-		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
-		/p:RestoreDisableParallel=true `
-		/p:nodeReuse=false;
+    dotnet build $projectFile /t:Clean /t:SignAndroidPackage /verbosity:$msverbosity `
+    /p:SolutionDir=$solutionDir `
+    /p:Configuration=Release `
+    /p:ApplicationId=$packageId `
+    /p:Version=$versionParam `
+    /p:OutputPath=$outputPath `
+    /p:ArchiveOnBuild=true `
+    /p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
+    /p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
+    ;
 
 	if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
 }

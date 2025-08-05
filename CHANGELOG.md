@@ -1,4 +1,4 @@
-# Upcoming
+# v7.3.736
 * Fix: Critical issue: Random inability to connect at startup
 * Fix: Internal crash in logger when closing the service
 * Fix: VpnService is unreachable

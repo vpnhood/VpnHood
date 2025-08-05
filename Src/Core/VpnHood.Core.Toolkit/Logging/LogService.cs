@@ -7,6 +7,7 @@ public class LogService(string logFilePath) : IDisposable
 {
     private ILogger? _logger;
     private readonly List<ILoggerProvider> _loggerProviders = [];
+    private int _isDisposed;
     public string LogFilePath { get; } = logFilePath;
     public string[] LogEvents { get; private set; } = [];
     public bool Exists => File.Exists(LogFilePath);
@@ -14,6 +15,7 @@ public class LogService(string logFilePath) : IDisposable
 
     public void Start(LogServiceOptions options, bool deleteOldReport = true)
     {
+        ObjectDisposedException.ThrowIf(_isDisposed == 1, this);
         Stop();
 
         VhLogger.IsAnonymousMode = options.LogAnonymous is null or true;
@@ -30,15 +32,18 @@ public class LogService(string logFilePath) : IDisposable
             JsonSerializer.Serialize(options));
     }
 
+    private readonly object _isStoppingLock = new();
     public void Stop()
     {
-        VhLogger.Instance.LogDebug("LogService is stopping...");
+        lock (_isStoppingLock) {
+            VhLogger.Instance.LogDebug("LogService is stopping...");
 
-        VhLogger.Instance = VhLogger.CreateConsoleLogger();
-        foreach (var loggerProvider in _loggerProviders)
-            loggerProvider.Dispose();
-        _loggerProviders.Clear();
-        _logger = null;
+            VhLogger.Instance = VhLogger.CreateConsoleLogger();
+            foreach (var loggerProvider in _loggerProviders)
+                loggerProvider.Dispose();
+            _loggerProviders.Clear();
+            _logger = null;
+        }
     }
 
     private ILogger CreateLogger(LogServiceOptions logServiceOptions, bool deleteOldReport)
@@ -105,6 +110,8 @@ public class LogService(string logFilePath) : IDisposable
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+            return;
         Stop();
     }
 

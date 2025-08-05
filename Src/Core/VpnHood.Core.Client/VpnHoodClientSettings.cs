@@ -20,7 +20,7 @@ public class VpnHoodClientSettings
     public required string[]? ExcludeApps { get; init; }
     public required TimeSpan SessionTimeout { get; init; }
     public required TimeSpan AutoWaitTimeout { get; init; }
-    public required TimeSpan ReconnectTimeout { get; init; }
+    public required TimeSpan UnstableTimeout { get; init; }
     public required string ClientId { get; init; }
     public required bool IncludeLocalNetwork { get; init; }
     public required string? SessionName { get; init; }

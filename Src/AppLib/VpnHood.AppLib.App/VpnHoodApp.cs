@@ -54,7 +54,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly bool _allowRecommendUserReviewByServer;
     private readonly string? _ga4MeasurementId;
     private readonly TimeSpan _versionCheckInterval;
-    private readonly TimeSpan _reconnectTimeout;
+    private readonly TimeSpan _unstableTimeout;
     private readonly TimeSpan _autoWaitTimeout;
     private readonly TimeSpan _serverQueryTimeout;
     private readonly TimeSpan _connectTimeout;
@@ -116,7 +116,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _locationServiceTimeout = options.LocationServiceTimeout;
         _ga4MeasurementId = options.Ga4MeasurementId;
         _versionCheckInterval = options.VersionCheckInterval;
-        _reconnectTimeout = options.ReconnectTimeout;
+        _unstableTimeout = options.UnstableTimeout;
         _autoWaitTimeout = options.AutoWaitTimeout;
         _tcpTimeout = options.TcpTimeout;
         _versionCheckResult = JsonUtils.TryDeserializeFile<VersionCheckResult>(VersionCheckFilePath);
@@ -657,7 +657,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ClientId = Features.ClientId,
                 AccessKey = token.ToAccessKey(),
                 SessionTimeout = _sessionTimeout,
-                ReconnectTimeout = _reconnectTimeout,
+                UnstableTimeout = _unstableTimeout,
                 AutoWaitTimeout = _autoWaitTimeout,
                 IncludeLocalNetwork = UserSettings.IncludeLocalNetwork && Features.IsLocalNetworkSupported,
                 IncludeIpRanges = (await GetIncludeIpRanges(cancellationToken)).ToArray(),

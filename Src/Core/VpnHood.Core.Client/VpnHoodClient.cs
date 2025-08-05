@@ -108,7 +108,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             IncludeApps = options.IncludeApps,
             SessionName = options.SessionName,
             AllowTcpReuse = options.AllowTcpReuse,
-            ReconnectTimeout = options.ReconnectTimeout,
+            UnstableTimeout = options.UnstableTimeout,
             AutoWaitTimeout = options.AutoWaitTimeout,
             Version = options.Version,
             UserAgent = options.UserAgent,
@@ -885,7 +885,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 await DisposeAsync(ex);
 
             // pause after retry limit
-            else if (now - _lastConnectionErrorTime.Value > Settings.ReconnectTimeout) {
+            else if (now - _lastConnectionErrorTime.Value > Settings.UnstableTimeout) {
                 _autoWaitTime = now;
                 if (_sessionStatus != null) _sessionStatus.WaitingCount++;
                 State = ClientState.Waiting;

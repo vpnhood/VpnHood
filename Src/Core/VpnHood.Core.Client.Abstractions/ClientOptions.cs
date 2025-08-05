@@ -39,7 +39,7 @@ public class ClientOptions
     public bool AutoDisposeVpnAdapter { get; set; } = true;
     public TimeSpan SessionTimeout { get; set; } = TimeSpan.FromDays(3);
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
-    public TimeSpan ReconnectTimeout { get; set; } = TimeSpan.FromSeconds(60); // connect timeout before pause
+    public TimeSpan UnstableTimeout { get; set; } = TimeSpan.FromSeconds(60); // connect timeout before pause
     public TimeSpan AutoWaitTimeout { get; set; } = TimeSpan.FromSeconds(30); // auto resume after pause
     public bool UseUdpChannel { get; set; }
     public bool IncludeLocalNetwork { get; set; }

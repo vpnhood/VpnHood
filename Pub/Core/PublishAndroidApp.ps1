@@ -45,6 +45,7 @@ Write-Host "*** Creating $module_packageFileName ..." -BackgroundColor Blue -For
 # ------------- apk
 if ($apk)
 {
+	# not-sure about RestoreDisableParallel yet
 	$outputPath = Join-Path $projectDir "bin/Release-$distribution/";
 	$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
 	dotnet build $projectFile /t:Clean /t:SignAndroidPackage /verbosity:$msverbosity `
@@ -57,8 +58,8 @@ if ($apk)
 		/p:AndroidPackageFormat="apk" `
 		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
-		/p:RestoreDisableParallel=true ` # not-sure yet
-		/p:nodeReuse:false;
+		/p:RestoreDisableParallel=true `
+		/p:nodeReuse=false;
 	
 	if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
 	 
@@ -98,8 +99,8 @@ if ($aab)
 		/p:ArchiveOnBuild=true `
 		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
-		/p:RestoreDisableParallel=true ` # not-sure yet
-		/p:nodeReuse:false;
+		/p:RestoreDisableParallel=true `
+		/p:nodeReuse=false;
 
 	if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
 }

@@ -34,7 +34,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public IAppReviewProvider? UserReviewProvider { get; set; }
     public AppAdProviderItem[] AdProviderItems { get; set; } = [];
     public ITrackerFactory? TrackerFactory { get; set; }
-    public TimeSpan ReconnectTimeout { get; set; } = ClientOptions.Default.ReconnectTimeout;
+    public TimeSpan UnstableTimeout { get; set; } = ClientOptions.Default.UnstableTimeout;
     public TimeSpan AutoWaitTimeout { get; set; } = ClientOptions.Default.AutoWaitTimeout;
     public bool? LogAnonymous { get; set; } =
         isDebugMode ? false : null; // it follows user's settings if it set to null

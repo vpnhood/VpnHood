@@ -146,7 +146,7 @@ public class ClientAppTest : TestAppBase
         // create app & connect
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.SessionTimeout = TimeSpan.FromSeconds(20);
-        appOptions.ReconnectTimeout = TimeSpan.FromSeconds(1);
+        appOptions.UnstableTimeout = TimeSpan.FromSeconds(1);
         appOptions.AutoWaitTimeout = TimeSpan.FromSeconds(2);
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestHelper.CreateDevice());
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());

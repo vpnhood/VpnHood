@@ -20,7 +20,6 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
-		<RuntimeIdentifiers>android-arm64;android-x64;android-arm;android-x86;</RuntimeIdentifiers>
 		<PathMap>$(SolutionDir)=.</PathMap>
 	</PropertyGroup>
 

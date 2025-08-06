@@ -52,10 +52,10 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.7" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.8" />
 		<PackageReference Include="NLog" Version="6.0.2" />
 		<PackageReference Include="NLog.Extensions.Logging" Version="6.0.2" />
-		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.7" />
+		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.8" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Server.Access.FileAccessManager\VpnHood.Core.Server.Access.FileAccessManager.csproj" />

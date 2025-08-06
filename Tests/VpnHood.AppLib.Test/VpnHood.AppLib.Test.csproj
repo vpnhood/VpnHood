@@ -28,10 +28,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.7" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-		<PackageReference Include="MSTest.TestAdapter" Version="3.10.0" />
-		<PackageReference Include="MSTest.TestFramework" Version="3.10.0" />
+		<PackageReference Include="MSTest.TestAdapter" Version="3.10.1" />
+		<PackageReference Include="MSTest.TestFramework" Version="3.10.1" />
 		<PackageReference Include="coverlet.collector" Version="6.0.4">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

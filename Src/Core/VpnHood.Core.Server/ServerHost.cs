@@ -627,7 +627,6 @@ public class ServerHost : IDisposable, IAsyncDisposable
             IncludeIpRanges = NetFilterIncludeIpRanges,
             VpnAdapterIncludeIpRanges = NetFilterVpnAdapterIncludeIpRanges,
             IsIpV6Supported = IsIpV6Supported,
-            IsReviewRequested = sessionResponseEx.IsReviewRequested,
             // client should wait more to get session exception replies
             RequestTimeout = _sessionManager.SessionOptions.TcpConnectTimeoutValue +
                              TunnelDefaults.ClientRequestTimeoutDelta,

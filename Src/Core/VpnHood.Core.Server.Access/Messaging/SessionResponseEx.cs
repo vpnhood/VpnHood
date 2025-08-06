@@ -20,7 +20,4 @@ public class SessionResponseEx : SessionResponse
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public SessionSuppressType SuppressedTo { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public bool IsReviewRequested { get; set; }
 }

@@ -11,9 +11,9 @@ namespace VpnHood.AppLib.Services.Ads;
 internal class AppCompositeAdService
 {
     private AppAdProviderItem? _loadedAdProviderItem;
-
     private readonly AppAdProviderItem[] _adProviderItems;
     private readonly ITracker? _tracker;
+    public bool IsPreload { get; private set; }
 
     public AppCompositeAdService(AppAdProviderItem[] adProviderItems, ITracker? tracker)
     {
@@ -34,7 +34,7 @@ internal class AppCompositeAdService
     {
         return _loadedAdProviderItem?.AdProvider.AdLoadedTime == null ||
                _loadedAdProviderItem.AdProvider.AdLoadedTime + _loadedAdProviderItem.AdProvider.AdLifeSpan <
-               DateTime.UtcNow;
+               DateTime.Now;
     }
 
     private static bool IsCountrySupported(AppAdProviderItem adProviderItem, string countryCode)
@@ -50,7 +50,7 @@ internal class AppCompositeAdService
 
     private readonly AsyncLock _loadAdLock = new();
 
-    public async Task LoadAd(IUiContext uiContext, string? countryCode, bool forceReload,
+    public async Task LoadAd(IUiContext uiContext, bool isPreload, string? countryCode, bool forceReload,
         TimeSpan loadAdTimeout, CancellationToken cancellationToken)
     {
         if (_adProviderItems.Length == 0)
@@ -60,6 +60,7 @@ internal class AppCompositeAdService
         if (!forceReload && !ShouldLoadAd())
             return;
 
+        IsPreload = isPreload;
         _loadedAdProviderItem = null;
         var providerExceptions = new List<(string, Exception)>();
 
@@ -88,13 +89,14 @@ internal class AppCompositeAdService
             }
             catch (Exception ex) {
                 var message = string.IsNullOrWhiteSpace(ex.Message)
-                    ? $"Empty message. Provider: {adProviderItem.Name}"
+                    ? $"Empty message. Provider: {adProviderItem.Name}, IsPreload: {isPreload}"
                     : ex.Message;
 
                 // track the error
                 if (_tracker != null)
                     await _tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildLoadAdFailed(
-                        adNetwork: adProviderItem.Name, errorMessage: message, countryCode: countryCode), cancellationToken);
+                        adNetwork: adProviderItem.Name, errorMessage: message, countryCode: countryCode, isPreload: isPreload), 
+                        cancellationToken);
 
                 providerExceptions.Add((adProviderItem.Name, ex));
                 VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.",

@@ -56,4 +56,5 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public bool AutoRemoveExpiredPremium { get; set; } // auto remove premium on access code reject
     public AppFeature[] PremiumFeatures { get; init; } = [];
     public bool AllowRecommendUserReviewByServer { get; set; }
+    public Uri? RemoteSettingsUrl { get; set; }
 }

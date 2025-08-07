@@ -137,7 +137,7 @@ internal class AppController : WebApiController, IAppController
     public async Task SetUserSettings(UserSettings userSettings)
     {
         userSettings = await HttpContext.GetRequestDataAsync<UserSettings>().Vhc();
-        App.SettingsService.AppSettings.UserSettings = userSettings;
+        App.SettingsService.Settings.UserSettings = userSettings;
         App.SettingsService.Save();
     }
 

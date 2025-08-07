@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.App.Client.Droid.Google.FirebaseUtils;
+namespace VpnHood.App.Connect.Droid.Google.FirebaseUtils;
 
 public class FirebaseAnalyticsTracker : Singleton<FirebaseAnalyticsTracker>, ITracker
 {

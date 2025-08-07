@@ -31,7 +31,12 @@ public static class JsonSerializerExt
         var propertyType = propertyInfo.PropertyType;
         object? parsedValue;
 
-        if (propertyType.IsValueType || propertyType == typeof(string)) {
+        if (propertyType == typeof(Uri)) {
+            parsedValue = updatedProperty.Value.GetString() is { } uriString
+                ? new Uri(uriString, UriKind.RelativeOrAbsolute)
+                : null;
+        }
+        else if (propertyType.IsValueType || propertyType == typeof(string)) {
             parsedValue = JsonSerializer.Deserialize(updatedProperty.Value.GetRawText(), propertyType);
         }
         else {

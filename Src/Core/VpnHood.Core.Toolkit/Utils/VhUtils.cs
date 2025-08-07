@@ -484,4 +484,9 @@ public static class VhUtils
         if (!string.IsNullOrEmpty(actionName))
             VhLogger.Instance.LogDebug(ex, "Could not invoke {ActionDesc}", actionName);
     }
+
+    public static Uri? TryParseUrl(string? stringUrl, UriKind uriKind = UriKind.Absolute)
+    {
+        return Uri.TryCreate(stringUrl, uriKind, out var result) ? result : null;
+    }
 }

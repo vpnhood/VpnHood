@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<Description>VpnHood Android Client Connect App with Ads and memebership</Description>
 		<TargetFramework>net9.0-android36.0</TargetFramework>
-		<RootNamespace>VpnHood.App.Client.Droid.Google</RootNamespace>
+		<RootNamespace>VpnHood.App.Connect.Droid.Google</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
 		<ApplicationVersion>737</ApplicationVersion>

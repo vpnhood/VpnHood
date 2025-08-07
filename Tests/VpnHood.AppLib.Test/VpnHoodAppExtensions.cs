@@ -35,7 +35,7 @@ public static class VpnHoodAppExtensions
 
     public static void UpdateClientCountry(this VpnHoodApp app, string countryCode)
     {
-        app.SettingsService.AppSettings.ClientIpLocation = new IpLocation {
+        app.SettingsService.Settings.ClientIpLocation = new IpLocation {
             IpAddress = IPAddress.Parse("1.2.3.4"), // Dummy IP address
             CountryCode = countryCode,
             CountryName = VhUtils.TryGetCountryName(countryCode) ?? "Unknown",

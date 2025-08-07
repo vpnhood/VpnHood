@@ -1,3 +1,7 @@
+# Upcoming
+* Fix: Preload ad in some regions
+* Feature: Show unstable connection
+
 # v7.3.737
 * Fix: Critical issue: Random inability to connect at startup
 * Fix: Internal crash in logger when closing the service

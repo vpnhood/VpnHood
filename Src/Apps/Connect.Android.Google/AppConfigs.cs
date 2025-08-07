@@ -5,7 +5,7 @@ using VpnHood.Core.Client.Abstractions;
 // ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo
 // ReSharper disable HeuristicUnreachableCode
-namespace VpnHood.App.Client.Droid.Google;
+namespace VpnHood.App.Connect.Droid.Google;
 
 internal class AppConfigs : AppConfigsBase<AppConfigs>
 {
@@ -13,6 +13,8 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
 
     public string? UpdateInfoUrl { get; set; } =
         "https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android.json";
+
+    public Uri? RemoteSettingsUrl { get; set; }
 
     public int? SpaDefaultPort { get; set; } = IsDebugMode ? 9571 : 9570;
     public bool SpaListenToAllIps { get; set; } = IsDebugMode;

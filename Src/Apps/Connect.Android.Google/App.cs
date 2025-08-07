@@ -1,6 +1,7 @@
 ﻿using Android.Runtime;
 using Microsoft.Extensions.Logging;
-using VpnHood.App.Client.Droid.Google.FirebaseUtils;
+using VpnHood.App.Client;
+using VpnHood.App.Connect.Droid.Google.FirebaseUtils;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Droid.Ads.VhAdMob;
@@ -11,7 +12,7 @@ using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Store;
 using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.App.Client.Droid.Google;
+namespace VpnHood.App.Connect.Droid.Google;
 
 [Application(
     Label = AppConfigs.AppName,
@@ -45,6 +46,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AccessKeys = [appConfigs.DefaultAccessKey],
             Resources = resources,
             UpdateInfoUrl = appConfigs.UpdateInfoUrl,
+            RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
             UpdaterProvider = new GooglePlayAppUpdaterProvider(),
@@ -58,7 +60,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AllowRecommendUserReviewByServer = true,
             AdOptions = new AppAdOptions {
                 PreloadAd = true
-            }
+            },
         };
     }
 

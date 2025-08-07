@@ -1,7 +1,7 @@
 using Ga4.Trackers;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 
-namespace VpnHood.App.Client.Droid.Google.FirebaseUtils;
+namespace VpnHood.App.Connect.Droid.Google.FirebaseUtils;
 
 public class FirebaseAnalyticsTrackerFactory : ITrackerFactory
 {

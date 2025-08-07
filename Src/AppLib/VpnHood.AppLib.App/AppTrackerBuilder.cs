@@ -4,7 +4,8 @@ namespace VpnHood.AppLib;
 
 public static class AppTrackerBuilder
 {
-    private static TrackEvent BuildAdFailed(string eventName, string? adNetwork, string errorMessage, string? countryCode)
+    private static TrackEvent BuildAdFailed(string eventName, string? adNetwork,
+        string errorMessage, string? countryCode, bool isPreload)
     {
         if (string.IsNullOrWhiteSpace(countryCode)) countryCode = "(vh_unknown)";
         if (string.IsNullOrWhiteSpace(errorMessage)) errorMessage = "(vh_unknown)";
@@ -14,26 +15,33 @@ public static class AppTrackerBuilder
             Parameters = new Dictionary<string, object> {
                 { "ad_network", adNetwork ?? "(vh_unknown)" },
                 { "error", errorMessage },
-                { "country", countryCode }
+                { "country", countryCode },
+                { "isPreload", isPreload },
             }
         };
     }
-    public static TrackEvent BuildAdFailed(string? adNetwork, string errorMessage, string? countryCode)
+    public static TrackEvent BuildAdFailed(string? adNetwork, string errorMessage,
+        string? countryCode, bool isPreload)
     {
-        return BuildAdFailed(eventName: "vh_ad_failed", adNetwork: adNetwork, errorMessage: errorMessage, countryCode: countryCode);
+        return BuildAdFailed(eventName: "vh_ad_failed", adNetwork: adNetwork,
+            errorMessage: errorMessage, countryCode: countryCode, isPreload: isPreload);
     }
 
-    public static TrackEvent BuildLoadAdFailed(string adNetwork, string errorMessage, string? countryCode)
+    public static TrackEvent BuildLoadAdFailed(string adNetwork, string errorMessage,
+        string? countryCode, bool isPreload)
     {
-        return BuildAdFailed(eventName: "vh_ad_load_failed", adNetwork: adNetwork, errorMessage: errorMessage, countryCode: countryCode);
+        return BuildAdFailed(eventName: "vh_ad_load_failed", adNetwork: adNetwork,
+            errorMessage: errorMessage, countryCode: countryCode, isPreload: isPreload);
     }
 
-    public static TrackEvent BuildShowAdFailed(string? adNetwork, string errorMessage, string? countryCode)
+    public static TrackEvent BuildShowAdFailed(string? adNetwork, string errorMessage,
+        string? countryCode, bool isPreload)
     {
-        return BuildAdFailed(eventName: "vh_ad_show_failed", adNetwork: adNetwork, errorMessage: errorMessage, countryCode: countryCode);
+        return BuildAdFailed(eventName: "vh_ad_show_failed", adNetwork: adNetwork,
+            errorMessage: errorMessage, countryCode: countryCode, isPreload: isPreload);
     }
 
-    public static TrackEvent BuildShowAdOk(string adNetwork, string? countryCode)
+    public static TrackEvent BuildShowAdOk(string adNetwork, string? countryCode, bool isPreload)
     {
         if (countryCode?.Trim() is null or "") countryCode = "(vh_unknown)";
 
@@ -42,6 +50,7 @@ public static class AppTrackerBuilder
             Parameters = new Dictionary<string, object> {
                 { "ad_network", adNetwork },
                 { "country", countryCode },
+                { "isPreload", isPreload }
             }
         };
     }

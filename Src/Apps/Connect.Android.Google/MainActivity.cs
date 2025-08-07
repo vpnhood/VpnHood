@@ -3,7 +3,7 @@ using Android.Service.QuickSettings;
 using VpnHood.AppLib.Droid.Common.Activities;
 using VpnHood.AppLib.Droid.Common.Constants;
 
-namespace VpnHood.App.Client.Droid.Google;
+namespace VpnHood.App.Connect.Droid.Google;
 
 [Activity(
     MainLauncher = true,

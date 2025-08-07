@@ -10,7 +10,7 @@ public static class AdMobUtil
 {
     private static readonly AsyncLock InitLock = new();
     public static bool IsInitialized { get; private set; }
-    public static TimeSpan DefaultAdTimeSpan { get; } = TimeSpan.FromMinutes(45);
+    public static TimeSpan DefaultAdTimeSpan { get; } = TimeSpan.FromMinutes(20);
 
     public static async Task Initialize(Context context, CancellationToken cancellationToken)
     {

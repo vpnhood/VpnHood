@@ -89,8 +89,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public event EventHandler? UiHasChanged;
     public bool IsIdle => ConnectionState.IsIdle();
     public string StorageFolderPath { get; }
-    public AppSettings Settings => SettingsService.AppSettings;
-    public UserSettings UserSettings => SettingsService.AppSettings.UserSettings;
+    public AppSettings Settings => SettingsService.Settings;
+    public UserSettings UserSettings => SettingsService.Settings.UserSettings;
     public AppFeatures Features { get; }
     public ClientProfileService ClientProfileService { get; }
     public Diagnoser Diagnoser { get; } = new();
@@ -216,7 +216,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             adProviderItems: options.AdProviderItems,
             loadAdTimeout: options.AdOptions.LoadAdTimeout,
             loadAdPostDelay: options.AdOptions.LoadAdPostDelay,
-            device: _device,
             tracker: tracker);
 
         AdManager = new AppAdManager(
@@ -255,11 +254,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // track ip location (try local provider, the server as satellite ip accepted if local failed)
         try {
-            if (Services.Tracker != null && !SettingsService.AppSettings.IsStartupTrackerSent) {
+            if (Services.Tracker != null && !SettingsService.Settings.IsStartupTrackerSent) {
                 var countryCode = await GetClientCountryCodeAsync(allowVpnServer: false, CancellationToken.None);
                 await Services.Tracker.Track(AppTrackerBuilder.BuildFirstLaunch(Features.ClientId, countryCode));
-                SettingsService.AppSettings.IsStartupTrackerSent = true;
-                SettingsService.AppSettings.Save();
+                SettingsService.Settings.IsStartupTrackerSent = true;
+                SettingsService.Settings.Save();
             }
         }
         catch (Exception ex) {
@@ -325,8 +324,20 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private void ActiveUiContext_OnChanged(object? sender, EventArgs e)
     {
         var uiContext = AppUiContext.Context;
-        if (IsIdle && AdManager.IsPreloadAdEnabled && uiContext != null)
-            _ = VhUtils.TryInvokeAsync("PreloadAd", () => AdManager.AdService.LoadInterstitialAd(uiContext, CancellationToken.None));
+        var country = GetClientCountryCode(allowVpnServer: false);
+
+        // try to preload ad from remote settings (Temporary evaluation)
+        var preloadAd = AdManager.IsPreloadAdEnabled;
+        if (SettingsService.RemoteSettings != null) {
+            if (SettingsService.RemoteSettings.PreloadAds.TryGetValue(country, out var countryPreloadAd) || 
+                SettingsService.RemoteSettings.PreloadAds.TryGetValue("*", out countryPreloadAd))
+                preloadAd = countryPreloadAd;
+        }
+
+        if (IsIdle && preloadAd && uiContext != null) {
+            _ = VhUtils.TryInvokeAsync("PreloadAd",
+                () => AdManager.AdService.LoadInterstitialAd(uiContext, CancellationToken.None));
+        }
     }
 
     public ClientProfileInfo? CurrentClientProfileInfo =>
@@ -421,7 +432,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 return AppConnectionState.Connected;
 
             if (clientState == ClientState.Unstable)
-                return AppConnectionState.Connected;
+                return AppConnectionState.Unstable;
 
             if (clientState == ClientState.Connecting || _isConnecting)
                 return AppConnectionState.Connecting;
@@ -445,9 +456,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public static VpnHoodApp Init(IDevice device, AppOptions options)
     {
         Directory.CreateDirectory(options.StorageFolderPath); //make sure the directory exists
-        var settingsService = new AppSettingsService(options.StorageFolderPath);
+        var settingsService = new AppSettingsService(options.StorageFolderPath, options.RemoteSettingsUrl);
         var logService = new LogService(Path.Combine(options.StorageFolderPath, FileNameLog));
-        logService.Start(GetLogOptions(settingsService.AppSettings.UserSettings, options.LogServiceOptions, options.IsDebugMode),
+        logService.Start(GetLogOptions(settingsService.Settings.UserSettings, options.LogServiceOptions, options.IsDebugMode),
             deleteOldReport: false);
         return new VpnHoodApp(device, settingsService, logService, options);
     }
@@ -824,9 +835,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             CountryName = VhUtils.TryGetCountryName(countryCode) ?? "Unknown"
         };
 
-        if (!JsonUtils.JsonEquals(clientIpLocationByServer, SettingsService.AppSettings.ClientIpLocationByServer)) {
-            SettingsService.AppSettings.ClientIpLocationByServer = clientIpLocationByServer;
-            SettingsService.AppSettings.Save();
+        if (!JsonUtils.JsonEquals(clientIpLocationByServer, SettingsService.Settings.ClientIpLocationByServer)) {
+            SettingsService.Settings.ClientIpLocationByServer = clientIpLocationByServer;
+            SettingsService.Settings.Save();
         }
     }
 
@@ -897,11 +908,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public string GetClientCountryCode(bool allowVpnServer)
     {
         // try by server 
-        if (allowVpnServer && SettingsService.AppSettings.ClientIpLocationByServer != null)
-            return SettingsService.AppSettings.ClientIpLocationByServer.CountryCode;
+        if (allowVpnServer && SettingsService.Settings.ClientIpLocationByServer != null)
+            return SettingsService.Settings.ClientIpLocationByServer.CountryCode;
 
         // try by client service providers
-        return SettingsService.AppSettings.ClientIpLocation?.CountryCode
+        return SettingsService.Settings.ClientIpLocation?.CountryCode
                ?? RegionInfo.CurrentRegion.Name;
     }
 
@@ -922,12 +933,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         using var scopeLock = await _currentLocationLock.LockAsync(cancellationToken);
 
         if (allowCache) {
-            if (allowVpnServer && SettingsService.AppSettings.ClientIpLocationByServer?.CountryCode != null)
-                return SettingsService.AppSettings.ClientIpLocationByServer;
+            if (allowVpnServer && SettingsService.Settings.ClientIpLocationByServer?.CountryCode != null)
+                return SettingsService.Settings.ClientIpLocationByServer;
 
             // try by client service providers
-            if (SettingsService.AppSettings.ClientIpLocation != null)
-                return SettingsService.AppSettings.ClientIpLocation;
+            if (SettingsService.Settings.ClientIpLocation != null)
+                return SettingsService.Settings.ClientIpLocation;
         }
 
         // try to get the current ip location by local service
@@ -936,11 +947,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             return ipLocation;
 
         // try to use cache if it could not get by local service
-        if (allowVpnServer && SettingsService.AppSettings.ClientIpLocationByServer?.CountryCode != null)
-            return SettingsService.AppSettings.ClientIpLocationByServer;
+        if (allowVpnServer && SettingsService.Settings.ClientIpLocationByServer?.CountryCode != null)
+            return SettingsService.Settings.ClientIpLocationByServer;
 
         // try by client service providers
-        return SettingsService.AppSettings.ClientIpLocation;
+        return SettingsService.Settings.ClientIpLocation;
     }
 
     private async Task<IpLocation?> TryGetCurrentIpLocationByLocal(CancellationToken cancellationToken)
@@ -968,8 +979,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var compositeProvider = new CompositeIpLocationProvider(VhLogger.Instance, providers,
                 providerTimeout: _locationServiceTimeout);
             var ipLocation = await compositeProvider.GetCurrentLocation(cancellationToken).Vhc();
-            SettingsService.AppSettings.ClientIpLocation = ipLocation;
-            SettingsService.AppSettings.Save();
+            SettingsService.Settings.ClientIpLocation = ipLocation;
+            SettingsService.Settings.Save();
             return ipLocation;
         }
         catch (Exception ex) {

@@ -66,6 +66,9 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
         return appConfigs;
     }
 
+    // make dynamic to prevent warning of unreachable code in Release mode
+    public static bool IsDebug => IsDebugMode; 
+
 #if DEBUG
     public const bool IsDebugMode = true;
 #else

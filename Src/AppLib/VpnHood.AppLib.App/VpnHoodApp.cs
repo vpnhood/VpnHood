@@ -127,9 +127,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _disconnectOnDispose = options.DisconnectOnDispose;
         _logServiceOptions = options.LogServiceOptions;
         _logService = logService;
-        _trackerFactory = options.TrackerFactory ?? new BuiltInTrackerFactory();
         _sessionTimeout = options.SessionTimeout;
         _allowRecommendUserReviewByServer = options.AllowRecommendUserReviewByServer;
+        _trackerFactory = options.TrackerFactory ?? 
+                          (options.IsDebugMode ? new NullTrackerFactory() : new BuiltInTrackerFactory());
 
         // IpRangeLocationProvider
         if (options.UseInternalLocationService) {
@@ -329,7 +330,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // try to preload ad from remote settings (Temporary evaluation)
         var preloadAd = AdManager.IsPreloadAdEnabled;
         if (SettingsService.RemoteSettings != null) {
-            if (SettingsService.RemoteSettings.PreloadAds.TryGetValue(country, out var countryPreloadAd) || 
+            if (SettingsService.RemoteSettings.PreloadAds.TryGetValue(country, out var countryPreloadAd) ||
                 SettingsService.RemoteSettings.PreloadAds.TryGetValue("*", out countryPreloadAd))
                 preloadAd = countryPreloadAd;
         }
@@ -882,8 +883,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public CultureInfo SystemUiCulture => 
-        _systemUiCulture ?? 
+    public CultureInfo SystemUiCulture =>
+        _systemUiCulture ??
         new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ?? CultureInfo.InstalledUICulture.Name);
 
     private void InitCulture()

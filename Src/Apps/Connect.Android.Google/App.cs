@@ -10,6 +10,7 @@ using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Store;
+using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Droid.Google;
@@ -20,7 +21,7 @@ namespace VpnHood.App.Connect.Droid.Google;
     Banner = AndroidAppConstants.Banner,
     NetworkSecurityConfig = AndroidAppConstants.NetworkSecurityConfig,
     SupportsRtl = AndroidAppConstants.SupportsRtl,
-    Debuggable = IsDebugMode,
+    Debuggable = AppConfigs.IsDebugMode,
     AllowBackup = AndroidAppConstants.AllowBackup)]
 [MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AppConfigs.AdMobApplicationId)]
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
@@ -29,7 +30,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     protected override AppOptions CreateAppOptions()
     {
         // lets init firebase analytics as single tone as soon as possible
-        if (!FirebaseAnalyticsTracker.IsInit)
+        if (!FirebaseAnalyticsTracker.IsInit && !AppConfigs.IsDebug)
             FirebaseAnalyticsTracker.Init();
 
         // load app configs
@@ -55,7 +56,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AdProviderItems = CreateAppAdProviderItems(appConfigs),
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             AdjustForSystemBars = false,
-            TrackerFactory = new FirebaseAnalyticsTrackerFactory(),
+            TrackerFactory = AppConfigs.IsDebug ? new NullTrackerFactory() : new FirebaseAnalyticsTrackerFactory(),
             PremiumFeatures = ConnectAppResources.PremiumFeatures,
             AllowRecommendUserReviewByServer = true,
             AdOptions = new AppAdOptions {
@@ -136,10 +137,4 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             return null;
         }
     }
-
-#if DEBUG
-    public const bool IsDebugMode = true;
-#else
-    public const bool IsDebugMode = false;
-#endif
 }

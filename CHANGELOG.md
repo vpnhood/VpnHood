@@ -1,4 +1,4 @@
-# Upcoming
+# v7.3.737
 * Fix: Preload ad in some regions
 * Feature: Show unstable connection
 

@@ -182,7 +182,7 @@ internal class AppController : WebApiController, IAppController
         throw new NotSupportedException("This method exists just to let swagger generate types.");
     }
 
-    [Route(HttpVerbs.Post, "/settings/user-review")]
+    [Route(HttpVerbs.Post, "/user-review")]
     public Task SetUserReview(int value)
     {
         App.SetUserReview(value);

@@ -13,8 +13,8 @@ public class GooglePlayInAppUserReviewProvider(bool testMode = false) : IAppUser
     {
         var appUiContext = (AndroidUiContext)uiContext;
         using var reviewManager = testMode
-            ? ReviewManagerFactory.Create(appUiContext.Activity)
-            : new FakeReviewManager(appUiContext.Activity);
+            ? new FakeReviewManager(appUiContext.Activity)
+            : ReviewManagerFactory.Create(appUiContext.Activity);
         
         using var reviewInfo = await reviewManager.RequestReviewFlow().AsTask<ReviewInfo>()
             .ConfigureAwait(false);

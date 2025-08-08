@@ -31,7 +31,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public IAppCultureProvider? CultureProvider { get; set; }
     public IAppUpdaterProvider? UpdaterProvider { get; set; }
     public IAppAccountProvider? AccountProvider { get; set; }
-    public IAppReviewProvider? UserReviewProvider { get; set; }
+    public IAppUserReviewProvider? UserReviewProvider { get; set; }
     public AppAdProviderItem[] AdProviderItems { get; set; } = [];
     public ITrackerFactory? TrackerFactory { get; set; }
     public TimeSpan UnstableTimeout { get; set; } = ClientOptions.Default.UnstableTimeout;

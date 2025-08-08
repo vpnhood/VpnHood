@@ -7,15 +7,19 @@ using Xamarin.Google.Android.Play.Core.Review.Testing;
 
 namespace VpnHood.AppLib.Droid.GooglePlay;
 
-public class GooglePlayInAppReviewProvider(bool testMode = false) : IAppReviewProvider
+public class GooglePlayInAppUserReviewProvider(bool testMode = false) : IAppUserReviewProvider
 {
-    public async Task RequestReview(IUiContext uiContext)
+    public async Task RequestReview(IUiContext uiContext, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)uiContext;
         using var reviewManager = testMode
             ? ReviewManagerFactory.Create(appUiContext.Activity)
             : new FakeReviewManager(appUiContext.Activity);
-        using var reviewInfo = await reviewManager.RequestReviewFlow().AsTask<ReviewInfo>().ConfigureAwait(false);
-        await reviewManager.LaunchReviewFlow(appUiContext.Activity, reviewInfo!).AsTask().ConfigureAwait(false);
+        
+        using var reviewInfo = await reviewManager.RequestReviewFlow().AsTask<ReviewInfo>()
+            .ConfigureAwait(false);
+        
+        await reviewManager.LaunchReviewFlow(appUiContext.Activity, reviewInfo!)
+            .AsTask().ConfigureAwait(false);
     }
 }

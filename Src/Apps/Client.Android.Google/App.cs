@@ -32,7 +32,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             IsLocalNetworkSupported = true,
             AdjustForSystemBars = false,
             UpdaterProvider = new GooglePlayAppUpdaterProvider(),
-            UserReviewProvider = new GooglePlayInAppReviewProvider(AppConfigs.IsDebugMode),
+            UserReviewProvider = new GooglePlayInAppUserReviewProvider(AppConfigs.IsDebugMode),
             AllowEndPointStrategy = true,
             AllowRecommendUserReviewByServer = false
         };

@@ -10,6 +10,6 @@ public class AppServices
     public required IAppUpdaterProvider? UpdaterProvider { get; init; }
     public required IAppUiProvider UiProvider { get; init; }
     public required IAppCultureProvider CultureProvider { get; init; }
-    public required IAppReviewProvider? UserReviewProvider { get; init; }
+    public required IAppUserReviewProvider? UserReviewProvider { get; init; }
     public required ITracker? Tracker { get; set; }
 }

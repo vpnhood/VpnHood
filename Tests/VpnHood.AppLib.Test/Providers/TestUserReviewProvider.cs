@@ -3,11 +3,11 @@ using VpnHood.Core.Client.Device.UiContexts;
 
 namespace VpnHood.AppLib.Test.Providers;
 
-internal class TestUserReviewProvider : IAppReviewProvider
+internal class TestUserReviewProvider : IAppUserReviewProvider
 {
     public bool IsReviewRequested { get; set; }
 
-    public async Task RequestReview(IUiContext uiContext)
+    public async Task RequestReview(IUiContext uiContext, CancellationToken cancellationToken)
     {
         if (!await uiContext.IsActive())
             throw new InvalidOperationException("UiContext is not active.");

@@ -51,7 +51,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
             UpdaterProvider = new GooglePlayAppUpdaterProvider(),
-            UserReviewProvider = new GooglePlayInAppReviewProvider(AppConfigs.IsDebugMode),
+            UserReviewProvider = new GooglePlayInAppUserReviewProvider(AppConfigs.IsDebugMode),
             AccountProvider = CreateAppAccountProvider(appConfigs, storageFolderPath),
             AdProviderItems = CreateAppAdProviderItems(appConfigs),
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,

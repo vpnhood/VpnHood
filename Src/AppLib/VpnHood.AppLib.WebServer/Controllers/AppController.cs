@@ -157,24 +157,34 @@ internal class AppController : WebApiController, IAppController
         return Task.FromResult(App.InstalledApps);
     }
 
-    [Route(HttpVerbs.Post, "/settings/open-always-on-page")]
+    [Route(HttpVerbs.Post, "/intents/open-always-on-page")]
     public Task OpenAlwaysOnPage()
     {
         App.Services.UiProvider.RequestAlwaysOn(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
-    [Route(HttpVerbs.Post, "/settings/request-quick-launch")]
+    [Route(HttpVerbs.Post, "/intents/request-quick-launch")]
     public Task RequestQuickLaunch()
     {
         return App.Services.UiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, CancellationToken.None);
     }
 
-    [Route(HttpVerbs.Post, "/settings/request-notification")]
+    [Route(HttpVerbs.Post, "/intents/request-notification")]
     public Task RequestNotification()
     {
         return App.Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
     }
+
+    [Route(HttpVerbs.Post, "/intents/request-user-review")]
+    public Task RequestUserReview()
+    {
+        if (App.Services.UserReviewProvider is null)
+            throw new NotSupportedException("User review is not supported.");
+
+        return App.Services.UserReviewProvider.RequestReview(AppUiContext.RequiredContext, CancellationToken.None);
+    }
+
 
     [Route(HttpVerbs.Post, "/process-types")]
     public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode)

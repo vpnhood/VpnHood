@@ -106,23 +106,30 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
-    [HttpPost("settings/open-always-on-page")]
+    [HttpPost("intents/open-always-on-page")]
     public Task OpenAlwaysOnPage()
     {
         throw new SwaggerOnlyException();
     }
 
-    [HttpPost("settings/request-quick-launch")]
+    [HttpPost("intents/request-quick-launch")]
     public Task RequestQuickLaunch()
     {
         throw new SwaggerOnlyException();
     }
 
-    [HttpPost("settings/request-notification")]
+    [HttpPost("intents/request-user-review")]
+    public Task RequestUserReview()
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("intents/request-notification")]
     public Task RequestNotification()
     {
         throw new SwaggerOnlyException();
     }
+
 
     [HttpPost("process-types")]
     public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode )

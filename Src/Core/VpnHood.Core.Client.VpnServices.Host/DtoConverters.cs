@@ -24,7 +24,8 @@ internal static class DtoConverters
             TcpTunnelledCount = sessionStatus.TcpTunnelledCount,
             UnstableCount = sessionStatus.UnstableCount,
             WaitingCount = sessionStatus.WaitingCount,
-            IsUserReviewRecommended = sessionStatus.IsUserReviewRecommended
+            IsUserReviewRecommended = sessionStatus.IsUserReviewRecommended,
+            IsDnsOverTlsDetected = sessionStatus.IsDnsOverTlsDetected,
         };
 
         return ret;

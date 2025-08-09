@@ -22,7 +22,7 @@ public interface IAppController
     Task<DeviceAppInfo[]> GetInstalledApps();
     Task VersionCheck();
     Task VersionCheckPostpone();
-    Task OpenAlwaysOnPage();
+    Task RequestAlwaysOn();
     Task RequestQuickLaunch();
     Task RequestNotification();
     Task RequestUserReview();

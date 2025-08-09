@@ -148,6 +148,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             VhLogger.Instance.LogInformation("Adding TUN adapter...");
             await AdapterAdd(cancellationToken).Vhc();
 
+            // SetSessionName
+            if (!string.IsNullOrEmpty(options.SessionName))
+                await SetSessionName(options.SessionName, cancellationToken);
+            
             // Set adapter IPv4 address
             if (AdapterIpNetworkV4 != null) {
                 VhLogger.Instance.LogDebug("Adding IPv4 address to adapter ...");
@@ -231,7 +235,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             // open the adapter
             VhLogger.Instance.LogInformation("Opening TUN adapter...");
             await AdapterOpen(cancellationToken).Vhc();
-
+            
             // start reading packets
             _ = Task.Run(StartReadingPackets, CancellationToken.None);
 

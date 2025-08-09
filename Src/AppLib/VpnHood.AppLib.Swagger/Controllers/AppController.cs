@@ -107,7 +107,7 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpPost("intents/open-always-on-page")]
-    public Task OpenAlwaysOnPage()
+    public Task RequestAlwaysOn()
     {
         throw new SwaggerOnlyException();
     }

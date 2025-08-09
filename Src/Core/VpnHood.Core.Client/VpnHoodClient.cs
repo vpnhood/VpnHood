@@ -58,6 +58,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly Job _cleanupJob;
     private readonly Tunnel _tunnel;
     private bool _isWaitingForAd;
+    private bool _isDnsOverTlsDetected;
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
 
     public event EventHandler? StateChanged;
@@ -399,6 +400,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // tcp already check for InInRange and IpV6 and Proxy
         if (ipPacket.Protocol == IpProtocol.Tcp) {
+            _isDnsOverTlsDetected |= ipPacket.ExtractTcp().DestinationPort == 853;
             if (_isTunProviderSupported && Settings.UseTcpOverTun && IsInIpRange(ipPacket.DestinationAddress))
                 _tunnel.SendPacketQueuedAsync(ipPacket).VhBlock();
             else
@@ -1099,6 +1101,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public long SessionMaxTraffic => _accessUsage.MaxTraffic;
         public DateTime? SessionExpirationTime => _accessUsage.ExpirationTime;
         public int? ActiveClientCount => _accessUsage.ActiveClientCount;
+        public bool IsDnsOverTlsDetected => client._isDnsOverTlsDetected;
     }
 
 }

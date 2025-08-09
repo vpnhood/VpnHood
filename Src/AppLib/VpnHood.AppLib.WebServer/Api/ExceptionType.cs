@@ -69,5 +69,8 @@ public enum ExceptionType
     EndPointDiscovery,
 
     [EnumMember(Value = nameof(PremiumOnlyException))]
-    PremiumOnly
+    PremiumOnly,
+
+    [EnumMember(Value = nameof(AdBlockerException))]
+    AdBlocker
 }

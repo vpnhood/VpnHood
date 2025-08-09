@@ -23,4 +23,5 @@ public interface ISessionStatus
     long SessionMaxTraffic { get; }
     DateTime? SessionExpirationTime { get; }
     int? ActiveClientCount { get; }
+    bool IsDnsOverTlsDetected { get; }
 }

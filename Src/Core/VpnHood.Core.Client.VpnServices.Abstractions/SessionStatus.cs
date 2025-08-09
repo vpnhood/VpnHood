@@ -21,4 +21,5 @@ public class SessionStatus
     public required DateTime? SessionExpirationTime { get; init; }
     public required int? ActiveClientCount { get; init; }
     public required bool IsUserReviewRecommended { get; init; }
+    public required bool IsDnsOverTlsDetected { get; init; }
 }

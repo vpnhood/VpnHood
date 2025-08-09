@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.AdExceptions;
+using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
@@ -49,9 +50,9 @@ public class AppAdManager(
 
             // flexible ad
             var adResult = adRequirement switch {
-                AdRequirement.Flexible => 
+                AdRequirement.Flexible =>
                     await adService.ShowInterstitial(uiContext, sessionId, cancellationToken).Vhc(),
-                AdRequirement.Rewarded => 
+                AdRequirement.Rewarded =>
                     await adService.ShowRewarded(uiContext, sessionId, cancellationToken).Vhc(),
                 _ => throw new AdException("Unsupported ad requirement.")
             };
@@ -73,6 +74,13 @@ public class AppAdManager(
         }
         catch (LoadAdException ex) when (adRequirement == AdRequirement.Flexible) {
             await vpnServiceManager.SetAdResult(ex, cancellationToken);
+            
+            // check if ad blocker is enabled
+            if (vpnServiceManager.ConnectionInfo.SessionStatus?.IsDnsOverTlsDetected == true)
+                throw new AdBlockerException("Private DNS is not supported in free version.") {
+                    IsPrivateDns = true
+                };
+
             VhLogger.Instance.LogDebug("Could not load any flexible ad.");
         }
         catch (Exception ex) {
@@ -95,6 +103,38 @@ public class AppAdManager(
                 AdService.CanShowRewarded;
         }
     }
+
+    //private async Task<bool> IsAdBlocker(CancellationToken cancellationToken)
+    //{
+    //    var nullAddress = IPAddress.Parse("0.0.0.0");
+    //    var adDomain = "googleads.g.doubleclick.net";
+
+    //    // check google dns
+    // ReSharper disable once GrammarMistakeInComment
+    //    try {
+    //        var hostEntry =
+    //            await DnsResolver.GetHostEntry(
+    //            adDomain,
+    //            new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(), 53),
+    //            TimeSpan.FromSeconds(4), cancellationToken);
+
+    //        if (hostEntry.AddressList.All(x => x.Equals(nullAddress)))
+    //            return true;
+    //    }
+    //    catch (Exception e) {
+    //        return false; // unknown state, maybe vpn not exist
+    //    }
+
+    //    // check default dns
+    //    try {
+    //        var hostEntry = await Dns.GetHostEntryAsync(adDomain, cancellationToken);
+    //        return hostEntry.AddressList.All(x => !x.Equals(nullAddress));
+    //    }
+    //    catch {
+    //        return true; // unknown state, maybe vpn not exist
+    //    }
+    // ReSharper disable once GrammarMistakeInComment
+    // }
 
     public async Task ExtendByRewardedAd(CancellationToken cancellationToken)
     {

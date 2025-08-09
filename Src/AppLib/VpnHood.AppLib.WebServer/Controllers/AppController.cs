@@ -157,8 +157,8 @@ internal class AppController : WebApiController, IAppController
         return Task.FromResult(App.InstalledApps);
     }
 
-    [Route(HttpVerbs.Post, "/intents/open-always-on-page")]
-    public Task OpenAlwaysOnPage()
+    [Route(HttpVerbs.Post, "/intents/request-always-on")]
+    public Task RequestAlwaysOn()
     {
         App.Services.UiProvider.RequestAlwaysOn(AppUiContext.RequiredContext);
         return Task.CompletedTask;

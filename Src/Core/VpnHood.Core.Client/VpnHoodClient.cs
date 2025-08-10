@@ -191,8 +191,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public ClientState State {
         get {
-            if (_disposed)
-                return ClientState.Disposed;
+            if (_state is ClientState.Disconnecting or ClientState.Disposed) 
+                return _state;
 
             // waiting for ad
             if (_waitForAdCts?.Task.IsCompleted is false)

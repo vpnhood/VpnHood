@@ -129,7 +129,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _logService = logService;
         _sessionTimeout = options.SessionTimeout;
         _allowRecommendUserReviewByServer = options.AllowRecommendUserReviewByServer;
-        _trackerFactory = options.TrackerFactory ?? 
+        _trackerFactory = options.TrackerFactory ??
                           (options.IsDebugMode ? new NullTrackerFactory() : new BuiltInTrackerFactory());
 
         // IpRangeLocationProvider
@@ -224,7 +224,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _vpnServiceManager,
             extendByRewardedAdThreshold: options.AdOptions.ExtendByRewardedAdThreshold,
             showAdPostDelay: options.AdOptions.ShowAdPostDelay,
-            isPreloadAdEnabled: options.AdOptions.PreloadAd);
+            isPreloadAdEnabled: options.AdOptions.PreloadAd,
+            detectAdBlocker: settingsService.RemoteSettings?.DetectAdBlocker ?? false); //todo: temporary read from remote settings
 
         // Clear the last update status if a version has changed
         if (_versionCheckResult != null && _versionCheckResult.LocalVersion != Features.Version) {
@@ -325,18 +326,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private void ActiveUiContext_OnChanged(object? sender, EventArgs e)
     {
         var uiContext = AppUiContext.Context;
-        var country = GetClientCountryCode(allowVpnServer: false);
-
-        // try to preload ad from remote settings (Temporary evaluation)
-        var preloadAd = AdManager.IsPreloadAdEnabled;
-        if (SettingsService.RemoteSettings != null) {
-            if (SettingsService.RemoteSettings.PreloadAds.TryGetValue(country, out var countryPreloadAd) ||
-                SettingsService.RemoteSettings.PreloadAds.TryGetValue("*", out countryPreloadAd))
-                preloadAd = countryPreloadAd;
-        }
-
-        if (IsIdle && preloadAd && uiContext != null) {
-            _ = VhUtils.TryInvokeAsync("PreloadAd",
+        if (IsIdle && uiContext != null) {
+            _ = VhUtils.TryInvokeAsync("PreloadAd", 
                 () => AdManager.AdService.LoadInterstitialAd(uiContext, CancellationToken.None));
         }
     }

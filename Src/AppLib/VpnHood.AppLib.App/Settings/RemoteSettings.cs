@@ -2,5 +2,5 @@
 
 public class RemoteSettings
 {
-    public Dictionary<string, bool> PreloadAds { get; set; } = [];
+    public bool DetectAdBlocker { get; set; }
 }

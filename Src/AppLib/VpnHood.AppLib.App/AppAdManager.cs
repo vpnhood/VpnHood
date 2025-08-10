@@ -18,7 +18,8 @@ public class AppAdManager(
     VpnServiceManager vpnServiceManager,
     TimeSpan extendByRewardedAdThreshold,
     TimeSpan showAdPostDelay,
-    bool isPreloadAdEnabled)
+    bool isPreloadAdEnabled,
+    bool detectAdBlocker)
 {
     public bool IsShowing { get; private set; }
     public AppAdService AdService => adService;
@@ -137,6 +138,9 @@ public class AppAdManager(
 
     private async Task<bool> IsAdBlocker(Exception ex, CancellationToken cancellationToken)
     {
+        if (!detectAdBlocker)
+            return false; // ad blocker detection is disabled
+
         var connectionInfo = vpnServiceManager.ConnectionInfo;
 
         // ignore ad blocker if DNS over TLS is not detected or if the client state is not WaitingForAdEx.

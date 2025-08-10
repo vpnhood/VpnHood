@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -280,42 +279,19 @@ internal class ConnectorServiceBase : IDisposable
         }
     }
 
-    /*
-    private bool UserCertificateValidationCallback2(object sender, X509Certificate? certificate, X509Chain? chain,
-        SslPolicyErrors sslPolicyErrors)
-    {
-        var ret = sslPolicyErrors == SslPolicyErrors.None ||
-                  EndPointInfo.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
-
-        return ret;
-    }
-    */
-
     private bool UserCertificateValidationCallback(object sender, X509Certificate? certificate, X509Chain? chain,
         SslPolicyErrors sslPolicyErrors)
     {
-        try {
-            if (sslPolicyErrors == SslPolicyErrors.None)
-                return true;
-
-            if (certificate == null)
-                return false;
-
-            // just try to fix this unknown nasty issue on Android Parameter 'ctx' must be a valid pointer
-            using var cert2 = new X509Certificate2(certificate);
-            if (cert2.Handle == IntPtr.Zero) {
-                VhLogger.Instance.LogDebug(GeneralEventId.Request, "Cert handle zero.");
-                return false;
-            }
-
-            var ret = EndPointInfo.CertificateHash?.SequenceEqual(cert2.GetCertHash()) == true;
-            return ret;
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogDebug(GeneralEventId.Request, "Failed to validate cert: {ex}", ex);
+        if (certificate == null)
             return false;
-        }
+
+        if (sslPolicyErrors == SslPolicyErrors.None)
+            return true;
+
+        var ret = EndPointInfo.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
+        return ret;
     }
+
 
     protected virtual void Dispose(bool disposing)
     {

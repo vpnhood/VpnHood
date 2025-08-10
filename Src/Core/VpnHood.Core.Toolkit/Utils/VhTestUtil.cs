@@ -64,7 +64,7 @@ public static class VhTestUtil
         string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true)
     {
         var timeoutSpan = noTimeoutOnDebugger && Debugger.IsAttached 
-            ? VhUtils.DebuggerTimeout
+            ? TimeSpan.FromDays(1)
             : TimeSpan.FromMilliseconds(timeout);
 
         var actualValue = await WaitForValue(expectedValue, valueFactory, timeoutSpan);
@@ -75,7 +75,7 @@ public static class VhTestUtil
         string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true)
     {
         var timeoutSpan = noTimeoutOnDebugger && Debugger.IsAttached
-            ? VhUtils.DebuggerTimeout
+            ? TimeSpan.FromDays(1)
             : TimeSpan.FromMilliseconds(timeout);
 
         var actualValue = await WaitForValue(expectedValue, valueFactory, timeoutSpan);
@@ -86,7 +86,7 @@ public static class VhTestUtil
         string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true)
     {
         var timeoutSpan = noTimeoutOnDebugger && Debugger.IsAttached
-            ? VhUtils.DebuggerTimeout
+            ? TimeSpan.FromDays(1)
             : TimeSpan.FromMilliseconds(timeout);
 
         var actualValue = await WaitForValue(expectedValue, () => task, timeoutSpan);

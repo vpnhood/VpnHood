@@ -572,7 +572,8 @@ public class ClientAppTest : TestAppBase
     {
         // create manager
         var accessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        accessManagerOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200); 
+        accessManagerOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
+        accessManagerOptions.SessionOptions.SyncCacheSize = 50;
         using var accessManager = TestHelper.CreateAccessManager(accessManagerOptions);
 
         // create server

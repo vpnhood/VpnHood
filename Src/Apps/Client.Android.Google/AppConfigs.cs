@@ -15,7 +15,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
         "https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.json";
 
     public int? SpaDefaultPort { get; set; } = IsDebugMode ? 9581 : 9580;
-    public bool SpaListenToAllIps { get; set; } = false;
+    public bool SpaListenToAllIps { get; set; } = IsDebugMode;
 
     // SampleAccessKey is a test access key, you should replace it with your own access key.
     // It is limited and can not be used in production.

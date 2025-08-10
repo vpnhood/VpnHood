@@ -1,6 +1,8 @@
 ﻿using System.Net;
+using System.Net.Sockets;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
+using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Device.UiContexts;
@@ -253,7 +255,7 @@ public class AdTest : TestAppBase
     }
 
     [TestMethod]
-    public async Task SplitAll_must_on_while_playing_ad()
+    public async Task SplitAll_must_on_while_playing_ad_ex()
     {
         var device = TestHelper.CreateDevice(new TestVpnAdapterOptions {
             SimulateDns = false
@@ -276,6 +278,11 @@ public class AdTest : TestAppBase
         var showAdCompletionSource = new TaskCompletionSource();
         var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
         adProvider.ShowAdCompletionSource = showAdCompletionSource;
+        adProvider.LoadAdCallback = () => {
+            if (adProvider.LoadAdCount == 1) // fail first time to use after adapter load
+                throw new LoadAdException("Test load failed.");
+        };
+
         var adProviderItem = new AppAdProviderItem { AdProvider = adProvider };
 
         // configure client app for ad
@@ -303,5 +310,47 @@ public class AdTest : TestAppBase
 
         // all included ips should be split now
         await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint1, TestConstants.HttpsExternalUri1);
+    }
+
+    [TestMethod]
+    public async Task Adblocker_exception()
+    {
+        // create server
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
+        adProvider.LoadAdCompletionSource = new TaskCompletionSource();
+        adProvider.LoadAdCallback = () => {
+            if (adProvider.LoadAdCount == 1) // fail first time to use after adapter load
+                throw new LoadAdException("Test load failed.");
+
+            // simulate adblocker
+            using var tcpClient = new TcpClient();
+            tcpClient.ConnectAsync(new IPEndPoint(TestConstants.HttpsEndPoint1.Address, 853)).GetAwaiter().GetResult();
+            throw new LoadAdException("Test load failed.");
+        };
+
+        // create client app
+        var appOptions = TestAppHelper.CreateAppOptions();
+        var adProviderItem = new AppAdProviderItem {
+            AdProvider = adProvider,
+            ProviderName = "UnitTestAd"
+        };
+
+        appOptions.AdProviderItems = [adProviderItem];
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestHelper.CreateDevice());
+
+        // connect
+        var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        _ = app.Connect(clientProfile.ClientProfileId);
+
+        await app.WaitForState(AppConnectionState.WaitingForAd);
+        await VhTestUtil.AssertEqualsWait(2, () => adProvider.LoadAdCount);
+
+        // wait for AdBlockerException
+        await VhTestUtil.AssertEqualsWait(AppConnectionState.None, () => app.State.ConnectionState);
+        Assert.AreEqual(nameof(AdBlockerException), app.State.LastError?.TypeName);
     }
 }

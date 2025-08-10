@@ -17,7 +17,7 @@ public static class VhUtils
     public const long Gigabytes = 1L << 30; // 1 GB
     public const long Terabytes = 1L << 40; // 1 TB
     public const long Petabytes = 1L << 50; // 1 PB
-    public static TimeSpan DebuggerTimeout { get; set; } = TimeSpan.FromDays(1);
+    public static TimeSpan? DebuggerTimeout { get; set; } = TimeSpan.FromDays(1);
 
     public static bool IsConnectionRefusedException(Exception ex)
     {
@@ -351,7 +351,7 @@ public static class VhUtils
 
             // Check if the underlying socket is connected
             var socket = tcpClient.Client;
-            var healthy = tcpClient.Connected && socket.Connected && !tcpClient.Client.Poll(1, SelectMode.SelectError);
+            var healthy = socket is { Connected: true } && !socket.Poll(1, SelectMode.SelectError);
 
             return healthy;
         }

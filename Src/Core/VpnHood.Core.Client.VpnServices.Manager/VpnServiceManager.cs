@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
@@ -12,6 +11,7 @@ using VpnHood.Core.Client.VpnServices.Manager.Exceptions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.VpnServices.Manager;
@@ -19,8 +19,8 @@ namespace VpnHood.Core.Client.VpnServices.Manager;
 public class VpnServiceManager : IDisposable
 {
     private const int VpnServiceUnreachableThreshold = 1; // after this count we stop the service
-    private readonly TimeSpan _requestVpnServiceTimeout = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(120);
-    private readonly TimeSpan _startVpnServiceTimeout = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(20);
+    private readonly TimeSpan _requestVpnServiceTimeout = TimeSpan.FromSeconds(120).WhenNoDebugger();
+    private readonly TimeSpan _startVpnServiceTimeout = TimeSpan.FromSeconds(20).WhenNoDebugger();
     private bool _disposed;
 
     private readonly TimeSpan _connectionInfoTimeSpan = TimeSpan.FromSeconds(1);
@@ -192,7 +192,8 @@ public class VpnServiceManager : IDisposable
         VhLogger.Instance.LogDebug("The VpnService has established a connection.");
     }
 
-    public Task ForceRefreshState(CancellationToken cancellationToken) => RefreshConnectionInfo(true, cancellationToken);
+    public Task RefreshState(CancellationToken cancellationToken) => 
+        TryRefreshConnectionInfo(true, cancellationToken);
 
     private async Task<ConnectionInfo> TryRefreshConnectionInfo(bool force, CancellationToken cancellationToken)
     {
@@ -209,6 +210,10 @@ public class VpnServiceManager : IDisposable
     private async Task<ConnectionInfo> RefreshConnectionInfo(bool force, CancellationToken cancellationToken)
     {
         if (_disposed)
+            return _connectionInfo;
+
+        // if it is locked, we are already updating the connection info
+        if (!force && _connectionInfoLock.IsLocked)
             return _connectionInfo;
 
         // build a new token source to cancel the previous request
@@ -310,7 +315,7 @@ public class VpnServiceManager : IDisposable
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogDebug(ex, "Could not send request to VpnService Host. EndPoint: {EndPoint}",
-                    tcpClient.Client.LocalEndPoint);
+                    tcpClient.SafeRemoteEndPoint());
                 tcpClient.Dispose();
                 _tcpClient = null;
             }
@@ -422,18 +427,19 @@ public class VpnServiceManager : IDisposable
         return SendRequest(new ApiSetWaitForAdRequest(), cancellationToken);
     }
 
-    public Task SetAdResult(AdResult adResult, bool isRewarded, CancellationToken cancellationToken)
+    public Task SetAdOk(AdResult adResult, bool isRewarded, CancellationToken cancellationToken)
     {
         return SendRequest(
-            new ApiSetAdResultRequest { AdResult = adResult, ApiError = null, IsRewarded = isRewarded },
+            new ApiSetAdOkRequest {
+                AdResult = adResult,
+                IsRewarded = isRewarded,
+            },
             cancellationToken);
     }
 
-    public Task SetAdResult(Exception ex, CancellationToken cancellationToken)
+    public Task SetAdFailed(Exception ex, CancellationToken cancellationToken)
     {
-        return SendRequest(new ApiSetAdResultRequest {
-            AdResult = null,
-            IsRewarded = false,
+        return SendRequest(new ApiAdFailedRequest {
             ApiError = ex.ToApiError()
         }, cancellationToken);
     }

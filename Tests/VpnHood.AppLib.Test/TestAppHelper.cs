@@ -31,8 +31,8 @@ public class TestAppHelper : TestHelper
             ServerQueryTimeout = TimeSpan.FromSeconds(2),
             AutoDiagnose = false,
             DisconnectOnDispose = true,
-            ConnectTimeout = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(5),
-            TcpTimeout = TimeSpan.FromSeconds(2),
+            ConnectTimeout = TimeSpan.FromSeconds(5).WhenNoDebugger(),
+            TcpTimeout = TimeSpan.FromSeconds(2).WhenNoDebugger(),
             Resources = new AppResources(),
             AdOptions = new AppAdOptions {
                 ShowAdPostDelay = TimeSpan.Zero,

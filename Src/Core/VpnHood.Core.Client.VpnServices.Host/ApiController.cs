@@ -112,10 +112,17 @@ internal class ApiController : IDisposable
                 await WriteResponseResult(stream, null, cancellationToken);
                 return;
 
+            case nameof(ApiSetAdOkRequest):
+                await SetAdOk(
+                    await StreamUtils.ReadObjectAsync<ApiSetAdOkRequest>(stream, cancellationToken),
+                    cancellationToken);
+                await WriteResponseResult(stream, null, cancellationToken);
+                return;
+
             // handle ad request
-            case nameof(ApiSetAdResultRequest):
-                await SetAdResult(
-                    await StreamUtils.ReadObjectAsync<ApiSetAdResultRequest>(stream, cancellationToken),
+            case nameof(ApiAdFailedRequest):
+                await SetAdFailed(
+                    await StreamUtils.ReadObjectAsync<ApiAdFailedRequest>(stream, cancellationToken),
                     cancellationToken);
                 await WriteResponseResult(stream, null, cancellationToken);
                 return;
@@ -191,20 +198,25 @@ internal class ApiController : IDisposable
     {
         _ = cancellationToken;
         _ = request;
-        VpnHoodClient.IsWaitingForAd = true;
+        VpnHoodClient.SetWaitForAd();
         return ValueTask.CompletedTask;
     }
 
-
-    private async Task SetAdResult(ApiSetAdResultRequest request, CancellationToken cancellationToken)
+    private async Task SetAdOk(ApiSetAdOkRequest request, CancellationToken cancellationToken)
     {
-        _ = cancellationToken;
-        VpnHoodClient.IsWaitingForAd = false;
-
         // Send rewarded ad result if it exists
-        if (request is { IsRewarded: true, AdResult.AdData: not null })
-            await VpnHoodClient.SendRewardedAdResult(request.AdResult.AdData, cancellationToken);
+        if (request.IsRewarded && !string.IsNullOrEmpty(request.AdResult.AdData))
+            await VpnHoodClient.SetRewardedAdOk(request.AdResult.AdData, cancellationToken);
+        else
+            await VpnHoodClient.SetAdOk(cancellationToken);
     }
+
+    private Task SetAdFailed(ApiAdFailedRequest request, CancellationToken cancellationToken)
+    {
+        _ = request; // request is not used here
+        return VpnHoodClient.SetAdFailed(cancellationToken);
+    }
+
 
     public void Dispose()
     {

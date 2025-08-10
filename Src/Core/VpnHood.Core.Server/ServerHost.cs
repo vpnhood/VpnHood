@@ -353,7 +353,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             else
                 VhLogger.Instance.LogDebug(GeneralEventId.Request, ex,
                     "ServerHost could not process this request. ClientStreamId: {ClientStreamId}, RemoteEp: {RemoteEp}",
-                    ex.Data["ClientStreamId"], tcpClient.Client.RemoteEndPoint);
+                    ex.Data["ClientStreamId"], tcpClient.SafeRemoteEndPoint());
 
             tcpClient.Dispose();
         }

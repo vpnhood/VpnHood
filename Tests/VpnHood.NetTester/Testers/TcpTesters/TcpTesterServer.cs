@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.NetTester.Utils;
 
 namespace VpnHood.NetTester.Testers.TcpTesters;
@@ -30,7 +31,7 @@ public class TcpTesterServer : IDisposable
 
     private static async Task ProcessClient(TcpClient client, CancellationToken cancellationToken)
     {
-        var remoteEndPoint = client.Client.RemoteEndPoint;
+        var remoteEndPoint = client.SafeRemoteEndPoint();
         VhLogger.Instance.LogInformation("Server: Start processing client. ClientEp: {ClientEp}", remoteEndPoint);
         try {
             await using var stream = client.GetStream();

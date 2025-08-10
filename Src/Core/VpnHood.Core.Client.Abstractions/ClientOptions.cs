@@ -57,7 +57,7 @@ public class ClientOptions
     public ConnectPlanId PlanId { get; set; }
     public DomainFilter DomainFilter { get; set; } = new();
     public bool ForceLogSni { get; set; }
-    public TimeSpan ServerQueryTimeout { get; set; } = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(10);
+    public TimeSpan ServerQueryTimeout { get; set; } = TimeSpan.FromSeconds(10).WhenNoDebugger();
     public string? AccessCode { get; set; }
     public string? SessionName { get; set; }
     public string[]? ExcludeApps { get; set; }
@@ -90,9 +90,6 @@ public class ClientOptions
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))] 
     public IPEndPoint[]? CustomServerEndpoints { get; set; }  // Override server endpoint
     
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public bool WaitForAd { get; set; }  // Override server endpoint
-
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool AllowAlwaysOn { get; set; }
 

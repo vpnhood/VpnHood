@@ -45,6 +45,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private byte[]? _sessionKey;
     private bool _useUdpChannel;
     private ClientState _state = ClientState.None;
+    private ClientState _lastState = ClientState.None;
+    private readonly object _stateEventLock = new();
     private ConnectorService? _connectorService;
     private DateTime? _autoWaitTime;
     private readonly ServerFinder _serverFinder;
@@ -57,7 +59,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly AsyncLock _packetChannelLock = new();
     private readonly Job _cleanupJob;
     private readonly Tunnel _tunnel;
-    private bool _isWaitingForAd;
+    private TaskCompletionSource? _waitForAdCts;
+    private bool _isPassthroughForAd;
     private bool _isDnsOverTlsDetected;
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
 
@@ -128,7 +131,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         Tracker = tracker;
         _dnsServers = options.DnsServers ?? [];
         _vpnAdapter = vpnAdapter;
-        _isWaitingForAd = options.WaitForAd;
         _useUdpChannel = options.UseUdpChannel;
         _serverFinder = new ServerFinder(socketFactory, Token.ServerToken,
             serverLocation: options.ServerLocation,
@@ -188,35 +190,40 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     }
 
     public ClientState State {
-        get => _state == ClientState.Connected && IsWaitingForAd ? ClientState.WaitingForAd : _state;
+        get {
+            if (_disposed)
+                return ClientState.Disposed;
+
+            // waiting for ad
+            if (_waitForAdCts?.Task.IsCompleted is false)
+                return ClientState.WaitingForAd;
+
+            // waiting 
+            if (_isPassthroughForAd && _state == ClientState.Connected)
+                return ClientState.WaitingForAdEx;
+
+            return _state;
+        }
         private set {
-            if (_state == value) return;
-            _state = value; //must set before raising the event; 
+            _state = value;
             FireStateChanged();
         }
     }
 
     private void FireStateChanged()
     {
+        lock (_stateEventLock) {
+            if (_lastState == State)
+                return;
+            _lastState = State;
+        }
+
         VhLogger.Instance.LogInformation("Client state is changed. NewState: {NewState}", State);
         Task.Run(() => {
             StateChanged?.Invoke(this, EventArgs.Empty);
             if (State == ClientState.Disposed)
                 StateChanged = null; //no more event will be raised after disposed
         }, CancellationToken.None);
-    }
-
-    public bool IsWaitingForAd {
-        get => _isWaitingForAd;
-        set {
-            if (value == _isWaitingForAd)
-                return;
-
-            _isWaitingForAd = value;
-            if (!value)
-                _clientHost.DropCurrentConnections();
-            FireStateChanged();
-        }
     }
 
     public bool UseUdpChannel {
@@ -450,7 +457,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public bool IsInIpRange(IPAddress ipAddress)
     {
         // only dns servers are tunneled if IsWaitingForAd is set
-        if (IsWaitingForAd)
+        if (_isPassthroughForAd)
             return _dnsServers.Contains(ipAddress);
 
         // all IPs are included if there is no filter
@@ -593,7 +600,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // initialize the connector
             _connectorService.Init(
                 helloResponse.ProtocolVersion,
-                requestTimeout: Debugger.IsAttached ? VhUtils.DebuggerTimeout : helloResponse.RequestTimeout,
+                requestTimeout: helloResponse.RequestTimeout.WhenNoDebugger(),
                 tcpReuseTimeout: helloResponse.TcpReuseTimeout,
                 serverSecret: helloResponse.ServerSecret,
                 useWebSocket: true);
@@ -747,8 +754,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // sometimes packet goes directly to the adapter especially on windows, so we need to filter them
             IncludeIpRanges = IncludeIpRanges.Intersect(adapterIncludeRanges);
 
-            // set waiting for ad if the server requires it
-            _isWaitingForAd |= helloResponse.AdRequirement != AdRequirement.None;
+            // wait for ad before adapter
+            if (helloResponse.AdRequirement != AdRequirement.None) {
+                _isPassthroughForAd = true; // set passthrough mode
+                _waitForAdCts = new TaskCompletionSource();
+                FireStateChanged();
+                await _waitForAdCts.Task;
+                _waitForAdCts = null;
+            }
 
             // Create Tcp Proxy Host
             _clientHost.Start();
@@ -786,10 +799,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    public void WaitForAd(bool value)
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-    }
 
     private async Task AddTcpPacketChannel(CancellationToken cancellationToken)
     {
@@ -917,7 +926,39 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             .Vhc();
     }
 
-    public async Task SendRewardedAdResult(string adData, CancellationToken cancellationToken)
+    public void SetWaitForAd()
+    {
+        _isPassthroughForAd = true;
+        FireStateChanged();
+    }
+
+    public Task SetAdFailed(CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+
+        // if there is no wait for ad, then we should remove passthrough flag and resume the connection
+        // App is responsible to disconnect for failed ad
+        if (_waitForAdCts == null)
+            _isPassthroughForAd = false;
+
+        // first step should always be accepted to jump to the next step
+        _waitForAdCts?.TrySetResult();
+        FireStateChanged();
+        return Task.CompletedTask;
+    }
+
+    public Task SetAdOk(CancellationToken cancellationToken)
+    {
+        // make everything is ok. 
+        _ = cancellationToken;
+        _isPassthroughForAd = false;
+        _clientHost.DropCurrentConnections();
+        _waitForAdCts?.TrySetResult();
+        FireStateChanged();
+        return Task.CompletedTask;
+    }
+
+    public async Task SetRewardedAdOk(string adData, CancellationToken cancellationToken)
     {
         // request reward from server
         using var requestResult = await SendRequest<SessionResponse>(
@@ -928,6 +969,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 AdData = adData
             },
             cancellationToken).Vhc();
+
+        await SetAdOk(cancellationToken);
     }
 
     private ValueTask Cleanup(CancellationToken cancellationToken)
@@ -952,6 +995,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     }
 
     private readonly AsyncLock _disposeLock = new();
+
     public async ValueTask DisposeAsync()
     {
         using var lockScope = await _disposeLock.LockAsync();
@@ -968,7 +1012,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         DisposeInternal();
 
         // dispose async resources
-        var byeTimeout = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TunnelDefaults.ByeTimeout;
+        var byeTimeout = TunnelDefaults.ByeTimeout.WhenNoDebugger();
 
         // close tracker
         if (_clientUsageTracker != null) {
@@ -1018,7 +1062,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         _cleanupJob.Dispose();
         State = ClientState.Disconnecting;
-        _isWaitingForAd = false;
+        _waitForAdCts?.TrySetCanceled();
+        _isPassthroughForAd = false;
 
         // stop reusing tcp connections for faster disposal
         if (_connectorService != null)

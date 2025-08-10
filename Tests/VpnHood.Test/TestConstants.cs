@@ -6,7 +6,7 @@ namespace VpnHood.Test;
 
 public class TestConstants
 {
-    public static TimeSpan DefaultHttpTimeout => Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(1);
+    public static TimeSpan DefaultHttpTimeout => TimeSpan.FromSeconds(1).WhenNoDebugger();
     public static TimeSpan DefaultUdpTimeout => DefaultHttpTimeout;
     public static TimeSpan DefaultPingTimeout => DefaultUdpTimeout;
 

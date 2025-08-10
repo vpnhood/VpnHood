@@ -404,7 +404,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public Task ForceUpdateState()
     {
-        return _vpnServiceManager.ForceRefreshState(CancellationToken.None);
+        return _vpnServiceManager.RefreshState(CancellationToken.None);
     }
 
     public AppConnectionState ConnectionState {
@@ -426,7 +426,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (clientState == ClientState.Waiting)
                 return AppConnectionState.Waiting;
 
-            if (clientState == ClientState.WaitingForAd)
+            if (clientState is ClientState.WaitingForAd or ClientState.WaitingForAdEx)
                 return AdManager.IsWaitingForPostDelay ? AppConnectionState.Connected : AppConnectionState.WaitingForAd;
 
             if (clientState == ClientState.Connected)

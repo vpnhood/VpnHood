@@ -12,6 +12,7 @@ using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Core.Server.Exceptions;
 using VpnHood.Core.Server.Utils;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
@@ -391,7 +392,7 @@ public class Session : IDisposable
 
             //tracking
             LogTrack(IpProtocol.Tcp,
-                localEndPoint: (IPEndPoint?)tcpClientHost.Client.LocalEndPoint,
+                localEndPoint: tcpClientHost.SafeLocalEndPoint(),
                 destinationEndPoint: request.DestinationEndPoint,
                 isNewLocal: true, isNewRemote: true, failReason: null);
 

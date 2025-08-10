@@ -70,10 +70,18 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         // ReSharper disable once UseObjectOrCollectionInitializer
         var items = new List<AppAdProviderItem>();
 
+        // interstitial
         items.Add(new AppAdProviderItem {
             AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialAdUnitId),
             ExcludeCountryCodes = ["CN", "RU"],
             ProviderName = "AdMob"
+        });
+
+        // rewarded ad
+        items.Add(new AppAdProviderItem {
+            AdProvider = AdMobRewardedAdProvider.Create(appConfigs.AdMobRewardedAdUnitId),
+            ExcludeCountryCodes = ["CN", "RU"],
+            ProviderName = "AdMob-Rewarded"
         });
 
         /*var initializeTimeout = TimeSpan.FromSeconds(5);
@@ -92,18 +100,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         //        ExcludeCountryCodes = ["IR", "CN"],
         //        ProviderName = "Chartboost"
         //    });
-
-        items.Add(new AppAdProviderItem {
-            AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialNoVideoAdUnitId),
-            ExcludeCountryCodes = ["CN", "RU"],
-            ProviderName = "AdMob-NoVideo"
-        });
-
-        items.Add(new AppAdProviderItem {
-            AdProvider = AdMobRewardedAdProvider.Create(appConfigs.AdMobRewardedAdUnitId),
-            ExcludeCountryCodes = ["CN", "RU"],
-            ProviderName = "AdMob-Rewarded"
-        });
 
         return items.ToArray();
     }

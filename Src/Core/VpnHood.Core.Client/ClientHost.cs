@@ -212,14 +212,14 @@ internal class ClientHost(
             VhUtils.ConfigTcpClient(orgTcpClient, null, null);
 
             // get original remote from NAT
-            var orgRemoteEndPoint = (IPEndPoint?)orgTcpClient.Client.RemoteEndPoint ??
-                                    throw new Exception("Could not get original remote endpoint from TcpClient.");
+            var orgRemoteEndPoint = 
+                orgTcpClient.SafeRemoteEndPoint() ?? throw new Exception("Could not get original remote endpoint from TcpClient.");
 
             ipVersion = orgRemoteEndPoint.IpVersion();
             var natItem =
                 (NatItemEx?)_nat.Resolve(ipVersion, IpProtocol.Tcp, (ushort)orgRemoteEndPoint.Port) ??
                 throw new Exception(
-                    $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
+                    $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgRemoteEndPoint)}");
 
             var syncCustomData = natItem.CustomData as SyncCustomData?;
 

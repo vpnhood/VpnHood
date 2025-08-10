@@ -7,6 +7,10 @@ public static class ExceptionExtensions
 {
     public static ApiError ToApiError(this Exception ex)
     {
+        // make sure ToApiError of ApiException is called first
+        if (ex is ApiException apiException)
+            return apiException.ToApiError();
+
         var exceptionType = GetExceptionType(ex);
 
         // set best message

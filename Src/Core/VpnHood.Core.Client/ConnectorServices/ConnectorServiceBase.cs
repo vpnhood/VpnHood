@@ -39,7 +39,7 @@ internal class ConnectorServiceBase : IDisposable
         _socketFactory = socketFactory;
         _allowTcpReuse = allowTcpReuse;
         Stat = new ClientConnectorStatImpl(this);
-        TcpReuseTimeout = Debugger.IsAttached ? VhUtils.DebuggerTimeout : TimeSpan.FromSeconds(30);
+        TcpReuseTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
         EndPointInfo = endPointInfo;
         _cleanupJob = new Job(Cleanup, "ConnectorCleanup");
     }

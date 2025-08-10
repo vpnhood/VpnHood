@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Net;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Services.Ads;
@@ -7,6 +8,7 @@ using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib;
@@ -43,7 +45,7 @@ public class AppAdManager(
             throw new ShowAdNoUiException();
 
         // set wait for ad state
-        await vpnServiceManager.SetWaitForAd(cancellationToken);
+        await vpnServiceManager.SetWaitForAd(cancellationToken).Vhc();
 
         try {
             IsShowing = true;
@@ -70,21 +72,23 @@ public class AppAdManager(
             await Task.Delay(showAdPostDelay - delay1, cancellationToken).Vhc();
 
             // track tell the VpnService to disable ad mode
-            await vpnServiceManager.SetAdResult(adResult, adRequirement == AdRequirement.Rewarded, cancellationToken);
+            await vpnServiceManager.SetAdOk(adResult,
+                isRewarded: adRequirement == AdRequirement.Rewarded,
+                cancellationToken).Vhc();
         }
-        catch (LoadAdException ex) when (adRequirement == AdRequirement.Flexible) {
-            await vpnServiceManager.SetAdResult(ex, cancellationToken);
-            
-            // check if ad blocker is enabled
-            if (vpnServiceManager.ConnectionInfo.SessionStatus?.IsDnsOverTlsDetected == true)
-                throw new AdBlockerException("Private DNS is not supported in free version.") {
-                    IsPrivateDns = true
-                };
+        catch (LoadAdException ex) 
+            when (adRequirement == AdRequirement.Flexible || 
+                  vpnServiceManager.ConnectionInfo.ClientState is not ClientState.WaitingForAdEx) {
 
-            VhLogger.Instance.LogDebug("Could not load any flexible ad.");
+            await vpnServiceManager.RefreshState(cancellationToken).Vhc();
+            await VerifyAdBlocker(ex, cancellationToken).Vhc();
+            await vpnServiceManager.SetAdFailed(ex, cancellationToken).Vhc();
+            VhLogger.Instance.LogDebug(ex, "Could not load any flexible ad.");
         }
         catch (Exception ex) {
-            await vpnServiceManager.SetAdResult(ex, cancellationToken);
+            await vpnServiceManager.RefreshState(cancellationToken).Vhc();
+            await VerifyAdBlocker(ex, cancellationToken).Vhc();
+            await vpnServiceManager.SetAdFailed(ex, cancellationToken).Vhc();
             throw;
         }
         finally {
@@ -104,38 +108,6 @@ public class AppAdManager(
         }
     }
 
-    //private async Task<bool> IsAdBlocker(CancellationToken cancellationToken)
-    //{
-    //    var nullAddress = IPAddress.Parse("0.0.0.0");
-    //    var adDomain = "googleads.g.doubleclick.net";
-
-    //    // check google dns
-    // ReSharper disable once GrammarMistakeInComment
-    //    try {
-    //        var hostEntry =
-    //            await DnsResolver.GetHostEntry(
-    //            adDomain,
-    //            new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(), 53),
-    //            TimeSpan.FromSeconds(4), cancellationToken);
-
-    //        if (hostEntry.AddressList.All(x => x.Equals(nullAddress)))
-    //            return true;
-    //    }
-    //    catch (Exception e) {
-    //        return false; // unknown state, maybe vpn not exist
-    //    }
-
-    //    // check default dns
-    //    try {
-    //        var hostEntry = await Dns.GetHostEntryAsync(adDomain, cancellationToken);
-    //        return hostEntry.AddressList.All(x => !x.Equals(nullAddress));
-    //    }
-    //    catch {
-    //        return true; // unknown state, maybe vpn not exist
-    //    }
-    // ReSharper disable once GrammarMistakeInComment
-    // }
-
     public async Task ExtendByRewardedAd(CancellationToken cancellationToken)
     {
         // save variable to prevent null reference exception
@@ -151,6 +123,71 @@ public class AppAdManager(
             throw new InvalidOperationException("Could not extend this session by a rewarded ad at this time.");
 
         // set wait for ad state
-        await ShowAd(connectionInfo.SessionInfo.SessionId, AdRequirement.Rewarded, cancellationToken);
+        await ShowAd(connectionInfo.SessionInfo.SessionId, AdRequirement.Rewarded, 
+            cancellationToken: cancellationToken).Vhc();
+    }
+
+    private async Task VerifyAdBlocker(Exception ex, CancellationToken cancellationToken)
+    {
+        if (await IsAdBlocker(ex, cancellationToken).Vhc())
+            throw new AdBlockerException("Private DNS is not supported in free version.") {
+                IsPrivateDns = true
+            };
+    }
+
+    private async Task<bool> IsAdBlocker(Exception ex, CancellationToken cancellationToken)
+    {
+        var connectionInfo = vpnServiceManager.ConnectionInfo;
+
+        // ignore ad blocker if DNS over TLS is not detected or if the client state is not WaitingForAdEx.
+        // We don't count network and default dns as ad blocker because they can be set by network admin
+        // WaitingForAdEx means adapter is started and network DNS is set to VPN DNS servers.
+        if (connectionInfo.ClientState is not ClientState.WaitingForAdEx ||
+            connectionInfo.SessionStatus?.IsDnsOverTlsDetected is null or false)
+            return false;
+
+        // we just check if the exception is LoadAdException
+        if (ex is not LoadAdException)
+            return false;
+
+        // NoFill usually means the network simply had no inventory.
+        // Because DoT is detected, we double-check via DNS to rule out blocking.
+        if (ex is NoFillAdException)
+            return await CheckAdBlockerByDnsQuery(cancellationToken).Vhc();
+
+        // IsDnsOverTlsDetected exists and exception is LoadAdException so we can assume that ad blocker exists
+        return true;
+    }
+
+    private static async Task<bool> CheckAdBlockerByDnsQuery(CancellationToken cancellationToken)
+    {
+        var nullAddress = IPAddress.Parse("0.0.0.0");
+        const string adDomain = "googleads.g.doubleclick.net";
+
+        // check google dns
+        try {
+            var hostEntry =
+                await DnsResolver.GetHostEntry(
+                    adDomain,
+                    new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(), 53),
+                    TimeSpan.FromSeconds(4), cancellationToken).Vhc();
+
+            // it shouldn't occured usually, as we expect it pass through VPN
+            if (hostEntry.AddressList.Any(x => x.Equals(nullAddress)))
+                return true; // definitely ad blocker
+        }
+        catch (Exception) {
+            return false; // unknown state
+        }
+
+        // check default dns
+        try {
+            var hostEntry = await Dns.GetHostEntryAsync(adDomain, cancellationToken).Vhc();
+            return hostEntry.AddressList.Any(x => x.Equals(nullAddress)); // definitely ad blocker
+        }
+        catch {
+            return true; // perhaps ad blocker, because we couldn't resolve the domain with UDP
+        }
     }
 }
+

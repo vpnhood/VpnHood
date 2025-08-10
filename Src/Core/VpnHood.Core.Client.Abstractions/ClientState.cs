@@ -11,6 +11,7 @@ public enum ClientState
     Unstable,
     Waiting,
     WaitingForAd,
+    WaitingForAdEx,
     Disconnecting,
     Disposed
 }

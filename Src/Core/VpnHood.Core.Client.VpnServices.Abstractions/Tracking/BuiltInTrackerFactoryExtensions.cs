@@ -6,14 +6,14 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 
 public static class BuiltInTrackerFactoryExtensions
 {
-    public static ITracker? TryCreateTracker(this ITrackerFactory trackerFactory, TrackerCreateParams createParams)
+    public static ITracker TryCreateTracker(this ITrackerFactory trackerFactory, TrackerCreateParams createParams)
     {
         try {
             return trackerFactory.CreateTracker(createParams);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Failed to create tracker.");
-            return null;
+            VhLogger.Instance.LogWarning(ex, "Failed to create a tracker. Returning a null tracker instead.");
+            return NullTrackerFactory.CreateNullTracker(createParams);
         }
     }
 }

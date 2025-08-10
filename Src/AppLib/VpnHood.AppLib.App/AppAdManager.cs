@@ -19,7 +19,7 @@ public class AppAdManager(
     TimeSpan extendByRewardedAdThreshold,
     TimeSpan showAdPostDelay,
     bool isPreloadAdEnabled,
-    bool detectAdBlocker)
+    bool rejectAdBlocker)
 {
     public bool IsShowing { get; private set; }
     public AppAdService AdService => adService;
@@ -77,19 +77,19 @@ public class AppAdManager(
                 isRewarded: adRequirement == AdRequirement.Rewarded,
                 cancellationToken).Vhc();
         }
-        catch (LoadAdException ex) 
-            when (adRequirement == AdRequirement.Flexible || 
-                  vpnServiceManager.ConnectionInfo.ClientState is not ClientState.WaitingForAdEx) {
-
-            await vpnServiceManager.RefreshState(cancellationToken).Vhc();
-            await VerifyAdBlocker(ex, cancellationToken).Vhc();
-            await vpnServiceManager.SetAdFailed(ex, cancellationToken).Vhc();
-            VhLogger.Instance.LogDebug(ex, "Could not load any flexible ad.");
+        catch (ShowAdNoUiException) {
+            // if ad is not shown because of no UI context just throw exception and let core
+            // remain in WaitingForAd state
+            throw;
         }
         catch (Exception ex) {
-            await vpnServiceManager.RefreshState(cancellationToken).Vhc();
             await VerifyAdBlocker(ex, cancellationToken).Vhc();
             await vpnServiceManager.SetAdFailed(ex, cancellationToken).Vhc();
+            if (adRequirement == AdRequirement.Flexible) {
+                VhLogger.Instance.LogDebug(ex, "Could not show any flexible ad.");
+                return;
+            }
+
             throw;
         }
         finally {
@@ -138,9 +138,11 @@ public class AppAdManager(
 
     private async Task<bool> IsAdBlocker(Exception ex, CancellationToken cancellationToken)
     {
-        if (!detectAdBlocker)
+        if (!rejectAdBlocker)
             return false; // ad blocker detection is disabled
 
+        // make sure we have the latest state
+        await vpnServiceManager.RefreshState(cancellationToken);
         var connectionInfo = vpnServiceManager.ConnectionInfo;
 
         // ignore ad blocker if DNS over TLS is not detected or if the client state is not WaitingForAdEx.
@@ -165,7 +167,7 @@ public class AppAdManager(
 
     private static async Task<bool> CheckAdBlockerByDnsQuery(CancellationToken cancellationToken)
     {
-        var nullAddress = IPAddress.Parse("0.0.0.0");
+        var nullAddressV4 = IPAddress.Any;
         const string adDomain = "googleads.g.doubleclick.net";
 
         // check google dns
@@ -177,7 +179,7 @@ public class AppAdManager(
                     TimeSpan.FromSeconds(4), cancellationToken).Vhc();
 
             // it shouldn't occured usually, as we expect it pass through VPN
-            if (hostEntry.AddressList.Any(x => x.Equals(nullAddress)))
+            if (hostEntry.AddressList.Any(x => x.Equals(IPAddress.Any) || x.Equals(IPAddress.IPv6Any)))
                 return true; // definitely ad blocker
         }
         catch (Exception) {
@@ -187,7 +189,8 @@ public class AppAdManager(
         // check default dns
         try {
             var hostEntry = await Dns.GetHostEntryAsync(adDomain, cancellationToken).Vhc();
-            return hostEntry.AddressList.Any(x => x.Equals(nullAddress)); // definitely ad blocker
+            return hostEntry.AddressList
+                .Any(x => x.Equals(IPAddress.Any) || x.Equals(IPAddress.IPv6Any)); // definitely ad blocker
         }
         catch {
             return true; // perhaps ad blocker, because we couldn't resolve the domain with UDP

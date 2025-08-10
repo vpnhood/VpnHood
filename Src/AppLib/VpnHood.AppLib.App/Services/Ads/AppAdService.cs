@@ -13,7 +13,7 @@ public class AppAdService(
     AppAdProviderItem[] adProviderItems,
     TimeSpan loadAdTimeout,
     TimeSpan loadAdPostDelay,
-    ITracker? tracker)
+    ITracker tracker)
 {
     private readonly AppCompositeAdService _compositeInterstitialAdService = new(
         adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.InterstitialAd).ToArray(),
@@ -87,24 +87,34 @@ public class AppAdService(
             countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
 
             // Load and sw ad
-            var result = await LoadAndShowAd(appCompositeAdService, uiContext, sessionId, countryCode,
+            var result = await LoadAndShowAd(appCompositeAdService, uiContext, sessionId, countryCode, cancellationToken).Vhc();
+
+            // enforce active UI context
+            await AppAdUtils.VerifyActiveUi(uiContext, immediately: false).Vhc();
+
+            // track ad show success
+            await tracker.TryTrackWithCancellation(
+                AppTrackerBuilder.BuildShowAdOk(adNetwork: result.NetworkName,
+                    countryCode: countryCode, isPreload: appCompositeAdService.IsPreload),
                 cancellationToken).Vhc();
-
-            // track successful ad show
-            var trackEvent = AppTrackerBuilder.BuildShowAdOk(
-                adNetwork: result.NetworkName, countryCode: countryCode, isPreload: appCompositeAdService.IsPreload);
-
-            if (tracker != null)
-                await tracker.TryTrackWithCancellation(trackEvent, cancellationToken).Vhc();
 
             return result;
         }
-        catch (Exception ex) when (tracker != null) {
+        catch (Exception ex) {
             var adNetwork = ex is ShowAdException showAdException ? showAdException.AdNetworkName : null;
-            var trackEvent = AppTrackerBuilder.BuildAdFailed(adNetwork: adNetwork,
-                errorMessage: ex.Message, countryCode: countryCode, isPreload: appCompositeAdService.IsPreload);
-            
-            await tracker.TryTrackWithCancellation(trackEvent, cancellationToken).Vhc();
+            await tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildAdFailed(
+                    adNetwork: adNetwork, errorMessage: ex.Message, countryCode: countryCode,
+                    isPreload: appCompositeAdService.IsPreload), cancellationToken).Vhc();
+
+            // convert it to ShowAdNoUiException
+            if (ex is not ShowAdNoUiException && !await AppAdUtils.IsActiveUi(uiContext)) {
+                var noUiException = new ShowAdNoUiException();
+                await tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildShowAdFailed(
+                        errorMessage: noUiException.Message, countryCode: countryCode,
+                        isPreload: appCompositeAdService.IsPreload, adNetwork: adNetwork), cancellationToken).Vhc();
+                throw noUiException;
+            }
+
             throw;
         }
     }
@@ -122,19 +132,20 @@ public class AppAdService(
         try {
             var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
             var networkName = await appCompositeAdService.ShowLoadedAd(uiContext, adData, cancellationToken).Vhc();
+
             var showAdResult = new AdResult {
                 AdData = adData,
                 NetworkName = networkName
             };
             return showAdResult;
         }
-        catch (Exception ex) when (tracker != null) {
+        catch (Exception ex) {
             // track failed ad show
             var adNetwork = ex is ShowAdException showAdException ? showAdException.AdNetworkName : null;
-            var trackEvent = AppTrackerBuilder.BuildShowAdFailed(adNetwork: adNetwork,
-                errorMessage: ex.Message, countryCode: countryCode, isPreload: appCompositeAdService.IsPreload);
-            
-            await tracker.TryTrackWithCancellation(trackEvent, cancellationToken).Vhc();
+            await tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildShowAdFailed(adNetwork: adNetwork,
+                errorMessage: ex.Message, countryCode: countryCode, isPreload: appCompositeAdService.IsPreload),
+                cancellationToken).Vhc();
+
             throw;
         }
     }

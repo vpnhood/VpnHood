@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Ga4.Trackers;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Diagnosing;
@@ -188,7 +189,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         };
 
         // create tracker
-        var tracker = options.TrackerFactory?.TryCreateTracker(new TrackerCreateParams {
+        var tracker = _trackerFactory.TryCreateTracker(new TrackerCreateParams {
             ClientId = Features.ClientId,
             ClientVersion = Features.Version,
             Ga4MeasurementId = Features.GaMeasurementId,
@@ -225,7 +226,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             extendByRewardedAdThreshold: options.AdOptions.ExtendByRewardedAdThreshold,
             showAdPostDelay: options.AdOptions.ShowAdPostDelay,
             isPreloadAdEnabled: options.AdOptions.PreloadAd,
-            detectAdBlocker: settingsService.RemoteSettings?.DetectAdBlocker ?? false); //todo: temporary read from remote settings
+            rejectAdBlocker: settingsService.RemoteSettings?.RejectAdBlocker ?? options.AdOptions.RejectAdBlocker);
 
         // Clear the last update status if a version has changed
         if (_versionCheckResult != null && _versionCheckResult.LocalVersion != Features.Version) {
@@ -256,7 +257,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // track ip location (try local provider, the server as satellite ip accepted if local failed)
         try {
-            if (Services.Tracker != null && !SettingsService.Settings.IsStartupTrackerSent) {
+            if (!SettingsService.Settings.IsStartupTrackerSent) {
                 var countryCode = await GetClientCountryCodeAsync(allowVpnServer: false, CancellationToken.None);
                 await Services.Tracker.Track(AppTrackerBuilder.BuildFirstLaunch(Features.ClientId, countryCode));
                 SettingsService.Settings.IsStartupTrackerSent = true;
@@ -302,8 +303,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ClientProfileService.ClientCountryCode = GetClientCountryCode(true);
 
             // Enable trackers
-            if (Services.Tracker != null)
-                Services.Tracker.IsEnabled = UserSettings.AllowAnonymousTracker;
+            Services.Tracker.IsEnabled = UserSettings.AllowAnonymousTracker;
 
             // sync culture to app settings
             Services.CultureProvider.SelectedCultures =
@@ -326,8 +326,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private void ActiveUiContext_OnChanged(object? sender, EventArgs e)
     {
         var uiContext = AppUiContext.Context;
-        if (IsIdle && uiContext != null) {
-            _ = VhUtils.TryInvokeAsync("PreloadAd", 
+        if (IsIdle && AdManager.IsPreloadAdEnabled && uiContext != null) {
+            _ = VhUtils.TryInvokeAsync("PreloadAd",
                 () => AdManager.AdService.LoadInterstitialAd(uiContext, CancellationToken.None));
         }
     }
@@ -559,13 +559,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             FireConnectionStateChanged();
 
             // initialize built-in tracker after acquire userAgent
-            if (Services.Tracker == null && UserSettings.AllowAnonymousTracker)
-                Services.Tracker = _trackerFactory.TryCreateTracker(new TrackerCreateParams {
-                    ClientId = Features.ClientId,
-                    ClientVersion = Features.Version,
-                    Ga4MeasurementId = Features.GaMeasurementId,
-                    UserAgent = connectOptions.UserAgent
-                });
+            if (Services.Tracker is TrackerBase trackerBase && UserSettings.AllowAnonymousTracker &&
+                !string.IsNullOrEmpty(connectOptions.UserAgent))
+                trackerBase.UserAgent = connectOptions.UserAgent;
 
             //logOptions.
             VhLogger.Instance.LogDebug("Starting the log service...");
@@ -1314,13 +1310,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void ReportError(Exception ex, string message, [CallerMemberName] string action = "n/a")
     {
-        _ = Services.Tracker?.TryTrackError(ex, message, action);
+        _ = Services.Tracker.TryTrackError(ex, message, action);
         VhLogger.Instance.LogError(ex, message);
     }
 
     private void ReportWarning(Exception ex, string message, [CallerMemberName] string action = "n/a")
     {
-        _ = Services.Tracker?.TryTrackWarningAsync(ex, message, action);
+        _ = Services.Tracker.TryTrackWarningAsync(ex, message, action);
         VhLogger.Instance.LogWarning(ex, message);
     }
 

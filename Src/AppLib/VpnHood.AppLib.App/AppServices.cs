@@ -11,5 +11,5 @@ public class AppServices
     public required IAppUiProvider UiProvider { get; init; }
     public required IAppCultureProvider CultureProvider { get; init; }
     public required IAppUserReviewProvider? UserReviewProvider { get; init; }
-    public required ITracker? Tracker { get; set; }
+    public required ITracker Tracker { get; set; }
 }

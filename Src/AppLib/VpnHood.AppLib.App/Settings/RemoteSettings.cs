@@ -2,5 +2,5 @@
 
 public class RemoteSettings
 {
-    public bool DetectAdBlocker { get; set; }
+    public bool RejectAdBlocker { get; set; }
 }

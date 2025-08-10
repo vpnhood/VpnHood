@@ -16,19 +16,20 @@ public class TestAdProvider(TestAccessManager accessManager, AppAdType adType = 
     public TaskCompletionSource? ShowAdCompletionSource { get; set; }
     public TaskCompletionSource? LoadAdCompletionSource { get; set; }
     public int LoadAdCount { get; private set; }
-    public Action LoadAdCallback { get; set; } = () => { };
+    public Func<Task> LoadAdCallback { get; set; } = () => Task.CompletedTask;
 
-    public Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
         LoadAdCount++;
         AdLoadedTime = null;
         if (FailLoad)
             throw new LoadAdException("Load Ad failed by test.");
 
-        LoadAdCallback.Invoke();
+        await LoadAdCallback.Invoke();
 
         AdLoadedTime = DateTime.Now;
-        return LoadAdCompletionSource?.Task ?? Task.CompletedTask;
+        if (LoadAdCompletionSource != null)
+            await LoadAdCompletionSource.Task;
     }
 
     public Task ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)

@@ -5,7 +5,7 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 
 public class NullTrackerFactory : ITrackerFactory
 {
-    public ITracker CreateTracker(TrackerCreateParams createParams)
+    public static ITracker CreateNullTracker(TrackerCreateParams createParams)
     {
         var tagTracker = new NullTracker {
             MeasurementId = "NullTracker",
@@ -15,5 +15,10 @@ public class NullTrackerFactory : ITrackerFactory
         };
 
         return tagTracker;
+    }
+
+    public ITracker CreateTracker(TrackerCreateParams createParams)
+    {
+        return CreateNullTracker(createParams);
     }
 }

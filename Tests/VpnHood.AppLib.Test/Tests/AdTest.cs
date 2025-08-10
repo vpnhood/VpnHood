@@ -281,6 +281,7 @@ public class AdTest : TestAppBase
         adProvider.LoadAdCallback = () => {
             if (adProvider.LoadAdCount == 1) // fail first time to use after adapter load
                 throw new LoadAdException("Test load failed.");
+            return Task.CompletedTask;
         };
 
         var adProviderItem = new AppAdProviderItem { AdProvider = adProvider };
@@ -298,6 +299,7 @@ public class AdTest : TestAppBase
         app.SettingsService.IpFilterSettings.AppIpFilterIncludes = customIps.ToText();
         _ = app.Connect(clientProfile.ClientProfileId);
         await app.WaitForState(AppConnectionState.WaitingForAd);
+        await VhTestUtil.AssertEqualsWait(2, () => adProvider.LoadAdCount);
 
         // all included ips should be split now
         await ClientAppTest.IpFilters_AssertExclude(TestHelper, app, TestConstants.NsEndPoint1, TestConstants.HttpsExternalUri1);
@@ -321,13 +323,14 @@ public class AdTest : TestAppBase
 
         var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
         adProvider.LoadAdCompletionSource = new TaskCompletionSource();
-        adProvider.LoadAdCallback = () => {
+        adProvider.LoadAdCallback = async () => {
             if (adProvider.LoadAdCount == 1) // fail first time to use after adapter load
                 throw new LoadAdException("Test load failed.");
 
             // simulate adblocker
             using var tcpClient = new TcpClient();
-            tcpClient.ConnectAsync(new IPEndPoint(TestConstants.HttpsEndPoint1.Address, 853)).GetAwaiter().GetResult();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            await tcpClient.ConnectAsync(new IPEndPoint(TestConstants.HttpsEndPoint1.Address, 853), timeout.Token);
             throw new LoadAdException("Test load failed.");
         };
 
@@ -335,7 +338,7 @@ public class AdTest : TestAppBase
         var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem {
             AdProvider = adProvider,
-            ProviderName = "UnitTestAd"
+            ProviderName = "UnitTestAd",
         };
 
         appOptions.AdProviderItems = [adProviderItem];

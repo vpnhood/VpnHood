@@ -37,7 +37,8 @@ public class TestAppHelper : TestHelper
             AdOptions = new AppAdOptions {
                 ShowAdPostDelay = TimeSpan.Zero,
                 LoadAdPostDelay = TimeSpan.Zero,
-                ExtendByRewardedAdThreshold = TimeSpan.Zero
+                ExtendByRewardedAdThreshold = TimeSpan.Zero,
+                RejectAdBlocker = true
             },
             LogServiceOptions = {
                 MinLogLevel = VhLogger.MinLogLevel,

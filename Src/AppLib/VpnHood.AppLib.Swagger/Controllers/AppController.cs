@@ -6,6 +6,7 @@ using VpnHood.AppLib.WebServer.Api;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using UserReview = VpnHood.AppLib.WebServer.Api.UserReview;
 
 namespace VpnHood.AppLib.Swagger.Controllers;
 
@@ -138,7 +139,7 @@ public class AppController : ControllerBase, IAppController
     }
     
     [HttpPost("user-review")]
-    public Task SetUserReview(int rate)
+    public Task SetUserReview(UserReview userReview)
     {
         throw new SwaggerOnlyException();
     }

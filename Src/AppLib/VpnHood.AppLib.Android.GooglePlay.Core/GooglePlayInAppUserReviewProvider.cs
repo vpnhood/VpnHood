@@ -18,7 +18,7 @@ public class GooglePlayInAppUserReviewProvider(bool testMode = false) : IAppUser
         
         using var reviewInfo = await reviewManager.RequestReviewFlow().AsTask<ReviewInfo>()
             .ConfigureAwait(false);
-        
+
         await reviewManager.LaunchReviewFlow(appUiContext.Activity, reviewInfo!)
             .AsTask().ConfigureAwait(false);
     }

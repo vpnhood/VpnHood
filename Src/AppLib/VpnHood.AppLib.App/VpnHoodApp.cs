@@ -981,14 +981,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public void SetUserReview(int rate)
+    public void SetUserReview(int rating, string reviewText)
     {
         _isUserReviewRecommended = false;
         Settings.UserReview = new UserReview {
             AppVersion = Features.Version,
-            Rate = rate,
+            Rating = rating,
             Time = DateTime.UtcNow
         };
+
+        _ = Services.Tracker.TryTrack(
+            AppTrackerBuilder.BuildUserReview(rating, reviewText));
     }
 
     private void VpnService_StateChanged(object? sender, EventArgs e)

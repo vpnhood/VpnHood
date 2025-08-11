@@ -2,7 +2,10 @@
 
 public class UserReview
 {
-    public int Rate { get; init; }
+    [Obsolete("Use Rating")]
+    public int Rate { get => Rating; set => Rating = value; }
+
+    public int Rating { get; set; }
     public DateTime Time { get; init; }
     public Version AppVersion { get; init; } = new();
 }

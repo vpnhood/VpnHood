@@ -193,10 +193,10 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/user-review")]
-    public Task SetUserReview([QueryField] int rate)
+    public async Task SetUserReview(Api.UserReview userReview)
     {
-        App.SetUserReview(rate);
-        return Task.CompletedTask;
+        userReview = await HttpContext.GetRequestDataAsync<Api.UserReview>().Vhc();
+        App.SetUserReview(userReview.Rating, userReview.ReviewText);
     }
 
     [Route(HttpVerbs.Get, "/countries")]

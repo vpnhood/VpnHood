@@ -16,7 +16,7 @@ public static class AppTrackerBuilder
                 { "ad_network", adNetwork ?? "(vh_unknown)" },
                 { "error", errorMessage },
                 { "country", countryCode },
-                { "isPreload", isPreload },
+                { "is_preload", isPreload },
             }
         };
     }
@@ -50,7 +50,7 @@ public static class AppTrackerBuilder
             Parameters = new Dictionary<string, object> {
                 { "ad_network", adNetwork },
                 { "country", countryCode },
-                { "isPreload", isPreload }
+                { "is_preload", isPreload }
             }
         };
     }
@@ -65,4 +65,16 @@ public static class AppTrackerBuilder
             }
         };
     }
+
+    public static TrackEvent BuildUserReview(int rating, string reviewText)
+    {
+        return new TrackEvent {
+            EventName = "vh_user_review",
+            Parameters = new Dictionary<string, object> {
+                { "rating", rating },
+                { "review_text", string.IsNullOrWhiteSpace(reviewText) ? "(vh_notset)" : reviewText }
+            }
+        };
+    }
+
 }

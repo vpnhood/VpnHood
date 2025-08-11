@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Assets.Ip2LocationLite;

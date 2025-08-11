@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Net;
+﻿using System.Net;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Test;

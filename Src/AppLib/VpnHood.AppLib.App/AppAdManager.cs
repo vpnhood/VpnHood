@@ -167,7 +167,6 @@ public class AppAdManager(
 
     private static async Task<bool> CheckAdBlockerByDnsQuery(CancellationToken cancellationToken)
     {
-        var nullAddressV4 = IPAddress.Any;
         const string adDomain = "googleads.g.doubleclick.net";
 
         // check google dns

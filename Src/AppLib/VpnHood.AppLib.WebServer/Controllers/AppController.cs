@@ -176,6 +176,12 @@ internal class AppController : WebApiController, IAppController
         return App.Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
     }
 
+    [Route(HttpVerbs.Post, "/intents/request-system-settings")]
+    public Task RequestSystemSettings()
+    {
+        return App.Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
+    }
+
     [Route(HttpVerbs.Post, "/intents/request-user-review")]
     public Task RequestUserReview()
     {

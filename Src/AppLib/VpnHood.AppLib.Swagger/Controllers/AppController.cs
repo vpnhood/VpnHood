@@ -130,6 +130,11 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
+    [HttpPost("intents/request-system-settings")]
+    public Task RequestSystemSettings()
+    {
+        throw new SwaggerOnlyException();
+    }
 
     [HttpPost("process-types")]
     public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode )

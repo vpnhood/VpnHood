@@ -175,6 +175,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsAccountSupported = options.AccountProvider != null,
             IsBillingSupported = options.AccountProvider?.BillingProvider != null,
             IsAlwaysOnSupported = uiProvider.IsAlwaysOnSupported,
+            IsSystemSettingsSupported = uiProvider.IsSystemSettingsSupported,
             IsQuickLaunchSupported = uiProvider.IsQuickLaunchSupported,
             IsNotificationSupported = uiProvider.IsNotificationSupported,
             IsUserReviewSupported = options.UserReviewProvider != null,
@@ -460,7 +461,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _appPersistState.LastError = null;
         _appPersistState.LastClearedError = ConnectionInfo.Error;
         _appPersistState.HasDiagnoseRequested = false;
-        _isUserReviewRecommended = false;
     }
 
     private LogServiceOptions GetLogOptions()
@@ -517,6 +517,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _connectCts = new CancellationTokenSource();
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectCts.Token);
             _isConnecting = true; //must be after checking IsIdle
+            _isUserReviewRecommended = false; // UI may call ClearLastError, so it my close immediately
             ClearLastError();
             await ConnectInternal1(connectOptions, linkedCts.Token);
         }

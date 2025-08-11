@@ -79,6 +79,19 @@ public class AndroidUiProvider : IAppUiProvider
         var intent = new Intent(Android.Provider.Settings.ActionVpnSettings);
         appUiContext.Activity.StartActivity(intent);
     }
+
+    public bool IsSystemSettingsSupported => true;
+
+    public void RequestSystemSettings(IUiContext context)
+    {
+        if (!IsSystemSettingsSupported)
+            throw new NotSupportedException("SystemSettings is not supported on this device.");
+
+        var appUiContext = (AndroidUiContext)context;
+        var intent = new Intent(Android.Provider.Settings.ActionSettings);
+        appUiContext.Activity.StartActivity(intent);
+    }
+
     public SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext)
     {
         // check is request supported for WindowInsets.Type.SystemBars()

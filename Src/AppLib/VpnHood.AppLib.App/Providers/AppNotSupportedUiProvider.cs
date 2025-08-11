@@ -19,5 +19,10 @@ internal class AppNotSupportedUiProvider
         throw new NotSupportedException();
 
     public bool IsAlwaysOnSupported => false;
-    public void RequestAlwaysOn(IUiContext uiContext) => throw new NotSupportedException();
+    public void RequestAlwaysOn(IUiContext uiContext) => 
+        throw new NotSupportedException();
+
+    public bool IsSystemSettingsSupported => false;
+    public void RequestSystemSettings(IUiContext uiContext) => 
+        throw new NotSupportedException();
 }

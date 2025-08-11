@@ -193,9 +193,9 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/user-review")]
-    public async Task SetUserReview(Api.UserReview userReview)
+    public async Task SetUserReview(Api.AppUserReview userReview)
     {
-        userReview = await HttpContext.GetRequestDataAsync<Api.UserReview>().Vhc();
+        userReview = await HttpContext.GetRequestDataAsync<Api.AppUserReview>().Vhc();
         App.SetUserReview(userReview.Rating, userReview.ReviewText);
     }
 

@@ -193,9 +193,9 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/user-review")]
-    public Task SetUserReview(int value)
+    public Task SetUserReview([QueryField] int rate)
     {
-        App.SetUserReview(value);
+        App.SetUserReview(rate);
         return Task.CompletedTask;
     }
 

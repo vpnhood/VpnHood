@@ -1,3 +1,6 @@
+# Upcoming
+* Feature: Handle UserReview recommendation
+
 # v7.2.732
 * Fix: Reconnecting especially when using torrent clients
 * Update: Tune memory usage

@@ -179,7 +179,8 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Post, "/intents/request-system-settings")]
     public Task RequestSystemSettings()
     {
-        return App.Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
+        App.Services.UiProvider.RequestSystemSettings(AppUiContext.RequiredContext);
+        return Task.CompletedTask;
     }
 
     [Route(HttpVerbs.Post, "/intents/request-user-review")]
@@ -199,9 +200,9 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/user-review")]
-    public async Task SetUserReview(Api.AppUserReview userReview)
+    public async Task SetUserReview(AppUserReview userReview)
     {
-        userReview = await HttpContext.GetRequestDataAsync<Api.AppUserReview>().Vhc();
+        userReview = await HttpContext.GetRequestDataAsync<AppUserReview>().Vhc();
         App.SetUserReview(userReview.Rating, userReview.ReviewText);
     }
 

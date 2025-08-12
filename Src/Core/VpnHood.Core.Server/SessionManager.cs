@@ -131,7 +131,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
     }
 
     public async Task<SessionResponseEx> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair,
-        int protocolVersion)
+        int protocolVersion, IPAddress clientIp)
     {
         // validate the token
         VhLogger.Instance.LogDebug("Validating the request by the access server. TokenId: {TokenId}",
@@ -140,7 +140,8 @@ public class SessionManager : IAsyncDisposable, IDisposable
         var extraData = JsonSerializer.Serialize(new SessionExtraData());
         var sessionResponseEx = await _accessManager.Session_Create(new SessionRequestEx {
             HostEndPoint = ipEndPointPair.LocalEndPoint,
-            ClientIp = ipEndPointPair.RemoteEndPoint.Address,
+            RemoteEndPoint = ipEndPointPair.RemoteEndPoint,
+            ClientIp = clientIp,
             ExtraData = extraData,
             ClientInfo = helloRequest.ClientInfo,
             EncryptedClientId = helloRequest.EncryptedClientId,

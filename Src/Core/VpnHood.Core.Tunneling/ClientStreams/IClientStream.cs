@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Toolkit.Net;
+﻿using System.Net;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Tunneling.ClientStreams;
 

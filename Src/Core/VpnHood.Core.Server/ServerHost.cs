@@ -221,8 +221,9 @@ public class ServerHost : IDisposable, IAsyncDisposable
         // read request version. We may wait here for reuse timeout
         var rest = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
         if (rest == 0) {
-            VhLogger.Instance.LogDebug(GeneralEventId.Request, "ClientStream has been closed. ClientStreamId: {ClientStreamId}, RemoteEp: {RemoteEp}",
-                clientStream.ClientStreamId, clientStream.IpEndPointPair.RemoteEndPoint);
+            VhLogger.Instance.LogDebug(GeneralEventId.Request, 
+                "ClientStream has been closed. ClientStreamId: {ClientStreamId}",
+                clientStream.ClientStreamId);
             clientStream.DisposeWithoutReuse();
             return -1;
         }
@@ -231,7 +232,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         return version;
     }
 
-    private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream,
+    private async Task<ServerConnection> CreateConnection(TcpClient tcpClient, Stream sslStream,
         CancellationToken cancellationToken)
     {
         try {
@@ -248,6 +249,10 @@ public class ServerHost : IDisposable, IAsyncDisposable
             var webSocketKey = headers.GetValueOrDefault("Sec-WebSocket-Key", "");
             var httpMethod = headers.GetValueOrDefault(HttpUtil.HttpRequestKey, "").Split(" ").FirstOrDefault();
             var upgrade = headers.GetValueOrDefault("Upgrade", "");
+            var clientIpByProxy = headers.GetValueOrDefault("X-Forwarded-For", "");
+            var clientIp = ServerUtil.GetClientIpFromXForwarded(clientIpByProxy) ??
+                           tcpClient.Client.GetRemoteEndPoint().Address;
+
             if (upgrade.Equals("websocket", StringComparison.OrdinalIgnoreCase))
                 streamType = TunnelStreamType.WebSocket;
 
@@ -260,9 +265,13 @@ public class ServerHost : IDisposable, IAsyncDisposable
                     if (httpMethod != "POST")
                         throw new Exception("Bad request");
 
-                    return new TcpClientStream(tcpClient, sslStream, streamId) {
-                        RequireHttpResponse = true
+                    return new ServerConnection {
+                        ClientIp = clientIp,
+                        ClientStream = new TcpClientStream(tcpClient, sslStream, streamId) {
+                            RequireHttpResponse = true
+                        }
                     };
+
 
                 // obsoleted
 #pragma warning disable CS0618 // Type or member is obsolete version >= 725
@@ -270,10 +279,13 @@ public class ServerHost : IDisposable, IAsyncDisposable
                     if (httpMethod != "POST")
                         throw new Exception("Bad request");
 
-                    return new TcpClientStream(tcpClient,
-                        new BinaryStreamStandard(sslStream, streamId, useBuffer),
-                        streamId, ReuseClientStream) {
-                        RequireHttpResponse = true
+                    return new ServerConnection {
+                        ClientIp = clientIp,
+                        ClientStream = new TcpClientStream(tcpClient,
+                            new BinaryStreamStandard(sslStream, streamId, useBuffer),
+                            streamId, ReuseClientStream) {
+                            RequireHttpResponse = true
+                        }
                     };
 #pragma warning restore CS0618 // Type or member is obsolete
 
@@ -282,10 +294,13 @@ public class ServerHost : IDisposable, IAsyncDisposable
                         throw new Exception("Bad request");
 
                     // create WebSocket stream without handshake
-                    return new TcpClientStream(tcpClient,
-                        new WebSocketStream(sslStream, streamId, useBuffer, isServer: true),
-                        streamId, ReuseClientStream) {
-                        RequireHttpResponse = false // Upgrade response has been already sent
+                    return new ServerConnection {
+                        ClientIp = clientIp,
+                        ClientStream = new TcpClientStream(tcpClient,
+                            new WebSocketStream(sslStream, streamId, useBuffer, isServer: true),
+                            streamId, ReuseClientStream) {
+                            RequireHttpResponse = false // Upgrade response has been already sent
+                        },
                     };
 
                 case TunnelStreamType.WebSocket:
@@ -297,10 +312,13 @@ public class ServerHost : IDisposable, IAsyncDisposable
                     await sslStream.WriteAsync(response, cancellationToken).Vhc();
 
                     // create WebSocket stream
-                    return new TcpClientStream(tcpClient,
-                        new WebSocketStream(sslStream, streamId, useBuffer, isServer: true),
-                        streamId, ReuseClientStream) {
-                        RequireHttpResponse = false // Upgrade response has been already sent
+                    return new ServerConnection {
+                        ClientIp = clientIp,
+                        ClientStream = new TcpClientStream(tcpClient,
+                            new WebSocketStream(sslStream, streamId, useBuffer, isServer: true),
+                            streamId, ReuseClientStream) {
+                            RequireHttpResponse = false // Upgrade response has been already sent
+                        }
                     };
 
                 case TunnelStreamType.Unknown:
@@ -318,7 +336,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, CancellationToken cancellationToken)
+    private async Task<ServerConnection> CreateConnection(TcpClient tcpClient, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Request, "TLS Authenticating...");
         var sslStream = new SslStream(tcpClient.GetStream(), true);
@@ -334,8 +352,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
                 cancellationToken).Vhc();
 
             // create client stream
-            var clientStream = await CreateClientStream(tcpClient, sslStream, cancellationToken).Vhc();
-            return clientStream;
+            var serverConnection = await CreateConnection(tcpClient, sslStream, cancellationToken).Vhc();
+            return serverConnection;
         }
         catch (Exception) {
             await sslStream.SafeDisposeAsync();
@@ -352,8 +370,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
             if (ex is ISelfLog loggable) loggable.Log();
             else
                 VhLogger.Instance.LogDebug(GeneralEventId.Request, ex,
-                    "ServerHost could not process this request. ClientStreamId: {ClientStreamId}, RemoteEp: {RemoteEp}",
-                    ex.Data["ClientStreamId"], tcpClient.SafeRemoteEndPoint());
+                    "ServerHost could not process this request. RemoteEp: {RemoteEp}, ClientIp: {ClientIp}, ClientStreamId: {ClientStreamId}",
+                    VhLogger.Format(tcpClient.SafeRemoteEndPoint()), ex.Data["ClientIp"], ex.Data["ClientStreamId"]);
 
             tcpClient.Dispose();
         }
@@ -363,13 +381,18 @@ public class ServerHost : IDisposable, IAsyncDisposable
     {
         using var timeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
         using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
-        var clientStream = await CreateClientStream(tcpClient, connectCts.Token).Vhc();
+        var serverConnection = await CreateConnection(tcpClient, connectCts.Token).Vhc();
+        var clientStream = serverConnection.ClientStream;
+        VhLogger.Instance.LogDebug(GeneralEventId.Request,
+            "ServerHost has created a new connection. ClientStreamId: {ClientStreamId}, RemoteEp: {RemoteEp}, ClientIp: {ClientIp}",
+            clientStream.ClientStreamId, VhLogger.Format(clientStream.IpEndPointPair.RemoteEndPoint), VhLogger.Format(serverConnection.ClientIp));
+
         try {
             var requestVersion = await ReadRequestVersion(clientStream, connectCts.Token).Vhc();
             if (requestVersion <= 0)
                 return; // client stream has been closed
 
-            await ProcessClientStream(clientStream, requestVersion, connectCts.Token).Vhc();
+            await ProcessClientStream(clientStream, requestVersion, clientIp: serverConnection.ClientIp, connectCts.Token).Vhc();
         }
         catch (Exception ex) {
             // try to write unauthorized response for any unknown error if client steam is not ChunkStream
@@ -377,8 +400,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
             if (clientStream is { Connected: true, RequireHttpResponse: true } &&
                 !VhUtils.IsSocketClosedException(ex)) {
                 VhLogger.Instance.LogDebug(GeneralEventId.Request,
-                    "ServerHost is writing unauthorized response. ClientStreamId: {ClientStreamId}, RemoteEp: {RemoteEp}",
-                    clientStream.ClientStreamId, clientStream.IpEndPointPair.RemoteEndPoint);
+                    "ServerHost is writing unauthorized response. ClientStreamId: {ClientStreamId}",
+                    clientStream.ClientStreamId);
 
                 // create a new CancellationTokenSource for close timeout
                 using var closeTimeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
@@ -390,6 +413,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             // dispose the stream
             clientStream.DisposeWithoutReuse();
             ex.Data["ClientStreamId"] = clientStream.ClientStreamId;
+            ex.Data["ClientIp"] = VhLogger.Format(serverConnection.ClientIp);
             throw;
         }
     }
@@ -419,7 +443,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                 return; // client stream has been closed
 
             timeoutCts.CancelAfter(_sessionManager.SessionOptions.TcpReuseTimeoutValue); // reset timeout for new request
-            await ProcessClientStream(clientStream, requestVersion, reusedCts.Token).Vhc();
+            await ProcessClientStream(clientStream, requestVersion, clientIp: null, reusedCts.Token).Vhc();
 
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "ServerHost has reused a shared ClientStream. ClientStreamId: {ClientStreamId}",
@@ -435,17 +459,17 @@ public class ServerHost : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task ProcessClientStream(IClientStream clientStream, int requestVersion, CancellationToken cancellationToken)
+    private async Task ProcessClientStream(IClientStream clientStream, int requestVersion, IPAddress? clientIp,
+        CancellationToken cancellationToken)
     {
-        using var scope = VhLogger.Instance.BeginScope(
-            $"RemoteEp: {VhLogger.Format(clientStream.IpEndPointPair.RemoteEndPoint)}");
+        using var scope = VhLogger.Instance.BeginScope($"ClientStreamId: {clientStream.ClientStreamId}");
 
         try {
             // Take ownership: stream is added here and removed in finally
             lock (_clientStreams)
                 _clientStreams.Add(clientStream);
 
-            await ProcessRequest(clientStream, requestVersion, cancellationToken).Vhc();
+            await ProcessRequest(clientStream, requestVersion, clientIp: clientIp, cancellationToken).Vhc();
         }
         catch (SessionException ex) {
             if (ex is ISelfLog loggable)
@@ -467,7 +491,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task ProcessRequest(IClientStream clientStream, int requestVersion, CancellationToken cancellationToken)
+    private async Task ProcessRequest(IClientStream clientStream, int requestVersion, IPAddress? clientIp,
+        CancellationToken cancellationToken)
     {
         if (requestVersion != 1)
             throw new NotSupportedException($"The request version is not supported. Version: {requestVersion}");
@@ -482,7 +507,9 @@ public class ServerHost : IDisposable, IAsyncDisposable
         var requestCode = (RequestCode)buffer[0];
         switch (requestCode) {
             case RequestCode.Hello:
-                await ProcessHello(clientStream, cancellationToken).Vhc();
+                if (clientIp is null)
+                    throw new InvalidOperationException("Hello request should come by ClientIp.");
+                await ProcessHello(clientStream, clientIp, cancellationToken).Vhc();
                 break;
 
             case RequestCode.SessionStatus:
@@ -543,13 +570,13 @@ public class ServerHost : IDisposable, IAsyncDisposable
         return request;
     }
 
-    private async Task ProcessHello(IClientStream clientStream, CancellationToken cancellationToken)
+    private async Task ProcessHello(IClientStream clientStream, IPAddress clientIp,
+        CancellationToken cancellationToken)
     {
         var ipEndPointPair = clientStream.IpEndPointPair;
 
         // reading request
-        VhLogger.Instance.LogDebug(GeneralEventId.Request, "Processing hello request... ClientIp: {ClientIp}",
-            VhLogger.Format(ipEndPointPair.RemoteEndPoint.Address));
+        VhLogger.Instance.LogDebug(GeneralEventId.Request, "Processing hello request...");
 
         var request = await ReadRequest<HelloRequest>(clientStream, cancellationToken).Vhc();
         using var scope = CreateLogScope(clientStream, request);
@@ -562,7 +589,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
             "Creating a session... TokenId: {TokenId}, ClientId: {ClientId}, ClientVersion: {ClientVersion}, UserAgent: {UserAgent}",
             VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId),
             request.ClientInfo.ClientVersion, request.ClientInfo.UserAgent);
-        var sessionResponseEx = await _sessionManager.CreateSession(request, ipEndPointPair, protocolVersion).Vhc();
+
+        var sessionResponseEx = await _sessionManager.CreateSession(request, ipEndPointPair, protocolVersion, clientIp).Vhc();
         var session = _sessionManager.GetSessionById(sessionResponseEx.SessionId) ??
                       throw new InvalidOperationException("Session is lost!");
 
@@ -573,8 +601,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
                 "This client is outdated and not supported anymore! Please update your app.");
 
         // Report new session
-        var clientIp = _sessionManager.TrackingOptions.TrackClientIpValue
-            ? VhLogger.Format(ipEndPointPair.RemoteEndPoint.Address)
+        var clientIpText = _sessionManager.TrackingOptions.TrackClientIpValue
+            ? VhLogger.Format(clientIp)
             : "*";
 
         // report in main log
@@ -586,14 +614,14 @@ public class ServerHost : IDisposable, IAsyncDisposable
             "SessionId: {SessionId-5}\t{Mode,-5}\tTokenId: {TokenId}\tClientCount: {ClientCount,-3}\tClientId: {ClientId}\tClientIp: {ClientIp-15}\tVersion: {Version}\tOS: {OS}",
             VhLogger.FormatSessionId(session.SessionId), "New", VhLogger.FormatId(request.TokenId),
             session.SessionResponseEx.AccessUsage?.ActiveClientCount, VhLogger.FormatId(request.ClientInfo.ClientId),
-            clientIp, request.ClientInfo.ClientVersion,
+            clientIpText, request.ClientInfo.ClientVersion,
             UserAgentParser.GetOperatingSystem(request.ClientInfo.UserAgent));
 
         // report in track log
         if (_sessionManager.TrackingOptions.IsEnabled) {
             VhLogger.Instance.LogInformation(GeneralEventId.Track,
                 "{Proto}; SessionId {SessionId}; TokenId {TokenId}; ClientIp {clientIp}".Replace("; ", "\t"),
-                "NewS", VhLogger.FormatSessionId(session.SessionId), VhLogger.FormatId(request.TokenId), clientIp);
+                "NewS", VhLogger.FormatSessionId(session.SessionId), VhLogger.FormatId(request.TokenId), clientIpText);
         }
 
         // reply hello session
@@ -640,7 +668,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             ServerTags = sessionResponseEx.ServerTags,
             AccessInfo = sessionResponseEx.AccessInfo,
             IsTunProviderSupported = _sessionManager.IsVpnAdapterSupported,
-            ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,
+            ClientPublicAddress = clientIp,
             ClientCountry = sessionResponseEx.ClientCountry,
             VirtualIpNetworkV4 =
                 new IpNetwork(session.VirtualIps.IpV4, _sessionManager.VirtualIpNetworkV4.PrefixLength),

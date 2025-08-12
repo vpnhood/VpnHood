@@ -57,4 +57,18 @@ internal static class ServerUtil
             "MaxWorkerThreads: {MaxWorkerThreads}, MaxCompletionPortThreads: {newMaxCompletionPortThreads}",
             maxWorkerThreads, newMaxCompletionPortThreads);
     }
+
+    public static IPAddress? GetClientIpFromXForwarded(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        
+        var parts = value.Split(',');
+        if (parts.Length == 0)
+            return null;
+
+        // Take the first part, which is the most trusted
+        var ipString = parts[0].Trim();
+        return IPAddress.TryParse(ipString, out var ipAddress) ? ipAddress : null;
+    }
 }

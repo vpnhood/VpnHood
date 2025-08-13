@@ -76,7 +76,7 @@ public class HttpStream : ChunkStream
             // ignore header
             if (!_isHttpHeaderRead) {
                 using var headerBuffer =
-                    await HttpUtil.ReadHeadersAsync(SourceStream, cancellationToken).Vhc();
+                    await HttpUtils.ReadHeadersAsync(SourceStream, cancellationToken).Vhc();
                 if (headerBuffer.Length == 0) {
                     _isFinished = true;
                     _isConnectionClosed = true;

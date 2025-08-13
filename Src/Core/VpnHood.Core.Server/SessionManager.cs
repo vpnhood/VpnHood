@@ -49,7 +49,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
     public byte[] ServerSecret {
         get => _serverSecret;
         set {
-            ApiKey = HttpUtil.GetApiKey(value, TunnelDefaults.HttpPassCheck);
+            ApiKey = HttpUtils.GetApiKey(value, TunnelDefaults.HttpPassCheck);
             _serverSecret = value;
         }
     }
@@ -74,7 +74,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
             Path.Combine(storagePath, "last-virtual-ips.json"));
 
         Tracker = tracker;
-        ApiKey = HttpUtil.GetApiKey(_serverSecret, TunnelDefaults.HttpPassCheck);
+        ApiKey = HttpUtils.GetApiKey(_serverSecret, TunnelDefaults.HttpPassCheck);
         NetFilter = netFilter;
         ServerVersion = serverVersion;
         if (_vpnAdapter != null)

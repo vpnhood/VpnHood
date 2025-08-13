@@ -240,14 +240,14 @@ public class ServerHost : IDisposable, IAsyncDisposable
             var streamId = UniqueIdFactory.Create() + ":server:tunnel:incoming";
 
             var headers =
-                await HttpUtil.ParseHeadersAsync(sslStream, cancellationToken).Vhc()
+                await HttpUtils.ParseHeadersAsync(sslStream, cancellationToken).Vhc()
                 ?? throw new Exception("Connection has been closed before receiving any request.");
 
             Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var streamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
             int.TryParse(headers.GetValueOrDefault("X-ProtocolVersion", "0"), out var protocolVersion);
             var webSocketKey = headers.GetValueOrDefault("Sec-WebSocket-Key", "");
-            var httpMethod = headers.GetValueOrDefault(HttpUtil.HttpRequestKey, "").Split(" ").FirstOrDefault();
+            var httpMethod = headers.GetValueOrDefault(HttpUtils.HttpRequestKey, "").Split(" ").FirstOrDefault();
             var upgrade = headers.GetValueOrDefault("Upgrade", "");
             var clientIpByProxy = headers.GetValueOrDefault("X-Forwarded-For", "");
             var clientIp = ServerUtil.GetClientIpFromXForwarded(clientIpByProxy) ??

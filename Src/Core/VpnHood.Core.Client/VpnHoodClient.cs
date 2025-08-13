@@ -174,7 +174,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // create proxy host
         _clientHost = new ClientHost(
-            this, _tunnel,
+            this, 
+            domainFilterService: DomainFilterService,
+            tunnel: _tunnel,
             catcherAddressIpV4: options.TcpProxyCatcherAddressIpV4, catcherAddressIpV6: options.TcpProxyCatcherAddressIpV6,
             streamProxyBufferSize: options.StreamProxySendBufferSize ?? TunnelDefaults.ClientStreamProxyBufferSize);
 
@@ -191,7 +193,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public ClientState State {
         get {
-            if (_state is ClientState.Disconnecting or ClientState.Disposed) 
+            if (_state is ClientState.Disconnecting or ClientState.Disposed)
                 return _state;
 
             // waiting for ad

@@ -110,7 +110,7 @@ internal class ConnectorService(
             // parse the HTTP request
             if (clientStream.RequireHttpResponse) {
                 clientStream.RequireHttpResponse = false;
-                var responseMessage = await HttpUtil.ReadResponse(clientStream.Stream, cancellationToken).Vhc();
+                var responseMessage = await HttpUtils.ReadResponse(clientStream.Stream, cancellationToken).Vhc();
                 if (responseMessage.StatusCode == HttpStatusCode.Unauthorized)
                     throw new UnauthorizedAccessException();
 

@@ -20,6 +20,7 @@ namespace VpnHood.Core.Client;
 
 internal class ClientHost(
     VpnHoodClient vpnHoodClient,
+    DomainFilterService domainFilterService,
     Tunnel tunnel,
     IPAddress catcherAddressIpV4,
     IPAddress catcherAddressIpV6,
@@ -28,13 +29,13 @@ internal class ClientHost(
 {
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private readonly ClientHostStat _stat = new();
+    private readonly Nat _nat = new(true);
     private TcpListener? _tcpListenerIpV4;
     private TcpListener? _tcpListenerIpV6;
     private IPEndPoint? _localEndpointIpV4;
     private IPEndPoint? _localEndpointIpV6;
     private int _processingCount;
-    private readonly ClientHostStat _stat = new();
-    private readonly Nat _nat = new(true);
 
     public IPAddress CatcherAddressIpV4 => catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 => catcherAddressIpV6;
@@ -185,7 +186,7 @@ internal class ClientHost(
 
     private void ProcessOutgoingSyncIpV6Packet(SyncCustomData syncCustomData)
     {
-        if (vpnHoodClient.DomainFilterService.IsEnabled &&
+        if (domainFilterService.IsEnabled &&
             (!vpnHoodClient.IsIpV6SupportedByServer || !vpnHoodClient.IsIpV6SupportedByClient))
             throw new Exception("DomainFilter is on but IPv6 is not fully supported.");
 
@@ -234,7 +235,7 @@ internal class ClientHost(
                 throw new Exception("TcpProxy rejected an outbound connection!");
 
             // Filter by SNI
-            var filterResult = await vpnHoodClient.DomainFilterService
+            var filterResult = await domainFilterService
                 .Process(orgTcpClient.GetStream(), natItem.DestinationAddress, cancellationToken)
                 .Vhc();
 

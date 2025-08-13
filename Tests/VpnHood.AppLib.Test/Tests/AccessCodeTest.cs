@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
@@ -17,6 +18,11 @@ public class AccessCodeTest : TestAppBase
         var tcpClient = new TcpClient();
         Console.WriteLine(tcpClient.ReceiveBufferSize);
         Console.WriteLine(tcpClient.SendBufferSize);
+
+        for (int i = 0; i < 10; i++) {
+            using var udpClient = new UdpClient(0); // Bind to an available local port
+            Console.WriteLine($"UDP Client {i + 1} Local Port: {((IPEndPoint)udpClient.Client.LocalEndPoint).Port}");
+        }
 
         await Task.CompletedTask;
     }

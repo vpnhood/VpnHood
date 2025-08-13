@@ -5,7 +5,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Utils;
 
-public static class HttpUtil
+public static class HttpUtils
 {
     public const string HttpRequestKey = "HTTP_REQUEST";
 

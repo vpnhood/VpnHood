@@ -90,7 +90,7 @@ internal class ConnectorServiceBase : IDisposable
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(headerBuilder.ToString()), cancellationToken).Vhc();
 
         // wait for response and websocket upgrade if needed before sending any data because GET can not have body
-        var responseMessage = await HttpUtil.ReadResponse(sslStream, cancellationToken).Vhc();
+        var responseMessage = await HttpUtils.ReadResponse(sslStream, cancellationToken).Vhc();
         if (responseMessage.StatusCode != HttpStatusCode.SwitchingProtocols)
             throw new Exception("Unexpected response.");
 

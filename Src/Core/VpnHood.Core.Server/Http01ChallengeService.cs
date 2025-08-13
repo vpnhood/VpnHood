@@ -59,11 +59,11 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
         CancellationToken cancellationToken)
     {
         await using var stream = client.GetStream();
-        var headers = await HttpUtil.ParseHeadersAsync(stream, cancellationToken).Vhc()
+        var headers = await HttpUtils.ParseHeadersAsync(stream, cancellationToken).Vhc()
                       ?? throw new Exception("Connection has been closed before receiving any request.");
 
         if (!headers.Any()) return;
-        var request = headers[HttpUtil.HttpRequestKey];
+        var request = headers[HttpUtils.HttpRequestKey];
         var requestParts = request.Split(' ');
         var expectedUrl = $"/.well-known/acme-challenge/{token}";
         var isMatched = requestParts.Length > 1 && requestParts[0] == "GET" && requestParts[1] == expectedUrl;

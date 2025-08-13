@@ -38,7 +38,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public bool? LogAnonymous { get; set; } =
         isDebugMode ? false : null; // it follows user's settings if it set to null
     public TimeSpan ServerQueryTimeout { get; set; } = ClientOptions.Default.ServerQueryTimeout;
-    public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(120).WhenNoDebugger();
+    public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromMinutes(4).WhenNoDebugger();
     public TimeSpan TcpTimeout { get; set; } = ClientOptions.Default.ConnectTimeout;
     public TimeSpan LocationServiceTimeout { get; set; } = TimeSpan.FromSeconds(3); // ignore debugger attach to let check when there is no internet
     public bool AutoDiagnose { get; set; } = true;

@@ -1,8 +1,9 @@
-# Upcoming
-* Feature: Detect device ad blocker using DNS over TLS
-* Feature: Smart prompt for user reviews
-* Update: Improved ad loading performance
-* Update: Load ads when DNS is configured
+# Upcoming  
+* Feature: Detect device ad blocker using DNS over TLS  
+* Feature: Smart prompt for user reviews  
+* Update: Improved ad loading performance  
+* Update: Load ads when DNS is configured  
+* Update: Increase connection timeout
 
 # v7.3.737
 * Fix: Preload ad in some regions

@@ -448,6 +448,7 @@ public class TestHelper : IDisposable
             VpnAdapterIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToArray(),
             IncludeLocalNetwork = true,
             ConnectTimeout = TimeSpan.FromSeconds(3),
+            UseTcpProxy = true,
             AccessKey = token?.ToAccessKey() ?? "" // set it later
         };
     }

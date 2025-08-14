@@ -9,6 +9,7 @@ public interface IDevice : IDisposable
     bool IsExcludeAppsSupported { get; }
     bool IsIncludeAppsSupported { get; }
     bool IsBindProcessToVpnSupported { get; }
+    bool IsTcpProxySupported { get; }
     string OsInfo { get; }
     DeviceMemInfo? MemInfo { get; }
     DeviceAppInfo[] InstalledApps { get; }

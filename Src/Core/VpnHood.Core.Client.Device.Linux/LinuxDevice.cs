@@ -10,6 +10,7 @@ public class LinuxDevice(string storageFolder) : IDevice
     public string VpnServiceConfigFolder { get; } = Path.Combine(storageFolder, "vpn-service");
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
+    public bool IsTcpProxySupported => true;
     public bool IsTv => false;
 
     public DeviceMemInfo MemInfo

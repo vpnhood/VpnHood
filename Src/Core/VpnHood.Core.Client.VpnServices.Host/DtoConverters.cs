@@ -26,6 +26,7 @@ internal static class DtoConverters
             WaitingCount = sessionStatus.WaitingCount,
             IsUserReviewRecommended = sessionStatus.IsUserReviewRecommended,
             IsDnsOverTlsDetected = sessionStatus.IsDnsOverTlsDetected,
+            IsTcpProxy = sessionStatus.IsTcpProxy
         };
 
         return ret;

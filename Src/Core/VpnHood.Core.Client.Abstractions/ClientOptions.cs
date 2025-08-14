@@ -49,7 +49,8 @@ public class ClientOptions
     public bool AllowAnonymousTracker { get; set; } = true;
     public bool AllowEndPointTracker { get; set; }
     public bool AllowTcpReuse { get; set; } = true;
-    public bool UseTcpOverTun { get; set; }
+    public bool UseTcpProxy { get; set; } = true;
+    public bool IsTcpProxySupported { get; set; } = true;
     public bool DropUdp { get; set; }
     public bool DropQuic { get; set; }
     public string? ServerLocation { get; set; }

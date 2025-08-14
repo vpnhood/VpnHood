@@ -35,6 +35,14 @@ public class HelloResponse : SessionResponse
     public string? ServerLocation { get; set; }
     public string[] ServerTags { get; set; } = [];
     public AccessInfo? AccessInfo { get; set; }
-    public bool IsTunProviderSupported { get; set; }
+    public bool IsTcpProxySupported { get; set; } = true;
+    public bool IsTcpPacketSupported { get; set; }
     public int Mtu { get; set; } = TunnelDefaults.MaxPacketSize;
+
+    [Obsolete("Use IsTcpPacketSupported")]
+    public bool IsTunProviderSupported {
+        get=> IsTcpPacketSupported; 
+        init=> IsTcpPacketSupported = value;
+    }
+
 }

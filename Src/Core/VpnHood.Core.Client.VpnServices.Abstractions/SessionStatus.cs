@@ -22,4 +22,5 @@ public class SessionStatus
     public required int? ActiveClientCount { get; init; }
     public required bool IsUserReviewRecommended { get; init; }
     public required bool IsDnsOverTlsDetected { get; init; }
+    public required bool IsTcpProxy { get; init; }
 }

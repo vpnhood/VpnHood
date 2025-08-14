@@ -15,6 +15,7 @@ public class UserSettings
     public bool TunnelClientCountry { get; set; } = true;
     public string[] AppFilters { get; set; } = [];
     public FilterMode AppFiltersMode { get; set; } = FilterMode.All;
+    public bool UseTcpProxy { get; set; }
     public bool UseUdpChannel { get; set; } = ClientOptions.Default.UseUdpChannel;
     public bool DropUdp { get; set; } = ClientOptions.Default.DropUdp;
     public bool DropQuic { get; set; } = ClientOptions.Default.DropQuic;
@@ -30,5 +31,4 @@ public class UserSettings
     
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public IPAddress[]? DnsServers { get; set; }
-
 }

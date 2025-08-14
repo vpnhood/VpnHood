@@ -12,6 +12,8 @@ public class SessionInfo
     public required AccessInfo? AccessInfo { get; init; }
     public required DateTime CreatedTime { get; set; }
     public required bool IsUdpChannelSupported { get; init; }
+    public required bool IsTcpPacketSupported { get; init; }
+    public required bool IsTcpProxySupported { get; init; }
     public required bool IsDnsServersAccepted { get; init; }
     public required ServerLocationInfo? ServerLocationInfo { get; init; }
     public required bool IsPremiumSession { get; init; }

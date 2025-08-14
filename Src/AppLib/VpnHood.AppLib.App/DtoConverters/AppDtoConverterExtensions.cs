@@ -31,7 +31,9 @@ public static class AppDtoConverterExtensions
             SuppressedTo = sessionInfo.SuppressedTo,
             DnsServers = sessionInfo.DnsServers,
             ClientPublicIpAddress = sessionInfo.ClientPublicIpAddress,
-            CreatedTime = sessionInfo.CreatedTime
+            CreatedTime = sessionInfo.CreatedTime,
+            IsTcpPacketSupported = sessionInfo.IsTcpPacketSupported,
+            IsTcpProxySupported = sessionInfo.IsTcpProxySupported,
         };
     }
 
@@ -50,6 +52,7 @@ public static class AppDtoConverterExtensions
             UnstableCount = sessionStatus.UnstableCount,
             WaitingCount = sessionStatus.WaitingCount,
             IsUdpMode = sessionStatus.IsUdpMode,
+            IsTcpProxy = sessionStatus.IsTcpProxy,
             CanExtendByRewardedAd = canExtendByRewardedAd,
             SessionMaxTraffic = sessionStatus.SessionMaxTraffic,
             SessionExpirationTime = sessionStatus.SessionExpirationTime,

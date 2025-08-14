@@ -18,6 +18,7 @@ public class TestDevice(
     public int BindProcessToVpnFalseCount { get; private set; }
     public int BindProcessToVpnTrueCount { get; private set; }
     public bool LastBindProcessToVpnValue { get; private set; }
+    public bool IsTcpProxySupported => true;
     public bool IsBindProcessToVpnSupported => true;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public string VpnServiceConfigFolder { get; } = Path.Combine(testHelper.WorkingPath, "VpnService");

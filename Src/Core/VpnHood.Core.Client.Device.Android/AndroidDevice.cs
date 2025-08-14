@@ -21,6 +21,7 @@ public class AndroidDevice : IDevice
     public bool IsBindProcessToVpnSupported => true;
     public bool IsExcludeAppsSupported => true;
     public bool IsIncludeAppsSupported => true;
+    public bool IsTcpProxySupported => true;
     public string OsInfo { get; } = $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
     public string VpnServiceConfigFolder => AndroidVpnService.VpnServiceConfigFolder;
     public bool IsTv { get; } =

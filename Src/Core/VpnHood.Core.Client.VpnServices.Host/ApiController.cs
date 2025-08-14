@@ -188,7 +188,7 @@ internal class ApiController : IDisposable
 
         VpnHoodClient.Settings.DropUdp = request.Params.DropUdp;
         VpnHoodClient.Settings.DropQuic = request.Params.DropQuic;
-        VpnHoodClient.Settings.UseTcpOverTun = request.Params.UseTcpOverTun;
+        VpnHoodClient.Settings.UseTcpProxy = request.Params.UseTcpProxy;
         VpnHoodClient.UseUdpChannel = request.Params.UseUdpChannel;
 
         return Task.CompletedTask;

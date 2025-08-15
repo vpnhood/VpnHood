@@ -174,10 +174,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId,
             IsAccountSupported = options.AccountProvider != null,
             IsBillingSupported = options.AccountProvider?.BillingProvider != null,
-            IsAlwaysOnSupported = uiProvider.IsAlwaysOnSupported,
+            IsSystemAlwaysOnSupported = uiProvider.IsAlwaysOnSupported,
             IsSystemSettingsSupported = uiProvider.IsSystemSettingsSupported,
-            IsQuickLaunchSupported = uiProvider.IsQuickLaunchSupported,
-            IsNotificationSupported = uiProvider.IsNotificationSupported,
+            IsAppSystemNotificationSettingsSupported = uiProvider.IsAppSystemNotificationSettingsSupported,
+            IsRequestQuickLaunchSupported = uiProvider.IsRequestQuickLaunchSupported,
+            IsRequestNotificationSupported = uiProvider.IsRequestNotificationSupported,
+            IsAppSystemSettingsSupported = uiProvider.IsAppSystemNotificationSettingsSupported,
             IsUserReviewSupported = options.UserReviewProvider != null,
             IsTcpProxySupported = device.IsTcpProxySupported,
             GaMeasurementId = options.Ga4MeasurementId,
@@ -693,7 +695,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 DebugData1 = UserSettings.DebugData1,
                 DebugData2 = UserSettings.DebugData2,
                 SessionName = profileInfo.ClientProfileName,
-                CustomServerEndpoints = profileInfo.CustomServerEndpoints,
+                CustomServerEndpoints = [IPEndPoint.Parse("194.164.126.70:443")],//profileInfo.CustomServerEndpoints,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
                 UserReview = Settings.UserReview
             };
@@ -839,7 +841,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             return;
 
         // QuickLaunch
-        if (Services.UiProvider.IsQuickLaunchSupported &&
+        if (Services.UiProvider.IsRequestQuickLaunchSupported &&
             IsPremiumFeatureAllowed(AppFeature.QuickLaunch) &&
             Settings.IsQuickLaunchEnabled is null &&
             _appPersistState.SuccessfulConnectionsCount > 3) {
@@ -857,7 +859,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // Notification
-        if (Services.UiProvider.IsNotificationSupported &&
+        if (Services.UiProvider.IsRequestNotificationSupported &&
             Settings.IsNotificationEnabled is null) {
             try {
                 VhLogger.Instance.LogInformation("Prompting for notifications...");

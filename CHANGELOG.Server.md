@@ -1,5 +1,8 @@
 # Upcoming
-* Extract Client IP from reserve proxies
+* Feature: Extract Client IP from reserve proxies
+* Feature: Add AllowTcpProxy option
+* Feature: Add AllowTcpPacket option
+* Fix: Block Stream Proxy requests by NetFilter
 
 # v7.3.739
 * Feature: Handle UserReview recommendation

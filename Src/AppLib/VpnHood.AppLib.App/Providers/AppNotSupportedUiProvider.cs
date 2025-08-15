@@ -8,21 +8,29 @@ internal class AppNotSupportedUiProvider
 {
     public SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext) => SystemBarsInfo.Default;
 
-    public bool IsQuickLaunchSupported => false;
+    public bool IsRequestQuickLaunchSupported => false;
 
     public Task<bool> RequestQuickLaunch(IUiContext uiContext, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
-    public bool IsNotificationSupported => false;
+    public bool IsRequestNotificationSupported => false;
 
     public Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
     public bool IsAlwaysOnSupported => false;
-    public void RequestAlwaysOn(IUiContext uiContext) => 
+    public void OpenSystemAlwaysOn(IUiContext uiContext) =>
         throw new NotSupportedException();
 
     public bool IsSystemSettingsSupported => false;
-    public void RequestSystemSettings(IUiContext uiContext) => 
+    public void OpenSystemSettings(IUiContext uiContext) =>
+        throw new NotSupportedException();
+
+    public bool IsAppSystemSettingsSupported => false;
+    public void OpenAppSystemSettings(IUiContext context) =>
+        throw new NotSupportedException();
+
+    public bool IsAppSystemNotificationSettingsSupported => false;
+    public void OpenAppSystemNotificationSettings(IUiContext uiContext) =>
         throw new NotSupportedException();
 }

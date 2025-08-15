@@ -7,21 +7,12 @@ namespace VpnHood.Core.Server;
 
 public class NetFilter : INetFilter
 {
-    private readonly IpRangeOrderedList _loopbackIpRange = IpNetwork.LoopbackNetworks.ToIpRanges();
-    private IpRangeOrderedList _blockedIpRanges = new([]);
     public bool BlockBroadcast { get; set; } = true;
     public bool BlockMulticast { get; set; } = true;
     public bool BlockLoopback { get; set; } = true;
 
-    public NetFilter()
-    {
-        BlockedIpRanges = _loopbackIpRange;
-    }
 
-    public IpRangeOrderedList BlockedIpRanges {
-        get => _blockedIpRanges;
-        set => _blockedIpRanges = _loopbackIpRange.Union(value);
-    }
+    public IpRangeOrderedList BlockedIpRanges { get; set; } = new();
 
     private bool IsIpAddressBlocked(IPAddress ipAddress)
     {

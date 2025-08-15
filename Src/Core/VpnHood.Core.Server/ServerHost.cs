@@ -667,7 +667,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
             ServerLocation = sessionResponseEx.ServerLocation,
             ServerTags = sessionResponseEx.ServerTags,
             AccessInfo = sessionResponseEx.AccessInfo,
-            IsTunProviderSupported = _sessionManager.IsVpnAdapterSupported,
+            IsTcpPacketSupported = _sessionManager.IsVpnAdapterSupported && session.AllowTcpPacket,
+            IsTcpProxySupported = session.AllowTcpProxy,
             ClientPublicAddress = clientIp,
             ClientCountry = sessionResponseEx.ClientCountry,
             VirtualIpNetworkV4 =

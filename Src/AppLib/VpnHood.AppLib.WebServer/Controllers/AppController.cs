@@ -157,13 +157,6 @@ internal class AppController : WebApiController, IAppController
         return Task.FromResult(App.InstalledApps);
     }
 
-    [Route(HttpVerbs.Post, "/intents/request-always-on")]
-    public Task RequestAlwaysOn()
-    {
-        App.Services.UiProvider.RequestAlwaysOn(AppUiContext.RequiredContext);
-        return Task.CompletedTask;
-    }
-
     [Route(HttpVerbs.Post, "/intents/request-quick-launch")]
     public Task RequestQuickLaunch()
     {
@@ -176,10 +169,31 @@ internal class AppController : WebApiController, IAppController
         return App.Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
     }
 
-    [Route(HttpVerbs.Post, "/intents/request-system-settings")]
-    public Task RequestSystemSettings()
+    [Route(HttpVerbs.Post, "/intents/open-system-always-on")]
+    public Task OpenSystemAlwaysOn()
     {
-        App.Services.UiProvider.RequestSystemSettings(AppUiContext.RequiredContext);
+        App.Services.UiProvider.OpenSystemAlwaysOn(AppUiContext.RequiredContext);
+        return Task.CompletedTask;
+    }
+
+    [Route(HttpVerbs.Post, "/intents/open-system-settings")]
+    public Task OpenSystemSettings()
+    {
+        App.Services.UiProvider.OpenSystemSettings(AppUiContext.RequiredContext);
+        return Task.CompletedTask;
+    }
+
+    [Route(HttpVerbs.Post, "/intents/open-app-system-settings")]
+    public Task OpenAppSystemSettings()
+    {
+        App.Services.UiProvider.OpenAppSystemSettings(AppUiContext.RequiredContext);
+        return Task.CompletedTask;
+    }
+
+    [Route(HttpVerbs.Post, "/intents/open-app-system-notification-settings")]
+    public Task OpenAppSystemNotificationSettings()
+    {
+        App.Services.UiProvider.OpenAppSystemSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 

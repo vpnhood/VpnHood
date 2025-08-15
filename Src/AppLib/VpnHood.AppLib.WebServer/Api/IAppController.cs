@@ -22,11 +22,13 @@ public interface IAppController
     Task<DeviceAppInfo[]> GetInstalledApps();
     Task VersionCheck();
     Task VersionCheckPostpone();
-    Task RequestAlwaysOn();
     Task RequestQuickLaunch();
     Task RequestNotification();
     Task RequestUserReview();
-    Task RequestSystemSettings();
+    Task OpenSystemAlwaysOn();
+    Task OpenSystemSettings();
+    Task OpenAppSystemSettings();
+    Task OpenAppSystemNotificationSettings();
     Task ExtendByRewardedAd();
     Task SetUserReview(AppUserReview userReview);
     Task<CountryInfo[]> GetCountries();

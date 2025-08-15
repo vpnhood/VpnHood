@@ -16,7 +16,7 @@ public class AndroidUiProvider : IAppUiProvider
     private const int RequestPostNotificationId = 11;
     private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
 
-    public bool IsQuickLaunchSupported { get; } =
+    public bool IsRequestQuickLaunchSupported { get; } =
         OperatingSystem.IsAndroidVersionAtLeast(33) &&
         Application.Context.PackageManager?.HasSystemFeature(PackageManager.FeatureLeanback) is false;
 
@@ -24,7 +24,7 @@ public class AndroidUiProvider : IAppUiProvider
     {
         var appUiContext = (AndroidUiContext)context;
 
-        if (!IsQuickLaunchSupported)
+        if (!IsRequestQuickLaunchSupported)
             throw new NotSupportedException("QuickLaunch is not supported on this device.");
 
         // request for adding tile
@@ -37,14 +37,14 @@ public class AndroidUiProvider : IAppUiProvider
         return res != 0;
     }
 
-    public bool IsNotificationSupported => OperatingSystem.IsAndroidVersionAtLeast(33);
+    public bool IsRequestNotificationSupported => OperatingSystem.IsAndroidVersionAtLeast(33);
 
     public async Task<bool> RequestNotification(IUiContext context, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)context;
 
         // check is request supported
-        if (!IsNotificationSupported)
+        if (!IsRequestNotificationSupported)
             throw new NotSupportedException("RequestNotification is not supported on this device.");
 
         // check is already granted
@@ -70,7 +70,7 @@ public class AndroidUiProvider : IAppUiProvider
 
     public bool IsAlwaysOnSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
 
-    public void RequestAlwaysOn(IUiContext context)
+    public void OpenSystemAlwaysOn(IUiContext context)
     {
         if (!IsAlwaysOnSupported)
             throw new NotSupportedException("AlwaysOn is not supported on this device.");
@@ -82,7 +82,7 @@ public class AndroidUiProvider : IAppUiProvider
 
     public bool IsSystemSettingsSupported => true;
 
-    public void RequestSystemSettings(IUiContext context)
+    public void OpenSystemSettings(IUiContext context)
     {
         if (!IsSystemSettingsSupported)
             throw new NotSupportedException("SystemSettings is not supported on this device.");
@@ -90,6 +90,40 @@ public class AndroidUiProvider : IAppUiProvider
         var appUiContext = (AndroidUiContext)context;
         var intent = new Intent(Android.Provider.Settings.ActionSettings);
         appUiContext.Activity.StartActivity(intent);
+    }
+
+    public bool IsAppSystemSettingsSupported => true;
+
+    public void OpenAppSystemSettings(IUiContext context)
+    {
+        if (!IsAppSystemSettingsSupported)
+            throw new NotSupportedException("AppSystemSettings is not supported on this device.");
+
+        var appUiContext = (AndroidUiContext)context;
+        var intent = new Intent(Android.Provider.Settings.ActionApplicationDetailsSettings);
+        intent.SetData(Android.Net.Uri.FromParts("package", appUiContext.Activity.PackageName, null));
+        appUiContext.Activity.StartActivity(intent);
+    }
+
+    public bool IsAppSystemNotificationSettingsSupported => true;
+    public void OpenAppSystemNotificationSettings(IUiContext context)
+    {
+        if (!IsAppSystemNotificationSettingsSupported)
+            throw new NotSupportedException("AppSystemNotificationSettings is not supported on this device.");
+
+        var appUiContext = (AndroidUiContext)context;
+        if (OperatingSystem.IsAndroidVersionAtLeast(26)) 
+        {
+            var intent = new Intent(Android.Provider.Settings.ActionAppNotificationSettings);
+            intent.PutExtra(Android.Provider.Settings.ExtraAppPackage, appUiContext.Activity.PackageName);
+            appUiContext.Activity.StartActivity(intent);
+        }
+        else {
+            var intent = new Intent(Android.Provider.Settings.ActionAppNotificationSettings);
+            intent.PutExtra("app_package", appUiContext.Activity.PackageName);
+            intent.PutExtra("app_uid", appUiContext.Activity.ApplicationInfo!.Uid);
+            appUiContext.Activity.StartActivity(intent);
+        }
     }
 
     public SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext)

@@ -4,17 +4,24 @@ namespace VpnHood.AppLib.Abstractions;
 
 public interface IAppUiProvider
 {
-    bool IsQuickLaunchSupported { get; }
+    bool IsRequestQuickLaunchSupported { get; }
     Task<bool> RequestQuickLaunch(IUiContext uiContext, CancellationToken cancellationToken);
 
-    bool IsNotificationSupported { get; }
+    bool IsRequestNotificationSupported { get; }
     Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken);
 
     bool IsAlwaysOnSupported { get; }
-    void RequestAlwaysOn(IUiContext uiContext);
+    void OpenSystemAlwaysOn(IUiContext uiContext);
 
     bool IsSystemSettingsSupported { get; }
-    void RequestSystemSettings(IUiContext uiContext);
+    void OpenSystemSettings(IUiContext uiContext);
+
+    bool IsAppSystemSettingsSupported { get; }
+    void OpenAppSystemSettings(IUiContext context);
+
+    bool IsAppSystemNotificationSettingsSupported { get; }
+    void OpenAppSystemNotificationSettings(IUiContext uiContext);
+
 
     SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext);
 }

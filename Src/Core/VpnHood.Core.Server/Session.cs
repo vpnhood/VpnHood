@@ -50,7 +50,7 @@ public class Session : IDisposable
     private readonly EventReporter _maxTcpConnectWaitExceptionReporter = new(
         "Maximum TcpConnectWait has been reached.", GeneralEventId.NetProtect);
 
-    private readonly EventReporter _filterReporter = new("Some requests have been blocked.", 
+    private readonly EventReporter _filterReporter = new("Some requests have been blocked.",
         GeneralEventId.NetProtect);
 
     private Traffic _prevTraffic = new();
@@ -70,6 +70,8 @@ public class Session : IDisposable
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
     public VirtualIpBundle VirtualIps { get; }
+    public bool AllowTcpPacket { get; }
+    public bool AllowTcpProxy { get; }
 
     internal Session(IAccessManager accessManager,
         IVpnAdapter? vpnAdapter,
@@ -111,6 +113,8 @@ public class Session : IDisposable
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
+        AllowTcpPacket = options.AllowTcpPacketValue;
+        AllowTcpProxy = options.AllowTcpProxyValue;
         ExtraData = extraData;
         VirtualIps = virtualIps;
         SessionResponseEx = sessionResponseEx;
@@ -223,9 +227,9 @@ public class Session : IDisposable
 
     private void Proxy_PacketReceived(IpPacket ipPacket)
     {
-        if (IsDisposed) 
+        if (IsDisposed)
             return;
-        
+
         PacketLogger.LogPacket(ipPacket, "Delegating a packet to client...");
         ipPacket = _netFilter.ProcessReply(ipPacket);
         Tunnel.SendPacketQueued(ipPacket); // PacketEnqueue will dispose packets
@@ -246,6 +250,10 @@ public class Session : IDisposable
             _filterReporter.Raise();
             throw new NetFilterException($"Invalid tunnel packet source ip. SourceIp: {VhLogger.Format(ipPacket.SourceAddress)}");
         }
+
+        // check TcpPacket
+        if (!AllowTcpPacket && ipPacket.Protocol == IpProtocol.Tcp)
+            throw new NetFilterException("TcpPacket is not allowed in this session.");
 
         // filter
         var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
@@ -315,7 +323,7 @@ public class Session : IDisposable
             Tunnel.RemoveAllPacketChannels();
             _udpChannel = null;
         }
-       
+
         // add channel
         VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
             "Creating a TcpPacketChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
@@ -361,6 +369,13 @@ public class Session : IDisposable
     public async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
+        if (!AllowTcpProxy)
+            throw new SessionException(SessionErrorCode.GeneralError, "TcpProxy is not allowed in this session.");
+
+        // filter
+        request.DestinationEndPoint = ValidateDestination(IpProtocol.Tcp, request.DestinationEndPoint);
+
+        // process request
         var isRequestedEpException = false;
         var isTcpConnectIncreased = false;
 
@@ -381,8 +396,8 @@ public class Session : IDisposable
 
             //set reuseAddress to  true to prevent error only one usage of each socket address is normally permitted
             tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint);
-            VhUtils.ConfigTcpClient(tcpClientHost, 
-                sendBufferSize: _tcpKernelBufferSize?.Send, 
+            VhUtils.ConfigTcpClient(tcpClientHost,
+                sendBufferSize: _tcpKernelBufferSize?.Send,
                 receiveBufferSize: _tcpKernelBufferSize?.Receive);
 
             // connect to requested destination
@@ -430,17 +445,22 @@ public class Session : IDisposable
         }
     }
 
+    private IPEndPoint ValidateDestination(IpProtocol protocol, IPEndPoint destinationEndPoint)
+    {
+        var newEndPoint = _netFilter.ProcessRequest(protocol, destinationEndPoint);
+        if (newEndPoint == null) {
+            LogTrack(protocol, null, destinationEndPoint, false, true, "NetFilter");
+            _filterReporter.Raise();
+            throw new NetFilterException($"Request discarded due to the NetFilter's policies. DestinationIp: {VhLogger.Format(destinationEndPoint)}");
+        }
+
+        return newEndPoint;
+    }
+
     private void VerifyTcpChannelRequest(IClientStream clientStream, StreamProxyChannelRequest request)
     {
         // filter
-        var newEndPoint = _netFilter.ProcessRequest(IpProtocol.Tcp, request.DestinationEndPoint);
-        if (newEndPoint == null) {
-            LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint, false, true, "NetFilter");
-            _filterReporter.Raise();
-            throw new RequestBlockedException(request.DestinationEndPoint, this, request.RequestId);
-        }
-
-        request.DestinationEndPoint = newEndPoint;
+        request.DestinationEndPoint = ValidateDestination(IpProtocol.Tcp, request.DestinationEndPoint);
 
         lock (_verifyRequestLock) {
             // NetScan limit

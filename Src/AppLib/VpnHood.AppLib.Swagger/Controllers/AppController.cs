@@ -107,7 +107,7 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpPost("intents/request-always-on")]
-    public Task RequestAlwaysOn()
+    public Task OpenSystemAlwaysOn()
     {
         throw new SwaggerOnlyException();
     }
@@ -130,8 +130,20 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
-    [HttpPost("intents/request-system-settings")]
-    public Task RequestSystemSettings()
+    [HttpPost("intents/open-system-settings")]
+    public Task OpenSystemSettings()
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("intents/open-app-system-settings")]
+    public Task OpenAppSystemSettings()
+    {
+        throw new SwaggerOnlyException();
+    }
+    
+    [HttpPost("intents/open-app-system-notification-settings")]
+    public Task OpenAppSystemNotificationSettings()
     {
         throw new SwaggerOnlyException();
     }

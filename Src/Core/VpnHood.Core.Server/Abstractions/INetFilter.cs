@@ -6,8 +6,8 @@ namespace VpnHood.Core.Server.Abstractions;
 
 public interface INetFilter
 {
-    public IpRangeOrderedList BlockedIpRanges { get; set; }
-    public IpPacket? ProcessRequest(IpPacket ipPacket);
-    public IPEndPoint? ProcessRequest(IpProtocol protocol, IPEndPoint requestEndPoint);
-    public IpPacket ProcessReply(IpPacket ipPacket);
+    IpRangeOrderedList BlockedIpRanges { get; set; }
+    IpPacket? ProcessRequest(IpPacket ipPacket);
+    IPEndPoint? ProcessRequest(IpProtocol protocol, IPEndPoint requestEndPoint);
+    IpPacket ProcessReply(IpPacket ipPacket);
 }

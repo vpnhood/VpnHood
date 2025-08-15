@@ -12,6 +12,11 @@ public class TestNetFilter : NetFilter
     private ConcurrentDictionary<Tuple<IpProtocol, IPEndPoint>, IPEndPoint> NetMapR { get; } = new();
     private IPAddress[] _blockedAddresses = [];
 
+    public TestNetFilter()
+    {
+        BlockLoopback = false;
+    }
+
     public void Init(IPAddress[] blockedAddresses, Tuple<IpProtocol, IPEndPoint, IPEndPoint>[] items)
     {
         NetMap.Clear();

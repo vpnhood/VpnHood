@@ -75,7 +75,7 @@ public class ClientTunnelTest : TestBase
     }
 
 
-    private static async Task AssertInvalidTcpRequest(ClientServerDom clientServer)
+    private async Task AssertInvalidTcpRequest(ClientServerDom clientServer)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Invalid Https request.");
         using var httpClient = new HttpClient();
@@ -86,8 +86,11 @@ public class ClientTunnelTest : TestBase
             httpClient.GetStringAsync(TestConstants.HttpsBlockedUri));
 
         Assert.AreEqual(HttpRequestError.SecureConnectionError, ex.HttpRequestError);
-        Assert.AreEqual(ClientState.Connected, clientServer.Client.State);
+        Assert.AreEqual(ClientState.Unstable, clientServer.Client.State);
 
+        // bring back to normal state
+        await TestHelper.Test_Https();
+        Assert.AreEqual(ClientState.Connected, clientServer.Client.State);
     }
 
     private async Task AssertValidTcp(ClientServerDom clientServer)

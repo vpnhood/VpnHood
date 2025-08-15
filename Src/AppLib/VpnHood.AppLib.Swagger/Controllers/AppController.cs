@@ -106,48 +106,6 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
-    [HttpPost("intents/request-always-on")]
-    public Task OpenSystemAlwaysOn()
-    {
-        throw new SwaggerOnlyException();
-    }
-
-    [HttpPost("intents/request-quick-launch")]
-    public Task RequestQuickLaunch()
-    {
-        throw new SwaggerOnlyException();
-    }
-
-    [HttpPost("intents/request-user-review")]
-    public Task RequestUserReview()
-    {
-        throw new SwaggerOnlyException();
-    }
-
-    [HttpPost("intents/request-notification")]
-    public Task RequestNotification()
-    {
-        throw new SwaggerOnlyException();
-    }
-
-    [HttpPost("intents/open-system-settings")]
-    public Task OpenSystemSettings()
-    {
-        throw new SwaggerOnlyException();
-    }
-
-    [HttpPost("intents/open-app-system-settings")]
-    public Task OpenAppSystemSettings()
-    {
-        throw new SwaggerOnlyException();
-    }
-    
-    [HttpPost("intents/open-app-system-notification-settings")]
-    public Task OpenAppSystemNotificationSettings()
-    {
-        throw new SwaggerOnlyException();
-    }
-
     [HttpPost("process-types")]
     public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode )
     {

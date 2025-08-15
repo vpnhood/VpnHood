@@ -6,7 +6,6 @@ using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.Core.Client.Device;
-using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
@@ -157,57 +156,7 @@ internal class AppController : WebApiController, IAppController
         return Task.FromResult(App.InstalledApps);
     }
 
-    [Route(HttpVerbs.Post, "/intents/request-quick-launch")]
-    public Task RequestQuickLaunch()
-    {
-        return App.Services.UiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, CancellationToken.None);
-    }
-
-    [Route(HttpVerbs.Post, "/intents/request-notification")]
-    public Task RequestNotification()
-    {
-        return App.Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
-    }
-
-    [Route(HttpVerbs.Post, "/intents/open-system-always-on")]
-    public Task OpenSystemAlwaysOn()
-    {
-        App.Services.UiProvider.OpenSystemAlwaysOn(AppUiContext.RequiredContext);
-        return Task.CompletedTask;
-    }
-
-    [Route(HttpVerbs.Post, "/intents/open-system-settings")]
-    public Task OpenSystemSettings()
-    {
-        App.Services.UiProvider.OpenSystemSettings(AppUiContext.RequiredContext);
-        return Task.CompletedTask;
-    }
-
-    [Route(HttpVerbs.Post, "/intents/open-app-system-settings")]
-    public Task OpenAppSystemSettings()
-    {
-        App.Services.UiProvider.OpenAppSystemSettings(AppUiContext.RequiredContext);
-        return Task.CompletedTask;
-    }
-
-    [Route(HttpVerbs.Post, "/intents/open-app-system-notification-settings")]
-    public Task OpenAppSystemNotificationSettings()
-    {
-        App.Services.UiProvider.OpenAppSystemSettings(AppUiContext.RequiredContext);
-        return Task.CompletedTask;
-    }
-
-    [Route(HttpVerbs.Post, "/intents/request-user-review")]
-    public Task RequestUserReview()
-    {
-        if (App.Services.UserReviewProvider is null)
-            throw new NotSupportedException("User review is not supported.");
-
-        return App.Services.UserReviewProvider.RequestReview(AppUiContext.RequiredContext, CancellationToken.None);
-    }
-
-
-    [Route(HttpVerbs.Post, "/process-types")]
+ [Route(HttpVerbs.Post, "/process-types")]
     public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode)
     {
         throw new NotSupportedException("This method exists just to let swagger generate types.");

@@ -18,12 +18,16 @@ internal class AppNotSupportedUiProvider
     public Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
-    public bool IsAlwaysOnSupported => false;
-    public void OpenSystemAlwaysOn(IUiContext uiContext) =>
-        throw new NotSupportedException();
-
     public bool IsSystemSettingsSupported => false;
     public void OpenSystemSettings(IUiContext uiContext) =>
+        throw new NotSupportedException();
+
+    public bool IsSystemAlwaysOnSettingsSupported => false;
+    public void OpenSystemAlwaysOnSettings(IUiContext uiContext) =>
+        throw new NotSupportedException();
+
+    public bool IsSystemKillSwitchSettingsSupported =>false;
+    public void OpenSystemKillSwitchSettings(IUiContext requiredContext) =>
         throw new NotSupportedException();
 
     public bool IsAppSystemSettingsSupported => false;

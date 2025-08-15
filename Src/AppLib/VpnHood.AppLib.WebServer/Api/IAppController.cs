@@ -22,13 +22,6 @@ public interface IAppController
     Task<DeviceAppInfo[]> GetInstalledApps();
     Task VersionCheck();
     Task VersionCheckPostpone();
-    Task RequestQuickLaunch();
-    Task RequestNotification();
-    Task RequestUserReview();
-    Task OpenSystemAlwaysOn();
-    Task OpenSystemSettings();
-    Task OpenAppSystemSettings();
-    Task OpenAppSystemNotificationSettings();
     Task ExtendByRewardedAd();
     Task SetUserReview(AppUserReview userReview);
     Task<CountryInfo[]> GetCountries();

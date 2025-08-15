@@ -68,12 +68,24 @@ public class AndroidUiProvider : IAppUiProvider
         }
     }
 
-    public bool IsAlwaysOnSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
+    public bool IsSystemKillSwitchSettingsSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
 
-    public void OpenSystemAlwaysOn(IUiContext context)
+    public void OpenSystemKillSwitchSettings(IUiContext context)
     {
-        if (!IsAlwaysOnSupported)
-            throw new NotSupportedException("AlwaysOn is not supported on this device.");
+        if (!IsSystemKillSwitchSettingsSupported)
+            throw new NotSupportedException("SystemKillSwitchSettings is not supported on this device.");
+
+        var appUiContext = (AndroidUiContext)context;
+        var intent = new Intent(Android.Provider.Settings.ActionVpnSettings);
+        appUiContext.Activity.StartActivity(intent);
+    }
+
+    public bool IsSystemAlwaysOnSettingsSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
+
+    public void OpenSystemAlwaysOnSettings(IUiContext context)
+    {
+        if (!IsSystemAlwaysOnSettingsSupported)
+            throw new NotSupportedException("SystemAlwaysOnSettings is not supported on this device.");
 
         var appUiContext = (AndroidUiContext)context;
         var intent = new Intent(Android.Provider.Settings.ActionVpnSettings);

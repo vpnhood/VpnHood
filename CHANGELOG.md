@@ -5,6 +5,7 @@
 * Update: Improved ad loading performance  
 * Update: Load ads when DNS is configured  
 * Update: Increase connection timeout
+* Fix: InAppReview
 
 # v7.3.737
 * Fix: Preload ad in some regions

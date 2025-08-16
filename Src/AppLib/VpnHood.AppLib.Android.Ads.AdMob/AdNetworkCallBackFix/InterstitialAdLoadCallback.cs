@@ -1,9 +1,9 @@
-﻿using Android.Gms.Ads.Interstitial;
-using Android.Runtime;
+﻿using Android.Runtime;
+using Google.Android.Gms.Ads.Interstitial;
 
 namespace VpnHood.AppLib.Droid.Ads.VhAdMob.AdNetworkCallBackFix;
 
-public abstract class InterstitialAdLoadCallback : Android.Gms.Ads.Interstitial.InterstitialAdLoadCallback
+public abstract class InterstitialAdLoadCallback : Google.Android.Gms.Ads.Interstitial.InterstitialAdLoadCallback
 {
     private static Delegate? _cbOnAdLoaded;
 

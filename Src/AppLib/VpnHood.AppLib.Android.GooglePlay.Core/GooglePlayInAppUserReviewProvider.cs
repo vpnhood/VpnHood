@@ -1,5 +1,5 @@
+using Android.Gms.Extensions;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Droid.GooglePlay.Utils;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.UiContexts;
 using Xamarin.Google.Android.Play.Core.Review;
@@ -16,10 +16,14 @@ public class GooglePlayInAppUserReviewProvider(bool testMode = false) : IAppUser
             ? new FakeReviewManager(appUiContext.Activity)
             : ReviewManagerFactory.Create(appUiContext.Activity);
         
-        using var reviewInfo = await reviewManager.RequestReviewFlow().AsTask<ReviewInfo>()
+        using var reviewInfo = await reviewManager.RequestReviewFlow()
+            .AsAsync<ReviewInfo>()
+            .WaitAsync(cancellationToken)
             .ConfigureAwait(false);
 
         await reviewManager.LaunchReviewFlow(appUiContext.Activity, reviewInfo!)
-            .AsTask().ConfigureAwait(false);
+            .AsAsync()
+            .WaitAsync(cancellationToken)
+            .ConfigureAwait(false);
     }
 }

@@ -1,13 +1,12 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Android.Gms.Extensions;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Droid.GooglePlay.Utils;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
-using Xamarin.Google.Android.Play.Core.Install.Model;
+using Xamarin.Google.Android.Play.Core.AppUpdate.Install.Model;
 
 namespace VpnHood.AppLib.Droid.GooglePlay;
 
@@ -18,9 +17,10 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
         try {
             var appUiContext = (AndroidUiContext)uiContext;
             using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
+
             using var appUpdateInfo =
-                await appUpdateManager.AppUpdateInfo.AsTask<AppUpdateInfo>().Vhc() ??
-                throw new Exception("Could not retrieve AppUpdateInfo");
+                await appUpdateManager.GetAppUpdateInfo().AsAsync<AppUpdateInfo>();
+            //throw new Exception("Could not retrieve AppUpdateInfo");
 
             // play set UpdateAvailability.UpdateNotAvailable even when there is no connection to google
             // So we return false if there is UpdateNotAvailable to let the alternative way works
@@ -34,7 +34,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
                 using var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
                     AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
                 if (updateFlowPlayTask != null)
-                    await updateFlowPlayTask.AsTask().WaitAsync(cancellationToken).ConfigureAwait(false);
+                    await updateFlowPlayTask.AsAsync().WaitAsync(cancellationToken).ConfigureAwait(false);
             });
 
             return true;

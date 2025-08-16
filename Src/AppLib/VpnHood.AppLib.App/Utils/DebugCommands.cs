@@ -10,6 +10,7 @@ public static class DebugCommands
     public const string NullCapture = "/null-capture";
     public const string NoTcpReuse = "/no-tcp-reuse";
     public const string WinDivert = "/windivert";
+    public const string Feedback = "/feedback";
 
     public static string[] All => [
         CaptureContext,
@@ -19,6 +20,7 @@ public static class DebugCommands
         KillSpaServer,
         NoTcpReuse,
         NullCapture,
-        WinDivert
+        WinDivert,
+        Feedback
     ];
 }

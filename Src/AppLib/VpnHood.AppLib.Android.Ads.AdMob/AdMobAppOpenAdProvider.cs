@@ -1,5 +1,5 @@
-using Android.Gms.Ads;
-using Android.Gms.Ads.AppOpen;
+using Google.Android.Gms.Ads;
+using Google.Android.Gms.Ads.AppOpen;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Droid.Ads.VhAdMob.AdNetworkCallBackFix;

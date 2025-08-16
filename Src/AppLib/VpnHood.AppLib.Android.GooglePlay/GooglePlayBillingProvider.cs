@@ -92,11 +92,9 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
         // Get products list from GooglePlay.
         try {
-            var response = await _billingClient.Value.QueryProductDetailsAsync(productDetailsParams).ConfigureAwait(false);
-            if (response.Result.ResponseCode != BillingResponseCode.Ok)
-                throw GoogleBillingException.Create(response.Result);
+            var productDetailsResult = await _billingClient.Value.QueryProductDetailsAsync(productDetailsParams).ConfigureAwait(false);
 
-            _productDetails = response.ProductDetails.First();
+            _productDetails = productDetailsResult.ProductDetailsList.First();
             _subscriptionOfferDetails = _productDetails.GetSubscriptionOfferDetails()
                                         ?? throw new Exception("Could not get subscription offer details.");
 

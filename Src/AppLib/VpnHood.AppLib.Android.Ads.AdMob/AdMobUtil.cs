@@ -1,6 +1,6 @@
 ﻿using Android.Content;
-using Android.Gms.Ads;
-using Android.Gms.Ads.Initialization;
+using Google.Android.Gms.Ads;
+using Google.Android.Gms.Ads.Initialization;
 using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.Core.Toolkit.Utils;
 

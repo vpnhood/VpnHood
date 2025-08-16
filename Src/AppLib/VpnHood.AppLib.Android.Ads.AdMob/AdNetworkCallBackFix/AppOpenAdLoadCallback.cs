@@ -1,4 +1,4 @@
-using Android.Gms.Ads.AppOpen;
+using Google.Android.Gms.Ads.AppOpen;
 using Android.Runtime;
 
 namespace VpnHood.AppLib.Droid.Ads.VhAdMob.AdNetworkCallBackFix;

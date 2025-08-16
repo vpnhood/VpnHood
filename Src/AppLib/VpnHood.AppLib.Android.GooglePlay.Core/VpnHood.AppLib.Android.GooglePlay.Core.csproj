@@ -38,7 +38,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Xamarin.Google.Android.Play.Core" Version="1.10.3.18" />
+	  <PackageReference Include="Xamarin.Google.Android.Play.App.Update" Version="2.1.0.16" />
+	  <PackageReference Include="Xamarin.Google.Android.Play.Review" Version="2.0.2.5" />
 	</ItemGroup>
 
 	<ItemGroup>

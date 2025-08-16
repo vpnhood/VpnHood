@@ -1,9 +1,9 @@
-using Android.Gms.Ads.Rewarded;
 using Android.Runtime;
+using Google.Android.Gms.Ads.Rewarded;
 
 namespace VpnHood.AppLib.Droid.Ads.VhAdMob.AdNetworkCallBackFix;
 
-public abstract class RewardedAdLoadCallback : Android.Gms.Ads.Rewarded.RewardedAdLoadCallback
+public abstract class RewardedAdLoadCallback : Google.Android.Gms.Ads.Rewarded.RewardedAdLoadCallback
 {
     private static Delegate? _cbOnAdLoaded;
 

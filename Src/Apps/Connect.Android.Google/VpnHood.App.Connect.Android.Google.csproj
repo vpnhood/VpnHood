@@ -68,9 +68,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.696" />
-		<PackageReference Include="Xamarin.Firebase.Analytics" Version="122.4.0" />
-		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="119.4.4" />
+		<PackageReference Include="Xamarin.Firebase.Analytics" Version="123.0.0.1" />
+		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="120.0.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>

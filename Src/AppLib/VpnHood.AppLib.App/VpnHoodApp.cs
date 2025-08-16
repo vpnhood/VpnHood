@@ -1122,9 +1122,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly AsyncLock _versionCheckLock = new();
     public async Task VersionCheck(bool force, TimeSpan delay, CancellationToken cancellationToken)
     {
+        VhLogger.Instance.LogDebug("VersionCheck requested. Force: {Force}, Delay: {Delay}", force, delay);
         using var lockAsync = await _versionCheckLock.LockAsync(cancellationToken).Vhc();
-        if (!force && _appPersistState.UpdateIgnoreTime + _versionCheckInterval > DateTime.Now)
+        if (!force && _appPersistState.UpdateIgnoreTime + _versionCheckInterval > DateTime.Now) {
+            VhLogger.Instance.LogDebug("VersionCheck is postponed. Last ignored time: {LastIgnoredTime}, Interval: {Interval}",
+                _appPersistState.UpdateIgnoreTime, _versionCheckInterval);
             return;
+        }
 
         // Wait for delay. Useful for waiting for an ad to send its tracker
         await Task.Delay(delay, cancellationToken).Vhc();
@@ -1138,6 +1142,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         try {
             if (AppUiContext.Context != null && Services.UpdaterProvider != null &&
                 await Services.UpdaterProvider.Update(AppUiContext.RequiredContext, linkedCts.Token).Vhc()) {
+                VhLogger.Instance.LogDebug("Update is managed by UpdaterProvider. Postponing the version check.");
                 VersionCheckPostpone();
                 return;
             }

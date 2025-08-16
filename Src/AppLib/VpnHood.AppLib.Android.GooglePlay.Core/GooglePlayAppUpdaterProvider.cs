@@ -17,22 +17,30 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
         try {
             var appUiContext = (AndroidUiContext)uiContext;
             using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
-
-            using var appUpdateInfo =
-                await appUpdateManager.GetAppUpdateInfo().AsAsync<AppUpdateInfo>();
-            //throw new Exception("Could not retrieve AppUpdateInfo");
+            using var appUpdateInfo = await appUpdateManager.GetAppUpdateInfo().AsAsync<AppUpdateInfo>();
 
             // play set UpdateAvailability.UpdateNotAvailable even when there is no connection to google
             // So we return false if there is UpdateNotAvailable to let the alternative way works
+            VhLogger.Instance.LogDebug("Checking for Google Play update availability...");
             var updateAvailability = appUpdateInfo.UpdateAvailability();
-            if (updateAvailability != UpdateAvailability.UpdateAvailable ||
-                !appUpdateInfo.IsUpdateTypeAllowed(AppUpdateType.Immediate))
+            if (updateAvailability != UpdateAvailability.UpdateAvailable) {
+                VhLogger.Instance.LogDebug(
+                    "Google Play update is not available. UpdateAvailability: {UpdateAvailability}", updateAvailability);
                 return false;
+            }
+
+            // check is update type allowed
+            //if (!appUpdateInfo.IsUpdateTypeAllowed(AppUpdateType.Immediate)) {
+            //    VhLogger.Instance.LogDebug("Google Play immediate update is not allowed.");
+            //    return false;
+            //}
 
             // Show Google Play update dialog
+            VhLogger.Instance.LogDebug("Google Play update is available, starting update flow...");
             await AndroidUtil.RunOnUiThread(appUiContext.Activity, async () => {
-                using var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
+                var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
                     AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
+
                 if (updateFlowPlayTask != null)
                     await updateFlowPlayTask.AsAsync().WaitAsync(cancellationToken).ConfigureAwait(false);
             });

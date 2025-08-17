@@ -25,6 +25,8 @@ public class AppState
     public required bool CanDisconnect { get; init; }
     public required bool CanConnect { get; init; }
     public required bool CanDiagnose { get; init; }
+    public required bool CanChangeTcpProxy { get; init; }
+    public required bool IsTcpProxy { get; init; }
     public required bool IsUserReviewRecommended { get; init; }
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }

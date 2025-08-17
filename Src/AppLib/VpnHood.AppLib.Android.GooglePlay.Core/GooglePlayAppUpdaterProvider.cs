@@ -12,7 +12,17 @@ namespace VpnHood.AppLib.Droid.GooglePlay;
 
 public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
 {
-    public async Task<bool> Update(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task<bool> IsUpdateAvailable(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        return UpdateInternal(uiContext, false, cancellationToken);
+    }
+
+    public Task<bool> Update(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        return UpdateInternal(uiContext, true, cancellationToken);
+    }
+
+    public async Task<bool> UpdateInternal(IUiContext uiContext, bool execute, CancellationToken cancellationToken)
     {
         try {
             var appUiContext = (AndroidUiContext)uiContext;
@@ -29,7 +39,11 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
                 return false;
             }
 
-            // check is update type allowed
+            // just return if execute is not required
+            if (!execute)
+                return true;
+
+            // check is update type allowed (this needs to publish by api to set)
             //if (!appUpdateInfo.IsUpdateTypeAllowed(AppUpdateType.Immediate)) {
             //    VhLogger.Instance.LogDebug("Google Play immediate update is not allowed.");
             //    return false;
@@ -38,6 +52,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
             // Show Google Play update dialog
             VhLogger.Instance.LogDebug("Google Play update is available, starting update flow...");
             await AndroidUtil.RunOnUiThread(appUiContext.Activity, async () => {
+                // flexible update requires much more handling 
                 var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
                     AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
 

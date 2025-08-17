@@ -1,5 +1,6 @@
 ﻿// ReSharper disable IdentifierTypo
 // ReSharper disable CommentTypo
+// ReSharper disable StringLiteralTypo
 namespace VpnHood.Core.Tunneling.Quic;
 
 using System;
@@ -188,7 +189,6 @@ public static class QuicSniExtractorStateful
     private static bool DcidEquals(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
         => a.Length == b.Length && a.SequenceEqual(b);
 
-    // ---------- Secrets & decryption ----------
 
     private static void DeriveInitialSecrets(QuicSniState st)
     {

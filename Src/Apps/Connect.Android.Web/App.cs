@@ -1,11 +1,12 @@
-﻿using System.Globalization;
-using Android.Runtime;
+﻿using Android.Runtime;
 using Com.Appsflyer;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
+using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Toolkit.Logging;
 
@@ -42,12 +43,15 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             Resources = resources,
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
-            UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
             AdjustForSystemBars = false,
             AllowRecommendUserReviewByServer = true,
-            PremiumFeatures = ConnectAppResources.PremiumFeatures
+            PremiumFeatures = ConnectAppResources.PremiumFeatures,
+            UpdaterOptions = new AppUpdaterOptions {
+                UpdateInfoUrl = appConfigs.UpdateInfoUrl,
+                UpdateDelay = TimeSpan.FromDays(1)
+            }
         };
     }
 

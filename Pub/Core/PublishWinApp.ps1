@@ -68,7 +68,7 @@ $json = @{
 	InstallationPageUrl = "$installationPageUrl";
 	ReleaseDate = "$releaseDate";
 	DeprecatedVersion = "$deprecatedVersion";
-	NotificationDelay = "3.00:00:00"
+	NotificationDelay = "$versionNotificationDelay";
 };
 $json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
 

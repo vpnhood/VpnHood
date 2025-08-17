@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VpnHood.AppLib;
+namespace VpnHood.AppLib.Services.Updaters;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum VersionStatus

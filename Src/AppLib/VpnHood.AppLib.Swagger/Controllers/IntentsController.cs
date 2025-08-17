@@ -6,7 +6,7 @@ namespace VpnHood.AppLib.Swagger.Controllers;
 
 [ApiController]
 [Route("api/intents")]
-public class IntentController : ControllerBase, IIntentController
+public class IntentsController : ControllerBase, IIntentController
 {
     [HttpPost("request-quick-launch")]
     public Task RequestQuickLaunch()

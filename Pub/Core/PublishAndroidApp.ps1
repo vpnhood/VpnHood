@@ -70,7 +70,7 @@ if ($apk)
 		InstallationPageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
 		ReleaseDate = "$releaseDate";
 		DeprecatedVersion = "$deprecatedVersion";
-		NotificationDelay = "03:00:00";
+		NotificationDelay = "$versionNotificationDelay";
 	};
 
 	$json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII;

@@ -21,7 +21,7 @@ public class GooglePlayInAppUserReviewProvider(bool testMode = false) : IAppUser
             .WaitAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        await reviewManager.LaunchReviewFlow(appUiContext.Activity, reviewInfo!)
+        await reviewManager.LaunchReviewFlow(appUiContext.Activity, reviewInfo)
             .AsAsync()
             .WaitAsync(cancellationToken)
             .ConfigureAwait(false);

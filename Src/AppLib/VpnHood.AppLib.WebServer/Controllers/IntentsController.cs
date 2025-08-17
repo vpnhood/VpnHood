@@ -6,23 +6,23 @@ using VpnHood.Core.Client.Device.UiContexts;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
-internal class IntentController : WebApiController, IIntentController
+internal class IntentsController : WebApiController, IIntentController
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
-    [Route(HttpVerbs.Post, "/intents/request-quick-launch")]
+    [Route(HttpVerbs.Post, "/request-quick-launch")]
     public Task RequestQuickLaunch()
     {
         return App.Services.UiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, CancellationToken.None);
     }
 
-    [Route(HttpVerbs.Post, "/intents/request-notification")]
+    [Route(HttpVerbs.Post, "/request-notification")]
     public Task RequestNotification()
     {
         return App.Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
     }
 
-    [Route(HttpVerbs.Post, "/intents/request-user-review")]
+    [Route(HttpVerbs.Post, "/request-user-review")]
     public Task RequestUserReview()
     {
         if (App.Services.UserReviewProvider is null)
@@ -31,7 +31,7 @@ internal class IntentController : WebApiController, IIntentController
         return App.Services.UserReviewProvider.RequestReview(AppUiContext.RequiredContext, CancellationToken.None);
     }
 
-    [Route(HttpVerbs.Post, "/intents/open-system-kill-switch-settings")]
+    [Route(HttpVerbs.Post, "/open-system-kill-switch-settings")]
     public Task OpenSystemKillSwitchSettings()
     {
         App.Services.UiProvider.OpenSystemKillSwitchSettings(AppUiContext.RequiredContext);
@@ -39,31 +39,31 @@ internal class IntentController : WebApiController, IIntentController
     }
 
 
-    [Route(HttpVerbs.Post, "/intents/open-system-always-on-settings")]
+    [Route(HttpVerbs.Post, "/open-system-always-on-settings")]
     public Task OpenSystemAlwaysOnSettings()
     {
         App.Services.UiProvider.OpenSystemAlwaysOnSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
-    [Route(HttpVerbs.Post, "/intents/open-system-settings")]
+    [Route(HttpVerbs.Post, "/open-system-settings")]
     public Task OpenSystemSettings()
     {
         App.Services.UiProvider.OpenSystemSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
-    [Route(HttpVerbs.Post, "/intents/open-app-system-settings")]
+    [Route(HttpVerbs.Post, "/open-app-system-settings")]
     public Task OpenAppSystemSettings()
     {
         App.Services.UiProvider.OpenAppSystemSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
-    [Route(HttpVerbs.Post, "/intents/open-app-system-notification-settings")]
+    [Route(HttpVerbs.Post, "/open-app-system-notification-settings")]
     public Task OpenAppSystemNotificationSettings()
     {
-        App.Services.UiProvider.OpenAppSystemSettings(AppUiContext.RequiredContext);
+        App.Services.UiProvider.OpenAppSystemNotificationSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 }

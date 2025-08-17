@@ -1,5 +1,6 @@
 ﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.Logging;
@@ -15,8 +16,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public bool IsDebugMode => isDebugMode;
     public string StorageFolderPath { get; set; } = BuildStorageFolderPath(storageFolderName);
     public TimeSpan SessionTimeout { get; set; } = ClientOptions.Default.SessionTimeout;
-    public TimeSpan VersionCheckInterval { get; set; } = TimeSpan.FromHours(24);
-    public string? UpdateInfoUrl { get; set; }
+    public AppUpdaterOptions? UpdaterOptions { get; set; }
     public bool UseInternalLocationService { get; set; } = true;
     public bool UseExternalLocationService { get; set; } = true;
     public AppResources Resources { get; set; } = new();
@@ -28,7 +28,6 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public string[] AccessKeys { get; set; } = [];
     public IAppUiProvider? UiProvider { get; set; }
     public IAppCultureProvider? CultureProvider { get; set; }
-    public IAppUpdaterProvider? UpdaterProvider { get; set; }
     public IAppAccountProvider? AccountProvider { get; set; }
     public IAppUserReviewProvider? UserReviewProvider { get; set; }
     public AppAdProviderItem[] AdProviderItems { get; set; } = [];

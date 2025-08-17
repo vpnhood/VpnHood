@@ -15,6 +15,7 @@ using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Providers;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
@@ -32,7 +33,6 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
-using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
@@ -54,7 +54,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly bool _allowEndPointTracker;
     private readonly bool _allowRecommendUserReviewByServer;
     private readonly string? _ga4MeasurementId;
-    private readonly TimeSpan _versionCheckInterval;
     private readonly TimeSpan _unstableTimeout;
     private readonly TimeSpan _autoWaitTimeout;
     private readonly TimeSpan _serverQueryTimeout;
@@ -75,16 +74,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private CancellationTokenSource _connectCts = new();
     private CancellationTokenSource _showAdCts = new();
     private CancellationTokenSource _connectTimeoutCts = new();
-    private VersionCheckResult? _versionCheckResult;
     private CultureInfo? _systemUiCulture;
     private UserSettings _oldUserSettings;
     private bool _isConnecting;
-    private readonly Job _versionCheckJob;
     private readonly LogService _logService;
     private bool _isUserReviewRecommended;
 
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
-    private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
     public event EventHandler? ConnectionStateChanged;
     public event EventHandler? UiHasChanged;
@@ -105,6 +101,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private VpnHoodApp(IDevice device, AppSettingsService settingsService, LogService logService, AppOptions options)
     {
+        var appVersion = typeof(VpnHoodApp).Assembly.GetName().Version ?? new Version();
         Resources = options.Resources;
         StorageFolderPath = options.StorageFolderPath ?? throw new ArgumentNullException(nameof(options.StorageFolderPath));
         SettingsService = settingsService;
@@ -116,11 +113,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _useExternalLocationService = options.UseExternalLocationService;
         _locationServiceTimeout = options.LocationServiceTimeout;
         _ga4MeasurementId = options.Ga4MeasurementId;
-        _versionCheckInterval = options.VersionCheckInterval;
         _unstableTimeout = options.UnstableTimeout;
         _autoWaitTimeout = options.AutoWaitTimeout;
         _tcpTimeout = options.TcpTimeout;
-        _versionCheckResult = JsonUtils.TryDeserializeFile<VersionCheckResult>(VersionCheckFilePath);
         _autoDiagnose = options.AutoDiagnose;
         _serverQueryTimeout = options.ServerQueryTimeout;
         _connectTimeout = options.ConnectTimeout;
@@ -160,7 +155,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // initialize features
         Features = new AppFeatures {
-            Version = typeof(VpnHoodApp).Assembly.GetName().Version ?? new Version(),
+            Version = appVersion,
             IsExcludeAppsSupported = _device.IsExcludeAppsSupported,
             IsIncludeAppsSupported = _device.IsIncludeAppsSupported,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
@@ -169,7 +164,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowEndPointStrategy = options.AllowEndPointStrategy,
             IsTv = device.IsTv,
             AdjustForSystemBars = options.AdjustForSystemBars,
-            UpdateInfoUrl = options.UpdateInfoUrl != null ? new Uri(options.UpdateInfoUrl) : null,
             UiName = options.UiName,
             BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId,
             IsAccountSupported = options.AccountProvider != null,
@@ -190,7 +184,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsLocalNetworkSupported = options.IsLocalNetworkSupported,
             IsDebugMode = options.IsDebugMode,
             CustomData = options.CustomData,
-            PremiumFeatures = options.PremiumFeatures
+            PremiumFeatures = options.PremiumFeatures,
         };
 
         // create tracker
@@ -205,12 +199,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Services = new AppServices {
             CultureProvider = options.CultureProvider ?? new AppCultureProvider(this),
             UserReviewProvider = options.UserReviewProvider,
-            UpdaterProvider = options.UpdaterProvider,
             UiProvider = uiProvider,
             Tracker = tracker,
-            AccountService = options.AccountProvider != null
-                ? new AppAccountService(this, options.AccountProvider)
-                : null,
+            AccountService = options.AccountProvider is null ? null :
+                new AppAccountService(this, options.AccountProvider),
+            UpdaterService = options.UpdaterOptions is null ? null :
+                new AppUpdaterService(
+                    storageFolderPath: options.StorageFolderPath,
+                    appVersion: Features.Version,
+                    updateOptions: options.UpdaterOptions)
         };
 
         // initialize client manager
@@ -233,26 +230,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             isPreloadAdEnabled: options.AdOptions.PreloadAd,
             rejectAdBlocker: settingsService.RemoteSettings?.RejectAdBlocker ?? options.AdOptions.RejectAdBlocker);
 
-        // Clear the last update status if a version has changed
-        if (_versionCheckResult != null && _versionCheckResult.LocalVersion != Features.Version) {
-            _versionCheckResult = null;
-            File.Delete(VersionCheckFilePath);
-        }
 
         // Apply settings but no error on startup
         ApplySettings();
 
         // schedule job
         AppUiContext.OnChanged += ActiveUiContext_OnChanged;
-
-        // start the version check job
-        _versionCheckJob = new Job(VersionCheckJob, new JobOptions {
-            Name = "VersionCheck",
-            Period = options.VersionCheckInterval,
-            DueTime = options.VersionCheckInterval > TimeSpan.FromSeconds(5)
-                ? TimeSpan.FromSeconds(2) // start immediately
-                : options.VersionCheckInterval
-        });
 
         // launch startup task
         Task.Run(OnStartup);
@@ -272,6 +255,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not sent first launch tracker.");
         }
+
+        // try update the app
+        await TryCheckForUpdate(CancellationToken.None);
+
     }
 
     private void ApplySettings()
@@ -384,9 +371,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ConnectRequestTime = _appPersistState.ConnectRequestTime,
                 CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture ?? SystemUiCulture),
                 SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),
-                VersionStatus = _versionCheckResult?.VersionStatus ?? VersionStatus.Unknown,
                 PurchaseState = Services.AccountService?.BillingService?.PurchaseState,
-                LastPublishInfo = _versionCheckResult?.GetNewerPublishInfo(),
+                UpdaterStatus = Services.UpdaterService?.Status,
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
                 LastError = LastError?.ToAppDto(),
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
@@ -1013,11 +999,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // check the version after the first connection
         if (ConnectionState is AppConnectionState.Connected)
-            _ = VhUtils.TryInvokeAsync("VersionCheck", () => VersionCheck(delay: TimeSpan.Zero, force: false,
-                cancellationToken: CancellationToken.None));
+            _ = TryCheckForUpdate(CancellationToken.None);
 
         // fire connection state changed
         FireConnectionStateChanged();
+    }
+
+    private Task TryCheckForUpdate(CancellationToken cancellationToken)
+    {
+        return Services.UpdaterService == null
+            ? Task.CompletedTask
+            : VhUtils.TryInvokeAsync("VersionCheck",
+                () => Services.UpdaterService.CheckForUpdate(force: true, cancellationToken: cancellationToken));
     }
 
     private readonly AsyncLock _showAdLock = new();
@@ -1100,115 +1093,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         finally {
             _isDisconnecting = false;
             FireConnectionStateChanged();
-        }
-    }
-
-    public void VersionCheckPostpone()
-    {
-        // version status is unknown when the app container can do it
-        _versionCheckResult = null;
-        if (File.Exists(VersionCheckFilePath))
-            File.Delete(VersionCheckFilePath);
-
-        // set the latest ignored time
-        _appPersistState.UpdateIgnoreTime = DateTime.Now;
-    }
-
-    private async ValueTask VersionCheckJob(CancellationToken cancellationToken)
-    {
-        await VersionCheck(force: false, delay: TimeSpan.Zero, cancellationToken: cancellationToken);
-    }
-
-    private readonly AsyncLock _versionCheckLock = new();
-    public async Task VersionCheck(bool force, TimeSpan delay, CancellationToken cancellationToken)
-    {
-        VhLogger.Instance.LogDebug("VersionCheck requested. Force: {Force}, Delay: {Delay}", force, delay);
-        using var lockAsync = await _versionCheckLock.LockAsync(cancellationToken).Vhc();
-        if (!force && _appPersistState.UpdateIgnoreTime + _versionCheckInterval > DateTime.Now) {
-            VhLogger.Instance.LogDebug("VersionCheck is postponed. Last ignored time: {LastIgnoredTime}, Interval: {Interval}",
-                _appPersistState.UpdateIgnoreTime, _versionCheckInterval);
-            return;
-        }
-
-        // Wait for delay. Useful for waiting for an ad to send its tracker
-        await Task.Delay(delay, cancellationToken).Vhc();
-
-        // set timeout
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-
-
-        // check the version by app container
-        try {
-            if (AppUiContext.Context != null && Services.UpdaterProvider != null &&
-                await Services.UpdaterProvider.Update(AppUiContext.RequiredContext, linkedCts.Token).Vhc()) {
-                VhLogger.Instance.LogDebug("Update is managed by UpdaterProvider. Postponing the version check.");
-                VersionCheckPostpone();
-                return;
-            }
-        }
-        catch (Exception ex) {
-            ReportWarning(ex, "Could not check version by VersionCheck.");
-        }
-
-        // check the version by UpdateInfoUrl
-        _versionCheckResult = await VersionCheckByUpdateInfo(linkedCts.Token).Vhc();
-
-        // save the result
-        if (_versionCheckResult != null)
-            await File.WriteAllTextAsync(VersionCheckFilePath,
-                JsonSerializer.Serialize(_versionCheckResult), linkedCts.Token).Vhc();
-
-        else if (File.Exists(VersionCheckFilePath))
-            File.Delete(VersionCheckFilePath);
-    }
-
-    private async Task<VersionCheckResult?> VersionCheckByUpdateInfo(CancellationToken cancellationToken)
-    {
-        try {
-            if (Features.UpdateInfoUrl == null)
-                return null; // no update info url. Job done
-
-            VhLogger.Instance.LogDebug("Retrieving the latest publish info...");
-
-            using var httpClient = new HttpClient();
-            var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl, cancellationToken).Vhc();
-            var latestPublishInfo = JsonUtils.Deserialize<PublishInfo>(publishInfoJson);
-            VersionStatus versionStatus;
-
-            // Check the version
-            if (latestPublishInfo.Version == null)
-                throw new Exception("Version is not available in publish info.");
-
-            // set default notification delay
-            if (Features.Version <= latestPublishInfo.DeprecatedVersion)
-                versionStatus = VersionStatus.Deprecated;
-
-            else if (Features.Version < latestPublishInfo.Version &&
-                     DateTime.UtcNow - latestPublishInfo.ReleaseDate > latestPublishInfo.NotificationDelay)
-                versionStatus = VersionStatus.Old;
-
-            else
-                versionStatus = VersionStatus.Latest;
-
-            // save the result
-            var checkResult = new VersionCheckResult {
-                LocalVersion = Features.Version,
-                VersionStatus = versionStatus,
-                PublishInfo = latestPublishInfo,
-                CheckedTime = DateTime.UtcNow
-            };
-
-            VhLogger.Instance.LogInformation(
-                "The latest publish info has been retrieved. VersionStatus: {VersionStatus}, LatestVersion: {LatestVersion}",
-                versionStatus, latestPublishInfo.Version);
-
-            return checkResult; // Job done
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogWarning("Could not retrieve the latest publish info information. Error: {Error}",
-                ex.Message);
-            return null; // could not retrieve the latest publish info. try later
         }
     }
 
@@ -1328,12 +1212,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         VhLogger.Instance.LogError(ex, message);
     }
 
-    private void ReportWarning(Exception ex, string message, [CallerMemberName] string action = "n/a")
-    {
-        _ = Services.Tracker.TryTrackWarningAsync(ex, message, action);
-        VhLogger.Instance.LogWarning(ex, message);
-    }
-
     public async Task<AppPurchaseOptions> GetPurchaseOptions()
     {
         var profileInfo = CurrentClientProfileInfo;
@@ -1427,7 +1305,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         SettingsService.BeforeSave -= SettingsBeforeSave;
         _vpnServiceManager.StateChanged -= VpnService_StateChanged;
         _vpnServiceManager.Dispose();
-        _versionCheckJob.Dispose();
         _device.Dispose();
         _logService.Dispose();
         AppUiContext.OnChanged -= ActiveUiContext_OnChanged;

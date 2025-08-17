@@ -2,6 +2,7 @@
 using VpnHood.AppLib;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
+using VpnHood.AppLib.Services.Updaters;
 
 namespace VpnHood.App.Client.Droid.Web;
 
@@ -26,12 +27,15 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             CustomData = appConfigs.CustomData,
             Resources = resources,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
-            UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             IsAddAccessKeySupported = true,
             IsLocalNetworkSupported = true,
             AdjustForSystemBars = false,
             AllowEndPointStrategy = true,
-            AllowRecommendUserReviewByServer = false
+            AllowRecommendUserReviewByServer = false,
+            UpdaterOptions = new AppUpdaterOptions {
+                UpdateInfoUrl = appConfigs.UpdateInfoUrl,
+                UpdateDelay = TimeSpan.FromDays(1)
+            },
         };
     }
 }

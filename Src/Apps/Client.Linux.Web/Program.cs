@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.AppLib;
+using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Device.Linux;
 using VpnHood.Core.Toolkit.Logging;
@@ -33,12 +34,15 @@ internal class Program
             {
                 Resources = resources,
                 AccessKeys = AppConfigs.IsDebug ? [appConfigs.DefaultAccessKey] : [],
-                UpdateInfoUrl = appConfigs.UpdateInfoUrl,
                 IsAddAccessKeySupported = true,
                 IsLocalNetworkSupported = true,
                 LocalSpaHostName = "my-vpnhood",
                 AllowEndPointStrategy = true,
                 AllowRecommendUserReviewByServer = false,
+                UpdaterOptions = new AppUpdaterOptions {
+                    UpdateInfoUrl = appConfigs.UpdateInfoUrl,
+                    UpdateDelay = TimeSpan.Zero,
+                },
                 LogServiceOptions = {
                     SingleLineConsole = false
                 }

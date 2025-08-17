@@ -3,6 +3,7 @@ using VpnHood.AppLib;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
+using VpnHood.AppLib.Services.Updaters;
 
 namespace VpnHood.App.Client.Droid.Google;
 
@@ -27,14 +28,18 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             CustomData = appConfigs.CustomData,
             Resources = resources,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
-            UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             IsAddAccessKeySupported = true,
             IsLocalNetworkSupported = true,
             AdjustForSystemBars = false,
-            UpdaterProvider = new GooglePlayAppUpdaterProvider(),
             UserReviewProvider = new GooglePlayInAppUserReviewProvider(AppConfigs.IsDebugMode),
             AllowEndPointStrategy = true,
-            AllowRecommendUserReviewByServer = false
+            AllowRecommendUserReviewByServer = false,
+            UpdaterOptions = new AppUpdaterOptions {
+                UpdateInfoUrl = appConfigs.UpdateInfoUrl,
+                UpdaterProvider = new GooglePlayAppUpdaterProvider(),
+                UpdateDelay = TimeSpan.FromDays(3)
+            },
+
         };
     }
 }

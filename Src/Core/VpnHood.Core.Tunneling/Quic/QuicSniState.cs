@@ -12,6 +12,7 @@ public sealed class QuicSniState
     public byte[] Hp = [];
 
     // Reassembly
+    // ReSharper disable once GrammarMistakeInComment
     // We keep sparse segments (offset, data). We assemble contiguous [0..N) when trying to parse.
     public List<(ulong Off, byte[] Data)> Segments = [];
 

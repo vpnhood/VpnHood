@@ -109,13 +109,19 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Post, "/version-check")]
     public Task VersionCheck()
     {
-        return App.VersionCheck(true, TimeSpan.Zero, HttpContext.CancellationToken);
+        if (App.Services.UpdaterService is null)
+            throw new NotSupportedException("App Updater is not supported.");
+
+        return App.Services.UpdaterService.CheckForUpdate(true, HttpContext.CancellationToken);
     }
 
     [Route(HttpVerbs.Post, "/version-check-postpone")]
     public Task VersionCheckPostpone()
     {
-        App.VersionCheckPostpone();
+        if (App.Services.UpdaterService is null)
+            throw new NotSupportedException("App Updater is not supported.");
+
+        App.Services.UpdaterService.Postpone();
         return Task.CompletedTask;
     }
 

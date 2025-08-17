@@ -16,8 +16,8 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
 
     public string StorageFolderName { get; set; } = IsDebugMode ? "VpnHoodClient.debug" : "VpnHood";
 
-    public string? UpdateInfoUrl { get; set; } =
-        "https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json";
+    public Uri? UpdateInfoUrl { get; set; } =
+        new("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json");
 
     public int? SpaDefaultPort { get; set; } = IsDebugMode ? 9571 : 80;
     public bool SpaListenToAllIps { get; set; } = IsDebugMode;

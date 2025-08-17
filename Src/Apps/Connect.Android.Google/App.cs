@@ -9,6 +9,7 @@ using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
 using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.Store;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.Logging;
@@ -46,11 +47,9 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             StorageFolderPath = storageFolderPath,
             AccessKeys = [appConfigs.DefaultAccessKey],
             Resources = resources,
-            UpdateInfoUrl = appConfigs.UpdateInfoUrl,
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
-            UpdaterProvider = new GooglePlayAppUpdaterProvider(),
             UserReviewProvider = new GooglePlayInAppUserReviewProvider(AppConfigs.IsDebugMode),
             AccountProvider = CreateAppAccountProvider(appConfigs, storageFolderPath),
             AdProviderItems = CreateAppAdProviderItems(appConfigs),
@@ -61,6 +60,10 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AllowRecommendUserReviewByServer = true,
             AdOptions = new AppAdOptions {
                 PreloadAd = true
+            },
+            UpdaterOptions = new AppUpdaterOptions {
+                UpdateInfoUrl = appConfigs.UpdateInfoUrl,
+                UpdaterProvider = new GooglePlayAppUpdaterProvider()
             },
         };
     }

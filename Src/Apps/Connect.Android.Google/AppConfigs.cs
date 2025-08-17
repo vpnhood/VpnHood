@@ -11,8 +11,8 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
 {
     public const string AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
 
-    public string? UpdateInfoUrl { get; set; } =
-        "https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android.json";
+    public Uri? UpdateInfoUrl { get; set; } = 
+        new ("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android.json");
 
     public Uri? RemoteSettingsUrl { get; set; }
 

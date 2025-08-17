@@ -11,8 +11,8 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
 {
     public const string AppName = IsDebugMode ? "VpnHOOD! CLIENT (DEBUG)" : "VpnHood! CLIENT";
 
-    public string? UpdateInfoUrl { get; set; } =
-        "https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.json";
+    public Uri? UpdateInfoUrl { get; set; } =
+        new ("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.json");
 
     public int? SpaDefaultPort { get; set; } = IsDebugMode ? 9581 : 9580;
     public bool SpaListenToAllIps { get; set; } = IsDebugMode;

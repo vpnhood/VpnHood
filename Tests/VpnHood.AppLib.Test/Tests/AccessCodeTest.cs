@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using System.Text;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
@@ -19,6 +18,8 @@ public class AccessCodeTest : TestAppBase
         Console.WriteLine(tcpClient.ReceiveBufferSize);
         Console.WriteLine(tcpClient.SendBufferSize);
         await Task.CompletedTask;
+
+        Console.WriteLine(TimeSpan.Parse("3.00:00:00"));
     }
 
  

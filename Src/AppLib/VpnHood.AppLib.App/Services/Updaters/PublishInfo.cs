@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AppLib;
+﻿namespace VpnHood.AppLib.Services.Updaters;
 
 public class PublishInfo
 {
@@ -8,6 +8,6 @@ public class PublishInfo
     public Uri? GooglePlayUrl { get; init; }
     public required Uri InstallationPageUrl { get; init; }
     public required DateTime ReleaseDate { get; init; }
-    public Version DeprecatedVersion { get; init; } = new(0, 0, 0, 0);
+    public Version DeprecatedVersion { get; init; } = new();
     public TimeSpan NotificationDelay { get; init; } = TimeSpan.Zero;
 }

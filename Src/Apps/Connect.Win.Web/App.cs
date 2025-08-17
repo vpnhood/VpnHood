@@ -1,5 +1,6 @@
 ﻿using VpnHood.App.Client;
 using VpnHood.AppLib;
+using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.Win.Common;
 using VpnHood.AppLib.Win.Common.WpfSpa;
 
@@ -29,8 +30,6 @@ public class App : VpnHoodWpfSpaApp
             UiName = "VpnHoodConnect",
             Resources = resources,
             AccessKeys = [appConfigs.DefaultAccessKey],
-            UpdateInfoUrl = appConfigs.UpdateInfoUrl,
-            UpdaterProvider = new AdvancedInstallerUpdaterProvider(),
             IsAddAccessKeySupported = false,
             LocalSpaHostName = "my-vpnhood-connect",
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
@@ -39,7 +38,13 @@ public class App : VpnHoodWpfSpaApp
             AllowRecommendUserReviewByServer = true,
             LogServiceOptions = {
                 SingleLineConsole = false
+            },
+            UpdaterOptions = new AppUpdaterOptions {
+                UpdateInfoUrl = appConfigs.UpdateInfoUrl,
+                UpdaterProvider = new AdvancedInstallerUpdaterProvider(),
+                UpdateDelay = TimeSpan.FromDays(1)
             }
+
         };
     }
 }

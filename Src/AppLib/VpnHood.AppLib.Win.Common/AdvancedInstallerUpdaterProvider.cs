@@ -10,7 +10,17 @@ namespace VpnHood.AppLib.Win.Common;
 public class AdvancedInstallerUpdaterProvider : IAppUpdaterProvider
 {
     // return false if the app update system does not work
-    public async Task<bool> Update(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task<bool> IsUpdateAvailable(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        return UpdateInternal(false, cancellationToken);
+    }
+
+    public Task<bool> Update(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        return UpdateInternal(true, cancellationToken);
+    }
+    
+    private static async Task<bool> UpdateInternal(bool executeUpdate, CancellationToken cancellationToken)
     {
         // launch updater if exists
         var assemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ??
@@ -26,7 +36,7 @@ public class AdvancedInstallerUpdaterProvider : IAppUpdaterProvider
         await process.WaitForExitAsync(cancellationToken);
 
         // install update
-        if (process.ExitCode == 0) {
+        if (process.ExitCode == 0 && executeUpdate) {
             process = Process.Start(updaterFilePath);
             await process.WaitForExitAsync(cancellationToken);
         }

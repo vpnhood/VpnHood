@@ -37,7 +37,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,
                 UpdaterProvider = new GooglePlayAppUpdaterProvider(),
-                UpdateDelay = TimeSpan.FromDays(3)
+                PromptDelay = TimeSpan.FromDays(3)
             },
 
         };

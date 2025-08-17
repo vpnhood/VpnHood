@@ -1079,6 +1079,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 Features.IsUserReviewSupported &&
                 ConnectionInfo.SessionStatus?.IsUserReviewRecommended == true;
 
+            // set user review recommended if debug command is enabled
+            _isUserReviewRecommended |= HasDebugCommand(DebugCommands.UserReview);
+
             // set after performing on disconnect task, because it will change the state
             _isDisconnecting = true;
 

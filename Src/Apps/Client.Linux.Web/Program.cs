@@ -41,7 +41,7 @@ internal class Program
                 AllowRecommendUserReviewByServer = false,
                 UpdaterOptions = new AppUpdaterOptions {
                     UpdateInfoUrl = appConfigs.UpdateInfoUrl,
-                    UpdateDelay = TimeSpan.Zero,
+                    PromptDelay = TimeSpan.Zero,
                 },
                 LogServiceOptions = {
                     SingleLineConsole = false

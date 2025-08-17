@@ -52,6 +52,10 @@ public class AppUpdaterService
         if (_data.PublishInfo == null)
             return VersionStatus.Unknown;
 
+        // wait for updater
+        if(DateTime.UtcNow - _data.PublishInfo.ReleaseDate < _data.PublishInfo.NotificationDelay)
+            return VersionStatus.Latest; // assume the latest version is available to let store validate the app
+
         // set default notification delay
         if (_appVersion <= _data.PublishInfo.DeprecatedVersion)
             return VersionStatus.Deprecated;
@@ -122,7 +126,7 @@ public class AppUpdaterService
 
             // check if the update is available for the given delay
             if (!force && !IsInPostponeTime && 
-                DateTime.Now - _data.UpdaterAvailableSince < _updateOptions.UpdateDelay)
+                DateTime.Now - _data.UpdaterAvailableSince < _updateOptions.PromptDelay)
                 return true; // handled
 
             // update available, try to update

@@ -22,7 +22,6 @@ $versionParam = $version.ToString(3);
 $versionTag = "v$versionParam" + (&{if($prerelease) {"-prerelease"} else {""}});
 $releaseDate = Get-Date -asUTC -Format "s";
 $deprecatedVersion = $versionJson.DeprecatedVersion;
-$versionNotificationDelay = $versionJson.NotificationDelay;
 
 if ( $bump -gt 0 )
 {

@@ -40,7 +40,7 @@ public class App : VpnHoodWpfSpaApp
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,
                 UpdaterProvider = new AdvancedInstallerUpdaterProvider(),
-                UpdateDelay = TimeSpan.FromDays(1)
+                PromptDelay = TimeSpan.FromDays(1)
             }
         };
     }

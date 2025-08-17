@@ -34,7 +34,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AllowRecommendUserReviewByServer = false,
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,
-                UpdateDelay = TimeSpan.FromDays(1)
+                PromptDelay = TimeSpan.FromDays(1)
             },
         };
     }

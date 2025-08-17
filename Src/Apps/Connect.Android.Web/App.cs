@@ -50,7 +50,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             PremiumFeatures = ConnectAppResources.PremiumFeatures,
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,
-                UpdateDelay = TimeSpan.FromDays(1)
+                PromptDelay = TimeSpan.FromDays(1)
             }
         };
     }

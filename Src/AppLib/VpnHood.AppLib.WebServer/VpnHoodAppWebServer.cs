@@ -131,6 +131,9 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
             .WithWebApi("/api/app", ResponseSerializerCallback, c => c
                 .WithController<AppController>()
                 .HandleUnhandledException(ExceptionHandler.DataResponseForException))
+            .WithWebApi("/api/intents", ResponseSerializerCallback, c => c
+                .WithController<IntentsController>()
+                .HandleUnhandledException(ExceptionHandler.DataResponseForException))
             .WithWebApi("/api/client-profiles", ResponseSerializerCallback, c => c
                 .WithController<ClientProfileController>()
                 .HandleUnhandledException(ExceptionHandler.DataResponseForException))

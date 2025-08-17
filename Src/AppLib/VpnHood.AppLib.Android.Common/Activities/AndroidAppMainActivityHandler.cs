@@ -60,10 +60,13 @@ public class AndroidAppMainActivityHandler
                 ActivityEvent.Activity.Window?.SetNavigationBarColor(backgroundColor.Value));
         }
 
-        // set window insets listener
-        if (OperatingSystem.IsAndroidVersionAtLeast(30))
-            ActivityEvent.Activity.Window?.DecorView.SetOnApplyWindowInsetsListener(new WebViewWindowInsetsListener());
 
+        // set window insets listener
+        if (OperatingSystem.IsAndroidVersionAtLeast(30)) {
+            var contentRoot = ActivityEvent.Activity.FindViewById<FrameLayout>(Android.Resource.Id.Content);
+            contentRoot?.SetOnApplyWindowInsetsListener(new WebViewWindowInsetsListener());
+            contentRoot?.RequestApplyInsets();
+        }
     }
 
     protected virtual bool OnNewIntent(Intent? intent)

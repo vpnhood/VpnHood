@@ -101,7 +101,7 @@ public class AppUpdaterService
         }
 
         // skip if already checked and not forced
-        if (!force && _data.CheckedTime + _updateOptions.CheckInterval > DateTime.Now) {
+        if (!force && DateTime.Now - _data.CheckedTime < _updateOptions.CheckInterval) {
             VhLogger.Instance.LogDebug("VersionCheck is postponed. CheckedTime: {CheckedTime}, Interval: {Interval}",
                 _data.CheckedTime, _updateOptions.CheckInterval);
             return;

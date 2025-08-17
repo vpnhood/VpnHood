@@ -256,8 +256,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogError(ex, "Could not sent first launch tracker.");
         }
 
-        // try update the app
-        _ = Services.UpdaterService?.TryCheckForUpdate(false, CancellationToken.None);
     }
 
     private void ApplySettings()
@@ -321,6 +319,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _ = VhUtils.TryInvokeAsync("PreloadAd",
                 () => AdManager.AdService.LoadInterstitialAd(uiContext, CancellationToken.None));
         }
+
+        // try update the app
+        if (uiContext != null)
+            _ = Services.UpdaterService?.TryCheckForUpdate(false, CancellationToken.None);
     }
 
     public ClientProfileInfo? CurrentClientProfileInfo =>

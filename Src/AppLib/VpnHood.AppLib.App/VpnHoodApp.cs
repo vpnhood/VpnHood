@@ -257,8 +257,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // try update the app
-        await TryCheckForUpdate(CancellationToken.None);
-
+        _ = Services.UpdaterService?.TryCheckForUpdate(false, CancellationToken.None);
     }
 
     private void ApplySettings()
@@ -1001,18 +1000,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // check the version after the first connection
         if (ConnectionState is AppConnectionState.Connected)
-            _ = TryCheckForUpdate(CancellationToken.None);
+            _ = Services.UpdaterService?.TryCheckForUpdate(false, CancellationToken.None);
 
         // fire connection state changed
         FireConnectionStateChanged();
-    }
-
-    private Task TryCheckForUpdate(CancellationToken cancellationToken)
-    {
-        return Services.UpdaterService == null
-            ? Task.CompletedTask
-            : VhUtils.TryInvokeAsync("VersionCheck",
-                () => Services.UpdaterService.CheckForUpdate(force: true, cancellationToken: cancellationToken));
     }
 
     private readonly AsyncLock _showAdLock = new();

@@ -62,8 +62,9 @@ public class CheckNewVersionTest : TestAppBase
     public async Task Current_is_deprecated()
     {
         SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
-            DateTime.UtcNow,
-            TimeSpan.Zero, CurrentAppVersion);
+            DateTime.UtcNow, 
+            notificationDelay: TimeSpan.Zero, 
+            deprecatedVersion: CurrentAppVersion);
 
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdaterOptions = new AppUpdaterOptions {
@@ -76,17 +77,22 @@ public class CheckNewVersionTest : TestAppBase
     }
 
     [TestMethod]
-    public async Task Current_is_old_by_job()
+    public async Task Current_is_old_by_connect()
     {
         SetNewRelease(CurrentAppVersion, DateTime.UtcNow, TimeSpan.Zero);
+
+        // create server and token
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
 
         // create client
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdaterOptions = new AppUpdaterOptions {
             UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1,
-            CheckInterval = TimeSpan.FromMilliseconds(500)
+            CheckInterval = TimeSpan.FromMilliseconds(10)
         };
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // version should be latest
         await VhTestUtil.AssertEqualsWait(VersionStatus.Latest, () => app.State.UpdaterStatus?.VersionStatus);
@@ -94,6 +100,9 @@ public class CheckNewVersionTest : TestAppBase
         // after publish a new version it should be old
         SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
             DateTime.UtcNow, TimeSpan.Zero);
+
+        await Task.Delay(100); // wait for CheckInterval
+        await app.Connect(clientProfile.ClientProfileId);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.State.UpdaterStatus?.VersionStatus);
     }
 

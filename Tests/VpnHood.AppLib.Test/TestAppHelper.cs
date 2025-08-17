@@ -53,6 +53,7 @@ public class TestAppHelper : TestHelper
     {
         appOptions ??= CreateAppOptions();
         device ??= new TestDevice(this, _ => new TestNullVpnAdapter());
+        AppUiContext.Context = new TestAppUiContext();
 
         //create app
         var clientApp = VpnHoodApp.Init(device, appOptions);
@@ -63,7 +64,6 @@ public class TestAppHelper : TestHelper
         clientApp.SettingsService.IpFilterSettings.AdapterIpFilterIncludes =
             TestIpAddresses.Select(x => new IpRange(x)).ToText();
         clientApp.UserSettings.LogAnonymous = false;
-        AppUiContext.Context = new TestAppUiContext();
 
         return clientApp;
     }

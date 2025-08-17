@@ -65,6 +65,17 @@ public class AppUpdaterService
             : VersionStatus.Latest;
     }
 
+    public async Task TryCheckForUpdate(bool force, CancellationToken cancellationToken)
+    {
+        try {
+            await CheckForUpdate(force, cancellationToken);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Error occurred while checking for updates.");
+            // Handle the error as needed, e.g., log it or notify the user
+        }
+    }
+
     public async Task CheckForUpdate(bool force, CancellationToken cancellationToken)
     {
         // check if the version check is already in progress

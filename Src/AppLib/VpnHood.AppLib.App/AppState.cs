@@ -32,4 +32,5 @@ public class AppState
     public required UiCultureInfo SystemUiCultureInfo { get; init; }
     public required BillingPurchaseState? PurchaseState { get; init; }
     public required SystemBarsInfo SystemBarsInfo { get; init; }
+    public required bool? IsNotificationEnabled { get; init; }
 }

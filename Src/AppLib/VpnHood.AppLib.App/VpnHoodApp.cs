@@ -371,6 +371,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LastError = LastError?.ToAppDto(),
                 IsTcpProxy = StateHelper.IsTcpProxy(Features, UserSettings, connectionInfo.SessionStatus),
                 CanChangeTcpProxy = StateHelper.CanChangeTcpProxy(Features, connectionInfo.SessionInfo),
+                IsNotificationEnabled = Services.UiProvider.IsNotificationEnabled,
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
                     ? Services.UiProvider.GetSystemBarsInfo(uiContext)
                     : SystemBarsInfo.Default,
@@ -624,8 +625,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // calculate vpnAdapterIpRanges
             var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
-            if (UserSettings.UseVpnAdapterIpFilter) {
-                VerifyPremiumFeature(AppFeature.AdapterIpFilter);
+            if (UserSettings.UseVpnAdapterIpFilter && CheckPremiumFeature(AppFeature.AdapterIpFilter)) {
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Intersect(
                     IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.AdapterIpFilterIncludes));
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Exclude(
@@ -633,9 +633,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
             // use default DNS servers if not premium account
-            var dnsServers = UserSettings.DnsServers;
-            if (!VhUtils.IsNullOrEmpty(dnsServers))
-                VerifyPremiumFeature(AppFeature.CustomDns);
+            var dnsServers = !VhUtils.IsNullOrEmpty(UserSettings.DnsServers) && CheckPremiumFeature(AppFeature.CustomDns) 
+                ? UserSettings.DnsServers : null;
 
             // create clientOptions
             var clientOptions = new ClientOptions {
@@ -1091,8 +1090,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // calculate vpnAdapterIpRanges
         var ipRanges = IpNetwork.All.ToIpRanges();
-        if (UserSettings.UseAppIpFilter) {
-            VerifyPremiumFeature(AppFeature.AppIpFilter);
+        if (UserSettings.UseAppIpFilter && CheckPremiumFeature(AppFeature.AppIpFilter)) {
             ipRanges = ipRanges.Intersect(
                 IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.AppIpFilterIncludes));
 
@@ -1269,6 +1267,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // check if the current profile is premium
         return CurrentClientProfileInfo?.IsPremiumAccount == true;
+    }
+
+    public bool CheckPremiumFeature(AppFeature feature)
+    {
+        if (IsPremiumFeatureAllowed(feature))
+            return true;
+
+        VhLogger.Instance.LogWarning("{Feature} is premium feature and can not be used with current plan.", feature);
+        return false;
     }
 
     public void VerifyPremiumFeature(AppFeature feature)

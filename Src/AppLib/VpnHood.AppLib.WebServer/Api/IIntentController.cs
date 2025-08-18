@@ -2,7 +2,6 @@
 
 public interface IIntentController
 {
-    Task<IntentStatus> GetStatus();
     Task RequestNotification();
     Task RequestQuickLaunch();
     Task RequestUserReview();

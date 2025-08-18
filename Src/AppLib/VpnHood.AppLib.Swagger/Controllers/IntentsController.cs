@@ -8,6 +8,12 @@ namespace VpnHood.AppLib.Swagger.Controllers;
 [Route("api/intents")]
 public class IntentsController : ControllerBase, IIntentController
 {
+    [HttpGet("status")]
+    public Task<IntentStatus> GetStatus()
+    {
+        throw new SwaggerOnlyException();
+    }
+
     [HttpPost("request-quick-launch")]
     public Task RequestQuickLaunch()
     {

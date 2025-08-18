@@ -2,8 +2,9 @@
 
 public interface IIntentController
 {
-    Task RequestQuickLaunch();
+    Task<IntentStatus> GetStatus();
     Task RequestNotification();
+    Task RequestQuickLaunch();
     Task RequestUserReview();
     Task OpenSystemAlwaysOnSettings();
     Task OpenSystemSettings();

@@ -48,12 +48,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private const string FolderNameProfiles = "profiles";
     private readonly bool _useInternalLocationService;
     private readonly bool _useExternalLocationService;
-    private readonly TimeSpan _locationServiceTimeout;
     private readonly bool _disconnectOnDispose;
     private readonly bool _autoDiagnose;
     private readonly bool _allowEndPointTracker;
     private readonly bool _allowRecommendUserReviewByServer;
     private readonly string? _ga4MeasurementId;
+    private readonly TimeSpan _locationServiceTimeout;
     private readonly TimeSpan _unstableTimeout;
     private readonly TimeSpan _autoWaitTimeout;
     private readonly TimeSpan _serverQueryTimeout;
@@ -168,16 +168,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId,
             IsAccountSupported = options.AccountProvider != null,
             IsBillingSupported = options.AccountProvider?.BillingProvider != null,
-            IsSystemPrivateDnsSettingsSupported = uiProvider.IsSystemPrivateDnsSettingsSupported,
-            IsRequestQuickLaunchSupported = uiProvider.IsRequestQuickLaunchSupported,
-            IsRequestNotificationSupported = uiProvider.IsRequestNotificationSupported,
-            IsSystemAlwaysOnSettingsSupported = uiProvider.IsSystemAlwaysOnSettingsSupported,
-            IsSystemKillSwitchSettingsSupported = uiProvider.IsSystemKillSwitchSettingsSupported,
-            IsSystemSettingsSupported = uiProvider.IsSystemSettingsSupported,
-            IsAppSystemNotificationSettingsSupported = uiProvider.IsAppSystemNotificationSettingsSupported,
-            IsAppSystemSettingsSupported = uiProvider.IsAppSystemNotificationSettingsSupported,
-            IsUserReviewSupported = options.UserReviewProvider != null,
             IsTcpProxySupported = device.IsTcpProxySupported,
+            IsUserReviewSupported = options.UserReviewProvider != null,
             GaMeasurementId = options.Ga4MeasurementId,
             ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId),
             AppId = options.AppId,

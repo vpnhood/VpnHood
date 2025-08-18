@@ -10,6 +10,25 @@ internal class IntentsController : WebApiController, IIntentController
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
+    [Route(HttpVerbs.Get, "/status")]
+    public Task<IntentStatus> GetStatus()
+    {
+        var status = new IntentStatus {
+            IsUserReviewSupported = App.Features.IsUserReviewSupported,
+            IsSystemPrivateDnsSettingsSupported = App.Services.UiProvider.IsSystemPrivateDnsSettingsSupported,
+            IsRequestQuickLaunchSupported = App.Services.UiProvider.IsRequestQuickLaunchSupported,
+            IsNotificationEnabled = App.Services.UiProvider.IsNotificationEnabled,
+            IsRequestNotificationSupported = App.Services.UiProvider.IsRequestNotificationSupported,
+            IsSystemKillSwitchSettingsSupported = App.Services.UiProvider.IsSystemKillSwitchSettingsSupported,
+            IsSystemAlwaysOnSettingsSupported = App.Services.UiProvider.IsSystemAlwaysOnSettingsSupported,
+            IsSystemSettingsSupported = App.Services.UiProvider.IsSystemSettingsSupported,
+            IsAppSystemSettingsSupported = App.Services.UiProvider.IsAppSystemSettingsSupported,
+            IsAppSystemNotificationSettingsSupported = App.Services.UiProvider.IsAppSystemNotificationSettingsSupported
+        };
+
+        return Task.FromResult(status);
+    }
+
     [Route(HttpVerbs.Post, "/request-quick-launch")]
     public Task RequestQuickLaunch()
     {

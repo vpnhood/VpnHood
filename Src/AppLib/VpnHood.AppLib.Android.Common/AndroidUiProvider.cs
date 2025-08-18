@@ -39,6 +39,14 @@ public class AndroidUiProvider : IAppUiProvider
 
     public bool IsRequestNotificationSupported => OperatingSystem.IsAndroidVersionAtLeast(33);
 
+    public bool? IsNotificationEnabled {
+        get {
+            var notificationManager = 
+                (NotificationManager?)Application.Context.GetSystemService(Context.NotificationService);
+            return notificationManager?.AreNotificationsEnabled();
+        }
+    }
+
     public async Task<bool> RequestNotification(IUiContext context, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)context;

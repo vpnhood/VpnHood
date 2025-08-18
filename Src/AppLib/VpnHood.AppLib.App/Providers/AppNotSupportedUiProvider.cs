@@ -13,6 +13,8 @@ internal class AppNotSupportedUiProvider
     public Task<bool> RequestQuickLaunch(IUiContext uiContext, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
+    public bool? IsNotificationEnabled => false;
+
     public bool IsRequestNotificationSupported => false;
 
     public Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken) =>

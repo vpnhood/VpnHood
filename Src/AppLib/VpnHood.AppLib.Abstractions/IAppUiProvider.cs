@@ -7,6 +7,7 @@ public interface IAppUiProvider
     bool IsRequestQuickLaunchSupported { get; }
     Task<bool> RequestQuickLaunch(IUiContext uiContext, CancellationToken cancellationToken);
 
+    bool? IsNotificationEnabled { get; }
     bool IsRequestNotificationSupported { get; }
     Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken);
 

@@ -110,7 +110,7 @@ public sealed class AndroidVpnNotification : IDisposable
 
 
             // show or hide
-            var notificationManager =
+            var notificationManager = 
                 (NotificationManager?)Application.Context.GetSystemService(Context.NotificationService);
             if (notificationManager == null)
                 return;

@@ -14,16 +14,8 @@ public class AppFeatures
     public required Guid? BuiltInClientProfileId { get; init; }
     public required bool IsAccountSupported { get; init; }
     public required bool IsBillingSupported { get; init; }
-    public required bool IsRequestQuickLaunchSupported { get; init; }
-    public required bool IsRequestNotificationSupported { get; init; }
-    public required bool IsUserReviewSupported { get; init; }
-    public required bool IsSystemPrivateDnsSettingsSupported { get; init; }
-    public required bool IsSystemKillSwitchSettingsSupported { get; init; }
-    public required bool IsSystemAlwaysOnSettingsSupported { get; init; }
-    public required bool IsSystemSettingsSupported { get; init; }
-    public required bool IsAppSystemSettingsSupported { get; init; }
-    public required bool IsAppSystemNotificationSettingsSupported { get; init; }
     public required bool IsTcpProxySupported { get; init; }
+    public required bool IsUserReviewSupported { get; init; }
     public required bool IsTv { get; init; }
     public required string? GaMeasurementId { get; init; }
     public required string ClientId { get; init; }

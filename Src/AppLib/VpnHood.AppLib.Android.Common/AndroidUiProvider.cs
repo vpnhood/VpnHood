@@ -68,6 +68,8 @@ public class AndroidUiProvider : IAppUiProvider
         }
     }
 
+    public bool IsSystemPrivateDnsSettingsSupported => OperatingSystem.IsAndroidVersionAtLeast(28);
+
     public bool IsSystemKillSwitchSettingsSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
 
     public void OpenSystemKillSwitchSettings(IUiContext context)

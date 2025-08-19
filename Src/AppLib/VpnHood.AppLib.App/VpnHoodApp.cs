@@ -344,13 +344,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppState State {
         get {
             var clientProfileInfo = CurrentClientProfileInfo;
-            var connectionInfo = ConnectionInfo;
             var connectionState = ConnectionState;
+            var connectionInfo = connectionState.IsIdle() ? null : ConnectionInfo;
+
             var uiContext = AppUiContext.Context;
             var appState = new AppState {
                 ConfigTime = Settings.ConfigTime,
-                SessionStatus = connectionInfo.SessionStatus?.ToAppDto(AdManager.CanExtendByRewardedAd),
-                SessionInfo = connectionInfo.SessionInfo?.ToAppDto(),
+                SessionStatus = connectionInfo?.SessionStatus?.ToAppDto(AdManager.CanExtendByRewardedAd),
+                SessionInfo = connectionInfo?.SessionInfo?.ToAppDto(),
                 ConnectionState = connectionState,
                 CanConnect = connectionState.CanConnect(),
                 CanDiagnose = connectionState.CanDiagnose(_appPersistState.HasDiagnoseRequested),
@@ -369,8 +370,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UpdaterStatus = Services.UpdaterService?.Status,
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
                 LastError = LastError?.ToAppDto(),
-                IsTcpProxy = StateHelper.IsTcpProxy(Features, UserSettings, connectionInfo.SessionStatus),
-                CanChangeTcpProxy = StateHelper.CanChangeTcpProxy(Features, connectionInfo.SessionInfo),
+                IsTcpProxy = StateHelper.IsTcpProxy(Features, UserSettings, connectionInfo?.SessionStatus),
+                CanChangeTcpProxy = StateHelper.CanChangeTcpProxy(Features, connectionInfo?.SessionInfo),
                 IsNotificationEnabled = Services.UiProvider.IsNotificationEnabled,
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
                     ? Services.UiProvider.GetSystemBarsInfo(uiContext)

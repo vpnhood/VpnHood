@@ -8,9 +8,10 @@ public static class StateHelper
 {
     public static bool IsTcpProxy(AppFeatures features, UserSettings userSettings, SessionStatus? sessionStatus)
     {
-        return sessionStatus?.IsTcpProxy ?? 
-               userSettings.UseTcpProxy && 
-               features.IsTcpProxySupported;
+        return
+            sessionStatus?.IsTcpProxy ??
+            userSettings.UseTcpProxy &&
+            features.IsTcpProxySupported;
     }
 
     public static bool CanChangeTcpProxy(AppFeatures features, SessionInfo? sessionInfo)

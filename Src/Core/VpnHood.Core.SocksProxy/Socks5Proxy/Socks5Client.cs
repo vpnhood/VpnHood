@@ -39,7 +39,7 @@ public class Socks5Client(Socks5Options options)
         await stream.FlushAsync(cancellationToken);
 
         var response = new byte[2];
-        await ReadExactAsync(stream, response, cancellationToken);
+        await stream.ReadExactlyAsync(response, cancellationToken);
         var authMethod = (Socks5AuthenticationType)response[1];
 
         switch (authMethod) {
@@ -66,7 +66,7 @@ public class Socks5Client(Socks5Options options)
         await stream.FlushAsync(cancellationToken);
 
         var response = new byte[2];
-        await ReadExactAsync(stream, response, cancellationToken);
+        await stream.ReadExactlyAsync(response, cancellationToken);
 
         if (response[1] != 0)
             throw new UnauthorizedAccessException("Proxy authentication failed.");
@@ -91,7 +91,7 @@ public class Socks5Client(Socks5Options options)
         await stream.FlushAsync(cancellationToken);
 
         var response = new byte[10];
-        await ReadExactAsync(stream, response, cancellationToken);
+        await stream.ReadExactlyAsync(response, cancellationToken);
 
         if (response[1] != (byte)Socks5CommandReply.Succeeded)
             HandleProxyCommandError(response);
@@ -146,15 +146,4 @@ public class Socks5Client(Socks5Options options)
         return buffer;
     }
 
-    public static async Task ReadExactAsync(NetworkStream stream, byte[] buffer, CancellationToken cancellationToken)
-    {
-        var read = 0;
-        while (read < buffer.Length) {
-            var bytesRead = await stream.ReadAsync(buffer, read, buffer.Length - read, cancellationToken);
-            if (bytesRead == 0)
-                throw new IOException("Unexpected end of stream.");
-
-            read += bytesRead;
-        }
-    }
 }

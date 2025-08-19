@@ -25,7 +25,7 @@ internal class WebViewWindowInsetsListener : Java.Lang.Object, View.IOnApplyWind
             // Apply padding to prevent layout overlap with system bars
             var rect = insets.GetInsets(mask);
             v.SetPadding(rect.Left, rect.Top, rect.Right, rect.Bottom);
-            return WindowInsets.Consumed;
+            //return WindowInsets.Consumed;
         }
 
         return insets; // Consume the insets

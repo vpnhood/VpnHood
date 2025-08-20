@@ -177,6 +177,30 @@ public class ClientProfileTest : TestAppBase
         Assert.IsFalse(location.Options.PremiumByPurchase);
     }
 
+    [TestMethod]
+    public async Task Crud_restore_to_auto_location_after_removing_access_code()
+    {
+        await using var app = TestAppHelper.CreateClientApp();
+        // create access code
+        var token = CreateToken();
+        token.ServerToken.ServerLocations = ["us/california"];
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
+        // update access code
+        var accessCode = TestAppHelper.BuildAccessCode();
+        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
+            AccessCode = accessCode
+        });
+
+
+        // remove access code
+        clientProfile = app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
+            AccessCode = null
+        });
+        Assert.IsFalse(clientProfile.IsPremiumLocationSelected);
+        Assert.IsTrue(ServerLocationInfo.IsAutoLocation(clientProfile.SelectedLocation));
+    }
+
 
     [TestMethod]
     public async Task Crud()

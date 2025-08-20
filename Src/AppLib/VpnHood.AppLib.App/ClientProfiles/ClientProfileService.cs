@@ -124,7 +124,7 @@ public class ClientProfileService
 
         if (updateParams.CustomServerEndpoints != null) {
             var customEndpoints = updateParams.CustomServerEndpoints.Value?.Select(IPEndPoint.Parse).ToArray();
-            if (customEndpoints?.Any(x=>x.Port==0) == true)
+            if (customEndpoints?.Any(x => x.Port == 0) == true)
                 throw new ArgumentException("Custom server endpoints cannot have port 0.", nameof(updateParams.CustomServerEndpoints));
 
             item.CustomServerEndpoints = updateParams.CustomServerEndpoints.Value?.Select(IPEndPoint.Parse).ToArray();
@@ -139,10 +139,17 @@ public class ClientProfileService
         if (updateParams.SelectedLocation != null)
             item.SelectedLocation = updateParams.SelectedLocation;
 
-        if (updateParams.AccessCode != null)
+        if (updateParams.AccessCode != null && updateParams.AccessCode.Value != item.AccessCode) {
             item.AccessCode = string.IsNullOrEmpty(updateParams.AccessCode.Value)
                 ? null
                 : AccessCodeUtils.Validate(updateParams.AccessCode.Value);
+
+            // reset premium location selection if access code is removed
+            if (item.AccessCode is null) {
+                item.IsPremiumLocationSelected = false; 
+                item.SelectedLocation = null;
+            }
+        }
 
         Save();
         return item;

@@ -32,5 +32,5 @@ public class UserSettings
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public IPAddress[]? DnsServers { get; set; }
     public bool UseProxyServer { get; set; }
-    public ProxyServerOptions[] ProxyServers { get; set; } = [];
+    public ProxyServerEndPoint[] ProxyServers { get; set; } = [];
 }

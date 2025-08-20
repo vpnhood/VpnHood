@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Core.Client.Abstractions;
 
-public class ProxyServerOptions
+public class ProxyServerEndPoint
 {
     public ProxyServerType ProxyServerType { get; init; }
     public string? Address { get; init; }

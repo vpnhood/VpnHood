@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using VpnHood.Core.Client.ClientProxies;
 
 namespace VpnHood.Core.Client.ConnectorServices;
 

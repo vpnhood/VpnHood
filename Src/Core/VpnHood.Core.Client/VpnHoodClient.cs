@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Client.ClientProxies;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Client.Exceptions;

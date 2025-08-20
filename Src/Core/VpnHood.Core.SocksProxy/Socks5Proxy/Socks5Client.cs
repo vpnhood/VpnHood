@@ -170,7 +170,7 @@ public class Socks5Client(Socks5Options options)
         return new Socks5CommandResult(command, reply, boundEp);
     }
 
-    private static async Task ReadAndDiscardAddressPort(NetworkStream stream, byte addressType, CancellationToken ct)
+    private static async Task ReadAndDiscardAddressPort(NetworkStream stream, byte addressType, CancellationToken cancellationToken)
     {
         var (addressLen, hasDomainLenByte) = addressType switch {
             (byte)Socks5AddressType.IpV4 => (4, false),
@@ -181,11 +181,11 @@ public class Socks5Client(Socks5Options options)
 
         if (hasDomainLenByte) {
             var lenBuf = new byte[1];
-            await stream.ReadExactlyAsync(lenBuf, ct);
+            await stream.ReadExactlyAsync(lenBuf, cancellationToken);
             addressLen = lenBuf[0];
         }
         var discard = new byte[addressLen + 2]; // address + port
-        await stream.ReadExactlyAsync(discard, ct);
+        await stream.ReadExactlyAsync(discard, cancellationToken);
     }
 
     private static void HandleProxyCommandError(byte[] response)
@@ -254,26 +254,26 @@ public class Socks5Client(Socks5Options options)
         return offset;
     }
 
-    private static async Task<Socks5Endpoint> ReadAddressPort(Stream stream, Socks5AddressType addressType, CancellationToken ct)
+    private static async Task<Socks5Endpoint> ReadAddressPort(Stream stream, Socks5AddressType addressType, CancellationToken cancellationToken)
     {
         if (addressType == Socks5AddressType.IpV4) {
             var buf = new byte[6];
-            await stream.ReadExactlyAsync(buf, ct);
+            await stream.ReadExactlyAsync(buf, cancellationToken);
             return new Socks5Endpoint(null, new IPAddress(buf.AsSpan(0, 4)), (buf[4] << 8) | buf[5]);
         }
 
         if (addressType == Socks5AddressType.IpV6) {
             var buf = new byte[18];
-            await stream.ReadExactlyAsync(buf, ct);
+            await stream.ReadExactlyAsync(buf, cancellationToken);
             return new Socks5Endpoint(null, new IPAddress(buf.AsSpan(0, 16)), (buf[16] << 8) | buf[17]);
         }
 
         if (addressType == Socks5AddressType.DomainName) {
             var lenBuf = new byte[1];
-            await stream.ReadExactlyAsync(lenBuf, ct);
+            await stream.ReadExactlyAsync(lenBuf, cancellationToken);
             var len = lenBuf[0];
             var buf = new byte[len + 2];
-            await stream.ReadExactlyAsync(buf, ct);
+            await stream.ReadExactlyAsync(buf, cancellationToken);
             var port = (buf[len] << 8) | buf[len + 1];
             return new Socks5Endpoint(null, null, port); // host not preserved in command reply currently
         }

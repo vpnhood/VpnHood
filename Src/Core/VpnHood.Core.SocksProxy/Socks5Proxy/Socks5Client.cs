@@ -56,15 +56,16 @@ public class Socks5Client(Socks5Options options)
         var epToSend = clientUdpEndPoint ?? new IPEndPoint(IPAddress.Any, 0);
         var result = await SendCommandAndReadReply(stream, Socks5Command.UdpAssociate, epToSend, cancellationToken);
 
-        if (result.BoundAddress == null)
+        var boundAddress = result.BoundEndpoint.Address;
+        if (boundAddress == null)
             throw new NotSupportedException("Proxy returned an unsupported address type for UDP ASSOCIATE.");
 
         // RFC: if BND.ADDR is 0.0.0.0 (or ::), use the proxy's address for sending datagrams.
-        var ipAddress = (result.BoundAddress.Equals(IPAddress.Any) || result.BoundAddress.Equals(IPAddress.IPv6Any))
+        var ipAddress = (boundAddress.Equals(IPAddress.Any) || boundAddress.Equals(IPAddress.IPv6Any))
             ? ProxyEndPoint.Address
-            : result.BoundAddress;
+            : boundAddress;
 
-        return new IPEndPoint(ipAddress, result.BoundPort);
+        return new IPEndPoint(ipAddress, result.BoundEndpoint.Port);
     }
 
     private async Task EnsureAuthenticated(NetworkStream stream, CancellationToken cancellationToken)
@@ -166,7 +167,7 @@ public class Socks5Client(Socks5Options options)
         }
 
         var boundEp = await ReadAddressPort(stream, (Socks5AddressType)header[3], cancellationToken);
-        return new Socks5CommandResult(command, reply, boundEp.Address, boundEp.Port);
+        return new Socks5CommandResult(command, reply, boundEp);
     }
 
     private static async Task ReadAndDiscardAddressPort(NetworkStream stream, byte addressType, CancellationToken ct)

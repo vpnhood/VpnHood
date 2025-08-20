@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -211,6 +212,9 @@ public class AccessCodeTest : TestAppBase
 
         var received = receiveTask.Result;
         var srcEp = Socks5Client.ParseUdpResponse(received.Buffer, out var payload);
+        var res = DnsResolver.ParseDnsResponse(payload.ToArray(), 0x1234);
+        Console.WriteLine(string.Join(",", res.AddressList.Select(x=>x.ToString())));
+
 
         // Basic DNS validation
         Assert.IsTrue(payload.Length >= 12, "DNS header too short.");

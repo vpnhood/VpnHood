@@ -60,11 +60,11 @@ public class Socks5Client(Socks5Options options)
             throw new NotSupportedException("Proxy returned an unsupported address type for UDP ASSOCIATE.");
 
         // RFC: if BND.ADDR is 0.0.0.0 (or ::), use the proxy's address for sending datagrams.
-        var addr = (result.BoundAddress.Equals(IPAddress.Any) || result.BoundAddress.Equals(IPAddress.IPv6Any))
+        var ipAddress = (result.BoundAddress.Equals(IPAddress.Any) || result.BoundAddress.Equals(IPAddress.IPv6Any))
             ? ProxyEndPoint.Address
             : result.BoundAddress;
 
-        return new IPEndPoint(addr, result.BoundPort);
+        return new IPEndPoint(ipAddress, result.BoundPort);
     }
 
     private async Task EnsureAuthenticated(NetworkStream stream, CancellationToken cancellationToken)
@@ -165,8 +165,8 @@ public class Socks5Client(Socks5Options options)
             HandleProxyCommandError([0, (byte)reply]);
         }
 
-        var (boundAddress, boundPort) = await ReadAddressPort(stream, (Socks5AddressType)header[3], cancellationToken);
-        return new Socks5CommandResult(command, reply, boundAddress, boundPort);
+        var boundEp = await ReadAddressPort(stream, (Socks5AddressType)header[3], cancellationToken);
+        return new Socks5CommandResult(command, reply, boundEp.Address, boundEp.Port);
     }
 
     private static async Task ReadAndDiscardAddressPort(NetworkStream stream, byte addressType, CancellationToken ct)
@@ -253,18 +253,18 @@ public class Socks5Client(Socks5Options options)
         return offset;
     }
 
-    private static async Task<(IPAddress? address, int port)> ReadAddressPort(Stream stream, Socks5AddressType addressType, CancellationToken ct)
+    private static async Task<Socks5Endpoint> ReadAddressPort(Stream stream, Socks5AddressType addressType, CancellationToken ct)
     {
         if (addressType == Socks5AddressType.IpV4) {
             var buf = new byte[6];
             await stream.ReadExactlyAsync(buf, ct);
-            return (new IPAddress(buf.AsSpan(0, 4)), (buf[4] << 8) | buf[5]);
+            return new Socks5Endpoint(null, new IPAddress(buf.AsSpan(0, 4)), (buf[4] << 8) | buf[5]);
         }
 
         if (addressType == Socks5AddressType.IpV6) {
             var buf = new byte[18];
             await stream.ReadExactlyAsync(buf, ct);
-            return (new IPAddress(buf.AsSpan(0, 16)), (buf[16] << 8) | buf[17]);
+            return new Socks5Endpoint(null, new IPAddress(buf.AsSpan(0, 16)), (buf[16] << 8) | buf[17]);
         }
 
         if (addressType == Socks5AddressType.DomainName) {
@@ -274,7 +274,7 @@ public class Socks5Client(Socks5Options options)
             var buf = new byte[len + 2];
             await stream.ReadExactlyAsync(buf, ct);
             var port = (buf[len] << 8) | buf[len + 1];
-            return (null, port);
+            return new Socks5Endpoint(null, null, port); // host not preserved in command reply currently
         }
 
         throw new NotSupportedException("Unsupported AddressType in reply.");
@@ -283,7 +283,7 @@ public class Socks5Client(Socks5Options options)
     /// <summary>
     /// Parse a SOCKS5 UDP response packet. Returns host when AddressType=DOMAIN, otherwise Address.
     /// </summary>
-    public static Socks5UdpResponse ParseUdpResponse(ReadOnlySpan<byte> relayDatagram, out ReadOnlySpan<byte> payload)
+    public static Socks5Endpoint ParseUdpResponse(ReadOnlySpan<byte> relayDatagram, out ReadOnlySpan<byte> payload)
     {
         if (relayDatagram.Length < 7)
             throw new ArgumentException("Packet too short for SOCKS5 UDP response.", nameof(relayDatagram));
@@ -292,32 +292,31 @@ public class Socks5Client(Socks5Options options)
 
         var addressType = (Socks5AddressType)relayDatagram[3];
         var offset = 4;
-        string? host = null;
-        IPAddress? address = null;
+        string? host = null; IPAddress? address = null;
         switch (addressType) {
             case Socks5AddressType.IpV4:
                 address = new IPAddress(relayDatagram.Slice(offset, 4));
-                offset += 4;
+                offset += 4; 
                 break;
 
             case Socks5AddressType.IpV6:
                 address = new IPAddress(relayDatagram.Slice(offset, 16));
-                offset += 16;
+                offset += 16; 
                 break;
 
             case Socks5AddressType.DomainName:
                 var len = relayDatagram[offset];
                 offset += 1;
                 host = Encoding.ASCII.GetString(relayDatagram.Slice(offset, len));
-                offset += len;
+                offset += len; 
                 break;
+
             default:
                 throw new NotSupportedException("Unsupported AddressType in UDP response.");
         }
-
         var port = (relayDatagram[offset] << 8) | relayDatagram[offset + 1];
         offset += 2;
         payload = relayDatagram[offset..];
-        return new Socks5UdpResponse(host, address, port);
+        return new Socks5Endpoint(host, address, port);
     }
 }

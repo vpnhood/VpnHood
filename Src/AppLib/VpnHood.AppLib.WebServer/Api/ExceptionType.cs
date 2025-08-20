@@ -40,7 +40,10 @@ public enum ExceptionType
     
     [EnumMember(Value = nameof(UnreachableServerException))]
     UnreachableServer,
-    
+
+    [EnumMember(Value = nameof(UnreachableProxyServerException))]
+    UnreachableProxyServer,
+
     [EnumMember(Value = nameof(UnreachableServerLocationException))]
     UnreachableServerLocation,
 

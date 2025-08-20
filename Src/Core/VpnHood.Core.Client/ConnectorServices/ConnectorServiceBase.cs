@@ -62,7 +62,7 @@ internal class ConnectorServiceBase : IDisposable
             .Append("User-Agent: Hood\r\n")
             .Append($"X-Buffered: {UseBuffer}\r\n")
             .Append($"X-ProtocolVersion: {protocolVersion}\r\n")
-            .Append($"X-BinaryStream: {streamType}\r\n") 
+            .Append($"X-BinaryStream: {streamType}\r\n")
             .Append("\r\n");
 
         var header = headerBuilder.ToString();
@@ -164,21 +164,28 @@ internal class ConnectorServiceBase : IDisposable
         var tcpEndPoint = EndPointInfo.TcpEndPoint;
 
         // create new stream
-        var tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint);
+        TcpClient? tcpClient = null;
         try {
+            VhLogger.Instance.LogDebug(GeneralEventId.Request, 
+                "Establishing a new TCP to the Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
+
             // Client.SessionTimeout does not affect in ConnectAsync
-            VhLogger.Instance.LogDebug(GeneralEventId.Request, "Establishing a new TCP to the Server... EndPoint: {EndPoint}",
-                VhLogger.Format(tcpEndPoint));
-            await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();
-            return await GetTlsConnectionToServer(streamId,  tcpClient, contentLength, cancellationToken).Vhc();
+            if (EndPointInfo.ProxyServerManager != null)
+                tcpClient = await EndPointInfo.ProxyServerManager.ConnectAsync(tcpEndPoint, cancellationToken);
+            else {
+                tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint);
+                await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();
+            }
+
+            return await GetTlsConnectionToServer(streamId, tcpClient, contentLength, cancellationToken).Vhc();
         }
         catch {
-            tcpClient.Dispose();
+            tcpClient?.Dispose();
             throw;
         }
     }
 
-    private async Task<IClientStream> GetTlsConnectionToServer(string streamId, TcpClient tcpClient, 
+    private async Task<IClientStream> GetTlsConnectionToServer(string streamId, TcpClient tcpClient,
         int contentLength, CancellationToken cancellationToken)
     {
         // Establish a TLS connection

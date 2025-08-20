@@ -134,7 +134,7 @@ public class AccessTest : TestBase
 
         // suppress by yourself
         await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
-            token: token, clientId: client1.Settings.ClientId);
+            token: token, clientId: client1.Config.ClientId);
 
         Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionInfo?.SuppressedTo);
         Assert.AreEqual(SessionErrorCode.Ok, client2.GetLastSessionErrorCode());
@@ -212,7 +212,7 @@ public class AccessTest : TestBase
 
         // suppress by yourself
         await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
-            token: token, clientId: client1.Settings.ClientId);
+            token: token, clientId: client1.Config.ClientId);
 
         Assert.AreEqual(SessionErrorCode.Ok, client1.GetLastSessionErrorCode());
         Assert.AreEqual(SessionSuppressType.None, client2.SessionInfo?.SuppressedTo);

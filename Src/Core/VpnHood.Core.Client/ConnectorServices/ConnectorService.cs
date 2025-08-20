@@ -18,7 +18,7 @@ internal class ConnectorService(
     ISocketFactory socketFactory,
     TimeSpan requestTimeout,
     bool allowTcpReuse)
-    : ConnectorServiceBase(endPointInfo, socketFactory, allowTcpReuse)
+    : ConnectorServiceBase(endPointInfo,  socketFactory, allowTcpReuse)
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private int _isDisposed;

@@ -22,6 +22,6 @@ public class TestTracker : ITracker
     {
         return TrackEvents.FirstOrDefault(e =>
             e.EventName == eventName &&
-            e.Parameters.ContainsKey(parameterName) && e.Parameters[parameterName].Equals(parameterValue));
+            e.Parameters.ContainsKey(parameterName) && Equals(e.Parameters[parameterName], parameterValue));
     }
 }

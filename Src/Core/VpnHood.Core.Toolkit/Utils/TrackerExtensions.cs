@@ -52,7 +52,7 @@ public static class TrackerExtensions
     {
         var trackEvent = new TrackEvent {
             EventName = "vh_exception",
-            Parameters = new Dictionary<string, object> {
+            Parameters = new Dictionary<string, object?> {
                     { "method", action },
                     { "message", message + ", " + exception.Message },
                     { "error_type", exception.GetType().Name },

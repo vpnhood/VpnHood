@@ -29,7 +29,7 @@ public abstract class TrackerBase : ITracker
     {
         var trackEvent = new TrackEvent {
             EventName = "exception",
-            Parameters = new Dictionary<string, object> {
+            Parameters = new Dictionary<string, object?> {
                 { "page_location", "ex/" + action },
                 { "page_title", ex.Message }
             }

@@ -128,7 +128,7 @@ public class VpnHoodServer : IAsyncDisposable
         // Report Anonymous info
         _ = SessionManager.Tracker?.TryTrack(new TrackEvent {
             EventName = TrackEventNames.SessionStart,
-            Parameters = new Dictionary<string, object> {
+            Parameters = new Dictionary<string, object?> {
                 { "access_manager", AccessManager.GetType().Name }
             }
         });

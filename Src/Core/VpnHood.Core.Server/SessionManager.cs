@@ -202,7 +202,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         return Tracker.TryTrack([
             new TrackEvent {
                 EventName = TrackEventNames.PageView,
-                Parameters = new Dictionary<string, object> {
+                Parameters = new Dictionary<string, object?> {
                     { "client_version", clientInfo.ClientVersion },
                     { "server_version", serverVersion },
                     { TrackParameterNames.PageTitle, $"server_version/{serverVersion}" },
@@ -326,7 +326,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
         await Tracker.Track(new TrackEvent {
             EventName = "heartbeat",
-            Parameters = new Dictionary<string, object> {
+            Parameters = new Dictionary<string, object?> {
                 { "session_count", Sessions.Count(x => !x.Value.IsDisposed) }
             }
         }, cancellationToken);

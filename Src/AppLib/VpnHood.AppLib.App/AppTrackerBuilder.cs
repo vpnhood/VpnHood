@@ -12,7 +12,7 @@ public static class AppTrackerBuilder
 
         return new TrackEvent {
             EventName = eventName,
-            Parameters = new Dictionary<string, object> {
+            Parameters = new Dictionary<string, object?> {
                 { "ad_network", adNetwork ?? "(vh_unknown)" },
                 { "error", errorMessage },
                 { "country", countryCode },
@@ -47,7 +47,7 @@ public static class AppTrackerBuilder
 
         return new TrackEvent {
             EventName = "vh_ad_show_ok",
-            Parameters = new Dictionary<string, object> {
+            Parameters = new Dictionary<string, object?> {
                 { "ad_network", adNetwork },
                 { "country", countryCode },
                 { "is_preload", isPreload }
@@ -59,7 +59,7 @@ public static class AppTrackerBuilder
     {
         return new TrackEvent {
             EventName = "vh_first_launch",
-            Parameters = new Dictionary<string, object> {
+            Parameters = new Dictionary<string, object?> {
                 { "deviceId", deviceId },
                 { "country", countryCode }
             }
@@ -70,7 +70,7 @@ public static class AppTrackerBuilder
     {
         return new TrackEvent {
             EventName = "vh_user_review",
-            Parameters = new Dictionary<string, object> {
+            Parameters = new Dictionary<string, object?> {
                 { "rating", rating },
                 { "review_text", string.IsNullOrWhiteSpace(reviewText) ? "(vh_notset)" : reviewText }
             }

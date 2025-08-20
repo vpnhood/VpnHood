@@ -25,6 +25,7 @@ public class ServerFinder(
     EndPointStrategy endPointStrategy,
     IPEndPoint[] customServerEndpoints,
     ITracker? tracker,
+    ProxyServerManager? proxyServerManager,
     int maxDegreeOfParallelism = 10)
 {
     private class HostStatus
@@ -237,6 +238,7 @@ public class ServerFinder(
     private ConnectorService CreateConnector(IPEndPoint tcpEndPoint)
     {
         var endPointInfo = new ConnectorEndPointInfo {
+            ProxyServerManager = proxyServerManager,
             CertificateHash = serverToken.CertificateHash,
             HostName = serverToken.HostName,
             TcpEndPoint = tcpEndPoint

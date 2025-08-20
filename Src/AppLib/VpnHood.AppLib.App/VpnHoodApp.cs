@@ -679,7 +679,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 SessionName = profileInfo.ClientProfileName,
                 CustomServerEndpoints = profileInfo.CustomServerEndpoints,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
-                UserReview = Settings.UserReview
+                UserReview = Settings.UserReview,
+                ProxyServers = UserSettings.ProxyServers,
             };
 
             VhLogger.Instance.LogDebug(

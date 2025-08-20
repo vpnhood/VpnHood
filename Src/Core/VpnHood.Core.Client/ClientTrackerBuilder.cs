@@ -34,7 +34,7 @@ public static class ClientTrackerBuilder
     {
         return new TrackEvent {
             EventName = "vh_connect_attempt",
-            Parameters = new Dictionary<string, object> {
+            Parameters = new Dictionary<string, object?> {
                 { "server_location", serverLocation ?? string.Empty },
                 { "connected", connected.ToString() },
                 { "ipv6_supported", isIpV6Supported.ToString() },
@@ -49,7 +49,7 @@ public static class ClientTrackerBuilder
     {
         return new TrackEvent {
             EventName = "vh_endpoint_status",
-            Parameters = new Dictionary<string, object> {
+            Parameters = new Dictionary<string, object?> {
                 { "ep", endPoint },
                 { "ip_v6", endPoint.Address.IsV6() },
                 { "available", available }
@@ -61,7 +61,7 @@ public static class ClientTrackerBuilder
     {
         var trackEvent = new TrackEvent {
             EventName = "vh_usage",
-            Parameters = new Dictionary<string, object> {
+            Parameters = new Dictionary<string, object?> {
                 { "traffic_total", Math.Round(traffic.Total / 1_000_000d) },
                 { "traffic_sent", Math.Round(traffic.Sent / 1_000_000d) },
                 { "traffic_received", Math.Round(traffic.Received / 1_000_000d) },

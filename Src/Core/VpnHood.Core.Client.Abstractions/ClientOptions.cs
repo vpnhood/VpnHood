@@ -95,6 +95,9 @@ public class ClientOptions
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public UserReview? UserReview { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public ProxyServerOptions[]? ProxyServers { get; set; }
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

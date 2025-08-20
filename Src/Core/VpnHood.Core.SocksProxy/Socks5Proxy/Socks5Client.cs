@@ -10,18 +10,30 @@ public class Socks5Client(Socks5Options options)
     private readonly string? _username = options.Username;
     private readonly string? _password = options.Password;
     private bool _isAuthenticated;
+    
+
+    public async Task<TimeSpan> CheckConnectionAsync(TcpClient tcpClient, CancellationToken cancellationToken)
+    {
+        try {
+            var tickCount = Environment.TickCount64;
+            await tcpClient.ConnectAsync(ProxyEndPoint, cancellationToken);
+            var stream = tcpClient.GetStream();
+            await EnsureAuthenticated(stream, cancellationToken);
+            return TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
+        }
+        catch {
+            tcpClient.Close();
+            throw;
+        }
+    }
 
     /// <summary>
     /// Establish a TCP connection to the destination host via the SOCKS5 proxy (CONNECT).
     /// </summary>
     public async Task ConnectAsync(TcpClient tcpClient, IPEndPoint remoteEp, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(options);
-
         try {
-            if (!tcpClient.Connected)
-                await tcpClient.ConnectAsync(ProxyEndPoint, cancellationToken);
-
+            await tcpClient.ConnectAsync(ProxyEndPoint, cancellationToken);
             var stream = tcpClient.GetStream();
             await EnsureAuthenticated(stream, cancellationToken);
             await PerformConnect(stream, remoteEp, cancellationToken);
@@ -188,19 +200,20 @@ public class Socks5Client(Socks5Options options)
         await stream.ReadExactlyAsync(discard, cancellationToken);
     }
 
+    //todo
     private static void HandleProxyCommandError(byte[] response)
     {
         var replyCode = (Socks5CommandReply)response[1];
         Exception exception = replyCode switch {
-            Socks5CommandReply.GeneralSocksServerFailure => new SocketException((int)SocketError.SocketError),
-            Socks5CommandReply.ConnectionNotAllowedByRuleset => new SocketException((int)SocketError.AccessDenied),
-            Socks5CommandReply.NetworkUnreachable => new SocketException((int)SocketError.NetworkUnreachable),
-            Socks5CommandReply.HostUnreachable => new SocketException((int)SocketError.HostUnreachable),
-            Socks5CommandReply.ConnectionRefused => new SocketException((int)SocketError.ConnectionRefused),
-            Socks5CommandReply.TtlExpired => new IOException("TTL Expired."),
-            Socks5CommandReply.CommandNotSupported => new NotSupportedException("Command not supported by SOCKS5 proxy."),
-            Socks5CommandReply.AddressTypeNotSupported => new SocketException((int)SocketError.AddressFamilyNotSupported),
-            _ => new SocketException((int)SocketError.ProtocolNotSupported)
+            Socks5CommandReply.GeneralSocksServerFailure => new ProxyServerException(SocketError.SocketError),
+            Socks5CommandReply.ConnectionNotAllowedByRuleset => new ProxyServerException(SocketError.AccessDenied),
+            Socks5CommandReply.NetworkUnreachable => new ProxyServerException(SocketError.NetworkUnreachable),
+            Socks5CommandReply.HostUnreachable => new ProxyServerException(SocketError.HostUnreachable),
+            Socks5CommandReply.ConnectionRefused => new ProxyServerException(SocketError.ConnectionRefused),
+            Socks5CommandReply.TtlExpired => new ProxyServerException(SocketError.SocketError, "TLS Expired"),
+            Socks5CommandReply.CommandNotSupported => new ProxyServerException(SocketError.OperationNotSupported),
+            Socks5CommandReply.AddressTypeNotSupported => new ProxyServerException(SocketError.AddressFamilyNotSupported),
+            _ => new ProxyServerException(SocketError.ProtocolNotSupported)
         };
 
         throw exception;

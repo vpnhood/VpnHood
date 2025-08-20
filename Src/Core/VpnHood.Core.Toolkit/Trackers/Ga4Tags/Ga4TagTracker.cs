@@ -29,7 +29,7 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
         var isMobile = IsMobile ?? CheckIsMobileByUserAgent(UserAgent);
 
         // ReSharper disable StringLiteralTypo
-        var parameters = new List<(string, object)> {
+        var parameters = new List<(string, object?)> {
             ("v", 2), // MeasurementId
             ("tid", MeasurementId), // MeasurementId
             ("gtm", Environment.TickCount), // GTM Hash

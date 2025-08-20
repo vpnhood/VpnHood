@@ -58,7 +58,7 @@ public class FirebaseAnalyticsTracker : Singleton<FirebaseAnalyticsTracker>, ITr
 
         var bundle = new Bundle();
         foreach (var parameter in trackEvent.Parameters)
-            bundle.PutString(parameter.Key, parameter.Value.ToString());
+            bundle.PutString(parameter.Key, parameter.Value?.ToString());
 
         _analytics.LogEvent(trackEvent.EventName, bundle);
     }

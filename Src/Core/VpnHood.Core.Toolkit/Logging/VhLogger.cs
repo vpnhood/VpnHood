@@ -91,9 +91,8 @@ public static class VhLogger
     public static string FormatHostName(string? dnsName)
     {
         if (dnsName == null) return "<null>";
-        if (IPEndPoint.TryParse(dnsName, out var ipEndPoint))
-            return Format(ipEndPoint);
-
+        if (IPAddress.TryParse(dnsName, out var ipAddress)) return Format(ipAddress);
+        if (IPEndPoint.TryParse(dnsName, out var ipEndPoint)) return Format(ipEndPoint);
         return IsAnonymousMode ? VhUtils.RedactHostName(dnsName) : dnsName;
     }
 

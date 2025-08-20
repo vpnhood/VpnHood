@@ -31,6 +31,9 @@ public static class ClientExceptionConverter
         if (apiError.Is<UnreachableServerException>())
             exception = new UnreachableServerException(apiError.Message);
 
+        if (apiError.Is<UnreachableProxyServerException>())
+            exception = new UnreachableProxyServerException(apiError.Message);
+
         if (apiError.Is<UnreachableServerLocationException>())
             exception = new UnreachableServerLocationException(apiError.Message);
 

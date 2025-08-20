@@ -204,7 +204,7 @@ public class VpnServiceHost : IDisposable
     {
         var connectionInfo = new ConnectionInfo {
             CreatedTime = FastDateTime.Now,
-            SessionName = client.Settings.SessionName,
+            SessionName = client.Config.SessionName,
             SessionInfo = client.SessionInfo,
             SessionStatus = client.SessionStatus?.ToDto(),
             ClientState = client.State,

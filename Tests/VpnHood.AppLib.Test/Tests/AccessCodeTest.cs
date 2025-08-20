@@ -1,11 +1,9 @@
-﻿using System.Net;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using System.Text;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.SocksProxy.Socks5Proxy;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;
@@ -20,15 +18,14 @@ public class AccessCodeTest : TestAppBase
         Console.WriteLine(tcpClient.ReceiveBufferSize);
         Console.WriteLine(tcpClient.SendBufferSize);
         await Task.CompletedTask;
-    }
 
-    async Task Read(UdpClient udpClient)
-    {
-        var response = await udpClient.ReceiveAsync();
-        Console.WriteLine(response);
-        Console.WriteLine("ssss");
-    }
+        TaskCompletionSource cts = new();
+        cts.SetException(new Exception("sss"));
+        Task[] tasks = [Task.CompletedTask, cts.Task];
+        while (tasks.Any(x => !x.IsCompleted))
+            await Task.WhenAny(tasks.Select(x => x)).Vhc();
 
+    }
 
     [TestMethod]
     public async Task AccessCode_Accept()

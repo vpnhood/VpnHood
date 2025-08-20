@@ -1,9 +1,11 @@
-﻿using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.SocksProxy.Socks5Proxy;
 
 namespace VpnHood.Core.Client;
 
-public class VpnHoodClientSettings
+public class VpnHoodClientConfig
 {
     public int MaxProtocolVersion => 9;
     public int MinProtocolVersion => 4;

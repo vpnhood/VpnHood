@@ -8,7 +8,7 @@ public class Ga4TagEvent
     public string? DocumentLocation { get; init; }
     public string? DocumentTitle { get; init; }
     public string? DocumentReferrer { get; set; }
-    public Dictionary<string, object> Properties { get; init; } = new();
+    public Dictionary<string, object?> Properties { get; init; } = new();
     public bool IsFirstVisit { get; init; }
     public long? EngagementTime { get; init; }
 }

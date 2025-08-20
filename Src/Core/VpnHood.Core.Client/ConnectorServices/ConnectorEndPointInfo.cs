@@ -4,7 +4,8 @@ namespace VpnHood.Core.Client.ConnectorServices;
 
 internal class ConnectorEndPointInfo
 {
-    public required IPEndPoint TcpEndPoint { get; set; }
-    public required string HostName { get; set; }
-    public required byte[]? CertificateHash { get; set; }
+    public required ProxyServerManager? ProxyServerManager { get; init; }
+    public required IPEndPoint TcpEndPoint { get; init; }
+    public required string HostName { get; init; }
+    public required byte[]? CertificateHash { get; init; }
 }

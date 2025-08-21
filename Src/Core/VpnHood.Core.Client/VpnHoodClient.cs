@@ -63,7 +63,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private TaskCompletionSource? _waitForAdCts;
     private bool _isPassthroughForAd;
     private bool _isDnsOverTlsDetected;
-    private readonly ProxyServerManager? _proxyServerManager;
+    private readonly ProxyServerManager _proxyServerManager;
 
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
 
@@ -136,6 +136,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _dnsServers = options.DnsServers ?? [];
         _vpnAdapter = vpnAdapter;
         _useUdpChannel = options.UseUdpChannel;
+        _proxyServerManager = new ProxyServerManager(options.ProxyServers ?? [], socketFactory);
+
         _serverFinder = new ServerFinder(socketFactory, Token.ServerToken,
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
@@ -186,10 +188,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             streamProxyBufferSize: options.StreamProxySendBufferSize ?? TunnelDefaults.ClientStreamProxyBufferSize);
 
         _clientHost.PacketReceived += ClientHost_PacketReceived;
-
-        // create proxy manager
-        if (!VhUtils.IsNullOrEmpty(options.ProxyServers))
-            _proxyServerManager = new ProxyServerManager(options.ProxyServers, socketFactory);
 
         // init vpnAdapter events
         vpnAdapter.Disposed += (_, _) => _ = DisposeAsync();
@@ -332,9 +330,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 Config.Version, Config.MinProtocolVersion, Config.MaxProtocolVersion, VhLogger.FormatId(Config.ClientId));
 
             // validate proxy servers
-            if (_proxyServerManager != null) {
+            if (_proxyServerManager.IsEnabled) {
                 await _proxyServerManager.RemoveBadServers(linkedCts.Token).Vhc();
-                VhLogger.Instance.LogInformation("Proxy servers: {Count}", _proxyServerManager.ProxyServerCount);
+                VhLogger.Instance.LogInformation("Proxy servers: {Count}",
+                    _proxyServerManager.ProxyServerStatuses.Length);
             }
 
             // Establish first connection and create a session

@@ -170,7 +170,7 @@ internal class ConnectorServiceBase : IDisposable
                 "Establishing a new TCP to the Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
 
             // Client.SessionTimeout does not affect in ConnectAsync
-            if (EndPointInfo.ProxyServerManager != null)
+            if (EndPointInfo.ProxyServerManager.IsEnabled)
                 tcpClient = await EndPointInfo.ProxyServerManager.ConnectAsync(tcpEndPoint, cancellationToken);
             else {
                 tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint);

@@ -5,6 +5,7 @@ public enum ProxyServerState
     Unknown,
     Active,
     PoorActive,
+    Failed,
     PoorInactive,
-    Unavailable,
+    FailedInactive
 }

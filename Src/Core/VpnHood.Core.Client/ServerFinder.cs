@@ -26,7 +26,7 @@ public class ServerFinder(
     EndPointStrategy endPointStrategy,
     IPEndPoint[] customServerEndpoints,
     ITracker? tracker,
-    ProxyServerManager? proxyServerManager,
+    ProxyServerManager proxyServerManager,
     int maxDegreeOfParallelism = 10)
 {
     private class HostStatus

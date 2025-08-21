@@ -1,33 +1,21 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.SocksProxy.Socks5Proxy;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Client.ClientProxies;
 
-public class ProxyServerManager(ProxyServerEndPoint[] optionsProxyServers, ISocketFactory socketFactory)
-{
-    public ProxyServerEndPoint[] OptionsProxyServers { get; } = optionsProxyServers;
-    public ISocketFactory SocketFactory { get; } = socketFactory;
-
-    public Task RemoveBadServers(CancellationToken linkedCtsToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<TcpClient> ConnectAsync(IPEndPoint tcpEndPoint, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public int ProxyServerCount => throw new NotImplementedException();
-}
-
-/*
 public class ProxyServerManager
 {
     private readonly ISocketFactory _socketFactory;
     public ProxyServerStatus[] ProxyServerStatuses { get; private set; } = [];
+    private ProxyServer[] ProxyServers { get; }
+    public bool IsEnabled => ProxyServers.Any();
 
     public ProxyServerManager(ProxyServerEndPoint[] proxyServerEndPoints,
         ISocketFactory socketFactory)
@@ -38,15 +26,6 @@ public class ProxyServerManager
         }).ToArray();
 
         _socketFactory = socketFactory;
-    }
-
-    private ProxyServer[] _proxyServers = [];
-    private ProxyServer[] ProxyServers {
-        get => _proxyServers;
-        set {
-            _proxyServers = value;
-            ProxyServerStatuses = value.Select(x => x.Status).ToArray();
-        }
     }
 
     public async Task RemoveBadServers(CancellationToken cancellationToken)
@@ -66,55 +45,39 @@ public class ProxyServerManager
         while (testTasks.Any(x => !x.Item3.IsCompleted))
             await Task.WhenAny(testTasks.Select(x => x.Item3)).Vhc();
 
-        // remove failed servers
-        foreach (var (proxyServer, tcpClient, task) in testTasks) {
-            tcpClient.Dispose();
-            if (!task.IsCompletedSuccessfully) {
-                proxyServer.SetSuccess(task.Result, false);
-                proxyServer.Status.LastResponseDuration = task.Result;
-                VhLogger.Instance.LogError(GeneralEventId.Essential, task.Exception,
-                    "Failed to connect to the proxy server {ProxyServer}. Excluding it from the list.",
-                    VhLogger.FormatHostName(proxyServer.EndPoint.Address));
-            }
-        }
-
         // calculate the average connection time and remove servers that took too long
         var connectionTimes = testTasks.Where(x => x.Item3.IsCompletedSuccessfully)
             .Select(x => x.Item3.Result).ToArray();
         var averageTime = connectionTimes.Any() ? connectionTimes.Average(ts => ts.TotalMilliseconds) : 0;
         var threshold = 2000 + averageTime * 2; // consider servers that take more than twice the average time as bad
 
-        foreach (var (proxyServer, _, task) in testTasks) {
-            if (task.IsCompletedSuccessfully) {
-                if (task.Result.TotalMilliseconds > threshold) {
-                    VhLogger.Instance.LogWarning(GeneralEventId.Essential,
-                        "Proxy server took too long to connect. Mark it as inactive. {ProxyServer}",
-                        VhLogger.FormatHostName(proxyServer.EndPoint.Address));
-                    proxyServer.SetPoorInactive(task.Result);
-                }
+        foreach (var (proxyServer, tcpClient, task) in testTasks) {
+            tcpClient.Dispose();
+
+            // set failed
+            if (!task.IsCompletedSuccessfully) {
+                proxyServer.SetFailed(inactive:true);
+                continue;
             }
-            else {
-                VhLogger.Instance.LogWarning(GeneralEventId.Essential,
-                    "Proxy server took too long to connect. Mark it as unavailable. {ProxyServer}",
-                    VhLogger.FormatHostName(proxyServer.EndPoint.Address));
-                proxyServer.SetFailed();
-            }
+
+            // set active or poor active
+            if (task.Result.TotalMilliseconds <= threshold)
+                proxyServer.SetActive(task.Result);
+            else
+                proxyServer.SetPoor(task.Result, inactive: true); // inactive poor on bad servers
         }
     }
 
     public async Task<TcpClient> ConnectAsync(IPEndPoint ipEndPoint, CancellationToken cancellationToken)
     {
-        // shuffle the proxy servers if in search mode
-        ProxyServerInfo[] proxyServers;
-        lock (this.proxyServers)
-            proxyServers = this.proxyServers.OrderBy(_ => Random.Shared.Next()).ToArray();
-
-        List<ProxyServerInfo> failedServers = [];
+        // order by active state then Last response duration
+        var proxyServers = ProxyServers.Where(x=>x.ShouldUse).OrderBy(_ => Random.Shared.Next()).ToArray();
 
         // try to connect to a proxy server
         TcpClient? tcpClientOk = null;
         foreach (var proxyServer in proxyServers) {
             var tcpClient = _socketFactory.CreateTcpClient(ipEndPoint);
+            var tickCount = Environment.TickCount64;
             try {
                 VhLogger.Instance.LogDebug(GeneralEventId.Essential,
                     "Connecting via a proxy server {ProxyServer}...",
@@ -124,32 +87,24 @@ public class ProxyServerManager
                 var client = new Socks5Client(socketOptions);
                 await client.ConnectAsync(tcpClient, ipEndPoint, cancellationToken).Vhc();
                 tcpClientOk = tcpClient;
-                proxyServer.FailedCount = 0; // reset failed count on successful connection
+                proxyServer.SetActive(TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount));
                 break;
             }
             catch (Exception ex) {
-                tcpClient.Dispose();
-                failedServers.Add(proxyServer);
-                proxyServer.FailedCount++;
-                proxyServer.TotalFailedCount++;
                 VhLogger.Instance.LogError(GeneralEventId.Essential, ex,
-                    "Failed to connect to the proxy server {ProxyServer}.",
+                    "Failed to connect to proxy server {ProxyServer}.",
                     VhLogger.FormatHostName(proxyServer.EndPoint.Address));
+
+                proxyServer.SetFailed(inactive: false);
+                tcpClient.Dispose();
+                proxyServer.Status.FailedCount++;
+                proxyServer.Status.TotalFailedCount++;
             }
         }
 
         // could not connect to any proxy server
         if (tcpClientOk is null)
             throw new SocketException((int)SocketError.NetworkUnreachable);
-
-        // remove failed servers from the list
-        lock (this.proxyServers)
-            foreach (var failedServer in failedServers.Where(x => x.FailedCount > 1)) {
-                this.proxyServers.Remove(failedServer);
-                VhLogger.Instance.LogWarning(GeneralEventId.Essential,
-                    "Proxy server has been removed from the list due to connection failures. {ProxyServer}",
-                    VhLogger.FormatHostName(failedServer.EndPoint.Address));
-            }
 
         return tcpClientOk;
     }
@@ -179,12 +134,10 @@ public class ProxyServerManager
         public required ProxyServerEndPoint EndPoint { get; init; }
         public ProxyServerStatus Status = new();
 
-        public void SetFailed()
-        {
-            Status.FailedCount++;
-            Status.TotalFailedCount++;
-            Status.State = ProxyServerState.Unavailable;
-        }
+        public bool ShouldUse => Status.State is
+            ProxyServerState.Unknown or
+            ProxyServerState.Active or
+            ProxyServerState.PoorActive;
 
         public void SetActive(TimeSpan responseDuration)
         {
@@ -194,17 +147,24 @@ public class ProxyServerManager
             Status.LastConnectionTime = DateTime.Now;
         }
 
-        public void SetPoorActive(TimeSpan responseDuration)
+        public void SetPoor(TimeSpan responseDuration, bool inactive)
         {
             SetActive(responseDuration);
-            Status.State = ProxyServerState.PoorActive;
+            Status.State = inactive ? ProxyServerState.PoorInactive : ProxyServerState.PoorActive;
+            VhLogger.Instance.LogWarning(GeneralEventId.Essential,
+                "Set proxy server state. {ProxyServer}, State: {State}",
+                VhLogger.FormatHostName(EndPoint.Address), Status.State);
+        }
+        public void SetFailed(bool inactive)
+        {
+            Status.FailedCount++;
+            Status.TotalFailedCount++;
+            Status.State = inactive ? ProxyServerState.FailedInactive : ProxyServerState.Failed;
+            VhLogger.Instance.LogWarning(GeneralEventId.Essential,
+                "Set proxy server state. {ProxyServer}, State: {State}",
+                VhLogger.FormatHostName(EndPoint.Address), Status.State);
         }
 
-        public void SetPoorInactive(TimeSpan responseDuration)
-        {
-            SetActive(responseDuration);
-            Status.State = ProxyServerState.PoorInactive;
-        }
     }
 
-}*/
+}

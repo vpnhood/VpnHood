@@ -63,7 +63,7 @@ public class AndroidAppMainActivityHandler
 
         // set window insets listener
         if (OperatingSystem.IsAndroidVersionAtLeast(30)) {
-            var contentRoot = ActivityEvent.Activity.FindViewById<FrameLayout>(Android.Resource.Id.Content);
+            var contentRoot = ActivityEvent.Activity.Window?.DecorView;
             contentRoot?.SetOnApplyWindowInsetsListener(new WebViewWindowInsetsListener());
             contentRoot?.RequestApplyInsets();
         }

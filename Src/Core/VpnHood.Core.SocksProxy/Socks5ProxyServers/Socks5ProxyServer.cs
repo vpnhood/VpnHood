@@ -7,7 +7,6 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.SocksProxy.Socks5ProxyServers;
 
-// Minimal SOCKS5 server for testing: supports CONNECT and UDP ASSOCIATE, IPv4/IPv6, NoAuth or Username/Password
 public sealed class Socks5ProxyServer(Socks5ProxyServerOptions options)
 {
     private readonly TcpListener _listener = new(options.ListenEndPoint);

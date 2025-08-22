@@ -9,7 +9,7 @@ namespace VpnHood.AppLib.Settings;
 public class UserSettings
 {
     public bool IsLicenseAccepted { get; set; }
-    public bool IsCloakPrompted { get; set; }
+    public bool IsTcpProxyPrompted { get; set; }
     public bool IsQuickLaunchPrompted { get; set; }
     public string? CultureCode { get; set; }
     public Guid? ClientProfileId { get; set; }

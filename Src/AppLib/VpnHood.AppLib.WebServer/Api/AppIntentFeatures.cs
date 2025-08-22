@@ -7,6 +7,7 @@ public class AppIntentFeatures(
     IAppUserReviewProvider? userReviewProvider)
 {
     public bool IsUserReviewSupported => userReviewProvider != null;
+    public bool IsQuickLaunchSupported => uiProvider?.IsQuickLaunchSupported ?? false;
     public bool IsRequestQuickLaunchSupported => uiProvider?.IsRequestQuickLaunchSupported ?? false;
     public bool IsRequestNotificationSupported => uiProvider?.IsRequestNotificationSupported ?? false;
     public bool IsSystemPrivateDnsSettingsSupported => uiProvider?.IsSystemPrivateDnsSettingsSupported ?? false;

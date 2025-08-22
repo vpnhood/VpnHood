@@ -4,7 +4,7 @@ using System.Text;
 
 namespace VpnHood.Core.SocksProxy.Socks5ProxyClients;
 
-public class Socks5ProxyClient(Socks5ClientProxyOptions clientProxyOptions) : IProxyClient
+public class Socks5ProxyClient(Socks5ProxyClientOptions clientProxyOptions) : IProxyClient
 {
     public IPEndPoint ProxyEndPoint { get; } = clientProxyOptions.ProxyEndPoint;
     private readonly string? _username = clientProxyOptions.Username;

@@ -1,7 +1,5 @@
-﻿using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.SocksProxy.Socks5Proxy;
 
 namespace VpnHood.Core.Client;
 

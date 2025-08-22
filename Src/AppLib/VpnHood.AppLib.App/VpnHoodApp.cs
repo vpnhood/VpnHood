@@ -250,6 +250,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     }
 
+    private Task? _reconfigurationTask;
     private void ApplySettings()
     {
         try {
@@ -263,7 +264,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     DropQuic = UserSettings.DropQuic
                 };
                 // it is not important to take effect immediately
-                _ = _vpnServiceManager.Reconfigure(reconfigureParams, CancellationToken.None);
+                _reconfigurationTask = _vpnServiceManager.Reconfigure(reconfigureParams, CancellationToken.None);
 
                 // check is disconnect required
                 disconnectRequired =
@@ -345,6 +346,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var clientProfileInfo = CurrentClientProfileInfo;
             var connectionState = ConnectionState;
             var connectionInfo = connectionState.IsIdle() ? null : ConnectionInfo;
+            var isReconfiguring = _reconfigurationTask is null || _reconfigurationTask.IsCompleted;
 
             var uiContext = AppUiContext.Context;
             var appState = new AppState {
@@ -369,7 +371,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UpdaterStatus = Services.UpdaterService?.Status,
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
                 LastError = LastError?.ToAppDto(),
-                IsTcpProxy = StateHelper.IsTcpProxy(Features, UserSettings, connectionInfo?.SessionStatus),
+                IsTcpProxy = StateHelper.IsTcpProxy(Features, UserSettings, connectionInfo, isReconfiguring),
                 CanChangeTcpProxy = StateHelper.CanChangeTcpProxy(Features, connectionInfo?.SessionInfo),
                 IsNotificationEnabled = Services.UiProvider.IsNotificationEnabled,
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null

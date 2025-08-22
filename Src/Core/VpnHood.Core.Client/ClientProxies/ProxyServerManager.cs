@@ -2,7 +2,7 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.SocksProxy.Socks5Proxy;
+using VpnHood.Core.SocksProxy.Socks5ProxyClients;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -35,7 +35,7 @@ public class ProxyServerManager
         // connect to each proxy server and check if it is reachable
         List<(ProxyServer, TcpClient, Task<TimeSpan>)> testTasks = [];
         foreach (var proxyServer in ProxyServers) {
-            var client = new Socks5Client(await BuildSocksProxyOptions(proxyServer.EndPoint));
+            var client = new Socks5ProxyClient(await BuildSocksProxyOptions(proxyServer.EndPoint));
             var tcpClient = _socketFactory.CreateTcpClient(client.ProxyEndPoint);
             var checkTask = client.CheckConnectionAsync(tcpClient, cancellationToken);
             testTasks.Add((proxyServer, tcpClient, checkTask));
@@ -84,7 +84,7 @@ public class ProxyServerManager
                     VhLogger.FormatHostName(proxyServer.EndPoint.Address));
 
                 var socketOptions = await BuildSocksProxyOptions(proxyServer.EndPoint).Vhc();
-                var client = new Socks5Client(socketOptions);
+                var client = new Socks5ProxyClient(socketOptions);
                 await client.ConnectAsync(tcpClient, ipEndPoint, cancellationToken).Vhc();
                 tcpClientOk = tcpClient;
                 proxyServer.SetActive(TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount));
@@ -109,7 +109,7 @@ public class ProxyServerManager
         return tcpClientOk;
     }
 
-    private static async Task<Socks5Options> BuildSocksProxyOptions(ProxyServerEndPoint proxyServerEndPoint)
+    private static async Task<Socks5ProxyClientOptions> BuildSocksProxyOptions(ProxyServerEndPoint proxyServerEndPoint)
     {
         ArgumentException.ThrowIfNullOrEmpty(proxyServerEndPoint.Address);
 
@@ -122,7 +122,7 @@ public class ProxyServerManager
             address = entry.AddressList[Random.Shared.Next(entry.AddressList.Length)];
         }
 
-        return new Socks5Options {
+        return new Socks5ProxyClientOptions() {
             ProxyEndPoint = new IPEndPoint(address, proxyServerEndPoint.Port),
             Username = proxyServerEndPoint.Username,
             Password = proxyServerEndPoint.Password,

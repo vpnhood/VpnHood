@@ -16,6 +16,8 @@ public class AndroidUiProvider : IAppUiProvider
     private const int RequestPostNotificationId = 11;
     private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
 
+    public bool IsQuickLaunchSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
+
     public bool IsRequestQuickLaunchSupported { get; } =
         OperatingSystem.IsAndroidVersionAtLeast(33) &&
         Application.Context.PackageManager?.HasSystemFeature(PackageManager.FeatureLeanback) is false;

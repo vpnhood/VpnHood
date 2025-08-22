@@ -8,6 +8,7 @@ internal class AppNotSupportedUiProvider
 {
     public SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext) => SystemBarsInfo.Default;
 
+    public bool IsQuickLaunchSupported => false;
     public bool IsRequestQuickLaunchSupported => false;
 
     public Task<bool> RequestQuickLaunch(IUiContext uiContext, CancellationToken cancellationToken) =>

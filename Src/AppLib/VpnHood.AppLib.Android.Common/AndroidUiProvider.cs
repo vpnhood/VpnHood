@@ -156,10 +156,9 @@ public class AndroidUiProvider : IAppUiProvider
 
         // get system bars info
         var appUiContext = (AndroidUiContext)uiContext;
-        var contentRoot = appUiContext.Activity.FindViewById<FrameLayout>(Android.Resource.Id.Content);
-
+        var contentRoot = appUiContext.Activity.Window?.DecorView;
         var rect = contentRoot?.RootWindowInsets?.GetInsets(WindowInsets.Type.SystemBars());
-        //var rect = appUiContext.Activity.Window?.DecorView.RootWindowInsets?.GetInsets(WindowInsets.Type.SystemBars());
+
         return rect == null
             ? SystemBarsInfo.Default
             : new SystemBarsInfo {

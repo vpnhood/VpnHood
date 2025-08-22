@@ -54,26 +54,39 @@ public class HttpsProxyClient(HttpsProxyOptions options)
         return errors == SslPolicyErrors.None;
     }
 
-    private async Task SendConnectRequest(Stream stream, string host, int port, CancellationToken ct)
+    private static string BuildAuthority(string host, int port)
     {
+        // IPv6 literal if it contains multiple colons
+        var isIpv6Literal = host.Contains(':') && host.IndexOf(':') != host.LastIndexOf(':');
+        return isIpv6Literal ? $"[{host}]:{port}" : $"{host}:{port}";
+    }
+
+    private async Task SendConnectRequest(Stream stream, string host, int port, CancellationToken cancellationToken)
+    {
+        var authority = BuildAuthority(host, port);
+
         var builder = new StringBuilder();
-        builder.Append($"CONNECT {host}:{port} HTTP/1.1\r\n");
-        builder.Append($"Host: {host}:{port}\r\n");
-        builder.Append("Proxy-Connection: Keep-Alive\r\n");
-        builder.Append("Connection: Keep-Alive\r\n");
+        builder.Append($"CONNECT {authority} HTTP/1.1\r\n");
+        builder.Append($"Host: {authority}\r\n");
+        builder.Append("Connection: keep-alive\r\n");
         if (_username != null) {
             var auth = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_username}:{_password ?? string.Empty}"));
             builder.Append($"Proxy-Authorization: Basic {auth}\r\n");
         }
+
         if (_extraHeaders != null) {
             foreach (var kv in _extraHeaders)
                 builder.Append(kv.Key).Append(": ").Append(kv.Value).Append("\r\n");
         }
+
+        builder.Append("Content-Length: 0\r\n"); // optional, but helps with strict proxies
         builder.Append("\r\n");
+
         var bytes = Encoding.ASCII.GetBytes(builder.ToString());
-        await stream.WriteAsync(bytes, ct).ConfigureAwait(false);
-        await stream.FlushAsync(ct).ConfigureAwait(false);
+        await stream.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
+        await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
+
 
     private static async Task ReadConnectResponse(Stream stream, CancellationToken ct)
     {
@@ -81,12 +94,12 @@ public class HttpsProxyClient(HttpsProxyOptions options)
         var received = 0;
         while (true) {
             var n = await stream.ReadAsync(buffer.AsMemory(received, buffer.Length - received), ct).ConfigureAwait(false);
-            if (n == 0) throw new IOException("Proxy closed connection.");
+            if (n == 0) throw new IOException( "Proxy closed connection.");
             received += n;
             if (received >= 4) {
-                for (int i = 3; i < received; i++) {
+                for (var i = 3; i < received; i++) {
                     if (buffer[i - 3] == '\r' && buffer[i - 2] == '\n' && buffer[i - 1] == '\r' && buffer[i] == '\n') {
-                        var headerText = Encoding.ASCII.GetString(buffer, 0, i + 1);
+                        var headerText = Encoding.UTF8.GetString(buffer, 0, i + 1);
                         ValidateStatus(headerText);
                         return;
                     }
@@ -107,6 +120,9 @@ public class HttpsProxyClient(HttpsProxyOptions options)
             throw new IOException("Invalid HTTP proxy status line.");
 
         if (code != 200)
-            throw new IOException($"HTTP proxy CONNECT failed with status {code}.");
+            throw new HttpRequestException(
+                message: $"HTTP proxy CONNECT failed with status {code}.", 
+                inner: null,
+                statusCode: (HttpStatusCode)code);
     }
 }

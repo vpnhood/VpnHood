@@ -12,7 +12,7 @@ public interface IAppUiProvider
     Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken);
 
     bool IsSystemPrivateDnsSettingsSupported { get; }
-    
+
     bool IsSystemSettingsSupported { get; }
     void OpenSystemSettings(IUiContext uiContext);
 
@@ -28,6 +28,6 @@ public interface IAppUiProvider
     bool IsAppSystemNotificationSettingsSupported { get; }
     void OpenAppSystemNotificationSettings(IUiContext uiContext);
 
-    
+
     SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext);
 }

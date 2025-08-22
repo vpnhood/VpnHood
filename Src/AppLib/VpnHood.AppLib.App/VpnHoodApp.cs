@@ -826,34 +826,32 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // QuickLaunch
         if (Services.UiProvider.IsRequestQuickLaunchSupported &&
             IsPremiumFeatureAllowed(AppFeature.QuickLaunch) &&
-            Settings.IsQuickLaunchEnabled is null &&
+            !Settings.IsQuickLaunchRequested  &&
             _appPersistState.SuccessfulConnectionsCount > 3) {
             try {
                 VhLogger.Instance.LogInformation("Prompting for Quick Launch...");
-                Settings.IsQuickLaunchEnabled =
-                    await Services.UiProvider
-                        .RequestQuickLaunch(uiContext, cancellationToken).Vhc();
+                await Services.UiProvider.RequestQuickLaunch(uiContext, cancellationToken).Vhc();
             }
             catch (Exception ex) {
                 ReportError(ex, "Could not add QuickLaunch.");
             }
 
+            Settings.IsQuickLaunchRequested = true;
             Settings.Save();
         }
 
         // Notification
         if (Services.UiProvider.IsRequestNotificationSupported &&
-            Settings.IsNotificationEnabled is null) {
+            !Settings.IsNotificationRequested) {
             try {
                 VhLogger.Instance.LogInformation("Prompting for notifications...");
-                Settings.IsNotificationEnabled =
-                    await Services.UiProvider
-                        .RequestNotification(uiContext, cancellationToken).Vhc();
+                await Services.UiProvider.RequestNotification(uiContext, cancellationToken).Vhc();
             }
             catch (Exception ex) {
                 ReportError(ex, "Could not enable Notification.");
             }
 
+            Settings.IsNotificationRequested = true;
             Settings.Save();
         }
     }

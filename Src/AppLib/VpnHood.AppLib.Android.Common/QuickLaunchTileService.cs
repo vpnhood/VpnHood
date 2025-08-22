@@ -76,7 +76,7 @@ public class QuickLaunchTileService : TileService
     public override void OnTileAdded()
     {
         VhLogger.Instance.LogDebug("OnTileAdded is requested.");
-        VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled = true;
+        VpnHoodApp.Instance.Settings.IsQuickLaunchRequested = true;
         VpnHoodApp.Instance.Settings.Save();
         base.OnTileAdded();
         Refresh();
@@ -85,7 +85,7 @@ public class QuickLaunchTileService : TileService
     public override void OnTileRemoved()
     {
         VhLogger.Instance.LogDebug("OnTileRemoved is requested.");
-        VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled = false;
+        VpnHoodApp.Instance.Settings.IsQuickLaunchRequested = false;
         VpnHoodApp.Instance.Settings.Save();
         base.OnTileRemoved();
     }
@@ -95,8 +95,8 @@ public class QuickLaunchTileService : TileService
     {
         VhLogger.Instance.LogDebug("OnStartListening is requested.");
         base.OnStartListening();
-        if (VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled == false) {
-            VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled = true;
+        if (VpnHoodApp.Instance.Settings.IsQuickLaunchRequested == false) {
+            VpnHoodApp.Instance.Settings.IsQuickLaunchRequested = true;
             VpnHoodApp.Instance.Settings.Save();
         }
 

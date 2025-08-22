@@ -7,8 +7,8 @@ public class AppSettings
 {
     public int Version { get; set; } = 2;
     public string ClientId { get; set; } = Guid.NewGuid().ToString();
-    public bool? IsQuickLaunchEnabled { get; set; }
-    public bool? IsNotificationEnabled { get; set; }
+    public bool IsQuickLaunchRequested { get; set; }
+    public bool IsNotificationRequested { get; set; }
     public UserReview? UserReview { get; set; }
     public bool IsStartupTrackerSent { get; set; }
     public IpLocation? ClientIpLocation { get; set; }

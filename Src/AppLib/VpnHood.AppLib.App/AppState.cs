@@ -28,6 +28,7 @@ public class AppState
     public required bool CanChangeTcpProxy { get; init; }
     public required bool IsTcpProxy { get; init; }
     public required bool IsUserReviewRecommended { get; init; }
+    public required bool IsQuickLaunchRecommended { get; init; }
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }
     public required BillingPurchaseState? PurchaseState { get; init; }

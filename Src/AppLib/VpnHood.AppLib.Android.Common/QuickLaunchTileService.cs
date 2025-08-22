@@ -76,8 +76,7 @@ public class QuickLaunchTileService : TileService
     public override void OnTileAdded()
     {
         VhLogger.Instance.LogDebug("OnTileAdded is requested.");
-        VpnHoodApp.Instance.Settings.IsQuickLaunchRequested = true;
-        VpnHoodApp.Instance.Settings.Save();
+        DisableQuickLaunchPrompt();
         base.OnTileAdded();
         Refresh();
     }
@@ -85,8 +84,7 @@ public class QuickLaunchTileService : TileService
     public override void OnTileRemoved()
     {
         VhLogger.Instance.LogDebug("OnTileRemoved is requested.");
-        VpnHoodApp.Instance.Settings.IsQuickLaunchRequested = false;
-        VpnHoodApp.Instance.Settings.Save();
+        DisableQuickLaunchPrompt();
         base.OnTileRemoved();
     }
 
@@ -95,12 +93,19 @@ public class QuickLaunchTileService : TileService
     {
         VhLogger.Instance.LogDebug("OnStartListening is requested.");
         base.OnStartListening();
-        if (VpnHoodApp.Instance.Settings.IsQuickLaunchRequested == false) {
-            VpnHoodApp.Instance.Settings.IsQuickLaunchRequested = true;
-            VpnHoodApp.Instance.Settings.Save();
-        }
-
+        DisableQuickLaunchPrompt();
         Refresh();
+    }
+
+    private void DisableQuickLaunchPrompt()
+    {
+        // User already has interacted with the tile
+        // Do not prompt for it again
+        if (VpnHoodApp.Instance.Settings.UserSettings.IsQuickLaunchPrompted)
+            return;
+
+        VpnHoodApp.Instance.Settings.UserSettings.IsQuickLaunchPrompted = true;
+        VpnHoodApp.Instance.Settings.Save();
     }
 
     private void Refresh()

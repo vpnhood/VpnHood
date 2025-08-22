@@ -7,7 +7,6 @@ public class AppSettings
 {
     public int Version { get; set; } = 2;
     public string ClientId { get; set; } = Guid.NewGuid().ToString();
-    public bool IsQuickLaunchRequested { get; set; }
     public bool IsNotificationRequested { get; set; }
     public UserReview? UserReview { get; set; }
     public bool IsStartupTrackerSent { get; set; }

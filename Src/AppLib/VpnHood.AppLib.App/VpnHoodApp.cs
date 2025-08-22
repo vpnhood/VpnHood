@@ -78,6 +78,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private UserSettings _oldUserSettings;
     private bool _isConnecting;
     private bool _isUserReviewRecommended;
+    private bool _quickLaunchRecommended;
 
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -358,6 +359,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CanDiagnose = connectionState.CanDiagnose(_appPersistState.HasDiagnoseRequested),
                 CanDisconnect = connectionState.CanDisconnect(),
                 IsUserReviewRecommended = _isUserReviewRecommended,
+                IsQuickLaunchRecommended = _quickLaunchRecommended,
                 IsIdle = IsIdle,
                 PromptForLog = IsIdle && _appPersistState.HasDiagnoseRequested && _logService.Exists,
                 LogExists = _logService.Exists,
@@ -828,18 +830,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // QuickLaunch
         if (Services.UiProvider.IsRequestQuickLaunchSupported &&
             IsPremiumFeatureAllowed(AppFeature.QuickLaunch) &&
-            !Settings.IsQuickLaunchRequested  &&
+            !_quickLaunchRecommended &&
+            !Settings.UserSettings.IsQuickLaunchPrompted &&
             _appPersistState.SuccessfulConnectionsCount > 3) {
-            try {
-                VhLogger.Instance.LogInformation("Prompting for Quick Launch...");
-                await Services.UiProvider.RequestQuickLaunch(uiContext, cancellationToken).Vhc();
-            }
-            catch (Exception ex) {
-                ReportError(ex, "Could not add QuickLaunch.");
-            }
-
-            Settings.IsQuickLaunchRequested = true;
-            Settings.Save();
+            
+            VhLogger.Instance.LogInformation("Recommending for quick launch...");
+            _quickLaunchRecommended = true;
         }
 
         // Notification

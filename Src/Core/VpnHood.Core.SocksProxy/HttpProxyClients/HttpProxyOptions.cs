@@ -1,8 +1,8 @@
 using System.Net;
 
-namespace VpnHood.Core.SocksProxy.HttpsProxy;
+namespace VpnHood.Core.SocksProxy.HttpProxyClients;
 
-public class HttpsProxyOptions
+public class HttpProxyOptions
 {
     public required IPEndPoint ProxyEndPoint { get; init; }
     public string? ProxyHost { get; init; }

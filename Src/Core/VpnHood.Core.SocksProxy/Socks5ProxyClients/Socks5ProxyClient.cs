@@ -2,13 +2,13 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-namespace VpnHood.Core.SocksProxy.Socks5Proxy;
+namespace VpnHood.Core.SocksProxy.Socks5ProxyClients;
 
-public class Socks5Client(Socks5Options options) : IClientProxy
+public class Socks5ProxyClient(Socks5ClientProxyOptions clientProxyOptions) : IProxyClient
 {
-    public IPEndPoint ProxyEndPoint { get; } = options.ProxyEndPoint;
-    private readonly string? _username = options.Username;
-    private readonly string? _password = options.Password;
+    public IPEndPoint ProxyEndPoint { get; } = clientProxyOptions.ProxyEndPoint;
+    private readonly string? _username = clientProxyOptions.Username;
+    private readonly string? _password = clientProxyOptions.Password;
     private bool _isAuthenticated;
 
     public async Task ConnectAsync(TcpClient tcpClient, string host, int port, CancellationToken cancellationToken)
@@ -64,7 +64,7 @@ public class Socks5Client(Socks5Options options) : IClientProxy
     public async Task<IPEndPoint> CreateUdpAssociateAsync(TcpClient tcpClient, IPEndPoint? clientUdpEndPoint,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(clientProxyOptions);
         if (!tcpClient.Connected)
             await tcpClient.ConnectAsync(ProxyEndPoint, cancellationToken);
 
@@ -78,7 +78,7 @@ public class Socks5Client(Socks5Options options) : IClientProxy
         if (boundAddress == null)
             throw new NotSupportedException("Proxy returned an unsupported address type for UDP ASSOCIATE.");
 
-        // RFC: if BND.ADDR is 0.0.0.0 (or ::), use the proxy's address for sending datagrams.
+        // RFC: if BND.ADDRESS is 0.0.0.0 (or ::), use the proxy's address for sending datagrams.
         var ipAddress = (boundAddress.Equals(IPAddress.Any) || boundAddress.Equals(IPAddress.IPv6Any))
             ? ProxyEndPoint.Address
             : boundAddress;
@@ -172,7 +172,7 @@ public class Socks5Client(Socks5Options options) : IClientProxy
         await stream.WriteAsync(request, cancellationToken);
         await stream.FlushAsync(cancellationToken);
 
-        // Reply: VER, REP, RSV, ATYP, BND.ADDR, BND.PORT
+        // Reply: VER, REP, RSV, ADDRESS_TYPE, BND.ADDRESS, BND.PORT
         var header = new byte[4];
         await stream.ReadExactlyAsync(header, cancellationToken);
         if (header[0] != 5)
@@ -211,15 +211,15 @@ public class Socks5Client(Socks5Options options) : IClientProxy
     {
         var replyCode = (Socks5CommandReply)response[1];
         Exception exception = replyCode switch {
-            Socks5CommandReply.GeneralSocksServerFailure => new ProxyServerException(SocketError.SocketError),
-            Socks5CommandReply.ConnectionNotAllowedByRuleset => new ProxyServerException(SocketError.AccessDenied),
-            Socks5CommandReply.NetworkUnreachable => new ProxyServerException(SocketError.NetworkUnreachable),
-            Socks5CommandReply.HostUnreachable => new ProxyServerException(SocketError.HostUnreachable),
-            Socks5CommandReply.ConnectionRefused => new ProxyServerException(SocketError.ConnectionRefused),
-            Socks5CommandReply.TtlExpired => new ProxyServerException(SocketError.SocketError, "TLS Expired"),
-            Socks5CommandReply.CommandNotSupported => new ProxyServerException(SocketError.OperationNotSupported),
-            Socks5CommandReply.AddressTypeNotSupported => new ProxyServerException(SocketError.AddressFamilyNotSupported),
-            _ => new ProxyServerException(SocketError.ProtocolNotSupported)
+            Socks5CommandReply.GeneralSocksServerFailure => new ProxyClientException(SocketError.SocketError),
+            Socks5CommandReply.ConnectionNotAllowedByRuleset => new ProxyClientException(SocketError.AccessDenied),
+            Socks5CommandReply.NetworkUnreachable => new ProxyClientException(SocketError.NetworkUnreachable),
+            Socks5CommandReply.HostUnreachable => new ProxyClientException(SocketError.HostUnreachable),
+            Socks5CommandReply.ConnectionRefused => new ProxyClientException(SocketError.ConnectionRefused),
+            Socks5CommandReply.TtlExpired => new ProxyClientException(SocketError.SocketError, "TLS Expired"),
+            Socks5CommandReply.CommandNotSupported => new ProxyClientException(SocketError.OperationNotSupported),
+            Socks5CommandReply.AddressTypeNotSupported => new ProxyClientException(SocketError.AddressFamilyNotSupported),
+            _ => new ProxyClientException(SocketError.ProtocolNotSupported)
         };
 
         throw exception;

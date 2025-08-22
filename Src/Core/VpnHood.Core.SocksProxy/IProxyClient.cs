@@ -3,7 +3,7 @@ using System.Net.Sockets;
 
 namespace VpnHood.Core.SocksProxy;
 
-public interface IClientProxy
+public interface IProxyClient
 {
     Task ConnectAsync(TcpClient tcpClient, string host, int port, CancellationToken cancellationToken);
 

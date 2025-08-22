@@ -4,9 +4,9 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
-namespace VpnHood.Core.SocksProxy.HttpsProxy;
+namespace VpnHood.Core.SocksProxy.HttpProxyClients;
 
-public class HttpsProxyClient(HttpsProxyOptions options) : IClientProxy
+public class HttpProxyClient(HttpProxyOptions options) : IProxyClient
 {
     public async Task ConnectAsync(TcpClient tcpClient, IPEndPoint destination, CancellationToken cancellationToken)
         => await ConnectAsync(tcpClient, destination.Address.ToString(), destination.Port, cancellationToken).ConfigureAwait(false);

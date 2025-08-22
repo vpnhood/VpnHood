@@ -26,7 +26,7 @@ public abstract class UdpChannelTransmitter : IDisposable
     public TransferBufferSize? BufferSize {
         get => new (_udpClient.Client.SendBufferSize, _udpClient.Client.ReceiveBufferSize);
         set {
-            using var udpClient = new UdpClient();
+            using var udpClient = new UdpClient(_udpClient.Client.AddressFamily);
             _udpClient.Client.SendBufferSize = value?.Send > 0 ? value.Value.Send : udpClient.Client.SendBufferSize;
             _udpClient.Client.ReceiveTimeout = value?.Receive > 0 ? value.Value.Receive : udpClient.Client.ReceiveTimeout;
         }

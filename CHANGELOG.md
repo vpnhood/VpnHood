@@ -6,6 +6,7 @@
 * Update: Load ads when DNS is configured  
 * Update: Increase connection timeout
 * Fix: InAppReview
+* Fix: UDP Channel on android
 
 # v7.3.737
 * Fix: Preload ad in some regions

@@ -13,7 +13,7 @@ public class TestConstants
     public static Uri HttpsUri2 => new($"https://{HttpsEndPoint2}/file2");
     public static Uri HttpsRefusedUri => new($"https://{TcpRefusedEndPoint}/file2");
     public static Uri HttpsBlockedUri => new($"https://{TcpBlockedEndPoint}/file2");
-    public static Uri HttpsExternalUri1 => new("https://www.wireshark.org/tools/v46status.html/"); //make sure always return same ips
+    public static Uri HttpsExternalUri1 => new("https://www.wireshark.org/"); //make sure always return same ips
     public static Uri HttpsExternalUri2 => new("https://ip4.me/"); //make sure always return same ips
     public static IPEndPoint NsEndPoint1 => IPEndPoint.Parse("1.1.1.1:53");
     public static IPEndPoint NsEndPoint2 => IPEndPoint.Parse("1.0.0.1:53");

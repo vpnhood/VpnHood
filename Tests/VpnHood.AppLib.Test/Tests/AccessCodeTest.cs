@@ -19,12 +19,6 @@ public class AccessCodeTest : TestAppBase
         Console.WriteLine(tcpClient.SendBufferSize);
         await Task.CompletedTask;
 
-        TaskCompletionSource cts = new();
-        cts.SetException(new Exception("sss"));
-        Task[] tasks = [Task.CompletedTask, cts.Task];
-        while (tasks.Any(x => !x.IsCompleted))
-            await Task.WhenAny(tasks.Select(x => x)).Vhc();
-
     }
 
     [TestMethod]

@@ -553,26 +553,26 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             throw new Exception("Server does not serve any UDP endpoint.");
         }
 
-        var udpChannel = ClientUdpChannelFactory.Create(
-            new ClientUdpChannelOptions {
-                SocketFactory = SocketFactory,
-                ServerKey = ServerSecret,
-                RemoteEndPoint = HostUdpEndPoint,
-                SessionKey = _sessionKey,
-                SessionId = SessionId,
-                ProtocolVersion = ConnectorService.ProtocolVersion,
-                AutoDisposePackets = true,
-                Blocking = true,
-                ChannelId = Guid.NewGuid().ToString(),
-                Lifespan = null,
-                BufferSize = TunnelDefaults.ClientUdpChannelBufferSize
-            });
-
+        UdpChannel? udpChannel = null;
         try {
+            udpChannel = ClientUdpChannelFactory.Create(
+                new ClientUdpChannelOptions {
+                    SocketFactory = SocketFactory,
+                    ServerKey = ServerSecret,
+                    RemoteEndPoint = HostUdpEndPoint,
+                    SessionKey = _sessionKey,
+                    SessionId = SessionId,
+                    ProtocolVersion = ConnectorService.ProtocolVersion,
+                    AutoDisposePackets = true,
+                    Blocking = true,
+                    ChannelId = Guid.NewGuid().ToString(),
+                    Lifespan = null,
+                    BufferSize = TunnelDefaults.ClientUdpChannelBufferSize
+                });
             _tunnel.AddChannel(udpChannel);
         }
         catch {
-            udpChannel.Dispose();
+            udpChannel?.Dispose();
             UseUdpChannel = false;
             throw;
         }

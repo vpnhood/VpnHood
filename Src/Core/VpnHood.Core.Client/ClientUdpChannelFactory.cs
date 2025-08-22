@@ -25,8 +25,8 @@ public class ClientUdpChannelFactory
         try {
             transmitter = new ClientUdpChannelTransmitter(udpClient, options.ServerKey);
             var udpChannel = new UdpChannel(transmitter, options);
-            transmitter.BufferSize = options.BufferSize;
             transmitter.UdpChannel = udpChannel;
+            transmitter.BufferSize = options.BufferSize;
             return udpChannel;
         }
         catch {

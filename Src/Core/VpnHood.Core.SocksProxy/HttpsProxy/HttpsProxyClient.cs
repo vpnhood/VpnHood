@@ -6,15 +6,19 @@ using System.Text;
 
 namespace VpnHood.Core.SocksProxy.HttpsProxy;
 
-public class HttpsProxyClient(HttpsProxyOptions options)
+public class HttpsProxyClient(HttpsProxyOptions options) : IClientProxy
 {
+    public async Task ConnectAsync(TcpClient tcpClient, IPEndPoint destination, CancellationToken cancellationToken)
+        => await ConnectAsync(tcpClient, destination.Address.ToString(), destination.Port, cancellationToken).ConfigureAwait(false);
+
     public async Task ConnectAsync(TcpClient tcpClient, string host, int port, CancellationToken cancellationToken)
     {
         try {
-            await tcpClient.ConnectAsync(options.ProxyEndPoint, cancellationToken).ConfigureAwait(false);
+            if (!tcpClient.Connected)
+                await tcpClient.ConnectAsync(options.ProxyEndPoint, cancellationToken).ConfigureAwait(false);
+
             Stream stream = tcpClient.GetStream();
 
-            // If TLS is enabled, wrap the stream in an SslStream
             if (options.UseTls) {
                 var ssl = new SslStream(stream, leaveInnerStreamOpen: true, UserCertificateValidationCallback);
                 await ssl.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
@@ -25,7 +29,6 @@ public class HttpsProxyClient(HttpsProxyOptions options)
                 stream = ssl;
             }
 
-            // Send the CONNECT request to the proxy
             await SendConnectRequest(stream, host, port, cancellationToken).ConfigureAwait(false);
             await ReadConnectResponse(stream, cancellationToken).ConfigureAwait(false);
         }
@@ -98,6 +101,7 @@ public class HttpsProxyClient(HttpsProxyOptions options)
         var parts = statusLine.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length < 2 || !int.TryParse(parts[1], out var code))
             throw new IOException("Invalid HTTP proxy status line.");
+
         if (code != 200)
             throw new HttpRequestException(message: $"HTTP proxy CONNECT failed with status {code}.", inner: null, statusCode: (HttpStatusCode)code);
     }

@@ -4,13 +4,19 @@ using System.Text;
 
 namespace VpnHood.Core.SocksProxy.Socks5Proxy;
 
-public class Socks5Client(Socks5Options options)
+public class Socks5Client(Socks5Options options) : IClientProxy
 {
     public IPEndPoint ProxyEndPoint { get; } = options.ProxyEndPoint;
     private readonly string? _username = options.Username;
     private readonly string? _password = options.Password;
     private bool _isAuthenticated;
-    
+
+    public async Task ConnectAsync(TcpClient tcpClient, string host, int port, CancellationToken cancellationToken)
+    {
+        var addresses = await Dns.GetHostAddressesAsync(host, cancellationToken).ConfigureAwait(false);
+        var ip = Array.Find(addresses, a => a.AddressFamily == AddressFamily.InterNetwork) ?? addresses[0];
+        await ConnectAsync(tcpClient, new IPEndPoint(ip, port), cancellationToken).ConfigureAwait(false);
+    }
 
     public async Task<TimeSpan> CheckConnectionAsync(TcpClient tcpClient, CancellationToken cancellationToken)
     {
@@ -188,7 +194,7 @@ public class Socks5Client(Socks5Options options)
             (byte)Socks5AddressType.IpV4 => (4, false),
             (byte)Socks5AddressType.IpV6 => (16, false),
             (byte)Socks5AddressType.DomainName => (0, true),
-            _ => throw new NotSupportedException("Unsupported ATYP in reply.")
+            _ => throw new NotSupportedException("Unsupported AddressType in reply.")
         };
 
         if (hasDomainLenByte) {

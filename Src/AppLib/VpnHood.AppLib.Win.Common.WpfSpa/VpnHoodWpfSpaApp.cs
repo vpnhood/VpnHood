@@ -78,9 +78,14 @@ public abstract class VpnHoodWpfSpaApp : Application
     protected override void OnExit(ExitEventArgs e)
     {
         VpnHoodWinApp.Instance.Dispose();
-        if (VpnHoodAppWebServer.IsInit) VpnHoodAppWebServer.Instance.Dispose();
-        if (VpnHoodApp.IsInit) VpnHoodApp.Instance.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5));
-
+        if (VpnHoodApp.IsInit) {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            VpnHoodApp.Instance.TryDisconnect().Wait(cts.Token);
+            if (VpnHoodAppWebServer.IsInit) VpnHoodAppWebServer.Instance.Dispose();
+            VpnHoodApp.Instance.DisposeAsync().AsTask().Wait(cts.Token);
+        }
+        
+        // Service has not been implemented on windows yet, so let disconnect gracefully
         base.OnExit(e);
     }
 }

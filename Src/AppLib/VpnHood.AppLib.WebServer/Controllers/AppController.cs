@@ -34,7 +34,7 @@ internal class AppController : WebApiController, IAppController
         var ret = new AppData {
             Features = App.Features,
             IntentFeatures = new AppIntentFeatures(App.Services.UiProvider, App.Services.UserReviewProvider),
-            Settings = App.Settings,
+            UserSettings = App.UserSettings,
             ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),
             State = App.State,
             AvailableCultureInfos = App.Services.CultureProvider.AvailableCultures

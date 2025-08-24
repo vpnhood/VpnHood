@@ -23,7 +23,6 @@ public class ClientUdpChannelFactory
         var udpClient = options.SocketFactory.CreateUdpClient(options.RemoteEndPoint.AddressFamily);
         ClientUdpChannelTransmitter? transmitter = null;
         try {
-            var zz = udpClient.Client;
             transmitter = new ClientUdpChannelTransmitter(udpClient, options.ServerKey);
             var udpChannel = new UdpChannel(transmitter, options);
             transmitter.BufferSize = options.BufferSize;

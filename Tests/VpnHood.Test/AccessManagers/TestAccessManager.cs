@@ -25,7 +25,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public bool RejectAllAds { get; set; }
     public bool CanExtendPremiumByAd { get; set; }
     public Dictionary<string, string> AccessCodes { get; set; } = new();
-    public bool IsUserReviewRecommended { get; set; }
+    public int UserReviewRecommended { get; set; }
     public UserReview? UserReview { get; set; }
 
     public void AddAdData(string adData)
@@ -117,7 +117,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     {
         if (sessionResponse.AccessUsage != null) {
             sessionResponse.AccessUsage.CanExtendByRewardedAd = CanExtendPremiumByAd;
-            sessionResponse.AccessUsage.IsUserReviewRecommended = IsUserReviewRecommended;
+            sessionResponse.AccessUsage.UserReviewRecommended = UserReviewRecommended;
         }
 
     }

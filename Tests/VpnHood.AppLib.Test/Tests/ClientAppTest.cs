@@ -591,7 +591,7 @@ public class ClientAppTest : TestAppBase
 
         // access manager set UserReviewRecommended
         Assert.IsFalse(testUserReviewProvider.IsReviewRequested);
-        accessManager.IsUserReviewRecommended = true;
+        accessManager.UserReviewRecommended = 2;
 
         await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
         await VhTestUtil.AssertEqualsWait(1, () => server.SessionManager.Sync(true));
@@ -603,12 +603,12 @@ public class ClientAppTest : TestAppBase
         await app.Disconnect();
 
         // client set rating
-            Assert.IsTrue(app.State.IsUserReviewRecommended);
+        Assert.AreEqual(accessManager.UserReviewRecommended, app.State.UserReviewRecommended);
 
         // UserReviewRecommended must be reset
         var beforeSetRateTime = FastDateTime.UtcNow;
         app.SetUserReview(3, "message");
-        Assert.IsFalse(app.State.IsUserReviewRecommended, "It must be reset after rating.");
+        Assert.AreEqual(0, app.State.UserReviewRecommended, "It must be reset after rating.");
         Assert.IsTrue(app.Settings.UserReview?.Time >= beforeSetRateTime);
         Assert.AreEqual(3, app.Settings.UserReview.Rating);
         Assert.AreEqual(app.Features.Version, app.Settings.UserReview.AppVersion);

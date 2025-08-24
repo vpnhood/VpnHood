@@ -27,7 +27,7 @@ public class AppState
     public required bool CanDiagnose { get; init; }
     public required bool CanChangeTcpProxy { get; init; }
     public required bool IsTcpProxy { get; init; }
-    public required bool IsUserReviewRecommended { get; init; }
+    public required int UserReviewRecommended { get; init; }
     public required bool IsQuickLaunchRecommended { get; init; }
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }

@@ -8,7 +8,11 @@ public class AccessUsage
     public bool CanExtendByRewardedAd { get; set; }
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [Obsolete]
     public bool IsUserReviewRecommended { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int UserReviewRecommended { get; set; }
 
     public bool IsPremium { get; set; } // session premium
     public Traffic CycleTraffic { get; set; } = new(); // total traffic

@@ -1183,7 +1183,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public bool IsUdpMode => client.UseUdpChannel;
         public bool IsTcpProxy => client.IsTcpProxy;
         public bool CanExtendByRewardedAd => _accessUsage.CanExtendByRewardedAd;
-        public bool IsUserReviewRecommended => _accessUsage.IsUserReviewRecommended;
+        public int UserReviewRecommended => _accessUsage.UserReviewRecommended;
         public long SessionMaxTraffic => _accessUsage.MaxTraffic;
         public DateTime? SessionExpirationTime => _accessUsage.ExpirationTime;
         public int? ActiveClientCount => _accessUsage.ActiveClientCount;

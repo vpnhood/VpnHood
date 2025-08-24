@@ -77,7 +77,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private CultureInfo? _systemUiCulture;
     private UserSettings _oldUserSettings;
     private bool _isConnecting;
-    private bool _isUserReviewRecommended;
+    private int _userReviewRecommended;
     private bool _quickLaunchRecommended;
 
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
@@ -358,7 +358,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CanConnect = connectionState.CanConnect(),
                 CanDiagnose = connectionState.CanDiagnose(_appPersistState.HasDiagnoseRequested),
                 CanDisconnect = connectionState.CanDisconnect(),
-                IsUserReviewRecommended = _isUserReviewRecommended,
+                UserReviewRecommended = _userReviewRecommended,
                 IsQuickLaunchRecommended = _quickLaunchRecommended,
                 IsIdle = IsIdle,
                 PromptForLog = IsIdle && _appPersistState.HasDiagnoseRequested && _logService.Exists,
@@ -508,7 +508,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _connectCts = new CancellationTokenSource();
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectCts.Token);
             _isConnecting = true; //must be after checking IsIdle
-            _isUserReviewRecommended = false; // UI may call ClearLastError, so it my close immediately
+            _userReviewRecommended = 0; // UI may call ClearLastError, so it my close immediately
             ClearLastError();
             await ConnectInternal1(connectOptions, linkedCts.Token);
         }
@@ -967,7 +967,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public void SetUserReview(int rating, string reviewText)
     {
-        _isUserReviewRecommended = false;
+        _userReviewRecommended = 0;
         Settings.UserReview = new UserReview {
             AppVersion = Features.Version,
             Rating = rating,
@@ -1054,15 +1054,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 _appPersistState.SuccessfulConnectionsCount++;
 
             // set review needed after disconnecting. It must be in connected state
-            _isUserReviewRecommended =
-                state.ConnectionState is AppConnectionState.Connected &&
-                _appPersistState.LastError is null &&
-                _allowRecommendUserReviewByServer &&
-                Features.IsUserReviewSupported &&
-                ConnectionInfo.SessionStatus?.IsUserReviewRecommended == true;
+            var sessionUserReviewRecommended = ConnectionInfo.SessionStatus?.UserReviewRecommended ?? 0;
+            if (state.ConnectionState is AppConnectionState.Connected &&
+                _appPersistState.LastError is null && _allowRecommendUserReviewByServer &&
+                Features.IsUserReviewSupported && sessionUserReviewRecommended > 0)
+                _userReviewRecommended = sessionUserReviewRecommended;
 
             // set user review recommended if debug command is enabled
-            _isUserReviewRecommended |= HasDebugCommand(DebugCommands.UserReview);
+            if (HasDebugCommand(DebugCommands.UserReview))
+                _userReviewRecommended = 2;
 
             // set after performing on disconnect task, because it will change the state
             _isDisconnecting = true;

@@ -20,7 +20,7 @@ public interface ISessionStatus
     bool IsUdpMode { get; }
     bool IsTcpProxy { get; }
     bool CanExtendByRewardedAd { get; }
-    bool IsUserReviewRecommended { get; }
+    int UserReviewRecommended { get; }
     long SessionMaxTraffic { get; }
     DateTime? SessionExpirationTime { get; }
     int? ActiveClientCount { get; }

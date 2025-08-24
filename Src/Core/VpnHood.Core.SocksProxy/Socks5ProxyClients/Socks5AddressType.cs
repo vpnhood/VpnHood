@@ -1,8 +1,0 @@
-namespace VpnHood.Core.SocksProxy.Socks5ProxyClients;
-
-public enum Socks5AddressType : byte
-{
-    IpV4 = 0x01,
-    DomainName = 0x03,
-    IpV6 = 0x04
-}

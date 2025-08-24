@@ -304,7 +304,6 @@ internal class ClientHost(
         }
     }
 
-
     public void Dispose()
     {
         if (_disposed)

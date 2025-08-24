@@ -2,10 +2,10 @@
 
 public class ProxyServerStatus
 {
-    public ProxyServerState State { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int Penalty { get; set; }
     public int SucceededCount { get; set; }
     public int FailedCount { get; set; }
-    public int TotalFailedCount { get; set; }
-    public TimeSpan LastResponseDuration { get; set; }
-    public DateTime LastConnectionTime { get; set; }
+    public TimeSpan Latency { get; set; }
+    public DateTime ConnectionTime { get; set; }
 }

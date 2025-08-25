@@ -173,6 +173,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             GaMeasurementId = options.Ga4MeasurementId,
             ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId),
             AppId = options.AppId,
+            AppName = options.Resources.Strings.AppName,
             DebugCommands = DebugCommands.All,
             IsLocalNetworkSupported = options.IsLocalNetworkSupported,
             IsDebugMode = options.IsDebugMode,
@@ -221,8 +222,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             extendByRewardedAdThreshold: options.AdOptions.ExtendByRewardedAdThreshold,
             showAdPostDelay: options.AdOptions.ShowAdPostDelay,
             isPreloadAdEnabled: options.AdOptions.PreloadAd,
-            rejectAdBlocker: settingsService.RemoteSettings?.RejectAdBlocker ?? options.AdOptions.RejectAdBlocker);
-
+            rejectAdBlocker: options.AdOptions.RejectAdBlocker);
 
         // Apply settings but no error on startup
         ApplySettings();

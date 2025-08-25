@@ -6,6 +6,7 @@ namespace VpnHood.AppLib;
 public class AppFeatures
 {
     public required string AppId { get; init; }
+    public required string AppName { get; init; }
     public required bool IsExcludeAppsSupported { get; init; }
     public required bool IsIncludeAppsSupported { get; init; }
     public required string? UiName { get; init; }

@@ -1,4 +1,4 @@
-# Upcoming
+# v7.3.742
 * Feature: Extract Client IP from reserve proxies
 * Feature: Add AllowTcpProxy option
 * Feature: Add AllowTcpPacket option

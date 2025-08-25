@@ -44,7 +44,7 @@ if ($mainRepo) {
 	# publish using github CLI: https://github.com/github/hub
 	$androidGoogleLatestDir = Join-Path $pubDir "Android.GooglePlay/apk/latest";
 
-	gh release delete "$versionTag" --cleanup-tag --yes;
+	gh release delete "$versionTag" --cleanup-tag --yes > $null 2>&1;
 	gh release create "$versionTag" `
 		--title "$versionTag" `
 		(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `
@@ -80,7 +80,7 @@ if ($connectRepo) {
 	# Publishing to GitHub
 	Push-Location -Path $connectRepoDir;
 
-	gh release delete "$versionTag" --cleanup-tag --yes;
+	gh release delete "$versionTag" --cleanup-tag --yes > $null 2>&1;
 	gh release create "$versionTag" `
 		--title "$versionTag" `
 		(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `

@@ -1,4 +1,4 @@
-# Upcoming  
+# v7.3.742
 * Feature: Detect device ad blocker using DNS over TLS  
 * Feature: Allow to disable VpnHood Cloak mode
 * Feature: Smart prompt for user reviews  

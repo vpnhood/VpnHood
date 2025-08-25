@@ -36,7 +36,6 @@ if ($nugets) {
 	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.LinuxTun/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.WinDivert/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Common/_publish.ps1";
-	& "$solutionDir/Src/Core/VpnHood.Core.SocksProxy/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Tunneling/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Abstractions/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client/_publish.ps1";

@@ -7,9 +7,6 @@ param(
 	[switch]$apk, [switch]$aab)
 
 . "$PSScriptRoot/Common.ps1"
-set MSBuildDisableNodeReuse=1 # todo: test to fix TargetFrameworks for your project
-
-
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 
 Write-Host "";

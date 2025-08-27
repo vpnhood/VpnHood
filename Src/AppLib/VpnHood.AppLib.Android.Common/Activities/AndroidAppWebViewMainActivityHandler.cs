@@ -1,5 +1,4 @@
 ﻿using System.Web;
-using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
@@ -10,7 +9,6 @@ using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;
 
@@ -28,7 +26,7 @@ public class AndroidAppWebViewMainActivityHandler(
         base.OnCreate(savedInstanceState);
 
         // initialize web view
-        InitLoadingPage();
+        AndroidAppLoader.Init(ActivityEvent.Activity);
 
         // Initialize UI
         Task.Run(InitTask);
@@ -58,28 +56,7 @@ public class AndroidAppWebViewMainActivityHandler(
         AndroidUtil.RunOnUiThread(ActivityEvent.Activity, InitWebUi);
         return Task.CompletedTask;
     }
-    private void InitLoadingPage()
-    {
-        ActivityEvent.Activity.SetContentView(_Microsoft.Android.Resource.Designer.Resource.Layout.progressbar);
-
-        // set window background color
-        var linearLayout = ActivityEvent.Activity.FindViewById<LinearLayout>(
-                _Microsoft.Android.Resource.Designer.Resource.Id.myLayout);
-
-        var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
-        if (linearLayout != null && backgroundColor != null)
-            VhUtils.TryInvoke("linearLayout.SetBackgroundColor", () =>
-                linearLayout.SetBackgroundColor(backgroundColor.Value));
-
-        // set progressbar color
-        var progressBarColor = VpnHoodApp.Instance.Resources.Colors.ProgressBarColor?.ToAndroidColor();
-        var progressBar = ActivityEvent.Activity.FindViewById<ProgressBar>(
-                _Microsoft.Android.Resource.Designer.Resource.Id.progressBar);
-
-        if (progressBar != null && progressBarColor != null)
-            VhUtils.TryInvoke("progressBar.IndeterminateTintList", () =>
-                progressBar.IndeterminateTintList = ColorStateList.ValueOf(progressBarColor.Value));
-    }
+  
 
     private static string GetChromeVersionFromUserAgent(string? userAgent)
     {

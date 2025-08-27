@@ -10,13 +10,11 @@
 
 # v7.3.737
 * Fix: Preload ad in some regions
-* Feature: Show unstable connection
-
-# v7.3.737
 * Fix: Critical issue: Random inability to connect at startup
 * Fix: Internal crash in logger when closing the service
 * Fix: VpnService is unreachable
 * Fix: Android: Always-on VPN
+* Feature: Show unstable connection
 * Feature: Custom Server Address for each access token
 * Update: Android: Postpone asking for QuickLaunch
 

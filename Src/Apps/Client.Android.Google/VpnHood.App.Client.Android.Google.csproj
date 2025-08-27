@@ -16,12 +16,12 @@
 
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
 		<!--android-arm is required for some android TVs-->
-		<UseCurrentRuntimeIdentifier>false</UseCurrentRuntimeIdentifier>
+		<!--<UseCurrentRuntimeIdentifier>false</UseCurrentRuntimeIdentifier>-->
 		<RuntimeIdentifier>android-arm64</RuntimeIdentifier>
 		<RuntimeIdentifiers>android-arm64;android-x64;android-arm;android-x86;</RuntimeIdentifiers>
-		<PublishTrimmed>True</PublishTrimmed>
-		<RunAOTCompilation>True</RunAOTCompilation>
-		<AndroidLinkTool>r8</AndroidLinkTool>
+		<PublishTrimmed>False</PublishTrimmed>
+		<RunAOTCompilation>False</RunAOTCompilation>
+		<!--<AndroidLinkTool>r8</AndroidLinkTool>-->
 		<PathMap>$(SolutionDir)=.</PathMap>
 	</PropertyGroup>
 
@@ -34,10 +34,6 @@
 		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
 	</PropertyGroup>
 	
-	<PropertyGroup Condition="'$(Configuration)'=='Release'">
-		<PathMap>$(SolutionDir)=.</PathMap>
-	</PropertyGroup>
-
 	<PropertyGroup>
 		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
 		<Company>OmegaHood LLC</Company>

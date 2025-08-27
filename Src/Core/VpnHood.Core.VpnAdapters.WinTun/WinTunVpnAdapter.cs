@@ -71,11 +71,13 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         // Load the WinTun DLL
         LoadWinTunDll();
 
+        // start wintun logger
         // create the adapter
         _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "VPN", BuildGuidFromName(AdapterName));
 
         // close the adapter if it was already exists error 183 (ERROR_ALREADY_EXISTS)
-        if (_tunAdapter == IntPtr.Zero && Marshal.GetLastWin32Error() == 183) {
+        var lastErrorCode = Marshal.GetLastWin32Error();
+        if (_tunAdapter == IntPtr.Zero && lastErrorCode == 183) {
             var prevAdapter = WinTunApi.WintunOpenAdapter(AdapterName);
             if (prevAdapter != IntPtr.Zero)
                 WinTunApi.WintunCloseAdapter(prevAdapter);
@@ -85,7 +87,9 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         }
 
         if (_tunAdapter == IntPtr.Zero)
-            throw new PInvokeException("Failed to create WinTun adapter. Make sure the app is running with admin privilege.");
+            throw new PInvokeException(
+                $"Failed to create WinTun adapter. Make sure the app is running with admin privilege. ErrorCode: {lastErrorCode}", 
+                lastErrorCode);
 
         _adapterIndex = GetAdapterIndex(AdapterName);
         return Task.CompletedTask;

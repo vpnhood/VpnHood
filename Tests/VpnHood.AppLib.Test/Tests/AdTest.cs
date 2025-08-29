@@ -272,6 +272,7 @@ public class AdTest : TestAppBase
         // add url2 and endpoint 2 to include list
         var httpsExternalUriIps = await Dns.GetHostAddressesAsync(TestConstants.HttpsExternalUri1.Host);
         var customIps = httpsExternalUriIps.Select(x => new IpRange(x)).ToList();
+        customIps.Add(new IpRange(TestConstants.UdpV4EndPoint1.Address));
         customIps.Add(new IpRange(TestConstants.NsEndPoint1.Address));
 
         // add provider
@@ -302,7 +303,8 @@ public class AdTest : TestAppBase
         await VhTestUtil.AssertEqualsWait(2, () => adProvider.LoadAdCount);
 
         // all included ips should be split now
-        await ClientAppTest.IpFilters_AssertExclude(TestHelper, app, TestConstants.NsEndPoint1, TestConstants.HttpsExternalUri1);
+        await ClientAppTest.IpFilters_AssertExclude(TestHelper, app, null, TestConstants.HttpsExternalUri1);
+        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint1, null); // all dns should be included
 
         // finish showing ad
         showAdCompletionSource.SetResult();

@@ -9,7 +9,7 @@ namespace VpnHood.AppLib.Swagger.Controllers;
 public class IntentsController : ControllerBase, IIntentController
 {
     [HttpPost("request-quick-launch")]
-    public Task RequestQuickLaunch()
+    public Task<bool> RequestQuickLaunch()
     {
         throw new SwaggerOnlyException();
     }
@@ -21,7 +21,7 @@ public class IntentsController : ControllerBase, IIntentController
     }
 
     [HttpPost("request-notification")]
-    public Task RequestNotification()
+    public Task<bool> RequestNotification()
     {
         throw new SwaggerOnlyException();
     }

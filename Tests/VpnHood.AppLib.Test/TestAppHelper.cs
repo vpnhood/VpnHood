@@ -3,6 +3,7 @@ using System.Text;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
@@ -21,6 +22,7 @@ public class TestAppHelper : TestHelper
         var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode: true) {
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
             SessionTimeout = TimeSpan.FromSeconds(2),
+            UiProvider = new TestUiProvider(),
             EventWatcherInterval = TimeSpan.FromMilliseconds(200), // no SPA in test, so we need to use event watcher
             Ga4MeasurementId = null,
             TrackerFactory = new TestTrackerFactory(),
@@ -37,7 +39,8 @@ public class TestAppHelper : TestHelper
                 ShowAdPostDelay = TimeSpan.Zero,
                 LoadAdPostDelay = TimeSpan.Zero,
                 ExtendByRewardedAdThreshold = TimeSpan.Zero,
-                RejectAdBlocker = true
+                RejectAdBlocker = true,
+                AllowedPrivateDnsProviders = ["dns.google"]
             },
             LogServiceOptions = {
                 MinLogLevel = VhLogger.MinLogLevel,

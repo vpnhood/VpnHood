@@ -241,8 +241,8 @@ public class ClientAppTest : TestAppBase
         Assert.AreEqual(oldSplitTraffic.Sent, app.GetSessionStatus().SessionSplitTraffic.Sent, delta: delta);
     }
 
-    public static async Task IpFilters_AssertExclude(TestHelper testHelper, VpnHoodApp app, IPEndPoint nameserver,
-        Uri url, int delta = 200)
+    public static async Task IpFilters_AssertExclude(TestHelper testHelper, VpnHoodApp app, 
+        IPEndPoint nameserver, Uri url, int delta = 200)
     {
         // NameServer
         var oldSessionTraffic = app.GetSessionStatus().SessionTraffic;

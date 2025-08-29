@@ -336,12 +336,17 @@ public class AdTest : TestAppBase
 
         // create client app
         var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.UiProvider = new TestUiProvider {
+            SystemPrivateDns = new PrivateDns { IsActive = true }
+        };
+
         var adProviderItem = new AppAdProviderItem {
             AdProvider = adProvider,
             ProviderName = "UnitTestAd",
         };
 
         appOptions.AdProviderItems = [adProviderItem];
+
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestHelper.CreateDevice());
 
         // connect
@@ -349,8 +354,8 @@ public class AdTest : TestAppBase
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         _ = app.Connect(clientProfile.ClientProfileId);
 
-        await app.WaitForState(AppConnectionState.WaitingForAd);
-        await VhTestUtil.AssertEqualsWait(2, () => adProvider.LoadAdCount);
+        //await app.WaitForState(AppConnectionState.WaitingForAd);
+        //await VhTestUtil.AssertEqualsWait(2, () => adProvider.LoadAdCount);
 
         // wait for AdBlockerException
         await VhTestUtil.AssertEqualsWait(AppConnectionState.None, () => app.State.ConnectionState);

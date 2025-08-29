@@ -175,7 +175,7 @@ internal class ClientHost(
             return null;
 
         var syncCustomData = new SyncCustomData {
-            IsInIpRange = vpnHoodClient.IsInIpRange(ipPacket.DestinationAddress)
+            IsInIpRange = vpnHoodClient.IsInEpRange(ipPacket)
         };
 
         if (ipPacket.Version == IpVersion.IPv6)
@@ -248,7 +248,7 @@ internal class ClientHost(
             }
 
             // Filter by IP
-            var isInIpRange = syncCustomData?.IsInIpRange ?? vpnHoodClient.IsInIpRange(natItem.DestinationAddress);
+            var isInIpRange = syncCustomData?.IsInIpRange ?? vpnHoodClient.IsInEpRange(natItem.DestinationAddress, natItem.DestinationPort);
             if (filterResult.Action == DomainFilterAction.Exclude ||
                 (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
                 var channelId = UniqueIdFactory.Create() + ":client:passthrough";

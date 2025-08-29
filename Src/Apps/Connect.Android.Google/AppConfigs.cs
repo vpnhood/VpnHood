@@ -58,6 +58,23 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
     public bool InmobiIsDebugMode { get; set; } = IsDebugMode;
     public JsonElement? CustomData { get; set; }
 
+    public string[]? AllowedPrivateDnsProviders = [
+        "one.one.one.one",
+        "family.cloudflare-dns.com",
+        "adult-filter-dns.cleanbrowsing.org",
+        "family-filter-dns.cleanbrowsing.org",
+        "family.dot.dns.yandex.net",
+        "dns.google",
+        "dns.quad9.net",
+        "common.dot.dns.yandex.net",
+        "unfiltered.adguard-dns.com",
+        "dot.sb",
+        "dns.sb",
+        "anycast.uncensoreddns.org",
+        "unicast.uncensoreddns.org",
+        "dot.libredns.gr"
+    ];
+
     public static AppConfigs Load()
     {
         var appConfigs = new AppConfigs();

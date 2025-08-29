@@ -436,8 +436,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // tcp already check for InInRange and IpV6 and Proxy
         if (ipPacket.Protocol == IpProtocol.Tcp) {
-            _isDnsOverTlsDetected |= ipPacket.ExtractTcp().DestinationPort == 853;
-            if (IsTcpProxy || !IsInIpRange(ipPacket.DestinationAddress))
+            var tcpPacket = ipPacket.ExtractTcp();
+            _isDnsOverTlsDetected |= tcpPacket.DestinationPort == 853;
+            if (IsTcpProxy || !IsInEpRange(ipPacket))
                 _clientHost.ProcessOutgoingPacket(ipPacket);
             else
                 _tunnel.SendPacketQueuedAsync(ipPacket).VhBlock();
@@ -446,7 +447,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // use local proxy if the packet is not in the range and not ICMP.
         // ICMP is not supported by the local proxy for split tunnel
-        if (!IsInIpRange(ipPacket.DestinationAddress) && !ipPacket.IsIcmpEcho()) {
+        if (!IsInEpRange(ipPacket) && !ipPacket.IsIcmpEcho()) {
             _proxyManager.SendPacketQueued(ipPacket);
             return;
         }
@@ -481,6 +482,22 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             return false;
 
         return true;
+    }
+
+    public bool IsInEpRange(IpPacket ipPacket)
+    {
+        var destinationPort = 0;
+        if (ipPacket.Protocol == IpProtocol.Tcp) destinationPort = ipPacket.ExtractTcp().DestinationPort;
+        if (ipPacket.Protocol == IpProtocol.Udp) destinationPort = ipPacket.ExtractUdp().DestinationPort;
+        return IsInEpRange(ipPacket.DestinationAddress, destinationPort);
+    }
+
+    public bool IsInEpRange(IPAddress ipAddress, int port)
+    {
+        if (_isPassthroughForAd)
+            return port is 53 or 853;
+
+        return IsInIpRange(ipAddress);
     }
 
     public bool IsInIpRange(IPAddress ipAddress)

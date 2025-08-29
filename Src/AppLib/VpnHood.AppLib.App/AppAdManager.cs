@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Services.Ads;
@@ -16,10 +17,12 @@ namespace VpnHood.AppLib;
 public class AppAdManager(
     AppAdService adService,
     VpnServiceManager vpnServiceManager,
+    IAppUiProvider uiProvider,
     TimeSpan extendByRewardedAdThreshold,
     TimeSpan showAdPostDelay,
     bool isPreloadAdEnabled,
-    bool rejectAdBlocker)
+    bool rejectAdBlocker,
+    string[]? allowedPrivateDnsProviders)
 {
     public bool IsShowing { get; private set; }
     public AppAdService AdService => adService;
@@ -130,17 +133,34 @@ public class AppAdManager(
 
     private async Task VerifyAdBlocker(Exception ex, CancellationToken cancellationToken)
     {
-        if (await IsAdBlocker(ex, cancellationToken).Vhc())
+        if (!rejectAdBlocker)
+            return;
+
+        if (await IsUnallowedPrivateDnsBySystemPrivateDns(ex, cancellationToken).Vhc())
             throw new AdBlockerException("Private DNS is not supported in free version.") {
                 IsPrivateDns = true
             };
     }
 
-    private async Task<bool> IsAdBlocker(Exception ex, CancellationToken cancellationToken)
+    private Task<bool> IsUnallowedPrivateDnsBySystemPrivateDns(Exception ex, CancellationToken cancellationToken)
     {
-        if (!rejectAdBlocker)
-            return false; // ad blocker detection is disabled
+        _ = cancellationToken;
+        _ = ex;
 
+        // check if private DNS is active and is in allowed list
+        var privateDns = uiProvider.GetSystemPrivateDns();
+        var isUnallowedPrivateDns =
+            privateDns is { IsActive: true } &&
+            allowedPrivateDnsProviders != null &&
+            !allowedPrivateDnsProviders.Contains(privateDns.Provider, StringComparer.OrdinalIgnoreCase);
+
+        return Task.FromResult(isUnallowedPrivateDns);
+    }
+
+
+    // ReSharper disable once UnusedMember.Local
+    private async Task<bool> IsAdBlockerByCheckDnsRequest(Exception ex, CancellationToken cancellationToken)
+    {
         // make sure we have the latest state
         await vpnServiceManager.RefreshState(cancellationToken);
         var connectionInfo = vpnServiceManager.ConnectionInfo;

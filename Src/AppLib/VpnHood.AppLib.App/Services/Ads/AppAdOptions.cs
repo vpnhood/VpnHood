@@ -8,6 +8,7 @@ public class AppAdOptions
     public TimeSpan LoadAdPostDelay { get; set; } = TimeSpan.Zero;
     public TimeSpan LoadAdTimeout { get; set; } = TimeSpan.FromSeconds(30).WhenNoDebugger();
     public TimeSpan ExtendByRewardedAdThreshold { get; set; } = TimeSpan.FromMinutes(5);
-    public bool RejectAdBlocker { get; set; }
     public bool PreloadAd { get; set; }
+    public bool RejectAdBlocker { get; set; }
+    public string[]? AllowedPrivateDnsProviders { get; set; }
 }

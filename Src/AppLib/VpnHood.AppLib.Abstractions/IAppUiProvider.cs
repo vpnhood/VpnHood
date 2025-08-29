@@ -29,6 +29,7 @@ public interface IAppUiProvider
     bool IsAppSystemNotificationSettingsSupported { get; }
     void OpenAppSystemNotificationSettings(IUiContext uiContext);
 
+    PrivateDns? GetSystemPrivateDns();
 
     SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext);
 }

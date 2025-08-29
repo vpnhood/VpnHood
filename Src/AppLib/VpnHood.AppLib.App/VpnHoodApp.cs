@@ -222,7 +222,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             extendByRewardedAdThreshold: options.AdOptions.ExtendByRewardedAdThreshold,
             showAdPostDelay: options.AdOptions.ShowAdPostDelay,
             isPreloadAdEnabled: options.AdOptions.PreloadAd,
-            rejectAdBlocker: options.AdOptions.RejectAdBlocker);
+            rejectAdBlocker: options.AdOptions.RejectAdBlocker,
+            allowedPrivateDnsProviders: options.AdOptions.AllowedPrivateDnsProviders,
+            uiProvider: uiProvider);
 
         // Apply settings but no error on startup
         ApplySettings();

@@ -1,11 +1,14 @@
 ﻿using Android;
 using Android.Content;
 using Android.Content.PM;
+using Android.Net;
 using Android.Views;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using Permission = Android.Content.PM.Permission;
 
@@ -150,6 +153,34 @@ public class AndroidUiProvider : IAppUiProvider
         }
     }
 
+    public PrivateDns? GetSystemPrivateDns()
+    {
+        if (!OperatingSystem.IsAndroidVersionAtLeast(28)) // < 28
+            return null;
+
+        var connectivityManager = (ConnectivityManager?)Application.Context
+            .GetSystemService(Context.ConnectivityService);
+
+        // get active network
+        var network = connectivityManager?.ActiveNetwork;
+        if (connectivityManager is null) {
+            VhLogger.Instance.LogDebug("Could not retrieve active network for PrivateDns.");
+            return null;
+        }
+
+        var linkProperties = connectivityManager.GetLinkProperties(network);
+        if (linkProperties is null) {
+            VhLogger.Instance.LogDebug("Could not retrieve LinkProperties for PrivateDns.");
+            return null;
+        }
+        
+        // Note: Provider is non-null only in strict "hostname" mode.
+        return new PrivateDns {
+            IsActive = linkProperties.IsPrivateDnsActive,
+            Provider = linkProperties.PrivateDnsServerName
+        };
+    }
+
     public SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext)
     {
         // check is request supported for WindowInsets.Type.SystemBars()
@@ -178,4 +209,6 @@ public class AndroidUiProvider : IAppUiProvider
         if (postNotificationsIndex != -1 && _requestPostNotificationsCompletionTask != null)
             _requestPostNotificationsCompletionTask.TrySetResult(e.GrantResults[postNotificationsIndex]);
     }
+
+
 }

@@ -59,8 +59,9 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             PremiumFeatures = ConnectAppResources.PremiumFeatures,
             AllowRecommendUserReviewByServer = true,
             AdOptions = new AppAdOptions {
+                PreloadAd = true,
                 RejectAdBlocker = true,
-                PreloadAd = true
+                AllowedPrivateDnsProviders = appConfigs.AllowedPrivateDnsProviders
             },
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,

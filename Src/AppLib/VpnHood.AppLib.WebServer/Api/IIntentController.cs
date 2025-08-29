@@ -2,8 +2,8 @@
 
 public interface IIntentController
 {
-    Task<bool> RequestNotification();
-    Task<bool> RequestQuickLaunch();
+    Task RequestNotification();
+    Task RequestQuickLaunch();
     Task RequestUserReview();
     Task OpenSystemAlwaysOnSettings();
     Task OpenSystemSettings();

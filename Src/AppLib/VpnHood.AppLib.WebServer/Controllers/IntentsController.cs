@@ -11,13 +11,13 @@ internal class IntentsController : WebApiController, IIntentController
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
     [Route(HttpVerbs.Post, "/request-quick-launch")]
-    public Task<bool> RequestQuickLaunch()
+    public Task RequestQuickLaunch()
     {
         return App.Services.UiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, CancellationToken.None);
     }
 
     [Route(HttpVerbs.Post, "/request-notification")]
-    public Task<bool> RequestNotification()
+    public Task RequestNotification()
     {
         return App.Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
     }

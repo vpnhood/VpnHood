@@ -5,6 +5,7 @@ using Android.Net;
 using Android.Views;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Exceptions;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Client.Device.UiContexts;
@@ -25,7 +26,7 @@ public class AndroidUiProvider : IAppUiProvider
         OperatingSystem.IsAndroidVersionAtLeast(33) &&
         Application.Context.PackageManager?.HasSystemFeature(PackageManager.FeatureLeanback) is false;
 
-    public async Task<bool> RequestQuickLaunch(IUiContext context, CancellationToken cancellationToken)
+    public async Task RequestQuickLaunch(IUiContext context, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)context;
 
@@ -34,25 +35,28 @@ public class AndroidUiProvider : IAppUiProvider
 
         // request for adding tile
         // result. 0: reject, 1: already granted, 2: granted 
+        var resuestTime = DateTime.Now;
         var res = await QuickLaunchTileService
             .RequestAddTile(appUiContext.Activity)
             .WaitAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        return res != 0;
+        if (res == 0 && DateTime.Now - resuestTime < TimeSpan.FromMilliseconds(1000))
+            throw new RequestQuickLaunchException(
+                "Unable to add the Quick Launch. Try again later or add it manually.");
     }
 
     public bool IsRequestNotificationSupported => OperatingSystem.IsAndroidVersionAtLeast(33);
 
     public bool? IsNotificationEnabled {
         get {
-            var notificationManager = 
+            var notificationManager =
                 (NotificationManager?)Application.Context.GetSystemService(Context.NotificationService);
             return notificationManager?.AreNotificationsEnabled();
         }
     }
 
-    public async Task<bool> RequestNotification(IUiContext context, CancellationToken cancellationToken)
+    public async Task RequestNotification(IUiContext context, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)context;
 
@@ -62,7 +66,7 @@ public class AndroidUiProvider : IAppUiProvider
 
         // check is already granted
         if (appUiContext.Activity.CheckSelfPermission(Manifest.Permission.PostNotifications) == Permission.Granted)
-            return true;
+            return;
 
         try {
             appUiContext.ActivityEvent.RequestPermissionsResultEvent += OnRequestPermissionsResult;
@@ -71,10 +75,11 @@ public class AndroidUiProvider : IAppUiProvider
             _requestPostNotificationsCompletionTask = new TaskCompletionSource<Permission>();
             appUiContext.Activity.RequestPermissions([Manifest.Permission.PostNotifications],
                 RequestPostNotificationId);
-            var res = await _requestPostNotificationsCompletionTask.Task
+            await _requestPostNotificationsCompletionTask.Task
                 .WaitAsync(cancellationToken)
                 .Vhc();
-            return res == Permission.Granted;
+            
+            //res == Permission.Granted;
         }
         finally {
             appUiContext.ActivityEvent.RequestPermissionsResultEvent -= OnRequestPermissionsResult;
@@ -139,8 +144,7 @@ public class AndroidUiProvider : IAppUiProvider
             throw new NotSupportedException("AppSystemNotificationSettings is not supported on this device.");
 
         var appUiContext = (AndroidUiContext)context;
-        if (OperatingSystem.IsAndroidVersionAtLeast(26)) 
-        {
+        if (OperatingSystem.IsAndroidVersionAtLeast(26)) {
             var intent = new Intent(Android.Provider.Settings.ActionAppNotificationSettings);
             intent.PutExtra(Android.Provider.Settings.ExtraAppPackage, appUiContext.Activity.PackageName);
             appUiContext.Activity.StartActivity(intent);
@@ -173,7 +177,7 @@ public class AndroidUiProvider : IAppUiProvider
             VhLogger.Instance.LogDebug("Could not retrieve LinkProperties for PrivateDns.");
             return null;
         }
-        
+
         // Note: Provider is non-null only in strict "hostname" mode.
         return new PrivateDns {
             IsActive = linkProperties.IsPrivateDnsActive,

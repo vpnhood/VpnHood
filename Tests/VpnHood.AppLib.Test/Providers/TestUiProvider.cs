@@ -14,7 +14,7 @@ internal class TestUiProvider
     public bool IsQuickLaunchSupported => false;
     public bool IsRequestQuickLaunchSupported => false;
 
-    public Task<bool> RequestQuickLaunch(IUiContext uiContext, CancellationToken cancellationToken) =>
+    public Task RequestQuickLaunch(IUiContext uiContext, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
     public bool? IsNotificationEnabled => false;

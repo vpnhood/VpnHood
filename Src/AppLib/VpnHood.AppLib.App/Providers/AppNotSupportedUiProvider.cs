@@ -19,7 +19,7 @@ internal class AppNotSupportedUiProvider
 
     public bool IsRequestNotificationSupported => false;
 
-    public Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken) =>
+    public Task RequestNotification(IUiContext uiContext, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
     public bool IsSystemPrivateDnsSettingsSupported => false;

@@ -41,7 +41,7 @@ public class AndroidUiProvider : IAppUiProvider
             .WaitAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        if (res == 0 && DateTime.Now - resuestTime < TimeSpan.FromMilliseconds(1000))
+        if (res <= 0 && DateTime.Now - resuestTime < TimeSpan.FromMilliseconds(1000))
             throw new RequestQuickLaunchException(
                 "Unable to add the Quick Launch. Try again later or add it manually.");
     }

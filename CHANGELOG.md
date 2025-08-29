@@ -1,7 +1,7 @@
-# v7.3.747
+# v7.3.748
 * Fix: Minor UI issues and translations
 
-# v7.3.747
+# v7.3.748
 * Feature: Detect device ad blocker using DNS over TLS  
 * Feature: Allow to disable VpnHood Cloak mode
 * Feature: Smart prompt for user reviews  

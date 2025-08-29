@@ -359,7 +359,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CanDiagnose = connectionState.CanDiagnose(_appPersistState.HasDiagnoseRequested),
                 CanDisconnect = connectionState.CanDisconnect(),
                 UserReviewRecommended = _userReviewRecommended,
-                IsQuickLaunchRecommended = _quickLaunchRecommended,
+                IsQuickLaunchRecommended = _quickLaunchRecommended && !Settings.UserSettings.IsQuickLaunchPrompted,
                 IsIdle = IsIdle,
                 PromptForLog = IsIdle && _appPersistState.HasDiagnoseRequested && _logService.Exists,
                 LogExists = _logService.Exists,
@@ -637,7 +637,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
             // use default DNS servers if not premium account
-            var dnsServers = !VhUtils.IsNullOrEmpty(UserSettings.DnsServers) && CheckPremiumFeature(AppFeature.CustomDns) 
+            var dnsServers = !VhUtils.IsNullOrEmpty(UserSettings.DnsServers) && CheckPremiumFeature(AppFeature.CustomDns)
                 ? UserSettings.DnsServers : null;
 
             // create clientOptions
@@ -833,9 +833,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             !_quickLaunchRecommended &&
             !Settings.UserSettings.IsQuickLaunchPrompted &&
             _appPersistState.SuccessfulConnectionsCount > 3) {
-            
-            VhLogger.Instance.LogInformation("Recommending for quick launch...");
             _quickLaunchRecommended = true;
+            VhLogger.Instance.LogInformation("Recommending for quick launch...");
         }
 
         // Notification

@@ -378,6 +378,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 IsTcpProxy = StateHelper.IsTcpProxy(Features, UserSettings, connectionInfo, isReconfiguring),
                 CanChangeTcpProxy = StateHelper.CanChangeTcpProxy(Features, connectionInfo?.SessionInfo),
                 IsNotificationEnabled = Services.UiProvider.IsNotificationEnabled,
+                SystemPrivateDns = Services.UiProvider.GetSystemPrivateDns(),
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
                     ? Services.UiProvider.GetSystemBarsInfo(uiContext)
                     : SystemBarsInfo.Default,

@@ -34,4 +34,6 @@ public class AppState
     public required BillingPurchaseState? PurchaseState { get; init; }
     public required SystemBarsInfo SystemBarsInfo { get; init; }
     public required bool? IsNotificationEnabled { get; init; }
+    public required PrivateDns? SystemPrivateDns { get; init; }
+
 }

@@ -14,8 +14,7 @@ using Object = Java.Lang.Object;
 
 namespace VpnHood.AppLib.Droid.Common;
 
-[Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = IconResourceName, Enabled = true,
-    Exported = true)]
+[Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = IconResourceName, Enabled = true, Exported = true)]
 [MetaData(MetaDataToggleableTile, Value = "true")]
 [MetaData(MetaDataActiveTile, Value = "true")]
 [IntentFilter([ActionQsTile])]
@@ -121,8 +120,7 @@ public class QuickLaunchTileService : TileService
         var currentProfileInfo = VpnHoodApp.Instance.CurrentClientProfileInfo;
         if (currentProfileInfo != null && !VpnHoodApp.Instance.IsIdle) {
             QsTile.Label = currentProfileInfo.ClientProfileName;
-            QsTile.State = VpnHoodApp.Instance.ConnectionState ==
-                           AppConnectionState.Connected
+            QsTile.State = VpnHoodApp.Instance.ConnectionState is AppConnectionState.Connected
                 ? TileState.Active
                 : TileState.Unavailable;
         }

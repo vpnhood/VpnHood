@@ -160,6 +160,9 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnDestroy()
     {
-        AppUiContext.Context = null;
+        // prevent multiple launch clear the activity context
+        var appUiContext = (AndroidUiContext?)AppUiContext.Context;
+        if (appUiContext?.ActivityEvent == ActivityEvent)
+            AppUiContext.Context = null;
     }
 }

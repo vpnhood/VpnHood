@@ -39,4 +39,38 @@ public class ProxyServerManagerTest
             async () => await mgr.ConnectAsync(target, CancellationToken.None));
         Assert.AreEqual((int)SocketError.NetworkUnreachable, ex.ErrorCode);
     }
+
+    [TestMethod]
+    public void Constructor_Supports_Multiple_Proxy_Types()
+    {
+        var socketFactory = new TestSocketFactory();
+        var proxyEndPoints = new[]
+        {
+            new ProxyServerEndPoint { ProxyServerType = ProxyServerType.Socks5, Address = "127.0.0.1", Port = 1080 },
+            new ProxyServerEndPoint { ProxyServerType = ProxyServerType.Socks4, Address = "127.0.0.1", Port = 1081 },
+            new ProxyServerEndPoint { ProxyServerType = ProxyServerType.Http, Address = "127.0.0.1", Port = 8080 },
+            new ProxyServerEndPoint { ProxyServerType = ProxyServerType.Https, Address = "127.0.0.1", Port = 8443 }
+        };
+
+        var mgr = new ProxyServerManager(proxyServerEndPoints: proxyEndPoints, socketFactory: socketFactory);
+        Assert.IsTrue(mgr.IsEnabled);
+        Assert.AreEqual(4, mgr.ProxyServerStatuses.Length);
+    }
+
+    [TestMethod]
+    public async Task RemoveBadServers_Marks_Unsupported_Types_As_Inactive()
+    {
+        var socketFactory = new TestSocketFactory();
+        var proxyEndPoints = new[]
+        {
+            new ProxyServerEndPoint { ProxyServerType = ProxyServerType.Socks4, Address = "127.0.0.1", Port = 1081 },
+            new ProxyServerEndPoint { ProxyServerType = ProxyServerType.Http, Address = "127.0.0.1", Port = 8080 }
+        };
+
+        var mgr = new ProxyServerManager(proxyServerEndPoints: proxyEndPoints, socketFactory: socketFactory);
+        await mgr.RemoveBadServers(CancellationToken.None);
+
+        // All non-SOCKS5 servers should be marked as inactive
+        Assert.IsTrue(mgr.ProxyServerStatuses.All(status => !status.IsActive));
+    }
 }

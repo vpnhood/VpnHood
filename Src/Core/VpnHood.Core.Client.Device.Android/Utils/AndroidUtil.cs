@@ -1,5 +1,6 @@
 ﻿using Android.Content;
 using Android.Content.PM;
+using Android.Content.Res;
 using Android.OS;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.ApiClients;
@@ -86,4 +87,17 @@ public static class AndroidUtil
                 Message = error.ToString()
             });
     }
+
+    public static bool IsTv(Context? context = null)
+    {
+        var ctx = context ?? Application.Context;
+
+        var uiMode = (UiModeManager?)ctx.GetSystemService(Context.UiModeService);
+        if (uiMode?.CurrentModeType is UiMode.TypeTelevision)
+            return true;
+
+        var packageManager = ctx.PackageManager;
+        return packageManager?.HasSystemFeature(PackageManager.FeatureLeanback) is true;
+    }
+
 }

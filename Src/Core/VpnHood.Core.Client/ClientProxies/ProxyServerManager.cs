@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Proxies;
 using VpnHood.Core.Proxies.Socks5ProxyClients;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -13,7 +14,7 @@ namespace VpnHood.Core.Client.ClientProxies;
 public class ProxyServerManager
 {
     private readonly ISocketFactory _socketFactory;
-    public ProxyServerStatus[] ProxyServerStatuses { get; private set; } = [];
+    public ProxyServerStatus[] ProxyServerStatuses => ProxyServers.Select(x => x.Status).ToArray();
     private ProxyServer[] ProxyServers { get; }
     public bool IsEnabled => ProxyServers.Any();
 
@@ -35,6 +36,14 @@ public class ProxyServerManager
         // connect to each proxy server and check if it is reachable
         List<(ProxyServer, TcpClient, Task<TimeSpan>)> testTasks = [];
         foreach (var proxyServer in ProxyServers) {
+            if (proxyServer.EndPoint.ProxyServerType != ProxyServerType.Socks5)
+            {
+                VhLogger.Instance.LogWarning("Skipping unsupported proxy type {ProxyType} for server {ProxyServer}",
+                    proxyServer.EndPoint.ProxyServerType, VhLogger.FormatHostName(proxyServer.EndPoint.Address));
+                proxyServer.Status.IsActive = false;
+                continue;
+            }
+
             var client = new Socks5ProxyClient(await BuildSocksProxyOptions(proxyServer.EndPoint));
             var tcpClient = _socketFactory.CreateTcpClient(client.ProxyEndPoint);
             var checkTask = client.CheckConnectionAsync(tcpClient, cancellationToken);
@@ -89,12 +98,10 @@ public class ProxyServerManager
             var tickCount = Environment.TickCount64;
             try {
                 VhLogger.Instance.LogDebug(GeneralEventId.Essential,
-                    "Connecting via a proxy server {ProxyServer}...",
-                    VhLogger.FormatHostName(proxyServer.EndPoint.Address));
+                    "Connecting via a {ProxyType} proxy server {ProxyServer}...",
+                    proxyServer.EndPoint.ProxyServerType, VhLogger.FormatHostName(proxyServer.EndPoint.Address));
 
-                var socketOptions = await BuildSocksProxyOptions(proxyServer.EndPoint).Vhc();
-                var client = new Socks5ProxyClient(socketOptions);
-                await client.ConnectAsync(tcpClient, ipEndPoint, cancellationToken).Vhc();
+                await ConnectToProxyAsync(proxyServer.EndPoint, tcpClient, ipEndPoint, cancellationToken).Vhc();
                 tcpClientOk = tcpClient;
 
                 // find the fastest server
@@ -108,8 +115,8 @@ public class ProxyServerManager
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(GeneralEventId.Essential, ex,
-                    "Failed to connect to proxy server {ProxyServer}.",
-                    VhLogger.FormatHostName(proxyServer.EndPoint.Address));
+                    "Failed to connect to {ProxyType} proxy server {ProxyServer}.",
+                    proxyServer.EndPoint.ProxyServerType, VhLogger.FormatHostName(proxyServer.EndPoint.Address));
 
                 proxyServer.RecordFailed(_requestCount);
                 tcpClient.Dispose();
@@ -121,6 +128,32 @@ public class ProxyServerManager
             throw new SocketException((int)SocketError.NetworkUnreachable);
 
         return tcpClientOk;
+    }
+
+    //private IProxyClient CreateProxyClient()
+
+    private async Task ConnectToProxyAsync(ProxyServerEndPoint proxyServerEndPoint, TcpClient tcpClient, IPEndPoint destination, CancellationToken cancellationToken)
+    {
+        switch (proxyServerEndPoint.ProxyServerType)
+        {
+            case ProxyServerType.Socks5:
+                var socks5Options = await BuildSocksProxyOptions(proxyServerEndPoint);
+                var socks5Client = new Socks5ProxyClient(socks5Options);
+                await socks5Client.ConnectAsync(tcpClient, destination, cancellationToken);
+                break;
+                
+            case ProxyServerType.Socks4:
+                throw new NotSupportedException("SOCKS4 proxy support requires additional implementation");
+                
+            case ProxyServerType.Http:
+                throw new NotSupportedException("HTTP proxy support requires additional implementation");
+                
+            case ProxyServerType.Https:
+                throw new NotSupportedException("HTTPS proxy support requires additional implementation");
+                
+            default:
+                throw new NotSupportedException($"Proxy type {proxyServerEndPoint.ProxyServerType} is not supported");
+        }
     }
 
     private static async Task<Socks5ProxyClientOptions> BuildSocksProxyOptions(ProxyServerEndPoint proxyServerEndPoint)
@@ -141,5 +174,34 @@ public class ProxyServerManager
             Username = proxyServerEndPoint.Username,
             Password = proxyServerEndPoint.Password,
         };
+    }
+}
+
+public class ProxyClientFactory
+{
+    public static IPAddress GetIpAddress()
+    {
+        throw new NotImplementedException();
+    }
+
+    public static IProxyClient CreateProxyClient(ProxyServerEndPoint proxyServerEndPoint)
+    {
+        switch (proxyServerEndPoint.ProxyServerType) {
+            case ProxyServerType.Socks5:
+                throw new NotImplementedException();
+            //return new Socks5ProxyClient("sfsfsf");
+
+            case ProxyServerType.Socks4:
+                throw new NotSupportedException("SOCKS4 proxy support requires additional implementation");
+
+            case ProxyServerType.Http:
+                throw new NotSupportedException("HTTP proxy support requires additional implementation");
+
+            case ProxyServerType.Https:
+                throw new NotSupportedException("HTTPS proxy support requires additional implementation");
+
+            default:
+                throw new NotSupportedException($"Proxy type {proxyServerEndPoint.ProxyServerType} is not supported");
+        }
     }
 }

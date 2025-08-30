@@ -24,9 +24,7 @@ public class AndroidDevice : IDevice
     public bool IsTcpProxySupported => true;
     public string OsInfo { get; } = $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
     public string VpnServiceConfigFolder => AndroidVpnService.VpnServiceConfigFolder;
-    public bool IsTv { get; } =
-        ((UiModeManager?)Application.Context.GetSystemService(Context.UiModeService))?
-        .CurrentModeType == UiMode.TypeTelevision;
+    public bool IsTv => AndroidUtil.IsTv();
 
     public static AndroidDevice Create()
     {

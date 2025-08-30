@@ -1,6 +1,5 @@
 ﻿using Android;
 using Android.Content;
-using Android.Content.PM;
 using Android.Net;
 using Android.Views;
 using Microsoft.Extensions.Logging;
@@ -8,6 +7,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
+using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -19,12 +19,13 @@ public class AndroidUiProvider : IAppUiProvider
 {
     private const int RequestPostNotificationId = 11;
     private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
+    private static bool IsTv => AndroidUtil.IsTv();
 
     public bool IsQuickLaunchSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
 
-    public bool IsRequestQuickLaunchSupported { get; } =
-        OperatingSystem.IsAndroidVersionAtLeast(33) &&
-        Application.Context.PackageManager?.HasSystemFeature(PackageManager.FeatureLeanback) is false;
+    public bool IsRequestQuickLaunchSupported  =>
+        OperatingSystem.IsAndroidVersionAtLeast(33) && 
+        !IsTv;
 
     public async Task<bool> RequestQuickLaunch(IUiContext context, CancellationToken cancellationToken)
     {
@@ -48,7 +49,9 @@ public class AndroidUiProvider : IAppUiProvider
         return res > 0;
     }
 
-    public bool IsRequestNotificationSupported => OperatingSystem.IsAndroidVersionAtLeast(33);
+    public bool IsRequestNotificationSupported => 
+        OperatingSystem.IsAndroidVersionAtLeast(33) &&
+        !IsTv;
 
     public bool? IsNotificationEnabled {
         get {
@@ -88,9 +91,13 @@ public class AndroidUiProvider : IAppUiProvider
         }
     }
 
-    public bool IsSystemPrivateDnsSettingsSupported => OperatingSystem.IsAndroidVersionAtLeast(28);
+    public bool IsSystemPrivateDnsSettingsSupported => 
+        OperatingSystem.IsAndroidVersionAtLeast(28) &&
+        !IsTv;
 
-    public bool IsSystemKillSwitchSettingsSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
+    public bool IsSystemKillSwitchSettingsSupported => 
+        OperatingSystem.IsAndroidVersionAtLeast(24) &&
+        !IsTv;
 
     public void OpenSystemKillSwitchSettings(IUiContext context)
     {
@@ -102,7 +109,8 @@ public class AndroidUiProvider : IAppUiProvider
         appUiContext.Activity.StartActivity(intent);
     }
 
-    public bool IsSystemAlwaysOnSettingsSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
+    public bool IsSystemAlwaysOnSettingsSupported => 
+        OperatingSystem.IsAndroidVersionAtLeast(24);
 
     public void OpenSystemAlwaysOnSettings(IUiContext context)
     {
